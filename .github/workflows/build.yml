@@ -24,8 +24,7 @@ jobs:
           cache: true
 
       - name: Generate Flutter platform files
-        run: flutter create --platforms=android,web .
-
+        run: flutter create --project-name=silsila_app --platforms=android,web .
       - name: Get dependencies
         run: flutter pub get
 
