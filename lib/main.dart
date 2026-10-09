@@ -24,7 +24,6 @@ class SilsilaApp extends StatelessWidget {
           secondary: orange,
         ),
         scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Arial',
       ),
       home: const SilsilaHomePage(),
     );
@@ -41,7 +40,7 @@ class SilsilaHomePage extends StatefulWidget {
 class _SilsilaHomePageState extends State<SilsilaHomePage> {
   int selectedIndex = 1;
 
-  final List<Map<String, dynamic>> categories = [
+  final List<Map<String, Object>> categories = [
     {'name': 'زيوت', 'icon': Icons.water_drop_outlined},
     {'name': 'مكرونة', 'icon': Icons.ramen_dining},
     {'name': 'بقوليات', 'icon': Icons.grain},
@@ -87,7 +86,10 @@ class _SilsilaHomePageState extends State<SilsilaHomePage> {
               ),
             ),
             const SizedBox(height: 16),
+
+            // Search
             TextField(
+              textDirection: TextDirection.rtl,
               decoration: InputDecoration(
                 hintText: 'ابحث عن مورد أو صنف...',
                 prefixIcon: const Icon(Icons.search),
@@ -99,7 +101,10 @@ class _SilsilaHomePageState extends State<SilsilaHomePage> {
                 ),
               ),
             ),
+
             const SizedBox(height: 24),
+
+            // Categories
             const Text(
               'الأقسام الرئيسية',
               style: TextStyle(
@@ -109,6 +114,7 @@ class _SilsilaHomePageState extends State<SilsilaHomePage> {
               ),
             ),
             const SizedBox(height: 12),
+
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -122,6 +128,7 @@ class _SilsilaHomePageState extends State<SilsilaHomePage> {
               ),
               itemBuilder: (context, index) {
                 final category = categories[index];
+
                 return Container(
                   decoration: BoxDecoration(
                     color: SilsilaApp.purple.withValues(alpha: 0.06),
@@ -151,7 +158,10 @@ class _SilsilaHomePageState extends State<SilsilaHomePage> {
                 );
               },
             ),
+
             const SizedBox(height: 24),
+
+            // Suppliers heading
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -169,23 +179,31 @@ class _SilsilaHomePageState extends State<SilsilaHomePage> {
                 ),
               ],
             ),
+
             const SizedBox(height: 8),
+
+            // Demo supplier cards
             _supplierCard(
               name: 'مورد المواد الغذائية',
               description: 'مواد غذائية متنوعة',
               minimum: 'الحد الأدنى للطلب: 1,000 جنيه',
             ),
+
             _supplierCard(
               name: 'مورد الزيوت والسمن',
               description: 'زيوت وسمن بأسعار الجملة',
               minimum: 'الحد الأدنى للطلب: 500 جنيه',
             ),
+
             _supplierCard(
               name: 'مورد المكرونة والبقوليات',
               description: 'أصناف متنوعة للتجار',
               minimum: 'الحد الأدنى للطلب: 750 جنيه',
             ),
-            const SizedBox(height: 20),
+
+            const SizedBox(height: 12),
+
+            // Offers banner
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -214,6 +232,8 @@ class _SilsilaHomePageState extends State<SilsilaHomePage> {
             ),
           ],
         ),
+
+        // Bottom navigation
         bottomNavigationBar: NavigationBar(
           selectedIndex: selectedIndex,
           onDestinationSelected: (index) {
@@ -226,12 +246,4 @@ class _SilsilaHomePageState extends State<SilsilaHomePage> {
             NavigationDestination(
               icon: Icon(Icons.shopping_cart_outlined),
               selectedIcon: Icon(Icons.shopping_cart),
-              label: 'السلة',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'الرئيسية',
-            ),
-            NavigationDestination(
-              icon:
+              label: 'الس
