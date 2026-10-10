@@ -17,28 +17,91 @@ jobs:
       - name: Download project
         uses: actions/checkout@v4
 
-      
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.29.3'
           cache: true
 
-
       - name: Generate Flutter platform files
         run: flutter create --project-name=silsila_app --platforms=android,web .
-
-      - name: Verify Android files
-        run: |
-          pwd
-          ls -la
-          flutter create --project-name=silsila_app --platforms=android .
-          test -f android/app/build.gradle.kts || test -f android/app/build.gradle
-          echo "Android files generated successfully"
 
       - name: Get dependencies
         run: flutter pub get
 
+      - name: Configure permanent signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -e
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/silsila-upload-key.jks
+
+          cat > android/key.properties <<EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=silsila
+          storeFile=silsila-upload-key.jks
+          EOF
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("android/app/build.gradle.kts")
+          if not p.exists():
+              raise SystemExit("Kotlin Gradle file not found")
+
+          s = p.read_text()
+
+          imports = "import java.util.Properties\nimport java.io.FileInputStream\n"
+          if "import java.util.Properties" not in s:
+              s = imports + s
+
+          props = """
+          val keystoreProperties = Properties()
+          val keystorePropertiesFile = rootProject.file("key.properties")
+          if (keystorePropertiesFile.exists()) {
+              keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+          }
+
+          """
+          if "val keystoreProperties = Properties()" not in s:
+              marker = "android {"
+              if marker not in s:
+                  raise SystemExit("Android configuration not found")
+              s = s.replace(marker, props + marker, 1)
+
+          signing = """
+              signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties["keyAlias"] as String
+                      keyPassword = keystoreProperties["keyPassword"] as String
+                      storeFile = file(keystoreProperties["storeFile"] as String)
+                      storePassword = keystoreProperties["storePassword"] as String
+                  }
+              }
+
+          """
+          if 'create("release")' not in s:
+              marker = "    buildTypes {"
+              if marker not in s:
+                  raise SystemExit("Build types configuration not found")
+              s = s.replace(marker, signing + marker, 1)
+
+          debug = 'signingConfig = signingConfigs.getByName("debug")'
+          release = 'signingConfig = signingConfigs.getByName("release")'
+
+          if debug in s:
+              s = s.replace(debug, release, 1)
+          elif release not in s:
+              raise SystemExit("Could not configure release signing")
+
+          p.write_text(s)
+          print("Permanent signing configuration prepared")
+          PY
 
       - name: Check code
         run: flutter analyze lib
