@@ -11,7 +11,7 @@ void main() {
 class SilsilaApp extends StatelessWidget {
   const SilsilaApp({super.key});
 
-  @override
+  @override 
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -21,13 +21,13 @@ class SilsilaApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: purple),
       ),
       home: const Directionality(
-  textDirection: TextDirection.rtl,
-  child: SilsilaLoginScreen(),
-),
+        textDirection: TextDirection.rtl,
+        child: SilsilaLoginScreen(),
       ),
     );
   }
 }
+
 
 class SilsilaHome extends StatefulWidget {
   const SilsilaHome({super.key});
