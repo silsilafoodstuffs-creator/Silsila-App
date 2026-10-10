@@ -28,9 +28,7 @@ jobs:
 
 
       - name: Get dependencies
-        run: |
-          flutter pub get
-          flutter pub deps | grep supabase_flutter
+        run: flutter pub get
 
       - name: Configure permanent signing key
         env:
