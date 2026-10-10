@@ -23,12 +23,6 @@ jobs:
         with:
           flutter-version: '3.29.3'
           cache: true
-      - name: Inspect Android Gradle files
-        run: |
-          ls -la android
-          ls -la android/app
-          find android -maxdepth 3 -type f -name '*gradle*'
-
 
 
       - name: Generate Flutter platform files
