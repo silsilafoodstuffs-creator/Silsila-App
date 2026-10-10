@@ -25,12 +25,6 @@ uses: actions/checkout@v4
   - name: Generate Flutter platform files
     run: flutter create --project-name=silsila_app --platforms=android,web .
 
-  - name: Show Android application settings
-    run: |
-      echo "Checking generated Android application settings"
-      grep -n "applicationId" android/app/build.gradle*
-      grep -n "signingConfig" android/app/build.gradle*
-
   - name: Get dependencies
     run: flutter pub get
 
