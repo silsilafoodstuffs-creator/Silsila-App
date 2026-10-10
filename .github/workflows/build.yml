@@ -29,9 +29,16 @@ jobs:
           ls -la android/app
           find android -maxdepth 3 -type f -name '*gradle*'
 
-      - name: Generate Flutter platform files
-        run: flutter create --project-name=silsila_app --platforms=android,web .
 
+      - name: Generate Flutter platform files
+        run: |
+          pwd
+          ls -la
+          flutter --version
+          flutter create --project-name=silsila_app --platforms=android,web .
+          echo "Flutter create exit code: $?"
+          ls -la
+          ls -la android
 
 
       - name: Get dependencies
