@@ -111,6 +111,33 @@ jobs:
 
 
 
+      - name: Verify APK signature
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKSIGNER="$(find "$SDK/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+
+          if [ -z "$APKSIGNER" ]; then
+            echo "ERROR: apksigner not found"
+            exit 1
+          fi
+
+          OUTPUT="$("$APKSIGNER" verify --verbose --print-certs "$APK")"
+          printf '%s\n' "$OUTPUT"
+
+          ACTUAL="$(printf '%s\n' "$OUTPUT" | sed -n 's/.*certificate SHA-256 digest: *//Ip' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          EXPECTED="a69301fe3009183301d1751aa99ef8d9025c696e2870e4dfb5fd9732be4d8e42"
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "ERROR: APK certificate does not match the permanent signing certificate"
+            exit 1
+          fi
+
+          echo "SUCCESS: APK signature matches the permanent signing certificate"
+
 
       - name: Check APK package ID
         run: |
