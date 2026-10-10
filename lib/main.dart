@@ -233,17 +233,102 @@ class _SilsilaHomePageState extends State<SilsilaHomePage> {
           ],
         ),
 
-        // Bottom navigation
         bottomNavigationBar: NavigationBar(
-          selectedIndex: selectedIndex,
-          onDestinationSelected: (index) {
-            setState(() {
-              selectedIndex = index;
-            });
-          },
-          indicatorColor: SilsilaApp.orange.withValues(alpha: 0.25),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.shopping_cart_outlined),
-              selectedIcon: Icon(Icons.shopping_cart),
-              label: 'الس
+  selectedIndex: selectedIndex,
+  onDestinationSelected: (index) {
+    setState(() {
+      selectedIndex = index;
+    });
+  },
+  indicatorColor: SilsilaApp.orange.withValues(alpha: 0.25),
+  destinations: const [
+    NavigationDestination(
+      icon: Icon(Icons.shopping_cart_outlined),
+      selectedIcon: Icon(Icons.shopping_cart),
+      label: 'السلة',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.home_outlined),
+      selectedIcon: Icon(Icons.home),
+      label: 'الرئيسية',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.more_horiz),
+      label: 'المزيد',
+    ),
+  ],
+),
+),
+);
+}
+
+Widget _supplierCard({
+  required String name,
+  required String description,
+  required String minimum,
+}) {
+  return Card(
+    color: Colors.white,
+    elevation: 1,
+    margin: const EdgeInsets.only(bottom: 12),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: BorderSide(color: Colors.grey.shade200),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: SilsilaApp.purple.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.storefront_outlined,
+              color: SilsilaApp.purple,
+              size: 30,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(description),
+                const SizedBox(height: 5),
+                Text(
+                  minimum,
+                  style: const TextStyle(
+                    color: SilsilaApp.purple,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.favorite_border,
+              color: SilsilaApp.pink,
+            ),
+            tooltip: 'إضافة للمفضلة',
+          ),
+        ],
+      ),
+    ),
+  );
+}
+}
