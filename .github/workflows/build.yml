@@ -109,6 +109,19 @@ jobs:
       - name: Build Android APK
         run: flutter build apk --release
 
+
+
+      - name: Check APK signing certificate
+        run: |
+          APK="build/app/outputs/flutter-apk/app-release.apk"
+          SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          APKSIGNER="$(find "$SDK/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          if [ -z "$APKSIGNER" ]; then
+            echo "apksigner was not found"
+            exit 1
+          fi
+          "$APKSIGNER" verify --print-certs "$APK"
+
       - name: Save APK
         uses: actions/upload-artifact@v4
         with:
