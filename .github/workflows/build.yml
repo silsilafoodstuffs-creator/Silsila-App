@@ -17,6 +17,14 @@ jobs:
       - name: Download project
         uses: actions/checkout@v4
 
+
+      - name: Locate Flutter project
+        run: |
+          pwd
+          ls -la
+          find . -name pubspec.yaml -not -path '*/.dart_tool/*'
+
+
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
