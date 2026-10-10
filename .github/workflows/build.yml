@@ -26,8 +26,11 @@ jobs:
       - name: Generate Flutter platform files
         run: flutter create --project-name=silsila_app --platforms=android,web .
 
+
       - name: Get dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          flutter pub deps | grep supabase_flutter
 
       - name: Configure permanent signing key
         env:
