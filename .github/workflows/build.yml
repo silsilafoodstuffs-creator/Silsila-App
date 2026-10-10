@@ -55,7 +55,7 @@ jobs:
 
           p = Path("android/app/build.gradle")
           if not p.exists():
-              raise SystemExit("Expected Groovy build.gradle was not found")
+              raise SystemExit("Expected android/app/build.gradle was not found")
 
           s = p.read_text()
 
