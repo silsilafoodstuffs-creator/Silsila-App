@@ -30,19 +30,21 @@ jobs:
           find android -maxdepth 3 -type f -name '*gradle*'
 
 
+
       - name: Generate Flutter platform files
+        run: flutter create --project-name=silsila_app --platforms=android,web .
+
+      - name: Verify Android files
         run: |
           pwd
           ls -la
-          flutter --version
-          flutter create --project-name=silsila_app --platforms=android,web .
-          echo "Flutter create exit code: $?"
-          ls -la
-          ls -la android
-
+          flutter create --project-name=silsila_app --platforms=android .
+          test -f android/app/build.gradle.kts || test -f android/app/build.gradle
+          echo "Android files generated successfully"
 
       - name: Get dependencies
         run: flutter pub get
+
 
     
       - name: Configure permanent signing key
