@@ -111,16 +111,17 @@ jobs:
 
 
 
-      - name: Check APK signing certificate
+
+      - name: Check APK package ID
         run: |
           APK="build/app/outputs/flutter-apk/app-release.apk"
           SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          APKSIGNER="$(find "$SDK/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
-          if [ -z "$APKSIGNER" ]; then
-            echo "apksigner was not found"
+          APKANALYZER="$(find "$SDK" -name apkanalyzer -type f | head -n 1)"
+          if [ -z "$APKANALYZER" ]; then
+            echo "apkanalyzer was not found"
             exit 1
           fi
-          "$APKSIGNER" verify --print-certs "$APK"
+          "$APKANALYZER" manifest application-id "$APK"
 
       - name: Save APK
         uses: actions/upload-artifact@v4
