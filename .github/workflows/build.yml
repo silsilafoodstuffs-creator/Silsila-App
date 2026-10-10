@@ -29,6 +29,7 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
+    
       - name: Configure permanent signing key
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -37,61 +38,73 @@ jobs:
           set -e
           test -n "$ANDROID_KEYSTORE_BASE64"
           test -n "$ANDROID_KEYSTORE_PASSWORD"
+
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/silsila-upload-key.jks
+
           cat > android/key.properties <<EOF
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyPassword=$ANDROID_KEYSTORE_PASSWORD
           keyAlias=silsila
           storeFile=silsila-upload-key.jks
           EOF
+
           python3 - <<'PY'
           from pathlib import Path
 
-          p = Path("android/app/build.gradle.kts")
+          p = Path("android/app/build.gradle")
           if not p.exists():
-              raise SystemExit("Expected build.gradle.kts was not found")
+              raise SystemExit("Expected Groovy build.gradle was not found")
 
           s = p.read_text()
-          properties = '''val keystoreProperties = java.util.Properties()
-          val keystorePropertiesFile = rootProject.file("key.properties")
+
+          props = """def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file('key.properties')
           if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(keystorePropertiesFile.inputStream())
+              keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
           }
 
-          '''
-          if "val keystoreProperties = java.util.Properties()" not in s:
-              marker = "android {\n"
-              if marker not in s:
-                  raise SystemExit("Could not locate android configuration")
-              s = s.replace(marker, properties + marker, 1)
+          """
 
-          signing = '''    signingConfigs {
-                  create("release") {
-                      keyAlias = keystoreProperties["keyAlias"] as String
-                      keyPassword = keystoreProperties["keyPassword"] as String
-                      storeFile = file(keystoreProperties["storeFile"] as String)
-                      storePassword = keystoreProperties["storePassword"] as String
+          if "def keystoreProperties = new Properties()" not in s:
+              if "android {" not in s:
+                  raise SystemExit("Could not find android configuration")
+              s = s.replace("android {", props + "android {", 1)
+
+          signing = """    signingConfigs {
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile file(keystoreProperties['storeFile'])
+                      storePassword keystoreProperties['storePassword']
                   }
               }
 
-          '''
-          if 'create("release")' not in s:
-              marker = "    buildTypes {\n"
-              if marker not in s:
-                  raise SystemExit("Could not locate buildTypes configuration")
-              s = s.replace(marker, signing + marker, 1)
+          """
 
-          debug_signing = 'signingConfig = signingConfigs.getByName("debug")'
-          release_signing = 'signingConfig = signingConfigs.getByName("release")'
-          if debug_signing in s:
-              s = s.replace(debug_signing, release_signing, 1)
-          elif release_signing not in s:
-              raise SystemExit("Could not locate release signing setting")
+          if "signingConfigs {" not in s:
+              if "    buildTypes {" not in s:
+                  raise SystemExit("Could not find buildTypes configuration")
+              s = s.replace("    buildTypes {", signing + "    buildTypes {", 1)
+
+          if "signingConfig = signingConfigs.debug" in s:
+              s = s.replace(
+                  "signingConfig = signingConfigs.debug",
+                  "signingConfig = signingConfigs.release",
+                  1
+              )
+          elif "signingConfig signingConfigs.debug" in s:
+              s = s.replace(
+                  "signingConfig signingConfigs.debug",
+                  "signingConfig signingConfigs.release",
+                  1
+              )
+          elif "signingConfigs.release" not in s:
+              raise SystemExit("Could not find release signing setting")
 
           p.write_text(s)
           print("Permanent signing configuration prepared")
           PY
-
+  
       - name: Check code
         run: flutter analyze lib
 
