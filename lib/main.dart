@@ -21,8 +21,9 @@ class SilsilaApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: purple),
       ),
       home: const Directionality(
-        textDirection: TextDirection.rtl,
-        child: SilsilaHome(),
+  textDirection: TextDirection.rtl,
+  child: SilsilaLoginScreen(),
+),
       ),
     );
   }
@@ -564,6 +565,223 @@ class _SilsilaHomeState extends State<SilsilaHome> {
         title: Text(title),
         subtitle: Text(description),
         onTap: () => message('$title: القسم ده تجريبي حاليًا.'),
+      ),
+    );
+  }
+}
+
+class SilsilaLoginScreen extends StatefulWidget {
+  const SilsilaLoginScreen({super.key});
+
+  @override
+  State<SilsilaLoginScreen> createState() =>
+      _SilsilaLoginScreenState();
+}
+
+class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
+  final phoneController = TextEditingController();
+  final passwordController = TextEditingController();
+  bool obscurePassword = true;
+
+  @override
+  void dispose() {
+    phoneController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  void showMessage(String text) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 88,
+                      height: 88,
+                      decoration: BoxDecoration(
+                        color: purple,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: const Icon(
+                        Icons.link,
+                        color: Colors.white,
+                        size: 48,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'سلسلة Silsila',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: purple,
+                      fontSize: 30,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'بنربط السوق ببعضه',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: orange, fontSize: 17),
+                  ),
+                  const SizedBox(height: 36),
+                  const Text(
+                    'تسجيل الدخول',
+                    style: TextStyle(
+                      color: purple,
+                      fontSize: 23,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: 'رقم الموبايل',
+                      hintText: 'اكتب هنا رقمك المسجل لدينا',
+                      prefixIcon: const Icon(
+                        Icons.phone_android,
+                        color: purple,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: purple,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: obscurePassword,
+                    decoration: InputDecoration(
+                      labelText: 'كلمة المرور',
+                      hintText: 'اكتب كلمة المرور الخاصة بك',
+                      prefixIcon: const Icon(
+                        Icons.lock_outline,
+                        color: purple,
+                      ),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            obscurePassword = !obscurePassword;
+                          });
+                        },
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(
+                          color: purple,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () {
+                        showMessage(
+                          'استعادة كلمة المرور ستُفعّل بعد ربط خدمة الحسابات.',
+                        );
+                      },
+                      child: const Text('نسيت كلمة المرور؟'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: purple,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () {
+                        if (phoneController.text.trim().isEmpty ||
+                            passwordController.text.isEmpty) {
+                          showMessage(
+                            'من فضلك اكتب رقم الموبايل وكلمة المرور.',
+                          );
+                          return;
+                        }
+
+                        showMessage(
+                          'تسجيل الدخول غير مفعّل بعد. يلزم ربط خدمة مصادقة حقيقية.',
+                        );
+                      },
+                      child: const Text(
+                        'تسجيل الدخول',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: purple,
+                      side: const BorderSide(color: purple),
+                      padding: const EdgeInsets.all(14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () {
+                      showMessage(
+                        'إنشاء الحساب سيتاح بعد تجهيز التسجيل وقاعدة البيانات.',
+                      );
+                    },
+                    child: const Text('إنشاء حساب جديد'),
+                  ),
+                  const SizedBox(height: 28),
+                  const Text(
+                    'للموردين والعملاء والمندوبين',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
