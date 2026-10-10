@@ -32,11 +32,9 @@ jobs:
           cache: true
 
       
-      - name: Generate Flutter platform files
-        run: |
-          cp pubspec.yaml /tmp/silsila-pubspec.yaml
-          flutter create --project-name=silsila_app --platforms=android,web .
-          cp /tmp/silsila-pubspec.yaml pubspec.yaml
+       - name: Generate Flutter platform files
+        run: flutter create --project-name=silsila_app --platforms=android,web .
+        
 
 
       - name: Get dependencies
