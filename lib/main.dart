@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
 const pink = Color(0xFFFF27C3);
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'https://teitsopmhruczplwlwgn.supabase.co/rest/v1/',
+    publishableKey: 'sb_publishable_y6pDeQ9rLq680rS7qqirPQ_LAo5ZcTu',
+  );
+
   runApp(const SilsilaApp());
 }
 
