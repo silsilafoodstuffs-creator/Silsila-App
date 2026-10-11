@@ -772,9 +772,16 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    onPressed: () {
-                      showMessage(
-                        'إنشاء الحساب سيتاح بعد تجهيز التسجيل وقاعدة البيانات.',
+                    
+                 onPressed: () {
+                   Navigator.push(
+                     context,
+                     MaterialPageRoute(
+                       builder: (_) => const SilsilaRegisterScreen(),
+                     ),
+                   );
+                 },
+
                       );
                     },
                     child: const Text('إنشاء حساب جديد'),
@@ -788,6 +795,336 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SilsilaRegisterScreen extends StatefulWidget {
+  const SilsilaRegisterScreen({super.key});
+
+  @override
+  State<SilsilaRegisterScreen> createState() =>
+      _SilsilaRegisterScreenState();
+}
+
+class _SilsilaRegisterScreenState
+    extends State<SilsilaRegisterScreen> {
+  final formKey = GlobalKey<FormState>();
+
+  final name = TextEditingController();
+  final phone = TextEditingController();
+  final whatsapp = TextEditingController();
+  final address = TextEditingController();
+  final landmark = TextEditingController();
+  final password = TextEditingController();
+  final confirmPassword = TextEditingController();
+
+  String accountType = 'عميل';
+  String activityType = 'مواد غذائية';
+  String governorate = '';
+  String area = '';
+
+  bool whatsappSame = true;
+  bool obscurePassword = true;
+
+  final accountTypes = const [
+    'مورد',
+    'عميل',
+    'مندوب',
+    'شركة شحن',
+    'إدارة نشاط',
+  ];
+
+  final governorates = const [
+    'القاهرة',
+    'الجيزة',
+    'القليوبية',
+    'الإسكندرية',
+    'أخرى',
+  ];
+
+  @override
+  void dispose() {
+    name.dispose();
+    phone.dispose();
+    whatsapp.dispose();
+    address.dispose();
+    landmark.dispose();
+    password.dispose();
+    confirmPassword.dispose();
+    super.dispose();
+  }
+
+  InputDecoration fieldDecoration(
+    String label,
+    IconData icon,
+  ) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: purple),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(
+          color: purple,
+          width: 2,
+        ),
+      ),
+    );
+  }
+
+  Widget textField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    TextInputType keyboardType = TextInputType.text,
+    bool required = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: fieldDecoration(label, icon),
+        validator: (value) {
+          if (required && (value == null || value.trim().isEmpty)) {
+            return 'من فضلك أدخل $label';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: purple,
+          foregroundColor: Colors.white,
+          title: const Text('إنشاء حساب جديد'),
+        ),
+        body: Form(
+          key: formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              const Center(
+                child: Icon(
+                  Icons.link,
+                  size: 58,
+                  color: purple,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'انضم إلى سلسلة',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: purple,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'بنربط السوق ببعضه',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: orange),
+              ),
+              const SizedBox(height: 24),
+
+              DropdownButtonFormField<String>(
+                value: activityType,
+                decoration: fieldDecoration(
+                  'نوع النشاط',
+                  Icons.storefront,
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'مواد غذائية',
+                    child: Text('مواد غذائية'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => activityType = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 14),
+
+              DropdownButtonFormField<String>(
+                value: accountType,
+                decoration: fieldDecoration(
+                  'نوع الحساب',
+                  Icons.person_outline,
+                ),
+                items: accountTypes
+                    .map(
+                      (type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => accountType = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 14),
+
+              textField(
+                name,
+                'الاسم أو اسم النشاط',
+                Icons.badge_outlined,
+              ),
+              textField(
+                phone,
+                'رقم الموبايل',
+                Icons.phone_android,
+                keyboardType: TextInputType.phone,
+              ),
+
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: whatsappSame,
+                activeColor: purple,
+                title: const Text('رقم واتساب هو نفس رقم الموبايل'),
+                onChanged: (value) {
+                  setState(() => whatsappSame = value ?? true);
+                },
+              ),
+
+              if (!whatsappSame)
+                textField(
+                  whatsapp,
+                  'رقم واتساب',
+                  Icons.chat_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+
+              DropdownButtonFormField<String>(
+                value: governorate.isEmpty ? null : governorate,
+                decoration: fieldDecoration(
+                  'المحافظة',
+                  Icons.location_city,
+                ),
+                hint: const Text('اختر المحافظة'),
+                items: governorates
+                    .map(
+                      (item) => DropdownMenuItem(
+                        value: item,
+                        child: Text(item),
+                      ),
+                    )
+                    .toList(),
+                validator: (value) =>
+                    value == null ? 'اختر المحافظة' : null,
+                onChanged: (value) {
+                  setState(() {
+                    governorate = value ?? '';
+                    area = '';
+                  });
+                },
+              ),
+              const SizedBox(height: 14),
+
+              textField(
+                address,
+                'المنطقة أو المركز أو القرية',
+                Icons.map_outlined,
+              ),
+              textField(
+                landmark,
+                'العنوان بالتفصيل وعلامة مميزة',
+                Icons.place_outlined,
+              ),
+
+              TextFormField(
+                controller: password,
+                obscureText: obscurePassword,
+                decoration: fieldDecoration(
+                  'كلمة المرور',
+                  Icons.lock_outline,
+                ).copyWith(
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      setState(() {
+                        obscurePassword = !obscurePassword;
+                      });
+                    },
+                    icon: Icon(
+                      obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.length < 8) {
+                    return 'كلمة المرور يجب ألا تقل عن 8 أحرف';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+
+              TextFormField(
+                controller: confirmPassword,
+                obscureText: true,
+                decoration: fieldDecoration(
+                  'تأكيد كلمة المرور',
+                  Icons.lock_reset,
+                ),
+                validator: (value) {
+                  if (value != password.text) {
+                    return 'كلمتا المرور غير متطابقتين';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+
+              SizedBox(
+                height: 52,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: purple,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    if (!formKey.currentState!.validate()) {
+                      return;
+                    }
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'البيانات سليمة. ربط إنشاء الحساب بقاعدة البيانات هو الخطوة التالية.',
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'إنشاء الحساب',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
