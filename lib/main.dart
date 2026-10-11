@@ -763,6 +763,7 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: purple,
@@ -772,20 +773,18 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
                         borderRadius: BorderRadius.circular(14),
                       ),
                     ),
-                    
-                 onPressed: () {
-                   Navigator.push(
-                     context,
-                     MaterialPageRoute(
-                       builder: (_) => const SilsilaRegisterScreen(),
-                     ),
-                   );
-                 },
-
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const SilsilaRegisterScreen(),
+                        ),
                       );
                     },
                     child: const Text('إنشاء حساب جديد'),
                   ),
+
                   const SizedBox(height: 28),
                   const Text(
                     'للموردين والعملاء والمندوبين',
