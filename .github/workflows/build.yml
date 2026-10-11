@@ -35,7 +35,12 @@ jobs:
         run: flutter create --project-name=silsila_app --platforms=android,web .
 
       - name: Get dependencies
-        run: flutter pub get
+        run: |
+          flutter pub get
+          flutter pub deps
+          grep -n "supabase_flutter" pubspec.yaml
+          test -f .dart_tool/package_config.json
+          grep -n "supabase_flutter" .dart_tool/package_config.json
 
       - name: Configure permanent signing key
         env:
