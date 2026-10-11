@@ -34,22 +34,29 @@ jobs:
       - name: Generate Flutter platform files
         run: flutter create --project-name=silsila_app --platforms=android,web .
 
+    
       - name: Get dependencies
         run: |
           echo "===== CURRENT DIRECTORY ====="
-           pwd
-           echo "===== PUBSPEC FILES ====="
-           find . -name pubspec.yaml -not -path '*/.dart_tool/*'
-           echo "===== ROOT PUBSPEC CONTENT ====="
+          pwd
+          echo "===== PUBSPEC FILES ====="
+          find . -name pubspec.yaml -not -path '*/.dart_tool/*'
+          echo "===== ROOT PUBSPEC CONTENT ====="
           if [ -f pubspec.yaml ]; then
-          sed -n '1,40p' pubspec.yaml
+            cat pubspec.yaml
           else
-          echo "ERROR: pubspec.yaml not found in root"
+            echo "ERROR: pubspec.yaml not found in root"
+            exit 1
           fi
+          echo "===== CHECK SUPABASE DEPENDENCY ====="
+          grep -n "supabase_flutter" pubspec.yaml || true
           echo "===== INSTALL DEPENDENCIES ====="
           flutter pub get
-          echo "===== DEPENDENCY CHECK ====="
+          echo "===== VERIFY SUPABASE PACKAGE ====="
+          grep -n "supabase_flutter" .dart_tool/package_config.json
+          echo "===== DEPENDENCY TREE ====="
           flutter pub deps
+
       - name: Configure permanent signing key
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
