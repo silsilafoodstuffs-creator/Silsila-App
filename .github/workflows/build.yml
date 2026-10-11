@@ -36,12 +36,20 @@ jobs:
 
       - name: Get dependencies
         run: |
+          echo "===== CURRENT DIRECTORY ====="
+           pwd
+           echo "===== PUBSPEC FILES ====="
+           find . -name pubspec.yaml -not -path '*/.dart_tool/*'
+           echo "===== ROOT PUBSPEC CONTENT ====="
+          if [ -f pubspec.yaml ]; then
+          sed -n '1,40p' pubspec.yaml
+          else
+          echo "ERROR: pubspec.yaml not found in root"
+          fi
+          echo "===== INSTALL DEPENDENCIES ====="
           flutter pub get
+          echo "===== DEPENDENCY CHECK ====="
           flutter pub deps
-          grep -n "supabase_flutter" pubspec.yaml
-          test -f .dart_tool/package_config.json
-          grep -n "supabase_flutter" .dart_tool/package_config.json
-
       - name: Configure permanent signing key
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
