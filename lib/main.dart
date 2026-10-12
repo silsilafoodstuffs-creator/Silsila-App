@@ -813,6 +813,7 @@ class _SilsilaRegisterScreenState
     extends State<SilsilaRegisterScreen> {
   final formKey = GlobalKey<FormState>();
 
+  final email = TextEditingController();
   final name = TextEditingController();
   final phone = TextEditingController();
   final whatsapp = TextEditingController();
