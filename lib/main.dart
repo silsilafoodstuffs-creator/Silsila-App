@@ -639,7 +639,20 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
 
       if (!mounted) return;
 
-      showMessage('تم تسجيل الدخول بنجاح.');
+      
+if (!mounted) return;
+
+Navigator.pushAndRemoveUntil(
+  context,
+  MaterialPageRoute(
+    builder: (_) => const Directionality(
+      textDirection: TextDirection.rtl,
+      child: SilsilaHome(),
+    ),
+  ),
+  (route) => false,
+);
+
     } on AuthException catch (e) {
       if (!mounted) return;
 
