@@ -1192,19 +1192,8 @@ textField(
                     backgroundColor: purple,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () {
-                    if (!formKey.currentState!.validate()) {
-                      return;
-                    }
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'البيانات سليمة. ربط إنشاء الحساب بقاعدة البيانات هو الخطوة التالية.',
-                        ),
-                      ),
-                    );
-                  },
+                  
+                  onPressed: registerAccount,
                   child: const Text(
                     'إنشاء الحساب',
                     style: TextStyle(
