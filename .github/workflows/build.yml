@@ -61,37 +61,11 @@ jobs:
           PY
 
         
+      
       - name: Get dependencies
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p = Path("pubspec.yaml")
-          s = p.read_text()
-
-          s = s.replace(
-              'description: "A new Flutter project."',
-              'description: "Silsila wholesale food trading application."'
-          )
-          s = s.replace(
-              "  cupertino_icons: ^1.0.8",
-              "  cupertino_icons: ^1.0.8\n  supabase_flutter: ^2.10.0"
-          )
-          s = s.replace(
-              "  flutter_lints: ^5.0.0",
-              "  flutter_lints: ^4.0.0"
-          )
-
-          if "supabase_flutter:" not in s:
-              raise SystemExit("ERROR: Could not add Supabase dependency")
-
-          p.write_text(s)
-          print("Updated root pubspec.yaml")
-          PY
-          cat pubspec.yaml
           flutter pub get
           flutter pub deps
-
 
       - name: Configure permanent signing key
         env:
