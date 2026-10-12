@@ -927,8 +927,15 @@ Future<void> registerAccount() async {
       password: password.text,
       data: {
         'full_name': name.text.trim(),
-        'phone': phone.text.trim(),
-        'account_type': accountType,
+        'phone': phone.text.trim(),        
+        'account_type': {
+        'مورد': 'supplier',
+        'عميل': 'customer',
+        'مندوب': 'delegate',
+        'شركة شحن': 'shipping_company',
+        'إدارة نشاط': 'business_admin',
+          }[accountType] ?? 'customer',
+
         'governorate': governorate,
         'district': address.text.trim(),
         'address': landmark.text.trim(),
