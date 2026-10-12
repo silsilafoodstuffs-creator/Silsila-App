@@ -845,17 +845,18 @@ class _SilsilaRegisterScreenState
     'أخرى',
   ];
 
-  @override
-  void dispose() {
-    name.dispose();
-    phone.dispose();
-    whatsapp.dispose();
-    address.dispose();
-    landmark.dispose();
-    password.dispose();
-    confirmPassword.dispose();
-    super.dispose();
-  }
+@override
+void dispose() {
+  email.dispose();
+  name.dispose();
+  phone.dispose();
+  whatsapp.dispose();
+  address.dispose();
+  landmark.dispose();
+  password.dispose();
+  confirmPassword.dispose();
+  super.dispose();
+}
 
   InputDecoration fieldDecoration(
     String label,
@@ -982,11 +983,19 @@ class _SilsilaRegisterScreenState
               ),
               const SizedBox(height: 14),
 
-              textField(
-                name,
-                'الاسم أو اسم النشاط',
-                Icons.badge_outlined,
-              ),
+              
+textField(
+  email,
+  'البريد الإلكتروني',
+  Icons.email_outlined,
+  keyboardType: TextInputType.emailAddress,
+),
+textField(
+  name,
+  'الاسم أو اسم النشاط',
+  Icons.badge_outlined,
+),
+
               textField(
                 phone,
                 'رقم الموبايل',
