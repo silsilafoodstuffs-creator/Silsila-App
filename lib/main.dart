@@ -19,85 +19,6 @@ Future<void> main() async {
 class SilsilaApp extends StatelessWidget {
   const SilsilaApp({super.key});
 
-Future<void> registerAccount() async {
-  if (!formKey.currentState!.validate()) return;
-
-  final emailValue = email.text.trim();
-
-  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-      .hasMatch(emailValue)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('اكتب بريد إلكتروني صحيح'),
-      ),
-    );
-    return;
-  }
-
-  setState(() {});
-
-  try {
-    final response =
-        await Supabase.instance.client.auth.signUp(
-      email: emailValue,
-      password: password.text,
-      data: {
-        'full_name': name.text.trim(),
-        'phone': phone.text.trim(),
-        'account_type': accountType,
-        'governorate': governorate,
-        'district': address.text.trim(),
-        'address': landmark.text.trim(),
-      },
-    );
-
-    if (!mounted) return;
-
-    if (response.user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تعذر إنشاء الحساب، حاول مرة أخرى'),
-        ),
-      );
-    } else if (response.session == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيده.',
-          ),
-        ),
-      );
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم إنشاء الحساب بنجاح'),
-        ),
-      );
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const SilsilaHome(),
-        ),
-        (route) => false,
-      );
-    }
-  } on AuthException catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('تعذر التسجيل: ${e.message}')),
-    );
-  } catch (e) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('حصل خطأ أثناء التسجيل، حاول مرة أخرى'),
-      ),
-    );
-  }
-}
   
   @override 
   Widget build(BuildContext context) {
@@ -982,6 +903,86 @@ void dispose() {
     );
   }
 
+Future<void> registerAccount() async {
+  if (!formKey.currentState!.validate()) return;
+
+  final emailValue = email.text.trim();
+
+  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+      .hasMatch(emailValue)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('اكتب بريد إلكتروني صحيح'),
+      ),
+    );
+    return;
+  }
+
+  setState(() {});
+
+  try {
+    final response =
+        await Supabase.instance.client.auth.signUp(
+      email: emailValue,
+      password: password.text,
+      data: {
+        'full_name': name.text.trim(),
+        'phone': phone.text.trim(),
+        'account_type': accountType,
+        'governorate': governorate,
+        'district': address.text.trim(),
+        'address': landmark.text.trim(),
+      },
+    );
+
+    if (!mounted) return;
+
+    if (response.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر إنشاء الحساب، حاول مرة أخرى'),
+        ),
+      );
+    } else if (response.session == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيده.',
+          ),
+        ),
+      );
+      Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم إنشاء الحساب بنجاح'),
+        ),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const SilsilaHome(),
+        ),
+        (route) => false,
+      );
+    }
+  } on AuthException catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('تعذر التسجيل: ${e.message}')),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('حصل خطأ أثناء التسجيل، حاول مرة أخرى'),
+      ),
+    );
+  }
+}
+  
   @override
   Widget build(BuildContext context) {
     return Directionality(
