@@ -579,6 +579,7 @@ class _SilsilaHomeState extends State<SilsilaHome> {
   }
 }
 
+
 class SilsilaLoginScreen extends StatefulWidget {
   const SilsilaLoginScreen({super.key});
 
@@ -588,24 +589,80 @@ class SilsilaLoginScreen extends StatefulWidget {
 }
 
 class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
-  final phoneController = TextEditingController();
+  final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
   bool obscurePassword = true;
+  bool isLoading = false;
 
   @override
   void dispose() {
-    phoneController.dispose();
+    emailController.dispose();
     passwordController.dispose();
     super.dispose();
   }
 
   void showMessage(String text) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text),
         behavior: SnackBarBehavior.floating,
       ),
     );
+  }
+
+  Future<void> login() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      showMessage('من فضلك اكتب البريد الإلكتروني وكلمة المرور.');
+      return;
+    }
+
+    if (!email.contains('@')) {
+      showMessage('من فضلك اكتب بريدًا إلكترونيًا صحيحًا.');
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      showMessage('تم تسجيل الدخول بنجاح.');
+    } on AuthException catch (e) {
+      if (!mounted) return;
+
+      final message = e.message.toLowerCase();
+
+      if (message.contains('email not confirmed')) {
+        showMessage('البريد الإلكتروني لم يتم تأكيده بعد.');
+      } else if (message.contains('invalid login credentials')) {
+        showMessage('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
+      } else {
+        showMessage('تعذر تسجيل الدخول: ${e.message}');
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      showMessage('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -663,13 +720,15 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
                   ),
                   const SizedBox(height: 20),
                   TextField(
-                    controller: phoneController,
-                    keyboardType: TextInputType.phone,
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    autocorrect: false,
+                    enableSuggestions: false,
                     decoration: InputDecoration(
-                      labelText: 'رقم الموبايل',
-                      hintText: 'اكتب هنا رقمك المسجل لدينا',
+                      labelText: 'البريد الإلكتروني',
+                      hintText: 'اكتب بريدك الإلكتروني المسجل لدينا',
                       prefixIcon: const Icon(
-                        Icons.phone_android,
+                        Icons.email_outlined,
                         color: purple,
                       ),
                       border: OutlineInputBorder(
@@ -718,13 +777,14 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
                         ),
                       ),
                     ),
+                    onSubmitted: (_) => login(),
                   ),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
                       onPressed: () {
                         showMessage(
-                          'استعادة كلمة المرور ستُفعّل بعد ربط خدمة الحسابات.',
+                          'استعادة كلمة المرور سنفعّلها في خطوة لاحقة.',
                         );
                       },
                       child: const Text('نسيت كلمة المرور؟'),
@@ -741,30 +801,26 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      onPressed: () {
-                        if (phoneController.text.trim().isEmpty ||
-                            passwordController.text.isEmpty) {
-                          showMessage(
-                            'من فضلك اكتب رقم الموبايل وكلمة المرور.',
-                          );
-                          return;
-                        }
-
-                        showMessage(
-                          'تسجيل الدخول غير مفعّل بعد. يلزم ربط خدمة مصادقة حقيقية.',
-                        );
-                      },
-                      child: const Text(
-                        'تسجيل الدخول',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      onPressed: isLoading ? null : login,
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text(
+                              'تسجيل الدخول',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: purple,
@@ -785,7 +841,6 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
                     },
                     child: const Text('إنشاء حساب جديد'),
                   ),
-
                   const SizedBox(height: 28),
                   const Text(
                     'للموردين والعملاء والمندوبين',
@@ -1073,17 +1128,17 @@ Future<void> registerAccount() async {
               const SizedBox(height: 14),
 
               
-textField(
-  email,
-  'البريد الإلكتروني',
-  Icons.email_outlined,
-  keyboardType: TextInputType.emailAddress,
-),
-textField(
-  name,
-  'الاسم أو اسم النشاط',
-  Icons.badge_outlined,
-),
+             textField(
+               email,
+              'البريد الإلكتروني',
+              Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+              ),
+              textField(
+              name,
+              'الاسم أو اسم النشاط',
+             Icons.badge_outlined,
+           ),
 
               textField(
                 phone,
