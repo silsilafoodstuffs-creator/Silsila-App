@@ -33,6 +33,33 @@ jobs:
 
       - name: Generate Flutter platform files
         run: flutter create --project-name=silsila_app --platforms=android,web .
+
+
+      - name: Ensure Android internet permission
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("android/app/src/main/AndroidManifest.xml")
+          s = p.read_text()
+
+          permission = 'android.permission.INTERNET'
+
+          if permission not in s:
+              marker = s.find('>', s.find('<manifest'))
+              if marker == -1:
+                  raise SystemExit("ERROR: Manifest tag not found")
+
+              s = (
+                  s[:marker + 1]
+                  + '\n    <uses-permission android:name="android.permission.INTERNET" />'
+                  + s[marker + 1:]
+              )
+              p.write_text(s)
+
+          print("SUCCESS: Android internet permission is present")
+          PY
+
         
       - name: Get dependencies
         run: |
