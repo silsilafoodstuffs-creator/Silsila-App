@@ -21,14 +21,12 @@ Future<void> main() async {
 class SilsilaApp extends StatelessWidget {
   const SilsilaApp({super.key});
 
-  
-  @override 
+  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'سلسلة Silsila',
       theme: SilsilaTheme.light,
-      
       home: const Directionality(
         textDirection: TextDirection.rtl,
         child: SilsilaLoginScreen(),
@@ -37,6 +35,9 @@ class SilsilaApp extends StatelessWidget {
   }
 }
 
+// ============================================================
+// الشاشة الرئيسية
+// ============================================================
 
 class SilsilaHome extends StatefulWidget {
   const SilsilaHome({super.key});
@@ -53,6 +54,7 @@ class _SilsilaHomeState extends State<SilsilaHome> {
   final Set<String> favorites = {};
   final List<String> cart = [];
 
+  // بيانات موردين تجريبية إلى حين ربط الموردين بقاعدة البيانات.
   final List<Map<String, String>> suppliers = [
     {
       'name': 'مؤسسة الأمان للمواد الغذائية',
@@ -91,6 +93,8 @@ class _SilsilaHomeState extends State<SilsilaHome> {
   }
 
   void message(String text) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(text),
@@ -120,17 +124,18 @@ class _SilsilaHomeState extends State<SilsilaHome> {
         ),
         actions: [
           IconButton(
+            tooltip: 'الإشعارات',
             onPressed: () {
               showDialog<void>(
                 context: context,
-                builder: (context) => AlertDialog(
+                builder: (dialogContext) => AlertDialog(
                   title: const Text('الإشعارات'),
                   content: const Text(
                     'هتظهر هنا إشعارات الطلبات والعروض الجديدة.',
                   ),
                   actions: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(dialogContext),
                       child: const Text('تمام'),
                     ),
                   ],
@@ -140,6 +145,7 @@ class _SilsilaHomeState extends State<SilsilaHome> {
             icon: const Icon(Icons.notifications_outlined),
           ),
           IconButton(
+            tooltip: 'المزيد',
             onPressed: () => setState(() => page = 2),
             icon: const Icon(Icons.menu),
           ),
@@ -311,6 +317,16 @@ class _SilsilaHomeState extends State<SilsilaHome> {
             Icons.local_offer_outlined,
           ),
         ],
+        const SizedBox(height: 12),
+        const Center(
+          child: Text(
+            'نسخة تجريبية من تطبيق سلسلة',
+            style: TextStyle(
+              color: Colors.black54,
+              fontSize: 12,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -372,6 +388,7 @@ class _SilsilaHomeState extends State<SilsilaHome> {
                   ),
                 ),
                 IconButton(
+                  tooltip: favorite ? 'إزالة من المفضلة' : 'إضافة للمفضلة',
                   onPressed: () {
                     setState(() {
                       if (favorite) {
@@ -380,6 +397,7 @@ class _SilsilaHomeState extends State<SilsilaHome> {
                         favorites.add(name);
                       }
                     });
+
                     message(
                       favorite
                           ? 'تم حذف المورد من المفضلة'
@@ -448,7 +466,11 @@ class _SilsilaHomeState extends State<SilsilaHome> {
                 ),
                 title: Text(entry.value),
                 trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'حذف',
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                  ),
                   onPressed: () {
                     setState(() => cart.removeAt(entry.key));
                     message('تم حذف العنصر من السلة');
@@ -499,14 +521,14 @@ class _SilsilaHomeState extends State<SilsilaHome> {
               backgroundColor: purple,
               child: Icon(Icons.person, color: Colors.white),
             ),
-            title: Text('زائر تطبيق سلسلة'),
-            subtitle: Text('لم يتم تسجيل الدخول'),
+            title: Text('حساب سلسلة'),
+            subtitle: Text('بيانات الحساب التفصيلية قيد التطوير'),
           ),
         ),
         menuItem(
           Icons.person_outline,
           'بياناتي',
-          'التسجيل وتعديل البيانات هيتضافوا في مرحلة لاحقة.',
+          'تعديل بيانات الحساب واستكمال الملف الشخصي يحتاج إلى ربط قاعدة البيانات.',
         ),
         menuItem(
           Icons.receipt_long,
@@ -551,12 +573,12 @@ class _SilsilaHomeState extends State<SilsilaHome> {
         onTap: () {
           showDialog<void>(
             context: context,
-            builder: (context) => AlertDialog(
+            builder: (dialogContext) => AlertDialog(
               title: Text(title),
               content: Text(description),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(dialogContext),
                   child: const Text('إغلاق'),
                 ),
               ],
@@ -579,13 +601,15 @@ class _SilsilaHomeState extends State<SilsilaHome> {
   }
 }
 
+// ============================================================
+// شاشة تسجيل الدخول
+// ============================================================
 
 class SilsilaLoginScreen extends StatefulWidget {
   const SilsilaLoginScreen({super.key});
 
   @override
-  State<SilsilaLoginScreen> createState() =>
-      _SilsilaLoginScreenState();
+  State<SilsilaLoginScreen> createState() => _SilsilaLoginScreenState();
 }
 
 class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
@@ -614,6 +638,8 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
   }
 
   Future<void> login() async {
+    if (isLoading) return;
+
     final email = emailController.text.trim();
     final password = passwordController.text;
 
@@ -622,14 +648,12 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
       return;
     }
 
-    if (!email.contains('@')) {
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
       showMessage('من فضلك اكتب بريدًا إلكترونيًا صحيحًا.');
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
     try {
       await Supabase.instance.client.auth.signInWithPassword(
@@ -639,41 +663,34 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
 
       if (!mounted) return;
 
-      
-if (!mounted) return;
-
-Navigator.pushAndRemoveUntil(
-  context,
-  MaterialPageRoute(
-    builder: (_) => const Directionality(
-      textDirection: TextDirection.rtl,
-      child: SilsilaHome(),
-    ),
-  ),
-  (route) => false,
-);
-
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const Directionality(
+            textDirection: TextDirection.rtl,
+            child: SilsilaHome(),
+          ),
+        ),
+        (route) => false,
+      );
     } on AuthException catch (e) {
       if (!mounted) return;
 
-      final message = e.message.toLowerCase();
+      final errorMessage = e.message.toLowerCase();
 
-      if (message.contains('email not confirmed')) {
+      if (errorMessage.contains('email not confirmed')) {
         showMessage('البريد الإلكتروني لم يتم تأكيده بعد.');
-      } else if (message.contains('invalid login credentials')) {
+      } else if (errorMessage.contains('invalid login credentials')) {
         showMessage('البريد الإلكتروني أو كلمة المرور غير صحيحة.');
       } else {
         showMessage('تعذر تسجيل الدخول: ${e.message}');
       }
     } catch (e) {
       if (!mounted) return;
-
       showMessage('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.');
     } finally {
       if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
+        setState(() => isLoading = false);
       }
     }
   }
@@ -796,13 +813,14 @@ Navigator.pushAndRemoveUntil(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
                       onPressed: () {
-                       Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                       builder: (_) => const SilsilaForgotPasswordScreen(),
-                     ),
-                  );
-                },
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const SilsilaForgotPasswordScreen(),
+                          ),
+                        );
+                      },
                       child: const Text('نسيت كلمة المرور؟'),
                     ),
                   ),
@@ -850,8 +868,7 @@ Navigator.pushAndRemoveUntil(
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              const SilsilaRegisterScreen(),
+                          builder: (_) => const SilsilaRegisterScreen(),
                         ),
                       );
                     },
@@ -873,6 +890,10 @@ Navigator.pushAndRemoveUntil(
   }
 }
 
+// ============================================================
+// شاشة إنشاء حساب جديد
+// ============================================================
+
 class SilsilaRegisterScreen extends StatefulWidget {
   const SilsilaRegisterScreen({super.key});
 
@@ -881,8 +902,7 @@ class SilsilaRegisterScreen extends StatefulWidget {
       _SilsilaRegisterScreenState();
 }
 
-class _SilsilaRegisterScreenState
-    extends State<SilsilaRegisterScreen> {
+class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
   final formKey = GlobalKey<FormState>();
 
   final email = TextEditingController();
@@ -901,6 +921,7 @@ class _SilsilaRegisterScreenState
 
   bool whatsappSame = true;
   bool obscurePassword = true;
+  bool isRegistering = false;
 
   final accountTypes = const [
     'مورد',
@@ -918,18 +939,18 @@ class _SilsilaRegisterScreenState
     'أخرى',
   ];
 
-@override
-void dispose() {
-  email.dispose();
-  name.dispose();
-  phone.dispose();
-  whatsapp.dispose();
-  address.dispose();
-  landmark.dispose();
-  password.dispose();
-  confirmPassword.dispose();
-  super.dispose();
-}
+  @override
+  void dispose() {
+    email.dispose();
+    name.dispose();
+    phone.dispose();
+    whatsapp.dispose();
+    address.dispose();
+    landmark.dispose();
+    password.dispose();
+    confirmPassword.dispose();
+    super.dispose();
+  }
 
   InputDecoration fieldDecoration(
     String label,
@@ -974,93 +995,108 @@ void dispose() {
     );
   }
 
-Future<void> registerAccount() async {
-  if (!formKey.currentState!.validate()) return;
-
-  final emailValue = email.text.trim();
-
-  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
-      .hasMatch(emailValue)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('اكتب بريد إلكتروني صحيح'),
-      ),
-    );
-    return;
-  }
-
-  setState(() {});
-
-  try {
-    final response =
-        await Supabase.instance.client.auth.signUp(
-      email: emailValue,
-      password: password.text,
-      data: {
-        'full_name': name.text.trim(),
-        'phone': phone.text.trim(),        
-        'account_type': {
-        'مورد': 'supplier',
-        'عميل': 'customer',
-        'مندوب': 'delegate',
-        'شركة شحن': 'shipping_company',
-        'إدارة نشاط': 'business_admin',
-          }[accountType] ?? 'customer',
-
-        'governorate': governorate,
-        'district': address.text.trim(),
-        'address': landmark.text.trim(),
-      },
-    );
-
+  void showRegisterMessage(String text) {
     if (!mounted) return;
 
-    if (response.user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تعذر إنشاء الحساب، حاول مرة أخرى'),
-        ),
-      );
-    } else if (response.session == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيده.',
-          ),
-        ),
-      );
-      Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم إنشاء الحساب بنجاح'),
-        ),
-      );
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const SilsilaHome(),
-        ),
-        (route) => false,
-      );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(text),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> registerAccount() async {
+    if (isRegistering) return;
+
+    if (!formKey.currentState!.validate()) return;
+
+    final emailValue = email.text.trim();
+    final phoneValue = phone.text.trim();
+    final whatsappValue =
+        whatsappSame ? phoneValue : whatsapp.text.trim();
+
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
+        .hasMatch(emailValue)) {
+      showRegisterMessage('اكتب بريدًا إلكترونيًا صحيحًا.');
+      return;
     }
-  } on AuthException catch (e) {
-    if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('تعذر التسجيل: ${e.message}')),
-    );
-  } catch (e) {
-    if (!mounted) return;
+    if (password.text != confirmPassword.text) {
+      showRegisterMessage('كلمتا المرور غير متطابقتين.');
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('حصل خطأ أثناء التسجيل، حاول مرة أخرى'),
-      ),
-    );
+    setState(() => isRegistering = true);
+
+    try {
+      final response =
+          await Supabase.instance.client.auth.signUp(
+        email: emailValue,
+        password: password.text,
+        data: {
+          'full_name': name.text.trim(),
+          'phone': phoneValue,
+          'whatsapp': whatsappValue,
+          'whatsapp_same': whatsappSame,
+          'activity_type': activityType,
+          'account_type': {
+                'مورد': 'supplier',
+                'عميل': 'customer',
+                'مندوب': 'delegate',
+                'شركة شحن': 'shipping_company',
+                'إدارة نشاط': 'business_admin',
+              }[accountType] ??
+              'customer',
+          'governorate': governorate,
+          'district': address.text.trim(),
+          'address': landmark.text.trim(),
+        },
+      );
+
+      if (!mounted) return;
+
+      if (response.user == null) {
+        showRegisterMessage(
+          'تعذر إنشاء الحساب، حاول مرة أخرى.',
+        );
+      } else if (response.session == null) {
+        showRegisterMessage(
+          'تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيده.',
+        );
+
+        Navigator.pop(context);
+      } else {
+        showRegisterMessage('تم إنشاء الحساب بنجاح.');
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const Directionality(
+              textDirection: TextDirection.rtl,
+              child: SilsilaHome(),
+            ),
+          ),
+          (route) => false,
+        );
+      }
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      showRegisterMessage('تعذر التسجيل: ${e.message}');
+    } catch (e) {
+      if (!mounted) return;
+
+      showRegisterMessage(
+        'حصل خطأ أثناء التسجيل، حاول مرة أخرى.',
+      );
+    } finally {
+      // الإصلاح الأساسي: إعادة الزر لحالته الطبيعية بعد انتهاء المحاولة.
+      if (mounted) {
+        setState(() => isRegistering = false);
+      }
+    }
   }
-}
-  
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -1113,11 +1149,13 @@ Future<void> registerAccount() async {
                     child: Text('مواد غذائية'),
                   ),
                 ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => activityType = value);
-                  }
-                },
+                onChanged: isRegistering
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          setState(() => activityType = value);
+                        }
+                      },
               ),
               const SizedBox(height: 14),
 
@@ -1135,26 +1173,28 @@ Future<void> registerAccount() async {
                       ),
                     )
                     .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() => accountType = value);
-                  }
-                },
+                onChanged: isRegistering
+                    ? null
+                    : (value) {
+                        if (value != null) {
+                          setState(() => accountType = value);
+                        }
+                      },
               ),
               const SizedBox(height: 14),
 
-              
-             textField(
-               email,
-              'البريد الإلكتروني',
-              Icons.email_outlined,
-              keyboardType: TextInputType.emailAddress,
-              ),
               textField(
-              name,
-              'الاسم أو اسم النشاط',
-             Icons.badge_outlined,
-           ),
+                email,
+                'البريد الإلكتروني',
+                Icons.email_outlined,
+                keyboardType: TextInputType.emailAddress,
+              ),
+
+              textField(
+                name,
+                'الاسم أو اسم النشاط',
+                Icons.badge_outlined,
+              ),
 
               textField(
                 phone,
@@ -1167,10 +1207,16 @@ Future<void> registerAccount() async {
                 contentPadding: EdgeInsets.zero,
                 value: whatsappSame,
                 activeColor: purple,
-                title: const Text('رقم واتساب هو نفس رقم الموبايل'),
-                onChanged: (value) {
-                  setState(() => whatsappSame = value ?? true);
-                },
+                title: const Text(
+                  'رقم واتساب هو نفس رقم الموبايل',
+                ),
+                onChanged: isRegistering
+                    ? null
+                    : (value) {
+                        setState(
+                          () => whatsappSame = value ?? true,
+                        );
+                      },
               ),
 
               if (!whatsappSame)
@@ -1198,12 +1244,14 @@ Future<void> registerAccount() async {
                     .toList(),
                 validator: (value) =>
                     value == null ? 'اختر المحافظة' : null,
-                onChanged: (value) {
-                  setState(() {
-                    governorate = value ?? '';
-                    area = '';
-                  });
-                },
+                onChanged: isRegistering
+                    ? null
+                    : (value) {
+                        setState(() {
+                          governorate = value ?? '';
+                          area = '';
+                        });
+                      },
               ),
               const SizedBox(height: 14),
 
@@ -1212,6 +1260,7 @@ Future<void> registerAccount() async {
                 'المنطقة أو المركز أو القرية',
                 Icons.map_outlined,
               ),
+
               textField(
                 landmark,
                 'العنوان بالتفصيل وعلامة مميزة',
@@ -1269,16 +1318,43 @@ Future<void> registerAccount() async {
                   style: FilledButton.styleFrom(
                     backgroundColor: purple,
                     foregroundColor: Colors.white,
-                  ),
-                  
-                  onPressed: registerAccount,
-                  child: const Text(
-                    'إنشاء الحساب',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
+                    disabledBackgroundColor: purple.withValues(
+                      alpha: 0.6,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
+
+                  // منع الضغط المتكرر أثناء التسجيل.
+                  onPressed: isRegistering ? null : registerAccount,
+
+                  // إظهار مؤشر التحميل أثناء انتظار Supabase.
+                  child: isRegistering
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : const Text(
+                          'إنشاء الحساب',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'سلسلة Silsila',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: purple,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
