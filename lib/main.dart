@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/app_theme.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -25,10 +26,8 @@ class SilsilaApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'سلسلة Silsila',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: purple),
-      ),
+      theme: SilsilaTheme.light,
+      
       home: const Directionality(
         textDirection: TextDirection.rtl,
         child: SilsilaLoginScreen(),
