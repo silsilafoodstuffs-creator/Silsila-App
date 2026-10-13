@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/app_theme.dart';
+import 'auth/forgot_password_screen.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -795,10 +796,13 @@ Navigator.pushAndRemoveUntil(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
                       onPressed: () {
-                        showMessage(
-                          'استعادة كلمة المرور سنفعّلها في خطوة لاحقة.',
-                        );
-                      },
+                       Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                       builder: (_) => const SilsilaForgotPasswordScreen(),
+                     ),
+                  );
+                },
                       child: const Text('نسيت كلمة المرور؟'),
                     ),
                   ),
