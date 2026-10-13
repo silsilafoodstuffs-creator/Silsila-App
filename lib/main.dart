@@ -44,10 +44,7 @@ class SilsilaApp extends StatelessWidget {
           centerTitle: false,
         ),
       ),
-      home: const Directionality(
-        textDirection: TextDirection.rtl,
-        child: SilsilaWelcomeScreen(),
-      ),
+      home: const SilsilaSplashScreen(),
     );
   }
 }
@@ -1307,6 +1304,72 @@ class _SilsilaHomeState extends State<SilsilaHome> {
 // ============================================================
 // تسجيل الدخول
 // ============================================================
+
+
+class SilsilaSplashScreen extends StatelessWidget {
+  const SilsilaSplashScreen({super.key});
+
+  void start(BuildContext context) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => const Directionality(
+          textDirection: TextDirection.rtl,
+          child: SilsilaLoginScreen(),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF3E007D),
+      body: SafeArea(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => start(context),
+          child: SizedBox.expand(
+            child: Image.asset(
+              'assets/images/silsila_splash.png',
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.link,
+                        size: 72,
+                        color: Color(0xFFFF27C3),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'سلسلة',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 42,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      FilledButton.icon(
+                        onPressed: () => start(context),
+                        icon: const Icon(Icons.arrow_forward),
+                        label: const Text('ابدأ'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 class SilsilaLoginScreen extends StatefulWidget {
   const SilsilaLoginScreen({super.key});
