@@ -1306,13 +1306,14 @@ class _SilsilaHomeState extends State<SilsilaHome> {
 // ============================================================
 
 
+
 class SilsilaSplashScreen extends StatelessWidget {
   const SilsilaSplashScreen({super.key});
 
   void start(BuildContext context) {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute<void>(
+      MaterialPageRoute(
         builder: (_) => const Directionality(
           textDirection: TextDirection.rtl,
           child: SilsilaLoginScreen(),
@@ -1325,46 +1326,45 @@ class SilsilaSplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF3E007D),
-      body: SafeArea(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => start(context),
-          child: SizedBox.expand(
-            child: Image.asset(
-              'assets/images/silsila_splash.png',
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.link,
-                        size: 72,
-                        color: Color(0xFFFF27C3),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'سلسلة',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 42,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      FilledButton.icon(
-                        onPressed: () => start(context),
-                        icon: const Icon(Icons.arrow_forward),
-                        label: const Text('ابدأ'),
-                      ),
-                    ],
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/silsila_splash.png',
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return const ColoredBox(
+                color: Color(0xFF3E007D),
+              );
+            },
+          ),
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: 32,
+            child: SafeArea(
+              child: Center(
+                child: FilledButton.icon(
+                  onPressed: () => start(context),
+                  icon: const Icon(Icons.arrow_forward),
+                  label: const Text('ابدأ'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFFFA015),
+                    foregroundColor: const Color(0xFF3E007D),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 36,
+                      vertical: 16,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
