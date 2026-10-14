@@ -1307,16 +1307,17 @@ class _SilsilaHomeState extends State<SilsilaHome> {
 
 
 
+
 class SilsilaSplashScreen extends StatelessWidget {
   const SilsilaSplashScreen({super.key});
 
   void start(BuildContext context) {
-    Navigator.pushReplacement(
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => const Directionality(
           textDirection: TextDirection.rtl,
-          child: SilsilaLoginScreen(),
+          child: SilsilaEntryOptionsScreen(),
         ),
       ),
     );
@@ -1325,41 +1326,349 @@ class SilsilaSplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF3E007D),
       body: Stack(
         fit: StackFit.expand,
         children: [
           Image.asset(
-            'assets/images/silsila_splash.png',
+            'assets/images/silsila_background.png',
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return const ColoredBox(
-                color: Color(0xFF3E007D),
-              );
-            },
+            errorBuilder: (_, __, ___) =>
+                const ColoredBox(color: purple),
           ),
-          Positioned(
-            left: 24,
-            right: 24,
-            bottom: 32,
-            child: SafeArea(
-              child: Center(
-                child: FilledButton.icon(
-                  onPressed: () => start(context),
-                  icon: const Icon(Icons.arrow_forward),
-                  label: const Text('ابدأ'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFFFA015),
-                    foregroundColor: const Color(0xFF3E007D),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 36,
-                      vertical: 16,
-                    ),
-                    textStyle: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+          SafeArea(
+            child: Column(
+              children: [
+                const Spacer(),
+                Image.asset(
+                  'assets/images/silsila_logo.png',
+                  width: 190,
+                  height: 190,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.link_rounded,
+                    size: 110,
+                    color: purple,
+                  ),
+                ),
+                const Spacer(),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: pink.withValues(alpha: 0.28),
+                            blurRadius: 18,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: FilledButton(
+                        onPressed: () => start(context),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: pink,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 17,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          textStyle: const TextStyle(
+                            fontFamily: 'Kufam',
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        child: const Text('ابدأ الآن'),
+                      ),
                     ),
                   ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class SilsilaEntryOptionsScreen extends StatelessWidget {
+  const SilsilaEntryOptionsScreen({super.key});
+
+  void _openPage(BuildContext context, Widget page) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: page,
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required String title,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(17),
+          boxShadow: [
+            BoxShadow(
+              color: pink.withValues(alpha: 0.22),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: FilledButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon),
+          label: Text(title),
+          style: FilledButton.styleFrom(
+            backgroundColor: pink,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(17),
+            ),
+            textStyle: const TextStyle(
+              fontFamily: 'Kufam',
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _storeIllustration() {
+    return SizedBox(
+      width: 250,
+      height: 225,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 205,
+            height: 205,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: purple.withValues(alpha: 0.08),
+              border: Border.all(
+                color: purple.withValues(alpha: 0.18),
+                width: 2,
+              ),
+            ),
+          ),
+          Positioned(
+            top: 4,
+            child: CircleAvatar(
+              radius: 25,
+              backgroundColor: orange,
+              child: const Icon(
+                Icons.storefront_rounded,
+                color: purple,
+                size: 29,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 4,
+            top: 77,
+            child: CircleAvatar(
+              radius: 24,
+              backgroundColor: pink,
+              child: const Icon(
+                Icons.person_rounded,
+                color: Colors.white,
+                size: 27,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 4,
+            top: 77,
+            child: CircleAvatar(
+              radius: 24,
+              backgroundColor: purple,
+              child: const Icon(
+                Icons.local_shipping_rounded,
+                color: Colors.white,
+                size: 27,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 36,
+            bottom: 2,
+            child: CircleAvatar(
+              radius: 23,
+              backgroundColor: const Color(0xFF20A67A),
+              child: const Icon(
+                Icons.inventory_2_rounded,
+                color: Colors.white,
+                size: 25,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 36,
+            bottom: 2,
+            child: CircleAvatar(
+              radius: 23,
+              backgroundColor: orange,
+              child: const Icon(
+                Icons.delivery_dining_rounded,
+                color: purple,
+                size: 27,
+              ),
+            ),
+          ),
+          Container(
+            width: 112,
+            height: 112,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(27),
+              boxShadow: [
+                BoxShadow(
+                  color: purple.withValues(alpha: 0.14),
+                  blurRadius: 20,
+                  offset: const Offset(0, 7),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.store_mall_directory_rounded,
+              color: purple,
+              size: 76,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/silsila_background.png',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) =>
+                const ColoredBox(color: canvas),
+          ),
+          ColoredBox(
+            color: Colors.white.withValues(alpha: 0.84),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Image.asset(
+                        'assets/images/silsila_logo.png',
+                        width: 100,
+                        height: 82,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.link_rounded,
+                          color: purple,
+                          size: 65,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'أهلًا بك في تطبيق سلسلة',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Kufam',
+                        color: purple,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      'منصتك لربط التجار والموردين والمناديب بالعملاء وشركات الشحن في سوق واحد.. بكل سهولة',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Kufam',
+                        color: ink,
+                        fontSize: 14,
+                        height: 1.8,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Center(child: _storeIllustration()),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'طريقة تسجيل الدخول',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Kufam',
+                        color: purple,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _actionButton(
+                      title: 'تسجيل دخول مستخدم حالي',
+                      icon: Icons.login_rounded,
+                      onPressed: () =>
+                          _openPage(context, const SilsilaLoginScreen()),
+                    ),
+                    const SizedBox(height: 13),
+                    _actionButton(
+                      title: 'إنشاء مستخدم جديد',
+                      icon: Icons.person_add_alt_1_rounded,
+                      onPressed: () =>
+                          _openPage(context, const SilsilaRegisterScreen()),
+                    ),
+                    const SizedBox(height: 13),
+                    _actionButton(
+                      title: 'تسجيل نشاط جديد',
+                      icon: Icons.add_business_rounded,
+                      onPressed: () =>
+                          _openPage(context, const SilsilaRegisterScreen()),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'سلسلة .. بنربط السوق ببعضه',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Kufam',
+                        color: purple,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
