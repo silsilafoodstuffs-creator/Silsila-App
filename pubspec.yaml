@@ -27,6 +27,6 @@ flutter:
   fonts:
     - family: Tajawal
       fonts:
-        - asset: assets/fonts/Kufam.otf
+        - asset: assets/fonts/Tajawal.ttf
 
     
