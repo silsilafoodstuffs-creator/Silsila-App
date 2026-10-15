@@ -30,6 +30,12 @@ class SilsilaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'سلسلة Silsila',
       theme: SilsilaTheme.light.copyWith(
+        textTheme: SilsilaTheme.light.textTheme.apply(
+          fontFamily: 'Kufam',
+        ),
+        primaryTextTheme: SilsilaTheme.light.primaryTextTheme.apply(
+          fontFamily: 'Kufam',
+        ),
         scaffoldBackgroundColor: canvas,
         colorScheme: ColorScheme.fromSeed(
           seedColor: purple,
