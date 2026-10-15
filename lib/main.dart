@@ -1642,27 +1642,42 @@ class SilsilaEntryOptionsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _actionButton(
-                      title: 'تسجيل دخول مستخدم حالي',
-                      icon: Icons.login_rounded,
-                      onPressed: () =>
-                          _openPage(context, const SilsilaLoginScreen()),
-                    ),
-                    const SizedBox(height: 13),
-                    _actionButton(
-                      title: 'إنشاء مستخدم جديد',
-                      icon: Icons.person_add_alt_1_rounded,
-                      onPressed: () =>
-                          _openPage(context, const SilsilaRegisterScreen()),
-                    ),
-                    const SizedBox(height: 13),
-                    _actionButton(
-                      title: 'تسجيل نشاط جديد',
-                      icon: Icons.add_business_rounded,
-                      onPressed: () =>
-                          _openPage(context, const SilsilaRegisterScreen()),
-                    ),
-                    const SizedBox(height: 20),
+                    
+_actionButton(
+  title: 'تسجيل دخول مستخدم حالي',
+  icon: Icons.login_rounded,
+  onPressed: () =>
+      _openPage(context, const SilsilaLoginScreen()),
+),
+
+const SizedBox(height: 13),
+
+_actionButton(
+  title: 'إنشاء مستخدم جديد',
+  icon: Icons.person_add_alt_1_rounded,
+  onPressed: () => _openPage(
+    context,
+    const SilsilaRegisterScreen(
+      initialAccountType: 'عميل',
+    ),
+  ),
+),
+
+const SizedBox(height: 13),
+
+_actionButton(
+  title: 'تسجيل نشاط جديد',
+  icon: Icons.add_business_rounded,
+  onPressed: () => _openPage(
+    context,
+    const SilsilaRegisterScreen(
+      initialAccountType: 'إدارة نشاط',
+    ),
+  ),
+),
+
+const SizedBox(height: 20),
+
                     const Text(
                       'سلسلة .. بنربط السوق ببعضه',
                       textAlign: TextAlign.center,
@@ -1971,6 +1986,12 @@ class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
     'أخرى',
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    accountType = widget.initialAccountType;
+  }
+  
   @override
   void dispose() {
     email.dispose();
