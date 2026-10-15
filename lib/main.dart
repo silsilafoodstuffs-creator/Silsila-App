@@ -1922,12 +1922,20 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
 // تسجيل حساب جديد
 // ============================================================
 
+
 class SilsilaRegisterScreen extends StatefulWidget {
-  const SilsilaRegisterScreen({super.key});
+  const SilsilaRegisterScreen({
+    super.key,
+    this.initialAccountType = 'عميل',
+  });
+
+  final String initialAccountType;
 
   @override
-  State<SilsilaRegisterScreen> createState() => _SilsilaRegisterScreenState();
+  State<SilsilaRegisterScreen> createState() =>
+      _SilsilaRegisterScreenState();
 }
+
 
 class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
   final formKey = GlobalKey<FormState>();
