@@ -9,7 +9,7 @@ class SilsilaTheme {
   static ThemeData get light {
     return ThemeData(
       useMaterial3: true,
-      fontFamily: 'Kufam',
+      fontFamily: 'Tajawal',
       colorScheme: ColorScheme.fromSeed(
         seedColor: purple,
         primary: purple,
@@ -22,38 +22,38 @@ class SilsilaTheme {
         foregroundColor: Colors.white,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          fontFamily: 'Kufam',
+          fontFamily: 'Tajawal',
           fontSize: 20,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
       ),
       textTheme: const TextTheme(
-        bodyLarge: TextStyle(fontFamily: 'Kufam'),
-        bodyMedium: TextStyle(fontFamily: 'Kufam'),
-        bodySmall: TextStyle(fontFamily: 'Kufam'),
+        bodyLarge: TextStyle(fontFamily: 'Tajawal'),
+        bodyMedium: TextStyle(fontFamily: 'Tajawal'),
+        bodySmall: TextStyle(fontFamily: 'Tajawal'),
         titleLarge: TextStyle(
           fontFamily: 'Kufam',
           fontWeight: FontWeight.bold,
         ),
         titleMedium: TextStyle(
-          fontFamily: 'Kufam',
+          fontFamily: 'Tajawal',
           fontWeight: FontWeight.w600,
         ),
-        titleSmall: TextStyle(fontFamily: 'Kufam'),
-        labelLarge: TextStyle(fontFamily: 'Kufam'),
-        labelMedium: TextStyle(fontFamily: 'Kufam'),
-        labelSmall: TextStyle(fontFamily: 'Kufam'),
+        titleSmall: TextStyle(fontFamily: 'Tajawal'),
+        labelLarge: TextStyle(fontFamily: 'Tajawal'),
+        labelMedium: TextStyle(fontFamily: 'Tajawal'),
+        labelSmall: TextStyle(fontFamily: 'Tajawal'),
         headlineLarge: TextStyle(
-          fontFamily: 'Kufam',
+          fontFamily: 'Tajawal',
           fontWeight: FontWeight.bold,
         ),
         headlineMedium: TextStyle(
-          fontFamily: 'Kufam',
+          fontFamily: 'Tajawal',
           fontWeight: FontWeight.bold,
         ),
         headlineSmall: TextStyle(
-          fontFamily: 'Kufam',
+          fontFamily: 'Tajawal',
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -80,22 +80,22 @@ class SilsilaTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          textStyle: const TextStyle(fontFamily: 'Kufam'),
+          textStyle: const TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          textStyle: const TextStyle(fontFamily: 'Kufam'),
+          textStyle: const TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          textStyle: const TextStyle(fontFamily: 'Kufam'),
+          textStyle: const TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          textStyle: const TextStyle(fontFamily: 'Kufam'),
+          textStyle: const TextStyle(fontFamily: 'Tajawal'),
         ),
       ),
     );
