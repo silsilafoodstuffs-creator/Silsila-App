@@ -30,12 +30,6 @@ class SilsilaApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'سلسلة Silsila',
       theme: SilsilaTheme.light.copyWith(
-        textTheme: SilsilaTheme.light.textTheme.apply(
-          fontFamily: 'Kufam',
-        ),
-        primaryTextTheme: SilsilaTheme.light.primaryTextTheme.apply(
-          fontFamily: 'Kufam',
-        ),
         scaffoldBackgroundColor: canvas,
         colorScheme: ColorScheme.fromSeed(
           seedColor: purple,
@@ -258,6 +252,9 @@ class _SilsilaHomeState extends State<SilsilaHome> {
   int page = 1;
   int tab = 0;
   int bannerIndex = 0;
+  String displayName = 'تاجر سلسلة';
+  String accountTypeLabel = 'عميل';
+  bool profileLoaded = false;
 
   final search = TextEditingController();
   final bannerController = PageController();
@@ -335,18 +332,26 @@ class _SilsilaHomeState extends State<SilsilaHome> {
   ];
 
   final List<String> categories = [
-    'السمن والزيوت',
-    'المكرونات',
-    'البقوليات',
-    'المشروبات الساخنة',
-    'المشروبات الغازية',
-    'الألبان والجبن',
-    'المنظفات',
-    'المعلبات',
-    'الحلويات',
-    'الشوكولاتة',
-    'المقرمشات',
-    'الورقيات',
+    'سمنات',
+    'زيوت',
+    'مكرونات',
+    'بقوليات',
+    'مشروبات ساخنة',
+    'مشروبات غازية',
+    'جبن',
+    'ألبان',
+    'عصائر',
+    'مقرمشات',
+    'منظفات',
+    'خردوات',
+    'مكملات طعام',
+    'مكملات حلويات',
+    'معلبات',
+    'ورقيات',
+    'مخبوزات',
+    'حلويات',
+    'شوكولاتة',
+    'أصناف أخرى',
   ];
 
   final List<Map<String, dynamic>> stories = [
@@ -356,6 +361,46 @@ class _SilsilaHomeState extends State<SilsilaHome> {
     {'name': 'الأكثر طلبًا', 'icon': Icons.trending_up, 'color': Colors.teal},
     {'name': 'اختياراتنا', 'icon': Icons.stars, 'color': Colors.deepOrange},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentProfile();
+  }
+
+  Future<void> _loadCurrentProfile() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => profileLoaded = true);
+      return;
+    }
+
+    try {
+      final profile = await Supabase.instance.client
+          .from('profiles')
+          .select('full_name, account_type')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (!mounted) return;
+      final name = (profile?['full_name'] as String?)?.trim();
+      final rawType = profile?['account_type'] as String?;
+      const labels = <String, String>{
+        'supplier': 'مورد',
+        'customer': 'عميل',
+        'delegate': 'مندوب',
+        'shipping_company': 'شركة شحن',
+        'business_admin': 'إدارة نشاط معتمدة',
+      };
+      setState(() {
+        if (name != null && name.isNotEmpty) displayName = name;
+        accountTypeLabel = labels[rawType] ?? 'عميل';
+        profileLoaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => profileLoaded = true);
+    }
+  }
 
   @override
   void dispose() {
@@ -432,7 +477,9 @@ class _SilsilaHomeState extends State<SilsilaHome> {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(child: _buildHeader()),
+        SliverToBoxAdapter(child: _demoDataNotice()),
         SliverToBoxAdapter(child: _buildSearch()),
+        SliverToBoxAdapter(child: _buildQuickOverview()),
         SliverToBoxAdapter(child: _buildBannerSlider()),
         SliverToBoxAdapter(child: _buildStories()),
         SliverToBoxAdapter(
@@ -514,6 +561,32 @@ class _SilsilaHomeState extends State<SilsilaHome> {
     );
   }
 
+  Widget _demoDataNotice() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: orange.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: orange.withValues(alpha: 0.35)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: purple, size: 18),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'نسخة تجريبية — الموردون والمنتجات والأسعار ليست بيانات بيع فعلية.',
+                style: TextStyle(color: ink, fontSize: 11, height: 1.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
@@ -533,12 +606,12 @@ class _SilsilaHomeState extends State<SilsilaHome> {
             child: const Icon(Icons.link_rounded, color: Colors.white, size: 30),
           ),
           const SizedBox(width: 11),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'أهلًا بيك في سلسلة 👋',
+                  'أهلًا ${displayName == 'تاجر سلسلة' ? 'بيك' : displayName} 👋',
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 18,
@@ -622,6 +695,132 @@ class _SilsilaHomeState extends State<SilsilaHome> {
             borderSide: const BorderSide(color: purple, width: 1.4),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuickOverview() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: const Color(0xFFECE5F2)),
+          boxShadow: [
+            BoxShadow(
+              color: purple.withValues(alpha: 0.045),
+              blurRadius: 18,
+              offset: const Offset(0, 7),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: palePurple,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.store_mall_directory_outlined,
+                      color: purple, size: 24),
+                ),
+                const SizedBox(width: 11),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('سوق الجملة في مكان واحد',
+                          style: TextStyle(
+                            color: ink,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w900,
+                          )),
+                      SizedBox(height: 4),
+                      Text('اكتشف الأقسام والموردين وابدأ تجهيز مشترياتك',
+                          style: TextStyle(
+                            color: Colors.black54,
+                            fontSize: 10,
+                            height: 1.5,
+                          )),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: orange.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text('B2B', style: TextStyle(
+                    color: purple, fontSize: 11, fontWeight: FontWeight.w900,
+                  )),
+                ),
+              ],
+            ),
+            const SizedBox(height: 15),
+            Row(
+              children: [
+                Expanded(child: _overviewMetric(Icons.storefront_outlined,
+                    '${suppliers.length}', 'موردون', purple)),
+                const SizedBox(width: 8),
+                Expanded(child: _overviewMetric(Icons.category_outlined,
+                    '${categories.length}', 'أقسام', orange)),
+                const SizedBox(width: 8),
+                Expanded(child: _overviewMetric(Icons.favorite_border_rounded,
+                    '${favorites.length}', 'مفضلة', pink)),
+              ],
+            ),
+            const SizedBox(height: 11),
+            Row(
+              children: [
+                const Icon(Icons.info_outline_rounded,
+                    color: Colors.black45, size: 14),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: Text(
+                    'نسخة استعراضية — بيانات الموردين والأسعار تحتاج إلى الربط الفعلي.',
+                    style: TextStyle(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      fontSize: 9,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _overviewMetric(IconData icon, String value, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 17),
+          const SizedBox(width: 5),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 13)),
+              Text(label, style: const TextStyle(color: ink, fontSize: 9)),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -978,6 +1177,24 @@ class _SilsilaHomeState extends State<SilsilaHome> {
               fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: 3),
+          SizedBox(
+            height: 29,
+            child: TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: purple,
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                visualDensity: VisualDensity.compact,
+              ),
+              onPressed: () {
+                final name = product['name'] as String;
+                setState(() => cart.add(name));
+                message('تمت إضافة $name إلى السلة التجريبية');
+              },
+              icon: const Icon(Icons.add_shopping_cart_rounded, size: 15),
+              label: const Text('أضف للسلة', style: TextStyle(fontSize: 10)),
+            ),
+          ),
         ],
       ),
     );
@@ -1076,12 +1293,12 @@ class _SilsilaHomeState extends State<SilsilaHome> {
                   borderRadius: BorderRadius.circular(13),
                 ),
               ),
-              onPressed: () {
-                setState(() => cart.add(name));
-                message('تمت إضافة $name للسلة التجريبية');
-              },
-              icon: const Icon(Icons.add_shopping_cart, size: 18),
-              label: const Text('إضافة للسلة'),
+              onPressed: () => _showInfo(
+                name,
+                'نوع المورد: ${supplier['type']}\n${supplier['minimum']}\n\nهذه بطاقة تجريبية. لم يتم ربط بيانات المورد أو كتالوجه بقاعدة البيانات بعد.',
+              ),
+              icon: const Icon(Icons.storefront_outlined, size: 18),
+              label: const Text('عرض تفاصيل المورد'),
             ),
           ),
         ],
@@ -1194,34 +1411,45 @@ class _SilsilaHomeState extends State<SilsilaHome> {
             gradient: const LinearGradient(colors: [purple, Color(0xFF7137A4)]),
             borderRadius: BorderRadius.circular(23),
           ),
-          child: const Row(
+          child: Row(
             children: [
-              CircleAvatar(
+              const CircleAvatar(
                 radius: 28,
                 backgroundColor: Colors.white24,
                 child: Icon(Icons.person_outline, color: Colors.white, size: 32),
               ),
-              SizedBox(width: 14),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'حساب سلسلة',
-                      style: TextStyle(
+                      displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 19,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                    SizedBox(height: 5),
+                    const SizedBox(height: 5),
                     Text(
-                      'كل خدمات تجارتك في مكان واحد',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      'حساب $accountTypeLabel • كل خدمات تجارتك في مكان واحد',
+                      style: const TextStyle(color: Colors.white70, fontSize: 11),
                     ),
                   ],
                 ),
               ),
+              if (!profileLoaded)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                ),
             ],
           ),
         ),
@@ -1312,6 +1540,174 @@ class _SilsilaHomeState extends State<SilsilaHome> {
 
 
 
+
+Widget _accountDestination(String accountType) {
+  if (accountType == 'customer') return const SilsilaHome();
+  return SilsilaRolePortalScreen(accountType: accountType);
+}
+
+class SilsilaRolePortalScreen extends StatelessWidget {
+  final String accountType;
+
+  const SilsilaRolePortalScreen({super.key, required this.accountType});
+
+  String get roleName {
+    switch (accountType) {
+      case 'supplier':
+        return 'المورد';
+      case 'delegate':
+        return 'المندوب';
+      case 'shipping_company':
+        return 'شركة الشحن';
+      case 'business_admin':
+        return 'إدارة النشاط';
+      default:
+        return 'الحساب';
+    }
+  }
+
+  String get roleDescription {
+    switch (accountType) {
+      case 'supplier':
+        return 'مساحة المورد لإدارة الأصناف والأسعار والطلبات ستُفعّل بعد تجهيز وحدات المورد وربطها بقاعدة البيانات.';
+      case 'delegate':
+        return 'مساحة المندوب لمتابعة المهام والتسليمات قيد التجهيز.';
+      case 'shipping_company':
+        return 'مساحة شركة الشحن لمتابعة الشحنات والتكليفات قيد التجهيز.';
+      case 'business_admin':
+        return 'هذا النوع لا يفعّل أدوات الإدارة تلقائيًا. يجب اعتماد صلاحيات الإدارة من جهة موثوقة قبل إتاحة أي وظائف إدارية.';
+      default:
+        return 'تعذر تحديد نوع الحساب. راجع بيانات حسابك مع الدعم.';
+    }
+  }
+
+  IconData get roleIcon {
+    switch (accountType) {
+      case 'supplier':
+        return Icons.storefront_rounded;
+      case 'delegate':
+        return Icons.badge_outlined;
+      case 'shipping_company':
+        return Icons.local_shipping_outlined;
+      case 'business_admin':
+        return Icons.admin_panel_settings_outlined;
+      default:
+        return Icons.person_outline_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: canvas,
+      appBar: AppBar(
+        title: const Text('سلسلة Silsila'),
+        actions: [
+          IconButton(
+            tooltip: 'تسجيل الخروج',
+            onPressed: () async {
+              await Supabase.instance.client.auth.signOut();
+              if (!context.mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: SilsilaSplashScreen(),
+                  ),
+                ),
+                (_) => false,
+              );
+            },
+            icon: const Icon(Icons.logout_rounded),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [purple, Color(0xFF7137A4)],
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+              ),
+              borderRadius: BorderRadius.circular(26),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(19),
+                  ),
+                  child: Icon(roleIcon, color: orange, size: 34),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'أهلًا بك في مساحة $roleName',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 23,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'سلسلة .. بنربط السوق ببعضه',
+                  style: TextStyle(color: orange, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFECE5F2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.construction_rounded, color: orange),
+                    SizedBox(width: 8),
+                    Text(
+                      'المساحة قيد التجهيز',
+                      style: TextStyle(
+                        color: purple,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  roleDescription,
+                  style: const TextStyle(color: ink, height: 1.8),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'تم توجيهك حسب نوع الحساب المسجل في قاعدة البيانات. لن تظهر وظائف غير جاهزة أو صلاحيات إدارية من شاشة التسجيل.',
+            style: TextStyle(color: Colors.black54, fontSize: 12, height: 1.7),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class SilsilaSplashScreen extends StatelessWidget {
   const SilsilaSplashScreen({super.key});
@@ -1642,42 +2038,29 @@ class SilsilaEntryOptionsScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
-_actionButton(
-  title: 'تسجيل دخول مستخدم حالي',
-  icon: Icons.login_rounded,
-  onPressed: () =>
-      _openPage(context, const SilsilaLoginScreen()),
-),
-
-const SizedBox(height: 13),
-
-_actionButton(
-  title: 'إنشاء مستخدم جديد',
-  icon: Icons.person_add_alt_1_rounded,
-  onPressed: () => _openPage(
-    context,
-    const SilsilaRegisterScreen(
-      initialAccountType: 'عميل',
-    ),
-  ),
-),
-
-const SizedBox(height: 13),
-
-_actionButton(
-  title: 'تسجيل نشاط جديد',
-  icon: Icons.add_business_rounded,
-  onPressed: () => _openPage(
-    context,
-    const SilsilaRegisterScreen(
-      initialAccountType: 'إدارة نشاط',
-    ),
-  ),
-),
-
-const SizedBox(height: 20),
-
+                    _actionButton(
+                      title: 'تسجيل دخول مستخدم حالي',
+                      icon: Icons.login_rounded,
+                      onPressed: () =>
+                          _openPage(context, const SilsilaLoginScreen()),
+                    ),
+                    const SizedBox(height: 13),
+                    _actionButton(
+                      title: 'إنشاء حساب جديد',
+                      icon: Icons.person_add_alt_1_rounded,
+                      onPressed: () =>
+                          _openPage(context, const SilsilaRegisterScreen()),
+                    ),
+                    const SizedBox(height: 13),
+                    _actionButton(
+                      title: 'تسجيل نشاط تجاري جديد',
+                      icon: Icons.add_business_rounded,
+                      onPressed: () => _openPage(
+                        context,
+                        const SilsilaRegisterScreen(activityRegistration: true),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     const Text(
                       'سلسلة .. بنربط السوق ببعضه',
                       textAlign: TextAlign.center,
@@ -1747,18 +2130,35 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
     setState(() => isLoading = true);
 
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
+      final authResponse = await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
       );
+      final user = authResponse.user;
+      if (user == null) {
+        showMessage('تم التحقق من الدخول لكن لم نستطع تحديد الحساب. حاول مرة أخرى.');
+        return;
+      }
+
+      final profile = await Supabase.instance.client
+          .from('profiles')
+          .select('account_type')
+          .eq('id', user.id)
+          .maybeSingle();
 
       if (!mounted) return;
+      final accountType = profile?['account_type'] as String?;
+      if (accountType == null || accountType.isEmpty) {
+        showMessage('تم تسجيل الدخول، لكن ملف الحساب غير مكتمل. تواصل مع الدعم قبل متابعة الاستخدام.');
+        return;
+      }
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
-          builder: (_) => const Directionality(
+          builder: (_) => Directionality(
             textDirection: TextDirection.rtl,
-            child: SilsilaHome(),
+            child: _accountDestination(accountType),
           ),
         ),
         (_) => false,
@@ -1937,20 +2337,17 @@ class _SilsilaLoginScreenState extends State<SilsilaLoginScreen> {
 // تسجيل حساب جديد
 // ============================================================
 
-
 class SilsilaRegisterScreen extends StatefulWidget {
+  final bool activityRegistration;
+
   const SilsilaRegisterScreen({
     super.key,
-    this.initialAccountType = 'عميل',
+    this.activityRegistration = false,
   });
 
-  final String initialAccountType;
-
   @override
-  State<SilsilaRegisterScreen> createState() =>
-      _SilsilaRegisterScreenState();
+  State<SilsilaRegisterScreen> createState() => _SilsilaRegisterScreenState();
 }
-
 
 class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
   final formKey = GlobalKey<FormState>();
@@ -1975,7 +2372,6 @@ class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
     'عميل',
     'مندوب',
     'شركة شحن',
-    'إدارة نشاط',
   ];
 
   final governorates = const [
@@ -1986,12 +2382,6 @@ class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
     'أخرى',
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    accountType = widget.initialAccountType;
-  }
-  
   @override
   void dispose() {
     email.dispose();
@@ -2093,7 +2483,6 @@ class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
             'عميل': 'customer',
             'مندوب': 'delegate',
             'شركة شحن': 'shipping_company',
-            'إدارة نشاط': 'business_admin',
           }[accountType] ?? 'customer',
           'governorate': governorate,
           'district': address.text.trim(),
@@ -2109,12 +2498,23 @@ class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
         showMessage('تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيده.');
         Navigator.pop(context);
       } else {
+        final profile = await Supabase.instance.client
+            .from('profiles')
+            .select('account_type')
+            .eq('id', response.user!.id)
+            .maybeSingle();
+        if (!mounted) return;
+        final createdType = profile?['account_type'] as String?;
+        if (createdType == null || createdType.isEmpty) {
+          showMessage('تم إنشاء حساب الدخول، لكن ملف النشاط لم يكتمل. لا تغلق التطبيق وراجع إعدادات قاعدة البيانات.');
+          return;
+        }
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (_) => const Directionality(
+            builder: (_) => Directionality(
               textDirection: TextDirection.rtl,
-              child: SilsilaHome(),
+              child: _accountDestination(createdType),
             ),
           ),
           (_) => false,
@@ -2182,6 +2582,30 @@ class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
                           () => accountType = value ?? 'عميل',
                         ),
               ),
+              if (widget.activityRegistration) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(13),
+                  decoration: BoxDecoration(
+                    color: orange.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: orange.withValues(alpha: 0.55)),
+                  ),
+                  child: const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline_rounded, color: purple),
+                      SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          'سجّل بيانات نشاطك التجاري كحساب عميل للشراء من الموردين. صلاحيات إدارة المنصة لا تُمنح من شاشة التسجيل وتحتاج إلى اعتماد منفصل.',
+                          style: TextStyle(color: ink, fontSize: 12, height: 1.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               textField(email, 'البريد الإلكتروني', Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress),
