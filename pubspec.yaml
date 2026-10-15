@@ -25,7 +25,7 @@ flutter:
     - assets/images/silsila_logo.png
     - assets/images/silsila_background.png
   fonts:
-    - family: Kufam
+    - family: Tajawal
       fonts:
         - asset: assets/fonts/Kufam.otf
 
