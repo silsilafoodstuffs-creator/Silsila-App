@@ -282,53 +282,56 @@ class _SilsilaHomeState extends State<SilsilaHome> {
     },
   ];
 
+  // بيانات موردين افتراضية للاختبار فقط، وليست حسابات دخول حقيقية.
   final List<Map<String, String>> suppliers = [
-    {
-      'name': 'مؤسسة الأمان للمواد الغذائية',
-      'type': 'تاجر جملة',
-      'minimum': 'الحد الأدنى 2000 جنيه',
-    },
-    {
-      'name': 'شركة الخير للتوزيع',
-      'type': 'شركة توزيع',
-      'minimum': 'الحد الأدنى 1500 جنيه',
-    },
-    {
-      'name': 'تجار المستقبل',
-      'type': 'تاجر جملة جملة',
-      'minimum': 'الحد الأدنى 3000 جنيه',
-    },
+    {'name': 'سلسلة للمواد الغذائية', 'type': 'تاجر جملة', 'minimum': 'الحد الأدنى 3000 جنيه'},
+    {'name': 'مؤسسة الأمان للمواد الغذائية', 'type': 'تاجر جملة', 'minimum': 'الحد الأدنى 2000 جنيه'},
+    {'name': 'شركة الخير للتوزيع', 'type': 'شركة توزيع', 'minimum': 'الحد الأدنى 1500 جنيه'},
+    {'name': 'تجار المستقبل', 'type': 'تاجر جملة جملة', 'minimum': 'الحد الأدنى 3000 جنيه'},
+    {'name': 'النور لتجارة الجملة', 'type': 'تاجر جملة', 'minimum': 'الحد الأدنى 2500 جنيه'},
+    {'name': 'الصفوة للتوريدات', 'type': 'شركة توزيع', 'minimum': 'الحد الأدنى 2000 جنيه'},
+    {'name': 'البركة للزيوت والسمن', 'type': 'تاجر جملة', 'minimum': 'الحد الأدنى 1800 جنيه'},
+    {'name': 'أولاد البلد للمكرونة والبقوليات', 'type': 'تاجر جملة', 'minimum': 'الحد الأدنى 1200 جنيه'},
+    {'name': 'رواد المشروبات والعصائر', 'type': 'شركة توزيع', 'minimum': 'الحد الأدنى 2200 جنيه'},
+    {'name': 'المخزن الاقتصادي للسوبر ماركت', 'type': 'تاجر جملة جملة', 'minimum': 'الحد الأدنى 3500 جنيه'},
   ];
 
+  // عملاء افتراضيون للسيناريوهات التجريبية فقط، لا يتم إنشاء حسابات Auth لهم.
+  final List<Map<String, String>> demoCustomers = [
+    {'name': 'سوبر ماركت النخبة', 'type': 'سوبر ماركت'},
+    {'name': 'ماركت الرحمة', 'type': 'بقالة'},
+    {'name': 'تجارة أولاد حسن', 'type': 'تاجر نصف جملة'},
+    {'name': 'سوبر ماركت الأمل', 'type': 'سوبر ماركت'},
+    {'name': 'بقالة البركة', 'type': 'بقالة'},
+    {'name': 'ماركت الإيمان', 'type': 'سوبر ماركت'},
+    {'name': 'مؤسسة الفجر التجارية', 'type': 'تاجر نصف جملة'},
+    {'name': 'سوبر ماركت المدينة', 'type': 'سوبر ماركت'},
+    {'name': 'بقالة السلام', 'type': 'بقالة'},
+    {'name': 'ماركت الصفاء', 'type': 'سوبر ماركت'},
+  ];
+
+  // كتالوج وأسعار افتراضية للاختبار؛ لا تمثل عروض بيع حقيقية.
   final List<Map<String, dynamic>> products = [
-    {
-      'name': 'زيت طعام',
-      'description': 'منتجات الزيوت',
-      'price': 'السعر عند المورد',
-      'icon': Icons.water_drop_outlined,
-      'color': orange,
-    },
-    {
-      'name': 'مكرونة',
-      'description': 'أصناف متنوعة',
-      'price': 'السعر عند المورد',
-      'icon': Icons.ramen_dining_outlined,
-      'color': purple,
-    },
-    {
-      'name': 'مشروبات',
-      'description': 'مشروبات وعصائر',
-      'price': 'السعر عند المورد',
-      'icon': Icons.local_drink_outlined,
-      'color': pink,
-    },
-    {
-      'name': 'منظفات',
-      'description': 'احتياجات المحل',
-      'price': 'السعر عند المورد',
-      'icon': Icons.cleaning_services_outlined,
-      'color': Colors.teal,
-    },
+    {'name': 'زيت خليط 1 لتر', 'description': 'زيوت • كرتونة 12 عبوة', 'price': 'سعر تجريبي 780 ج.م', 'icon': Icons.water_drop_outlined, 'color': orange},
+    {'name': 'زيت عباد الشمس 1 لتر', 'description': 'زيوت • كرتونة 12 عبوة', 'price': 'سعر تجريبي 960 ج.م', 'icon': Icons.water_drop, 'color': orange},
+    {'name': 'سمن نباتي 1.5 كجم', 'description': 'سمنات • كرتونة 6 عبوات', 'price': 'سعر تجريبي 720 ج.م', 'icon': Icons.breakfast_dining, 'color': orange},
+    {'name': 'مكرونة 400 جم', 'description': 'مكرونات • كرتونة 20 كيس', 'price': 'سعر تجريبي 420 ج.م', 'icon': Icons.ramen_dining_outlined, 'color': purple},
+    {'name': 'أرز أبيض 1 كجم', 'description': 'حبوب وبقوليات • شيكارة', 'price': 'سعر تجريبي 950 ج.م', 'icon': Icons.grain, 'color': purple},
+    {'name': 'سكر أبيض 1 كجم', 'description': 'سلع أساسية • شيكارة', 'price': 'سعر تجريبي 1100 ج.م', 'icon': Icons.icecream_outlined, 'color': pink},
+    {'name': 'شاي أسود 250 جم', 'description': 'مشروبات ساخنة • كرتونة', 'price': 'سعر تجريبي 840 ج.م', 'icon': Icons.coffee_outlined, 'color': purple},
+    {'name': 'صلصة طماطم 300 جم', 'description': 'معلبات • كرتونة 24 عبوة', 'price': 'سعر تجريبي 360 ج.م', 'icon': Icons.inventory_2_outlined, 'color': orange},
+    {'name': 'فول مدمس 400 جم', 'description': 'معلبات • كرتونة 24 علبة', 'price': 'سعر تجريبي 480 ج.م', 'icon': Icons.lunch_dining_outlined, 'color': orange},
+    {'name': 'عصير مانجو 1 لتر', 'description': 'عصائر • كرتونة 12 عبوة', 'price': 'سعر تجريبي 540 ج.م', 'icon': Icons.local_drink_outlined, 'color': pink},
+    {'name': 'مشروب غازي  cola', 'description': 'مشروبات غازية • عبوة', 'price': 'سعر تجريبي 300 ج.م', 'icon': Icons.local_drink, 'color': pink},
+    {'name': 'بسكويت سادة', 'description': 'مقرمشات وحلويات • كرتونة', 'price': 'سعر تجريبي 390 ج.م', 'icon': Icons.cookie_outlined, 'color': orange},
+    {'name': 'شيبسي بطعم الجبنة', 'description': 'مقرمشات • كرتونة', 'price': 'سعر تجريبي 450 ج.م', 'icon': Icons.fastfood_outlined, 'color': pink},
+    {'name': 'لبن طويل الأجل 1 لتر', 'description': 'ألبان • كرتونة 12 عبوة', 'price': 'سعر تجريبي 660 ج.م', 'icon': Icons.local_cafe_outlined, 'color': purple},
+    {'name': 'جبنة بيضاء 500 جم', 'description': 'جبن • عبوة', 'price': 'سعر تجريبي 600 ج.م', 'icon': Icons.breakfast_dining_outlined, 'color': orange},
+    {'name': 'منظف أرضيات 1 لتر', 'description': 'منظفات • كرتونة', 'price': 'سعر تجريبي 480 ج.م', 'icon': Icons.cleaning_services_outlined, 'color': Colors.teal},
+    {'name': 'سائل أطباق 650 مل', 'description': 'منظفات • كرتونة', 'price': 'سعر تجريبي 420 ج.م', 'icon': Icons.soap_outlined, 'color': Colors.teal},
+    {'name': 'مناديل ورقية', 'description': 'ورقيات • باكيتات', 'price': 'سعر تجريبي 350 ج.م', 'icon': Icons.cleaning_services, 'color': purple},
+    {'name': 'خل أبيض 1 لتر', 'description': 'مواد غذائية • كرتونة', 'price': 'سعر تجريبي 240 ج.م', 'icon': Icons.water_drop, 'color': orange},
+    {'name': 'عدس أصفر 1 كجم', 'description': 'حبوب وبقوليات • شيكارة', 'price': 'سعر تجريبي 1250 ج.م', 'icon': Icons.grain, 'color': purple},
   ];
 
   final List<String> categories = [
@@ -1460,8 +1463,12 @@ class _SilsilaHomeState extends State<SilsilaHome> {
             'سجل الطلبات الحقيقي سيتم ربطه بقاعدة البيانات.'),
         _menuItem(Icons.favorite_outline, 'الموردون المفضلون',
             favorites.isEmpty ? 'لا توجد عناصر في المفضلة.' : favorites.join('\n')),
+        _menuItem(Icons.groups_outlined, 'عملاء تجريبيون',
+            demoCustomers.map((item) => '${item['name']} — ${item['type']}').join('\n')),
         _menuItem(Icons.account_balance_wallet_outlined, 'رصيدي ومحفظتي',
             'خدمات المحفظة ستتاح بعد تجهيز النظام المالي.'),
+        _menuItem(Icons.receipt_long_rounded, 'كشف حسابي',
+            'كشف حساب تجريبي للاختبار: رصيد افتتاحي 0.00 ج.م، إجمالي مدين 0.00 ج.م، إجمالي دائن 0.00 ج.م، الرصيد الحالي 0.00 ج.م. سيتم ربط الحركات الفعلية بقاعدة البيانات لاحقًا.'),
         _menuItem(Icons.local_offer_outlined, 'العروض',
             'العروض الحالية تجريبية لحين ربطها بالموردين.'),
         _menuItem(Icons.settings_outlined, 'الإعدادات',
@@ -2375,11 +2382,11 @@ class _SilsilaRegisterScreenState extends State<SilsilaRegisterScreen> {
   ];
 
   final governorates = const [
-    'القاهرة',
-    'الجيزة',
-    'القليوبية',
-    'الإسكندرية',
-    'أخرى',
+    'القاهرة', 'الجيزة', 'الإسكندرية', 'القليوبية', 'البحيرة',
+    'مطروح', 'دمياط', 'الدقهلية', 'كفر الشيخ', 'الغربية', 'المنوفية',
+    'الشرقية', 'بورسعيد', 'الإسماعيلية', 'السويس', 'شمال سيناء',
+    'جنوب سيناء', 'بني سويف', 'الفيوم', 'المنيا', 'أسيوط', 'سوهاج',
+    'قنا', 'الأقصر', 'أسوان', 'البحر الأحمر', 'الوادي الجديد',
   ];
 
   @override
