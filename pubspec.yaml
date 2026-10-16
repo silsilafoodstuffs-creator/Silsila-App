@@ -6,6 +6,7 @@ version: 1.0.0+1
 environment:
   sdk: '>=3.3.0 <4.0.0'
 
+
 dependencies:
   flutter:
     sdk: flutter
@@ -16,7 +17,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
@@ -24,9 +25,18 @@ flutter:
     - assets/images/silsila_splash.png
     - assets/images/silsila_logo.png
     - assets/images/silsila_background.png
+    - assets/images/silsila_icon_app.png
   fonts:
     - family: Tajawal
       fonts:
         - asset: assets/fonts/Tajawal.ttf
 
-    
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/silsila_icon_app.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/silsila_icon_app.png"
+  remove_alpha_ios: true
+```
