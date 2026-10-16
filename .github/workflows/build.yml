@@ -1,3 +1,4 @@
+```yaml
 name: Build Silsila Android App
 
 'on':
@@ -17,13 +18,11 @@ jobs:
       - name: Download project
         uses: actions/checkout@v4
 
-
       - name: Locate Flutter project
         run: |
           pwd
           ls -la
           find . -name pubspec.yaml -not -path '*/.dart_tool/*'
-
 
       - name: Install Flutter
         uses: subosito/flutter-action@v2
@@ -33,7 +32,6 @@ jobs:
 
       - name: Generate Flutter platform files
         run: flutter create --project-name=silsila_app --platforms=android,web .
-
 
       - name: Ensure Android internet permission
         run: |
@@ -60,12 +58,13 @@ jobs:
           print("SUCCESS: Android internet permission is present")
           PY
 
-        
-      
       - name: Get dependencies
         run: |
           flutter pub get
           flutter pub deps
+
+      - name: Generate Silsila App Icon
+        run: dart run flutter_launcher_icons
 
       - name: Configure permanent signing key
         env:
@@ -141,16 +140,12 @@ jobs:
           print("Permanent signing configuration prepared")
           PY
 
-      
       - name: Check code
         run: flutter analyze lib
         continue-on-error: true
 
-
       - name: Build Android APK
         run: flutter build apk --release
-
-
 
       - name: Verify APK signature
         shell: bash
@@ -179,7 +174,6 @@ jobs:
 
           echo "SUCCESS: APK signature matches the permanent signing certificate"
 
-
       - name: Check APK package ID
         run: |
           APK="build/app/outputs/flutter-apk/app-release.apk"
@@ -197,3 +191,4 @@ jobs:
           name: silsila-android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
+```
