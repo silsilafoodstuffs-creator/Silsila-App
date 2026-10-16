@@ -1,3 +1,4 @@
+```yaml
 name: silsila_app
 description: Silsila wholesale food trading application.
 publish_to: 'none'
@@ -32,9 +33,10 @@ flutter:
 
 flutter_launcher_icons:
   android: true
-  ios: true
+  ios: false
   image_path: "assets/images/silsila_icon_App.png"
   min_sdk_android: 21
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/images/silsila_icon_App.png"
   remove_alpha_ios: true
+```
