@@ -102,7 +102,11 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
   Future<void> _openFix(Map<String, dynamic> issue) async {
     final route = (issue['repair_route'] ?? '').toString();
     final code = (issue['issue_code'] ?? '').toString();
-    if (route == 'journal_draft' || route == 'journal_reversal') {
+    if (code == 'JOURNAL_CLOSED_PERIOD' || code == 'JOURNAL_NO_FISCAL_PERIOD') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpFiscalPeriodsScreen(initialCompanyId: _company.text.trim()),
+      ));
+    } else if (route == 'journal_draft' || route == 'journal_reversal') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => ErpJournalEntriesScreen(
           initialCompanyId: _company.text.trim(),
