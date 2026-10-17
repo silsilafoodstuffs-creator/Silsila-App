@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/trader_market_service.dart';
 import 'services/order_status_service.dart';
 import 'services/wallet_service.dart';
+import 'services/profile_service.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -1089,14 +1090,7 @@ class _MainShellState extends State<MainShell> {
           menuItem(
             Icons.settings_outlined,
             'إعدادات الحساب',
-            () => openPage(
-              'إعدادات الحساب',
-              const SimpleListPage(
-                title: 'إعدادات الحساب',
-                details: 'إدارة البيانات والعناوين وكلمة المرور.',
-                icon: Icons.settings,
-              ),
-            ),
+            () => openPage('إعدادات الحساب', const ProfileEditorScreen()),
           ),
           menuItem(
             Icons.logout_rounded,
@@ -2040,6 +2034,185 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           ),
         ],
       );
+}
+
+class ProfileEditorScreen extends StatefulWidget {
+  const ProfileEditorScreen({super.key});
+
+  @override
+  State<ProfileEditorScreen> createState() => _ProfileEditorScreenState();
+}
+
+class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final whatsappController = TextEditingController();
+  final districtController = TextEditingController();
+  final areaController = TextEditingController();
+  final addressController = TextEditingController();
+  final service = ProfileService();
+  String activity = 'مواد غذائية';
+  String governorate = 'القاهرة';
+  bool loading = true;
+  bool saving = false;
+  String? loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    loadProfile();
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    whatsappController.dispose();
+    districtController.dispose();
+    areaController.dispose();
+    addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final profile = await service.getMyProfile();
+      if (profile != null) {
+        nameController.text = (profile['full_name'] ?? '').toString();
+        whatsappController.text = (profile['whatsapp_phone'] ?? '').toString();
+        districtController.text = (profile['district'] ?? '').toString();
+        areaController.text = (profile['area'] ?? '').toString();
+        addressController.text = (profile['address'] ?? '').toString();
+        final savedActivity = (profile['activity_type'] ?? '').toString();
+        if (activityTypes.contains(savedActivity)) activity = savedActivity;
+        final savedGovernorate = (profile['governorate'] ?? '').toString();
+        if (const ['القاهرة','الجيزة','القليوبية','الإسكندرية','الشرقية'].contains(savedGovernorate)) {
+          governorate = savedGovernorate;
+        }
+      }
+    } catch (_) {
+      loadError = 'تعذر تحميل البيانات. تأكد من تسجيل الدخول.';
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> saveProfile() async {
+    if (!formKey.currentState!.validate()) return;
+    setState(() => saving = true);
+    try {
+      await service.saveMyProfile(
+        fullName: nameController.text,
+        activityType: activity,
+        whatsappPhone: whatsappController.text,
+        governorate: governorate,
+        district: districtController.text,
+        area: areaController.text,
+        address: addressController.text,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم حفظ بيانات الحساب.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر حفظ البيانات. تأكد من تسجيل الدخول وصلاحيات الحساب.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator(color: purple));
+    }
+    if (loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.person_off_outlined, size: 58, color: purple),
+              Text(loadError!, textAlign: TextAlign.center),
+              TextButton(onPressed: () => setState(() { loading = true; loadError = null; loadProfile(); }), child: const Text('إعادة المحاولة')),
+            ],
+          ),
+        ),
+      );
+    }
+    return Form(
+      key: formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Icon(Icons.manage_accounts_outlined, size: 58, color: purple),
+          const SizedBox(height: 8),
+          const Text('بيانات الحساب', textAlign: TextAlign.center, style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 18),
+          TextFormField(
+            controller: nameController,
+            decoration: const InputDecoration(labelText: 'الاسم أو اسم النشاط'),
+            validator: requiredValidator,
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: activity,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'نوع النشاط'),
+            items: activityTypes.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+            onChanged: (value) => setState(() => activity = value ?? activity),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: whatsappController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'رقم واتساب'),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: governorate,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'المحافظة'),
+            items: const [
+              DropdownMenuItem(value: 'القاهرة', child: Text('القاهرة')),
+              DropdownMenuItem(value: 'الجيزة', child: Text('الجيزة')),
+              DropdownMenuItem(value: 'القليوبية', child: Text('القليوبية')),
+              DropdownMenuItem(value: 'الإسكندرية', child: Text('الإسكندرية')),
+              DropdownMenuItem(value: 'الشرقية', child: Text('الشرقية')),
+            ],
+            onChanged: (value) => setState(() => governorate = value ?? governorate),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(controller: districtController, decoration: const InputDecoration(labelText: 'المركز أو المدينة')),
+          const SizedBox(height: 12),
+          TextFormField(controller: areaController, decoration: const InputDecoration(labelText: 'القرية أو الحي')),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: addressController,
+            maxLines: 2,
+            decoration: const InputDecoration(labelText: 'العنوان بالتفصيل'),
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: saving ? null : saveProfile,
+            icon: const Icon(Icons.save_outlined),
+            label: Text(saving ? 'جارٍ الحفظ...' : 'حفظ البيانات'),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'تغيير نوع الحساب وحالة الاعتماد ورقم الدخول يخضع لصلاحيات النظام.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class WalletOverviewScreen extends StatefulWidget {
