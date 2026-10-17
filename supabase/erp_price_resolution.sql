@@ -37,7 +37,7 @@ declare
   v_currency char(3) := 'EGP';
   v_source text := 'item_master';
 begin
-  if p_price_kind not in ('sale','purchase') then
+  if p_price_kind is null or p_price_kind not in ('sale','purchase') then
     raise exception 'نوع التسعير يجب أن يكون sale أو purchase';
   end if;
   if p_quantity is null or p_quantity <= 0 then
