@@ -388,7 +388,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               : ['delivery','invoice','return'].contains(type);
           final canPost = status == 'draft' && eligibleType;
           final date = _s(r['document_date']);
-          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () async { setState(() { _selectedDocumentId = _s(r['id']); _partyId = _s(widget.kind == ErpOperationalKind.purchase ? r['supplier_id'] : r['customer_id']); _warehouseId = _s(r['warehouse_id']); }); await _loadLines(_s(r['id'])); }, child: Padding(padding: const EdgeInsets.all(12), child: Column(
+          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () async { setState(() { _selectedDocumentId = _s(r['id']); _documentType = _s(r['document_type']); _partyId = _s(widget.kind == ErpOperationalKind.purchase ? r['supplier_id'] : r['customer_id']); _warehouseId = _s(r['warehouse_id']); }); await _loadLines(_s(r['id'])); }, child: Padding(padding: const EdgeInsets.all(12), child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(children: [
