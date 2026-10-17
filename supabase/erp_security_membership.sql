@@ -137,6 +137,9 @@ begin
     if v_count < 2 or v_debit <= 0 or v_debit <> v_credit then
       raise exception 'لا يمكن ترحيل القيد دون سطور متوازنة';
     end if;
+    if new.posted_by is null or new.posted_at is null then
+      raise exception 'بيانات المستخدم ووقت الترحيل مطلوبة';
+    end if;
     if exists (
       select 1 from public.erp_journal_lines l
       join public.erp_accounts a on a.id = l.account_id
