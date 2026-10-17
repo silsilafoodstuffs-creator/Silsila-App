@@ -155,6 +155,10 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => ErpInventoryMasterScreen(initialCompanyId: _company.text.trim(), initialView: 'warehouses'),
       ));
+    } else if (route == 'groups') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpInventoryMasterScreen(initialCompanyId: _company.text.trim(), initialView: 'groups'),
+      ));
     } else if (route == 'items') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => ErpInventoryMasterScreen(initialCompanyId: _company.text.trim(), initialView: 'items'),
