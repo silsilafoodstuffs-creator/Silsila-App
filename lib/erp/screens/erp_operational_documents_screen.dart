@@ -54,7 +54,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     _selectedDocumentId = widget.initialDocumentId;
     if (widget.initialDocumentId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _load();
+        await _load(clearMessage: false);
         if (mounted && _selectedDocumentId != null) {
           await _loadLines(_selectedDocumentId!);
         }
@@ -71,12 +71,12 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
 
-  Future<void> _load() async {
+  Future<void> _load({bool clearMessage = true}) async {
     if (_company.text.trim().isEmpty) {
       setState(() => _error = 'أدخل معرّف الشركة أولًا.');
       return;
     }
-    setState(() { _loading = true; _error = null; _message = null; });
+    setState(() { _loading = true; _error = null; if (clearMessage) _message = null; });
     try {
       final results = await Future.wait([
         _repo.fetchDocuments(companyId: _company.text, kind: widget.kind),
@@ -134,7 +134,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       if (!mounted) return;
       _documentNumber.clear(); _notes.clear();
       setState(() { _saving = false; _selectedDocumentId = id; _message = 'تم إنشاء مسودة المستند. أضف البنود ثم رحّلها.'; });
-      await _load();
+      await _load(clearMessage: false);
       if (mounted) setState(() => _selectedDocumentId = id);
     } catch (e) {
       if (!mounted) return;
@@ -199,7 +199,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         itemId: _itemId!, quantity: quantity, unitPrice: price, discount: discount, tax: tax);
       if (!mounted) return;
       setState(() { _saving = false; _message = 'تمت إضافة البند وتحديث إجمالي المستند.'; });
-      await _load();
+      await _load(clearMessage: false);
       if (mounted && _selectedDocumentId != null) await _loadLines(_selectedDocumentId!);
     } catch (e) {
       if (!mounted) return;
@@ -234,7 +234,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       );
       if (!mounted) return;
       setState(() { _loading = false; _message = 'تم إنشاء/تأكيد القيد المحاسبي للمستند $number. رقم معرّف القيد: $id'; });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر ترحيل الأثر المحاسبي: $e'; });
@@ -257,7 +257,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       await _repo.postDocument(_s(row['id']), widget.kind);
       if (!mounted) return;
       setState(() { _loading = false; _message = 'تم ترحيل المستند $number وتسجيل حركات المخزون.'; });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر ترحيل المستند: $e'; });
