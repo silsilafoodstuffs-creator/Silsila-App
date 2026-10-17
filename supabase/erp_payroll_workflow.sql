@@ -135,6 +135,14 @@ begin
     if old.status <> 'draft' or new.approved_by is null or new.approved_at is null then
       raise exception 'اعتماد مسير الرواتب يجب أن يتم من إجراء الاعتماد';
     end if;
+    if new.employee_count = 0 or new.gross_total <= 0 or not exists (
+      select 1 from public.erp_payroll_lines l where l.payroll_run_id = old.id
+    ) or new.employee_count <> (select count(*) from public.erp_payroll_lines l where l.payroll_run_id = old.id)
+      or new.gross_total <> (select coalesce(sum(l.gross_amount),0) from public.erp_payroll_lines l where l.payroll_run_id = old.id)
+      or new.deduction_total <> (select coalesce(sum(l.deductions),0) from public.erp_payroll_lines l where l.payroll_run_id = old.id)
+      or new.net_total <> (select coalesce(sum(l.net_amount),0) from public.erp_payroll_lines l where l.payroll_run_id = old.id) then
+      raise exception 'لا يمكن اعتماد مسير الرواتب قبل مطابقة إجمالياته مع تفاصيل الموظفين';
+    end if;
   elsif new.status = 'posted' then
     if old.status <> 'approved' or new.journal_entry_id is null or not exists (
       select 1 from public.erp_journal_entries j
