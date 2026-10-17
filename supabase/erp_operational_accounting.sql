@@ -222,7 +222,13 @@ begin
   from public.erp_inventory_movements m
   where m.company_id = v_company_id
     and m.reference_id = p_document_id
-    and m.reference_type = case when p_kind = 'purchase' then 'purchase_document' else 'sales_document' end;
+    and m.reference_type = case when p_kind = 'purchase' then 'purchase_document' else 'sales_document' end
+    and m.movement_type = case
+      when p_kind = 'purchase' and v_doc_type = 'return' then 'supplier_return'
+      when p_kind = 'purchase' then 'purchase_receipt'
+      when p_kind = 'sales' and v_doc_type = 'return' then 'customer_return'
+      else 'sales_issue'
+    end;
   if v_line_count = 0 or v_movement_count <> v_line_count then
     raise exception 'حركات المخزون لا تطابق عدد بنود المستند؛ راجع المستند قبل الترحيل المحاسبي';
   end if;
