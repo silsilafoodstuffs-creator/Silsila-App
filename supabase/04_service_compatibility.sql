@@ -138,4 +138,14 @@ CREATE TRIGGER silsila_profiles_role_compatibility
 BEFORE INSERT OR UPDATE OF account_type, role ON public.profiles
 FOR EACH ROW EXECUTE FUNCTION public.silsila_sync_profile_role();
 
+-- A limited public directory avoids exposing all profile columns just to discover suppliers.
+CREATE OR REPLACE VIEW public.supplier_directory AS
+SELECT id, full_name, activity_type, supplier_type, governorate, district,
+       address, account_status
+FROM public.profiles
+WHERE role = 'supplier'
+  AND account_status IN ('approved', 'active', 'مفعل', 'معتمد');
+
+GRANT SELECT ON public.supplier_directory TO anon, authenticated;
+
 COMMIT;
