@@ -30,7 +30,10 @@ begin
   if nullif(trim(p_description), '') is null then
     raise exception 'بيان القيد مطلوب';
   end if;
-  if jsonb_typeof(p_lines) <> 'array' or jsonb_array_length(p_lines) < 2 then
+  if p_lines is null or jsonb_typeof(p_lines) is distinct from 'array' then
+    raise exception 'سطور القيد يجب أن تُرسل في صورة قائمة';
+  end if;
+  if jsonb_array_length(p_lines) < 2 then
     raise exception 'يجب إدخال سطرين على الأقل في القيد';
   end if;
 
