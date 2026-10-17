@@ -1,6 +1,10 @@
 -- Persist supplier favorites separately from product favorites.
 BEGIN;
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_favorites_user_product_unique
+  ON public.favorites(user_id, product_id)
+  WHERE product_id IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS public.supplier_favorites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
