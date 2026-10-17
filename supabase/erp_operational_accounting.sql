@@ -36,6 +36,9 @@ declare
   v_account_id uuid;
   v_company_id uuid;
 begin
+  if tg_op = 'UPDATE' and old.company_id is distinct from new.company_id then
+    raise exception 'لا يمكن نقل خريطة الحسابات إلى شركة أخرى؛ أنشئ خريطة مستقلة للشركة المطلوبة';
+  end if;
   if (
     select count(*) from unnest(array[
       new.accounts_receivable_account_id,
