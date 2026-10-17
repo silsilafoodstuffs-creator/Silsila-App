@@ -32,6 +32,7 @@ from (values
   ('erp_sales_documents','table'),
   ('erp_sales_lines','table'),
   ('erp_stock_balances','view'),
+  ('erp_employee_directory','view'),
   ('erp_account_ledger_totals','view'),
   ('erp_account_tree_metrics','view'),
   ('erp_general_ledger','view'),
