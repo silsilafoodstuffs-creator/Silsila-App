@@ -3298,10 +3298,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
+    final normalizedPhone = normalizePhoneForAuth(phoneController.text);
     setState(() => busy = true);
     try {
       final response = await client.auth.signUp(
-        phone: phoneController.text.trim(),
+        phone: normalizedPhone,
         password: passwordController.text,
         data: {
           'full_name': nameController.text.trim(),
@@ -3311,8 +3312,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'supplier_type': supplierType,
           'delegate_type': delegateType,
           'whatsapp_phone': sameWhatsApp
-              ? phoneController.text.trim()
-              : whatsappController.text.trim(),
+              ? normalizedPhone
+              : normalizePhoneForAuth(whatsappController.text),
           'governorate': governorate,
           'district': districtController.text.trim(),
           'area': areaController.text.trim(),
@@ -3328,7 +3329,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             builder: (_) => Directionality(
               textDirection: TextDirection.rtl,
               child: OtpVerificationScreen(
-                phone: phoneController.text.trim(),
+                phone: normalizedPhone,
               ),
             ),
           ),
@@ -3774,6 +3775,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
 }
 
 
+/// توحيد رقم الهاتف إلى صيغة E.164 المطلوبة لمصادقة الهاتف.
+/// يدعم أرقام مصر المحلية مثل 010... و02...، والأرقام الدولية.
+String normalizePhoneForAuth(String input) {
+  final compact = input.trim().replaceAll(RegExp(r'[\\s().-]'), '');
+  final digits = compact.replaceAll(RegExp(r'\\D'), '');
+
+  if (compact.startsWith('+')) return '+$digits';
+  if (digits.startsWith('00')) return '+${digits.substring(2)}';
+  if (digits.startsWith('20')) return '+$digits';
+  if (digits.startsWith('0') && (digits.length == 10 || digits.length == 11)) {
+    return '+20${digits.substring(1)}';
+  }
+  return '+$digits';
+}
+
 String? requiredValidator(String? value) {
   if (value == null || value.trim().isEmpty) {
     return 'هذا الحقل مطلوب';
@@ -3963,7 +3979,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => busy = true);
     try {
       await client.auth.signInWithPassword(
-        phone: phone.text.trim(),
+        phone: normalizePhoneForAuth(phone.text),
         password: password.text,
       );
       if (mounted) {
@@ -4068,7 +4084,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final client = database;
     if (client == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.'))); return; }
     setState(() => busy = true);
-    try { await client.auth.signInWithOtp(phone: value, shouldCreateUser: false); if (mounted) { setState(() => codeSent = true); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم طلب إرسال رمز التحقق.'))); } }
+    try { await client.auth.signInWithOtp(phone: normalizePhoneForAuth(value), shouldCreateUser: false); if (mounted) { setState(() => codeSent = true); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم طلب إرسال رمز التحقق.'))); } }
     catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال الرمز. راجع إعدادات الرسائل النصية.'))); }
     finally { if (mounted) setState(() => busy = false); }
   }
@@ -4086,7 +4102,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (client == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.'))); return; }
     setState(() => busy = true);
     try {
-      await client.auth.verifyOTP(phone: phone.text.trim(), token: token, type: OtpType.sms);
+      await client.auth.verifyOTP(phone: normalizePhoneForAuth(phone.text), token: token, type: OtpType.sms);
       await client.auth.updateUser(UserAttributes(password: password.text));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث كلمة المرور بنجاح.')));
