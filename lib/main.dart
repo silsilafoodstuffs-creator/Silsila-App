@@ -989,7 +989,7 @@ class _MainShellState extends State<MainShell> {
                 children: [
                   IconButton(
                     onPressed: () => setState(() {
-                      if (entry.value <= 1) {
+                      if (entry.value <= product.minQuantity) {
                         cart.remove(entry.key);
                       } else {
                         cart[entry.key] = entry.value - 1;
@@ -1034,7 +1034,7 @@ class _MainShellState extends State<MainShell> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'الأسعار المعروضة تجريبية وليست أسعار مورد مؤكدة.',
+                    allProducts.any((p) => p.id != null) ? 'الإجمالي تقديري وقد يتغير عند تأكيد الطلب من قاعدة البيانات.' : 'الأسعار المعروضة أمثلة توضيحية وليست أسعار مورد مؤكدة.',
                     style: TextStyle(fontSize: 12, color: Colors.black54),
                   ),
                   const SizedBox(height: 12),
