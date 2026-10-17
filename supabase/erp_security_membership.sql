@@ -297,6 +297,24 @@ begin
 end;
 $$;
 
+
+-- Operational documents must enter through a draft; posting is a guarded transition.
+drop policy if exists erp_purchase_documents_insert_operator on public.erp_purchase_documents;
+create policy erp_purchase_documents_insert_operator on public.erp_purchase_documents
+for insert to authenticated with check (
+  status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
+);
+drop policy if exists erp_sales_documents_insert_operator on public.erp_sales_documents;
+create policy erp_sales_documents_insert_operator on public.erp_sales_documents
+for insert to authenticated with check (
+  status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
+);
+drop policy if exists erp_cash_vouchers_insert_operator on public.erp_cash_vouchers;
+create policy erp_cash_vouchers_insert_operator on public.erp_cash_vouchers
+for insert to authenticated with check (
+  status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
+);
+
 -- Document lines inherit company access through their header and must reference
 -- items belonging to that same company.
 drop policy if exists erp_purchase_lines_select_member on public.erp_purchase_lines;
