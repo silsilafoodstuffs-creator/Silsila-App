@@ -135,7 +135,7 @@ class DeliveryService {
           'pickup_address': cleanPickup,
           'delivery_address': cleanDelivery,
           'notes': _emptyToNull(notes),
-          'status': 'pending',
+          'status': 'قيد الاستلام',
         })
         .select()
         .single();
