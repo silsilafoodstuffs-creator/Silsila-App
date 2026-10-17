@@ -47,11 +47,14 @@ class ErpPriceListsRepository {
       throw ArgumentError('الشركة وكود القائمة واسمها حقول مطلوبة.');
     }
     if (!['sale','purchase'].contains(kind)) throw ArgumentError('نوع القائمة غير صحيح.');
-    await _db.from('erp_price_lists').insert({
-      'company_id': companyId.trim(), 'price_list_code': code.trim(),
-      'price_list_name': name.trim(), 'price_kind': kind,
-      'currency_code': currency.trim().isEmpty ? 'EGP' : currency.trim().toUpperCase(),
-      'is_default': isDefault, 'is_active': true, 'notes': _blank(notes),
+    await _db.rpc('erp_create_price_list', params: {
+      'p_company_id': companyId.trim(),
+      'p_code': code.trim(),
+      'p_name': name.trim(),
+      'p_kind': kind,
+      'p_is_default': isDefault,
+      'p_currency_code': currency.trim().isEmpty ? 'EGP' : currency.trim().toUpperCase(),
+      'p_notes': _blank(notes),
     });
   }
   Future<void> addLine({
