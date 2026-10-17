@@ -138,8 +138,17 @@ begin
   elsif new.status = 'posted' then
     if old.status <> 'approved' or new.journal_entry_id is null or not exists (
       select 1 from public.erp_journal_entries j
-      where j.id = new.journal_entry_id and j.company_id = new.company_id and j.status = 'posted'
-    ) then raise exception 'ترحيل مسير الرواتب يتطلب قيدًا محاسبيًا مرحّلًا'; end if;
+      where j.id = new.journal_entry_id and j.company_id = new.company_id
+        and j.status = 'posted' and j.entry_date = new.period_end
+        and (select coalesce(sum(l.debit),0) from public.erp_journal_lines l where l.entry_id = j.id) = new.gross_total
+        and (select coalesce(sum(l.credit),0) from public.erp_journal_lines l where l.entry_id = j.id) = new.gross_total
+        and exists (select 1 from public.erp_journal_lines l where l.entry_id = j.id
+          and l.account_id = new.expense_account_id and l.debit = new.gross_total and l.credit = 0)
+        and (new.net_total = 0 or exists (select 1 from public.erp_journal_lines l where l.entry_id = j.id
+          and l.account_id = new.payable_account_id and l.debit = 0 and l.credit = new.net_total))
+        and (new.deduction_total = 0 or exists (select 1 from public.erp_journal_lines l where l.entry_id = j.id
+          and l.account_id = new.deductions_account_id and l.debit = 0 and l.credit = new.deduction_total))
+    ) then raise exception 'ترحيل مسير الرواتب يتطلب قيدًا محاسبيًا مطابقًا للإجماليات والحسابات'; end if;
   elsif new.status not in ('draft','cancelled') then
     raise exception 'انتقال حالة مسير الرواتب غير مسموح';
   end if;
