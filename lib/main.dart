@@ -15,6 +15,7 @@ import 'services/story_service.dart';
 import 'services/user_service.dart';
 import 'services/support_service.dart';
 import 'services/delivery_service.dart';
+import 'services/favorite_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 
@@ -479,6 +480,7 @@ class _MainShellState extends State<MainShell> {
   String search = '';
   String accountName = 'تاجر سلسلة';
   final favorites = <String>{};
+  final favoriteService = FavoriteService();
   final cart = <String, int>{};
   final cartProducts = <String, Product>{};
   final searchController = TextEditingController();
@@ -508,6 +510,97 @@ class _MainShellState extends State<MainShell> {
     loadLiveSuppliers();
     loadLiveCategories();
     loadCurrentRole();
+    loadFavoriteKeys();
+  }
+
+  Future<void> loadFavoriteKeys() async {
+    if (database?.auth.currentUser == null) return;
+    try {
+      final keys = await favoriteService.getFavoriteKeys();
+      if (!mounted) return;
+      setState(() {
+        favorites.removeWhere((key) => key.startsWith('product:') || key.startsWith('supplier:'));
+        favorites.addAll(keys);
+      });
+    } catch (_) {
+      // Keep local favorites usable when the account is offline or not signed in.
+    }
+  }
+
+  String favoriteLabel(String key) {
+    if (key.startsWith('product:')) {
+      final id = key.substring('product:'.length);
+      for (final product in allProducts) {
+        if (product.id?.toString() == id) return product.name;
+      }
+      return 'منتج محفوظ';
+    }
+    if (key.startsWith('supplier:')) {
+      final id = key.substring('supplier:'.length);
+      for (final supplier in liveSuppliers) {
+        if ((supplier['id'] ?? '').toString() == id) {
+          return (supplier['full_name'] ?? 'مورد محفوظ').toString();
+        }
+      }
+      return 'مورد محفوظ';
+    }
+    return key;
+  }
+
+  Future<void> toggleProductFavorite(Product product) async {
+    final key = product.id == null ? product.name : 'product:${product.id}';
+    final next = !favorites.contains(key);
+    setState(() {
+      if (next) {
+        favorites.add(key);
+      } else {
+        favorites.remove(key);
+      }
+    });
+    if (product.id == null || database?.auth.currentUser == null) return;
+    try {
+      await favoriteService.setProductFavorite(productId: product.id!, favorite: next);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        if (next) {
+          favorites.remove(key);
+        } else {
+          favorites.add(key);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر حفظ المفضلة: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> toggleSupplierFavorite(String supplierId) async {
+    final key = 'supplier:$supplierId';
+    final next = !favorites.contains(key);
+    setState(() {
+      if (next) {
+        favorites.add(key);
+      } else {
+        favorites.remove(key);
+      }
+    });
+    if (database?.auth.currentUser == null) return;
+    try {
+      await favoriteService.setSupplierFavorite(supplierId: supplierId, favorite: next);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        if (next) {
+          favorites.remove(key);
+        } else {
+          favorites.add(key);
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر حفظ المورد في المفضلة: ${e.toString()}')),
+      );
+    }
   }
 
   Future<void> loadLiveCategories() async {
@@ -912,7 +1005,8 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget productCard(Product product) {
-    final favorite = favorites.contains(product.name);
+    final favoriteKey = product.id == null ? product.name : 'product:${product.id}';
+    final favorite = favorites.contains(favoriteKey);
     return Card(
       clipBehavior: Clip.antiAlias,
       color: Colors.white,
@@ -931,11 +1025,7 @@ class _MainShellState extends State<MainShell> {
                     left: 2,
                     top: 2,
                     child: IconButton(
-                      onPressed: () => setState(() {
-                        favorite
-                            ? favorites.remove(product.name)
-                            : favorites.add(product.name);
-                      }),
+                      onPressed: () => toggleProductFavorite(product),
                       icon: Icon(
                         favorite ? Icons.favorite : Icons.favorite_border,
                         color: favorite ? pink : purple,
@@ -999,9 +1089,7 @@ class _MainShellState extends State<MainShell> {
         trailing: IconButton(
           icon: Icon(favorite ? Icons.favorite : Icons.favorite_border,
             color: favorite ? pink : purple),
-          onPressed: () => setState(() {
-            favorite ? favorites.remove(favoriteKey) : favorites.add(favoriteKey);
-          }),
+          onPressed: () => toggleSupplierFavorite(id),
         ),
         onTap: () => openPage(
           name,
@@ -1315,7 +1403,7 @@ class _MainShellState extends State<MainShell> {
             'المفضلة',
             () => openPage(
               'المفضلة',
-              FavoritesScreen(names: favorites.toList()),
+              FavoritesScreen(names: favorites.map(favoriteLabel).toList()),
             ),
           ),
           menuItem(
