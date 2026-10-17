@@ -1,7 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Data access for the ERP chart of accounts.
-/// A company id is always required; authorization is still enforced by Supabase RLS.
+/// Company authorization remains enforced by Supabase RLS.
 class ErpAccountsRepository {
   ErpAccountsRepository({SupabaseClient? client})
       : _client = client ?? _tryGetClient();
@@ -24,8 +24,6 @@ class ErpAccountsRepository {
     return client;
   }
 
-  /// Reads account nodes with their posted-ledger metrics.
-  /// Returns an empty list when the company has no accounts.
   Future<List<Map<String, dynamic>>> fetchAccountMetrics({
     required String companyId,
     bool activeOnly = false,
@@ -36,14 +34,12 @@ class ErpAccountsRepository {
     var query = _requireClient
         .from('erp_account_tree_metrics')
         .select()
-        .eq('company_id', companyId);
+        .eq('company_id', companyId.trim());
     if (activeOnly) query = query.eq('is_active', true);
     final rows = await query.order('account_code');
     return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 
-  /// Creates a node in the selected company. Parent and postable rules are
-  /// checked server-side too; this client check is only early feedback.
   Future<Map<String, dynamic>> createAccount({
     required String companyId,
     required String code,
@@ -55,50 +51,30 @@ class ErpAccountsRepository {
   }) async {
     final normalizedCode = code.trim();
     final normalizedName = name.trim();
-    if (companyId.trim().isEmpty ||
+    final normalizedCompany = companyId.trim();
+    if (normalizedCompany.isEmpty ||
         normalizedCode.isEmpty ||
         normalizedName.isEmpty) {
       throw ArgumentError('الشركة وكود الحساب واسم الحساب حقول إلزامية.');
     }
-    const types = {'asset', 'liability', 'equity', 'revenue', 'expense'};
-    if (!types.contains(accountType)) {
-      throw ArgumentError('نوع الحساب غير صحيح.');
-    }
-    if (!{'debit', 'credit'}.contains(normalBalance)) {
-      throw ArgumentError('طبيعة الرصيد يجب أن تكون مدينًا أو دائنًا.');
-    }
-    if (parentId != null && parentId.trim().isEmpty) parentId = null;
-
+    _validateTypeAndBalance(accountType, normalBalance);
+    parentId = _normalizeParent(parentId);
     final client = _requireClient;
-    if (parentId != null) {
-      final parent = await client
-          .from('erp_accounts')
-          .select('id, company_id, is_postable')
-          .eq('id', parentId)
-          .eq('company_id', companyId)
-          .maybeSingle();
-      if (parent == null) {
-        throw StateError('الحساب الأب غير موجود داخل الشركة المحددة.');
-      }
-      if (parent['is_postable'] == true) {
-        throw StateError('لا يمكن إضافة حساب فرعي تحت حساب تحليلي قابل للترحيل.');
-      }
-    }
-
-    final inserted = await client
-        .from('erp_accounts')
-        .insert({
-          'company_id': companyId,
-          'account_code': normalizedCode,
-          'account_name': normalizedName,
-          'account_type': accountType,
-          'normal_balance': normalBalance,
-          'parent_id': parentId,
-          'is_postable': isPostable,
-          'is_active': true,
-        })
-        .select()
-        .single();
+    await _validateParent(
+      client,
+      companyId: normalizedCompany,
+      parentId: parentId,
+    );
+    final inserted = await client.from('erp_accounts').insert({
+      'company_id': normalizedCompany,
+      'account_code': normalizedCode,
+      'account_name': normalizedName,
+      'account_type': accountType,
+      'normal_balance': normalBalance,
+      'parent_id': parentId,
+      'is_postable': isPostable,
+      'is_active': true,
+    }).select().single();
     return Map<String, dynamic>.from(inserted);
   }
 
@@ -111,45 +87,82 @@ class ErpAccountsRepository {
     required String normalBalance,
     required bool isPostable,
     required bool isActive,
+    String? parentId,
   }) async {
-    if (companyId.trim().isEmpty || accountId.trim().isEmpty) {
+    final normalizedCompany = companyId.trim();
+    final normalizedId = accountId.trim();
+    final normalizedCode = code.trim();
+    final normalizedName = name.trim();
+    if (normalizedCompany.isEmpty || normalizedId.isEmpty) {
       throw ArgumentError('معرّف الشركة والحساب مطلوبان.');
     }
-    const types = {'asset', 'liability', 'equity', 'revenue', 'expense'};
-    if (!types.contains(accountType) ||
-        !{'debit', 'credit'}.contains(normalBalance)) {
-      throw ArgumentError('نوع الحساب أو طبيعة الرصيد غير صحيح.');
+    if (normalizedCode.isEmpty || normalizedName.isEmpty) {
+      throw ArgumentError('كود الحساب واسم الحساب حقول إلزامية.');
     }
+    _validateTypeAndBalance(accountType, normalBalance);
+    final normalizedParent = _normalizeParent(parentId);
+    if (normalizedParent == normalizedId) {
+      throw StateError('لا يمكن اختيار الحساب نفسه كحساب أب.');
+    }
+
     final client = _requireClient;
+    await _validateParent(
+      client,
+      companyId: normalizedCompany,
+      parentId: normalizedParent,
+    );
+
+    // Reject a parent anywhere below this account to prevent hierarchy cycles.
+    if (normalizedParent != null) {
+      final records = await client
+          .from('erp_accounts')
+          .select('id,parent_id')
+          .eq('company_id', normalizedCompany);
+      final childrenByParent = <String, List<String>>{};
+      for (final record in records) {
+        final id = (record['id'] ?? '').toString();
+        final parent = (record['parent_id'] ?? '').toString();
+        if (id.isNotEmpty && parent.isNotEmpty) {
+          childrenByParent.putIfAbsent(parent, () => <String>[]).add(id);
+        }
+      }
+      final descendants = <String>{};
+      final pending = <String>[normalizedId];
+      while (pending.isNotEmpty) {
+        final current = pending.removeLast();
+        for (final child in childrenByParent[current] ?? const <String>[]) {
+          if (descendants.add(child)) pending.add(child);
+        }
+      }
+      if (descendants.contains(normalizedParent)) {
+        throw StateError('لا يمكن نقل الحساب أسفل أحد الحسابات التابعة له.');
+      }
+    }
+
     if (isPostable) {
       final children = await client
           .from('erp_accounts')
           .select('id')
-          .eq('company_id', companyId)
-          .eq('parent_id', accountId)
+          .eq('company_id', normalizedCompany)
+          .eq('parent_id', normalizedId)
           .limit(1);
       if (children.isNotEmpty) {
         throw StateError('لا يمكن تحويل حساب له حسابات فرعية إلى حساب تحليلي.');
       }
     }
-    final updated = await client
-        .from('erp_accounts')
-        .update({
-          'account_code': code.trim(),
-          'account_name': name.trim(),
-          'account_type': accountType,
-          'normal_balance': normalBalance,
-          'is_postable': isPostable,
-          'is_active': isActive,
-        })
-        .eq('company_id', companyId)
-        .eq('id', accountId)
-        .select()
-        .single();
+
+    final updated = await client.from('erp_accounts').update({
+      'account_code': normalizedCode,
+      'account_name': normalizedName,
+      'account_type': accountType,
+      'normal_balance': normalBalance,
+      'parent_id': normalizedParent,
+      'is_postable': isPostable,
+      'is_active': isActive,
+    }).eq('company_id', normalizedCompany).eq('id', normalizedId).select().single();
     return Map<String, dynamic>.from(updated);
   }
 
-  /// Deactivates instead of deleting, preserving references from journal lines.
   Future<void> deactivateAccount({
     required String companyId,
     required String accountId,
@@ -160,7 +173,40 @@ class ErpAccountsRepository {
     await _requireClient
         .from('erp_accounts')
         .update({'is_active': false})
+        .eq('company_id', companyId.trim())
+        .eq('id', accountId.trim());
+  }
+
+  static String? _normalizeParent(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+    return value.trim();
+  }
+
+  static void _validateTypeAndBalance(String type, String balance) {
+    const types = {'asset', 'liability', 'equity', 'revenue', 'expense'};
+    if (!types.contains(type)) throw ArgumentError('نوع الحساب غير صحيح.');
+    if (!{'debit', 'credit'}.contains(balance)) {
+      throw ArgumentError('طبيعة الرصيد يجب أن تكون مدينًا أو دائنًا.');
+    }
+  }
+
+  static Future<void> _validateParent(
+    SupabaseClient client, {
+    required String companyId,
+    required String? parentId,
+  }) async {
+    if (parentId == null) return;
+    final parent = await client
+        .from('erp_accounts')
+        .select('id, company_id, is_postable')
+        .eq('id', parentId)
         .eq('company_id', companyId)
-        .eq('id', accountId);
+        .maybeSingle();
+    if (parent == null) {
+      throw StateError('الحساب الأب غير موجود داخل الشركة المحددة.');
+    }
+    if (parent['is_postable'] == true) {
+      throw StateError('لا يمكن وضع حساب فرعي تحت حساب تحليلي قابل للترحيل.');
+    }
   }
 }
