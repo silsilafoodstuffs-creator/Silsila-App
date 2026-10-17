@@ -495,6 +495,7 @@ class _MainShellState extends State<MainShell> {
   bool loadingLiveSuppliers = false;
   bool isAdmin = false;
   bool isApprovedSupplier = false;
+  int unreadNotifications = 0;
   bool loadingLiveProducts = false;
   String? productLoadMessage;
 
@@ -513,6 +514,36 @@ class _MainShellState extends State<MainShell> {
     loadLiveCategories();
     loadCurrentRole();
     loadFavoriteKeys();
+    loadUnreadNotifications();
+  }
+
+  Future<void> loadUnreadNotifications() async {
+    if (database?.auth.currentUser == null) {
+      if (mounted) setState(() => unreadNotifications = 0);
+      return;
+    }
+    try {
+      final count = await NotificationService().getUnreadCount();
+      if (mounted) setState(() => unreadNotifications = count);
+    } catch (_) {
+      // Keep the header usable if notifications are temporarily unavailable.
+    }
+  }
+
+  Future<void> openNotifications() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            appBar: AppBar(title: Text('الإشعارات')),
+            body: NotificationsScreen(),
+          ),
+        ),
+      ),
+    );
+    await loadUnreadNotifications();
   }
 
   Future<void> loadFavoriteKeys() async {
@@ -795,10 +826,27 @@ class _MainShellState extends State<MainShell> {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
-            icon: const Icon(Icons.notifications_none),
-            onPressed: () => openPage(
-              'الإشعارات',
-              const NotificationsScreen(),
+            onPressed: openNotifications,
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications_none),
+                if (unreadNotifications > 0)
+                  Positioned(
+                    top: -7,
+                    right: -9,
+                    child: Container(
+                      constraints: const BoxConstraints(minWidth: 17, minHeight: 17),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: const BoxDecoration(color: pink, shape: BoxShape.circle),
+                      child: Text(
+                        unreadNotifications > 99 ? '99+' : '$unreadNotifications',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           actions: [
