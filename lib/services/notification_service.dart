@@ -69,6 +69,10 @@ class NotificationService {
       throw ArgumentError('معرّف الإشعار مطلوب.');
     }
 
+    if (id.length > 200) {
+      throw ArgumentError('معرّف الإشعار طويل أكثر من اللازم.');
+    }
+
     await _requireClient
         .from('notifications')
         .update({'is_read': true})
@@ -92,6 +96,10 @@ class NotificationService {
 
     if (id == null) {
       throw ArgumentError('معرّف الإشعار مطلوب.');
+    }
+
+    if (id.length > 200) {
+      throw ArgumentError('معرّف الإشعار طويل أكثر من اللازم.');
     }
 
     await _requireClient
