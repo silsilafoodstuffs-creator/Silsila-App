@@ -101,35 +101,16 @@ class ErpOperationalDocumentsRepository {
     if (itemId.isEmpty || quantity <= 0 || unitPrice < 0 || discount < 0 || tax < 0 || discount > gross) {
       throw ArgumentError('راجع الصنف والكمية والسعر والخصم والضريبة.');
     }
-    final total = gross - discount + tax;
-    final payload = <String, dynamic>{
-      'document_id': documentId, 'item_id': itemId, 'quantity': quantity,
-      'unit_price': unitPrice, 'discount_amount': discount, 'tax_amount': tax,
-      'line_total': total,
-    };
-    final table = kind == ErpOperationalKind.purchase ? 'erp_purchase_lines' : 'erp_sales_lines';
-    await _db.from(table).insert(payload);
-    final headerTable = kind == ErpOperationalKind.purchase ? 'erp_purchase_documents' : 'erp_sales_documents';
-    final lines = await _db.from(table).select('quantity, unit_price, discount_amount, tax_amount')
-      .eq('document_id', documentId);
-    var subtotal = 0.0;
-    var discounts = 0.0;
-    var taxes = 0.0;
-    for (final line in lines) {
-      final q = _num(line['quantity']);
-      subtotal += q * _num(line['unit_price']);
-      discounts += _num(line['discount_amount']);
-      taxes += _num(line['tax_amount']);
-    }
-    await _db.from(headerTable).update({
-      'subtotal': subtotal,
-      'discount_total': discounts,
-      'tax_total': taxes,
-      'grand_total': subtotal - discounts + taxes,
-    }).eq('id', documentId).eq('status', 'draft');
+    await _db.rpc('erp_add_operational_document_line', params: {
+      'p_document_id': documentId,
+      'p_kind': kind == ErpOperationalKind.purchase ? 'purchase' : 'sales',
+      'p_item_id': itemId,
+      'p_quantity': quantity,
+      'p_unit_price': unitPrice,
+      'p_discount': discount,
+      'p_tax': tax,
+    });
   }
-
-  static double _num(dynamic value) => value is num ? value.toDouble() : double.tryParse((value ?? '0').toString()) ?? 0;
 
   Future<void> postDocument(String id, ErpOperationalKind kind) async {
     final function = kind == ErpOperationalKind.purchase
