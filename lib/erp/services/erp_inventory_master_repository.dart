@@ -59,10 +59,12 @@ class ErpInventoryMasterRepository {
     });
   }
 
-  Future<void> setWarehouseActive(String id, bool active) async =>
-    _db.from('erp_warehouses').update({'is_active': active}).eq('id', id);
-  Future<void> setItemActive(String id, bool active) async =>
-    _db.from('erp_items').update({'is_active': active}).eq('id', id);
+  Future<void> setWarehouseActive(String id, bool active) async {
+    await _db.from('erp_warehouses').update({'is_active': active}).eq('id', id);
+  }
+  Future<void> setItemActive(String id, bool active) async {
+    await _db.from('erp_items').update({'is_active': active}).eq('id', id);
+  }
 
   static String? _blank(String? value) => value == null || value.trim().isEmpty ? null : value.trim();
 }
