@@ -92,6 +92,7 @@ class CategoryService {
     int? parentId,
     String? icon,
     String? imageUrl,
+    String? activityType,
     int? sortOrder,
     bool? isActive,
   }) async {
@@ -107,6 +108,10 @@ class CategoryService {
     if (parentId != null) updates['parent_id'] = parentId;
     if (icon != null) updates['icon'] = icon;
     if (imageUrl != null) updates['image_url'] = imageUrl;
+    if (activityType != null) {
+      final cleanedActivity = activityType.trim();
+      updates['activity_type'] = cleanedActivity.isEmpty ? null : cleanedActivity;
+    }
     if (sortOrder != null) updates['sort_order'] = sortOrder;
     if (isActive != null) updates['is_active'] = isActive;
 
