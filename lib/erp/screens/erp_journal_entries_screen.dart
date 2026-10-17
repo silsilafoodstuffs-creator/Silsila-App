@@ -182,12 +182,12 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.pop(confirmContext, false),
-                                            child: const Text('لأ'),
+                                            child: const Text('لا'),
                                           ),
                                           FilledButton(
                                             style: FilledButton.styleFrom(backgroundColor: Colors.red),
                                             onPressed: () => Navigator.pop(confirmContext, true),
-                                            child: const Text('أه، احذف'),
+                                            child: const Text('نعم'),
                                           ),
                                         ],
                                       ),
