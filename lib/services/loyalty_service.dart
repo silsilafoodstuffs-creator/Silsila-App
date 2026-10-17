@@ -2,13 +2,29 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoyaltyService {
   LoyaltyService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+      : _client = client ?? _defaultClient;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  static SupabaseClient? get _defaultClient {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+    if (client == null) {
+      throw StateError('خدمة قاعدة البيانات غير متاحة حالياً.');
+    }
+    return client;
+  }
 
   String get _userId {
-    final user = _client.auth.currentUser;
-    if (user == null) {
+    final user = _requireClient.auth.currentUser;
+    if (user == null || user.id.trim().isEmpty) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
     return user.id;
@@ -16,7 +32,7 @@ class LoyaltyService {
 
   /// جلب رصيد النقاط من جدول profiles.
   Future<int> getPointsBalance() async {
-    final response = await _client
+    final response = await _requireClient
         .from('profiles')
         .select('points_balance')
         .eq('id', _userId)
@@ -25,61 +41,68 @@ class LoyaltyService {
     if (response == null) return 0;
 
     final value = response['points_balance'];
-    final int? points;
+
+    if (value == null) return 0;
+
     if (value is int) {
-      points = value;
-    } else if (value is num) {
-      if (!value.isFinite || value < 0 || value > 9007199254740991) {
-        throw StateError('تعذر قراءة رصيد النقاط بصورة صحيحة.');
+      if (value < 0) {
+        throw StateError('رصيد النقاط غير صالح.');
       }
-      points = value.toInt();
-    } else {
-      points = int.tryParse(value?.toString() ?? '');
+      return value;
     }
 
-    if (points == null || points < 0) {
+    if (value is num) {
+      if (!value.isFinite ||
+          value < 0 ||
+          value > 9007199254740991) {
+        throw StateError('تعذر قراءة رصيد النقاط بصورة صحيحة.');
+      }
+
+      return value.toInt();
+    }
+
+    final parsed = int.tryParse(value.toString().trim());
+
+    if (parsed == null || parsed < 0) {
       throw StateError('تعذر قراءة رصيد النقاط بصورة صحيحة.');
     }
-    return points;
+
+    return parsed;
   }
 
   /// جلب سجل حركات النقاط.
   Future<List<Map<String, dynamic>>> getPointsHistory({
     int limit = 50,
   }) async {
-    if (limit < 1 || limit > 200) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
-    }
+    _validateLimit(limit);
 
-    final response = await _client
+    final response = await _requireClient
         .from('loyalty_transactions')
         .select()
         .eq('user_id', _userId)
         .order('created_at', ascending: false)
         .limit(limit);
 
-    return List<Map<String, dynamic>>.from(response);
+    return _toMapList(response);
   }
 
   /// جلب أهداف المستخدم.
   Future<List<Map<String, dynamic>>> getMyGoals({
     int limit = 50,
   }) async {
-    if (limit < 1 || limit > 200) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
-    }
+    _validateLimit(limit);
 
-    final response = await _client
+    final response = await _requireClient
         .from('user_goals')
         .select()
         .eq('user_id', _userId)
         .order('created_at', ascending: false)
         .limit(limit);
 
-    return List<Map<String, dynamic>>.from(response);
+    return _toMapList(response);
   }
 
-  /// حساب نسبة تحقيق الهدف.
+  /// حساب نسبة تحقيق الهدف، مع حصر النتيجة بين 0 و100.
   double calculateGoalProgress({
     required num currentValue,
     required num targetValue,
@@ -91,8 +114,26 @@ class LoyaltyService {
     }
 
     final progress = currentValue / targetValue * 100;
+
     if (!progress.isFinite) return 0;
 
     return progress.clamp(0, 100).toDouble();
+  }
+
+  void _validateLimit(int limit) {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+  }
+
+  List<Map<String, dynamic>> _toMapList(dynamic value) {
+    if (value is! List) {
+      throw StateError('أعاد الخادم قائمة بيانات غير متوقعة.');
+    }
+
+    return value
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
   }
 }
