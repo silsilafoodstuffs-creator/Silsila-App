@@ -48,8 +48,6 @@ class FavoriteService {
     final keys = <String>{};
 
     for (final item in results[0]) {
-      if (item is! Map) continue;
-
       final productId = item['product_id'];
       if (productId == null) continue;
 
