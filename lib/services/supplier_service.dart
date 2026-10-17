@@ -79,7 +79,6 @@ class SupplierService {
           'governorate, district, address, account_status',
         )
         .eq('id', supplierId.trim())
-        .eq('role', 'supplier')
         .maybeSingle();
 
     return response;
