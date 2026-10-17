@@ -65,6 +65,16 @@ class StoryService {
     if (cleanUrl.isEmpty) {
       throw ArgumentError('رابط صورة أو فيديو القصة مطلوب.');
     }
+    final parsedUrl = Uri.tryParse(cleanUrl);
+    if (parsedUrl == null ||
+        !parsedUrl.hasScheme ||
+        (parsedUrl.scheme != 'https' && parsedUrl.scheme != 'http') ||
+        parsedUrl.host.isEmpty) {
+      throw ArgumentError('رابط القصة يجب أن يكون رابط ويب صحيحًا يبدأ بـ https أو http.');
+    }
+    if ((caption ?? '').trim().length > 300) {
+      throw ArgumentError('وصف القصة يجب ألا يتجاوز 300 حرف.');
+    }
 
     if (cleanType != 'image' && cleanType != 'video') {
       throw ArgumentError('نوع القصة يجب أن يكون image أو video.');
