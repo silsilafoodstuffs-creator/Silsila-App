@@ -113,7 +113,8 @@ begin
     from public.erp_inventory_movements m
     where m.company_id = p_company_id
       and m.warehouse_id = p_warehouse_id
-      and m.item_id = p_item_id;
+      and m.item_id = p_item_id
+      and m.movement_date <= p_movement_date;
     if v_current < p_quantity then
       raise exception 'الرصيد غير كافٍ. الرصيد الحالي % والكمية المطلوبة %', v_current, p_quantity;
     end if;
@@ -149,3 +150,103 @@ comment on function public.erp_record_inventory_movement(
   uuid,uuid,uuid,text,numeric,numeric,uuid,timestamptz,text,uuid,text,date,text
 ) is
   'Authorized append-only stock movement; validates company ownership and serializes stock-out checks.';
+
+
+create or replace function public.erp_transfer_inventory_between_warehouses(
+  p_company_id uuid,
+  p_source_warehouse_id uuid,
+  p_target_warehouse_id uuid,
+  p_item_id uuid,
+  p_quantity numeric,
+  p_unit_cost numeric default 0,
+  p_transfer_date timestamptz default now(),
+  p_batch_number text default null,
+  p_expiry_date date default null,
+  p_notes text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+set row_security = off
+as $$
+declare
+  v_transfer_id uuid := gen_random_uuid();
+  v_source_balance numeric(18,3);
+  v_source_branch uuid;
+  v_target_branch uuid;
+begin
+  if auth.uid() is null then raise exception 'يجب تسجيل الدخول أولًا'; end if;
+  if not public.erp_user_has_company_role(
+    p_company_id, array['owner','admin','manager','operator','accountant']::text[]
+  ) then raise exception 'ليست لديك صلاحية تحويل المخزون'; end if;
+  if p_source_warehouse_id is null or p_target_warehouse_id is null
+     or p_source_warehouse_id = p_target_warehouse_id then
+    raise exception 'اختر مخزنين مختلفين للتحويل'; end if;
+  if p_item_id is null or p_quantity is null or p_quantity <= 0
+     or p_unit_cost is null or p_unit_cost < 0 or p_transfer_date is null then
+    raise exception 'الصنف والتاريخ والكمية الموجبة والتكلفة الصحيحة مطلوبة'; end if;
+
+  if not exists (select 1 from public.erp_items i
+    where i.id = p_item_id and i.company_id = p_company_id and i.is_active) then
+    raise exception 'الصنف غير نشط أو لا يتبع الشركة'; end if;
+
+  select branch_id into v_source_branch from public.erp_warehouses
+  where id = p_source_warehouse_id and company_id = p_company_id and is_active;
+  if not found then raise exception 'مخزن الصرف غير نشط أو لا يتبع الشركة'; end if;
+  select branch_id into v_target_branch from public.erp_warehouses
+  where id = p_target_warehouse_id and company_id = p_company_id and is_active;
+  if not found then raise exception 'مخزن الاستلام غير نشط أو لا يتبع الشركة'; end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(
+    p_company_id::text || ':' || least(p_source_warehouse_id::text, p_target_warehouse_id::text) || ':' || p_item_id::text, 0
+  ));
+  perform pg_advisory_xact_lock(hashtextextended(
+    p_company_id::text || ':' || greatest(p_source_warehouse_id::text, p_target_warehouse_id::text) || ':' || p_item_id::text, 0
+  ));
+
+  select coalesce(sum(m.quantity_in - m.quantity_out),0)
+    into v_source_balance
+  from public.erp_inventory_movements m
+  where m.company_id = p_company_id
+    and m.warehouse_id = p_source_warehouse_id
+    and m.item_id = p_item_id
+    and m.movement_date <= p_transfer_date;
+  if v_source_balance < p_quantity then
+    raise exception 'رصيد مخزن الصرف غير كافٍ. المتاح % والمطلوب %', v_source_balance, p_quantity;
+  end if;
+
+  insert into public.erp_inventory_movements(
+    company_id, branch_id, warehouse_id, item_id, movement_date, movement_type,
+    quantity_in, quantity_out, unit_cost, reference_type, reference_id,
+    batch_number, expiry_date, notes, created_by
+  ) values (
+    p_company_id, v_source_branch, p_source_warehouse_id, p_item_id, p_transfer_date,
+    'transfer_out', 0, p_quantity, p_unit_cost, 'warehouse_transfer', v_transfer_id,
+    nullif(trim(p_batch_number), ''), p_expiry_date, nullif(trim(p_notes), ''), auth.uid()
+  );
+
+  insert into public.erp_inventory_movements(
+    company_id, branch_id, warehouse_id, item_id, movement_date, movement_type,
+    quantity_in, quantity_out, unit_cost, reference_type, reference_id,
+    batch_number, expiry_date, notes, created_by
+  ) values (
+    p_company_id, v_target_branch, p_target_warehouse_id, p_item_id, p_transfer_date,
+    'transfer_in', p_quantity, 0, p_unit_cost, 'warehouse_transfer', v_transfer_id,
+    nullif(trim(p_batch_number), ''), p_expiry_date, nullif(trim(p_notes), ''), auth.uid()
+  );
+
+  return v_transfer_id;
+end;
+$$;
+
+revoke all on function public.erp_transfer_inventory_between_warehouses(
+  uuid,uuid,uuid,uuid,numeric,numeric,timestamptz,text,date,text
+) from public, anon;
+grant execute on function public.erp_transfer_inventory_between_warehouses(
+  uuid,uuid,uuid,uuid,numeric,numeric,timestamptz,text,date,text
+) to authenticated;
+
+comment on function public.erp_transfer_inventory_between_warehouses(
+  uuid,uuid,uuid,uuid,numeric,numeric,timestamptz,text,date,text
+) is 'Creates matched transfer-out and transfer-in stock ledger records atomically.';
