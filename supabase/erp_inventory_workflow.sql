@@ -148,6 +148,21 @@ begin
     end if;
   end if;
 
+  if v_kind = 'customer_return' then
+    select coalesce(sum(m.quantity_in - m.quantity_out),0),
+      coalesce(sum(m.quantity_in * m.unit_cost) - sum(m.quantity_out * m.unit_cost),0)
+      into v_current, v_inventory_value
+    from public.erp_inventory_movements m
+    where m.company_id = p_company_id and m.warehouse_id = p_warehouse_id
+      and m.item_id = p_item_id and m.movement_date <= p_movement_date;
+    if v_current > 0 then
+      v_effective_cost := greatest(v_inventory_value / v_current, 0);
+    else
+      select i.purchase_price into v_effective_cost from public.erp_items i
+      where i.id = p_item_id and i.company_id = p_company_id;
+    end if;
+  end if;
+
   insert into public.erp_inventory_movements(
     company_id, branch_id, warehouse_id, item_id, movement_date,
     movement_type, quantity_in, quantity_out, unit_cost, reference_type,
