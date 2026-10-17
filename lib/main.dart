@@ -511,6 +511,12 @@ class _MainShellState extends State<MainShell> {
       : categories;
 
   @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
     loadLiveProducts();
