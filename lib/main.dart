@@ -5215,8 +5215,64 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final address = TextEditingController();
   final notes = TextEditingController();
   final service = CheckoutService();
+  final addressService = AddressService();
+  List<Map<String, dynamic>> savedAddresses = [];
+  String? selectedAddressId;
   String method = 'نقدي';
   bool busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadSavedAddresses();
+  }
+
+  Future<void> loadSavedAddresses() async {
+    if (database?.auth.currentUser == null) return;
+    try {
+      final rows = await addressService.getAddresses();
+      if (!mounted) return;
+      setState(() {
+        savedAddresses = rows;
+        final preferred = rows.where((row) => row['is_default'] == true).firstOrNull;
+        if (preferred != null) {
+          selectedAddressId = preferred['id']?.toString();
+          address.text = formatAddress(preferred);
+        } else if (rows.isNotEmpty && address.text.trim().isEmpty) {
+          selectedAddressId = rows.first['id']?.toString();
+          address.text = formatAddress(rows.first);
+        }
+      });
+    } catch (_) {
+      // Manual address entry remains available if saved addresses cannot be loaded.
+    }
+  }
+
+  String formatAddress(Map<String, dynamic> item) {
+    return [
+      item['governorate'],
+      item['district'],
+      item['village'],
+      item['address'],
+      if ((item['landmark'] ?? '').toString().trim().isNotEmpty) 'علامة مميزة: ${item['landmark']}',
+    ].where((value) => value != null && value.toString().trim().isNotEmpty).join('، ');
+  }
+
+  Future<void> openAddressBook() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            appBar: AppBar(title: Text('عناويني المحفوظة')),
+            body: AddressBookScreen(),
+          ),
+        ),
+      ),
+    );
+    await loadSavedAddresses();
+  }
   @override
   void dispose() { address.dispose(); notes.dispose(); super.dispose(); }
   Future<void> send() async {
@@ -5251,7 +5307,32 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
     Card(child: ListTile(title: const Text('عدد الوحدات'), trailing: Text('${widget.itemCount}'))),
     Card(child: ListTile(title: const Text('الإجمالي التقديري'), trailing: Text('${widget.total.toStringAsFixed(2)} ج.م'))),
+    if (savedAddresses.isNotEmpty)
+      DropdownButtonFormField<String>(
+        value: savedAddresses.any((item) => item['id']?.toString() == selectedAddressId) ? selectedAddressId : null,
+        decoration: const InputDecoration(labelText: 'اختر عنوانًا محفوظًا'),
+        items: savedAddresses.map((item) => DropdownMenuItem<String>(
+          value: item['id'].toString(),
+          child: Text((item['title'] ?? 'عنوان محفوظ').toString()),
+        )).toList(),
+        onChanged: (value) {
+          final selected = savedAddresses.where((item) => item['id']?.toString() == value).firstOrNull;
+          if (selected == null) return;
+          setState(() {
+            selectedAddressId = value;
+            address.text = formatAddress(selected);
+          });
+        },
+      ),
     TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'عنوان التوصيل بالتفصيل')),
+    Align(
+      alignment: Alignment.centerRight,
+      child: TextButton.icon(
+        onPressed: openAddressBook,
+        icon: const Icon(Icons.location_on_outlined),
+        label: const Text('إدارة العناوين المحفوظة'),
+      ),
+    ),
     const SizedBox(height: 10),
     TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات إضافية')),
     const SizedBox(height: 10),
