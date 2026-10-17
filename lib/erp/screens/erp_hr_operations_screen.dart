@@ -14,6 +14,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
   final _company = TextEditingController();
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _attendance = [];
+  List<Map<String, dynamic>> _leaveRequests = [];
   bool _loading = false;
   bool _saving = false;
   String? _error;
@@ -44,11 +45,13 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
       final values = await Future.wait([
         _repo.fetchEmployees(_company.text),
         _repo.fetchAttendance(_company.text),
+        _repo.fetchLeaveRequests(_company.text),
       ]);
       if (!mounted) return;
       setState(() {
         _employees = values[0];
         _attendance = values[1];
+        _leaveRequests = values[2];
         _loading = false;
       });
     } catch (e) {
@@ -133,6 +136,96 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
     }
   }
 
+  Future<void> _showLeaveDialog() async {
+    if (_employees.isEmpty) {
+      setState(() => _error = 'حمّل دليل الموظفين أولًا قبل إنشاء طلب إجازة.');
+      return;
+    }
+    String? employeeId = _employees.isEmpty ? null : _s(_employees.first['id']);
+    String leaveType = 'سنوية';
+    DateTime start = DateTime.now();
+    DateTime end = DateTime.now();
+    final reason = TextEditingController();
+    String? localError;
+    await showDialog<void>(context: context, barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
+        title: const Text('طلب إجازة جديد'),
+        content: SizedBox(width: 520, child: SingleChildScrollView(child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              value: employeeId, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'الموظف'),
+              items: _employees.map((e) => DropdownMenuItem<String>(
+                value: _s(e['id']), child: Text(_employeeName(_s(e['id'])), overflow: TextOverflow.ellipsis))).toList(),
+              onChanged: (v) => refresh(() => employeeId = v),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: leaveType,
+              decoration: const InputDecoration(labelText: 'نوع الإجازة'),
+              items: const [
+                DropdownMenuItem(value: 'سنوية', child: Text('سنوية')),
+                DropdownMenuItem(value: 'عارضة', child: Text('عارضة')),
+                DropdownMenuItem(value: 'مرضية', child: Text('مرضية')),
+                DropdownMenuItem(value: 'بدون أجر', child: Text('بدون أجر')),
+              ],
+              onChanged: (v) => refresh(() => leaveType = v ?? leaveType),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(onPressed: () async {
+              final picked = await showDatePicker(context: ctx, initialDate: start, firstDate: DateTime(2000), lastDate: DateTime(2100));
+              if (picked != null) refresh(() => start = picked);
+            }, child: Text('من: ' + _dateOnly(start))),
+            OutlinedButton(onPressed: () async {
+              final picked = await showDatePicker(context: ctx, initialDate: end, firstDate: DateTime(2000), lastDate: DateTime(2100));
+              if (picked != null) refresh(() => end = picked);
+            }, child: Text('إلى: ' + _dateOnly(end))),
+            TextField(controller: reason, maxLines: 2, decoration: const InputDecoration(labelText: 'السبب / الملاحظات')),
+            if (localError != null) Text(localError!, style: const TextStyle(color: Colors.red)),
+          ],
+        ))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          FilledButton(onPressed: () async {
+            if (employeeId == null || start.isAfter(end)) {
+              refresh(() => localError = 'اختر الموظف وتأكد من ترتيب التاريخين.');
+              return;
+            }
+            Navigator.pop(ctx);
+            setState(() { _saving = true; _error = null; _message = null; });
+            try {
+              await _repo.createLeaveRequest(companyId: _company.text, employeeId: employeeId!,
+                leaveType: leaveType, start: start, end: end, reason: reason.text);
+              if (!mounted) return;
+              setState(() { _saving = false; _message = 'تم إنشاء طلب الإجازة بحالة انتظار الاعتماد.'; });
+              await _load();
+            } catch (e) {
+              if (!mounted) return;
+              setState(() { _saving = false; _error = 'تعذر إنشاء طلب الإجازة: $e'; });
+            }
+          }, child: const Text('حفظ الطلب')),
+        ],
+      )));
+    reason.dispose();
+  }
+
+  Future<void> _decideLeave(Map<String, dynamic> request, String decision) async {
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      await _repo.decideLeave(_s(request['id']), decision);
+      if (!mounted) return;
+      setState(() { _saving = false; _message = decision == 'approved' ? 'تم اعتماد طلب الإجازة.' : 'تم رفض طلب الإجازة.'; });
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _saving = false; _error = 'تعذر اتخاذ القرار: $e'; });
+    }
+  }
+
+  String _dateOnly(DateTime date) => date.year.toString().padLeft(4, '0') + '-' +
+      date.month.toString().padLeft(2, '0') + '-' + date.day.toString().padLeft(2, '0');
+
   String _employeeName(String id) {
     final matches = _employees.where((e) => _s(e['id']) == id);
     return matches.isEmpty ? id : '${_s(matches.first['employee_code'])} — ${_s(matches.first['full_name'])}';
@@ -166,6 +259,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
           segments: const [
             ButtonSegment(value: 'employees', label: Text('الموظفون'), icon: Icon(Icons.badge_outlined)),
             ButtonSegment(value: 'attendance', label: Text('الحضور اليوم'), icon: Icon(Icons.access_time)),
+            ButtonSegment(value: 'leave', label: Text('الإجازات'), icon: Icon(Icons.event_available)),
           ],
           selected: {_view},
           onSelectionChanged: (v) => setState(() => _view = v.first),
@@ -180,7 +274,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
             subtitle: Text('${_s(e['job_title']).isEmpty ? 'بدون مسمى وظيفي' : _s(e['job_title'])} • ${_s(e['department_name'])}\nالحالة: ${_s(e['employment_status'])}'),
             isThreeLine: true,
           ))),
-        ] else ...[
+        ] else if (_view == 'attendance') ...[
           Text('الحضور والانصراف • $dateLabel', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
           if (_employees.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('حمّل دليل الموظفين أولًا.')),
           ...activeEmployees.where((e) => !presentIds.contains(_s(e['id']))).map((e) => Card(child: ListTile(
@@ -197,6 +291,34 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
               isThreeLine: true,
               trailing: checkedOut ? const Icon(Icons.verified, color: Colors.green) : OutlinedButton(onPressed: _saving ? null : () => _checkOut(r), child: const Text('تسجيل انصراف')),
             ));
+          }),
+        ] else ...[
+          Row(children: [
+            Expanded(child: Text('طلبات الإجازات • ' + _leaveRequests.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17))),
+            FilledButton.icon(onPressed: _saving ? null : _showLeaveDialog, icon: const Icon(Icons.add), label: const Text('طلب جديد')),
+          ]),
+          if (_leaveRequests.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد طلبات إجازة مسجلة.')),
+          ..._leaveRequests.map((request) {
+            final status = _s(request['status']);
+            return Card(child: Padding(padding: const EdgeInsets.all(10), child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(_employeeName(_s(request['employee_id'])), style: const TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text(_s(request['leave_type']) + ' • ' + _s(request['starts_on']) + ' إلى ' + _s(request['ends_on']) +
+                  ' • ' + _s(request['requested_days']) + ' يوم'),
+                if (_s(request['reason']).isNotEmpty) Text('السبب: ' + _s(request['reason'])),
+                Row(children: [
+                  Chip(label: Text(status)),
+                  const Spacer(),
+                  if (status == 'pending') ...[
+                    TextButton(onPressed: _saving ? null : () => _decideLeave(request, 'rejected'), child: const Text('رفض')),
+                    const SizedBox(width: 6),
+                    FilledButton(onPressed: _saving ? null : () => _decideLeave(request, 'approved'), child: const Text('اعتماد')),
+                  ],
+                ]),
+              ],
+            )));
           }),
         ],
       ],
