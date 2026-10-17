@@ -30,18 +30,21 @@ with recursive account_paths as (
     a.id as ancestor_id,
     a.id as descendant_id,
     a.company_id,
-    0 as depth
+    0 as depth,
+    array[a.id]::uuid[] as path
   from public.erp_accounts a
   union all
   select
     p.ancestor_id,
     child.id as descendant_id,
     p.company_id,
-    p.depth + 1
+    p.depth + 1,
+    p.path || child.id
   from account_paths p
   join public.erp_accounts child
     on child.parent_id = p.descendant_id
    and child.company_id = p.company_id
+  where not child.id = any(p.path)
 ),
 descendant_metrics as (
   select
