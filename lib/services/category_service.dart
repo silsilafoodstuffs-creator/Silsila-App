@@ -2,9 +2,27 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CategoryService {
   CategoryService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+      : _client = client ?? _defaultClient;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  static SupabaseClient? get _defaultClient {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client == null) {
+      throw StateError('اتصال Supabase غير متاح.');
+    }
+
+    return client;
+  }
 
   /// جلب الأقسام الرئيسية والفرعية.
   Future<List<Map<String, dynamic>>> getCategories({
@@ -12,17 +30,18 @@ class CategoryService {
     bool activeOnly = true,
     int limit = 200,
   }) async {
-    if (limit < 1 || limit > 500) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و500.');
-    }
-    var query = _client.from('categories').select();
+    _validateLimit(limit);
+
+    var query = _requireClient.from('categories').select();
 
     if (activeOnly) {
       query = query.eq('is_active', true);
     }
 
-    if (activityType != null && activityType.trim().isNotEmpty) {
-      query = query.eq('activity_type', activityType.trim());
+    final activity = _emptyToNull(activityType);
+
+    if (activity != null) {
+      query = query.eq('activity_type', activity);
     }
 
     final rows = await query
@@ -33,18 +52,21 @@ class CategoryService {
     return List<Map<String, dynamic>>.from(rows);
   }
 
-  /// جلب قسم بواسطة المعرّف.
+  /// جلب قسم باستخدام معرّفه.
   Future<Map<String, dynamic>?> getCategoryById(
     int categoryId,
   ) async {
-    if (categoryId <= 0) {
-      throw ArgumentError('معرّف القسم غير صالح.');
-    }
-    return await _client
+    _validateId(categoryId, 'القسم');
+
+    final result = await _requireClient
         .from('categories')
         .select()
         .eq('id', categoryId)
         .maybeSingle();
+
+    if (result == null) return null;
+
+    return Map<String, dynamic>.from(result);
   }
 
   /// جلب الأقسام الفرعية لقسم رئيسي.
@@ -52,13 +74,10 @@ class CategoryService {
     int parentId, {
     int limit = 200,
   }) async {
-    if (limit < 1 || limit > 500) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و500.');
-    }
-    if (parentId <= 0) {
-      throw ArgumentError('معرّف القسم الرئيسي غير صالح.');
-    }
-    final rows = await _client
+    _validateId(parentId, 'القسم الرئيسي');
+    _validateLimit(limit);
+
+    final rows = await _requireClient
         .from('categories')
         .select()
         .eq('parent_id', parentId)
@@ -70,7 +89,7 @@ class CategoryService {
     return List<Map<String, dynamic>>.from(rows);
   }
 
-  /// إضافة قسم جديد.
+  /// إنشاء قسم جديد.
   Future<Map<String, dynamic>> createCategory({
     required String name,
     int? parentId,
@@ -79,52 +98,54 @@ class CategoryService {
     String? activityType,
     int sortOrder = 0,
   }) async {
-    final cleanName = name.trim();
+    final cleanName = _requiredText(name, 'اسم القسم');
 
-    if (cleanName.isEmpty || cleanName.length > 120) {
-      throw ArgumentError('اسم القسم مطلوب ويجب ألا يتجاوز 120 حرفًا.');
+    if (cleanName.length > 120) {
+      throw ArgumentError('اسم القسم يجب ألا يتجاوز 120 حرفًا.');
     }
-    if (parentId != null && parentId <= 0) {
-      throw ArgumentError('معرّف القسم الرئيسي غير صالح.');
+
+    if (parentId != null) {
+      _validateId(parentId, 'القسم الرئيسي');
     }
+
     if (sortOrder < 0) {
       throw ArgumentError('ترتيب القسم لا يمكن أن يكون سالبًا.');
     }
-    if ((icon ?? '').trim().length > 80) {
+
+    final cleanIcon = _emptyToNull(icon);
+    final cleanActivity = _emptyToNull(activityType);
+    final cleanImageUrl = _emptyToNull(imageUrl);
+
+    if (cleanIcon != null && cleanIcon.length > 80) {
       throw ArgumentError('اسم أيقونة القسم طويل أكثر من اللازم.');
     }
-    if ((imageUrl ?? '').trim().isNotEmpty) {
-      final uri = Uri.tryParse(imageUrl!.trim());
-      if (uri == null ||
-          !uri.hasScheme ||
-          (uri.scheme != 'https' && uri.scheme != 'http') ||
-          uri.host.isEmpty) {
-        throw ArgumentError('رابط صورة القسم غير صالح.');
-      }
-    }
-    if (activityType != null && activityType.trim().length > 120) {
+
+    if (cleanActivity != null && cleanActivity.length > 120) {
       throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
     }
 
-    final result = await _client
+    if (cleanImageUrl != null) {
+      _validateImageUrl(cleanImageUrl);
+    }
+
+    final result = await _requireClient
         .from('categories')
         .insert({
           'name': cleanName,
           'parent_id': parentId,
-          'icon': icon,
-          'image_url': imageUrl,
-          if (activityType != null && activityType.trim().isNotEmpty)
-            'activity_type': activityType.trim(),
+          'icon': cleanIcon,
+          'image_url': cleanImageUrl,
+          'activity_type': cleanActivity,
           'sort_order': sortOrder,
           'is_active': true,
         })
         .select()
         .single();
 
-    return result;
+    return Map<String, dynamic>.from(result);
   }
 
-  /// تعديل بيانات قسم.
+  /// تعديل بيانات قسم موجود.
   Future<void> updateCategory({
     required int categoryId,
     String? name,
@@ -135,77 +156,136 @@ class CategoryService {
     int? sortOrder,
     bool? isActive,
   }) async {
-    if (categoryId <= 0) {
-      throw ArgumentError('معرّف القسم غير صالح.');
-    }
+    _validateId(categoryId, 'القسم');
+
     final updates = <String, dynamic>{};
 
     if (name != null) {
-      final cleanName = name.trim();
-      if (cleanName.isEmpty || cleanName.length > 120) {
-        throw ArgumentError('اسم القسم مطلوب ويجب ألا يتجاوز 120 حرفًا.');
+      final cleanName = _requiredText(name, 'اسم القسم');
+
+      if (cleanName.length > 120) {
+        throw ArgumentError('اسم القسم يجب ألا يتجاوز 120 حرفًا.');
       }
+
       updates['name'] = cleanName;
     }
 
     if (parentId != null) {
-      if (parentId <= 0 || parentId == categoryId) {
-        throw ArgumentError('معرّف القسم الرئيسي غير صالح.');
+      _validateId(parentId, 'القسم الرئيسي');
+
+      if (parentId == categoryId) {
+        throw ArgumentError('لا يمكن جعل القسم تابعًا لنفسه.');
       }
+
       updates['parent_id'] = parentId;
     }
+
     if (icon != null) {
-      final cleanIcon = icon.trim();
-      if (cleanIcon.length > 80) {
+      final cleanIcon = _emptyToNull(icon);
+
+      if (cleanIcon != null && cleanIcon.length > 80) {
         throw ArgumentError('اسم أيقونة القسم طويل أكثر من اللازم.');
       }
-      updates['icon'] = cleanIcon.isEmpty ? null : cleanIcon;
+
+      updates['icon'] = cleanIcon;
     }
+
     if (imageUrl != null) {
-      final cleanImageUrl = imageUrl.trim();
-      if (cleanImageUrl.isNotEmpty) {
-        final uri = Uri.tryParse(cleanImageUrl);
-        if (uri == null ||
-            !uri.hasScheme ||
-            (uri.scheme != 'https' && uri.scheme != 'http') ||
-            uri.host.isEmpty) {
-          throw ArgumentError('رابط صورة القسم غير صالح.');
-        }
+      final cleanImageUrl = _emptyToNull(imageUrl);
+
+      if (cleanImageUrl != null) {
+        _validateImageUrl(cleanImageUrl);
       }
-      updates['image_url'] = cleanImageUrl.isEmpty ? null : cleanImageUrl;
+
+      updates['image_url'] = cleanImageUrl;
     }
+
     if (activityType != null) {
-      final cleanedActivity = activityType.trim();
-      if (cleanedActivity.length > 120) {
+      final cleanActivity = _emptyToNull(activityType);
+
+      if (cleanActivity != null && cleanActivity.length > 120) {
         throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
       }
-      updates['activity_type'] =
-          cleanedActivity.isEmpty ? null : cleanedActivity;
+
+      updates['activity_type'] = cleanActivity;
     }
+
     if (sortOrder != null) {
       if (sortOrder < 0) {
         throw ArgumentError('ترتيب القسم لا يمكن أن يكون سالبًا.');
       }
+
       updates['sort_order'] = sortOrder;
     }
-    if (isActive != null) updates['is_active'] = isActive;
+
+    if (isActive != null) {
+      updates['is_active'] = isActive;
+    }
 
     if (updates.isEmpty) return;
 
-    await _client
+    await _requireClient
         .from('categories')
         .update(updates)
         .eq('id', categoryId);
   }
 
+  /// تفعيل قسم.
+  Future<void> activateCategory(int categoryId) async {
+    _validateId(categoryId, 'القسم');
+
+    await _requireClient
+        .from('categories')
+        .update({'is_active': true})
+        .eq('id', categoryId);
+  }
+
   /// تعطيل قسم دون حذفه نهائيًا.
   Future<void> deactivateCategory(int categoryId) async {
-    if (categoryId <= 0) {
-      throw ArgumentError('معرّف القسم غير صالح.');
-    }
-    await _client
+    _validateId(categoryId, 'القسم');
+
+    await _requireClient
         .from('categories')
         .update({'is_active': false})
         .eq('id', categoryId);
+  }
+
+  void _validateId(int id, String fieldName) {
+    if (id <= 0) {
+      throw ArgumentError('معرّف $fieldName غير صالح.');
+    }
+  }
+
+  void _validateLimit(int limit) {
+    if (limit < 1 || limit > 500) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و500.');
+    }
+  }
+
+  String _requiredText(String? value, String fieldName) {
+    final cleaned = value?.trim();
+
+    if (cleaned == null || cleaned.isEmpty) {
+      throw ArgumentError('يرجى إدخال $fieldName.');
+    }
+
+    return cleaned;
+  }
+
+  String? _emptyToNull(String? value) {
+    final cleaned = value?.trim();
+
+    return cleaned == null || cleaned.isEmpty ? null : cleaned;
+  }
+
+  void _validateImageUrl(String value) {
+    final uri = Uri.tryParse(value);
+
+    if (uri == null ||
+        !uri.hasScheme ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      throw ArgumentError('رابط صورة القسم غير صالح.');
+    }
   }
 }
