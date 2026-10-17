@@ -177,7 +177,7 @@ declare
   v_discount numeric(14,2);
   v_tax numeric(14,2);
 begin
-  if p_kind not in ('purchase','sales') then raise exception 'نوع المستند غير مدعوم'; end if;
+  if p_kind is null or p_kind not in ('purchase','sales') then raise exception 'نوع المستند غير مدعوم'; end if;
   if p_item_id is null or p_quantity is null or p_quantity <= 0
      or p_unit_price is null or p_unit_price < 0
      or coalesce(p_discount,0) < 0 or coalesce(p_tax,0) < 0
