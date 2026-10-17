@@ -51,6 +51,7 @@ from (values
   ('erp_post_payroll_run','function'),
   ('erp_decide_leave_request','function'),
   ('erp_guard_fiscal_period','function'),
+  ('erp_validate_master_data_links','function'),
   ('erp_record_inventory_movement','function'),
   ('erp_transfer_inventory_between_warehouses','function')
 ) as x(object_name, object_type)
