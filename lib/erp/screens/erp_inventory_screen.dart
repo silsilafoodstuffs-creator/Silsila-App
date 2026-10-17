@@ -21,6 +21,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
   List<Map<String, dynamic>> _balances = [];
   List<Map<String, dynamic>> _movements = [];
   String? _warehouseId;
+  String? _targetWarehouseId;
   String? _itemId;
   String _type = 'opening';
   bool _loading = false;
@@ -32,10 +33,9 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
     'opening': 'رصيد افتتاحي / وارد',
     'purchase_receipt': 'استلام مشتريات',
     'customer_return': 'مرتجع عميل',
-    'transfer_in': 'تحويل وارد',
     'sales_issue': 'صرف مبيعات',
     'supplier_return': 'مرتجع مورد',
-    'transfer_out': 'تحويل منصرف',
+    'transfer_out': 'تحويل بين المخازن',
     'waste': 'هالك',
   };
 
@@ -81,6 +81,9 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
         if (!_warehouses.any((r) => _s(r['id']) == _warehouseId)) {
           _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
         }
+        if (!_warehouses.any((r) => _s(r['id']) == _targetWarehouseId)) {
+          _targetWarehouseId = _warehouses.length > 1 ? _s(_warehouses[1]['id']) : null;
+        }
         if (!_items.any((r) => _s(r['id']) == _itemId)) {
           _itemId = _items.isEmpty ? null : _s(_items.first['id']);
         }
@@ -105,16 +108,32 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
     }
     setState(() { _saving = true; _error = null; _success = null; });
     try {
-      await _repo.recordMovement(
-        companyId: _company.text,
-        warehouseId: _warehouseId!,
-        itemId: _itemId!,
-        movementType: _type,
-        quantity: quantity,
-        unitCost: cost,
-        notes: _notes.text.trim(),
-        batchNumber: _batch.text.trim().isEmpty ? null : _batch.text.trim(),
-      );
+      if (_type == 'transfer_out') {
+        if (_targetWarehouseId == null || _targetWarehouseId == _warehouseId) {
+          throw ArgumentError('اختر مخزن استلام مختلفًا عن مخزن الصرف.');
+        }
+        await _repo.transferInventory(
+          companyId: _company.text,
+          sourceWarehouseId: _warehouseId!,
+          targetWarehouseId: _targetWarehouseId!,
+          itemId: _itemId!,
+          quantity: quantity,
+          unitCost: cost,
+          notes: _notes.text.trim(),
+          batchNumber: _batch.text.trim().isEmpty ? null : _batch.text.trim(),
+        );
+      } else {
+        await _repo.recordMovement(
+          companyId: _company.text,
+          warehouseId: _warehouseId!,
+          itemId: _itemId!,
+          movementType: _type,
+          quantity: quantity,
+          unitCost: cost,
+          notes: _notes.text.trim(),
+          batchNumber: _batch.text.trim().isEmpty ? null : _batch.text.trim(),
+        );
+      }
       if (!mounted) return;
       _quantity.clear();
       _notes.clear();
@@ -198,6 +217,17 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
                 items: _types.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                 onChanged: (v) => setState(() => _type = v ?? _type),
               ),
+              if (_type == 'transfer_out') ...[
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _targetWarehouseId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'مخزن الاستلام', border: OutlineInputBorder()),
+                  items: _warehouses.where((r) => _s(r['id']) != _warehouseId).map((r) =>
+                    DropdownMenuItem<String>(value: _s(r['id']), child: Text(_warehouseName(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
+                  onChanged: (v) => setState(() => _targetWarehouseId = v),
+                ),
+              ],
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(child: TextField(controller: _quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true),
