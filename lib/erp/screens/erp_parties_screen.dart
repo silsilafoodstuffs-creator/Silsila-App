@@ -47,9 +47,9 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _kindLabel(String value) => value == 'supplier' ? 'مورد' : value == 'customer' ? 'عميل' : 'مورد وعميل';
 
-  Future<void> _load() async {
+  Future<void> _load({bool clearMessage = true}) async {
     if (_company.text.trim().isEmpty) { setState(() => _error = 'أدخل معرّف الشركة أولًا.'); return; }
-    setState(() { _loading = true; _error = null; _message = null; });
+    setState(() { _loading = true; _error = null; if (clearMessage) _message = null; });
     try {
       final rows = await _repo.fetchParties(_company.text, kind: _filter);
       if (!mounted) return;
@@ -77,7 +77,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       _code.clear(); _name.clear(); _phone.clear(); _whatsapp.clear(); _email.clear(); _address.clear();
       _governorate.clear(); _district.clear(); _creditLimit.text = '0'; _openingBalance.text = '0';
       setState(() { _saving = false; _message = 'تمت إضافة الطرف.'; });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذرت إضافة الطرف: $e'; });
@@ -90,7 +90,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       await _repo.setActive(_s(row['id']), row['is_active'] != true);
       if (!mounted) return;
       setState(() { _saving = false; _message = row['is_active'] == true ? 'تم تعطيل الطرف.' : 'تم تنشيط الطرف.'; });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر تحديث الحالة: $e'; });
