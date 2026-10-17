@@ -5234,7 +5234,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!mounted) return;
       setState(() {
         savedAddresses = rows;
-        final preferred = rows.where((row) => row['is_default'] == true).firstOrNull;
+        Map<String, dynamic>? preferred;
+        for (final row in rows) {
+          if (row['is_default'] == true) {
+            preferred = row;
+            break;
+          }
+        }
         if (preferred != null) {
           selectedAddressId = preferred['id']?.toString();
           address.text = formatAddress(preferred);
@@ -5316,7 +5322,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           child: Text((item['title'] ?? 'عنوان محفوظ').toString()),
         )).toList(),
         onChanged: (value) {
-          final selected = savedAddresses.where((item) => item['id']?.toString() == value).firstOrNull;
+          Map<String, dynamic>? selected;
+          for (final item in savedAddresses) {
+            if (item['id']?.toString() == value) {
+              selected = item;
+              break;
+            }
+          }
           if (selected == null) return;
           setState(() {
             selectedAddressId = value;
