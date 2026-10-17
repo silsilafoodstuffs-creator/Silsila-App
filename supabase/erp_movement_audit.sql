@@ -1060,6 +1060,37 @@ begin
       select 1 from public.erp_operational_account_mappings m where m.company_id = p_company_id
     )
 
+  union all
+
+  select distinct
+    'company:' || m.company_id::text || ':operational_account_mapping_invalid',
+    'المحاسبة التشغيلية',
+    m.id,
+    'خريطة الحسابات',
+    null::date,
+    'حساب مرتبط غير صالح',
+    'خطأ',
+    'OPERATIONAL_ACCOUNT_MAPPING_INVALID_ACCOUNT',
+    'تحتوي خريطة الحسابات التشغيلية على حساب مفقود أو غير نشط أو غير قابل للترحيل أو يتبع شركة أخرى.',
+    'operational_account_mappings'
+  from public.erp_operational_account_mappings m
+  cross join lateral unnest(array[
+    m.accounts_receivable_account_id,
+    m.accounts_payable_account_id,
+    m.sales_revenue_account_id,
+    m.sales_returns_account_id,
+    m.inventory_account_id,
+    m.cost_of_goods_sold_account_id,
+    m.purchase_return_variance_account_id,
+    m.sales_tax_payable_account_id,
+    m.purchase_tax_credit_account_id
+  ]) as mapped(account_id)
+  left join public.erp_accounts a on a.id = mapped.account_id
+  where m.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'المحاسبة التشغيلية')
+    and mapped.account_id is not null
+    and (a.id is null or a.company_id <> m.company_id or not a.is_active or not a.is_postable)
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
