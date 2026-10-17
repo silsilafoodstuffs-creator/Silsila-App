@@ -234,7 +234,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     selected: selectedModule,
                     selectedTileColor: Colors.white.withValues(alpha: .14),
-                    leading: Icon(_iconFor(name), color: selectedModule ? _orange : Colors.white70, size: 20),
+                    leading: Icon(_iconFor(name), color: _orange, size: 20),
                     title: Text(name, style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: selectedModule ? FontWeight.w800 : FontWeight.w500)),
                     onTap: () => setState(() {
                       _module = name;
@@ -294,7 +294,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                               _expandedGroups.add(groupKey);
                             }
                           }),
-                          icon: Text(groupOpen ? '−' : '+', style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700)),
+                          icon: Text(groupOpen ? '−' : '+', style: const TextStyle(color: _orange, fontSize: 21, fontWeight: FontWeight.w700)),
                         ),
                       ]),
                       if (groupOpen)
@@ -305,7 +305,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                             visualDensity: const VisualDensity(vertical: -3),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 9),
                             minLeadingWidth: 12,
-                            leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: page == _page && selectedModule ? _orange : Colors.white38, size: 11),
+                            leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: _orange, size: 11),
                             title: Text(page, style: TextStyle(color: page == _page && selectedModule ? Colors.white : Colors.white70, fontSize: 10.5, fontWeight: page == _page && selectedModule ? FontWeight.w800 : FontWeight.normal)),
                             onTap: () => setState(() {
                               _module = name;
@@ -322,10 +322,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 }),
             ]);
           }).toList(),
-          const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Text('تطبيقات قيد التطوير', style: TextStyle(color: _orange, fontWeight: FontWeight.w900, fontSize: 12))),
-          _appLink('تطبيق سلسلة', 'التطبيق الرئيسي', Icons.apps_rounded, true),
-          _appLink('تطبيق رقم 2', 'جاري إنشاؤه', Icons.phone_android_rounded, false),
-          _appLink('تطبيق رقم 3', 'جاري إنشاؤه', Icons.web_rounded, false),
           ],
         )),
         const Divider(color: Colors.white24, height: 1),
@@ -355,14 +351,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     if (name.contains('الدعم')) return Icons.support_agent_rounded;
     return Icons.query_stats_rounded;
   }
-
-  Widget _appLink(String title, String subtitle, IconData icon, bool active) => ListTile(
-    dense: true,
-    leading: Icon(icon, color: active ? _orange : Colors.white70, size: 19),
-    title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
-    subtitle: Text(subtitle, style: TextStyle(color: active ? Colors.white70 : Colors.white54, fontSize: 10)),
-    onTap: active ? () => _open('إدارة التطبيقات', 'بيانات أساسية', 'إعدادات هوية التطبيق') : () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$title — $subtitle'))),
-  );
 
   Widget _rightPanel() => Container(
     decoration: const BoxDecoration(border: Border(left: BorderSide(color: Color(0xFFECE7F2)))),
@@ -398,7 +386,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ])),
     const SizedBox(height: 18),
     Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const Text('هوية التطبيق الحالي', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
+      const Text('التطبيقات التابعة لسلسلة', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 8),
+      const Text('إدارة تطبيق سلسلة والتطبيقات الإضافية من مكان واحد؛ التطبيقات غير المنشورة تظل قيد التجهيز دون إظهار قسم مستقل لها.', style: TextStyle(color: Colors.black54, height: 1.6, fontSize: 12)),
+      const SizedBox(height: 12),
+      _managedAppCard('تطبيق سلسلة', 'التطبيق الرئيسي', Icons.apps_rounded, true, () => setState(() => _appName = 'سلسلة')),
+      _managedAppCard('تطبيق رقم 2', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.phone_android_rounded, false, () => setState(() => _appName = 'تطبيق رقم 2')),
+      _managedAppCard('تطبيق رقم 3', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.web_rounded, false, () => setState(() => _appName = 'تطبيق رقم 3')),
+      const Divider(height: 28),
+      const Text('هوية التطبيق المحدد', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
       const SizedBox(height: 14),
       TextFormField(initialValue: _appName, decoration: const InputDecoration(labelText: 'اسم التطبيق', border: OutlineInputBorder()), onChanged: (v) => setState(() => _appName = v)),
       const SizedBox(height: 12),
@@ -430,9 +426,26 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ])),
   ]);
 
+  Widget _managedAppCard(String title, String subtitle, IconData icon, bool active, VoidCallback onTap) => Card(
+    elevation: 0,
+    margin: const EdgeInsets.only(bottom: 8),
+    color: active ? const Color(0xFFFFF7EB) : const Color(0xFFFCFAFD),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(13),
+      side: BorderSide(color: active ? _orange : const Color(0xFFECE7F2)),
+    ),
+    child: ListTile(
+      onTap: onTap,
+      leading: Icon(icon, color: _orange),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, color: _purple)),
+      subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
+      trailing: Icon(active ? Icons.check_circle_rounded : Icons.tune_rounded, color: active ? _orange : _pink, size: 20),
+    ),
+  );
+
   Widget _colorChoice(String label, Color color, Color selected, ValueChanged<Color> onSelect) => OutlinedButton(
     onPressed: () => onSelect(color),
-    style: OutlinedButton.styleFrom(side: BorderSide(color: selected == color ? _purple : const Color(0xFFECE7F2), width: selected == color ? 2 : 1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+    style: OutlinedButton.styleFrom(side: BorderSide(color: selected == color ? _pink : const Color(0xFFECE7F2), width: selected == color ? 2 : 1), overlayColor: _pink.withValues(alpha: .10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
     child: Row(mainAxisSize: MainAxisSize.min, children: [Container(width: 16, height: 16, decoration: BoxDecoration(color: color, shape: BoxShape.circle)), const SizedBox(width: 7), Text(label)]),
   );
 
