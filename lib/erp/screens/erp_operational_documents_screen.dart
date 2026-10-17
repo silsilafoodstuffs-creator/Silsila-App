@@ -90,6 +90,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         if (!_warehouses.any((r) => _s(r['id']) == _warehouseId)) _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
         if (!_items.any((r) => _s(r['id']) == _itemId)) _itemId = _items.isEmpty ? null : _s(_items.first['id']);
         if (_selectedDocumentId != null && !_rows.any((r) => _s(r['id']) == _selectedDocumentId)) _selectedDocumentId = null;
+        if (_selectedDocumentId != null) {
+          final current = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
+          if (current.isNotEmpty) {
+            _partyId = _s(widget.kind == ErpOperationalKind.purchase ? current.first['supplier_id'] : current.first['customer_id']);
+            _warehouseId = _s(current.first['warehouse_id']);
+          }
+        }
         _loading = false;
       });
     } catch (e) {
