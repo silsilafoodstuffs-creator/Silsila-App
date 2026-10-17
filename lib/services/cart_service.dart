@@ -106,6 +106,12 @@ class CartService extends ChangeNotifier {
     if (newItem.name.trim().isEmpty) {
       throw ArgumentError('اسم المنتج مطلوب.');
     }
+    if (newItem.supplierId.trim().isEmpty) {
+      throw ArgumentError('يجب ربط المنتج بمورد صالح قبل إضافته إلى السلة.');
+    }
+    if (newItem.unit.trim().isEmpty) {
+      throw ArgumentError('وحدة قياس المنتج مطلوبة.');
+    }
     if (!newItem.price.isFinite || newItem.price < 0) {
       throw ArgumentError('سعر المنتج غير صالح.');
     }
