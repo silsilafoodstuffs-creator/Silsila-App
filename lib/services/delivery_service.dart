@@ -30,6 +30,82 @@ class DeliveryService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  /// جلب شركة الشحن المرتبطة بحساب المستخدم الحالي.
+  Future<Map<String, dynamic>?> getMyShippingCompany() async {
+    final response = await _client
+        .from('shipping_companies')
+        .select()
+        .eq('profile_id', _userId)
+        .maybeSingle();
+    if (response == null) return null;
+    return Map<String, dynamic>.from(response);
+  }
+
+  /// جلب الشحنات المسندة إلى شركة الشحن الحالية.
+  Future<List<Map<String, dynamic>>> getAssignedDeliveries({
+    int limit = 100,
+  }) async {
+    _validateLimit(limit);
+    final company = await getMyShippingCompany();
+    if (company == null) return [];
+    final rows = await _client
+        .from('deliveries')
+        .select()
+        .eq('shipping_company_id', company['id'])
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// تحديث حالة الشحنة عبر إجراء آمن يتحقق من شركة الشحن المسندة.
+  Future<Map<String, dynamic>> updateDeliveryStatus({
+    required String deliveryId,
+    required String status,
+    String? note,
+  }) async {
+    const allowed = {'قيد الاستلام', 'في الطريق', 'تم التسليم', 'ملغي', 'مُلغي'};
+    if (!allowed.contains(status)) {
+      throw ArgumentError('حالة الشحنة غير مدعومة.');
+    }
+    final response = await _client.rpc(
+      'shipping_company_update_delivery_status',
+      params: {
+        'p_delivery_id': deliveryId.trim(),
+        'p_new_status': status,
+        'p_note': _emptyToNull(note),
+      },
+    );
+    return Map<String, dynamic>.from(response as Map);
+  }
+
+  /// قائمة شركات الشحن للإدارة، بما فيها غير النشطة.
+  Future<List<Map<String, dynamic>>> getAllShippingCompaniesForAdmin() async {
+    final response = await _client.rpc('admin_list_shipping_companies');
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  /// إنشاء أو تحديث شركة شحن من لوحة الإدارة.
+  Future<Map<String, dynamic>> saveShippingCompany({
+    String? companyId,
+    String? profileId,
+    required String name,
+    String? phone,
+    required bool isActive,
+  }) async {
+    if (name.trim().isEmpty) throw ArgumentError('اسم شركة الشحن مطلوب.');
+    final response = await _client.rpc(
+      'admin_save_shipping_company',
+      params: {
+        'p_company_id': companyId,
+        'p_profile_id': profileId,
+        'p_name': name.trim(),
+        'p_phone': _emptyToNull(phone),
+        'p_is_active': isActive,
+      },
+    );
+    return Map<String, dynamic>.from(response as Map);
+  }
+
   /// إنشاء طلب توصيل مرتبط بطلب شراء.
   Future<Map<String, dynamic>> createDelivery({
     required String orderId,
