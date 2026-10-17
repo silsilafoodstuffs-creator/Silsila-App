@@ -64,7 +64,7 @@ begin
 
   v_base := case when p_price_kind = 'sale' then v_item.sale_price else v_item.purchase_price end;
 
-  select l.id, l.price_list_name, l.currency_code, ln.unit_price, ln.discount_percent,
+  select l.id as price_list_id, l.price_list_name, l.currency_code, ln.unit_price, ln.discount_percent,
          case when pp.party_id is not null then 'party_price_list' else 'default_price_list' end as resolved_source
     into v_line
   from public.erp_price_lists l
@@ -90,7 +90,7 @@ begin
   if found then
     v_base := v_line.unit_price;
     v_discount := coalesce(v_line.discount_percent, 0);
-    v_list_id := v_line.id;
+    v_list_id := v_line.price_list_id;
     v_list_name := v_line.price_list_name;
     v_currency := v_line.currency_code;
     v_source := v_line.resolved_source;
