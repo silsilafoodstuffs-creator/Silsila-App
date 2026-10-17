@@ -1244,7 +1244,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final phoneController = TextEditingController();
   final whatsappController = TextEditingController();
   final addressController = TextEditingController();
+  final landmarkController = TextEditingController();
+  final districtController = TextEditingController();
+  final areaController = TextEditingController();
   final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
 
   String activity = 'مواد غذائية';
   late String accountType;
@@ -1270,7 +1274,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     phoneController.dispose();
     whatsappController.dispose();
     addressController.dispose();
+    landmarkController.dispose();
+    districtController.dispose();
+    areaController.dispose();
     passwordController.dispose();
+    confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -1301,7 +1309,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ? phoneController.text.trim()
               : whatsappController.text.trim(),
           'governorate': governorate,
+          'district': districtController.text.trim(),
+          'area': areaController.text.trim(),
           'address': addressController.text.trim(),
+          'landmark': landmarkController.text.trim(),
         },
       );
 
@@ -1492,10 +1503,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 12),
               TextFormField(
+                controller: districtController,
+                decoration: const InputDecoration(
+                  labelText: 'المركز أو المدينة',
+                  prefixIcon: Icon(Icons.location_city_outlined),
+                ),
+                validator: requiredValidator,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: areaController,
+                decoration: const InputDecoration(
+                  labelText: 'القرية أو الحي',
+                  prefixIcon: Icon(Icons.map_outlined),
+                ),
+                validator: requiredValidator,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
                 controller: addressController,
                 maxLines: 2,
                 decoration: const InputDecoration(
-                  labelText: 'العنوان وأقرب علامة مميزة',
+                  labelText: 'العنوان بالتفصيل',
+                  prefixIcon: Icon(Icons.home_outlined),
+                ),
+                validator: requiredValidator,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: landmarkController,
+                decoration: const InputDecoration(
+                  labelText: 'أقرب علامة مميزة (اختياري)',
+                  prefixIcon: Icon(Icons.place_outlined),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1503,12 +1542,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(
-                  labelText: 'كلمة المرور (8 أحرف على الأقل)',
+                  labelText: 'كلمة المرور',
+                  helperText: '8 أحرف على الأقل مع حرف كبير وصغير ورقم ورمز',
+                  prefixIcon: Icon(Icons.lock_outline),
                 ),
-                validator: (v) =>
-                    v == null || v.length < 8
-                        ? 'كلمة المرور يجب ألا تقل عن 8 أحرف'
-                        : null,
+                validator: (v) {
+                  if (v == null || v.length < 8) {
+                    return 'كلمة المرور يجب ألا تقل عن 8 أحرف';
+                  }
+                  if (!RegExp(r'[A-Z]').hasMatch(v) ||
+                      !RegExp(r'[a-z]').hasMatch(v) ||
+                      !RegExp(r'\d').hasMatch(v) ||
+                      !RegExp(r'[^A-Za-z0-9]').hasMatch(v)) {
+                    return 'أضف حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: confirmPasswordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'تأكيد كلمة المرور',
+                  prefixIcon: Icon(Icons.lock_reset_outlined),
+                ),
+                validator: (v) => v != passwordController.text
+                    ? 'كلمتا المرور غير متطابقتين'
+                    : null,
               ),
               const SizedBox(height: 18),
               SizedBox(
