@@ -227,6 +227,10 @@ class ReviewService {
       throw ArgumentError(errorMessage);
     }
 
+    if (cleaned.length > 200) {
+      throw ArgumentError('معرّف البيانات أطول من الحد المسموح.');
+    }
+
     return cleaned;
   }
 
