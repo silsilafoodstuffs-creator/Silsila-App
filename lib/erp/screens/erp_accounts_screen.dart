@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/erp_accounts_repository.dart';
 
 class ErpAccountsScreen extends StatefulWidget {
-  const ErpAccountsScreen({super.key, this.initialCompanyId});
+  const ErpAccountsScreen({super.key, this.initialCompanyId, this.initialSearch});
 
   final String? initialCompanyId;
+  final String? initialSearch;
 
   @override
   State<ErpAccountsScreen> createState() => _ErpAccountsScreenState();
@@ -23,6 +24,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
   void initState() {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
+    _search.text = widget.initialSearch ?? '';
   }
 
   @override
