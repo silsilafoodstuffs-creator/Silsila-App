@@ -109,6 +109,18 @@ CREATE INDEX IF NOT EXISTS idx_account_classifications_role
     ON public.account_classifications
     (account_role, is_active, sort_order);
 
+-- التصنيفات والأنشطة للقراءة فقط من التطبيق.
+ALTER TABLE public.activity_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.account_classifications ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "activity_types_read_active" ON public.activity_types;
+CREATE POLICY "activity_types_read_active" ON public.activity_types
+FOR SELECT TO anon, authenticated USING (is_active = TRUE);
+
+DROP POLICY IF EXISTS "account_classifications_read_active" ON public.account_classifications;
+CREATE POLICY "account_classifications_read_active" ON public.account_classifications
+FOR SELECT TO anon, authenticated USING (is_active = TRUE);
+
 CREATE INDEX IF NOT EXISTS idx_products_activity_type
     ON public.products (activity_type);
 
