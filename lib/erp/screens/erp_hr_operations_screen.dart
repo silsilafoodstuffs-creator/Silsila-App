@@ -156,7 +156,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
         const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 8, children: [
           FilledButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh), label: const Text('تحميل البيانات')),
-          OutlinedButton.icon(onPressed: _saving || _company.text.trim().isEmpty ? null : _addEmployee, icon: const Icon(Icons.person_add_alt_1), label: const Text('إضافة موظف')),
+          OutlinedButton.icon(onPressed: _saving ? null : _addEmployee, icon: const Icon(Icons.person_add_alt_1), label: const Text('إضافة موظف')),
         ]),
         if (_error != null) _notice(_error!, Colors.red),
         if (_message != null) _notice(_message!, Colors.green),
