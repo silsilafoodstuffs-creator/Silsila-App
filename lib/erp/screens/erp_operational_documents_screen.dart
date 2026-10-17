@@ -27,6 +27,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   List<Map<String, dynamic>> _parties = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _lines = [];
   String? _partyId;
   String? _warehouseId;
   String? _itemId;
@@ -138,6 +139,15 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذرت إضافة البند: $e'; });
+    }
+  }
+
+  Future<void> _loadLines(String documentId) async {
+    try {
+      final rows = await _repo.fetchLines(documentId, widget.kind);
+      if (mounted) setState(() => _lines = rows);
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تحميل بنود المستند: $e');
     }
   }
 
@@ -255,6 +265,17 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               FilledButton.icon(onPressed: _saving ? null : _addLine, icon: const Icon(Icons.playlist_add), label: const Text('إضافة البند')),
             ],
           ))),
+        if (_selectedDocumentId != null && _lines.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text('بنود المستند المحدد', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+          ..._lines.map((line) => Card(child: ListTile(
+            title: Text(_itemLabel(_s(line['item_id']))),
+            subtitle: Text('الكمية: ' + _s(line['quantity']) + ' • السعر: ' + _money(line['unit_price']) +
+              ' • خصم: ' + _money(line['discount_amount']) + ' • ضريبة: ' + _money(line['tax_amount'])),
+            isThreeLine: false,
+            trailing: Text(_money(line['line_total']) + ' ج.م', style: const TextStyle(fontWeight: FontWeight.w900)),
+          ))),
+        ],
         ..._rows.map((r) {
           final status = _s(r['status']);
           final type = _s(r['document_type']);
@@ -263,7 +284,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               : ['delivery','invoice','return'].contains(type);
           final canPost = ['draft','approved'].contains(status) && eligibleType;
           final date = _s(r['document_date']);
-          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () => setState(() => _selectedDocumentId = _s(r['id'])), child: Padding(padding: const EdgeInsets.all(12), child: Column(
+          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () async { setState(() => _selectedDocumentId = _s(r['id'])); await _loadLines(_s(r['id'])); }, child: Padding(padding: const EdgeInsets.all(12), child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(children: [
