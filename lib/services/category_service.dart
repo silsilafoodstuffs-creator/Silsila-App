@@ -30,6 +30,9 @@ class CategoryService {
   Future<Map<String, dynamic>?> getCategoryById(
     int categoryId,
   ) async {
+    if (categoryId <= 0) {
+      throw ArgumentError('معرّف القسم غير صالح.');
+    }
     return await _client
         .from('categories')
         .select()
@@ -41,6 +44,9 @@ class CategoryService {
   Future<List<Map<String, dynamic>>> getSubcategories(
     int parentId,
   ) async {
+    if (parentId <= 0) {
+      throw ArgumentError('معرّف القسم الرئيسي غير صالح.');
+    }
     final rows = await _client
         .from('categories')
         .select()
@@ -158,7 +164,11 @@ class CategoryService {
     }
     if (activityType != null) {
       final cleanedActivity = activityType.trim();
-      updates['activity_type'] = cleanedActivity.isEmpty ? null : cleanedActivity;
+      if (cleanedActivity.length > 120) {
+        throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
+      }
+      updates['activity_type'] =
+          cleanedActivity.isEmpty ? null : cleanedActivity;
     }
     if (sortOrder != null) {
       if (sortOrder < 0) {
