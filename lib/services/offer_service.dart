@@ -2,37 +2,58 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OfferService {
   OfferService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+      : _client = client ?? _defaultClient;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  static SupabaseClient? get _defaultClient {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+    if (client == null) {
+      throw StateError('خدمة قاعدة البيانات غير متاحة حالياً.');
+    }
+    return client;
+  }
 
   String get _userId {
-    final user = _client.auth.currentUser;
-    if (user == null) {
+    final user = _requireClient.auth.currentUser;
+    if (user == null || user.id.trim().isEmpty) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
     return user.id;
   }
 
-  /// جلب العروض النشطة، مع إمكانية تحديد النشاط.
+  void _validateLimit(int limit) {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+  }
+
+  /// جلب العروض النشطة المتاحة حاليًا، مع إمكانية تحديد النشاط.
   Future<List<Map<String, dynamic>>> getOffers({
     String? activityType,
     int limit = 50,
   }) async {
-    if (limit < 1 || limit > 200) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
-    }
+    _validateLimit(limit);
 
     final now = DateTime.now().toUtc().toIso8601String();
-    var query = _client
+
+    var query = _requireClient
         .from('offers')
         .select()
         .eq('is_active', true)
         .or('starts_at.is.null,starts_at.lte.$now')
         .or('ends_at.is.null,ends_at.gte.$now');
 
-    final activity = activityType?.trim();
-    if (activity != null && activity.isNotEmpty) {
+    final activity = _emptyToNull(activityType);
+    if (activity != null) {
       query = query.eq('activity_type', activity);
     }
 
@@ -40,7 +61,7 @@ class OfferService {
         .order('created_at', ascending: false)
         .limit(limit);
 
-    return List<Map<String, dynamic>>.from(response);
+    return _toMapList(response);
   }
 
   /// جلب عروض مورد معين.
@@ -49,21 +70,21 @@ class OfferService {
     bool activeOnly = true,
     int limit = 50,
   }) async {
-    if (limit < 1 || limit > 200) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
-    }
+    _validateLimit(limit);
+
     final cleanSupplierId = supplierId.trim();
     if (cleanSupplierId.isEmpty) {
       throw ArgumentError('معرّف المورد مطلوب.');
     }
 
-    var query = _client
+    var query = _requireClient
         .from('offers')
         .select()
         .eq('supplier_id', cleanSupplierId);
 
     if (activeOnly) {
       final now = DateTime.now().toUtc().toIso8601String();
+
       query = query
           .eq('is_active', true)
           .or('starts_at.is.null,starts_at.lte.$now')
@@ -74,7 +95,7 @@ class OfferService {
         .order('created_at', ascending: false)
         .limit(limit);
 
-    return List<Map<String, dynamic>>.from(response);
+    return _toMapList(response);
   }
 
   /// إضافة عرض جديد بواسطة المورد الحالي.
@@ -89,10 +110,13 @@ class OfferService {
   }) async {
     final cleanTitle = title.trim();
     final cleanDescription = description.trim();
+    final cleanImageUrl = _emptyToNull(imageUrl);
+    final activity = _emptyToNull(activityType);
 
     if (cleanTitle.isEmpty || cleanDescription.isEmpty) {
       throw ArgumentError('يرجى إدخال عنوان العرض ووصفه.');
     }
+
     if (cleanTitle.length > 200 || cleanDescription.length > 5000) {
       throw ArgumentError('عنوان العرض أو وصفه تجاوز الحد المسموح.');
     }
@@ -108,16 +132,17 @@ class OfferService {
       throw ArgumentError('نسبة الخصم يجب أن تكون أكبر من صفر وحتى 100%.');
     }
 
-    if (imageUrl != null && imageUrl.trim().isNotEmpty) {
-      final uri = Uri.tryParse(imageUrl.trim());
+    if (cleanImageUrl != null) {
+      final uri = Uri.tryParse(cleanImageUrl);
       if (uri == null ||
-          !uri.hasScheme ||
-          (uri.scheme != 'https' && uri.scheme != 'http') ||
-          uri.host.isEmpty) {
+          !uri.hasAuthority ||
+          uri.host.isEmpty ||
+          (uri.scheme != 'https' && uri.scheme != 'http')) {
         throw ArgumentError('رابط صورة العرض غير صالح.');
       }
     }
-    if (activityType != null && activityType.trim().length > 120) {
+
+    if (activity != null && activity.length > 120) {
       throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
     }
 
@@ -127,11 +152,10 @@ class OfferService {
       'description': cleanDescription,
       'starts_at': startsAt.toUtc().toIso8601String(),
       'ends_at': endsAt.toUtc().toIso8601String(),
-      'image_url': _emptyToNull(imageUrl),
+      'image_url': cleanImageUrl,
       'is_active': true,
     };
 
-    final activity = _emptyToNull(activityType);
     if (activity != null) {
       data['activity_type'] = activity;
     }
@@ -140,23 +164,24 @@ class OfferService {
       data['discount_percentage'] = discountPercentage;
     }
 
-    final response = await _client
+    final response = await _requireClient
         .from('offers')
         .insert(data)
         .select()
         .single();
 
-    return Map<String, dynamic>.from(response);
+    return _toMap(response);
   }
 
   /// إيقاف عرض يملكه المورد الحالي.
   Future<void> deactivateOffer(String offerId) async {
     final id = offerId.trim();
+
     if (id.isEmpty) {
       throw ArgumentError('معرّف العرض مطلوب.');
     }
 
-    await _client
+    await _requireClient
         .from('offers')
         .update({'is_active': false})
         .eq('id', id)
@@ -166,11 +191,12 @@ class OfferService {
   /// حذف عرض يملكه المورد الحالي.
   Future<void> deleteOffer(String offerId) async {
     final id = offerId.trim();
+
     if (id.isEmpty) {
       throw ArgumentError('معرّف العرض مطلوب.');
     }
 
-    await _client
+    await _requireClient
         .from('offers')
         .delete()
         .eq('id', id)
@@ -180,5 +206,24 @@ class OfferService {
   String? _emptyToNull(String? value) {
     final cleaned = value?.trim();
     return cleaned == null || cleaned.isEmpty ? null : cleaned;
+  }
+
+  Map<String, dynamic> _toMap(dynamic value) {
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+
+    throw StateError('أعاد الخادم بيانات غير متوقعة.');
+  }
+
+  List<Map<String, dynamic>> _toMapList(dynamic value) {
+    if (value is! List) {
+      throw StateError('أعاد الخادم قائمة بيانات غير متوقعة.');
+    }
+
+    return value
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
   }
 }
