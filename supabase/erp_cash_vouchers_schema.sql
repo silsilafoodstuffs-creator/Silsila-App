@@ -52,8 +52,8 @@ declare
   v_source_branch uuid;
 begin
   if new.branch_id is not null and not exists (
-    select 1 from public.erp_branches b where b.id = new.branch_id and b.company_id = new.company_id
-  ) then raise exception 'فرع السند لا يتبع الشركة نفسها'; end if;
+    select 1 from public.erp_branches b where b.id = new.branch_id and b.company_id = new.company_id and b.is_active
+  ) then raise exception 'فرع السند غير نشط أو لا يتبع الشركة نفسها'; end if;
 
   if not exists (
     select 1 from public.erp_cashboxes c
