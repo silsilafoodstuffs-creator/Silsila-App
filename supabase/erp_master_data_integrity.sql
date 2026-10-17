@@ -131,4 +131,4 @@ before insert or update of company_id, party_id, price_list_id on public.erp_par
 for each row execute function public.erp_validate_master_data_links();
 
 comment on function public.erp_validate_master_data_links() is
-  'Prevents cross-company branch, item group, cashbox account, item unit and party contact links.';
+  'Validates company-scoped links for branches, item groups, cashboxes, item units, party contacts, and price list assignments.';
