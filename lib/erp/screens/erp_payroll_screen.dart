@@ -240,7 +240,11 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
                 value: _employeeId, isExpanded: true,
                 decoration: const InputDecoration(labelText: 'الموظف', border: OutlineInputBorder()),
                 items: _employees.map((e) => DropdownMenuItem(value: _s(e['id']), child: Text(_employeeLabel(_s(e['id'])), overflow: TextOverflow.ellipsis))).toList(),
-                onChanged: (v) => setState(() => _employeeId = v),
+                onChanged: (v) => setState(() {
+                  _employeeId = v;
+                  final employee = _employees.where((e) => _s(e['id']) == v);
+                  if (employee.isNotEmpty) _basic.text = _money(employee.first['base_salary']);
+                }),
               ),
               const SizedBox(height: 8),
               Row(children: [
