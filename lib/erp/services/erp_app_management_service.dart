@@ -51,6 +51,37 @@ class ErpAppManagementService {
         .toList(growable: false);
   }
 
+  /// Creates or updates an app's company-scoped registry record.
+  /// Restrictive RLS must independently validate company membership.
+  Future<String> saveManagedApp({
+    required String companyId,
+    required String appKey,
+    required String displayName,
+    required ErpManagedAppStatus status,
+    String? description,
+    String? packageName,
+    String? webUrl,
+  }) async {
+    _requireId(companyId, 'معرّف الشركة مطلوب.');
+    _requireId(appKey, 'مفتاح التطبيق مطلوب.');
+    _requireId(displayName, 'اسم التطبيق مطلوب.');
+    final payload = <String, Object?>{
+      'company_id': companyId,
+      'app_key': appKey.trim(),
+      'display_name': displayName.trim(),
+      'status': _statusToDb(status),
+      'description': _clean(description),
+      'package_name': _clean(packageName),
+      'web_url': _clean(webUrl),
+    };
+    final row = await _db
+        .from('erp_managed_apps')
+        .upsert(payload, onConflict: 'company_id,app_key')
+        .select('id')
+        .single();
+    return row['id'].toString();
+  }
+
   Future<ErpAppThemeSettings?> getThemeSettings({required String appId}) async {
     _requireId(appId, 'معرّف التطبيق مطلوب.');
     final row = await _db
@@ -240,6 +271,17 @@ class ErpAppManagementService {
     'shipping_company',
     'other',
   };
+
+  static String _statusToDb(ErpManagedAppStatus value) {
+    switch (value) {
+      case ErpManagedAppStatus.active:
+        return 'active';
+      case ErpManagedAppStatus.inDevelopment:
+        return 'in_development';
+      case ErpManagedAppStatus.paused:
+        return 'paused';
+    }
+  }
 
   static ErpManagedAppStatus _statusFromDb(String? value) {
     switch (value) {
