@@ -1,10 +1,23 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SearchService {
-  SearchService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  SearchService({SupabaseClient? client}) : _client = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client != null) {
+      return client;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      throw StateError('اتصال Supabase غير متاح. يرجى المحاولة لاحقًا.');
+    }
+  }
 
   /// البحث عن الموردين بالاسم ونوع النشاط.
   Future<List<Map<String, dynamic>>> searchSuppliers({
@@ -14,14 +27,14 @@ class SearchService {
   }) async {
     _validateLimit(limit);
 
-    var request = _client
+    var request = _requireClient
         .from('supplier_directory')
         .select(
           'id, full_name, activity_type, supplier_type, '
           'governorate, district, account_status',
         );
 
-    final term = _clean(query);
+    final term = _cleanSearch(query);
 
     if (term != null) {
       request = request.ilike(
@@ -52,12 +65,12 @@ class SearchService {
   }) async {
     _validateLimit(limit);
 
-    var request = _client
+    var request = _requireClient
         .from('products')
         .select()
         .eq('is_active', true);
 
-    final term = _clean(query);
+    final term = _cleanSearch(query);
 
     if (term != null) {
       request = request.ilike(
@@ -93,12 +106,12 @@ class SearchService {
   }) async {
     _validateLimit(limit);
 
-    var request = _client
+    var request = _requireClient
         .from('categories')
         .select()
         .eq('is_active', true);
 
-    final term = _clean(query);
+    final term = _cleanSearch(query);
 
     if (term != null) {
       request = request.ilike(
@@ -135,7 +148,7 @@ class SearchService {
       throw ArgumentError('يرجى تحديد المحافظة.');
     }
 
-    var request = _client
+    var request = _requireClient
         .from('supplier_directory')
         .select(
           'id, full_name, activity_type, supplier_type, '
@@ -143,7 +156,7 @@ class SearchService {
         )
         .eq('governorate', cleanGovernorate);
 
-    final term = _clean(query);
+    final term = _cleanSearch(query);
 
     if (term != null) {
       request = request.ilike(
@@ -164,6 +177,17 @@ class SearchService {
     if (limit < 1 || limit > 200) {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
+  }
+
+  /// تنظيف عبارة البحث والتحقق من طولها.
+  String? _cleanSearch(String? value) {
+    final term = _clean(value);
+
+    if (term != null && term.length > 150) {
+      throw ArgumentError('عبارة البحث طويلة أكثر من اللازم.');
+    }
+
+    return term;
   }
 
   /// تنظيف النصوص الفارغة.
