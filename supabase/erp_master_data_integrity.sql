@@ -11,33 +11,34 @@ as $$
 declare
   v_company uuid;
   v_postable boolean;
+  v_active boolean;
 begin
   if tg_table_name = 'erp_warehouses' then
     if new.branch_id is not null then
-      select company_id into v_company from public.erp_branches where id = new.branch_id;
-      if v_company is distinct from new.company_id then
-        raise exception 'فرع المخزن يجب أن يتبع الشركة نفسها';
+      select company_id, is_active into v_company, v_active from public.erp_branches where id = new.branch_id;
+      if v_company is distinct from new.company_id or v_active is distinct from true then
+        raise exception 'فرع المخزن غير نشط أو لا يتبع الشركة نفسها';
       end if;
     end if;
   elsif tg_table_name = 'erp_items' then
     if new.group_id is not null then
-      select company_id into v_company from public.erp_item_groups where id = new.group_id;
-      if v_company is distinct from new.company_id then
-        raise exception 'مجموعة الصنف يجب أن تتبع الشركة نفسها';
+      select company_id, is_active into v_company, v_active from public.erp_item_groups where id = new.group_id;
+      if v_company is distinct from new.company_id or v_active is distinct from true then
+        raise exception 'مجموعة الصنف غير نشطة أو لا تتبع الشركة نفسها';
       end if;
     end if;
   elsif tg_table_name = 'erp_cashboxes' then
     if new.branch_id is not null then
-      select company_id into v_company from public.erp_branches where id = new.branch_id;
-      if v_company is distinct from new.company_id then
-        raise exception 'فرع الخزينة يجب أن يتبع الشركة نفسها';
+      select company_id, is_active into v_company, v_active from public.erp_branches where id = new.branch_id;
+      if v_company is distinct from new.company_id or v_active is distinct from true then
+        raise exception 'فرع الخزينة غير نشط أو لا يتبع الشركة نفسها';
       end if;
     end if;
     if new.account_id is not null then
-      select company_id, is_postable into v_company, v_postable
+      select company_id, is_postable, is_active into v_company, v_postable, v_active
       from public.erp_accounts where id = new.account_id;
-      if v_company is distinct from new.company_id or v_postable is distinct from true then
-        raise exception 'حساب الخزينة يجب أن يكون حسابًا تحليليًا تابعًا للشركة نفسها';
+      if v_company is distinct from new.company_id or v_postable is distinct from true or v_active is distinct from true then
+        raise exception 'حساب الخزينة يجب أن يكون نشطًا وتحليليًا وتابعًا للشركة نفسها';
       end if;
     end if;
   elsif tg_table_name = 'erp_item_units' then
