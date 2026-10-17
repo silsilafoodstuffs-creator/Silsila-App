@@ -3,6 +3,9 @@ import '../services/erp_movement_audit_repository.dart';
 import 'erp_accounts_screen.dart';
 import 'erp_journal_entries_screen.dart';
 import 'erp_inventory_screen.dart';
+import 'erp_cash_vouchers_screen.dart';
+import 'erp_operational_documents_screen.dart';
+import 'erp_hr_operations_screen.dart';
 
 class ErpMovementAuditScreen extends StatefulWidget {
   const ErpMovementAuditScreen({super.key});
@@ -102,6 +105,28 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
           initialCompanyId: _company.text.trim(),
           initialEntryId: (issue['document_id'] ?? '').toString(),
         ),
+      ));
+    } else if (route == 'cash_vouchers') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpCashVouchersScreen(initialCompanyId: _company.text.trim()),
+      ));
+    } else if (route == 'purchases') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpOperationalDocumentsScreen(
+          initialCompanyId: _company.text.trim(),
+          kind: ErpOperationalKind.purchase,
+        ),
+      ));
+    } else if (route == 'sales') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpOperationalDocumentsScreen(
+          initialCompanyId: _company.text.trim(),
+          kind: ErpOperationalKind.sales,
+        ),
+      ));
+    } else if (route == 'hr') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpHrOperationsScreen(initialCompanyId: _company.text.trim()),
       ));
     } else if (route == 'inventory') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
