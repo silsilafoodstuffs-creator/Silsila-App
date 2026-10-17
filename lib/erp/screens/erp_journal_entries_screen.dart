@@ -348,6 +348,100 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
     }
   }
 
+  Future<void> _reverse(Map<String, dynamic> entry) async {
+    final reason = TextEditingController();
+    DateTime reversalDate = DateTime.now();
+    String? dialogError;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, refresh) => AlertDialog(
+          title: Text('إنشاء قيد عكس — رقم ${_str(entry, 'entry_number')}'),
+          content: SizedBox(
+            width: 460,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'سيُنشأ قيد جديد بعكس المدين والدائن، مع الاحتفاظ بالقيد الأصلي لأغراض المراجعة. لا يمكن تكرار عكس القيد نفسه.',
+                  style: TextStyle(height: 1.5),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: reason,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'سبب العكس (إلزامي)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: ctx,
+                      initialDate: reversalDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (picked != null) refresh(() => reversalDate = picked);
+                  },
+                  icon: const Icon(Icons.calendar_month),
+                  label: Text('تاريخ العكس: ${reversalDate.year}-${reversalDate.month.toString().padLeft(2, '0')}-${reversalDate.day.toString().padLeft(2, '0')}'),
+                ),
+                if (dialogError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(dialogError!, style: const TextStyle(color: Colors.red)),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton.icon(
+              onPressed: () {
+                if (reason.text.trim().isEmpty) {
+                  refresh(() => dialogError = 'اكتب سبب العكس أولًا.');
+                  return;
+                }
+                Navigator.pop(ctx, true);
+              },
+              icon: const Icon(Icons.undo),
+              label: const Text('إنشاء قيد العكس'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) {
+      reason.dispose();
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    try {
+      await _repo.reverseEntry(
+        entryId: _str(entry, 'id'),
+        reversalDate: reversalDate,
+        reason: reason.text,
+      );
+      reason.dispose();
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إنشاء قيد العكس. راجع دفتر الأستاذ للتأكد من ظهوره.')),
+      );
+    } catch (e) {
+      reason.dispose();
+      if (!mounted) return;
+      setState(() { _loading = false; _error = 'تعذر إنشاء قيد العكس: $e'; });
+    }
+  }
+
   Future<void> _post(Map<String, dynamic> entry) async {
     final id = _str(entry, 'id');
     final number = _str(entry, 'entry_number');
@@ -475,6 +569,12 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                         tooltip: 'ترحيل القيد',
                         onPressed: _loading ? null : () => _post(entry),
                         icon: const Icon(Icons.task_alt, color: Color(0xFF18865A)),
+                      ),
+                    if (status == 'posted')
+                      IconButton(
+                        tooltip: 'إنشاء قيد عكس',
+                        onPressed: _loading ? null : () => _reverse(entry),
+                        icon: const Icon(Icons.undo, color: Color(0xFFCE287A)),
                       ),
                   ],
                 ),
