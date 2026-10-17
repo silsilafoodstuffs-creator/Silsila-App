@@ -60,6 +60,35 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   String _appName = 'سلسلة';
   Color _appPrimary = const Color(0xFF3E007D);
   Color _appAccent = const Color(0xFFFFA015);
+  final Map<String, Map<String, Object>> _managedAppDrafts = {
+    'silsila': {'name': 'سلسلة', 'primary': const Color(0xFF3E007D), 'accent': const Color(0xFFFFA015)},
+    'app_2': {'name': 'تطبيق رقم 2', 'primary': const Color(0xFF3E007D), 'accent': const Color(0xFFFFA015)},
+    'app_3': {'name': 'تطبيق رقم 3', 'primary': const Color(0xFF3E007D), 'accent': const Color(0xFFFFA015)},
+  };
+
+  void _selectManagedApp(String key) {
+    final draft = _managedAppDrafts[key];
+    if (draft == null) return;
+    setState(() {
+      _selectedAppKey = key;
+      _appName = draft['name'] as String;
+      _appPrimary = draft['primary'] as Color;
+      _appAccent = draft['accent'] as Color;
+    });
+  }
+
+  void _updateManagedAppDraft({String? name, Color? primary, Color? accent}) {
+    setState(() {
+      if (name != null) _appName = name;
+      if (primary != null) _appPrimary = primary;
+      if (accent != null) _appAccent = accent;
+      _managedAppDrafts[_selectedAppKey] = {
+        'name': _appName,
+        'primary': _appPrimary,
+        'accent': _appAccent,
+      };
+    });
+  }
   bool _allowImageManagement = true;
   bool _allowThemeManagement = true;
   bool _allowPermissionManagement = true;
@@ -391,17 +420,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       const SizedBox(height: 8),
       const Text('إدارة تطبيق سلسلة والتطبيقات الإضافية من مكان واحد؛ التطبيقات غير المنشورة تظل قيد التجهيز دون إظهار قسم مستقل لها.', style: TextStyle(color: Colors.black54, height: 1.6, fontSize: 12)),
       const SizedBox(height: 12),
-      _managedAppCard('تطبيق سلسلة', 'التطبيق الرئيسي', Icons.apps_rounded, _selectedAppKey == 'silsila', () => setState(() { _selectedAppKey = 'silsila'; _appName = 'سلسلة'; })),
-      _managedAppCard('تطبيق رقم 2', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.phone_android_rounded, _selectedAppKey == 'app_2', () => setState(() { _selectedAppKey = 'app_2'; _appName = 'تطبيق رقم 2'; })),
-      _managedAppCard('تطبيق رقم 3', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.web_rounded, _selectedAppKey == 'app_3', () => setState(() { _selectedAppKey = 'app_3'; _appName = 'تطبيق رقم 3'; })),
+      _managedAppCard('تطبيق سلسلة', 'التطبيق الرئيسي', Icons.apps_rounded, _selectedAppKey == 'silsila', () => _selectManagedApp('silsila')),
+      _managedAppCard('تطبيق رقم 2', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.phone_android_rounded, _selectedAppKey == 'app_2', () => _selectManagedApp('app_2')),
+      _managedAppCard('تطبيق رقم 3', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.web_rounded, _selectedAppKey == 'app_3', () => _selectManagedApp('app_3')),
       const Divider(height: 28),
       const Text('هوية التطبيق المحدد', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
       const SizedBox(height: 14),
-      TextFormField(key: ValueKey(_selectedAppKey), initialValue: _appName, decoration: const InputDecoration(labelText: 'اسم التطبيق', border: OutlineInputBorder()), onChanged: (v) => setState(() => _appName = v)),
+      TextFormField(key: ValueKey(_selectedAppKey), initialValue: _appName, decoration: const InputDecoration(labelText: 'اسم التطبيق', border: OutlineInputBorder()), onChanged: (v) => _updateManagedAppDraft(name: v)),
       const SizedBox(height: 12),
       Wrap(spacing: 10, runSpacing: 10, children: [
-        _colorChoice('بنفسجي', const Color(0xFF3E007D), _appPrimary, (v) => setState(() => _appPrimary = v)),
-        _colorChoice('برتقالي', const Color(0xFFFFA015), _appAccent, (v) => setState(() => _appAccent = v)),
+        _colorChoice('بنفسجي', const Color(0xFF3E007D), _appPrimary, (v) => _updateManagedAppDraft(primary: v)),
+        _colorChoice('برتقالي', const Color(0xFFFFA015), _appAccent, (v) => _updateManagedAppDraft(accent: v)),
         _colorChoice('وردي', const Color(0xFFFF27C3), _appAccent, (v) => setState(() => _appAccent = v)),
         _colorChoice('أزرق', const Color(0xFF1565C0), _appAccent, (v) => setState(() => _appAccent = v)),
       ]),
