@@ -11,6 +11,7 @@ declare
   v_company uuid;
   v_party_kind text;
   v_document_company uuid;
+  v_warehouse_branch uuid;
 begin
   if tg_table_name = 'erp_purchase_documents' then
     select company_id, party_kind into v_company, v_party_kind
@@ -18,9 +19,15 @@ begin
     if v_company is distinct from new.company_id or v_party_kind not in ('supplier','both') then
       raise exception 'المورد يجب أن يكون موردًا تابعًا للشركة نفسها';
     end if;
-    if new.warehouse_id is not null and not exists (
-      select 1 from public.erp_warehouses w where w.id = new.warehouse_id and w.company_id = new.company_id
-    ) then raise exception 'مخزن المشتريات لا يتبع الشركة نفسها'; end if;
+    if new.warehouse_id is not null then
+      select company_id, branch_id into v_company, v_warehouse_branch
+      from public.erp_warehouses where id = new.warehouse_id;
+      if v_company is distinct from new.company_id then raise exception 'مخزن المشتريات لا يتبع الشركة نفسها'; end if;
+      if new.branch_id is null then new.branch_id := v_warehouse_branch;
+      elsif v_warehouse_branch is not null and new.branch_id <> v_warehouse_branch then
+        raise exception 'فرع المستند يجب أن يطابق فرع المخزن';
+      end if;
+    end if;
     if new.branch_id is not null and not exists (
       select 1 from public.erp_branches b where b.id = new.branch_id and b.company_id = new.company_id
     ) then raise exception 'فرع المشتريات لا يتبع الشركة نفسها'; end if;
@@ -30,9 +37,15 @@ begin
     if v_company is distinct from new.company_id or v_party_kind not in ('customer','both') then
       raise exception 'العميل يجب أن يكون عميلًا تابعًا للشركة نفسها';
     end if;
-    if new.warehouse_id is not null and not exists (
-      select 1 from public.erp_warehouses w where w.id = new.warehouse_id and w.company_id = new.company_id
-    ) then raise exception 'مخزن المبيعات لا يتبع الشركة نفسها'; end if;
+    if new.warehouse_id is not null then
+      select company_id, branch_id into v_company, v_warehouse_branch
+      from public.erp_warehouses where id = new.warehouse_id;
+      if v_company is distinct from new.company_id then raise exception 'مخزن المبيعات لا يتبع الشركة نفسها'; end if;
+      if new.branch_id is null then new.branch_id := v_warehouse_branch;
+      elsif v_warehouse_branch is not null and new.branch_id <> v_warehouse_branch then
+        raise exception 'فرع المستند يجب أن يطابق فرع المخزن';
+      end if;
+    end if;
     if new.branch_id is not null and not exists (
       select 1 from public.erp_branches b where b.id = new.branch_id and b.company_id = new.company_id
     ) then raise exception 'فرع المبيعات لا يتبع الشركة نفسها'; end if;
