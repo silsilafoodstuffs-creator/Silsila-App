@@ -14,9 +14,19 @@ class OrderStatusService {
     return user.id;
   }
 
-  /// جلب سجل تغييرات حالة طلب، بعد التحقق من صلاحية الوصول إليه.
+  /// حالات الطلب الموحدة في تطبيق سلسلة.
+  static const List<String> allowedStatuses = [
+    'انتظار قبول',
+    'تنفيذ',
+    'تحميل',
+    'توصيل',
+    'تم التسليم',
+    'مُلغي',
+  ];
+
+  /// جلب سجل حركة الطلب.
   Future<List<Map<String, dynamic>>> getOrderHistory(
-    String orderId,
+    int orderId,
   ) async {
     final userId = _userId;
 
@@ -28,56 +38,63 @@ class OrderStatusService {
         .maybeSingle();
 
     if (order == null) {
-      throw StateError('الطلب غير موجود أو لا تملك صلاحية الاطلاع عليه.');
+      throw StateError('الطلب غير موجود أو لا تملك صلاحية الوصول إليه.');
     }
 
-    final response = await _client
+    final rows = await _client
         .from('order_status_history')
         .select()
         .eq('order_id', orderId)
-        .order('created_at', ascending: true);
+        .order('created_at');
 
-    return List<Map<String, dynamic>>.from(response);
+    return List<Map<String, dynamic>>.from(rows);
   }
 
-  /// جلب الطلبات الحالية للمستخدم مع حالاتها.
+  /// جميع طلبات المستخدم الحالية.
   Future<List<Map<String, dynamic>>> getMyOrders() async {
     final userId = _userId;
 
-    final response = await _client
+    final rows = await _client
         .from('orders')
         .select()
         .or('customer_id.eq.$userId,supplier_id.eq.$userId')
         .order('created_at', ascending: false);
 
-    return List<Map<String, dynamic>>.from(response);
+    return List<Map<String, dynamic>>.from(rows);
   }
 
-  /// تحديث حالة طلب يملكه المورد الحالي.
-  ///
-  /// يجب أن تسمح سياسات Supabase للمستخدم بتنفيذ التحديث.
+  /// تحديث حالة الطلب بواسطة المورد.
   Future<Map<String, dynamic>> updateOrderStatus({
-    required String orderId,
+    required int orderId,
     required String status,
     String? note,
   }) async {
     final cleanStatus = status.trim();
 
-    const allowedStatuses = {
-      'pending',
-      'accepted',
-      'processing',
-      'loading',
-      'shipping',
-      'delivered',
-      'cancelled',
-    };
-
     if (!allowedStatuses.contains(cleanStatus)) {
-      throw ArgumentError('حالة الطلب غير معروفة.');
+      throw ArgumentError('حالة الطلب غير صحيحة.');
     }
 
     final userId = _userId;
+
+    final current = await _client
+        .from('orders')
+        .select('status')
+        .eq('id', orderId)
+        .eq('supplier_id', userId)
+        .maybeSingle();
+
+    if (current == null) {
+      throw StateError('الطلب غير موجود أو لا تملك صلاحية تحديثه.');
+    }
+
+    final currentStatus = current['status']?.toString() ?? '';
+
+    if (!_canMove(currentStatus, cleanStatus)) {
+      throw StateError(
+        'لا يمكن نقل الطلب من "$currentStatus" إلى "$cleanStatus".',
+      );
+    }
 
     final updated = await _client
         .from('orders')
@@ -85,26 +102,34 @@ class OrderStatusService {
         .eq('id', orderId)
         .eq('supplier_id', userId)
         .select()
-        .maybeSingle();
+        .single();
 
-    if (updated == null) {
-      throw StateError('تعذر تحديث الطلب؛ تحقق من وجوده وصلاحياتك.');
-    }
-
-    // تسجيل السجل منفصل عن تحديث الطلب؛ يجب تحسينه لاحقًا
-    // باستخدام دالة قاعدة بيانات لضمان تنفيذ العمليتين معًا.
     await _client.from('order_status_history').insert({
       'order_id': orderId,
       'status': cleanStatus,
       'changed_by': userId,
-      'note': _emptyToNull(note),
+      'note': _clean(note),
     });
 
     return Map<String, dynamic>.from(updated);
   }
 
-  String? _emptyToNull(String? value) {
-    final cleaned = value?.trim();
-    return cleaned == null || cleaned.isEmpty ? null : cleaned;
+  bool _canMove(String current, String next) {
+    const transitions = {
+      'انتظار قبول': ['تنفيذ', 'مُلغي'],
+      'تنفيذ': ['تحميل', 'مُلغي'],
+      'تحميل': ['توصيل'],
+      'توصيل': ['تم التسليم'],
+      'تم التسليم': [],
+      'مُلغي': [],
+    };
+
+    return transitions[current]?.contains(next) ?? false;
+  }
+
+  String? _clean(String? value) {
+    final result = value?.trim();
+    if (result == null || result.isEmpty) return null;
+    return result;
   }
 }
