@@ -185,18 +185,5 @@ create trigger erp_payroll_line_company_guard before insert or update of company
 on public.erp_payroll_lines for each row execute function public.erp_validate_hr_company_links();
 
 
--- Safe employee directory for attendance operators: intentionally excludes salary,
--- national identifiers, personal notes, and other sensitive fields.
-create or replace view public.erp_employee_directory
-as
-select
-  e.id, e.company_id, e.branch_id, e.employee_code, e.full_name,
-  e.phone, e.job_title, e.department_name, e.hire_date,
-  e.employment_status, e.is_active
-from public.erp_employees e
-where public.erp_user_can_access_company(e.company_id);
-
-grant select on public.erp_employee_directory to authenticated;
-
 -- No direct access grants are added here. Apply membership-aware policies and
 -- role grants only after reviewing the target company's HR access requirements.
