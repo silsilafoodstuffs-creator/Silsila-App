@@ -136,6 +136,14 @@ class WalletService {
       );
     }
 
+    if (cleanReference != null &&
+        (cleanReference.contains(r'\n') ||
+            cleanReference.contains(r'\r'))) {
+      throw ArgumentError(
+        'الرقم المرجعي يجب أن يكون في سطر واحد.',
+      );
+    }
+
     final userId = _userId;
 
     final response = await _requireClient
