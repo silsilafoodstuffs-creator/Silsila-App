@@ -136,6 +136,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       if (!mounted) return;
       setState(() { _saving = false; _message = 'تمت إضافة البند وتحديث إجمالي المستند.'; });
       await _load();
+      if (mounted && _selectedDocumentId != null) await _loadLines(_selectedDocumentId!);
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذرت إضافة البند: $e'; });
