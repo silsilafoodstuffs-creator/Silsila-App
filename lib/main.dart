@@ -9,6 +9,7 @@ import 'services/product_service.dart';
 import 'services/supplier_service.dart';
 import 'services/offer_service.dart';
 import 'services/story_service.dart';
+import 'services/user_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 
@@ -481,6 +482,7 @@ class _MainShellState extends State<MainShell> {
   List<Product> liveProducts = [];
   List<Map<String, dynamic>> liveSuppliers = [];
   bool loadingLiveSuppliers = false;
+  bool isAdmin = false;
   bool loadingLiveProducts = false;
   String? productLoadMessage;
 
@@ -492,6 +494,16 @@ class _MainShellState extends State<MainShell> {
     super.initState();
     loadLiveProducts();
     loadLiveSuppliers();
+    loadCurrentRole();
+  }
+
+  Future<void> loadCurrentRole() async {
+    try {
+      final profile = await ProfileService().getMyProfile();
+      if (mounted) setState(() => isAdmin = profile?['role'] == 'admin');
+    } catch (_) {
+      if (mounted) setState(() => isAdmin = false);
+    }
   }
 
   Future<void> loadLiveSuppliers() async {
@@ -1270,6 +1282,12 @@ class _MainShellState extends State<MainShell> {
             'إعدادات الحساب',
             () => openPage('إعدادات الحساب', const ProfileEditorScreen()),
           ),
+          if (isAdmin)
+            menuItem(
+              Icons.admin_panel_settings_outlined,
+              'مراجعة الحسابات الجديدة',
+              () => openPage('مراجعة الحسابات', const AdminApprovalsScreen()),
+            ),
           menuItem(
             Icons.logout_rounded,
             'تسجيل الخروج',
@@ -1305,6 +1323,116 @@ class _MainShellState extends State<MainShell> {
         title: Text(title),
         trailing: const Icon(Icons.chevron_left),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class AdminApprovalsScreen extends StatefulWidget {
+  const AdminApprovalsScreen({super.key});
+
+  @override
+  State<AdminApprovalsScreen> createState() => _AdminApprovalsScreenState();
+}
+
+class _AdminApprovalsScreenState extends State<AdminApprovalsScreen> {
+  final service = UserService();
+  final profileService = ProfileService();
+  List<Map<String, dynamic>> accounts = [];
+  bool loading = true;
+  String? error;
+  final busyIds = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    loadAccounts();
+  }
+
+  Future<void> loadAccounts() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final rows = await service.getPendingAccounts();
+      if (!mounted) return;
+      setState(() => accounts = rows);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { accounts = []; error = 'هذه الشاشة متاحة للمسؤول المعتمد فقط، وتحتاج تطبيق ترحيلات الإدارة.'; });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> updateStatus(Map<String, dynamic> account, String status) async {
+    final id = (account['id'] ?? '').toString();
+    if (id.isEmpty || busyIds.contains(id)) return;
+    setState(() => busyIds.add(id));
+    try {
+      await profileService.updateAccountStatus(userId: id, status: status);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(status == 'approved' ? 'تم اعتماد الحساب.' : 'تم رفض الحساب.')),
+      );
+      await loadAccounts();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تحديث الحساب: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => busyIds.remove(id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadAccounts,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('طلبات تفعيل الحسابات', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+          if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center)),
+          if (accounts.isEmpty && error == null)
+            const Padding(padding: EdgeInsets.all(28), child: Text('لا توجد حسابات معلقة للمراجعة.', textAlign: TextAlign.center)),
+          ...accounts.map((account) {
+            final id = (account['id'] ?? '').toString();
+            final name = (account['full_name'] ?? 'حساب جديد').toString();
+            final phone = (account['phone'] ?? 'لا يوجد رقم').toString();
+            final type = (account['account_type'] ?? 'غير محدد').toString();
+            final activity = (account['activity_type'] ?? 'غير محدد').toString();
+            final location = [account['governorate'], account['district']]
+                .where((v) => v != null && v.toString().trim().isNotEmpty)
+                .join(' • ');
+            final busy = busyIds.contains(id);
+            return Card(
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Text('نوع الحساب: $type'),
+                  Text('النشاط: $activity'),
+                  Text('الهاتف: $phone'),
+                  if (location.isNotEmpty) Text('الموقع: $location'),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: OutlinedButton(
+                      onPressed: busy ? null : () => updateStatus(account, 'rejected'),
+                      child: const Text('رفض'),
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: FilledButton(
+                      onPressed: busy ? null : () => updateStatus(account, 'approved'),
+                      child: Text(busy ? 'جارٍ الحفظ...' : 'اعتماد الحساب'),
+                    )),
+                  ]),
+                ]),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
