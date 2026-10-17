@@ -211,7 +211,7 @@ begin
     'تحذير',
     'CASHBOX_ACCOUNT_MISSING',
     'الخزينة أو الحساب البنكي غير مربوط بحساب أستاذ عام صالح.',
-    'accounts'
+    'cashboxes'
   from public.erp_cashboxes c
   left join public.erp_accounts a on a.id = c.account_id
   where c.company_id = p_company_id
@@ -805,7 +805,7 @@ begin
     'خطأ',
     'CASH_TRANSFER_DESTINATION_INVALID',
     'سند التحويل مرتبط بخزينة استلام غير صالحة أو بحساب أستاذ غير نشط.',
-    'cash_vouchers'
+    'cashboxes'
   from public.erp_cash_vouchers v
   left join public.erp_cashboxes c on c.id = v.destination_cashbox_id
   left join public.erp_accounts a on a.id = c.account_id
