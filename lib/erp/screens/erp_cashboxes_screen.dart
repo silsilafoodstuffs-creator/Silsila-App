@@ -147,7 +147,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
         ...visible.map((r) => Card(child: ListTile(
           leading: Icon(r['is_bank_account'] == true ? Icons.account_balance : Icons.account_balance_wallet, color: const Color(0xFF3E007D)),
           title: Text(_s(r['cashbox_code']) + ' — ' + _s(r['cashbox_name'])),
-          subtitle: Text(_s(r['bank_name']) + ' • حساب أستاذ: ' + _s(r['account_id']) + '\n' + _branchLabel(_s(r['branch_id']))),
+          subtitle: Text(_s(r['bank_name']) + ' • حساب أستاذ: ' + _accountLabel(_s(r['account_id'])) + '\n' + _branchLabel(_s(r['branch_id']))),
           isThreeLine: true,
           trailing: IconButton(onPressed: _saving ? null : () => _toggle(r), icon: Icon(r['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
         ))),
