@@ -18,8 +18,8 @@
 7. `supabase/erp_account_integrity.sql`
 8. `supabase/erp_account_tree_metrics.sql`
 9. `supabase/erp_journal_workflow.sql`
-10. `supabase/erp_fiscal_period_workflow.sql`
-11. `supabase/erp_security_membership.sql`
+10. `supabase/erp_security_membership.sql`
+11. `supabase/erp_fiscal_period_workflow.sql`
 
 ملف العضويات يضيف سياسات RLS. لا تفتح الجداول للمستخدمين قبل إنشاء عضوية الشركة الصحيحة للمستخدمين المصرح لهم. إنشاء أول شركة وعضوية مالكها إجراء إداري منفصل؛ لا تضع مفتاح `service_role` في Flutter.
 
