@@ -31,6 +31,8 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     'الأصناف',
     'الفترات المالية',
     'المخزون',
+    'المبيعات',
+    'المشتريات',
   ];
 
   @override
