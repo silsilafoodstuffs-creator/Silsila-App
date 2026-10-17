@@ -336,21 +336,30 @@ begin
     'المخزون',
     b.item_id,
     i.item_code,
-    null::date,
+    b.negative_date,
     i.item_name || ' — ' || w.warehouse_name,
     'خطأ',
     'STOCK_NEGATIVE_BALANCE',
-    'رصيد الصنف بالمخزن سالب؛ راجع الحركات التاريخية والتسويات.',
+    'رصيد الصنف بالمخزن أصبح سالبًا خلال الفترة المحددة؛ راجع الحركة التي سببت العجز والتسويات اللاحقة.',
     'inventory'
   from (
-    select m.company_id, m.warehouse_id, m.item_id,
-      sum(m.quantity_in - m.quantity_out) as quantity_on_hand
-    from public.erp_inventory_movements m
-    where m.company_id = p_company_id
-      and (p_start_date is null or m.movement_date::date >= p_start_date)
-      and (p_end_date is null or m.movement_date::date <= p_end_date)
-    group by m.company_id, m.warehouse_id, m.item_id
-    having sum(m.quantity_in - m.quantity_out) < 0
+    select distinct on (x.company_id, x.warehouse_id, x.item_id)
+      x.company_id, x.warehouse_id, x.item_id, x.movement_date::date as negative_date
+    from (
+      select m.company_id, m.warehouse_id, m.item_id, m.movement_date,
+        sum(m.quantity_in - m.quantity_out) over (
+          partition by m.company_id, m.warehouse_id, m.item_id
+          order by m.movement_date, m.created_at, m.id
+          rows between unbounded preceding and current row
+        ) as balance_after
+      from public.erp_inventory_movements m
+      where m.company_id = p_company_id
+        and (p_end_date is null or m.movement_date::date <= p_end_date)
+    ) x
+    where x.balance_after < 0
+      and (p_start_date is null or x.movement_date::date >= p_start_date)
+      and (p_end_date is null or x.movement_date::date <= p_end_date)
+    order by x.company_id, x.warehouse_id, x.item_id, x.movement_date
   ) b
   join public.erp_items i on i.id = b.item_id
   join public.erp_warehouses w on w.id = b.warehouse_id
