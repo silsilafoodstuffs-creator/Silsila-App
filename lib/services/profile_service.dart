@@ -105,22 +105,32 @@ class ProfileService {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
 
-    final allowedStatuses = {
-      'pending', 'approved', 'active', 'rejected', 'suspended',
-      'مفعل', 'معتمد', 'مرفوض', 'موقوف',
+    const allowedStatuses = {
+      'pending',
+      'approved',
+      'active',
+      'rejected',
+      'suspended',
+      'مفعل',
+      'معتمد',
+      'مرفوض',
+      'موقوف',
     };
-    if (!allowedStatuses.contains(status)) {
+    final cleanUserId = userId.trim();
+    final cleanStatus = status.trim();
+
+    if (!allowedStatuses.contains(cleanStatus)) {
       throw ArgumentError('حالة الحساب غير مدعومة.');
     }
-    if (userId.trim().isEmpty) {
+    if (cleanUserId.isEmpty) {
       throw ArgumentError('معرّف المستخدم مطلوب.');
     }
 
     await client.rpc(
       'admin_update_account_status',
       params: {
-        'p_user_id': userId.trim(),
-        'p_status': status,
+        'p_user_id': cleanUserId,
+        'p_status': cleanStatus,
       },
     );
   }
