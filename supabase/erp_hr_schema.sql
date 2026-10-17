@@ -140,8 +140,9 @@ $$;
 create or replace function public.erp_validate_hr_company_links()
 returns trigger
 language plpgsql
-security invoker
+security definer
 set search_path = public
+set row_security = off
 as $$
 declare
   v_employee_company uuid;
