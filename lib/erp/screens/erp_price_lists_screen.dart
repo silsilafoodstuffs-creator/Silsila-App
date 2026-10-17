@@ -18,6 +18,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   final _itemPrice = TextEditingController(text: '0');
   final _minQty = TextEditingController(text: '1');
   final _discount = TextEditingController(text: '0');
+  final _testQuantity = TextEditingController(text: '1');
   List<Map<String, dynamic>> _lists = [];
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _parties = [];
@@ -26,6 +27,8 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   String? _selectedListId;
   String? _selectedItemId;
   String? _selectedPartyId;
+  Map<String, dynamic>? _pricePreview;
+  bool _previewing = false;
   bool _default = false;
   bool _loading = false;
   bool _saving = false;
@@ -37,7 +40,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   @override
   void dispose() {
     _company.dispose(); _code.dispose(); _name.dispose(); _notes.dispose();
-    _itemPrice.dispose(); _minQty.dispose(); _discount.dispose(); super.dispose();
+    _itemPrice.dispose(); _minQty.dispose(); _discount.dispose(); _testQuantity.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
@@ -116,6 +119,26 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
       setState(() { _saving = false; _error = 'تعذر إضافة السعر: $e'; });
     }
   }
+  Future<void> _previewPrice() async {
+    final qty = double.tryParse(_testQuantity.text.trim()) ?? 0;
+    if (_selectedItemId == null || qty <= 0) {
+      setState(() => _error = 'اختر الصنف وأدخل كمية أكبر من صفر لاختبار السعر.');
+      return;
+    }
+    setState(() { _previewing = true; _error = null; _pricePreview = null; });
+    try {
+      final result = await _repo.resolvePrice(
+        companyId: _company.text, itemId: _selectedItemId!, kind: _kind,
+        quantity: qty, partyId: _selectedPartyId,
+      );
+      if (!mounted) return;
+      setState(() { _previewing = false; _pricePreview = result; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _previewing = false; _error = 'تعذر حساب السعر الفعلي: $e'; });
+    }
+  }
+
   Future<void> _assignParty() async {
     if (_selectedListId == null || _selectedPartyId == null) { setState(() => _error = 'اختر القائمة والعميل/المورد.'); return; }
     setState(() { _saving = true; _error = null; _message = null; });
@@ -190,6 +213,29 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
             onChanged: (v) => setState(() => _selectedPartyId = v),
           ),
           FilledButton.icon(onPressed: _saving ? null : _assignParty, icon: const Icon(Icons.link), label: const Text('ربط القائمة بالطرف')),
+          const Divider(height: 24),
+          const Text('معاينة السعر الفعلي', style: TextStyle(fontWeight: FontWeight.w900)),
+          const Text('تحسب المعاينة سعر الطرف أو القائمة الافتراضية أو سعر بطاقة الصنف، دون تعديل أي فاتورة.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+          const SizedBox(height: 8),
+          TextField(controller: _testQuantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الكمية المطلوب تسعيرها')),
+          const SizedBox(height: 8),
+          FilledButton.icon(onPressed: _previewing ? null : _previewPrice, icon: const Icon(Icons.calculate_outlined), label: const Text('احسب السعر')),
+          if (_previewing) const LinearProgressIndicator(),
+          if (_pricePreview != null) Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: const Color(0xFFF0E8FA), borderRadius: BorderRadius.circular(10)),
+              child: Text(
+                'سعر الوحدة: ' + _money(_pricePreview!['base_unit_price']) +
+                ' ج.م\\nالخصم: ' + _s(_pricePreview!['discount_percent']) + '%' +
+                '\\nالسعر بعد الخصم: ' + _money(_pricePreview!['net_unit_price']) + ' ج.م' +
+                '\\nالمصدر: ' + _s(_pricePreview!['price_source']) +
+                (_s(_pricePreview!['price_list_name']).isEmpty ? '' : '\\nالقائمة: ' + _s(_pricePreview!['price_list_name'])),
+                style: const TextStyle(height: 1.6, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
         ]))),
       ],
       const SizedBox(height: 10),
