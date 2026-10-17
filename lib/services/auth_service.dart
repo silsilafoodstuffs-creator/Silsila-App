@@ -121,9 +121,19 @@ class AuthService {
         RegExp(r'[^A-Za-z0-9]').hasMatch(value);
   }
 
-  /// تنظيف رقم الهاتف مع الحفاظ على علامة الدولة.
+  /// توحيد رقم الهاتف إلى صيغة E.164 قبل إرساله إلى Supabase.
+  /// يحوّل أرقام مصر المحلية مثل 01012345678 إلى +201012345678.
   String _normalizePhone(String value) {
-    return value.trim().replaceAll(RegExp(r'[\s()-]'), '');
+    final compact = value.trim().replaceAll(RegExp(r'[\s().-]'), '');
+    final digits = compact.replaceAll(RegExp(r'\D'), '');
+
+    if (compact.startsWith('+')) return '+$digits';
+    if (digits.startsWith('00')) return '+${digits.substring(2)}';
+    if (digits.startsWith('20')) return '+$digits';
+    if (digits.startsWith('0') && (digits.length == 10 || digits.length == 11)) {
+      return '+20${digits.substring(1)}';
+    }
+    return '+$digits';
   }
 
   /// التحقق الأساسي من صيغة رقم الهاتف.
