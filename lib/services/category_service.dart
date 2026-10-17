@@ -58,6 +58,7 @@ class CategoryService {
     int? parentId,
     String? icon,
     String? imageUrl,
+    String? activityType,
     int sortOrder = 0,
   }) async {
     final cleanName = name.trim();
@@ -73,6 +74,8 @@ class CategoryService {
           'parent_id': parentId,
           'icon': icon,
           'image_url': imageUrl,
+          if (activityType != null && activityType.trim().isNotEmpty)
+            'activity_type': activityType.trim(),
           'sort_order': sortOrder,
           'is_active': true,
         })
