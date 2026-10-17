@@ -3252,6 +3252,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final areaController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
+  bool obscurePassword = true;
+  bool obscureConfirmPassword = true;
 
   String activity = 'مواد غذائية';
   late String accountType;
@@ -3679,12 +3681,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: obscurePassword,
+                decoration: InputDecoration(
                   labelText: 'كلمة المرور',
                   helperText:
                       '8 أحرف على الأقل مع حرف كبير وصغير ورقم ورمز',
-                  prefixIcon: Icon(Icons.lock_outline),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    tooltip: obscurePassword ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور',
+                    onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                    icon: Icon(obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                  ),
                 ),
                 validator: (v) {
                   if (v == null || v.length < 8) {
@@ -3704,10 +3711,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: confirmPasswordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: obscureConfirmPassword,
+                decoration: InputDecoration(
                   labelText: 'تأكيد كلمة المرور',
-                  prefixIcon: Icon(Icons.lock_reset_outlined),
+                  prefixIcon: const Icon(Icons.lock_reset_outlined),
+                  suffixIcon: IconButton(
+                    tooltip: obscureConfirmPassword ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور',
+                    onPressed: () => setState(() => obscureConfirmPassword = !obscureConfirmPassword),
+                    icon: Icon(obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                  ),
                 ),
                 validator: (v) {
                   if (v == null || v.isEmpty) {
@@ -4045,6 +4057,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final confirmation = TextEditingController();
   bool codeSent = false;
   bool busy = false;
+  bool obscureNewPassword = true;
+  bool obscureConfirmation = true;
   @override
   void dispose() { phone.dispose(); code.dispose(); password.dispose(); confirmation.dispose(); super.dispose(); }
 
@@ -4086,8 +4100,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     FilledButton(onPressed: busy ? null : sendCode, child: Text(busy ? 'جارٍ الإرسال...' : 'إرسال رمز التحقق')),
     if (codeSent) ...[
       TextField(controller: code, keyboardType: TextInputType.number, maxLength: 6, decoration: const InputDecoration(labelText: 'رمز التحقق')),
-      TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'كلمة المرور الجديدة')),
-      TextField(controller: confirmation, obscureText: true, decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور')),
+      TextField(
+        controller: password,
+        obscureText: obscureNewPassword,
+        decoration: InputDecoration(
+          labelText: 'كلمة المرور الجديدة',
+          suffixIcon: IconButton(
+            tooltip: obscureNewPassword ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور',
+            onPressed: () => setState(() => obscureNewPassword = !obscureNewPassword),
+            icon: Icon(obscureNewPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+          ),
+        ),
+      ),
+      TextField(
+        controller: confirmation,
+        obscureText: obscureConfirmation,
+        decoration: InputDecoration(
+          labelText: 'تأكيد كلمة المرور',
+          suffixIcon: IconButton(
+            tooltip: obscureConfirmation ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور',
+            onPressed: () => setState(() => obscureConfirmation = !obscureConfirmation),
+            icon: Icon(obscureConfirmation ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+          ),
+        ),
+      ),
       FilledButton(onPressed: busy ? null : updatePassword, child: Text(busy ? 'جارٍ التحديث...' : 'تحديث كلمة المرور')),
     ],
   ]);
