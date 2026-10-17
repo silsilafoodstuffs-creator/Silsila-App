@@ -1507,6 +1507,12 @@ class _MainShellState extends State<MainShell> {
               'إدارة تذاكر الدعم',
               () => openPage('إدارة تذاكر الدعم', const AdminSupportTicketsScreen()),
             ),
+          if (isAdmin)
+            menuItem(
+              Icons.category_outlined,
+              'إدارة أقسام المنتجات',
+              () => openPage('إدارة الأقسام', const AdminCategoriesScreen()),
+            ),
           menuItem(
             Icons.logout_rounded,
             'تسجيل الخروج',
@@ -2218,6 +2224,139 @@ class _SupportScreenState extends State<SupportScreen> {
           ),
         )),
       ],
+    );
+  }
+}
+
+class AdminCategoriesScreen extends StatefulWidget {
+  const AdminCategoriesScreen({super.key});
+
+  @override
+  State<AdminCategoriesScreen> createState() => _AdminCategoriesScreenState();
+}
+
+class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
+  final service = CategoryService();
+  List<Map<String, dynamic>> categories = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadCategories();
+  }
+
+  Future<void> loadCategories() async {
+    try {
+      final rows = await service.getCategories(activeOnly: false);
+      if (!mounted) return;
+      setState(() { categories = rows; error = null; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'هذه الشاشة للمسؤول المعتمد فقط، وتحتاج صلاحيات إدارة الأقسام.');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> editCategory({Map<String, dynamic>? existing}) async {
+    final name = TextEditingController(text: (existing?['name'] ?? '').toString());
+    final icon = TextEditingController(text: (existing?['icon'] ?? '').toString());
+    final order = TextEditingController(text: (existing?['sort_order'] ?? 0).toString());
+    bool active = existing?['is_active'] != false;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(existing == null ? 'إضافة قسم' : 'تعديل القسم'),
+          content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم القسم')),
+            TextField(controller: icon, decoration: const InputDecoration(labelText: 'رمز القسم (اختياري)')),
+            TextField(controller: order, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ترتيب العرض')),
+            CheckboxListTile(value: active, onChanged: (value) => setDialogState(() => active = value ?? true), title: const Text('قسم نشط'), contentPadding: EdgeInsets.zero),
+          ])),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      try {
+        final sortOrder = int.tryParse(order.text.trim()) ?? 0;
+        final categoryId = existing?['id'];
+        if (categoryId == null) {
+          await service.createCategory(
+            name: name.text,
+            icon: icon.text.trim().isEmpty ? null : icon.text.trim(),
+            sortOrder: sortOrder,
+          );
+        } else {
+          await service.updateCategory(
+            categoryId: categoryId is int ? categoryId : int.parse(categoryId.toString()),
+            name: name.text,
+            icon: icon.text.trim(),
+            sortOrder: sortOrder,
+            isActive: active,
+          );
+        }
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ القسم.')));
+        await loadCategories();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ القسم: $e')));
+      }
+    }
+    name.dispose();
+    icon.dispose();
+    order.dispose();
+  }
+
+  Future<void> toggleCategory(Map<String, dynamic> category) async {
+    final rawId = category['id'];
+    final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+    if (id == null) return;
+    try {
+      await service.updateCategory(categoryId: id, isActive: category['is_active'] != true);
+      await loadCategories();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تغيير حالة القسم: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadCategories,
+      child: ListView(padding: const EdgeInsets.all(16), children: [
+        Row(children: [
+          const Expanded(child: Text('أقسام المنتجات', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+          FilledButton.icon(onPressed: () => editCategory(), icon: const Icon(Icons.add), label: const Text('إضافة')),
+        ]),
+        if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+        ...categories.map((category) {
+          final active = category['is_active'] == true;
+          return Card(
+            child: ListTile(
+              leading: Icon(Icons.category_outlined, color: active ? purple : Colors.grey),
+              title: Text((category['name'] ?? '').toString()),
+              subtitle: Text('ترتيب العرض: ${category['sort_order'] ?? 0} • ${active ? 'نشط' : 'متوقف'}'),
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') editCategory(existing: category);
+                  if (value == 'toggle') toggleCategory(category);
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit', child: Text('تعديل')),
+                  PopupMenuItem(value: 'toggle', child: Text(active ? 'إيقاف' : 'تفعيل')),
+                ],
+              ),
+            ),
+          );
+        }),
+      ]),
     );
   }
 }
