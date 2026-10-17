@@ -39,7 +39,9 @@ class WalletService {
         ? balance.toDouble()
         : double.tryParse(balance?.toString() ?? '');
 
-    if (parsedBalance == null || !parsedBalance.isFinite) {
+    if (parsedBalance == null ||
+        !parsedBalance.isFinite ||
+        parsedBalance < 0) {
       throw StateError('تعذر قراءة رصيد المحفظة بصورة صحيحة.');
     }
 
