@@ -32,6 +32,15 @@ BEGIN
     RAISE EXCEPTION 'يجب تسجيل الدخول أولاً';
   END IF;
 
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles p
+    WHERE p.id = p_supplier_id
+      AND p.role = 'supplier'
+      AND p.account_status IN ('approved', 'active', 'مفعل', 'معتمد')
+  ) THEN
+    RAISE EXCEPTION 'لا يمكن الطلب من مورد غير معتمد أو غير نشط';
+  END IF;
+
   v_order := public.place_supplier_order_without_wallet(
     p_supplier_id, p_items, p_payment_method, p_delivery_address, p_notes
   );
