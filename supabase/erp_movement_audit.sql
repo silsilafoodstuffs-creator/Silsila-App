@@ -816,6 +816,33 @@ begin
     and (c.id is null or c.company_id <> v.company_id or not c.is_active
       or a.id is null or a.company_id <> v.company_id or not a.is_active or not a.is_postable)
 
+
+  union all
+
+  select
+    'leave:' || l1.id::text || ':overlap:' || l2.id::text,
+    'الإجازات',
+    l1.id,
+    e.employee_code,
+    l1.starts_on,
+    e.full_name,
+    'تحذير',
+    'APPROVED_LEAVE_OVERLAP',
+    'يوجد طلبا إجازة معتمدان متداخلان للموظف نفسه.',
+    'hr'
+  from public.erp_leave_requests l1
+  join public.erp_leave_requests l2
+    on l2.employee_id = l1.employee_id
+   and l2.company_id = l1.company_id
+   and l2.id > l1.id
+   and daterange(l1.starts_on, l1.ends_on, '[]') && daterange(l2.starts_on, l2.ends_on, '[]')
+  join public.erp_employees e on e.id = l1.employee_id
+  where l1.company_id = p_company_id
+    and l1.status = 'approved' and l2.status = 'approved'
+    and (p_start_date is null or l1.starts_on >= p_start_date)
+    and (p_end_date is null or l1.starts_on <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'الإجازات')
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
