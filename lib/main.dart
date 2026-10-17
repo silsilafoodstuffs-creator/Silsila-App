@@ -1098,8 +1098,32 @@ class _MainShellState extends State<MainShell> {
               ),
             ),
           ),
+          menuItem(
+            Icons.logout_rounded,
+            'تسجيل الخروج',
+            logout,
+          ),
         ],
       );
+
+  Future<void> logout() async {
+    try {
+      await database?.auth.signOut();
+    } catch (_) {
+      // العودة إلى شاشة البداية حتى لو تعذر الاتصال بالخدمة.
+    }
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const Directionality(
+          textDirection: TextDirection.rtl,
+          child: WelcomeScreen(),
+        ),
+      ),
+      (route) => false,
+    );
+  }
 
   Widget menuItem(IconData icon, String title, VoidCallback onTap) {
     return Card(
