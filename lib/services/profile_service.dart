@@ -64,7 +64,6 @@ class ProfileService {
     }
 
     final data = <String, dynamic>{
-      'id': user.id,
       'full_name': fullName.trim(),
       'activity_type': activityType,
       'customer_type': customerType,
@@ -77,7 +76,8 @@ class ProfileService {
       'address': _clean(address),
     };
 
-    await client.from('profiles').upsert(data, onConflict: 'id');
+    data['updated_at'] = DateTime.now().toUtc().toIso8601String();
+    await client.from('profiles').update(data).eq('id', user.id);
   }
 
   /// تحديث حالة الحساب.
