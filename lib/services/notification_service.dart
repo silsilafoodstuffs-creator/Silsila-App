@@ -30,7 +30,7 @@ class NotificationService {
     return id;
   }
 
-  /// جلب إشعارات المستخدم الحالي من الأحدث إلى الأقدم.
+  /// جلب إشعارات المستخدم من الأحدث إلى الأقدم.
   Future<List<Map<String, dynamic>>> getMyNotifications({
     int limit = 50,
   }) async {
@@ -61,14 +61,15 @@ class NotificationService {
 
   /// تعليم إشعار واحد كمقروء.
   Future<void> markAsRead(String notificationId) async {
-    if (notificationId.trim().isEmpty) {
+    final id = notificationId.trim();
+    if (id.isEmpty) {
       throw ArgumentError('معرّف الإشعار مطلوب.');
     }
 
     await _requireClient
         .from('notifications')
         .update({'is_read': true})
-        .eq('id', notificationId.trim())
+        .eq('id', id)
         .eq('user_id', _userId);
   }
 
@@ -81,16 +82,85 @@ class NotificationService {
         .eq('is_read', false);
   }
 
-  /// حذف إشعار واحد من حساب المستخدم الحالي.
+  /// حذف إشعار من حساب المستخدم الحالي.
   Future<void> deleteNotification(String notificationId) async {
-    if (notificationId.trim().isEmpty) {
+    final id = notificationId.trim();
+    if (id.isEmpty) {
       throw ArgumentError('معرّف الإشعار مطلوب.');
     }
 
     await _requireClient
         .from('notifications')
         .delete()
-        .eq('id', notificationId.trim())
+        .eq('id', id)
         .eq('user_id', _userId);
+  }
+
+  /// تسجيل إشعار للمستخدم الحالي.
+  Future<Map<String, dynamic>> createMyNotification({
+    required String title,
+    required String body,
+    String? type,
+    int? orderId,
+  }) async {
+    return createNotification(
+      userId: _userId,
+      title: title,
+      body: body,
+      type: type,
+      orderId: orderId,
+    );
+  }
+
+  /// إنشاء إشعار لمستخدم محدد.
+  ///
+  /// استدعاء هذه الدالة لمستخدم آخر يتطلب صلاحية
+  /// مناسبة في سياسات Supabase.
+  Future<Map<String, dynamic>> createNotification({
+    required String userId,
+    required String title,
+    required String body,
+    String? type,
+    int? orderId,
+  }) async {
+    final cleanUserId = userId.trim();
+    final cleanTitle = title.trim();
+    final cleanBody = body.trim();
+
+    if (cleanUserId.isEmpty) {
+      throw ArgumentError('معرّف المستخدم مطلوب.');
+    }
+    if (cleanTitle.isEmpty) {
+      throw ArgumentError('عنوان الإشعار مطلوب.');
+    }
+    if (cleanBody.isEmpty) {
+      throw ArgumentError('نص الإشعار مطلوب.');
+    }
+
+    final data = <String, dynamic>{
+      'user_id': cleanUserId,
+      'title': cleanTitle,
+      'body': cleanBody,
+      'is_read': false,
+    };
+
+    if (type != null && type.trim().isNotEmpty) {
+      data['type'] = type.trim();
+    }
+
+    if (orderId != null) {
+      if (orderId <= 0) {
+        throw ArgumentError('رقم الطلب غير صحيح.');
+      }
+      data['order_id'] = orderId;
+    }
+
+    final response = await _requireClient
+        .from('notifications')
+        .insert(data)
+        .select()
+        .single();
+
+    return Map<String, dynamic>.from(response);
   }
 }
