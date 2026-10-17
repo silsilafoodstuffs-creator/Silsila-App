@@ -20,6 +20,9 @@ class ReviewService {
     int limit = 50,
   }) async {
     _validateLimit(limit);
+    if (supplierId.trim().isEmpty) {
+      throw ArgumentError('معرّف المورد مطلوب.');
+    }
 
     final response = await _client
         .from('reviews')
@@ -35,6 +38,9 @@ class ReviewService {
   Future<Map<String, dynamic>> getSupplierRating(
     String supplierId,
   ) async {
+    if (supplierId.trim().isEmpty) {
+      throw ArgumentError('معرّف المورد مطلوب.');
+    }
     final reviews = await _client
         .from('reviews')
         .select('rating')
@@ -80,6 +86,9 @@ class ReviewService {
     if (supplierId.trim().isEmpty || orderId.trim().isEmpty) {
       throw ArgumentError('معرّف المورد والطلب مطلوبان.');
     }
+    if ((comment ?? '').trim().length > 3000) {
+      throw ArgumentError('تعليق التقييم يجب ألا يتجاوز 3000 حرف.');
+    }
 
     final response = await _client
         .from('reviews')
@@ -105,6 +114,12 @@ class ReviewService {
     if (rating < 1 || rating > 5) {
       throw ArgumentError('التقييم يجب أن يكون من نجمة إلى خمس نجوم.');
     }
+    if (reviewId.trim().isEmpty) {
+      throw ArgumentError('معرّف التقييم مطلوب.');
+    }
+    if ((comment ?? '').trim().length > 3000) {
+      throw ArgumentError('تعليق التقييم يجب ألا يتجاوز 3000 حرف.');
+    }
 
     final response = await _client
         .from('reviews')
@@ -112,7 +127,7 @@ class ReviewService {
           'rating': rating,
           'comment': _emptyToNull(comment),
         })
-        .eq('id', reviewId)
+        .eq('id', reviewId.trim())
         .eq('customer_id', _userId)
         .select()
         .single();
@@ -122,10 +137,14 @@ class ReviewService {
 
   /// حذف تقييم يملكه المستخدم الحالي.
   Future<void> deleteReview(String reviewId) async {
+    final id = reviewId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('معرّف التقييم مطلوب.');
+    }
     await _client
         .from('reviews')
         .delete()
-        .eq('id', reviewId)
+        .eq('id', id)
         .eq('customer_id', _userId);
   }
 
