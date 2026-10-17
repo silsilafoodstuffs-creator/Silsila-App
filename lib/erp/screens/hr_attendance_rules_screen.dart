@@ -35,10 +35,10 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       },icon:const Icon(Icons.add),label:const Text('إضافة وردية'),style:FilledButton.styleFrom(backgroundColor:_purple)),
       OutlinedButton.icon(onPressed:()=>setState(()=>_editingShiftIndex=_selectedShiftIndex),icon:const Icon(Icons.edit_outlined,color:_orange),label:const Text('تعديل الوردية المحددة')),
       OutlinedButton.icon(onPressed:()=>_message('هذه مسودة واجهة. الحفظ الدائم يحتاج ربطها بقاعدة البيانات.'),icon:const Icon(Icons.save_outlined,color:_orange),label:const Text('حفظ القواعد')),
-      if(shifts.length>1) OutlinedButton.icon(onPressed:(){
+      if(shifts.length>1) OutlinedButton.icon(onPressed:()=>_confirmDelete('الوردية المحددة',(){
         final removed=shifts.removeAt(_selectedShiftIndex);removed.dispose();
         setState((){_selectedShiftIndex=(_selectedShiftIndex-1).clamp(0,shifts.length-1).toInt();_editingShiftIndex=null;});
-      },icon:const Icon(Icons.delete_outline,color:_red),label:const Text('حذف الوردية المحددة')),
+      }),icon:const Icon(Icons.delete_outline,color:_red),label:const Text('حذف الوردية المحددة')),
     ]),
     const SizedBox(height:12),
     const Text('فترات التأخير الخمس يجب أن تكون متتابعة: نهاية كل شريحة تليها بداية الشريحة التالية مباشرة. القيم لا تُطبق على الرواتب فعليًا قبل الربط والاعتماد.',style:TextStyle(color:_red,height:1.5)),
@@ -75,7 +75,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       _heading('العطلة الأسبوعية — اختيار متعدد'),
       Wrap(spacing:5,children:weekdays.map((d)=>FilterChip(label:Text(d),selected:s.days.contains(d),selectedColor:const Color(0xFFFFE4BB),onSelected:canEdit?(v)=>setState(()=>v?s.days.add(d):s.days.remove(d)):null)).toList()),
       _heading('قواعد السماح'),
-      _numberFields([_num(s.graceIn,'سماح بداية الحضور بالدقائق',readOnly:!canEdit),_num(s.graceOut,'سماح نهاية الانصراف بالدقائق',readOnly:!canEdit),_num(s.monthGrace,'إجمالي السماح الشهري بالدقائق',readOnly:!canEdit),_num(s.multiplier,'معامل خصم الدقائق المتجاوزة',readOnly:!canEdit)]),
+      _numberFields([_num(s.graceIn,'سماح بداية الحضور',readOnly:!canEdit,width:170),_num(s.graceOut,'سماح نهاية الانصراف',readOnly:!canEdit,width:170),_num(s.monthGrace,'السماح الشهري',readOnly:!canEdit,width:170),_num(s.multiplier,'معامل الخصم',readOnly:!canEdit,width:170)]),
       _heading('قواعد الحضور والانصراف'),
       _numberFields([_num(s.earlyIn,'الحضور المبكر: قيمة الدقيقة إضافي',readOnly:!canEdit),_num(s.earlyOut,'الانصراف المبكر: قيمة الدقيقة خصم',readOnly:!canEdit),_num(s.lateOut,'الانصراف المتأخر: قيمة الدقيقة إضافي',readOnly:!canEdit)]),
       _heading('قواعد الحضور المتأخر — شرائح متتابعة'),
@@ -88,19 +88,17 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
           DataCell(SizedBox(width:72,child:TextField(controller:s.to[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:9)),onChanged:canEdit?(_)=>setState((){}):null))),
           DataCell(SizedBox(width:78,child:TextField(controller:s.value[n],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:9))))),
           DataCell(DropdownButton<String>(value:s.action[n],items:const[DropdownMenuItem(value:'خصم',child:Text('خصم')),DropdownMenuItem(value:'إضافي',child:Text('إضافي'))],onChanged:canEdit?(v)=>setState(()=>s.action[n]=v??'خصم'):null)),
-          DataCell(IconButton(tooltip:'حذف قاعدة التأخير',onPressed:canEdit&&s.from.length>1?()=>setState(()=>s.removeLateRule(n)):null,icon:const Icon(Icons.delete_outline,color:_red))),
+          DataCell(IconButton(tooltip:'حذف قاعدة التأخير',onPressed:canEdit&&s.from.length>1?()=>_confirmDelete('قاعدة التأخير ${n+1}',()=>setState(()=>s.removeLateRule(n))):null,icon:const Icon(Icons.delete_outline,color:_red))),
         ])),
       )),
       if(canEdit) Align(alignment:Alignment.centerRight,child:OutlinedButton.icon(onPressed:()=>setState(()=>s.addLateRule()),icon:const Icon(Icons.add_circle_outline,color:_orange),label:const Text('إضافة قاعدة حضور متأخر'))),
       Text(_validateRanges(s),style:TextStyle(color:_validateRanges(s).startsWith('سليم')?_green:_red,fontWeight:FontWeight.w700,fontSize:12)),
       _heading('قواعد نسيان البصمة'),
-      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-        _num(s.missIn,'نسيان بصمة حضور',readOnly:!canEdit,width:260),
-        const SizedBox(width:6),
-        _num(s.missOut,'نسيان بصمة انصراف',readOnly:!canEdit,width:260),
-        const SizedBox(width:6),
-        _num(s.missDay,'نسيان بصمة اليوم',readOnly:!canEdit,width:260),
-      ])),
+      Wrap(spacing:6,runSpacing:6,children:[
+        _num(s.missIn,'نسيان بصمة حضور',readOnly:!canEdit,width:175),
+        _num(s.missOut,'نسيان بصمة انصراف',readOnly:!canEdit,width:175),
+        _num(s.missDay,'نسيان بصمة اليوم',readOnly:!canEdit,width:175),
+      ]),
       _heading('قواعد الغياب'),
       _absenceRules(
         title: 'غياب بإذن',
@@ -117,17 +115,15 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
         onRemove: (index) => setState(() => s.removeAbsentRule(index)),
       ),
       _numberFields([
-        _num(s.sick,'غياب مرضي: قيمة اليوم',readOnly:!canEdit),
-        _num(s.injury,'إصابة عمل: قيمة اليوم',readOnly:!canEdit),
+        _num(s.sick,'مرضي: قيمة اليوم',readOnly:!canEdit,width:190),
+        _num(s.injury,'إصابة عمل: قيمة اليوم',readOnly:!canEdit,width:190),
       ]),
       _heading('قواعد الإجازات — قيمة اليوم الإضافي'),
-      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-        _num(s.weeklyLeave,'الأسبوعية',readOnly:!canEdit,width:245),
-        const SizedBox(width:6),
-        _num(s.publicLeave,'الرسمية',readOnly:!canEdit,width:245),
-        const SizedBox(width:6),
-        _num(s.annualLeave,'السنوية',readOnly:!canEdit,width:245),
-      ])),
+      Wrap(spacing:6,runSpacing:6,children:[
+        _num(s.weeklyLeave,'الأسبوعية',readOnly:!canEdit,width:155),
+        _num(s.publicLeave,'الرسمية',readOnly:!canEdit,width:155),
+        _num(s.annualLeave,'السنوية',readOnly:!canEdit,width:155),
+      ]),
       Text('الإدارات: '+s.depts.join('، ')+' | الفروع: '+s.branches.join('، ')+' | عدد الموظفين المحددين: '+s.employees.length.toString(),style:const TextStyle(color:Colors.black54,fontSize:12)),
     ])));
   }
@@ -163,10 +159,10 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
           children: List.generate(rules.length, (index) => Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _num(rules[index], 'قيمة الغياب ${index + 1}', readOnly: !canEdit, width: 260),
+              _num(rules[index], 'قيمة ${index + 1}', readOnly: !canEdit, width: 175),
               IconButton(
                 tooltip: 'حذف قاعدة $title',
-                onPressed: canEdit && rules.length > 1 ? () => onRemove(index) : null,
+                onPressed: canEdit ? () => _confirmDelete('قاعدة $title رقم ${index + 1}', () => onRemove(index)) : null,
                 icon: const Icon(Icons.delete_outline, color: _red),
               ),
             ],
@@ -194,6 +190,25 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
     const Divider(),const Text('الفروع'),...branches.map((b)=>CheckboxListTile(dense:true,value:s.branches.contains(b),title:Text(b),onChanged:(v)=>refresh(()=>v==true?s.branches.add(b):s.branches.remove(b)))),
     const SizedBox(height:8),TextField(controller:s.employeeText,decoration:const InputDecoration(labelText:'أرقام الموظفين مفصولة بفاصلة',border:OutlineInputBorder())),
   ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){s.employees..clear()..addAll(s.employeeText.text.split(',').map((x)=>x.trim()).where((x)=>x.isNotEmpty));Navigator.pop(ctx);setState((){});},child:const Text('تطبيق'))])));}
+  Future<void> _confirmDelete(String item, VoidCallback onDelete) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تأكيد الحذف'),
+        content: Text('هل ترغب في حذف $item؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('لأ')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('أه، احذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) onDelete();
+  }
+
   void _message(String m)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));
 }
 
@@ -224,9 +239,9 @@ class _Shift {
   final excusedRules = <TextEditingController>[
     TextEditingController(text:'0'),
   ];
-  final absentRules = <TextEditingController>[
-    TextEditingController(text:'1'),
-  ];
+  final absentRules = List<TextEditingController>.generate(
+    5, (_) => TextEditingController(text: '1'),
+  );
   final sick=TextEditingController(text:'0'),injury=TextEditingController(text:'0');
 
   void addExcusedRule() => excusedRules.add(TextEditingController(text:'0'));
@@ -276,7 +291,7 @@ class _HrFingerprintDevicesScreenState extends State<HrFingerprintDevicesScreen>
         OutlinedButton.icon(onPressed:()=>_test(d),icon:Icon(Icons.network_check,color:c),label:const Text('اختبار الاتصال')),
         OutlinedButton.icon(onPressed:()=>_pull(d),icon:const Icon(Icons.download_outlined,color:_orange),label:const Text('سحب الحركات')),
         OutlinedButton.icon(onPressed:()=>_edit(d,i),icon:const Icon(Icons.edit_outlined,color:_orange),label:const Text('تعديل')),
-        IconButton(onPressed:()=>setState(()=>devices.removeAt(i).dispose()),icon:const Icon(Icons.delete_outline,color:_red)),
+        IconButton(tooltip:'حذف الجهاز',onPressed:()=>_confirmDeviceDelete(i,d),icon:const Icon(Icons.delete_outline,color:_red)),
       ]),
       if(d.note.isNotEmpty)Text(d.note,style:const TextStyle(fontSize:12,color:Colors.black54)),
     ])));}),
