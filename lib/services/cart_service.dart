@@ -50,25 +50,33 @@ class CartItem {
   }) {
     return CartItem(
       productId: _toInt(product['id']),
-      name: (product['name'] ?? '').toString(),
-      supplierId: (product['supplier_id'] ?? '').toString(),
-      category: (product['category'] ?? '').toString(),
-      unit: (product['unit'] ?? 'وحدة').toString(),
+      name: (product['name'] ?? '').toString().trim(),
+      supplierId: (product['supplier_id'] ?? '').toString().trim(),
+      category: (product['category'] ?? '').toString().trim(),
+      unit: (product['unit'] ?? 'وحدة').toString().trim(),
       price: _toDouble(product['price']),
-      minQuantity: _toInt(product['min_quantity'], fallback: 1),
+      minQuantity: _toInt(
+        product['min_quantity'],
+        fallback: 1,
+      ),
       quantity: quantity,
     );
   }
 
   static int _toInt(dynamic value, {int fallback = 0}) {
     if (value is int) return value;
+    if (value is num) return value.toInt();
+
     return int.tryParse(value?.toString() ?? '') ?? fallback;
   }
 
   static double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
+
     final raw = value?.toString().trim() ?? '';
+
     if (raw.isEmpty) return double.nan;
+
     return double.tryParse(raw) ?? double.nan;
   }
 }
@@ -89,7 +97,11 @@ class CartService extends ChangeNotifier {
 
   bool get isEmpty => _items.isEmpty;
 
-  /// إضافة منتج أو زيادة كميته.
+  bool get isNotEmpty => _items.isNotEmpty;
+
+  int get uniqueProductCount => _items.length;
+
+  /// إضافة منتج جديد أو زيادة كمية منتج موجود.
   void addProduct(
     Map<String, dynamic> product, {
     int quantity = 1,
@@ -103,24 +115,33 @@ class CartService extends ChangeNotifier {
       throw ArgumentError('معرّف المنتج غير صالح.');
     }
 
-    if (newItem.name.trim().isEmpty) {
+    if (newItem.name.isEmpty) {
       throw ArgumentError('اسم المنتج مطلوب.');
     }
-    if (newItem.supplierId.trim().isEmpty) {
-      throw ArgumentError('يجب ربط المنتج بمورد صالح قبل إضافته إلى السلة.');
+
+    if (newItem.supplierId.isEmpty) {
+      throw ArgumentError(
+        'يجب ربط المنتج بمورد صالح قبل إضافته إلى السلة.',
+      );
     }
-    if (newItem.unit.trim().isEmpty) {
+
+    if (newItem.unit.isEmpty) {
       throw ArgumentError('وحدة قياس المنتج مطلوبة.');
     }
+
     if (!newItem.price.isFinite || newItem.price < 0) {
       throw ArgumentError('سعر المنتج غير صالح.');
     }
-    if (newItem.minQuantity < 1) {
+
+    if (newItem.minQuantity < 1 ||
+        newItem.minQuantity > maxQuantityPerProduct) {
       throw ArgumentError('الحد الأدنى لكمية المنتج غير صالح.');
     }
 
     if (quantity < 1 || quantity > maxQuantityPerProduct) {
-      throw ArgumentError('الكمية يجب أن تكون بين 1 والحد الأقصى المسموح.');
+      throw ArgumentError(
+        'الكمية يجب أن تكون بين 1 والحد الأقصى المسموح.',
+      );
     }
 
     final existing = _items[newItem.productId];
@@ -136,20 +157,27 @@ class CartService extends ChangeNotifier {
     } else {
       if (existing.supplierId != newItem.supplierId) {
         throw StateError(
-          'تغيّر المورد المرتبط بهذا المنتج. احذف المنتج من السلة وأضفه من جديد.',
+          'تغيّر المورد المرتبط بهذا المنتج. '
+          'احذف المنتج من السلة وأضفه من جديد.',
         );
       }
+
       if (existing.price != newItem.price ||
           existing.minQuantity != newItem.minQuantity) {
         throw StateError(
-          'تغيّر سعر المنتج أو الحد الأدنى للطلب. احذف المنتج من السلة وأضفه من جديد لتحديث بياناته.',
+          'تغيّر سعر المنتج أو الحد الأدنى للطلب. '
+          'احذف المنتج من السلة وأضفه من جديد لتحديث بياناته.',
         );
       }
 
       final nextQuantity = existing.quantity + quantity;
+
       if (nextQuantity > maxQuantityPerProduct) {
-        throw ArgumentError('تجاوزت الحد الأقصى لكمية هذا المنتج.');
+        throw ArgumentError(
+          'تجاوزت الحد الأقصى لكمية هذا المنتج.',
+        );
       }
+
       _items[newItem.productId] = existing.copyWith(
         quantity: nextQuantity,
       );
@@ -158,9 +186,10 @@ class CartService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// تعيين كمية المنتج، مع احترام الحد الأدنى للطلب.
+  /// تعيين كمية المنتج مع احترام الحد الأدنى للطلب.
   void setQuantity(int productId, int quantity) {
     final existing = _items[productId];
+
     if (existing == null) return;
 
     if (quantity < existing.minQuantity) {
@@ -168,31 +197,45 @@ class CartService extends ChangeNotifier {
         'الحد الأدنى للطلب هو ${existing.minQuantity}.',
       );
     }
+
     if (quantity > maxQuantityPerProduct) {
-      throw ArgumentError('تجاوزت الحد الأقصى لكمية هذا المنتج.');
+      throw ArgumentError(
+        'تجاوزت الحد الأقصى لكمية هذا المنتج.',
+      );
     }
 
-    _items[productId] = existing.copyWith(quantity: quantity);
+    if (quantity == existing.quantity) return;
+
+    _items[productId] = existing.copyWith(
+      quantity: quantity,
+    );
+
     notifyListeners();
   }
 
   /// زيادة كمية منتج موجود.
   void increaseQuantity(int productId) {
     final existing = _items[productId];
+
     if (existing == null) return;
 
     if (existing.quantity >= maxQuantityPerProduct) {
-      throw ArgumentError('تجاوزت الحد الأقصى لكمية هذا المنتج.');
+      throw ArgumentError(
+        'تجاوزت الحد الأقصى لكمية هذا المنتج.',
+      );
     }
+
     _items[productId] = existing.copyWith(
       quantity: existing.quantity + 1,
     );
+
     notifyListeners();
   }
 
-  /// تقليل الكمية، مع عدم النزول عن الحد الأدنى.
+  /// تقليل الكمية دون النزول عن الحد الأدنى.
   void decreaseQuantity(int productId) {
     final existing = _items[productId];
+
     if (existing == null) return;
 
     if (existing.quantity <= existing.minQuantity) return;
@@ -200,6 +243,7 @@ class CartService extends ChangeNotifier {
     _items[productId] = existing.copyWith(
       quantity: existing.quantity - 1,
     );
+
     notifyListeners();
   }
 
@@ -218,6 +262,16 @@ class CartService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// التحقق من وجود منتج في السلة.
+  bool containsProduct(int productId) {
+    return _items.containsKey(productId);
+  }
+
+  /// الحصول على منتج محدد من السلة.
+  CartItem? getItem(int productId) {
+    return _items[productId];
+  }
+
   /// تقسيم عناصر السلة حسب المورد.
   Map<String, List<CartItem>> get itemsBySupplier {
     final result = <String, List<CartItem>>{};
@@ -226,12 +280,28 @@ class CartService extends ChangeNotifier {
       result.putIfAbsent(item.supplierId, () => []).add(item);
     }
 
-    return result.map(
-      (key, value) => MapEntry(
-        key,
-        List<CartItem>.unmodifiable(value),
+    return Map<String, List<CartItem>>.unmodifiable(
+      result.map(
+        (key, value) => MapEntry(
+          key,
+          List<CartItem>.unmodifiable(value),
+        ),
       ),
     );
+  }
+
+  /// عدد المنتجات المختلفة التابعة لمورد معين.
+  int supplierProductCount(String supplierId) {
+    return _items.values
+        .where((item) => item.supplierId == supplierId)
+        .length;
+  }
+
+  /// إجمالي عدد الوحدات التابعة لمورد معين.
+  int supplierItemCount(String supplierId) {
+    return _items.values
+        .where((item) => item.supplierId == supplierId)
+        .fold(0, (sum, item) => sum + item.quantity);
   }
 
   /// حساب إجمالي منتجات مورد معين.
