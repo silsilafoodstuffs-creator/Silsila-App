@@ -1319,6 +1319,74 @@ class StoriesScreen extends StatefulWidget {
 }
 
 class _StoriesScreenState extends State<StoriesScreen> {
+  final mediaUrlController = TextEditingController();
+  final captionController = TextEditingController();
+  String newStoryMediaType = 'image';
+
+  Future<void> createStory() async {
+    if (database?.auth.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('سجّل الدخول أولًا لنشر قصة.')),
+      );
+      return;
+    }
+    mediaUrlController.clear();
+    captionController.clear();
+    newStoryMediaType = 'image';
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('نشر قصة جديدة'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: mediaUrlController,
+                keyboardType: TextInputType.url,
+                decoration: const InputDecoration(labelText: 'رابط الصورة أو الفيديو'),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                value: newStoryMediaType,
+                decoration: const InputDecoration(labelText: 'نوع الوسائط'),
+                items: const [
+                  DropdownMenuItem(value: 'image', child: Text('صورة')),
+                  DropdownMenuItem(value: 'video', child: Text('فيديو')),
+                ],
+                onChanged: (value) => setDialogState(() => newStoryMediaType = value ?? 'image'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: captionController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'وصف مختصر (اختياري)'),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('نشر')),
+          ],
+        ),
+      ),
+    );
+    if (accepted != true) return;
+    try {
+      await service.createStory(
+        mediaUrl: mediaUrlController.text,
+        mediaType: newStoryMediaType,
+        caption: captionController.text,
+        activityType: widget.activityType,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نشر القصة.')));
+      await loadStories();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر القصة: $error')));
+    }
+  }
+
   final service = StoryService();
   List<Map<String, dynamic>> stories = [];
   bool loading = true;
@@ -1345,6 +1413,13 @@ class _StoriesScreenState extends State<StoriesScreen> {
   }
 
   @override
+  void dispose() {
+    mediaUrlController.dispose();
+    captionController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator(color: purple));
     return RefreshIndicator(
@@ -1352,6 +1427,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          Align(alignment: Alignment.centerLeft, child: FilledButton.icon(onPressed: createStory, icon: const Icon(Icons.add), label: const Text('إضافة قصة'))),
+          const SizedBox(height: 10),
           const Text('قصص الموردين', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
           const SizedBox(height: 8),
           const Text('تختفي القصة تلقائيًا عند انتهاء مدتها.'),
