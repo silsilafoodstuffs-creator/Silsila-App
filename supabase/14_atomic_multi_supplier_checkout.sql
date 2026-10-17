@@ -122,9 +122,10 @@ BEGIN
     VALUES (v_order_id, 'انتظار قبول', v_customer_id, 'تم إنشاء الطلب');
 
     FOR v_item IN
-      SELECT x.product_id, x.quantity
+      SELECT x.product_id, SUM(x.quantity)::NUMERIC(12,3) AS quantity
       FROM jsonb_to_recordset(p_items) AS x(supplier_id UUID, product_id BIGINT, quantity NUMERIC)
       WHERE x.supplier_id = v_supplier_id
+      GROUP BY x.product_id
       ORDER BY x.product_id
     LOOP
       SELECT price, name, unit
