@@ -233,8 +233,14 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
                 Expanded(child: TextField(controller: _quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(labelText: 'الكمية', border: OutlineInputBorder()))),
                 const SizedBox(width: 8),
-                Expanded(child: TextField(controller: _cost, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'تكلفة الوحدة', border: OutlineInputBorder()))),
+                if (_type == 'opening' || _type == 'purchase_receipt')
+                  Expanded(child: TextField(controller: _cost, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'تكلفة الوحدة', border: OutlineInputBorder())))
+                else
+                  const Expanded(child: Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Text('سيحسب النظام متوسط التكلفة المرجح تلقائيًا.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                  )),
               ]),
               const SizedBox(height: 8),
               TextField(controller: _batch, decoration: const InputDecoration(labelText: 'رقم التشغيلة (اختياري)', border: OutlineInputBorder())),
