@@ -43,7 +43,11 @@ class SupportService {
 
     final cleanOrderId = orderId?.trim();
     if (cleanOrderId != null && cleanOrderId.isNotEmpty) {
-      data['order_id'] = cleanOrderId;
+      final parsedOrderId = int.tryParse(cleanOrderId);
+      if (parsedOrderId == null || parsedOrderId <= 0) {
+        throw ArgumentError('رقم الطلب المرتبط بالتذكرة غير صحيح.');
+      }
+      data['order_id'] = parsedOrderId;
     }
 
     final response = await _client
