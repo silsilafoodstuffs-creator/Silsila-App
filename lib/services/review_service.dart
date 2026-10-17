@@ -1,16 +1,33 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ReviewService {
-  ReviewService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  ReviewService({SupabaseClient? client}) : _client = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client != null) {
+      return client;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      throw StateError(
+        'اتصال Supabase غير متاح. يرجى المحاولة لاحقًا.',
+      );
+    }
+  }
 
   String get _userId {
-    final user = _client.auth.currentUser;
+    final user = _requireClient.auth.currentUser;
+
     if (user == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
+
     return user.id;
   }
 
@@ -20,45 +37,48 @@ class ReviewService {
     int limit = 50,
   }) async {
     _validateLimit(limit);
-    if (supplierId.trim().isEmpty) {
-      throw ArgumentError('معرّف المورد مطلوب.');
-    }
 
-    final response = await _client
+    final cleanSupplierId = _requiredText(
+      supplierId,
+      'معرّف المورد مطلوب.',
+    );
+
+    final response = await _requireClient
         .from('reviews')
         .select()
-        .eq('reviewed_user_id', supplierId.trim())
+        .eq('reviewed_user_id', cleanSupplierId)
         .order('created_at', ascending: false)
         .limit(limit);
 
-    return List<Map<String, dynamic>>.from(response);
+    return _mapRows(response);
   }
 
-  /// حساب متوسط التقييم وعدد التقييمات.
+  /// حساب متوسط التقييم وعدد التقييمات الصحيحة.
   Future<Map<String, dynamic>> getSupplierRating(
     String supplierId,
   ) async {
-    if (supplierId.trim().isEmpty) {
-      throw ArgumentError('معرّف المورد مطلوب.');
-    }
-    final cleanSupplierId = supplierId.trim();
-    final reviews = await _client
+    final cleanSupplierId = _requiredText(
+      supplierId,
+      'معرّف المورد مطلوب.',
+    );
+
+    final response = await _requireClient
         .from('reviews')
         .select('rating')
         .eq('reviewed_user_id', cleanSupplierId);
 
-    final rows = List<Map<String, dynamic>>.from(reviews);
+    final rows = _mapRows(response);
+
     var total = 0.0;
     var validCount = 0;
 
     for (final review in rows) {
       final rawRating = review['rating'];
+
       final rating = rawRating is num
           ? rawRating.toDouble()
           : double.tryParse(rawRating?.toString() ?? '');
 
-      // Ignore malformed rows instead of including them in the average's
-      // denominator or presenting an invalid score.
       if (rating == null ||
           !rating.isFinite ||
           rating < 1 ||
@@ -85,36 +105,44 @@ class ReviewService {
     };
   }
 
-  /// إضافة تقييم لمورد بعد إتمام التعامل.
+  /// إضافة تقييم لمورد.
   Future<Map<String, dynamic>> addReview({
     required String supplierId,
     required String orderId,
     required int rating,
     String? comment,
   }) async {
-    if (rating < 1 || rating > 5) {
-      throw ArgumentError('التقييم يجب أن يكون من نجمة إلى خمس نجوم.');
-    }
+    _validateRating(rating);
 
-    if (supplierId.trim().isEmpty || orderId.trim().isEmpty) {
-      throw ArgumentError('معرّف المورد والطلب مطلوبان.');
-    }
-    final parsedOrderId = int.tryParse(orderId.trim());
+    final cleanSupplierId = _requiredText(
+      supplierId,
+      'معرّف المورد مطلوب.',
+    );
+
+    final cleanOrderId = _requiredText(
+      orderId,
+      'رقم الطلب مطلوب.',
+    );
+
+    final parsedOrderId = int.tryParse(cleanOrderId);
+
     if (parsedOrderId == null || parsedOrderId <= 0) {
-      throw ArgumentError('رقم الطلب المرتبط بالتقييم غير صحيح.');
-    }
-    if ((comment ?? '').trim().length > 3000) {
-      throw ArgumentError('تعليق التقييم يجب ألا يتجاوز 3000 حرف.');
+      throw ArgumentError(
+        'رقم الطلب المرتبط بالتقييم غير صحيح.',
+      );
     }
 
-    final response = await _client
+    final cleanComment = _cleanComment(comment);
+    final reviewerId = _userId;
+
+    final response = await _requireClient
         .from('reviews')
         .insert({
-          'reviewer_id': _userId,
-          'reviewed_user_id': supplierId.trim(),
+          'reviewer_id': reviewerId,
+          'reviewed_user_id': cleanSupplierId,
           'order_id': parsedOrderId,
           'rating': rating,
-          'comment': _emptyToNull(comment),
+          'comment': cleanComment,
         })
         .select()
         .single();
@@ -122,47 +150,64 @@ class ReviewService {
     return Map<String, dynamic>.from(response);
   }
 
-  /// تعديل تقييم سابق يملكه المستخدم الحالي.
+  /// تعديل تقييم يملكه المستخدم الحالي.
   Future<Map<String, dynamic>> updateReview({
     required String reviewId,
     required int rating,
     String? comment,
   }) async {
-    if (rating < 1 || rating > 5) {
-      throw ArgumentError('التقييم يجب أن يكون من نجمة إلى خمس نجوم.');
-    }
-    if (reviewId.trim().isEmpty) {
-      throw ArgumentError('معرّف التقييم مطلوب.');
-    }
-    if ((comment ?? '').trim().length > 3000) {
-      throw ArgumentError('تعليق التقييم يجب ألا يتجاوز 3000 حرف.');
-    }
+    _validateRating(rating);
 
-    final response = await _client
+    final cleanReviewId = _requiredText(
+      reviewId,
+      'معرّف التقييم مطلوب.',
+    );
+
+    final cleanComment = _cleanComment(comment);
+    final reviewerId = _userId;
+
+    final response = await _requireClient
         .from('reviews')
         .update({
           'rating': rating,
-          'comment': _emptyToNull(comment),
+          'comment': cleanComment,
         })
-        .eq('id', reviewId.trim())
-        .eq('reviewer_id', _userId)
+        .eq('id', cleanReviewId)
+        .eq('reviewer_id', reviewerId)
         .select()
-        .single();
+        .maybeSingle();
+
+    if (response == null) {
+      throw StateError(
+        'لم يتم العثور على التقييم أو لا تملك صلاحية تعديله.',
+      );
+    }
 
     return Map<String, dynamic>.from(response);
   }
 
   /// حذف تقييم يملكه المستخدم الحالي.
   Future<void> deleteReview(String reviewId) async {
-    final id = reviewId.trim();
-    if (id.isEmpty) {
-      throw ArgumentError('معرّف التقييم مطلوب.');
-    }
-    await _client
+    final cleanReviewId = _requiredText(
+      reviewId,
+      'معرّف التقييم مطلوب.',
+    );
+
+    final reviewerId = _userId;
+
+    await _requireClient
         .from('reviews')
         .delete()
-        .eq('id', id)
-        .eq('reviewer_id', _userId);
+        .eq('id', cleanReviewId)
+        .eq('reviewer_id', reviewerId);
+  }
+
+  void _validateRating(int rating) {
+    if (rating < 1 || rating > 5) {
+      throw ArgumentError(
+        'التقييم يجب أن يكون من نجمة إلى خمس نجوم.',
+      );
+    }
   }
 
   void _validateLimit(int limit) {
@@ -171,8 +216,40 @@ class ReviewService {
     }
   }
 
-  String? _emptyToNull(String? value) {
+  String _requiredText(String value, String errorMessage) {
+    final cleaned = value.trim();
+
+    if (cleaned.isEmpty) {
+      throw ArgumentError(errorMessage);
+    }
+
+    return cleaned;
+  }
+
+  String? _cleanComment(String? value) {
     final cleaned = value?.trim();
-    return cleaned == null || cleaned.isEmpty ? null : cleaned;
+
+    if (cleaned == null || cleaned.isEmpty) {
+      return null;
+    }
+
+    if (cleaned.length > 3000) {
+      throw ArgumentError(
+        'تعليق التقييم يجب ألا يتجاوز 3000 حرف.',
+      );
+    }
+
+    return cleaned;
+  }
+
+  List<Map<String, dynamic>> _mapRows(dynamic response) {
+    if (response is! List) {
+      throw StateError('تعذر قراءة بيانات التقييمات.');
+    }
+
+    return response
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
   }
 }
