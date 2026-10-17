@@ -51,6 +51,23 @@ begin
     if v_company is distinct from new.company_id then
       raise exception 'جهة اتصال الطرف يجب أن تتبع الشركة نفسها';
     end if;
+  elsif tg_table_name = 'erp_price_list_lines' then
+    if not exists (select 1 from public.erp_price_lists p where p.id = new.price_list_id and p.company_id = new.company_id) then
+      raise exception 'قائمة الأسعار يجب أن تتبع الشركة نفسها';
+    end if;
+    if not exists (select 1 from public.erp_items i where i.id = new.item_id and i.company_id = new.company_id) then
+      raise exception 'الصنف في سطر قائمة الأسعار يجب أن يتبع الشركة نفسها';
+    end if;
+    if new.item_unit_id is not null and not exists (
+      select 1 from public.erp_item_units u where u.id = new.item_unit_id and u.item_id = new.item_id and u.company_id = new.company_id
+    ) then raise exception 'وحدة السعر يجب أن تكون وحدة معرفة للصنف نفسه'; end if;
+  elsif tg_table_name = 'erp_party_price_lists' then
+    if not exists (select 1 from public.erp_parties p where p.id = new.party_id and p.company_id = new.company_id) then
+      raise exception 'الطرف المرتبط بقائمة الأسعار يجب أن يتبع الشركة نفسها';
+    end if;
+    if not exists (select 1 from public.erp_price_lists p where p.id = new.price_list_id and p.company_id = new.company_id) then
+      raise exception 'قائمة أسعار الطرف يجب أن تتبع الشركة نفسها';
+    end if;
   end if;
   return new;
 end;
@@ -79,6 +96,16 @@ for each row execute function public.erp_validate_master_data_links();
 drop trigger if exists erp_party_contact_company_guard on public.erp_party_contacts;
 create trigger erp_party_contact_company_guard
 before insert or update of company_id, party_id on public.erp_party_contacts
+for each row execute function public.erp_validate_master_data_links();
+
+drop trigger if exists erp_price_list_line_company_guard on public.erp_price_list_lines;
+create trigger erp_price_list_line_company_guard
+before insert or update of company_id, price_list_id, item_id, item_unit_id on public.erp_price_list_lines
+for each row execute function public.erp_validate_master_data_links();
+
+drop trigger if exists erp_party_price_list_company_guard on public.erp_party_price_lists;
+create trigger erp_party_price_list_company_guard
+before insert or update of company_id, party_id, price_list_id on public.erp_party_price_lists
 for each row execute function public.erp_validate_master_data_links();
 
 comment on function public.erp_validate_master_data_links() is
