@@ -143,7 +143,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   Future<void> _applyPriceList() async {
     final quantity = double.tryParse(_quantity.text.trim()) ?? 0;
-    if (_itemId == null || _partyId == null || quantity <= 0) {
+    final selected = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
+    final partyId = selected.isNotEmpty
+      ? _s(widget.kind == ErpOperationalKind.purchase ? selected.first['supplier_id'] : selected.first['customer_id'])
+      : (_partyId ?? '');
+    if (_itemId == null || partyId.isEmpty || quantity <= 0) {
       setState(() => _error = 'اختر مستندًا وطرفًا وصنفًا، وأدخل كمية صحيحة قبل جلب السعر.');
       return;
     }
@@ -154,7 +158,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         itemId: _itemId!,
         kind: widget.kind == ErpOperationalKind.purchase ? 'purchase' : 'sale',
         quantity: quantity,
-        partyId: _partyId,
+        partyId: partyId,
       );
       if (!mounted) return;
       if (price == null) {
