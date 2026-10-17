@@ -14,13 +14,20 @@ class AddressService {
     return user.id;
   }
 
-  /// جلب جميع عناوين المستخدم الحالي.
-  Future<List<Map<String, dynamic>>> getAddresses() async {
+  /// جلب عناوين المستخدم الحالي.
+  Future<List<Map<String, dynamic>>> getAddresses({
+    int limit = 100,
+  }) async {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+
     final response = await _client
         .from('addresses')
         .select()
         .eq('user_id', _userId)
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(limit);
 
     return List<Map<String, dynamic>>.from(response);
   }
