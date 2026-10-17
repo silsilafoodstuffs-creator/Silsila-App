@@ -40,17 +40,17 @@ begin
       raise exception 'حسابا الخزينتين غير صالحين أو متطابقان';
     end if;
     v_lines := jsonb_build_array(
-      jsonb_build_object('account_id', v_target_account, 'description', v.description, 'debit', v.amount, 'credit', 0),
-      jsonb_build_object('account_id', v_source_account, 'description', v.description, 'debit', 0, 'credit', v.amount)
+      jsonb_build_object('account_id', v_target_account, 'description', v.description, 'debit', v.amount, 'credit', 0, 'branch_id', v.branch_id),
+      jsonb_build_object('account_id', v_source_account, 'description', v.description, 'debit', 0, 'credit', v.amount, 'branch_id', v.branch_id)
     );
   elsif v.voucher_type = 'receipt' then
     v_lines := jsonb_build_array(
-      jsonb_build_object('account_id', v_source_account, 'description', v.description, 'debit', v.amount, 'credit', 0),
-      jsonb_build_object('account_id', v.counter_account_id, 'description', v.description, 'debit', 0, 'credit', v.amount)
+      jsonb_build_object('account_id', v_source_account, 'description', v.description, 'debit', v.amount, 'credit', 0, 'branch_id', v.branch_id),
+      jsonb_build_object('account_id', v.counter_account_id, 'description', v.description, 'debit', 0, 'credit', v.amount, 'party_id', v.party_id, 'branch_id', v.branch_id)
     );
   elsif v.voucher_type = 'payment' then
     v_lines := jsonb_build_array(
-      jsonb_build_object('account_id', v.counter_account_id, 'description', v.description, 'debit', v.amount, 'credit', 0),
+      jsonb_build_object('account_id', v.counter_account_id, 'description', v.description, 'debit', v.amount, 'credit', 0, 'party_id', v.party_id, 'branch_id', v.branch_id),
       jsonb_build_object('account_id', v_source_account, 'description', v.description, 'debit', 0, 'credit', v.amount)
     );
   else
