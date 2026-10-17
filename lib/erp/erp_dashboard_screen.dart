@@ -363,7 +363,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   );
 
   Widget _rightPanel() => Container(
-    color: Colors.white,
     decoration: const BoxDecoration(border: Border(left: BorderSide(color: Color(0xFFECE7F2)))),
     child: SafeArea(child: ListView(padding: const EdgeInsets.all(16), children: [
       Row(children: [const Icon(Icons.notifications_active_outlined, color: _purple), const SizedBox(width: 8), const Expanded(child: Text('لوحة التنبيهات', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 16))), Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: const Color(0xFFFFF1D9), borderRadius: BorderRadius.circular(20)), child: const Text('3', style: TextStyle(color: Color(0xFF9A5A00), fontWeight: FontWeight.w900)))]),
