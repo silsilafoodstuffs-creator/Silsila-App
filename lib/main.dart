@@ -504,7 +504,7 @@ class _EntryOptionTile extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(.12),
+          backgroundColor: color.withValues(alpha: .12),
           child: Icon(icon, color: color),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -989,7 +989,7 @@ class _MainShellState extends State<MainShell> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: purple.withOpacity(.08),
+                  color: purple.withValues(alpha: .08),
                   blurRadius: 14,
                   offset: const Offset(0, -3),
                 ),
@@ -1031,7 +1031,7 @@ class _MainShellState extends State<MainShell> {
     final selected = tab == index;
     return Expanded(
       child: Material(
-        color: selected ? purple.withOpacity(.07) : Colors.transparent,
+        color: selected ? purple.withValues(alpha: .07) : Colors.transparent,
         borderRadius: BorderRadius.circular(13),
         child: InkWell(
           borderRadius: BorderRadius.circular(13),
@@ -1209,11 +1209,11 @@ class _MainShellState extends State<MainShell> {
             contentPadding: const EdgeInsets.symmetric(vertical: 12),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: purple.withOpacity(.12)),
+              borderSide: BorderSide(color: purple.withValues(alpha: .12)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: purple.withOpacity(.12)),
+              borderSide: BorderSide(color: purple.withValues(alpha: .12)),
             ),
           ),
         ),
@@ -1247,7 +1247,7 @@ class _MainShellState extends State<MainShell> {
                   ),
                   backgroundColor: Colors.white,
                   selectedColor: purple,
-                  side: BorderSide(color: purple.withOpacity(.15)),
+                  side: BorderSide(color: purple.withValues(alpha: .15)),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1266,7 +1266,7 @@ class _MainShellState extends State<MainShell> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: purple.withOpacity(.10)),
+            border: Border.all(color: purple.withValues(alpha: .10)),
           ),
           child: Row(
             children: [
@@ -1338,7 +1338,7 @@ class _MainShellState extends State<MainShell> {
                   color: selected ? Colors.white : purple,
                   fontWeight: FontWeight.w600,
                 ),
-                side: BorderSide(color: purple.withOpacity(.15)),
+                side: BorderSide(color: purple.withValues(alpha: .15)),
                 onPressed: () => setState(() {
                   selectedCategory = c;
                   selectedEntity = 'الأصناف';
@@ -1364,7 +1364,7 @@ class _MainShellState extends State<MainShell> {
                   child: ChoiceChip(
                     label: Text(category),
                     selected: selected,
-                    selectedColor: orange.withOpacity(.25),
+                    selectedColor: orange.withValues(alpha: .25),
                     onSelected: (_) => setState(() => selectedCategory = category),
                   ),
                 );
@@ -1395,7 +1395,7 @@ class _MainShellState extends State<MainShell> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: purple.withOpacity(.10)),
+              border: Border.all(color: purple.withValues(alpha: .10)),
             ),
             child: Column(
               children: [
@@ -1497,7 +1497,7 @@ class _MainShellState extends State<MainShell> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
               decoration: BoxDecoration(
-                color: orange.withOpacity(.18),
+                color: orange.withValues(alpha: .18),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text('$count', style: const TextStyle(color: purple, fontSize: 11)),
@@ -1525,7 +1525,7 @@ class _MainShellState extends State<MainShell> {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: purple.withOpacity(.08),
+                        color: purple.withValues(alpha: .08),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(product.icon, color: purple, size: 25),
@@ -1663,7 +1663,7 @@ class _MainShellState extends State<MainShell> {
         children: [
           Expanded(
             child: Container(
-              color: purple.withOpacity(.07),
+              color: purple.withValues(alpha: .07),
               child: Stack(
                 children: [
                   Center(
@@ -3209,7 +3209,6 @@ class _AdminShippingCompaniesScreenState extends State<AdminShippingCompaniesScr
         if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
         if (companies.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text('لم تتم إضافة شركات شحن بعد.', textAlign: TextAlign.center)),
         ...companies.map((company) {
-          final id = (company['id'] ?? '').toString();
           final active = company['is_active'] == true;
           return Card(
             color: Colors.white,
@@ -5569,7 +5568,7 @@ class _LoyaltyOverviewScreenState extends State<LoyaltyOverviewScreen> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    LinearProgressIndicator(value: progress / 100, color: orange, backgroundColor: purple.withOpacity(.1)),
+                    LinearProgressIndicator(value: progress / 100, color: orange, backgroundColor: purple.withValues(alpha: .1)),
                     const SizedBox(height: 6),
                     Text('$current من $target • ${progress.toStringAsFixed(0)}%'),
                   ]),
@@ -6021,7 +6020,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 color: Colors.white,
                 child: ExpansionTile(
                   leading: CircleAvatar(
-                    backgroundColor: statusColor(status).withOpacity(.12),
+                    backgroundColor: statusColor(status).withValues(alpha: .12),
                     child: Icon(Icons.receipt_long, color: statusColor(status)),
                   ),
                   title: Text('طلب #$number', style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -6185,7 +6184,7 @@ class MarketCard extends StatelessWidget {
         color: Colors.white,
         child: ListTile(
           leading: CircleAvatar(
-            backgroundColor: color.withOpacity(.12),
+            backgroundColor: color.withValues(alpha: .12),
             child: Icon(Icons.storefront, color: color),
           ),
           title: Text(
