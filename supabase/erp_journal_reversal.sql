@@ -93,10 +93,6 @@ begin
      set status = 'posted', posted_by = auth.uid(), posted_at = now(), updated_at = now()
    where id = v_reversal_id;
 
-  update public.erp_journal_entries
-     set status = 'posted', posted_by = auth.uid(), posted_at = now(), updated_at = now()
-   where id = v_reversal_id;
-
   return v_reversal_id;
 end;
 $$;
