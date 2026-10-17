@@ -47,6 +47,8 @@ class AddressService {
       throw ArgumentError('يرجى إدخال اسم العنوان والمحافظة والعنوان بالتفصيل.');
     }
 
+    _validateCoordinates(latitude, longitude);
+
     final userId = _userId;
 
     if (isDefault) {
@@ -115,6 +117,8 @@ class AddressService {
       throw ArgumentError('يرجى إدخال اسم العنوان والمحافظة والعنوان بالتفصيل.');
     }
 
+    _validateCoordinates(latitude, longitude);
+
     final userId = _userId;
 
     if (isDefault == true) {
@@ -157,6 +161,17 @@ class AddressService {
         .delete()
         .eq('id', addressId)
         .eq('user_id', _userId);
+  }
+
+  void _validateCoordinates(double? latitude, double? longitude) {
+    if ((latitude == null) != (longitude == null)) {
+      throw ArgumentError('يجب إدخال خط العرض وخط الطول معًا.');
+    }
+    if (latitude != null &&
+        (latitude < -90 || latitude > 90 ||
+            longitude! < -180 || longitude > 180)) {
+      throw ArgumentError('إحداثيات الموقع خارج النطاق الصحيح.');
+    }
   }
 
   String? _emptyToNull(String? value) {
