@@ -50,6 +50,14 @@ class SupplierService {
       throw ArgumentError('عبارة البحث طويلة أكثر من اللازم.');
     }
 
+    if (activity != null && activity.length > 100) {
+      throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
+    }
+
+    if (type != null && type.length > 100) {
+      throw ArgumentError('نوع المورد طويل أكثر من اللازم.');
+    }
+
     if (activity != null) {
       query = query.eq('activity_type', activity);
     }
