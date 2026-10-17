@@ -5,6 +5,7 @@ import 'services/order_status_service.dart';
 import 'services/wallet_service.dart';
 import 'services/profile_service.dart';
 import 'services/notification_service.dart';
+import 'services/product_service.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -134,14 +135,20 @@ class Product {
     this.category,
     this.price,
     this.unit,
-    this.icon,
-  );
+    this.icon, {
+    this.id,
+    this.supplierId,
+    this.minQuantity = 1,
+  });
 
   final String name;
   final String category;
   final double price;
   final String unit;
   final IconData icon;
+  final int? id;
+  final String? supplierId;
+  final int minQuantity;
 }
 
 const products = [
@@ -461,6 +468,89 @@ class _MainShellState extends State<MainShell> {
   final favorites = <String>{};
   final cart = <String, int>{};
   final searchController = TextEditingController();
+  final productService = ProductService();
+  List<Product> liveProducts = [];
+  bool loadingLiveProducts = false;
+  String? productLoadMessage;
+
+  List<Product> get allProducts =>
+      liveProducts.isNotEmpty ? liveProducts : products;
+
+  @override
+  void initState() {
+    super.initState();
+    loadLiveProducts();
+  }
+
+  Future<void> loadLiveProducts() async {
+    if (database == null) return;
+    if (mounted) setState(() {
+      loadingLiveProducts = true;
+      productLoadMessage = null;
+    });
+    try {
+      final rows = await productService.getProducts(
+        activityType: activity,
+        limit: 100,
+      );
+      final mapped = rows.map((row) {
+        final category = (row['category'] ??
+                row['category_name'] ??
+                '').toString();
+        final rawId = row['id'];
+        final id = rawId is int
+            ? rawId
+            : int.tryParse(rawId?.toString() ?? '');
+        final rawPrice = row['price'];
+        final price = rawPrice is num
+            ? rawPrice.toDouble()
+            : double.tryParse(rawPrice?.toString() ?? '') ?? 0;
+        final rawMin = row['min_quantity'] ?? row['minimum_quantity'];
+        final minQuantity = rawMin is num
+            ? rawMin.toInt()
+            : int.tryParse(rawMin?.toString() ?? '') ?? 1;
+        return Product(
+          (row['name'] ?? '').toString(),
+          category,
+          price,
+          (row['unit'] ?? 'وحدة').toString(),
+          _iconForCategory(category),
+          id: id,
+          supplierId: row['supplier_id']?.toString(),
+          minQuantity: minQuantity < 1 ? 1 : minQuantity,
+        );
+      }).where((p) => p.id != null && p.name.trim().isNotEmpty).toList();
+      if (!mounted) return;
+      setState(() {
+        liveProducts = mapped;
+        loadingLiveProducts = false;
+        productLoadMessage = mapped.isEmpty
+            ? 'لا توجد منتجات منشورة حاليًا؛ تعرض أمثلة توضيحية مؤقتة.'
+            : null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        loadingLiveProducts = false;
+        productLoadMessage = 'تعذر تحميل الكتالوج الآن؛ تُعرض أمثلة توضيحية مؤقتة.';
+      });
+    }
+  }
+
+  IconData _iconForCategory(String category) {
+    if (category.contains('زيت')) return Icons.water_drop;
+    if (category.contains('سمن')) return Icons.breakfast_dining;
+    if (category.contains('مكرون')) return Icons.ramen_dining;
+    if (category.contains('مشروب') || category.contains('عصير')) {
+      return Icons.local_drink;
+    }
+    if (category.contains('منظف')) return Icons.cleaning_services;
+    if (category.contains('ورقي')) return Icons.inventory_2;
+    if (category.contains('جبن') || category.contains('ألبان')) {
+      return Icons.local_cafe;
+    }
+    return Icons.shopping_basket;
+  }
 
   @override
   void dispose() {
@@ -471,7 +561,7 @@ class _MainShellState extends State<MainShell> {
   double get total {
     double value = 0;
     for (final entry in cart.entries) {
-      final matches = products.where((p) => p.name == entry.key);
+      final matches = allProducts.where((p) => p.name == entry.key);
       if (matches.isNotEmpty) {
         value += matches.first.price * entry.value;
       }
@@ -533,7 +623,10 @@ class _MainShellState extends State<MainShell> {
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
-              onPressed: () => setState(() {}),
+              onPressed: () {
+              setState(() {});
+              loadLiveProducts();
+            },
             ),
           ],
         ),
@@ -577,7 +670,7 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget homePage() {
-    final visible = products.where((p) {
+    final visible = allProducts.where((p) {
       final categoryMatch =
           selectedCategory == 'الكل' || p.category == selectedCategory;
       final q = search.trim().toLowerCase();
@@ -590,6 +683,11 @@ class _MainShellState extends State<MainShell> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (loadingLiveProducts) const LinearProgressIndicator(minHeight: 2),
+        if (productLoadMessage != null) Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(productLoadMessage!, style: const TextStyle(color: Colors.black54)),
+        ),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -638,10 +736,14 @@ class _MainShellState extends State<MainShell> {
                 ),
               )
               .toList(),
-          onChanged: (v) => setState(() {
-            activity = v ?? 'مواد غذائية';
-            selectedCategory = 'الكل';
-          }),
+          onChanged: (v) {
+            setState(() {
+              activity = v ?? 'مواد غذائية';
+              selectedCategory = 'الكل';
+              liveProducts = [];
+            });
+            loadLiveProducts();
+          },
         ),
         const SizedBox(height: 12),
         TextField(
@@ -871,7 +973,7 @@ class _MainShellState extends State<MainShell> {
           ),
         ...entries.map((entry) {
           final product =
-              products.firstWhere((p) => p.name == entry.key);
+              allProducts.firstWhere((p) => p.name == entry.key, orElse: () => Product(entry.key, '', 0, 'وحدة', Icons.shopping_basket));
           return Card(
             color: Colors.white,
             child: ListTile(
