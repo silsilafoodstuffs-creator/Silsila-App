@@ -56,6 +56,7 @@ class ErpDashboardScreen extends StatefulWidget {
 
 class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   String _module = 'إدارة البرنامج';
+  String _selectedAppKey = 'silsila';
   String _appName = 'سلسلة';
   Color _appPrimary = const Color(0xFF3E007D);
   Color _appAccent = const Color(0xFFFFA015);
@@ -390,19 +391,19 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       const SizedBox(height: 8),
       const Text('إدارة تطبيق سلسلة والتطبيقات الإضافية من مكان واحد؛ التطبيقات غير المنشورة تظل قيد التجهيز دون إظهار قسم مستقل لها.', style: TextStyle(color: Colors.black54, height: 1.6, fontSize: 12)),
       const SizedBox(height: 12),
-      _managedAppCard('تطبيق سلسلة', 'التطبيق الرئيسي', Icons.apps_rounded, true, () => setState(() => _appName = 'سلسلة')),
-      _managedAppCard('تطبيق رقم 2', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.phone_android_rounded, false, () => setState(() => _appName = 'تطبيق رقم 2')),
-      _managedAppCard('تطبيق رقم 3', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.web_rounded, false, () => setState(() => _appName = 'تطبيق رقم 3')),
+      _managedAppCard('تطبيق سلسلة', 'التطبيق الرئيسي', Icons.apps_rounded, _selectedAppKey == 'silsila', () => setState(() { _selectedAppKey = 'silsila'; _appName = 'سلسلة'; })),
+      _managedAppCard('تطبيق رقم 2', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.phone_android_rounded, _selectedAppKey == 'app_2', () => setState(() { _selectedAppKey = 'app_2'; _appName = 'تطبيق رقم 2'; })),
+      _managedAppCard('تطبيق رقم 3', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.web_rounded, _selectedAppKey == 'app_3', () => setState(() { _selectedAppKey = 'app_3'; _appName = 'تطبيق رقم 3'; })),
       const Divider(height: 28),
       const Text('هوية التطبيق المحدد', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
       const SizedBox(height: 14),
-      TextFormField(initialValue: _appName, decoration: const InputDecoration(labelText: 'اسم التطبيق', border: OutlineInputBorder()), onChanged: (v) => setState(() => _appName = v)),
+      TextFormField(key: ValueKey(_selectedAppKey), initialValue: _appName, decoration: const InputDecoration(labelText: 'اسم التطبيق', border: OutlineInputBorder()), onChanged: (v) => setState(() => _appName = v)),
       const SizedBox(height: 12),
       Wrap(spacing: 10, runSpacing: 10, children: [
         _colorChoice('بنفسجي', const Color(0xFF3E007D), _appPrimary, (v) => setState(() => _appPrimary = v)),
         _colorChoice('برتقالي', const Color(0xFFFFA015), _appAccent, (v) => setState(() => _appAccent = v)),
-        _colorChoice('وردي', const Color(0xFFFF27C3), _appPrimary, (v) => setState(() => _appPrimary = v)),
-        _colorChoice('أزرق', const Color(0xFF1565C0), _appPrimary, (v) => setState(() => _appPrimary = v)),
+        _colorChoice('وردي', const Color(0xFFFF27C3), _appAccent, (v) => setState(() => _appAccent = v)),
+        _colorChoice('أزرق', const Color(0xFF1565C0), _appAccent, (v) => setState(() => _appAccent = v)),
       ]),
       const SizedBox(height: 14),
       Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: _appPrimary, borderRadius: BorderRadius.circular(14)), child: Row(children: [const Icon(Icons.apps_rounded, color: Colors.white, size: 30), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_appName.trim().isEmpty ? 'اسم التطبيق' : _appName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)), const Text('معاينة الألوان المختارة', style: TextStyle(color: Colors.white70, fontSize: 11))])), Container(width: 18, height: 18, decoration: BoxDecoration(color: _appAccent, shape: BoxShape.circle))])),
@@ -420,7 +421,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowImageManagement, onChanged: (v) => setState(() => _allowImageManagement = v), title: const Text('السماح بإدارة الصور'), subtitle: const Text('يتطلب لاحقًا ربط التخزين والصلاحيات بالخادم')),
       SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowPermissionManagement, onChanged: (v) => setState(() => _allowPermissionManagement = v), title: const Text('السماح بإدارة صلاحيات المستخدمين'), subtitle: const Text('ليس بديلًا عن صلاحيات قاعدة البيانات')),
       const SizedBox(height: 12),
-      FilledButton.icon(onPressed: () => setState(() => _activityLog.insert(0, 'تم تعديل إعدادات واجهة إدارة التطبيقات محليًا')), icon: const Icon(Icons.save_outlined), label: const Text('تسجيل التعديلات في سجل النشاطات')),
+      FilledButton.icon(onPressed: () => setState(() => _activityLog.insert(0, 'تم تعديل إعدادات واجهة إدارة التطبيقات محليًا')), icon: const Icon(Icons.save_outlined), label: const Text('حفظ المعاينة في سجل النشاطات')),
       const SizedBox(height: 8),
       const Text('تنبيه: هذه المعاينة تغيّر الحالة داخل الواجهة الحالية فقط. حفظ الهوية ورفع الصور وتطبيق الصلاحيات على المستخدمين يحتاج تخزينًا وقاعدة بيانات وخادمًا موثوقًا.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.7)),
     ])),
@@ -508,7 +509,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _quick(String title, IconData icon, VoidCallback action) => OutlinedButton.icon(
     onPressed: action, icon: Icon(icon, size: 19), label: Text(title),
-    style: OutlinedButton.styleFrom(foregroundColor: _purple, backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16), side: const BorderSide(color: Color(0xFFE5DDED)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
+    style: OutlinedButton.styleFrom(foregroundColor: _purple, backgroundColor: Colors.white, overlayColor: _pink.withValues(alpha: .10), padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16), side: const BorderSide(color: Color(0xFFE5DDED)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
   );
 
   Widget _workspace() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
