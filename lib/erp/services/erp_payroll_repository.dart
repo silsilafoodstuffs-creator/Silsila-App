@@ -62,6 +62,7 @@ class ErpPayrollRepository {
     if (runCode.trim().isEmpty || start.isAfter(end)) throw ArgumentError('راجع كود المسير والفترة.');
     await _db.from('erp_payroll_runs').insert({
       'company_id': companyId.trim(),
+      'created_by': _db.auth.currentUser?.id,
       'run_code': runCode.trim(),
       'period_start': _dateOnly(start),
       'period_end': _dateOnly(end),
