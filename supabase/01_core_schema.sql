@@ -381,6 +381,15 @@ DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
 CREATE POLICY "profiles_update_own" ON public.profiles
 FOR UPDATE TO authenticated USING (id = auth.uid()) WITH CHECK (id = auth.uid());
 
+-- Restrict profile updates to user-editable fields; account roles and approval
+-- state must only be changed by trusted administrative/server-side code.
+REVOKE UPDATE ON public.profiles FROM authenticated;
+GRANT UPDATE (
+  full_name, whatsapp_phone, activity_type, customer_type, supplier_type,
+  delegate_type, governorate, district, area, address, landmark, avatar_url,
+  updated_at
+) ON public.profiles TO authenticated;
+
 DROP POLICY IF EXISTS "categories_read_active" ON public.categories;
 CREATE POLICY "categories_read_active" ON public.categories
 FOR SELECT TO anon, authenticated USING (is_active = true);
