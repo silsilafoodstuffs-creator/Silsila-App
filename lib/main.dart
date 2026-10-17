@@ -254,6 +254,42 @@ class SilsilaApp extends StatelessWidget {
           primary: purple,
           secondary: orange,
         ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: purple,
+            foregroundColor: Colors.white,
+            overlayColor: pink.withValues(alpha: 0.12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
+            ),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: purple,
+            foregroundColor: Colors.white,
+            overlayColor: pink.withValues(alpha: 0.14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
+            ),
+          ),
+        ),
+        outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: purple,
+            overlayColor: pink.withValues(alpha: 0.10),
+            side: const BorderSide(color: Color(0xFFE5DDED)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13),
+            ),
+          ),
+        ),
+        textButtonTheme: TextButtonThemeData(
+          style: TextButton.styleFrom(
+            foregroundColor: purple,
+            overlayColor: pink.withValues(alpha: 0.10),
+          ),
+        ),
         appBarTheme: const AppBarTheme(
           backgroundColor: purple,
           foregroundColor: Colors.white,
