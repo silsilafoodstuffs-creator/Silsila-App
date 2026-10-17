@@ -1440,6 +1440,12 @@ class _MainShellState extends State<MainShell> {
               'مراجعة طلبات شحن المحافظ',
               () => openPage('مراجعة شحن المحافظ', const AdminTopUpReviewScreen()),
             ),
+          if (isAdmin)
+            menuItem(
+              Icons.local_shipping,
+              'إدارة شركات الشحن',
+              () => openPage('إدارة شركات الشحن', const AdminShippingCompaniesScreen()),
+            ),
           menuItem(
             Icons.logout_rounded,
             'تسجيل الخروج',
@@ -2110,6 +2116,145 @@ class _SupportScreenState extends State<SupportScreen> {
           ),
         )),
       ],
+    );
+  }
+}
+
+class AdminShippingCompaniesScreen extends StatefulWidget {
+  const AdminShippingCompaniesScreen({super.key});
+
+  @override
+  State<AdminShippingCompaniesScreen> createState() => _AdminShippingCompaniesScreenState();
+}
+
+class _AdminShippingCompaniesScreenState extends State<AdminShippingCompaniesScreen> {
+  final service = DeliveryService();
+  List<Map<String, dynamic>> companies = [];
+  bool loading = true;
+  final busyIds = <String>{};
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadCompanies();
+  }
+
+  Future<void> loadCompanies() async {
+    try {
+      final rows = await service.getAllShippingCompaniesForAdmin();
+      if (!mounted) return;
+      setState(() { companies = rows; error = null; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'هذه الشاشة متاحة للمسؤول المعتمد فقط، وتحتاج تطبيق ترحيل الشحن.');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> editCompany({Map<String, dynamic>? company}) async {
+    final name = TextEditingController(text: (company?['name'] ?? '').toString());
+    final phone = TextEditingController(text: (company?['phone'] ?? '').toString());
+    final profileId = TextEditingController(text: (company?['profile_id'] ?? '').toString());
+    bool active = company?['is_active'] != false;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(company == null ? 'إضافة شركة شحن' : 'تعديل شركة الشحن'),
+          content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم شركة الشحن')),
+            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف')),
+            TextField(controller: profileId, decoration: const InputDecoration(labelText: 'معرّف حساب شركة الشحن (UUID اختياري)')),
+            CheckboxListTile(value: active, onChanged: (value) => setDialogState(() => active = value ?? true), title: const Text('شركة نشطة'), contentPadding: EdgeInsets.zero),
+          ])),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      try {
+        await service.saveShippingCompany(
+          companyId: company?['id']?.toString(),
+          profileId: profileId.text.trim().isEmpty ? null : profileId.text.trim(),
+          name: name.text,
+          phone: phone.text,
+          isActive: active,
+        );
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ شركة الشحن.')));
+        await loadCompanies();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الشركة: $e')));
+      }
+    }
+    name.dispose();
+    phone.dispose();
+    profileId.dispose();
+  }
+
+  Future<void> toggleCompany(Map<String, dynamic> company) async {
+    final id = (company['id'] ?? '').toString();
+    if (id.isEmpty || busyIds.contains(id)) return;
+    setState(() => busyIds.add(id));
+    try {
+      await service.saveShippingCompany(
+        companyId: id,
+        profileId: company['profile_id']?.toString(),
+        name: (company['name'] ?? '').toString(),
+        phone: company['phone']?.toString(),
+        isActive: company['is_active'] != true,
+      );
+      await loadCompanies();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحديث الشركة: $e')));
+    } finally {
+      if (mounted) setState(() => busyIds.remove(id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadCompanies,
+      child: ListView(padding: const EdgeInsets.all(16), children: [
+        Row(children: [
+          const Expanded(child: Text('شركات الشحن', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+          FilledButton.icon(onPressed: () => editCompany(), icon: const Icon(Icons.add), label: const Text('إضافة')),
+        ]),
+        if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+        if (companies.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text('لم تتم إضافة شركات شحن بعد.', textAlign: TextAlign.center)),
+        ...companies.map((company) {
+          final id = (company['id'] ?? '').toString();
+          final active = company['is_active'] == true;
+          return Card(
+            color: Colors.white,
+            child: ListTile(
+              leading: Icon(Icons.local_shipping_outlined, color: active ? purple : Colors.grey),
+              title: Text((company['name'] ?? 'شركة شحن').toString()),
+              subtitle: Text([
+                if ((company['phone'] ?? '').toString().isNotEmpty) company['phone'].toString(),
+                if ((company['profile_id'] ?? '').toString().isNotEmpty) 'حساب مرتبط',
+                active ? 'نشطة' : 'متوقفة',
+              ].join(' • ')),
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') editCompany(company: company);
+                  if (value == 'toggle') toggleCompany(company);
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit', child: Text('تعديل')),
+                  PopupMenuItem(value: 'toggle', child: Text(active ? 'إيقاف' : 'تفعيل')),
+                ],
+              ),
+            ),
+          );
+        }),
+      ]),
     );
   }
 }
