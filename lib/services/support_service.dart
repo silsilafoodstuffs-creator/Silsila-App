@@ -2,15 +2,35 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupportService {
   SupportService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+      : _client = client ?? _defaultClient;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  static SupabaseClient? get _defaultClient {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client == null) {
+      throw StateError('اتصال Supabase غير متاح.');
+    }
+
+    return client;
+  }
 
   String get _userId {
-    final user = _client.auth.currentUser;
+    final user = _requireClient.auth.currentUser;
+
     if (user == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
+
     return user.id;
   }
 
@@ -21,20 +41,18 @@ class SupportService {
     String category = 'general',
     String? orderId,
   }) async {
-    final cleanSubject = subject.trim();
-    final cleanMessage = message.trim();
-    final cleanCategory = category.trim();
+    final cleanSubject = _requiredText(subject, 'عنوان الطلب');
+    final cleanMessage = _requiredText(message, 'تفاصيل الطلب');
+    final cleanCategory = _requiredText(category, 'نوع الطلب');
 
-    if (cleanSubject.isEmpty || cleanMessage.isEmpty) {
-      throw ArgumentError('يرجى إدخال عنوان الشكوى وتفاصيلها.');
+    if (cleanSubject.length > 200) {
+      throw ArgumentError('عنوان التذكرة تجاوز الحد المسموح.');
     }
 
-    if (cleanCategory.isEmpty) {
-      throw ArgumentError('يرجى تحديد نوع الطلب.');
+    if (cleanMessage.length > 10000) {
+      throw ArgumentError('تفاصيل التذكرة تجاوزت الحد المسموح.');
     }
-    if (cleanSubject.length > 200 || cleanMessage.length > 10000) {
-      throw ArgumentError('عنوان التذكرة أو تفاصيلها تجاوز الحد المسموح.');
-    }
+
     if (cleanCategory.length > 80) {
       throw ArgumentError('نوع التذكرة طويل أكثر من اللازم.');
     }
@@ -47,16 +65,19 @@ class SupportService {
       'status': 'open',
     };
 
-    final cleanOrderId = orderId?.trim();
-    if (cleanOrderId != null && cleanOrderId.isNotEmpty) {
+    final cleanOrderId = _emptyToNull(orderId);
+
+    if (cleanOrderId != null) {
       final parsedOrderId = int.tryParse(cleanOrderId);
+
       if (parsedOrderId == null || parsedOrderId <= 0) {
         throw ArgumentError('رقم الطلب المرتبط بالتذكرة غير صحيح.');
       }
+
       data['order_id'] = parsedOrderId;
     }
 
-    final response = await _client
+    final response = await _requireClient
         .from('support_tickets')
         .insert(data)
         .select()
@@ -69,11 +90,9 @@ class SupportService {
   Future<List<Map<String, dynamic>>> getMyTickets({
     int limit = 50,
   }) async {
-    if (limit < 1 || limit > 200) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
-    }
+    _validateLimit(limit);
 
-    final response = await _client
+    final response = await _requireClient
         .from('support_tickets')
         .select()
         .eq('user_id', _userId)
@@ -83,14 +102,13 @@ class SupportService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  /// جلب تفاصيل تذكرة تخص المستخدم الحالي.
-  Future<Map<String, dynamic>?> getTicket(String ticketId) async {
-    final id = ticketId.trim();
-    if (id.isEmpty) {
-      throw ArgumentError('معرّف التذكرة مطلوب.');
-    }
+  /// جلب تفاصيل تذكرة تخص المستخدم الحالي فقط.
+  Future<Map<String, dynamic>?> getTicket(
+    String ticketId,
+  ) async {
+    final id = _requiredText(ticketId, 'معرّف التذكرة');
 
-    final response = await _client
+    final response = await _requireClient
         .from('support_tickets')
         .select()
         .eq('id', id)
@@ -102,8 +120,40 @@ class SupportService {
     return Map<String, dynamic>.from(response);
   }
 
+  /// إغلاق تذكرة مفتوحة تخص المستخدم الحالي.
+  ///
+  /// لا يسمح هذا الإجراء بتعديل التذاكر التابعة لمستخدم آخر.
+  Future<void> closeMyTicket(String ticketId) async {
+    final id = _requiredText(ticketId, 'معرّف التذكرة');
+
+    await _requireClient
+        .from('support_tickets')
+        .update({'status': 'closed'})
+        .eq('id', id)
+        .eq('user_id', _userId)
+        .eq('status', 'open');
+  }
+
+  /// التحقق من عدد النتائج.
+  void _validateLimit(int limit) {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+  }
+
+  String _requiredText(String? value, String fieldName) {
+    final cleaned = value?.trim();
+
+    if (cleaned == null || cleaned.isEmpty) {
+      throw ArgumentError('يرجى إدخال $fieldName.');
+    }
+
+    return cleaned;
+  }
+
   String? _emptyToNull(String? value) {
     final cleaned = value?.trim();
+
     return cleaned == null || cleaned.isEmpty ? null : cleaned;
   }
 }
