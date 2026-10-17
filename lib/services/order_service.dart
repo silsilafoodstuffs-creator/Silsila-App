@@ -16,17 +16,21 @@ class OrderService {
 
   SupabaseClient get _requireClient {
     final client = _client;
+
     if (client == null) {
       throw StateError('اتصال Supabase غير متاح.');
     }
+
     return client;
   }
 
   String get _userId {
     final id = _requireClient.auth.currentUser?.id;
+
     if (id == null) {
       throw StateError('يجب تسجيل الدخول قبل إنشاء الطلب.');
     }
+
     return id;
   }
 
@@ -49,12 +53,8 @@ class OrderService {
 
   /// إنشاء طلب لمورد واحد مع حفظ تفاصيل المنتجات.
   ///
-  /// يفترض أن orders تحتوي على:
-  /// customer_id, supplier_id, total_amount,
-  /// status, payment_method.
-  ///
-  /// ويفترض أن order_items تحتوي على:
-  /// order_id, product_id, quantity, unit_price, total_price.
+  /// يتم احتساب الأسعار النهائية والتحقق منها داخل قاعدة البيانات.
+  /// يفترض أن إجراء place_supplier_order يدعم المعاملات المرسلة أدناه.
   Future<int> createOrder({
     required String supplierId,
     required List<Map<String, dynamic>> items,
@@ -62,7 +62,14 @@ class OrderService {
     String? deliveryAddress,
     String? notes,
   }) async {
-    if (supplierId.trim().isEmpty) {
+    final client = _requireClient;
+
+    // التأكد من وجود مستخدم مسجل الدخول.
+    _userId;
+
+    final cleanSupplierId = supplierId.trim();
+
+    if (cleanSupplierId.isEmpty) {
       throw ArgumentError('يجب تحديد المورد.');
     }
 
@@ -70,21 +77,40 @@ class OrderService {
       throw ArgumentError('لا يمكن إنشاء طلب دون منتجات.');
     }
 
-    if (!paymentMethods.contains(paymentMethod)) {
+    if (!paymentMethods.contains(paymentMethod.trim())) {
       throw ArgumentError('طريقة الدفع غير صحيحة.');
     }
 
-    final client = _requireClient;
+    final cleanAddress = _clean(deliveryAddress);
+
+    if (cleanAddress == null) {
+      throw ArgumentError('يجب تحديد عنوان التوصيل.');
+    }
+
+    if (cleanAddress.length > 2000) {
+      throw ArgumentError('عنوان التوصيل طويل أكثر من اللازم.');
+    }
+
+    if (notes != null && notes.trim().length > 2000) {
+      throw ArgumentError('ملاحظات الطلب طويلة أكثر من اللازم.');
+    }
 
     final preparedItems = <Map<String, dynamic>>[];
+    final seenProducts = <int>{};
 
     for (final item in items) {
       final productId = _toInt(item['product_id']);
       final quantity = _toInt(item['quantity']);
-      final price = _toDouble(item['unit_price']);
 
-      if (productId <= 0 || quantity <= 0 || price < 0) {
+      if (productId <= 0 || quantity <= 0) {
         throw ArgumentError('بيانات أحد المنتجات غير صحيحة.');
+      }
+
+      // منع تكرار المنتج نفسه في تفاصيل الطلب.
+      if (!seenProducts.add(productId)) {
+        throw ArgumentError(
+          'يوجد منتج مكرر في الطلب. يرجى جمع كمياته أولًا.',
+        );
       }
 
       preparedItems.add({
@@ -93,27 +119,26 @@ class OrderService {
       });
     }
 
-    final cleanAddress = _clean(deliveryAddress);
-    if (cleanAddress == null) {
-      throw ArgumentError('يجب تحديد عنوان التوصيل.');
-    }
-
     final response = await client.rpc(
       'place_supplier_order',
       params: {
-        'p_supplier_id': supplierId.trim(),
+        'p_supplier_id': cleanSupplierId,
         'p_items': preparedItems,
-        'p_payment_method': paymentMethod,
+        'p_payment_method': paymentMethod.trim(),
         'p_delivery_address': cleanAddress,
         'p_notes': _clean(notes),
       },
     );
 
-    if (response is! Map) {
-      throw StateError('لم تُرجع قاعدة البيانات بيانات الطلب بصورة صحيحة.');
+    final orderId = _extractOrderId(response);
+
+    if (orderId <= 0) {
+      throw StateError(
+        'لم تُرجع قاعدة البيانات رقم طلب صالحًا.',
+      );
     }
 
-    return _toInt(response['id']);
+    return orderId;
   }
 
   /// جلب طلبات المستخدم الحالي.
@@ -143,6 +168,7 @@ class OrderService {
     }
 
     final client = _requireClient;
+
     final order = await client
         .from('orders')
         .select('id')
@@ -151,7 +177,9 @@ class OrderService {
         .maybeSingle();
 
     if (order == null) {
-      throw StateError('الطلب غير موجود أو لا تملك صلاحية الوصول إليه.');
+      throw StateError(
+        'الطلب غير موجود أو لا تملك صلاحية الوصول إليه.',
+      );
     }
 
     final response = await client
@@ -171,24 +199,51 @@ class OrderService {
 
     await _requireClient.rpc(
       'cancel_customer_order',
-      params: {'p_order_id': orderId},
+      params: {
+        'p_order_id': orderId,
+      },
     );
+  }
+
+  /// استخراج رقم الطلب من صيغ الاستجابة الشائعة.
+  int _extractOrderId(dynamic response) {
+    if (response is int) {
+      return response;
+    }
+
+    if (response is num) {
+      return response.toInt();
+    }
+
+    if (response is Map) {
+      return _toInt(
+        response['id'] ??
+            response['order_id'] ??
+            response['orderId'],
+      );
+    }
+
+    if (response is List && response.isNotEmpty) {
+      return _extractOrderId(response.first);
+    }
+
+    return 0;
   }
 
   int _toInt(dynamic value) {
     if (value is int) return value;
     if (value is num) return value.toInt();
-    return int.tryParse(value?.toString() ?? '') ?? 0;
-  }
 
-  double _toDouble(dynamic value) {
-    if (value is num) return value.toDouble();
-    return double.tryParse(value?.toString() ?? '') ?? 0;
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   String? _clean(String? value) {
     final result = value?.trim();
-    if (result == null || result.isEmpty) return null;
+
+    if (result == null || result.isEmpty) {
+      return null;
+    }
+
     return result;
   }
 }
