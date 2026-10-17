@@ -110,3 +110,14 @@
 - يجب تطبيق ملفات SQL بالترتيب: `erp_schema.sql` ثم `erp_journal_workflow.sql` ثم `erp_ledger_reports.sql` ثم `erp_journal_reversal.sql`. هذه الملفات لم تُطبّق على قاعدة Supabase حتى الآن.
 - الدوال تستخدم `security invoker`؛ لذلك يجب إعداد RLS وسياسات إدخال وقراءة وتحديث مناسبة للمستخدمين والشركة قبل التجربة. لم تُشغّل اختبارات أو عملية بناء.
 
+## ربط صلاحيات الشركات (RLS) قبل الاختبار
+- أضيف `supabase/erp_security_membership.sql` لإنشاء جدول عضويات الشركات `erp_company_members` والأدوار `owner`, `admin`, `accountant`, `manager`, `operator`, `viewer`، وسياسات RLS لجداول ERP والقيود.
+- لا يُفتح الوصول العام إلى البيانات. يجب إضافة مستخدم Supabase Auth إلى الشركة بدور مناسب قبل أن يتمكن من القراءة أو الحفظ.
+- بعد إنشاء سجل الشركة من SQL Editor أو من مسار إداري موثوق، أضف عضوية المستخدم الأول يدويًا باستخدام UUID الخاص به من Authentication → Users. مثال توضيحي فقط، استبدل المعرفات بالقيم الفعلية:
+  `insert into public.erp_company_members (company_id, user_id, member_role) values ('COMPANY-UUID', 'AUTH-USER-UUID', 'owner');`
+  يجب إدخال UUID صالح بدل النصين التوضيحيين. لا تضع مفتاح `service_role` داخل التطبيق.
+- سياسة إدخال الشركات من تطبيق العميل مغلقة عمدًا؛ إنشاء الشركة الأولى وتعيين مالكها خطوة إدارية منفصلة.
+- يضيف ملف الأمان أيضًا حارسًا يمنع تعديل رأس القيد بعد ترحيله. لتصحيح قيد مرحّل يجب إنشاء قيد عكس بدل تغيير التاريخ أو البيان أو السطور الأصلية.
+- ترتيب التطبيق المقترح: `erp_schema.sql` ثم `erp_journal_workflow.sql` ثم `erp_security_membership.sql` ثم `erp_ledger_reports.sql` ثم `erp_journal_reversal.sql`.
+- راجع سياسة الشركة وأدوار المستخدمين قبل التنفيذ على بيانات حقيقية. لا تشغّل هذه الملفات على قاعدة إنتاج تحتوي بيانات قائمة دون مراجعة المخطط والنسخ الاحتياطي.
+
