@@ -20,21 +20,27 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/images/silsila_splash.png
     - assets/images/silsila_logo.png
     - assets/images/silsila_background.png
     - assets/images/silsila_icon_App.png
+
   fonts:
     - family: Tajawal
       fonts:
         - asset: assets/fonts/Tajawal.ttf
 
+    - family: Kufam
+      fonts:
+        - asset: assets/fonts/Kufam.otf
+
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/images/silsila_icon_App.png"
+  image_path: assets/images/silsila_icon_App.png
   min_sdk_android: 21
-  adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/silsila_icon_App.png"
+  adaptive_icon_background: '#FFFFFF'
+  adaptive_icon_foreground: assets/images/silsila_icon_App.png
   remove_alpha_ios: true
