@@ -10,6 +10,7 @@ import 'services/supplier_service.dart';
 import 'services/category_service.dart';
 import 'services/supplier_product_service.dart';
 import 'services/offer_service.dart';
+import 'services/supplier_offer_service.dart';
 import 'services/story_service.dart';
 import 'services/user_service.dart';
 import 'services/support_service.dart';
@@ -1290,7 +1291,7 @@ class _MainShellState extends State<MainShell> {
           menuItem(
             Icons.local_offer_outlined,
             'العروض',
-            () => openPage('العروض', OffersScreen(activityType: activity)),
+            () => openPage('العروض', OffersScreen(activityType: activity, canManage: isApprovedSupplier)),
           ),
           menuItem(
             Icons.auto_awesome,
@@ -2064,8 +2065,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
 }
 
 class OffersScreen extends StatefulWidget {
-  const OffersScreen({super.key, required this.activityType});
+  const OffersScreen({super.key, required this.activityType, required this.canManage});
   final String activityType;
+  final bool canManage;
 
   @override
   State<OffersScreen> createState() => _OffersScreenState();
@@ -2073,6 +2075,56 @@ class OffersScreen extends StatefulWidget {
 
 class _OffersScreenState extends State<OffersScreen> {
   final service = OfferService();
+  final supplierService = SupplierOfferService();
+
+  Future<void> createOffer() async {
+    final title = TextEditingController();
+    final description = TextEditingController();
+    final discount = TextEditingController();
+    final imageUrl = TextEditingController();
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('إنشاء عرض جديد'),
+        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض')),
+          TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'تفاصيل العرض')),
+          TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم (اختياري)')),
+          TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة العرض (اختياري)')),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('نشر العرض')),
+        ],
+      ),
+    );
+    if (accepted == true) {
+      try {
+        final discountValue = discount.text.trim().isEmpty ? null : double.tryParse(discount.text.trim());
+        if (discount.text.trim().isNotEmpty && discountValue == null) {
+          throw ArgumentError('أدخل نسبة خصم صحيحة.');
+        }
+        final now = DateTime.now();
+        await supplierService.createOffer(
+          title: title.text,
+          description: description.text,
+          startsAt: now,
+          endsAt: now.add(const Duration(days: 7)),
+          imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
+          activityType: widget.activityType,
+          discountPercentage: discountValue,
+        );
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نشر العرض لمدة 7 أيام.')));
+        await loadOffers();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر العرض: $e')));
+      }
+    }
+    title.dispose();
+    description.dispose();
+    discount.dispose();
+    imageUrl.dispose();
+  }
   List<Map<String, dynamic>> offers = [];
   bool loading = true;
   String? error;
@@ -2105,7 +2157,10 @@ class _OffersScreenState extends State<OffersScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('عروض الموردين', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+          Row(children: [
+            const Expanded(child: Text('عروض الموردين', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+            if (widget.canManage) FilledButton.icon(onPressed: createOffer, icon: const Icon(Icons.add), label: const Text('إضافة عرض')),
+          ]),
           const SizedBox(height: 8),
           Text('النشاط: ${widget.activityType}'),
           if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center)),
