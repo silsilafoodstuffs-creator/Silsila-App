@@ -213,7 +213,7 @@ class DeliveryService {
     final response = await _requireClient
         .from('deliveries')
         .insert({
-          'order_id': cleanOrderId,
+          'order_id': parsedOrderId,
           'shipping_company_id': cleanCompanyId,
           'requested_by': _userId,
           'pickup_address': cleanPickup,
