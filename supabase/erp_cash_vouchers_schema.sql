@@ -102,6 +102,16 @@ begin
   if new.status not in ('draft','posted','cancelled') then
     raise exception 'حالة السند غير صحيحة';
   end if;
+  if new.status = 'posted' then
+    if new.journal_entry_id is null or not exists (
+      select 1 from public.erp_journal_entries j
+      where j.id = new.journal_entry_id
+        and j.company_id = new.company_id
+        and j.status = 'posted'
+    ) then
+      raise exception 'لا يمكن ترحيل سند الخزينة دون قيد يومية مرحّل تابع للشركة نفسها';
+    end if;
+  end if;
   return new;
 end;
 $$;
