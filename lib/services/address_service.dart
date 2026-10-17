@@ -37,10 +37,6 @@ class AddressService {
     double? longitude,
     bool isDefault = false,
   }) async {
-    final cleanAddressId = addressId.trim();
-    if (cleanAddressId.isEmpty) {
-      throw ArgumentError('معرّف العنوان مطلوب.');
-    }
     final cleanTitle = title.trim();
     final cleanGovernorate = governorate.trim();
     final cleanAddress = address.trim();
@@ -118,6 +114,10 @@ class AddressService {
     double? longitude,
     bool? isDefault,
   }) async {
+    final cleanAddressId = addressId.trim();
+    if (cleanAddressId.isEmpty) {
+      throw ArgumentError('معرّف العنوان مطلوب.');
+    }
     final cleanTitle = title.trim();
     final cleanGovernorate = governorate.trim();
     final cleanAddress = address.trim();
