@@ -383,6 +383,143 @@ begin
       or (m.branch_id is not null and (b.id is null or b.company_id <> m.company_id))
     )
 
+
+  union all
+
+  select
+    'purchase:' || d.id::text || ':references',
+    'المشتريات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'مستند مشتريات',
+    'خطأ',
+    'PURCHASE_REFERENCE_MISMATCH',
+    'المورد أو المخزن في مستند المشتريات لا يتبع الشركة نفسها أو غير موجود.',
+    'purchases'
+  from public.erp_purchase_documents d
+  left join public.erp_parties p on p.id = d.supplier_id
+  left join public.erp_warehouses w on w.id = d.warehouse_id
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (
+      p.id is null or p.company_id <> d.company_id
+      or p.party_kind not in ('supplier','both')
+      or (d.warehouse_id is not null and (w.id is null or w.company_id <> d.company_id))
+    )
+
+  union all
+
+  select
+    'purchase:' || d.id::text || ':lines',
+    'المشتريات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'مستند مشتريات',
+    'تحذير',
+    'PURCHASE_WITHOUT_LINES',
+    'مستند المشتريات ليس له أي بنود.',
+    'purchases'
+  from public.erp_purchase_documents d
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and not exists (select 1 from public.erp_purchase_lines l where l.document_id = d.id)
+
+  union all
+
+  select
+    'purchase-line:' || l.id::text || ':item',
+    'المشتريات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'بند مشتريات غير صحيح',
+    'خطأ',
+    'PURCHASE_LINE_ITEM_MISMATCH',
+    'صنف بند المشتريات لا يتبع شركة المستند.',
+    'purchases'
+  from public.erp_purchase_lines l
+  join public.erp_purchase_documents d on d.id = l.document_id
+  left join public.erp_items i on i.id = l.item_id
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (i.id is null or i.company_id <> d.company_id)
+
+  union all
+
+  select
+    'sale:' || d.id::text || ':references',
+    'المبيعات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'مستند مبيعات',
+    'خطأ',
+    'SALE_REFERENCE_MISMATCH',
+    'العميل أو المخزن في مستند المبيعات لا يتبع الشركة نفسها أو غير موجود.',
+    'sales'
+  from public.erp_sales_documents d
+  left join public.erp_parties p on p.id = d.customer_id
+  left join public.erp_warehouses w on w.id = d.warehouse_id
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (
+      p.id is null or p.company_id <> d.company_id
+      or p.party_kind not in ('customer','both')
+      or (d.warehouse_id is not null and (w.id is null or w.company_id <> d.company_id))
+    )
+
+  union all
+
+  select
+    'sale:' || d.id::text || ':lines',
+    'المبيعات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'مستند مبيعات',
+    'تحذير',
+    'SALE_WITHOUT_LINES',
+    'مستند المبيعات ليس له أي بنود.',
+    'sales'
+  from public.erp_sales_documents d
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and not exists (select 1 from public.erp_sales_lines l where l.document_id = d.id)
+
+  union all
+
+  select
+    'sale-line:' || l.id::text || ':item',
+    'المبيعات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'بند مبيعات غير صحيح',
+    'خطأ',
+    'SALE_LINE_ITEM_MISMATCH',
+    'صنف بند المبيعات لا يتبع شركة المستند.',
+    'sales'
+  from public.erp_sales_lines l
+  join public.erp_sales_documents d on d.id = l.document_id
+  left join public.erp_items i on i.id = l.item_id
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (i.id is null or i.company_id <> d.company_id)
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
