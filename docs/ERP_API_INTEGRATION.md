@@ -148,7 +148,7 @@
 - أضيفت الدالة `erp_transfer_inventory_between_warehouses` لإنشاء حركتي تحويل متقابلتين (صرف من المصدر وإضافة للهدف) داخل معاملة واحدة، مع رفض المخزن نفسه كمصدر وهدف والتحقق من الرصيد.
 - أضيفت شاشة `lib/erp/screens/erp_inventory_screen.dart` وخدمة `lib/erp/services/erp_inventory_repository.dart`. ترتبط بها خيارات أرصدة الأصناف وكارت الصنف والجرد والإضافة والصرف والتحويل والتسوية في لوحة ERP؛ وهي حاليًا دفتر حركة أساسي وليست بديلًا عن شاشات أوامر الشراء/البيع الكاملة.
 - أضيفت سياسات قراءة لدفتر المخزون، وسياسات العضوية للمبيعات والمشتريات وبنودها داخل `erp_security_membership.sql`. ابدأ بتطبيق `erp_operations_schema.sql` قبل `erp_security_membership.sql` حتى تكون الجداول موجودة عند إنشاء السياسات.
-- الترتيب المقترح بعد هذه الإضافات: `erp_schema.sql`، `erp_operations_schema.sql`، `erp_master_data_schema.sql`، `erp_hr_schema.sql`، `erp_cash_vouchers_schema.sql`، `erp_account_integrity.sql`، `erp_account_tree_metrics.sql`، `erp_journal_workflow.sql`، `erp_security_membership.sql`، `erp_ledger_reports.sql`، `erp_journal_reversal.sql`، `erp_inventory_workflow.sql`، `erp_operations_workflow.sql`، `erp_cash_voucher_workflow.sql`، `erp_movement_audit.sql`، ثم `erp_preflight_check.sql`.
+- الترتيب المقترح بعد هذه الإضافات: `erp_schema.sql`، `erp_operations_schema.sql`، `erp_master_data_schema.sql`، `erp_hr_schema.sql`، `erp_cash_vouchers_schema.sql`، `erp_account_integrity.sql`، `erp_account_tree_metrics.sql`، `erp_journal_workflow.sql`، `erp_security_membership.sql`، `erp_payroll_workflow.sql`، `erp_ledger_reports.sql`، `erp_journal_reversal.sql`، `erp_inventory_workflow.sql`، `erp_operations_workflow.sql`، `erp_cash_voucher_workflow.sql`، `erp_movement_audit.sql`، ثم `erp_preflight_check.sql`.
 - هذه الملفات لم تُطبّق على Supabase. لا يمكن اعتبار أي وظيفة قاعدة بيانات عاملة حتى تطبيق SQL والتحقق منه في المشروع المستهدف.
 
 ## الموارد البشرية والحضور والرواتب
@@ -168,4 +168,10 @@
 - أضيف `supabase/erp_cash_voucher_workflow.sql`؛ ترحيل السند ينشئ قيد يومية متوازنًا تلقائيًا، ويربط القيد بالسند، ويمنع إعادة الترحيل. التحويل يسجل مدين خزينة الاستلام ودائن خزينة المصدر.
 - أضيفت شاشة `lib/erp/screens/erp_cash_vouchers_screen.dart` وخدمة المستودع المرتبطة بها، وربطت خيارات سندات القبض والصرف والتحويل في لوحة ERP.
 - يتطلب الترحيل حساب أستاذ صالحًا مربوطًا بكل خزينة، وحسابًا مقابلًا صالحًا للقبض والصرف. لم يتم تطبيق SQL أو تجربة الترحيل على قاعدة فعلية.
+
+## دورة مسير الرواتب المحاسبية
+- أضيف `supabase/erp_payroll_workflow.sql` لإعادة حساب إجماليات المسير من تفاصيل الموظفين، واعتماد المسودة، ثم إنشاء قيد يومية متوازن وترحيله وربطه بالمسير.
+- أضيفت شاشة `lib/erp/screens/erp_payroll_screen.dart` وخدمة `lib/erp/services/erp_payroll_repository.dart` لإنشاء مسير، وإضافة تفاصيل الراتب، وإعادة الحساب، والاعتماد والترحيل المحاسبي.
+- يجب تحديد حساب مصروف الرواتب وحساب مستحقات الرواتب وحساب الاستقطاعات، وكلها حسابات نشطة قابلة للترحيل ومختلفة. اعتماد وترحيل المسير متاحان للأدوار الإدارية والمحاسبية المصرح بها فقط.
+- صرف المستحقات النقدية الفعلي يحتاج بعد ذلك إلى ربط المسير بسند صرف خزينة، وليس مجرد تغيير حالة المسير إلى «مدفوع».
 
