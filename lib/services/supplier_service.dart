@@ -44,7 +44,6 @@ class SupplierService {
           'id, full_name, activity_type, supplier_type, '
           'governorate, district, address, account_status',
         )
-        .eq('role', 'supplier')
         .order('full_name')
         .limit(limit);
 
