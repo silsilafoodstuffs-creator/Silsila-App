@@ -62,8 +62,8 @@ class SupplierOrderService {
   Future<void> acceptOrder(int orderId) async {
     await _changeStatus(
       orderId: orderId,
-      newStatus: 'accepted',
-      allowedCurrentStatuses: {'pending'},
+      newStatus: 'تنفيذ',
+      allowedCurrentStatuses: {'انتظار قبول'},
     );
   }
 
@@ -71,8 +71,8 @@ class SupplierOrderService {
   Future<void> startPreparingOrder(int orderId) async {
     await _changeStatus(
       orderId: orderId,
-      newStatus: 'preparing',
-      allowedCurrentStatuses: {'accepted'},
+      newStatus: 'تحميل',
+      allowedCurrentStatuses: {'تنفيذ'},
     );
   }
 
@@ -80,8 +80,8 @@ class SupplierOrderService {
   Future<void> markReadyForDelivery(int orderId) async {
     await _changeStatus(
       orderId: orderId,
-      newStatus: 'ready_for_delivery',
-      allowedCurrentStatuses: {'preparing'},
+      newStatus: 'توصيل',
+      allowedCurrentStatuses: {'تحميل'},
     );
   }
 
@@ -92,9 +92,18 @@ class SupplierOrderService {
   }) async {
     await _changeStatus(
       orderId: orderId,
-      newStatus: 'cancelled',
+      newStatus: 'مُلغي',
       note: reason,
-      allowedCurrentStatuses: {'pending', 'accepted'},
+      allowedCurrentStatuses: {'انتظار قبول', 'تنفيذ'},
+    );
+  }
+
+  /// تأكيد إتمام التسليم.
+  Future<void> markDelivered(int orderId) async {
+    await _changeStatus(
+      orderId: orderId,
+      newStatus: 'تم التسليم',
+      allowedCurrentStatuses: {'توصيل'},
     );
   }
 
