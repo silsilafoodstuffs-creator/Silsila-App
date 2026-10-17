@@ -241,6 +241,10 @@ declare
   v_doc public.erp_purchase_documents%rowtype;
   v_line record;
   v_count integer := 0;
+  v_subtotal numeric(16,2);
+  v_discount numeric(16,2);
+  v_tax numeric(16,2);
+  v_line_total numeric(16,2);
   v_movement_type text;
 begin
   select * into v_doc from public.erp_purchase_documents where id = p_document_id for update;
@@ -255,8 +259,16 @@ begin
   if v_doc.warehouse_id is null then raise exception 'اختر مخزنًا للمستند قبل الترحيل'; end if;
   if not exists (select 1 from public.erp_warehouses w where w.id = v_doc.warehouse_id and w.company_id = v_doc.company_id and w.is_active) then
     raise exception 'المخزن غير نشط أو لا يتبع الشركة'; end if;
-  select count(*) into v_count from public.erp_purchase_lines where document_id = v_doc.id;
+  select count(*)::integer, round(coalesce(sum(l.quantity * l.unit_price),0),2),
+    coalesce(sum(l.discount_amount),0), coalesce(sum(l.tax_amount),0), coalesce(sum(l.line_total),0)
+    into v_count, v_subtotal, v_discount, v_tax, v_line_total
+  from public.erp_purchase_lines l where l.document_id = v_doc.id;
   if v_count = 0 then raise exception 'لا يمكن ترحيل مستند مشتريات بلا بنود'; end if;
+  if v_doc.subtotal <> v_subtotal or v_doc.discount_total <> v_discount
+     or v_doc.tax_total <> v_tax or v_doc.grand_total <> v_line_total
+     or v_doc.grand_total <> v_subtotal - v_discount + v_tax then
+    raise exception 'إجماليات مستند المشتريات لا تطابق تفاصيل البنود؛ أعد حساب المستند قبل الترحيل';
+  end if;
 
   v_movement_type := case when v_doc.document_type = 'return' then 'supplier_return' else 'purchase_receipt' end;
   for v_line in
@@ -300,8 +312,16 @@ begin
   if v_doc.warehouse_id is null then raise exception 'اختر مخزنًا للمستند قبل الترحيل'; end if;
   if not exists (select 1 from public.erp_warehouses w where w.id = v_doc.warehouse_id and w.company_id = v_doc.company_id and w.is_active) then
     raise exception 'المخزن غير نشط أو لا يتبع الشركة'; end if;
-  select count(*) into v_count from public.erp_sales_lines where document_id = v_doc.id;
+  select count(*)::integer, round(coalesce(sum(l.quantity * l.unit_price),0),2),
+    coalesce(sum(l.discount_amount),0), coalesce(sum(l.tax_amount),0), coalesce(sum(l.line_total),0)
+    into v_count, v_subtotal, v_discount, v_tax, v_line_total
+  from public.erp_sales_lines l where l.document_id = v_doc.id;
   if v_count = 0 then raise exception 'لا يمكن ترحيل مستند مبيعات بلا بنود'; end if;
+  if v_doc.subtotal <> v_subtotal or v_doc.discount_total <> v_discount
+     or v_doc.tax_total <> v_tax or v_doc.grand_total <> v_line_total
+     or v_doc.grand_total <> v_subtotal - v_discount + v_tax then
+    raise exception 'إجماليات مستند المبيعات لا تطابق تفاصيل البنود؛ أعد حساب المستند قبل الترحيل';
+  end if;
 
   v_movement_type := case when v_doc.document_type = 'return' then 'customer_return' else 'sales_issue' end;
   for v_line in
