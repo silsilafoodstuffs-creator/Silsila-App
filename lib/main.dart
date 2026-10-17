@@ -517,7 +517,14 @@ class _EntryOptionTile extends StatelessWidget {
 }
 
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  const MainShell({
+    super.key,
+    this.testRole,
+    this.testAccountName,
+  });
+
+  final String? testRole;
+  final String? testAccountName;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -717,6 +724,18 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> loadCurrentRole() async {
+    if (widget.testRole != null) {
+      if (mounted) {
+        setState(() {
+          isAdmin = false;
+          isApprovedSupplier = widget.testRole == 'supplier';
+          if (widget.testAccountName != null) {
+            accountName = widget.testAccountName!;
+          }
+        });
+      }
+      return;
+    }
     try {
       final profile = await ProfileService().getMyProfile();
       if (mounted) setState(() {
@@ -1947,7 +1966,7 @@ class _MainShellState extends State<MainShell> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        accountName,
+                        widget.testAccountName ?? accountName,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 19,
@@ -4444,7 +4463,33 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> login() async {
-    if (phone.text.trim().isEmpty || password.text.isEmpty) {
+    const testLoginEnabled = bool.fromEnvironment(
+      'SILSILA_TEST_LOGIN',
+      defaultValue: false,
+    );
+    final enteredPhone = normalizeArabicDigits(phone.text.trim())
+        .replaceAll(RegExp(r'[\\s\\-()]'), '');
+
+    if (testLoginEnabled &&
+        (enteredPhone == '01002251795' || enteredPhone == '01019617100')) {
+      final isSupplier = enteredPhone == '01019617100';
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => MainShell(
+            testRole: isSupplier ? 'supplier' : 'client',
+            testAccountName: isSupplier
+                ? 'سلسلة للمواد الغذائية'
+                : 'عايز وظيفة',
+          ),
+        ),
+        (route) => false,
+      );
+      return;
+    }
+
+    if (phone.text.trim().isEmpty ||
+        (password.text.isEmpty && !testLoginEnabled)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('اكتب رقم الهاتف وكلمة المرور.')),
       );
@@ -4509,8 +4554,12 @@ class _LoginScreenState extends State<LoginScreen> {
               prefixIcon: Icon(Icons.phone),
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
+          if (!const bool.fromEnvironment(
+            'SILSILA_TEST_LOGIN',
+            defaultValue: false,
+          )) ...[
+            const SizedBox(height: 12),
+            TextField(
             controller: password,
             obscureText: obscurePassword,
             decoration: InputDecoration(
@@ -4523,10 +4572,29 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
+          ],
+          if (const bool.fromEnvironment(
+            'SILSILA_TEST_LOGIN',
+            defaultValue: false,
+          )) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'وضع اختبار: أدخل رقم العميل أو المورد المحدد للدخول مباشرة.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.deepOrange),
+            ),
+          ],
           const SizedBox(height: 18),
           FilledButton(
             onPressed: busy ? null : login,
-            child: Text(busy ? 'جارٍ الدخول...' : 'دخول'),
+            child: Text(
+              const bool.fromEnvironment(
+                'SILSILA_TEST_LOGIN',
+                defaultValue: false,
+              )
+                  ? 'دخول تجريبي'
+                  : (busy ? 'جارٍ الدخول...' : 'دخول'),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.push(
