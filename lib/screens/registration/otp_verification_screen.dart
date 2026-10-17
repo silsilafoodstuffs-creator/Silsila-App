@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_theme.dart';
+import 'registration_success_screen.dart';
 
 class SilsilaOtpVerificationScreen extends StatefulWidget {
   const SilsilaOtpVerificationScreen({
@@ -48,16 +49,14 @@ class _SilsilaOtpVerificationScreenState
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم التحقق بنجاح'),
-        ),
-      );
-
       if (widget.onVerified != null) {
         widget.onVerified!();
       } else {
-        Navigator.of(context).pop(true);
+        await Navigator.of(context).pushReplacement<bool, bool>(
+          MaterialPageRoute<bool>(
+            builder: (_) => const SilsilaRegistrationSuccessScreen(),
+          ),
+        );
       }
     } on AuthException catch (error) {
       if (!mounted) return;
@@ -76,9 +75,7 @@ class _SilsilaOtpVerificationScreenState
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'حدث خطأ أثناء التحقق. حاول مرة أخرى.',
-          ),
+          content: Text('حدث خطأ أثناء التحقق. حاول مرة أخرى.'),
         ),
       );
     } finally {
@@ -89,6 +86,8 @@ class _SilsilaOtpVerificationScreenState
   }
 
   Future<void> _resendCode() async {
+    if (_isResending || _isVerifying) return;
+
     setState(() => _isResending = true);
 
     try {
@@ -200,8 +199,7 @@ class _SilsilaOtpVerificationScreenState
                         validator: (value) {
                           final code = value?.trim() ?? '';
 
-                          if (code.length != 6 ||
-                              !RegExp(r'^\d{6}$').hasMatch(code)) {
+                          if (!RegExp(r'^\d{6}$').hasMatch(code)) {
                             return 'أدخل رمزًا صحيحًا مكوّنًا من 6 أرقام';
                           }
 
@@ -212,8 +210,7 @@ class _SilsilaOtpVerificationScreenState
                       SizedBox(
                         height: 52,
                         child: FilledButton(
-                          onPressed:
-                              _isVerifying ? null : _verifyCode,
+                          onPressed: _isVerifying ? null : _verifyCode,
                           child: _isVerifying
                               ? const SizedBox(
                                   width: 23,
@@ -228,8 +225,9 @@ class _SilsilaOtpVerificationScreenState
                       ),
                       const SizedBox(height: 12),
                       TextButton.icon(
-                        onPressed:
-                            _isResending ? null : _resendCode,
+                        onPressed: (_isResending || _isVerifying)
+                            ? null
+                            : _resendCode,
                         icon: _isResending
                             ? const SizedBox(
                                 width: 17,
