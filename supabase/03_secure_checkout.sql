@@ -79,6 +79,9 @@ BEGIN
   )
   RETURNING id INTO v_order_id;
 
+  INSERT INTO public.order_status_history(order_id, status, changed_by, note)
+  VALUES (v_order_id, 'انتظار قبول', v_customer_id, 'تم إنشاء الطلب');
+
   FOR v_item IN SELECT value FROM jsonb_array_elements(p_items)
   LOOP
     v_product_id := (v_item->>'product_id')::BIGINT;
