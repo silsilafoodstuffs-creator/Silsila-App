@@ -26,7 +26,9 @@ class OfferService {
     var query = _client
         .from('offers')
         .select()
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .lte('starts_at', DateTime.now().toUtc().toIso8601String())
+        .gte('ends_at', DateTime.now().toUtc().toIso8601String());
 
     final activity = activityType?.trim();
     if (activity != null && activity.isNotEmpty) {
@@ -51,7 +53,11 @@ class OfferService {
         .eq('supplier_id', supplierId);
 
     if (activeOnly) {
-      query = query.eq('is_active', true);
+      final now = DateTime.now().toUtc().toIso8601String();
+      query = query
+          .eq('is_active', true)
+          .lte('starts_at', now)
+          .gte('ends_at', now);
     }
 
     final response = await query
