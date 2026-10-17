@@ -136,6 +136,12 @@ class NotificationService {
     if (cleanBody.isEmpty) {
       throw ArgumentError('نص الإشعار مطلوب.');
     }
+    if (cleanTitle.length > 200 || cleanBody.length > 3000) {
+      throw ArgumentError('عنوان الإشعار أو نصه تجاوز الحد المسموح.');
+    }
+    if (type != null && type.trim().length > 80) {
+      throw ArgumentError('نوع الإشعار طويل أكثر من اللازم.');
+    }
 
     final data = <String, dynamic>{
       'user_id': cleanUserId,
