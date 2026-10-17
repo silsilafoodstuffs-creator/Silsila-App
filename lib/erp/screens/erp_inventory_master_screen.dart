@@ -186,7 +186,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
             DropdownButtonFormField<String>(
               value: _parentGroupId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'المجموعة الرئيسية (اختياري)'),
-              items: [const DropdownMenuItem<String>(value: null, child: Text('بدون مجموعة رئيسية')), ..._groups.where((g) => g['is_active'] == true && _s(g['id']) != _parentGroupId).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['group_code']) + ' — ' + _s(g['group_name']), overflow: TextOverflow.ellipsis)))],
+              items: [const DropdownMenuItem<String>(value: null, child: Text('بدون مجموعة رئيسية')), ..._groups.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['group_code']) + ' — ' + _s(g['group_name']), overflow: TextOverflow.ellipsis)))],
               onChanged: (v) => setState(() => _parentGroupId = v),
             ),
             const SizedBox(height: 8),
