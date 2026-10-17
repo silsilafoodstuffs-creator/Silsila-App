@@ -355,6 +355,7 @@ begin
       from public.erp_inventory_movements m
       where m.company_id = p_company_id
         and (p_end_date is null or m.movement_date::date <= p_end_date)
+        and (p_end_date is not null or m.movement_date <= now())
     ) x
     where x.balance_after < 0
       and (p_start_date is null or x.movement_date::date >= p_start_date)
