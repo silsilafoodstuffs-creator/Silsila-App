@@ -5449,6 +5449,26 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
   }
 
   Future<void> deleteAddress(Map<String, dynamic> item) async {
+    final title = (item['title'] ?? 'هذا العنوان').toString();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تأكيد الحذف'),
+        content: Text('هل ترغب في حذف العنوان "$title"؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('لأ'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('أه، احذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     try {
       await service.deleteAddress(item['id'].toString());
       await loadAddresses();
