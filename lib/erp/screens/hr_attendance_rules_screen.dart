@@ -37,7 +37,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       OutlinedButton.icon(onPressed:()=>_message('هذه مسودة واجهة. الحفظ الدائم يحتاج ربطها بقاعدة البيانات.'),icon:const Icon(Icons.save_outlined,color:_orange),label:const Text('حفظ القواعد')),
       if(shifts.length>1) OutlinedButton.icon(onPressed:(){
         final removed=shifts.removeAt(_selectedShiftIndex);removed.dispose();
-        setState(()=>{_selectedShiftIndex=(_selectedShiftIndex-1).clamp(0,shifts.length-1);_editingShiftIndex=null;});
+        setState((){_selectedShiftIndex=(_selectedShiftIndex-1).clamp(0,shifts.length-1).toInt();_editingShiftIndex=null;});
       },icon:const Icon(Icons.delete_outline,color:_red),label:const Text('حذف الوردية المحددة')),
     ]),
     const SizedBox(height:12),
