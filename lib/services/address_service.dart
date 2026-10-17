@@ -130,6 +130,7 @@ class AddressService {
   /// تعيين عنوان محفوظ كعنوان افتراضي.
   Future<void> setDefaultAddress(String addressId) async {
     final id = _requiredText(addressId, 'معرّف العنوان');
+    _validateTextLength(id, 'معرّف العنوان', 200);
 
     await _requireClient.rpc(
       'set_default_address',
@@ -262,6 +263,7 @@ class AddressService {
   /// حذف عنوان من حساب المستخدم الحالي.
   Future<void> deleteAddress(String addressId) async {
     final id = _requiredText(addressId, 'معرّف العنوان');
+    _validateTextLength(id, 'معرّف العنوان', 200);
 
     await _requireClient
         .from('addresses')
