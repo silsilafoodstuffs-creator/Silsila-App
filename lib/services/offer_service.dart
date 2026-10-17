@@ -47,11 +47,20 @@ class OfferService {
   Future<List<Map<String, dynamic>>> getSupplierOffers(
     String supplierId, {
     bool activeOnly = true,
+    int limit = 50,
   }) async {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+    final cleanSupplierId = supplierId.trim();
+    if (cleanSupplierId.isEmpty) {
+      throw ArgumentError('معرّف المورد مطلوب.');
+    }
+
     var query = _client
         .from('offers')
         .select()
-        .eq('supplier_id', supplierId);
+        .eq('supplier_id', cleanSupplierId);
 
     if (activeOnly) {
       final now = DateTime.now().toUtc().toIso8601String();
@@ -62,7 +71,8 @@ class OfferService {
     }
 
     final response = await query
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(limit);
 
     return List<Map<String, dynamic>>.from(response);
   }
