@@ -9,6 +9,7 @@ set search_path = public
 set row_security = off
 as $$
 begin
+  perform pg_advisory_xact_lock(hashtextextended(new.company_id::text || ':fiscal-period', 0));
   if new.ends_on < new.starts_on then
     raise exception 'نهاية الفترة المالية يجب ألا تسبق بدايتها';
   end if;
