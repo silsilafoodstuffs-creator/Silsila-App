@@ -120,15 +120,13 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $
 BEGIN
-  IF NEW.role IS NULL OR btrim(NEW.role) = '' THEN
-    NEW.role := CASE
-      WHEN NEW.account_type IN ('مورد', 'supplier') THEN 'supplier'
-      WHEN NEW.account_type IN ('مندوب', 'delegate') THEN 'delegate'
-      WHEN NEW.account_type IN ('شركة شحن', 'shipping_company') THEN 'shipping_company'
-      WHEN NEW.account_type IN ('إدارة نشاط', 'admin', 'management') THEN 'admin'
-      ELSE 'customer'
-    END;
-  END IF;
+  NEW.role := CASE
+    WHEN NEW.account_type IN ('مورد', 'supplier') THEN 'supplier'
+    WHEN NEW.account_type IN ('مندوب', 'delegate') THEN 'delegate'
+    WHEN NEW.account_type IN ('شركة شحن', 'shipping_company') THEN 'shipping_company'
+    WHEN NEW.account_type IN ('إدارة نشاط', 'admin', 'management') THEN 'admin'
+    ELSE 'customer'
+  END;
   RETURN NEW;
 END;
 $;
