@@ -140,7 +140,7 @@ begin
   foreach t in array array[
     'erp_branches','erp_fiscal_periods','erp_accounts','erp_cashboxes',
     'erp_warehouses','erp_item_groups','erp_items','erp_parties',
-    'erp_employees','erp_attendance_records','erp_leave_requests','erp_payroll_runs'
+    'erp_attendance_records','erp_leave_requests'
   ]
   loop
     execute format('drop policy if exists %I on public.%I', t || '_select_member', t);
@@ -329,6 +329,44 @@ for delete to authenticated using (exists (
 grant select, insert, update, delete on public.erp_purchase_documents, public.erp_purchase_lines,
   public.erp_sales_documents, public.erp_sales_lines to authenticated;
 
+
+
+-- Salary-bearing employee and payroll records are restricted to management/accounting.
+drop policy if exists erp_employees_select_hr on public.erp_employees;
+create policy erp_employees_select_hr on public.erp_employees
+for select to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[]));
+drop policy if exists erp_employees_insert_hr on public.erp_employees;
+create policy erp_employees_insert_hr on public.erp_employees
+for insert to authenticated
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager']::text[]));
+drop policy if exists erp_employees_update_hr on public.erp_employees;
+create policy erp_employees_update_hr on public.erp_employees
+for update to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin','manager']::text[]))
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager']::text[]));
+drop policy if exists erp_employees_delete_hr on public.erp_employees;
+create policy erp_employees_delete_hr on public.erp_employees
+for delete to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
+
+drop policy if exists erp_payroll_runs_select_accounting on public.erp_payroll_runs;
+create policy erp_payroll_runs_select_accounting on public.erp_payroll_runs
+for select to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]));
+drop policy if exists erp_payroll_runs_insert_accounting on public.erp_payroll_runs;
+create policy erp_payroll_runs_insert_accounting on public.erp_payroll_runs
+for insert to authenticated
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]));
+drop policy if exists erp_payroll_runs_update_accounting on public.erp_payroll_runs;
+create policy erp_payroll_runs_update_accounting on public.erp_payroll_runs
+for update to authenticated
+using (status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]))
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]));
+drop policy if exists erp_payroll_runs_delete_admin on public.erp_payroll_runs;
+create policy erp_payroll_runs_delete_admin on public.erp_payroll_runs
+for delete to authenticated
+using (status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
 
 -- Payroll lines inherit company scope from their payroll run and must reference
 -- an employee in the same company.
