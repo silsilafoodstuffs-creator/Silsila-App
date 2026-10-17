@@ -717,4 +717,4 @@ $$;
 revoke all on function public.erp_run_movement_audit(uuid,date,date,text) from public, anon;
 grant execute on function public.erp_run_movement_audit(uuid,date,date,text) to authenticated;
 comment on function public.erp_run_movement_audit(uuid,date,date,text) is
-  'Read-only integrity audit for journal entries, chart of accounts, and cashbox/bank account links currently present in the ERP schema.';
+  'Read-only integrity audit for accounting, inventory, sales, purchases, cash vouchers, employee attendance, leave and payroll tables installed in the ERP schema.';
