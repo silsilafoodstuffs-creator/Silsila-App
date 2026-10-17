@@ -225,11 +225,17 @@ class AddressService {
     if ((latitude == null) != (longitude == null)) {
       throw ArgumentError('يجب إدخال خط العرض وخط الطول معًا.');
     }
-    if (latitude != null &&
-        (!latitude.isFinite ||
-            !longitude!.isFinite ||
-            latitude < -90 || latitude > 90 ||
-            longitude < -180 || longitude > 180)) {
+
+    final lat = latitude;
+    final lon = longitude;
+    if (lat == null || lon == null) return;
+
+    if (!lat.isFinite ||
+        !lon.isFinite ||
+        lat < -90 ||
+        lat > 90 ||
+        lon < -180 ||
+        lon > 180) {
       throw ArgumentError('إحداثيات الموقع خارج النطاق الصحيح.');
     }
   }
