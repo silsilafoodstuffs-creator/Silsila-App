@@ -86,13 +86,6 @@ begin
         and src.branch_id is not null and dst.branch_id is not null
         and src.branch_id <> dst.branch_id
     ) then raise exception 'التحويل بين فرعين مختلفين يحتاج إجراء تحويل بين الفروع'; end if;
-    if exists (
-      select 1 from public.erp_cashboxes src
-      join public.erp_cashboxes dst on dst.id = new.destination_cashbox_id
-      where src.id = new.source_cashbox_id
-        and src.branch_id is not null and dst.branch_id is not null
-        and src.branch_id <> dst.branch_id
-    ) then raise exception 'التحويل بين فرعين مختلفين يحتاج إجراء تحويل بين الفروع'; end if;
   else
     if not exists (
       select 1 from public.erp_accounts a where a.id = new.counter_account_id
