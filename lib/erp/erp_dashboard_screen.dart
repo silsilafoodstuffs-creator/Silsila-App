@@ -272,18 +272,26 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ));
   }
 
-  Widget _recordAction(String label, IconData icon, VoidCallback action) => OutlinedButton.icon(
-    onPressed: action, icon: Icon(icon, size: 16), label: Text(label),
-    style: OutlinedButton.styleFrom(foregroundColor: _purple, backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12), side: const BorderSide(color: Color(0xFFE5DDED)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)), textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+  Widget _recordAction(String label, IconData icon, Color color, VoidCallback action) => FilledButton.icon(
+    onPressed: action,
+    icon: Icon(icon, size: 16),
+    label: Text(label),
+    style: FilledButton.styleFrom(
+      foregroundColor: Colors.white,
+      backgroundColor: color,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+    ),
   );
 
   Widget _recordToolbar({bool includeAdd = true}) => Wrap(spacing: 7, runSpacing: 7, children: [
-    if (includeAdd) _recordAction('إضافة', Icons.add_rounded, _openAddDialog),
-    _recordAction('تعديل', Icons.edit_outlined, _editCurrentRecord),
-    _recordAction('حفظ', Icons.save_outlined, _saveCurrentPage),
-    _recordAction('طباعة', Icons.print_outlined, () => _showPrintPreview(pdf: false)),
-    _recordAction('تصدير Excel', Icons.table_view_outlined, _exportExcel),
-    _recordAction('تصدير PDF', Icons.picture_as_pdf_outlined, () => _showPrintPreview(pdf: true)),
+    if (includeAdd) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
+    _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
+    _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
+    _recordAction('طباعة', Icons.print_outlined, _pink, () => _showPrintPreview(pdf: false)),
+    _recordAction('تصدير Excel', Icons.table_view_outlined, const Color(0xFF16834A), _exportExcel),
+    _recordAction('تصدير PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), () => _showPrintPreview(pdf: true)),
   ]);
 
   @override
@@ -474,18 +482,33 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _rightPanel() => Container(
     decoration: const BoxDecoration(border: Border(left: BorderSide(color: Color(0xFFECE7F2)))),
-    child: SafeArea(child: ListView(padding: const EdgeInsets.all(16), children: [
-      Row(children: [const Icon(Icons.notifications_active_outlined, color: _purple), const SizedBox(width: 8), const Expanded(child: Text('لوحة التنبيهات', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 16))), Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: const Color(0xFFFFF1D9), borderRadius: BorderRadius.circular(20)), child: const Text('3', style: TextStyle(color: Color(0xFF9A5A00), fontWeight: FontWeight.w900)))]),
-      const SizedBox(height: 12),
-      _notice(Icons.inventory_2_outlined, 'مراجعة المخزون', 'راجع حدود إعادة الطلب والصلاحية', _orange),
-      _notice(Icons.security_outlined, 'صلاحيات المستخدمين', 'إعداد سياسات الوصول قبل التشغيل', _pink),
-      _notice(Icons.cloud_off_outlined, 'الربط بقاعدة البيانات', 'بعض الشاشات ما زالت تجريبية', _purple),
-      const SizedBox(height: 22),
-      const Divider(color: Color(0xFFECE7F2)),
-      const SizedBox(height: 12),
-      const Row(children: [Icon(Icons.history_rounded, color: _purple), SizedBox(width: 8), Expanded(child: Text('سجل النشاطات', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 16)))]),
-      const SizedBox(height: 12),
-      ..._activityLog.map((entry) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.circle, size: 7, color: _orange), const SizedBox(width: 9), Expanded(child: Text(entry, style: const TextStyle(fontSize: 11, height: 1.5, color: Colors.black87, fontWeight: FontWeight.w700)))]))),
+    child: SafeArea(child: ListView(padding: const EdgeInsets.all(12), children: [
+      Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(color: _purple, borderRadius: BorderRadius.circular(16)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            const Icon(Icons.notifications_active_outlined, color: Colors.white),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('لوحة التنبيهات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: _orange, borderRadius: BorderRadius.circular(20)), child: const Text('3', style: TextStyle(color: _purple, fontWeight: FontWeight.w900))),
+          ]),
+          const SizedBox(height: 12),
+          _notice(Icons.inventory_2_outlined, 'مراجعة المخزون', 'راجع حدود إعادة الطلب والصلاحية', _orange),
+          _notice(Icons.security_outlined, 'صلاحيات المستخدمين', 'إعداد سياسات الوصول قبل التشغيل', _pink),
+          _notice(Icons.cloud_off_outlined, 'الربط بقاعدة البيانات', 'بعض الشاشات ما زالت تجريبية', Colors.white),
+        ]),
+      ),
+      const SizedBox(height: 16),
+      Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(color: _purple, borderRadius: BorderRadius.circular(16)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Row(children: [Icon(Icons.history_rounded, color: Colors.white), SizedBox(width: 8), Expanded(child: Text('سجل النشاطات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)))]),
+          const SizedBox(height: 12),
+          ..._activityLog.map((entry) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.circle, size: 7, color: _orange), const SizedBox(width: 9), Expanded(child: Text(entry, style: const TextStyle(fontSize: 11, height: 1.5, color: Colors.white, fontWeight: FontWeight.w800)))]))),
+        ]),
+      ),
       const SizedBox(height: 12),
       const Text('ملاحظة: التنبيهات وسجل النشاطات حاليًا أمثلة محلية، وليسا متصلين بعد بأحداث النظام الفعلية.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
     ])),
@@ -494,8 +517,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _notice(IconData icon, String title, String detail, Color color) => Container(
     margin: const EdgeInsets.only(bottom: 9),
     padding: const EdgeInsets.all(11),
-    decoration: BoxDecoration(color: _canvas, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFECE7F2))),
-    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: color, size: 19), const SizedBox(width: 9), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: _purple)), const SizedBox(height: 4), Text(detail, style: const TextStyle(color: Colors.black87, fontSize: 10, height: 1.5, fontWeight: FontWeight.w700))]))]),
+    decoration: BoxDecoration(color: Colors.white.withValues(alpha: .10), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.white24)),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, color: color, size: 19),
+      const SizedBox(width: 9),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: Colors.white)),
+        const SizedBox(height: 4),
+        Text(detail, style: const TextStyle(color: Colors.white, fontSize: 10, height: 1.5, fontWeight: FontWeight.w800)),
+      ])),
+    ]),
   );
 
   Widget _appManagement() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -584,7 +615,34 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(_module, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 18)),
       const SizedBox(height: 4),
-      Text('الرئيسية  /  $_module  /  $_page', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 11)),
+      Wrap(
+        spacing: 5,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          InkWell(
+            onTap: _goHome,
+            borderRadius: BorderRadius.circular(5),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 2, horizontal: 3),
+              child: Text('الرئيسية', style: TextStyle(color: _purple, fontSize: 11, fontWeight: FontWeight.w800, decoration: TextDecoration.underline)),
+            ),
+          ),
+          const Text('/', style: TextStyle(color: Colors.black45, fontSize: 11)),
+          InkWell(
+            onTap: () {
+              final groups = _modules[_module]!;
+              _open(_module, groups.keys.first, groups.values.first.first);
+            },
+            borderRadius: BorderRadius.circular(5),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 3),
+              child: Text(_module, style: const TextStyle(color: _purple, fontSize: 11, fontWeight: FontWeight.w700, decoration: TextDecoration.underline)),
+            ),
+          ),
+          const Text('/', style: TextStyle(color: Colors.black45, fontSize: 11)),
+          Text(_page, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 11)),
+        ],
+      ),
     ])),
     if (!compact) SizedBox(width: 240, child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'بحث سريع', prefixIcon: const Icon(Icons.search_rounded), isDense: true, filled: true, fillColor: _canvas, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
     const SizedBox(width: 8),
@@ -625,11 +683,27 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     const SizedBox(height: 22),
   ]);
 
-  void _open(String module, String group, String page) => setState(() { _module = module; _group = group; _page = page; _search = ''; });
+  void _goHome() => setState(() {
+    _module = 'إدارة البرنامج';
+    _group = 'بيانات أساسية';
+    _page = 'بيانات الشركة';
+    _search = '';
+    _selectedRecord = null;
+  });
+
+  void _open(String module, String group, String page) => setState(() {
+    _module = module;
+    _group = group;
+    _page = page;
+    _search = '';
+    _selectedRecord = null;
+    _expandedModules.add(module);
+    _expandedGroups.add('$module::$group');
+  });
 
   Widget _quick(String title, IconData icon, VoidCallback action) => OutlinedButton.icon(
     onPressed: action, icon: Icon(icon, size: 19), label: Text(title),
-    style: OutlinedButton.styleFrom(foregroundColor: _purple, backgroundColor: Colors.white, overlayColor: _pink.withValues(alpha: .10), padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16), side: const BorderSide(color: Color(0xFFE5DDED)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
+    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, backgroundColor: _purple, overlayColor: Colors.white24, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16), side: const BorderSide(color: _purple), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)), textStyle: const TextStyle(fontWeight: FontWeight.w800)),
   );
 
   Widget _workspace() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -647,7 +721,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       const SizedBox(height: 12),
       _recordToolbar(includeAdd: _group != 'تقارير'),
       const SizedBox(height: 18),
-      Wrap(spacing: 8, runSpacing: 8, children: _pages.map((p) => ActionChip(label: Text(p), backgroundColor: p == _page ? const Color(0xFFF1E9FA) : const Color(0xFFF9F7FB), side: BorderSide(color: p == _page ? _purple : const Color(0xFFECE7F2)), onPressed: () => setState(() => _page = p))).toList()),
+      Wrap(spacing: 8, runSpacing: 8, children: _pages.map((p) => ActionChip(
+        label: Text(p, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        backgroundColor: p == _page ? const Color(0xFF6E2BA6) : _purple,
+        side: BorderSide(color: p == _page ? _orange : const Color(0xFF6E2BA6), width: p == _page ? 2 : 1),
+        onPressed: () => setState(() { _page = p; _selectedRecord = null; }),
+      )).toList()),
       const SizedBox(height: 16),
       if (_group == 'تقارير') const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('نموذج تقارير تجريبي؛ ستظهر المؤشرات الفعلية بعد ربط مصادر البيانات واعتماد المعادلات المحاسبية.', style: TextStyle(color: Colors.black54, height: 1.6))),
       if (_rows.isEmpty) const Padding(padding: EdgeInsets.all(28), child: Text('لا توجد نتائج مطابقة.', textAlign: TextAlign.center))
