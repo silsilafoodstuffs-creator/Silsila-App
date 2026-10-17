@@ -1367,7 +1367,7 @@ class _MainShellState extends State<MainShell> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     allProducts.any((p) => p.id != null) ? 'الإجمالي تقديري وقد يتغير عند تأكيد الطلب من قاعدة البيانات.' : 'الأسعار المعروضة أمثلة توضيحية وليست أسعار مورد مؤكدة.',
                     style: TextStyle(fontSize: 12, color: Colors.black54),
                   ),
@@ -1879,7 +1879,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     stock.dispose();
   }
 
-  Future<void> deactivate(Map<String, dynamic> product) async {
+  Future<void> deactivateProduct(Map<String, dynamic> product) async {
     final rawId = product['id'];
     final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
     if (id == null || busyIds.contains(id)) return;
@@ -5691,13 +5691,6 @@ class MarketCard extends StatelessWidget {
   }
 }
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key, required this.total, required this.itemCount, required this.items, required this.onSuccess});
   final double total;
@@ -5836,7 +5829,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           if (selected == null) return;
           setState(() {
             selectedAddressId = value;
-            address.text = formatAddress(selected);
+            address.text = formatAddress(selected!);
           });
         },
       ),
