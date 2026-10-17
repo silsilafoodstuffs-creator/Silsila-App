@@ -130,10 +130,12 @@ class WalletService {
       );
     }
 
+    final userId = _userId;
+
     final response = await _requireClient
         .from('wallet_topup_requests')
         .insert({
-          'user_id': _userId,
+          'user_id': userId,
           'amount': amount,
           'payment_method': method,
           'reference': cleanReference,
