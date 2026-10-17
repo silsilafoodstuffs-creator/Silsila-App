@@ -32,6 +32,12 @@ class SupportService {
     if (cleanCategory.isEmpty) {
       throw ArgumentError('يرجى تحديد نوع الطلب.');
     }
+    if (cleanSubject.length > 200 || cleanMessage.length > 10000) {
+      throw ArgumentError('عنوان التذكرة أو تفاصيلها تجاوز الحد المسموح.');
+    }
+    if (cleanCategory.length > 80) {
+      throw ArgumentError('نوع التذكرة طويل أكثر من اللازم.');
+    }
 
     final data = <String, dynamic>{
       'user_id': _userId,
