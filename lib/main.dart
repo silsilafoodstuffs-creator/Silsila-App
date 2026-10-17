@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/trader_market_service.dart';
+import 'services/order_status_service.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -1069,15 +1070,7 @@ class _MainShellState extends State<MainShell> {
           menuItem(
             Icons.receipt_long,
             'سجل طلباتي',
-            () => openPage(
-              'سجل طلباتي',
-              const SimpleListPage(
-                title: 'الطلبات',
-                details:
-                    'حالات الطلب: انتظار القبول، التنفيذ، التحميل، التوصيل، تم التسليم، ملغي.',
-                icon: Icons.receipt_long,
-              ),
-            ),
+            () => openPage('سجل طلباتي', const MyOrdersScreen()),
           ),
           menuItem(
             Icons.favorite_border,
@@ -2030,6 +2023,133 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           ),
         ],
       );
+}
+
+class MyOrdersScreen extends StatefulWidget {
+  const MyOrdersScreen({super.key});
+
+  @override
+  State<MyOrdersScreen> createState() => _MyOrdersScreenState();
+}
+
+class _MyOrdersScreenState extends State<MyOrdersScreen> {
+  late Future<List<Map<String, dynamic>>> ordersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    ordersFuture = OrderStatusService().getMyOrders();
+  }
+
+  Future<void> reload() async {
+    setState(() => ordersFuture = OrderStatusService().getMyOrders());
+    await ordersFuture;
+  }
+
+  Color statusColor(String status) {
+    switch (status) {
+      case 'تم التسليم':
+        return Colors.green;
+      case 'مُلغي':
+        return Colors.red;
+      case 'توصيل':
+        return orange;
+      case 'تحميل':
+      case 'تنفيذ':
+        return purple;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: ordersFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: purple));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.receipt_long, size: 56, color: purple),
+                  const SizedBox(height: 12),
+                  const Text('سجّل الدخول لعرض طلباتك، أو تحقق من اتصال قاعدة البيانات.'),
+                  const SizedBox(height: 8),
+                  TextButton(onPressed: reload, child: const Text('إعادة المحاولة')),
+                ],
+              ),
+            ),
+          );
+        }
+        final orders = snapshot.data ?? const <Map<String, dynamic>>[];
+        if (orders.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: reload,
+            child: ListView(
+              children: const [
+                SizedBox(height: 100),
+                Icon(Icons.receipt_long_outlined, size: 62, color: purple),
+                SizedBox(height: 12),
+                Center(child: Text('لا توجد طلبات مسجلة حتى الآن.')),
+              ],
+            ),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: orders.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final order = orders[index];
+              final status = (order['status'] ?? 'انتظار قبول').toString();
+              final number = (order['order_number'] ?? order['id'] ?? '').toString();
+              final total = order['total_amount'];
+              final date = order['created_at']?.toString() ?? '';
+              final isSupplier = order['supplier_id'] ==
+                  database?.auth.currentUser?.id;
+              return Card(
+                color: Colors.white,
+                child: ExpansionTile(
+                  leading: CircleAvatar(
+                    backgroundColor: statusColor(status).withOpacity(.12),
+                    child: Icon(Icons.receipt_long, color: statusColor(status)),
+                  ),
+                  title: Text('طلب #$number', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('${isSupplier ? 'طلب وارد' : 'طلبك'} • $status'),
+                  trailing: const Icon(Icons.expand_more),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text('الإجمالي: ${total ?? 0} ج.م'),
+                    ),
+                    if (date.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text('تاريخ الطلب: ${date.split('T').first}'),
+                      ),
+                    if (order['payment_method'] != null)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text('الدفع: ${order['payment_method']}'),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
 }
 
 class FavoritesScreen extends StatelessWidget {
