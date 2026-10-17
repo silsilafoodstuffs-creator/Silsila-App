@@ -82,12 +82,18 @@ class TraderMarketService {
         cleanType.isEmpty) {
       throw ArgumentError('يرجى إدخال العنوان والوصف ونوع المنشور.');
     }
+    if (cleanTitle.length > 200 ||
+        cleanDescription.length > 10000 ||
+        cleanType.length > 80) {
+      throw ArgumentError('العنوان أو الوصف أو نوع المنشور تجاوز الحد المسموح.');
+    }
 
-    if (quantity != null && quantity <= 0) {
+    if (quantity != null && (!quantity.isFinite || quantity <= 0)) {
       throw ArgumentError('الكمية يجب أن تكون أكبر من صفر.');
     }
 
-    if (targetPrice != null && targetPrice < 0) {
+    if (targetPrice != null &&
+        (!targetPrice.isFinite || targetPrice < 0)) {
       throw ArgumentError('السعر لا يمكن أن يكون سالبًا.');
     }
 
@@ -137,11 +143,18 @@ class TraderMarketService {
     final cleanTitle = title.trim();
     final cleanDescription = description.trim();
 
+    final cleanPostId = postId.trim();
+    if (cleanPostId.isEmpty) {
+      throw ArgumentError('معرّف المنشور مطلوب.');
+    }
     if (cleanTitle.isEmpty || cleanDescription.isEmpty) {
       throw ArgumentError('يرجى إدخال العنوان والوصف.');
     }
+    if (cleanTitle.length > 200 || cleanDescription.length > 10000) {
+      throw ArgumentError('العنوان أو الوصف تجاوز الحد المسموح.');
+    }
 
-    if (quantity != null && quantity <= 0) {
+    if (quantity != null && (!quantity.isFinite || quantity <= 0)) {
       throw ArgumentError('الكمية يجب أن تكون أكبر من صفر.');
     }
 
@@ -166,7 +179,7 @@ class TraderMarketService {
     final response = await _client
         .from('trader_market_posts')
         .update(data)
-        .eq('id', postId)
+        .eq('id', cleanPostId)
         .eq('user_id', _userId)
         .select()
         .single();
@@ -176,10 +189,14 @@ class TraderMarketService {
 
   /// حذف منشور يملكه المستخدم الحالي.
   Future<void> deletePost(String postId) async {
+    final id = postId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('معرّف المنشور مطلوب.');
+    }
     await _client
         .from('trader_market_posts')
         .delete()
-        .eq('id', postId)
+        .eq('id', id)
         .eq('user_id', _userId);
   }
 
