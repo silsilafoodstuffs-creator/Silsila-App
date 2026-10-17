@@ -116,7 +116,7 @@ BEGIN
   END IF;
 
   SELECT role INTO v_role FROM public.profiles WHERE id = v_user_id;
-  IF v_role <> 'admin' AND NOT EXISTS (
+  IF COALESCE(v_role, '') <> 'admin' AND NOT EXISTS (
     SELECT 1 FROM public.shipping_companies sc
     JOIN public.deliveries d ON d.shipping_company_id = sc.id
     WHERE d.id = p_delivery_id AND sc.profile_id = v_user_id
