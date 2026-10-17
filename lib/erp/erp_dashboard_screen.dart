@@ -165,15 +165,23 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     color: _purple,
     child: SafeArea(
       child: Column(children: [
-        const Padding(
-          padding: EdgeInsets.all(20),
+        Padding(
+          padding: const EdgeInsets.all(20),
           child: Row(children: [
-            CircleAvatar(backgroundColor: Colors.white, radius: 24, child: Icon(Icons.hub_rounded, color: _purple, size: 30)),
-            SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 52,
+              height: 52,
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+              child: Image.asset('assets/images/silsila_logo.png', fit: BoxFit.contain),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('سلسلة Silsila', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
               SizedBox(height: 4),
-              Text('ERP • إدارة موارد المؤسسة', style: TextStyle(color: Colors.white70, fontSize: 11)),
+              Text('سلسلة .. بنربط السوق ببعضه', style: TextStyle(color: _orange, fontSize: 12, fontWeight: FontWeight.w700)),
+              SizedBox(height: 3),
+              Text('ERP • إدارة موارد المؤسسة', style: TextStyle(color: Colors.white70, fontSize: 10)),
             ])),
           ]),
         ),
