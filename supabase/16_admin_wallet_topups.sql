@@ -102,6 +102,19 @@ BEGIN
          review_note = NULLIF(btrim(COALESCE(p_note,'')), '')
    WHERE id = p_request_id;
 
+  INSERT INTO public.notifications (
+    user_id, title, body, notification_type, type, data
+  ) VALUES (
+    v_user_id,
+    CASE WHEN p_approve THEN 'تم اعتماد شحن المحفظة' ELSE 'تم رفض طلب شحن المحفظة' END,
+    CASE
+      WHEN p_approve THEN 'تمت إضافة ' || v_amount || ' ج.م إلى رصيد محفظتك.'
+      ELSE COALESCE(NULLIF(btrim(COALESCE(p_note,'')), ''), 'لم يتم اعتماد طلب الشحن.')
+    END,
+    'wallet', 'wallet',
+    jsonb_build_object('topup_request_id', p_request_id, 'status', CASE WHEN p_approve THEN 'approved' ELSE 'rejected' END)
+  );
+
   RETURN jsonb_build_object(
     'id', p_request_id,
     'status', CASE WHEN p_approve THEN 'approved' ELSE 'rejected' END
