@@ -1040,6 +1040,24 @@ begin
         and j.source_id = d.id and j.status = 'posted'
     )
 
+  union all
+
+  select
+    'company:' || p_company_id::text || ':operational_account_mapping',
+    'المحاسبة التشغيلية',
+    null::uuid,
+    null::text,
+    null::date,
+    'خريطة الحسابات التشغيلية غير معدة',
+    'تحذير',
+    'OPERATIONAL_ACCOUNT_MAPPING_MISSING',
+    'لم يتم إعداد حسابات العملاء والموردين والإيرادات والمخزون وتكلفة المبيعات لهذه الشركة.',
+    'operational_account_mappings'
+  where (p_area = 'كل الحركات' or p_area = 'المحاسبة التشغيلية')
+    and not exists (
+      select 1 from public.erp_operational_account_mappings m where m.company_id = p_company_id
+    )
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
