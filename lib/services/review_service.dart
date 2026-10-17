@@ -27,7 +27,7 @@ class ReviewService {
     final response = await _client
         .from('reviews')
         .select()
-        .eq('supplier_id', supplierId)
+        .eq('supplier_id', supplierId.trim())
         .order('created_at', ascending: false)
         .limit(limit);
 
@@ -85,6 +85,10 @@ class ReviewService {
 
     if (supplierId.trim().isEmpty || orderId.trim().isEmpty) {
       throw ArgumentError('معرّف المورد والطلب مطلوبان.');
+    }
+    final parsedOrderId = int.tryParse(orderId.trim());
+    if (parsedOrderId == null || parsedOrderId <= 0) {
+      throw ArgumentError('رقم الطلب المرتبط بالتقييم غير صحيح.');
     }
     if ((comment ?? '').trim().length > 3000) {
       throw ArgumentError('تعليق التقييم يجب ألا يتجاوز 3000 حرف.');
