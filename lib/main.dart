@@ -3805,118 +3805,25 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 }
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends StatelessWidget {
   const ForgotPasswordScreen({super.key});
-
-  @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
-}
-
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
-  final phoneController = TextEditingController();
-  final codeController = TextEditingController();
-  final passwordController = TextEditingController();
-  final confirmController = TextEditingController();
-  bool codeSent = false;
-  bool busy = false;
-
-  @override
-  void dispose() {
-    phoneController.dispose();
-    codeController.dispose();
-    passwordController.dispose();
-    confirmController.dispose();
-    super.dispose();
-  }
-
-  Future<void> sendCode() async {
-    final phone = phoneController.text.trim();
-    if (phone.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('أدخل رقم الهاتف المسجل في الحساب.')),
-      );
-      return;
-    }
-    final client = database;
-    if (client == null) return;
-    setState(() => busy = true);
-    try {
-      await client.auth.signInWithOtp(
-        phone: phone,
-        shouldCreateUser: false,
-      );
-      if (mounted) {
-        setState(() => codeSent = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم طلب رمز التحقق إذا كان الرقم مسجلًا.')),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر إرسال الرمز. راجع إعدادات SMS أو حاول لاحقًا.')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-  }
-
-  Future<void> changePassword() async {
-    final code = codeController.text.trim();
-    final password = passwordController.text;
-    if (!RegExp(r'^\d{6}
-  const CheckoutScreen({
-    super.key,
-    required this.total,
-    required this.itemCount,
-  });
-
-  final double total;
-  final int itemCount;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: ListTile(
-            title: const Text('عدد الوحدات'),
-            trailing: Text('$itemCount'),
-          ),
+      padding: const EdgeInsets.all(20),
+      children: const [
+        Icon(Icons.lock_reset, size: 60, color: purple),
+        SizedBox(height: 12),
+        Text(
+          'استعادة كلمة المرور',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
         ),
-        Card(
-          child: ListTile(
-            title: const Text('الإجمالي التقديري'),
-            trailing: Text('${total.toStringAsFixed(2)} ج.م'),
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'طريقة الدفع',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        ...[
-          'نقدي',
-          'آجل من المورد',
-          'محفظة كاش',
-          'تحويل بنكي',
-          'من الرصيد',
-        ].map(
-          (method) => ListTile(
-            leading: const Icon(Icons.payments_outlined, color: purple),
-            title: Text(method),
-            trailing: const Icon(Icons.chevron_left),
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('طريقة الدفع المختارة: $method')),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'هذه شاشة تجهيز الطلب. إرسال الطلب وحفظ بنوده يحتاج استكمال الربط مع جداول الطلبات وسياسات قاعدة البيانات.',
-          style: TextStyle(color: Colors.black54),
+        SizedBox(height: 12),
+        Text(
+          'خدمة استعادة كلمة المرور عبر الهاتف غير مكتملة الإعداد حاليًا. تواصل مع الدعم للمساعدة في استعادة الحساب.',
+          textAlign: TextAlign.center,
         ),
       ],
     );
