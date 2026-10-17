@@ -21,7 +21,7 @@ class ErpPayrollRepository {
 
   Future<List<Map<String, dynamic>>> fetchEmployees(String companyId) async {
     final rows = await _db.from('erp_employee_directory')
-      .select('id, employee_code, full_name, base_salary:employee_code')
+      .select('id, employee_code, full_name, job_title, department_name')
       .eq('company_id', companyId.trim()).eq('employment_status', 'active').eq('is_active', true)
       .order('employee_code');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
