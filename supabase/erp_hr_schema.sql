@@ -160,6 +160,19 @@ begin
     if v_employee_company is distinct from new.company_id then
       raise exception 'الموظف يجب أن يتبع شركة السجل نفسه';
     end if;
+  elsif tg_table_name = 'erp_payroll_runs' then
+    if new.expense_account_id is not null and not exists (
+      select 1 from public.erp_accounts a where a.id = new.expense_account_id
+        and a.company_id = new.company_id and a.is_active and a.is_postable
+    ) then raise exception 'حساب مصروف الرواتب غير صالح'; end if;
+    if new.payable_account_id is not null and not exists (
+      select 1 from public.erp_accounts a where a.id = new.payable_account_id
+        and a.company_id = new.company_id and a.is_active and a.is_postable
+    ) then raise exception 'حساب مستحقات الرواتب غير صالح'; end if;
+    if new.deductions_account_id is not null and not exists (
+      select 1 from public.erp_accounts a where a.id = new.deductions_account_id
+        and a.company_id = new.company_id and a.is_active and a.is_postable
+    ) then raise exception 'حساب استقطاعات الرواتب غير صالح'; end if;
   elsif tg_table_name = 'erp_payroll_lines' then
     select company_id into v_employee_company from public.erp_employees where id = new.employee_id;
     select company_id into v_run_company from public.erp_payroll_runs where id = new.payroll_run_id;
@@ -183,6 +196,10 @@ on public.erp_attendance_records for each row execute function public.erp_valida
 drop trigger if exists erp_leave_company_guard on public.erp_leave_requests;
 create trigger erp_leave_company_guard before insert or update of company_id, employee_id
 on public.erp_leave_requests for each row execute function public.erp_validate_hr_company_links();
+
+drop trigger if exists erp_payroll_run_accounts_guard on public.erp_payroll_runs;
+create trigger erp_payroll_run_accounts_guard before insert or update of company_id, expense_account_id, payable_account_id, deductions_account_id
+on public.erp_payroll_runs for each row execute function public.erp_validate_hr_company_links();
 
 drop trigger if exists erp_payroll_line_company_guard on public.erp_payroll_lines;
 create trigger erp_payroll_line_company_guard before insert or update of company_id, employee_id, payroll_run_id
