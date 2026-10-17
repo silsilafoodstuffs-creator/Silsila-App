@@ -79,6 +79,26 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     });
   }
 
+  void _setMonthRange({required bool previousMonth}) {
+    final now = DateTime.now();
+    final month = previousMonth
+        ? DateTime(now.year, now.month - 1, 1)
+        : DateTime(now.year, now.month, 1);
+    final nextMonth = previousMonth
+        ? DateTime(now.year, now.month, 1)
+        : DateTime(now.year, now.month + 1, 1);
+    setState(() {
+      _startDate = month;
+      _endDate = nextMonth.subtract(const Duration(days: 1));
+    });
+  }
+
+  Future<void> _runArea(String area) async {
+    if (_loading) return;
+    setState(() => _area = area);
+    await _run();
+  }
+
   Future<void> _run() async {
     setState(() {
       _loading = true;
@@ -248,6 +268,16 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
               icon: const Icon(Icons.calendar_month),
               label: Text('إلى: ${_dateText(_endDate)}'),
             ),
+            OutlinedButton.icon(
+              onPressed: () => _setMonthRange(previousMonth: false),
+              icon: const Icon(Icons.calendar_view_month),
+              label: const Text('هذا الشهر'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _setMonthRange(previousMonth: true),
+              icon: const Icon(Icons.history),
+              label: const Text('الشهر السابق'),
+            ),
             TextButton(
               onPressed: () => setState(() { _startDate = null; _endDate = null; }),
               child: const Text('من بداية النظام'),
@@ -259,6 +289,33 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D)),
             ),
           ]),
+          const SizedBox(height: 14),
+          const Text(
+            'اختبار كل حركة على حدة',
+            style: TextStyle(color: Color(0xFF3E007D), fontSize: 16, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'اختر الحركة لتشغيل فحصها مباشرة بنفس الشركة والفترة المحددتين أعلاه.',
+            style: TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: _areas.where((area) => area != 'كل الحركات').map((area) =>
+              OutlinedButton.icon(
+                onPressed: _loading ? null : () => _runArea(area),
+                icon: const Icon(Icons.fact_check_outlined, size: 16),
+                label: Text('اختبار $area'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _area == area ? Colors.white : const Color(0xFF3E007D),
+                  backgroundColor: _area == area ? const Color(0xFF3E007D) : null,
+                  side: const BorderSide(color: Color(0xFF3E007D)),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                ),
+              )).toList(),
+          ),
           const SizedBox(height: 10),
           const Card(
             child: Padding(
