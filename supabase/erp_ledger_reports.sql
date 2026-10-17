@@ -86,3 +86,6 @@ comment on view public.erp_general_ledger is
   'Detailed posted journal lines only; security_invoker preserves base-table RLS.';
 comment on function public.erp_get_trial_balance(uuid,date,date) is
   'Trial balance by company and optional inclusive date range, using posted entries only; respects RLS.';
+
+-- Explicit read grant for authenticated clients; the view remains subject to base-table RLS.
+grant select on public.erp_general_ledger to authenticated;
