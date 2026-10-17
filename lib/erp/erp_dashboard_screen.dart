@@ -219,7 +219,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         const Divider(color: Colors.white24, height: 1),
         Expanded(child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          children: _modules.entries.map((moduleEntry) {
+          children: [
+          ..._modules.entries.map((moduleEntry) {
             final name = moduleEntry.key;
             final moduleOpen = _expandedModules.contains(name);
             final selectedModule = name == _module;
@@ -325,6 +326,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           _appLink('تطبيق سلسلة', 'التطبيق الرئيسي', Icons.apps_rounded, true),
           _appLink('تطبيق رقم 2', 'جاري إنشاؤه', Icons.phone_android_rounded, false),
           _appLink('تطبيق رقم 3', 'جاري إنشاؤه', Icons.web_rounded, false),
+          ],
         )),
         const Divider(color: Colors.white24, height: 1),
         const Padding(padding: EdgeInsets.all(14), child: Column(children: [
