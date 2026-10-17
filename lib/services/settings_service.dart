@@ -1,16 +1,33 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SettingsService {
-  SettingsService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  SettingsService({SupabaseClient? client}) : _client = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client != null) {
+      return client;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      throw StateError(
+        'اتصال Supabase غير متاح. يرجى المحاولة لاحقًا.',
+      );
+    }
+  }
 
   String get _userId {
-    final user = _client.auth.currentUser;
+    final user = _requireClient.auth.currentUser;
+
     if (user == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
+
     return user.id;
   }
 
@@ -23,9 +40,22 @@ class SettingsService {
     'theme': 'light',
   };
 
+  static const List<String> supportedLanguages = ['ar', 'en'];
+
+  static const List<String> supportedPriceDisplays = [
+    'final',
+    'negotiable',
+  ];
+
+  static const List<String> supportedThemes = [
+    'light',
+    'dark',
+    'system',
+  ];
+
   /// جلب إعدادات المستخدم أو القيم الافتراضية.
   Future<Map<String, dynamic>> getSettings() async {
-    final response = await _client
+    final response = await _requireClient
         .from('user_settings')
         .select()
         .eq('user_id', _userId)
@@ -35,13 +65,15 @@ class SettingsService {
       return Map<String, dynamic>.from(defaultSettings);
     }
 
+    final saved = Map<String, dynamic>.from(response);
+
     return {
       ...defaultSettings,
-      ...Map<String, dynamic>.from(response),
+      ...saved,
     };
   }
 
-  /// إنشاء الإعدادات أو تحديثها.
+  /// إنشاء إعدادات المستخدم أو تحديثها.
   Future<Map<String, dynamic>> saveSettings({
     String? language,
     bool? notificationsEnabled,
@@ -50,35 +82,44 @@ class SettingsService {
     String? priceDisplay,
     String? theme,
   }) async {
+    final cleanLanguage = _clean(language);
+    final cleanPriceDisplay = _clean(priceDisplay);
+    final cleanTheme = _clean(theme);
+
+    if (cleanLanguage != null &&
+        !supportedLanguages.contains(cleanLanguage)) {
+      throw ArgumentError('اللغة المحددة غير مدعومة.');
+    }
+
+    if (cleanPriceDisplay != null &&
+        !supportedPriceDisplays.contains(cleanPriceDisplay)) {
+      throw ArgumentError('طريقة عرض الأسعار غير صحيحة.');
+    }
+
+    if (cleanTheme != null &&
+        !supportedThemes.contains(cleanTheme)) {
+      throw ArgumentError('المظهر المحدد غير مدعوم.');
+    }
+
+    final userId = _userId;
     final current = await getSettings();
 
     final next = <String, dynamic>{
-      'user_id': _userId,
-      'language': language ?? current['language'],
+      'user_id': userId,
+      'language': cleanLanguage ?? current['language'],
       'notifications_enabled':
           notificationsEnabled ?? current['notifications_enabled'],
       'offers_notifications':
           offersNotifications ?? current['offers_notifications'],
       'order_notifications':
           orderNotifications ?? current['order_notifications'],
-      'price_display': priceDisplay ?? current['price_display'],
-      'theme': theme ?? current['theme'],
+      'price_display':
+          cleanPriceDisplay ?? current['price_display'],
+      'theme': cleanTheme ?? current['theme'],
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
 
-    if (!const ['ar', 'en'].contains(next['language'])) {
-      throw ArgumentError('اللغة المحددة غير مدعومة.');
-    }
-
-    if (!const ['final', 'negotiable'].contains(next['price_display'])) {
-      throw ArgumentError('طريقة عرض الأسعار غير صحيحة.');
-    }
-
-    if (!const ['light', 'dark', 'system'].contains(next['theme'])) {
-      throw ArgumentError('المظهر المحدد غير مدعوم.');
-    }
-
-    final response = await _client
+    final response = await _requireClient
         .from('user_settings')
         .upsert(
           next,
@@ -90,7 +131,7 @@ class SettingsService {
     return Map<String, dynamic>.from(response);
   }
 
-  /// إعادة الإعدادات إلى قيمها الافتراضية.
+  /// إعادة إعدادات المستخدم إلى القيم الافتراضية.
   Future<Map<String, dynamic>> resetSettings() {
     return saveSettings(
       language: 'ar',
@@ -100,5 +141,15 @@ class SettingsService {
       priceDisplay: 'final',
       theme: 'light',
     );
+  }
+
+  String? _clean(String? value) {
+    final cleaned = value?.trim();
+
+    if (cleaned == null || cleaned.isEmpty) {
+      return null;
+    }
+
+    return cleaned;
   }
 }
