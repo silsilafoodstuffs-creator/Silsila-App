@@ -70,6 +70,10 @@ begin
       select 1 from public.erp_accounts a where a.id = new.counter_account_id
         and a.company_id = new.company_id and a.is_active and a.is_postable
     ) then raise exception 'الحساب المقابل غير نشط أو لا يتبع الشركة نفسها'; end if;
+    if new.counter_account_id = (
+      select c.account_id from public.erp_cashboxes c
+      where c.id = new.source_cashbox_id and c.company_id = new.company_id
+    ) then raise exception 'الحساب المقابل لا يمكن أن يكون حساب الخزينة المصدر نفسه'; end if;
     if new.party_id is not null and not exists (
       select 1 from public.erp_parties p where p.id = new.party_id and p.company_id = new.company_id and p.is_active
     ) then raise exception 'الطرف غير نشط أو لا يتبع الشركة نفسها'; end if;
