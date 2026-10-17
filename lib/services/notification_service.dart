@@ -130,6 +130,11 @@ class NotificationService {
     if (cleanUserId.isEmpty) {
       throw ArgumentError('معرّف المستخدم مطلوب.');
     }
+    if (cleanUserId != _userId) {
+      throw StateError(
+        'لا يمكن إنشاء إشعار لحساب آخر من جلسة المستخدم الحالية.',
+      );
+    }
     if (cleanTitle.isEmpty) {
       throw ArgumentError('عنوان الإشعار مطلوب.');
     }
