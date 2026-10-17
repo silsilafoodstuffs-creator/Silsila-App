@@ -405,9 +405,6 @@ DROP POLICY IF EXISTS "orders_create_customer" ON public.orders;
 CREATE POLICY "orders_create_customer" ON public.orders
 FOR INSERT TO authenticated WITH CHECK (customer_id = auth.uid());
 DROP POLICY IF EXISTS "orders_update_participant" ON public.orders;
-CREATE POLICY "orders_update_participant" ON public.orders
-FOR UPDATE TO authenticated USING (customer_id = auth.uid() OR supplier_id = auth.uid())
-WITH CHECK (customer_id = auth.uid() OR supplier_id = auth.uid());
 
 DROP POLICY IF EXISTS "order_items_read_participant" ON public.order_items;
 CREATE POLICY "order_items_read_participant" ON public.order_items
@@ -416,10 +413,6 @@ FOR SELECT TO authenticated USING (
     (o.customer_id = auth.uid() OR o.supplier_id = auth.uid()))
 );
 DROP POLICY IF EXISTS "order_items_create_customer_order" ON public.order_items;
-CREATE POLICY "order_items_create_customer_order" ON public.order_items
-FOR INSERT TO authenticated WITH CHECK (
-  EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_id AND o.customer_id = auth.uid())
-);
 
 DROP POLICY IF EXISTS "order_history_read_participant" ON public.order_status_history;
 CREATE POLICY "order_history_read_participant" ON public.order_status_history
@@ -428,13 +421,6 @@ FOR SELECT TO authenticated USING (
     AND (o.customer_id = auth.uid() OR o.supplier_id = auth.uid()))
 );
 DROP POLICY IF EXISTS "order_history_create_participant" ON public.order_status_history;
-CREATE POLICY "order_history_create_participant" ON public.order_status_history
-FOR INSERT TO authenticated WITH CHECK (
-  changed_by = auth.uid() AND EXISTS (
-    SELECT 1 FROM public.orders o WHERE o.id = order_id
-      AND (o.customer_id = auth.uid() OR o.supplier_id = auth.uid())
-  )
-);
 
 DROP POLICY IF EXISTS "cart_items_manage_own" ON public.cart_items;
 CREATE POLICY "cart_items_manage_own" ON public.cart_items
