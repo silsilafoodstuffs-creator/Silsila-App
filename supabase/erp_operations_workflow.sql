@@ -298,6 +298,10 @@ declare
   v_doc public.erp_sales_documents%rowtype;
   v_line record;
   v_count integer := 0;
+  v_subtotal numeric(16,2);
+  v_discount numeric(16,2);
+  v_tax numeric(16,2);
+  v_line_total numeric(16,2);
   v_movement_type text;
 begin
   select * into v_doc from public.erp_sales_documents where id = p_document_id for update;
