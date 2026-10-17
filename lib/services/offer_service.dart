@@ -151,19 +151,29 @@ class OfferService {
 
   /// إيقاف عرض يملكه المورد الحالي.
   Future<void> deactivateOffer(String offerId) async {
+    final id = offerId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('معرّف العرض مطلوب.');
+    }
+
     await _client
         .from('offers')
         .update({'is_active': false})
-        .eq('id', offerId)
+        .eq('id', id)
         .eq('supplier_id', _userId);
   }
 
   /// حذف عرض يملكه المورد الحالي.
   Future<void> deleteOffer(String offerId) async {
+    final id = offerId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('معرّف العرض مطلوب.');
+    }
+
     await _client
         .from('offers')
         .delete()
-        .eq('id', offerId)
+        .eq('id', id)
         .eq('supplier_id', _userId);
   }
 
