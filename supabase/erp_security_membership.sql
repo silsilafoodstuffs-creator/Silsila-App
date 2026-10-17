@@ -241,7 +241,13 @@ with check (public.erp_user_has_company_role(company_id, array['owner','admin','
 drop policy if exists erp_fiscal_periods_delete_admin on public.erp_fiscal_periods;
 create policy erp_fiscal_periods_delete_admin on public.erp_fiscal_periods
 for delete to authenticated using (
-  status = 'open' and public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
+  status = 'open'
+  and public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
+  and not exists (
+    select 1 from public.erp_journal_entries e
+    where e.company_id = erp_fiscal_periods.company_id
+      and e.entry_date between erp_fiscal_periods.starts_on and erp_fiscal_periods.ends_on
+  )
 );
 
 -- Journal headers are visible to company members. Only accounting/admin roles may
