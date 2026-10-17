@@ -35,49 +35,27 @@ class SupplierService {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
 
-    var query = _requireClient
+    final response = await _requireClient
         .from('supplier_directory')
         .select(
           'id, full_name, activity_type, supplier_type, '
           'governorate, district, account_status',
-        );
-
-    final activity = _clean(activityType);
-    final type = _clean(supplierType);
-    final term = _clean(search);
-
-    if (term != null && term.length > 150) {
-      throw ArgumentError('عبارة البحث طويلة أكثر من اللازم.');
-    }
-
-    if (activity != null && activity.length > 100) {
-      throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
-    }
-
-    if (type != null && type.length > 100) {
-      throw ArgumentError('نوع المورد طويل أكثر من اللازم.');
-    }
-
-    if (activity != null) {
-      query = query.eq('activity_type', activity);
-    }
-
-    if (type != null) {
-      query = query.eq('supplier_type', type);
-    }
-
-    if (term != null) {
-      query = query.ilike(
-        'full_name',
-        '%${_escapeLike(term)}%',
-      );
-    }
-
-    final response = await query
+        )
         .order('full_name', ascending: true)
         .limit(limit);
 
-    return List<Map<String, dynamic>>.from(response);
+    var rows = List<Map<String, dynamic>>.from(response);
+    if (activity != null) {
+      rows = rows.where((row) => row['activity_type']?.toString() == activity).toList();
+    }
+    if (type != null) {
+      rows = rows.where((row) => row['supplier_type']?.toString() == type).toList();
+    }
+    if (term != null) {
+      final needle = term.toLowerCase();
+      rows = rows.where((row) => (row['full_name'] ?? '').toString().toLowerCase().contains(needle)).toList();
+    }
+    return rows;
   }
 
   /// جلب بيانات مورد واحد باستخدام معرّف حسابه.
