@@ -65,6 +65,7 @@ class ErpOperationalDocumentsRepository {
     }
     final payload = <String, dynamic>{
       'company_id': companyId.trim(),
+      'created_by': _db.auth.currentUser?.id,
       'warehouse_id': warehouseId,
       'document_number': documentNumber.trim(),
       'document_date': DateTime.now().toIso8601String().substring(0, 10),
