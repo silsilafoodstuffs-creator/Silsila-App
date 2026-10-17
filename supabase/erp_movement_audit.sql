@@ -748,7 +748,7 @@ begin
     'purchases'
   from public.erp_purchase_documents d
   left join lateral (
-    select round(coalesce(sum(l.quantity * l.unit_price),0),2) as subtotal,
+    select coalesce(sum(round(l.quantity * l.unit_price,2)),0) as subtotal,
       coalesce(sum(l.discount_amount),0) as discount_total,
       coalesce(sum(l.tax_amount),0) as tax_total,
       coalesce(sum(l.line_total),0) as grand_total
@@ -777,7 +777,7 @@ begin
     'sales'
   from public.erp_sales_documents d
   left join lateral (
-    select round(coalesce(sum(l.quantity * l.unit_price),0),2) as subtotal,
+    select coalesce(sum(round(l.quantity * l.unit_price,2)),0) as subtotal,
       coalesce(sum(l.discount_amount),0) as discount_total,
       coalesce(sum(l.tax_amount),0) as tax_total,
       coalesce(sum(l.line_total),0) as grand_total
