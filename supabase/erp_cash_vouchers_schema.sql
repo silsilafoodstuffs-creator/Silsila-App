@@ -67,6 +67,10 @@ begin
       where c.id = new.destination_cashbox_id and c.company_id = new.company_id
         and c.is_active and a.is_active and a.is_postable
     ) then raise exception 'خزينة الاستلام غير نشطة أو غير مرتبطة بحساب أستاذ صالح'; end if;
+    if (select src.account_id from public.erp_cashboxes src where src.id = new.source_cashbox_id)
+       = (select dst.account_id from public.erp_cashboxes dst where dst.id = new.destination_cashbox_id) then
+      raise exception 'يجب ربط كل خزينة بحساب أستاذ مختلف لإتمام التحويل';
+    end if;
   else
     if not exists (
       select 1 from public.erp_accounts a where a.id = new.counter_account_id
