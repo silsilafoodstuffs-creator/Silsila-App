@@ -17,6 +17,8 @@ declare
   v_entry_id uuid;
   v_line jsonb;
   v_account_id uuid;
+  v_party_id uuid;
+  v_branch_id uuid;
   v_debit numeric(14,2);
   v_credit numeric(14,2);
   v_count integer := 0;
@@ -82,6 +84,8 @@ begin
   loop
     v_count := v_count + 1;
     v_account_id := nullif(v_line->>'account_id','')::uuid;
+    v_party_id := nullif(v_line->>'party_id','')::uuid;
+    v_branch_id := nullif(v_line->>'branch_id','')::uuid;
     v_debit := coalesce(nullif(v_line->>'debit','')::numeric, 0);
     v_credit := coalesce(nullif(v_line->>'credit','')::numeric, 0);
     if v_account_id is null or v_debit < 0 or v_credit < 0
@@ -98,11 +102,17 @@ begin
     if not v_account.is_active or not v_account.is_postable then
       raise exception 'يجب أن يكون حساب القيد نشطًا وقابلًا للترحيل';
     end if;
+    if v_party_id is not null and not exists (
+      select 1 from public.erp_parties p where p.id = v_party_id and p.company_id = p_company_id and p.is_active
+    ) then raise exception 'الطرف في سطر القيد غير نشط أو لا يتبع الشركة'; end if;
+    if v_branch_id is not null and not exists (
+      select 1 from public.erp_branches b where b.id = v_branch_id and b.company_id = p_company_id and b.is_active
+    ) then raise exception 'الفرع في سطر القيد غير نشط أو لا يتبع الشركة'; end if;
     insert into public.erp_journal_lines(
-      entry_id, account_id, description, debit, credit
+      entry_id, account_id, description, debit, credit, party_id, branch_id
     ) values (
       v_entry_id, v_account_id, nullif(trim(v_line->>'description'), ''),
-      v_debit, v_credit
+      v_debit, v_credit, v_party_id, v_branch_id
     );
     v_total_debit := v_total_debit + v_debit;
     v_total_credit := v_total_credit + v_credit;
