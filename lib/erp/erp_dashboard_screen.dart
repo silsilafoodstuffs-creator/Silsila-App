@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -234,14 +235,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     if (rows.isEmpty) return '';
     final keys = rows.first.keys.toList();
     String cell(String value) => '"${value.replaceAll('"', '""')}"';
-    return [keys.map(cell).join(','), ...rows.map((row) => keys.map((key) => cell(row[key] ?? '')).join(','))].join('\\r\\n');
+    return [
+      '\uFEFF${keys.map(cell).join(',')}',
+      ...rows.map((row) => keys.map((key) => cell(row[key] ?? '')).join(',')),
+    ].join('\\r\\n');
   }
 
   void _exportExcel() {
     final csv = _currentPageCsv();
     if (csv.isEmpty) { _showActionMessage('لا توجد بيانات لتصديرها من شاشة $_page'); return; }
     Clipboard.setData(ClipboardData(text: csv));
-    _showActionMessage('تم تجهيز بيانات $_page بصيغة CSV المتوافقة مع Excel ونسخها للحافظة');
+    _showActionMessage('تم تجهيز ملف CSV متوافق مع Excel ونسخ محتواه للحافظة. استخدم لصق في Excel ثم احفظه بصيغة XLSX.');
   }
 
   void _showPrintPreview({required bool pdf}) {
