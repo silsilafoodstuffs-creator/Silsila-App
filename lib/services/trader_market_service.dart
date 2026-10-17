@@ -158,8 +158,9 @@ class TraderMarketService {
       throw ArgumentError('الكمية يجب أن تكون أكبر من صفر.');
     }
 
-    if (targetPrice != null && targetPrice < 0) {
-      throw ArgumentError('السعر لا يمكن أن يكون سالبًا.');
+    if (targetPrice != null &&
+        (!targetPrice.isFinite || targetPrice < 0)) {
+      throw ArgumentError('السعر يجب أن يكون رقمًا صحيحًا غير سالب.');
     }
 
     final data = <String, dynamic>{
