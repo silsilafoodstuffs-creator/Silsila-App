@@ -80,15 +80,21 @@ class UserService {
       'active',
       'suspended',
       'rejected',
+      'مفعل',
+      'معتمد',
+      'مرفوض',
+      'موقوف',
     };
 
-    if (!allowedStatuses.contains(status)) {
-      throw ArgumentError('حالة الحساب غير صحيحة.');
-    }
-    if (userId.trim().isEmpty) {
+    final cleanUserId = userId.trim();
+    final cleanStatus = status.trim();
+
+    if (cleanUserId.isEmpty) {
       throw ArgumentError('معرّف المستخدم مطلوب.');
     }
-
+    if (!allowedStatuses.contains(cleanStatus)) {
+      throw ArgumentError('حالة الحساب غير صحيحة.');
+    }
     if (_client.auth.currentUser == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
@@ -96,8 +102,8 @@ class UserService {
     await _client.rpc(
       'admin_update_account_status',
       params: {
-        'p_user_id': userId.trim(),
-        'p_status': status.trim(),
+        'p_user_id': cleanUserId,
+        'p_status': cleanStatus,
       },
     );
   }
