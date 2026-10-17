@@ -24,7 +24,7 @@ class SupplierService {
     return client;
   }
 
-  /// جلب الموردين مع بياناتهم الأساسية.
+  /// جلب الموردين مع تطبيق المرشحات داخل قاعدة البيانات قبل الحد.
   Future<List<Map<String, dynamic>>> getSuppliers({
     String? activityType,
     String? supplierType,
@@ -35,40 +35,34 @@ class SupplierService {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
 
-    final response = await _requireClient
+    var query = _requireClient
         .from('supplier_directory')
         .select(
           'id, full_name, activity_type, supplier_type, '
           'governorate, district, account_status',
-        )
+        );
+
+    final activity = _clean(activityType);
+    final type = _clean(supplierType);
+    final term = _clean(search);
+
+    if (activity != null) {
+      query = query.eq('activity_type', activity);
+    }
+
+    if (type != null) {
+      query = query.eq('supplier_type', type);
+    }
+
+    if (term != null) {
+      query = query.ilike('full_name', '%${_escapeLike(term)}%');
+    }
+
+    final response = await query
         .order('full_name', ascending: true)
         .limit(limit);
 
-    var rows = List<Map<String, dynamic>>.from(response);
-    final activity = activityType?.trim();
-    final type = supplierType?.trim();
-    final term = search?.trim();
-
-    if (activity != null && activity.isNotEmpty) {
-      rows = rows
-          .where((row) => row['activity_type']?.toString() == activity)
-          .toList();
-    }
-    if (type != null && type.isNotEmpty) {
-      rows = rows
-          .where((row) => row['supplier_type']?.toString() == type)
-          .toList();
-    }
-    if (term != null && term.isNotEmpty) {
-      final needle = term.toLowerCase();
-      rows = rows
-          .where((row) => (row['full_name'] ?? '')
-              .toString()
-              .toLowerCase()
-              .contains(needle))
-          .toList();
-    }
-    return rows;
+    return List<Map<String, dynamic>>.from(response);
   }
 
   /// جلب بيانات مورد واحد باستخدام معرّف حسابه.
