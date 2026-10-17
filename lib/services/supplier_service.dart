@@ -46,6 +46,10 @@ class SupplierService {
     final type = _clean(supplierType);
     final term = _clean(search);
 
+    if (term != null && term.length > 150) {
+      throw ArgumentError('عبارة البحث طويلة أكثر من اللازم.');
+    }
+
     if (activity != null) {
       query = query.eq('activity_type', activity);
     }
@@ -78,6 +82,10 @@ class SupplierService {
       throw ArgumentError('معرّف المورد مطلوب.');
     }
 
+    if (cleanId.length > 200) {
+      throw ArgumentError('معرّف المورد طويل أكثر من اللازم.');
+    }
+
     final response = await _requireClient
         .from('supplier_directory')
         .select(
@@ -100,6 +108,10 @@ class SupplierService {
 
     if (cleanId == null) {
       throw ArgumentError('معرّف المورد مطلوب.');
+    }
+
+    if (cleanId.length > 200) {
+      throw ArgumentError('معرّف المورد طويل أكثر من اللازم.');
     }
 
     final response = await _requireClient
