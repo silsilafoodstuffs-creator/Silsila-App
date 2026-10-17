@@ -1787,6 +1787,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   String? companyId;
   bool loading = true;
   bool sending = false;
+  bool isShippingCompany = false;
   String? error;
 
   @override
@@ -1806,6 +1807,18 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   Future<void> loadDeliveryData() async {
     try {
+      final profile = await ProfileService().getMyProfile();
+      if ((profile?['role'] ?? '').toString() == 'shipping_company') {
+        final assigned = await service.getAssignedDeliveries();
+        if (!mounted) return;
+        setState(() {
+          isShippingCompany = true;
+          companies = [];
+          deliveries = assigned;
+          error = null;
+        });
+        return;
+      }
       final loadedCompanies = await service.getShippingCompanies();
       final loadedDeliveries = await service.getMyDeliveries();
       if (!mounted) return;
@@ -1822,6 +1835,22 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       setState(() => error = 'تعذر تحميل شركات الشحن أو الشحنات السابقة.');
     } finally {
       if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> updateAssignedDelivery(Map<String, dynamic> delivery, String status) async {
+    final id = (delivery['id'] ?? '').toString();
+    if (id.isEmpty) return;
+    setState(() => sending = true);
+    try {
+      await service.updateDeliveryStatus(deliveryId: id, status: status);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم تحديث الشحنة إلى: $status')));
+      await loadDeliveryData();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحديث الشحنة: $e')));
+    } finally {
+      if (mounted) setState(() => sending = false);
     }
   }
 
@@ -1859,6 +1888,59 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    if (isShippingCompany) {
+      return RefreshIndicator(
+        onRefresh: loadDeliveryData,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            const Text('الشحنات المسندة لشركتك', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+            if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+            if (deliveries.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text('لا توجد شحنات مسندة حاليًا.', textAlign: TextAlign.center)),
+            ...deliveries.map((delivery) {
+              final status = (delivery['status'] ?? 'pending').toString();
+              final nextStatus = switch (status) {
+                'pending' => 'قيد الاستلام',
+                'قيد الاستلام' => 'في الطريق',
+                'في الطريق' => 'تم التسليم',
+                _ => null,
+              };
+              final isClosed = status == 'تم التسليم' || status == 'ملغي' || status == 'مُلغي';
+              return Card(
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('شحنة الطلب رقم ${delivery['order_id'] ?? '-'}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                    const SizedBox(height: 6),
+                    Text('الحالة: $status'),
+                    Text('عنوان التوصيل: ${delivery['delivery_address'] ?? 'غير محدد'}'),
+                    if ((delivery['pickup_address'] ?? '').toString().isNotEmpty)
+                      Text('عنوان الاستلام: ${delivery['pickup_address']}'),
+                    const SizedBox(height: 10),
+                    Row(children: [
+                      if (nextStatus != null)
+                        Expanded(child: FilledButton(
+                          onPressed: sending ? null : () => updateAssignedDelivery(delivery, nextStatus),
+                          child: Text(nextStatus == 'تم التسليم' ? 'تأكيد التسليم' : 'تحديث إلى $nextStatus'),
+                        )),
+                      if (!isClosed && status != 'pending') ...[
+                        const SizedBox(width: 8),
+                        OutlinedButton(
+                          onPressed: sending ? null : () => updateAssignedDelivery(delivery, 'ملغي'),
+                          child: const Text('إلغاء الشحنة'),
+                        ),
+                      ],
+                    ]),
+                  ]),
+                ),
+              );
+            }),
+          ],
+        ),
+      );
+    }
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
