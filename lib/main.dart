@@ -7,6 +7,7 @@ import 'services/profile_service.dart';
 import 'services/notification_service.dart';
 import 'services/product_service.dart';
 import 'services/supplier_service.dart';
+import 'services/offer_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 
@@ -1238,15 +1239,7 @@ class _MainShellState extends State<MainShell> {
           menuItem(
             Icons.local_offer_outlined,
             'العروض',
-            () => openPage(
-              'العروض',
-              const SimpleListPage(
-                title: 'العروض',
-                details:
-                    'ستظهر هنا عروض الموردين بعد إدخالها في قاعدة البيانات.',
-                icon: Icons.local_offer,
-              ),
-            ),
+            () => openPage('العروض', OffersScreen(activityType: activity)),
           ),
           menuItem(
             Icons.receipt_long,
@@ -1306,6 +1299,83 @@ class _MainShellState extends State<MainShell> {
         title: Text(title),
         trailing: const Icon(Icons.chevron_left),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class OffersScreen extends StatefulWidget {
+  const OffersScreen({super.key, required this.activityType});
+  final String activityType;
+
+  @override
+  State<OffersScreen> createState() => _OffersScreenState();
+}
+
+class _OffersScreenState extends State<OffersScreen> {
+  final service = OfferService();
+  List<Map<String, dynamic>> offers = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadOffers();
+  }
+
+  Future<void> loadOffers() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final result = await service.getOffers(activityType: widget.activityType);
+      if (!mounted) return;
+      setState(() => offers = result);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { offers = []; error = 'تعذر تحميل العروض. تأكد من الاتصال بقاعدة البيانات.'; });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadOffers,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('عروض الموردين', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+          const SizedBox(height: 8),
+          Text('النشاط: ${widget.activityType}'),
+          if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center)),
+          if (offers.isEmpty && error == null)
+            const Padding(padding: EdgeInsets.all(28), child: Text('لا توجد عروض منشورة حاليًا.', textAlign: TextAlign.center)),
+          ...offers.map((offer) {
+            final title = (offer['title'] ?? 'عرض من المورد').toString();
+            final description = (offer['description'] ?? '').toString();
+            final discount = offer['discount_percentage'];
+            final ends = offer['ends_at']?.toString();
+            return Card(
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    const Icon(Icons.local_offer, color: orange),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold))),
+                    if (discount is num && discount > 0)
+                      Chip(label: Text('خصم ${discount.toStringAsFixed(0)}%')),
+                  ]),
+                  if (description.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(description)),
+                  if (ends != null && ends.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text('ينتهي: ${ends.split('T').first}', style: const TextStyle(color: Colors.black54, fontSize: 12))),
+                ]),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
