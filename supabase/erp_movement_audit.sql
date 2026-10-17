@@ -328,6 +328,61 @@ begin
         and e.entry_date between fp.starts_on and fp.ends_on
     )
 
+
+  union all
+
+  select
+    'stock:' || b.warehouse_id::text || ':' || b.item_id::text || ':negative',
+    'المخزون',
+    b.item_id,
+    i.item_code,
+    null::date,
+    i.item_name || ' — ' || w.warehouse_name,
+    'خطأ',
+    'STOCK_NEGATIVE_BALANCE',
+    'رصيد الصنف بالمخزن سالب؛ راجع الحركات التاريخية والتسويات.',
+    'inventory'
+  from (
+    select m.company_id, m.warehouse_id, m.item_id,
+      sum(m.quantity_in - m.quantity_out) as quantity_on_hand
+    from public.erp_inventory_movements m
+    where m.company_id = p_company_id
+      and (p_start_date is null or m.movement_date::date >= p_start_date)
+      and (p_end_date is null or m.movement_date::date <= p_end_date)
+    group by m.company_id, m.warehouse_id, m.item_id
+    having sum(m.quantity_in - m.quantity_out) < 0
+  ) b
+  join public.erp_items i on i.id = b.item_id
+  join public.erp_warehouses w on w.id = b.warehouse_id
+  where (p_area = 'كل الحركات' or p_area = 'المخزون')
+
+  union all
+
+  select
+    'stock:' || m.id::text || ':ownership',
+    'المخزون',
+    m.id,
+    m.movement_type,
+    m.movement_date::date,
+    coalesce(i.item_name, 'صنف غير موجود') || ' — ' || coalesce(w.warehouse_name, 'مخزن غير موجود'),
+    'خطأ',
+    'STOCK_COMPANY_MISMATCH',
+    'حركة المخزون تشير إلى صنف أو مخزن أو فرع لا يتبع الشركة نفسها.',
+    'inventory'
+  from public.erp_inventory_movements m
+  left join public.erp_items i on i.id = m.item_id
+  left join public.erp_warehouses w on w.id = m.warehouse_id
+  left join public.erp_branches b on b.id = m.branch_id
+  where m.company_id = p_company_id
+    and (p_start_date is null or m.movement_date::date >= p_start_date)
+    and (p_end_date is null or m.movement_date::date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المخزون')
+    and (
+      i.id is null or i.company_id <> m.company_id
+      or w.id is null or w.company_id <> m.company_id
+      or (m.branch_id is not null and (b.id is null or b.company_id <> m.company_id))
+    )
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
