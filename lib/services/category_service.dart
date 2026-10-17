@@ -10,7 +10,11 @@ class CategoryService {
   Future<List<Map<String, dynamic>>> getCategories({
     String? activityType,
     bool activeOnly = true,
+    int limit = 200,
   }) async {
+    if (limit < 1 || limit > 500) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و500.');
+    }
     var query = _client.from('categories').select();
 
     if (activeOnly) {
@@ -21,7 +25,10 @@ class CategoryService {
       query = query.eq('activity_type', activityType.trim());
     }
 
-    final rows = await query.order('sort_order').order('name');
+    final rows = await query
+        .order('sort_order')
+        .order('name')
+        .limit(limit);
 
     return List<Map<String, dynamic>>.from(rows);
   }
@@ -42,8 +49,12 @@ class CategoryService {
 
   /// جلب الأقسام الفرعية لقسم رئيسي.
   Future<List<Map<String, dynamic>>> getSubcategories(
-    int parentId,
-  ) async {
+    int parentId, {
+    int limit = 200,
+  }) async {
+    if (limit < 1 || limit > 500) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و500.');
+    }
     if (parentId <= 0) {
       throw ArgumentError('معرّف القسم الرئيسي غير صالح.');
     }
@@ -53,7 +64,8 @@ class CategoryService {
         .eq('parent_id', parentId)
         .eq('is_active', true)
         .order('sort_order')
-        .order('name');
+        .order('name')
+        .limit(limit);
 
     return List<Map<String, dynamic>>.from(rows);
   }
