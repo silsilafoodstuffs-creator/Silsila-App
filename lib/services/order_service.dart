@@ -165,12 +165,10 @@ class OrderService {
 
   /// إلغاء طلب ما زال في انتظار القبول.
   Future<void> cancelPendingOrder(int orderId) async {
-    await _requireClient
-        .from('orders')
-        .update({'status': 'مُلغي'})
-        .eq('id', orderId)
-        .eq('customer_id', _userId)
-        .eq('status', 'انتظار قبول');
+    await _requireClient.rpc(
+      'cancel_customer_order',
+      params: {'p_order_id': orderId},
+    );
   }
 
   int _toInt(dynamic value) {
