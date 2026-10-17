@@ -781,10 +781,23 @@ class _MainShellState extends State<MainShell> {
   }
 
   void addToCart(Product product) {
+    const maxQuantityPerProduct = CartService.maxQuantityPerProduct;
     final key = product.cartKey;
+    final currentQuantity = cart[key] ?? 0;
+    final nextQuantity = currentQuantity == 0
+        ? product.minQuantity
+        : currentQuantity + 1;
+
+    if (nextQuantity < 1 || nextQuantity > maxQuantityPerProduct) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('وصلت للحد الأقصى المسموح لكمية هذا المنتج.')),
+      );
+      return;
+    }
+
     setState(() {
       cartProducts[key] = product;
-      cart[key] = (cart[key] ?? 0) + (cart.containsKey(key) ? 1 : product.minQuantity);
+      cart[key] = nextQuantity;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1265,9 +1278,12 @@ class _MainShellState extends State<MainShell> {
                   ),
                   Text('${entry.value}'),
                   IconButton(
-                    onPressed: () => setState(
-                      () => cart[entry.key] = entry.value + 1,
-                    ),
+                    onPressed: entry.value >= CartService.maxQuantityPerProduct
+                        ? null
+                        : () => setState(
+                              () => cart[entry.key] = entry.value + 1,
+                            ),
+                    tooltip: 'زيادة الكمية',
                     icon: const Icon(Icons.add_circle_outline),
                   ),
                 ],
@@ -3652,7 +3668,14 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final client = database;
-    if (client == null) return;
+    if (client == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('الاتصال بالخدمة غير متاح حاليًا. حاول مرة أخرى لاحقًا.'),
+        ),
+      );
+      return;
+    }
 
     setState(() => busy = true);
     try {
