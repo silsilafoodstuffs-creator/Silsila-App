@@ -1287,7 +1287,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => busy = true);
     try {
-      await client.auth.signUp(
+      final response = await client.auth.signUp(
         phone: phoneController.text.trim(),
         password: passwordController.text,
         data: {
@@ -1305,11 +1305,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
         },
       );
 
-      if (mounted) {
+      if (mounted && response.user != null && response.session == null) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => Directionality(
+              textDirection: TextDirection.rtl,
+              child: OtpVerificationScreen(
+                phone: phoneController.text.trim(),
+              ),
+            ),
+          ),
+        );
+      } else if (mounted && response.session != null) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainShell()),
+          (route) => false,
+        );
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'تم إرسال طلب التسجيل. قد يُطلب رمز تحقق حسب إعدادات النظام.',
+              'لم يكتمل إنشاء الحساب. راجع إعدادات مصادقة الهاتف في Supabase.',
             ),
           ),
         );
@@ -1536,6 +1554,431 @@ String? requiredValidator(String? value) {
     return 'هذا الحقل مطلوب';
   }
   return null;
+}
+
+class OtpVerificationScreen extends StatefulWidget {
+  const OtpVerificationScreen({super.key, required this.phone});
+
+  final String phone;
+
+  @override
+  State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
+}
+
+class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+  final codeController = TextEditingController();
+  bool busy = false;
+
+  @override
+  void dispose() {
+    codeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> verifyCode() async {
+    final code = codeController.text.trim();
+    if (!RegExp(r'^\d{6}
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final phone = TextEditingController();
+  final password = TextEditingController();
+  bool busy = false;
+
+  @override
+  void dispose() {
+    phone.dispose();
+    password.dispose();
+    super.dispose();
+  }
+
+  Future<void> login() async {
+    if (phone.text.trim().isEmpty || password.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('اكتب رقم الهاتف وكلمة المرور.')),
+      );
+      return;
+    }
+
+    final client = database;
+    if (client == null) return;
+
+    setState(() => busy = true);
+    try {
+      await client.auth.signInWithPassword(
+        phone: phone.text.trim(),
+        password: password.text,
+      );
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainShell()),
+          (route) => false,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'تعذر تسجيل الدخول. راجع إعدادات مصادقة الهاتف في Supabase.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const Icon(Icons.lock_outline, size: 60, color: purple),
+          const SizedBox(height: 12),
+          const Text(
+            'تسجيل الدخول',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: phone,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              labelText: 'اكتب هنا رقمك المسجل لدينا',
+              prefixIcon: Icon(Icons.phone),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: password,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'اكتب كلمة المرور الخاصة بك',
+              prefixIcon: Icon(Icons.lock),
+            ),
+          ),
+          const SizedBox(height: 18),
+          FilledButton(
+            onPressed: busy ? null : login,
+            child: Text(busy ? 'جارٍ الدخول...' : 'دخول'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const RegisterScreen(),
+              ),
+            ),
+            child: const Text('إنشاء نشاط جديد'),
+          ),
+        ],
+      );
+}
+
+class CheckoutScreen extends StatelessWidget {
+  const CheckoutScreen({
+    super.key,
+    required this.total,
+    required this.itemCount,
+  });
+
+  final double total;
+  final int itemCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: ListTile(
+            title: const Text('عدد الوحدات'),
+            trailing: Text('$itemCount'),
+          ),
+        ),
+        Card(
+          child: ListTile(
+            title: const Text('الإجمالي التقديري'),
+            trailing: Text('${total.toStringAsFixed(2)} ج.م'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'طريقة الدفع',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        ...[
+          'نقدي',
+          'آجل من المورد',
+          'محفظة كاش',
+          'تحويل بنكي',
+          'من الرصيد',
+        ].map(
+          (method) => ListTile(
+            leading: const Icon(Icons.payments_outlined, color: purple),
+            title: Text(method),
+            trailing: const Icon(Icons.chevron_left),
+            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('طريقة الدفع المختارة: $method')),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'هذه شاشة تجهيز الطلب. إرسال الطلب وحفظ بنوده يحتاج استكمال الربط مع جداول الطلبات وسياسات قاعدة البيانات.',
+          style: TextStyle(color: Colors.black54),
+        ),
+      ],
+    );
+  }
+}
+
+class MarketPostScreen extends StatefulWidget {
+  const MarketPostScreen({super.key});
+
+  @override
+  State<MarketPostScreen> createState() => _MarketPostScreenState();
+}
+
+class _MarketPostScreenState extends State<MarketPostScreen> {
+  final titleController = TextEditingController();
+  final detailsController = TextEditingController();
+  String type = 'buy';
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    detailsController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          DropdownButtonFormField<String>(
+            value: type,
+            decoration: const InputDecoration(labelText: 'نوع الإعلان'),
+            items: const [
+              DropdownMenuItem(value: 'buy', child: Text('طلب شراء')),
+              DropdownMenuItem(value: 'sell', child: Text('عرض بيع')),
+            ],
+            onChanged: (v) => setState(() => type = v ?? 'buy'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: titleController,
+            decoration: const InputDecoration(labelText: 'عنوان الإعلان'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: detailsController,
+            maxLines: 4,
+            decoration: const InputDecoration(labelText: 'التفاصيل'),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'واجهة الإعلان جاهزة. حفظ الإعلان يحتاج ربط حقول الجدول وسياساته.',
+                ),
+              ),
+            ),
+            child: const Text('حفظ الإعلان'),
+          ),
+        ],
+      );
+}
+
+class FavoritesScreen extends StatelessWidget {
+  const FavoritesScreen({super.key, required this.names});
+
+  final List<String> names;
+
+  @override
+  Widget build(BuildContext context) {
+    if (names.isEmpty) {
+      return const Center(child: Text('لم تضف عناصر للمفضلة بعد.'));
+    }
+
+    return ListView(
+      children: names
+          .map(
+            (name) => ListTile(
+              leading: const Icon(Icons.favorite, color: pink),
+              title: Text(name),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class SimpleListPage extends StatelessWidget {
+  const SimpleListPage({
+    super.key,
+    required this.title,
+    required this.details,
+    required this.icon,
+  });
+
+  final String title;
+  final String details;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Icon(icon, size: 64, color: purple),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(details, textAlign: TextAlign.center),
+        ],
+      );
+}
+
+class MarketCard extends StatelessWidget {
+  const MarketCard({
+    super.key,
+    required this.title,
+    required this.type,
+    required this.details,
+    required this.color,
+  });
+
+  final String title;
+  final String type;
+  final String details;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        color: Colors.white,
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: color.withOpacity(.12),
+            child: Icon(Icons.storefront, color: color),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text('$type\n$details'),
+          isThreeLine: true,
+        ),
+      );
+}
+).hasMatch(code)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('أدخل رمز التحقق المكوّن من 6 أرقام.')),
+      );
+      return;
+    }
+
+    final client = database;
+    if (client == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.')),
+      );
+      return;
+    }
+
+    setState(() => busy = true);
+    try {
+      await client.auth.verifyOTP(
+        phone: widget.phone,
+        token: code,
+        type: OtpType.sms,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم تفعيل الحساب بنجاح.')),
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainShell()),
+          (route) => false,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('رمز التحقق غير صحيح أو انتهت صلاحيته. حاول مرة أخرى.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 24),
+        const Icon(Icons.verified_user_outlined, size: 68, color: purple),
+        const SizedBox(height: 18),
+        const Text(
+          'تأكيد رقم الهاتف',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى ${widget.phone}',
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        TextField(
+          controller: codeController,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 26,
+            letterSpacing: 10,
+            fontWeight: FontWeight.bold,
+          ),
+          decoration: const InputDecoration(
+            labelText: 'رمز التحقق',
+            counterText: '',
+            prefixIcon: Icon(Icons.password),
+          ),
+        ),
+        const SizedBox(height: 18),
+        FilledButton(
+          onPressed: busy ? null : verifyCode,
+          child: Text(busy ? 'جارٍ التحقق...' : 'تأكيد وتفعيل الحساب'),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'يلزم تفعيل إرسال رسائل SMS وإعداد مزود الهاتف في مشروع Supabase.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.black54, height: 1.5),
+        ),
+      ],
+    );
+  }
 }
 
 class LoginScreen extends StatefulWidget {
