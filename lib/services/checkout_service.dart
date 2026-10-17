@@ -95,54 +95,29 @@ class CheckoutService {
     for (final entry in groupedItems.entries) {
       final supplierId = entry.key;
       final supplierItems = entry.value;
-      final total = calculateTotal(supplierItems);
 
-      final order = await _client
-          .from('orders')
-          .insert({
-            'customer_id': user.id,
-            'supplier_id': supplierId,
-            'total_amount': total,
-            'status': 'pending',
-            'payment_method': paymentMethod,
-            'delivery_address': deliveryAddress.trim(),
-            'notes': notes?.trim(),
-          })
-          .select()
-          .single();
+      // يتم حساب الأسعار والتحقق منها داخل PostgreSQL؛
+      // لا نرسل سعر العميل باعتباره مصدرًا موثوقًا.
+      final response = await _client.rpc(
+        'place_supplier_order',
+        params: {
+          'p_supplier_id': supplierId,
+          'p_items': supplierItems
+              .map((item) => {
+                    'product_id': item.productId,
+                    'quantity': item.quantity,
+                  })
+              .toList(),
+          'p_payment_method': paymentMethod,
+          'p_delivery_address': deliveryAddress.trim(),
+          'p_notes': notes?.trim(),
+        },
+      );
 
-      final orderId = order['id'];
-
-      try {
-        final orderItems = supplierItems.map((item) {
-          return {
-            'order_id': orderId,
-            'product_id': item.productId,
-            'quantity': item.quantity,
-            'unit_price': item.price,
-            'total_price': item.total,
-          };
-        }).toList();
-
-        await _client
-            .from('order_items')
-            .insert(orderItems);
-
-        createdOrders.add(order);
-      } catch (_) {
-        // حذف الطلب الحالي إذا تعذر حفظ تفاصيله.
-        // يتطلب ذلك أن تسمح سياسات قاعدة البيانات بالحذف.
-        try {
-          await _client
-              .from('orders')
-              .delete()
-              .eq('id', orderId)
-              .eq('customer_id', user.id);
-        } catch (_) {
-          // الاحتفاظ بالخطأ الأصلي.
-        }
-
-        rethrow;
+      if (response is Map) {
+        createdOrders.add(Map<String, dynamic>.from(response));
+      } else {
+        throw StateError('لم تُرجع قاعدة البيانات بيانات الطلب بصورة صحيحة.');
       }
     }
 
