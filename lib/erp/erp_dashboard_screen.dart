@@ -921,28 +921,130 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _movementAuditScreen() {
     const areas = ['كل الحركات','العملاء','الموردون','المخازن','الأصناف','البنوك','الخزائن','الموظفون','القيود المحاسبية','المبيعات','المشتريات','المردودات','التحويلات'];
-    final rows = _auditSampleRows.where((r) => _auditModule == 'كل الحركات' || r['area'] == _auditModule).toList();
+    final startDate = DateTime.tryParse(_auditPeriod == 'شهر محدد' && _auditStart.length == 7 ? '$_auditStart-01' : _auditStart);
+    final endDate = DateTime.tryParse(_auditPeriod == 'شهر محدد' && _auditStart.length == 7 ? '${_auditStart}-31' : _auditEnd);
+    final rows = _auditSampleRows.where((r) {
+      if (_auditModule != 'كل الحركات' && r['area'] != _auditModule) return false;
+      final date = DateTime.tryParse(r['date'] ?? '');
+      if (_auditPeriod == 'من بداية النظام حتى تاريخه') return true;
+      if (date == null || startDate == null) return false;
+      if (_auditPeriod == 'شهر محدد') {
+        return (r['date'] ?? '').startsWith(_auditStart);
+      }
+      return !date.isBefore(DateTime(startDate.year, startDate.month, startDate.day)) &&
+          (endDate == null || !date.isAfter(DateTime(endDate.year, endDate.month, endDate.day)));
+    }).toList();
+    final issueCount = rows.where((r) => r['issue'] != 'سليم').length;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _screenHeading('اختبار ومراجعة الحركات', 'تجميع الحركات حسب المجال والفترة، وإظهار الأخطاء المقترحة للمراجعة'),
-      Wrap(spacing: 10, runSpacing: 10, children: [
-        SizedBox(width: 230, child: DropdownButtonFormField<String>(value: _auditPeriod, decoration: const InputDecoration(labelText: 'الفترة', border: OutlineInputBorder()), items: const ['من بداية النظام حتى تاريخه','شهر محدد','من تاريخ إلى تاريخ'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(), onChanged:(v)=>setState(()=>_auditPeriod=v ?? _auditPeriod)),
-        SizedBox(width: 220, child: DropdownButtonFormField<String>(value: _auditModule, decoration: const InputDecoration(labelText: 'تجميع الحركات حسب', border: OutlineInputBorder()), items: areas.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(), onChanged:(v)=>setState(()=>_auditModule=v ?? _auditModule)),
-        if (_auditPeriod != 'من بداية النظام حتى تاريخه') SizedBox(width: 180, child: TextFormField(initialValue:_auditStart, decoration:const InputDecoration(labelText:'من تاريخ / الشهر', border:OutlineInputBorder()), onChanged:(v)=>_auditStart=v)),
-        if (_auditPeriod == 'من تاريخ إلى تاريخ') SizedBox(width: 180, child: TextFormField(initialValue:_auditEnd, decoration:const InputDecoration(labelText:'إلى تاريخ', border:OutlineInputBorder()), onChanged:(v)=>_auditEnd=v)),
+      _screenHeading('اختبار ومراجعة الحركات', 'فحص تجميعي حسب المجال والفترة، وعرض تقرير بالملاحظات مع إجراء ضبط لكل مستند'),
+      Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFECE7F2))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            SizedBox(width: 250, child: DropdownButtonFormField<String>(
+              value: _auditPeriod,
+              decoration: const InputDecoration(labelText: 'نطاق الفحص', border: OutlineInputBorder()),
+              items: const ['من بداية النظام حتى تاريخه','شهر محدد','من تاريخ إلى تاريخ'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),
+              onChanged:(v)=>setState(()=>_auditPeriod=v ?? _auditPeriod),
+            )),
+            SizedBox(width: 220, child: DropdownButtonFormField<String>(
+              value: _auditModule,
+              decoration: const InputDecoration(labelText: 'تجميع الحركات حسب', border: OutlineInputBorder()),
+              items: areas.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),
+              onChanged:(v)=>setState(()=>_auditModule=v ?? _auditModule),
+            )),
+            if (_auditPeriod != 'من بداية النظام حتى تاريخه')
+              SizedBox(width: 190, child: TextFormField(
+                key: ValueKey('audit-start-$_auditPeriod'),
+                initialValue: _auditStart,
+                decoration: InputDecoration(labelText: _auditPeriod == 'شهر محدد' ? 'الشهر (YYYY-MM)' : 'من تاريخ (YYYY-MM-DD)', border: const OutlineInputBorder(), hintText: _auditPeriod == 'شهر محدد' ? '2026-10' : '2026-10-01'),
+                onChanged:(v)=>_auditStart=v.trim(),
+              )),
+            if (_auditPeriod == 'من تاريخ إلى تاريخ')
+              SizedBox(width: 190, child: TextFormField(
+                key: ValueKey('audit-end-$_auditPeriod'),
+                initialValue: _auditEnd,
+                decoration: const InputDecoration(labelText:'إلى تاريخ (YYYY-MM-DD)', border:OutlineInputBorder(), hintText:'2026-10-31'),
+                onChanged:(v)=>_auditEnd=v.trim(),
+              )),
+          ]),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            FilledButton.icon(
+              onPressed: () => setState(() {
+                _auditChecked.clear();
+                _activityLog.insert(0, 'تم تشغيل عرض مراجعة الحركات للفترة: $_auditPeriod، المجال: $_auditModule');
+              }),
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('فحص وعرض التقرير'),
+              style: FilledButton.styleFrom(backgroundColor: _purple, foregroundColor: Colors.white),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => setState(() {
+                _auditPeriod = 'من بداية النظام حتى تاريخه';
+                _auditModule = 'كل الحركات';
+                _auditStart = '2026-10';
+                _auditEnd = '2026-10-17';
+                _auditChecked.clear();
+              }),
+              icon: const Icon(Icons.restart_alt),
+              label: const Text('إعادة ضبط الفلاتر'),
+            ),
+          ]),
+        ]),
+      ),
+      const SizedBox(height: 12),
+      _notice(Icons.info_outline, 'مصدر البيانات', 'هذه الشاشة تعرض عينة واجهة فقط حاليًا؛ لم تُربط بعد بجداول الحركات الفعلية. لذلك لا تعتبر نتائجها تدقيقًا محاسبيًا فعليًا ولا تعدّل المستند الأصلي. الفحص الفعلي يحتاج ربط مصادر الحركات وقواعد التحقق بالخادم.', _orange),
+      const SizedBox(height: 12),
+      Wrap(spacing:8,runSpacing:8,children:[
+        _summaryChip('الحركات بالتقرير',rows.length.toString(),_purple),
+        _summaryChip('ملاحظات تحتاج مراجعة',issueCount.toString(),_orange),
+        _summaryChip('تمت مراجعتها يدويًا',_auditChecked.where((doc)=>rows.any((r)=>r['doc']==doc)).length.toString(),const Color(0xFF18865A)),
       ]),
-      const SizedBox(height:12),
-      _notice(Icons.info_outline, 'حالة الفحص', 'المعروض حاليًا نموذج توضيحي. تشغيل اختبار فعلي لكل الحركات يتطلب ربطه ببيانات النظام وقواعد التحقق قبل إصدار تقرير أخطاء حقيقي.', _orange),
-      const SizedBox(height:12),
-      Wrap(spacing:8,runSpacing:8,children:[_summaryChip('حركات في العينة',rows.length.toString(),_purple),_summaryChip('تحتاج مراجعة',rows.where((r)=>r['issue']!='سليم').length.toString(),_orange),_summaryChip('تمت مراجعتها',_auditChecked.length.toString(),const Color(0xFF18865A))]),
-      const SizedBox(height:12),
-      ...rows.map((r) => Card(child: Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        Row(children:[Expanded(child:Text('${r['area']} • ${r['name']}',style:const TextStyle(fontWeight:FontWeight.w900,color:_purple))),Text('${r['date']}')]),
-        const SizedBox(height:6),
-        Text('المستند: ${r['doc']} • القيمة: ${r['value']} ج.م'),
-        const SizedBox(height:5),
-        Row(children:[Expanded(child:Text('نتيجة الفحص: ${r['issue']}',style:TextStyle(color:r['issue']=='سليم'?const Color(0xFF18865A):const Color(0xFFD32F2F),fontWeight:FontWeight.w700))),OutlinedButton.icon(onPressed:()=>_showAuditFix(r),icon:const Icon(Icons.build_circle_outlined),label:const Text('ضبط الحركة'))]),
-        CheckboxListTile(contentPadding:EdgeInsets.zero,dense:true,value:_auditChecked.contains(r['doc']),onChanged:(v)=>setState(()=>v==true?_auditChecked.add(r['doc'] as String):_auditChecked.remove(r['doc'] as String)),title:const Text('تمت المراجعة يدويًا'))
-      ])))),
+      const SizedBox(height: 12),
+      if (rows.isEmpty)
+        const Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد حركات ضمن الفلاتر المختارة في العينة الحالية.', textAlign: TextAlign.center)))
+      else
+        ...rows.map((r) {
+          final isOkay = r['issue'] == 'سليم';
+          final reviewed = _auditChecked.contains(r['doc']);
+          return Card(
+            margin: const EdgeInsets.only(bottom: 9),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                Row(children:[
+                  Expanded(child:Text('${r['area']} • ${r['name']}',style:const TextStyle(fontWeight:FontWeight.w900,color:_purple))),
+                  Text('${r['date']}',style:const TextStyle(fontSize:12)),
+                ]),
+                const SizedBox(height:6),
+                Text('المستند: ${r['doc']} • القيمة: ${r['value']} ج.م'),
+                const SizedBox(height:7),
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(color:(isOkay?const Color(0xFF18865A):const Color(0xFFD32F2F)).withOpacity(.08),borderRadius:BorderRadius.circular(9)),
+                  child: Text('نتيجة الفحص: ${r['issue']}',style:TextStyle(color:isOkay?const Color(0xFF18865A):const Color(0xFFD32F2F),fontWeight:FontWeight.w800)),
+                ),
+                const SizedBox(height:8),
+                Wrap(spacing:8,runSpacing:8,children:[
+                  OutlinedButton.icon(
+                    onPressed:()=>_showAuditFix(r),
+                    icon:const Icon(Icons.build_circle_outlined),
+                    label:const Text('ضبط الحركة'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed:()=>setState(()=>reviewed?_auditChecked.remove(r['doc']):_auditChecked.add(r['doc']!)),
+                    icon:Icon(reviewed?Icons.check_circle:Icons.check_circle_outline),
+                    label:Text(reviewed?'إلغاء المراجعة':'تمت المراجعة'),
+                  ),
+                ]),
+              ]),
+            ),
+          );
+        }),
+      const SizedBox(height: 8),
+      const Text('مجالات الفحص: العملاء، الموردون، المخازن، الأصناف، البنوك، الخزائن، الموظفون، القيود المحاسبية، المبيعات، المشتريات، المردودات والتحويلات.',style:TextStyle(color:Colors.black54,height:1.6)),
     ]);
   }
 
