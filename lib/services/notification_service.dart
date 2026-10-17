@@ -27,11 +27,13 @@ class NotificationService {
   String get _userId {
     final id = _requireClient.auth.currentUser?.id;
 
-    if (id == null || id.isEmpty) {
-      throw StateError('يجب تسجيل الدخول أولاً.');
+    final cleanId = id?.trim();
+
+    if (cleanId == null || cleanId.isEmpty || cleanId.length > 200) {
+      throw StateError('معرّف المستخدم غير صالح. يرجى تسجيل الدخول مرة أخرى.');
     }
 
-    return id;
+    return cleanId;
   }
 
   /// جلب إشعارات المستخدم من الأحدث إلى الأقدم.
@@ -143,6 +145,10 @@ class NotificationService {
 
     if (cleanUserId == null) {
       throw ArgumentError('معرّف المستخدم مطلوب.');
+    }
+
+    if (cleanUserId.length > 200) {
+      throw ArgumentError('معرّف المستخدم طويل أكثر من اللازم.');
     }
 
     if (cleanUserId != _userId) {
