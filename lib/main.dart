@@ -968,9 +968,9 @@ class _MainShellState extends State<MainShell> {
           name,
           SimpleListPage(
             title: name,
-            details: 'النشاط: ${supplier['activity_type'] ?? 'غير محدد'}\\n'
-                'التصنيف: ${supplier['supplier_type'] ?? 'غير محدد'}\\n'
-                'الموقع: ${location.isEmpty ? 'لم يُحدد' : location}\\n'
+            details: 'النشاط: ${supplier['activity_type'] ?? 'غير محدد'}\n'
+                'التصنيف: ${supplier['supplier_type'] ?? 'غير محدد'}\n'
+                'الموقع: ${location.isEmpty ? 'لم يُحدد' : location}\n'
                 'العنوان: ${supplier['address'] ?? 'لم يُحدد'}',
             icon: Icons.store,
           ),
@@ -2466,7 +2466,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
               if (quantity != null) 'الكمية: $quantity ${post['unit'] ?? ''}',
               if (governorate.isNotEmpty) governorate,
               details,
-            ].where((part) => part.toString().trim().isNotEmpty).join('\\n');
+            ].where((part) => part.toString().trim().isNotEmpty).join('\n');
             return MarketCard(
               title: title,
               type: isBuy ? 'طلب شراء' : 'عرض بيع',
@@ -2678,7 +2678,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       color: isRead ? Colors.blueGrey : purple,
                     ),
                     title: Text(title, style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.bold)),
-                    subtitle: Text([body, if (date.isNotEmpty) date.split('T').first].where((v) => v.isNotEmpty).join('\\n')),
+                    subtitle: Text([body, if (date.isNotEmpty) date.split('T').first].where((v) => v.isNotEmpty).join('\n')),
                     trailing: isRead ? null : IconButton(
                       tooltip: 'تعليم كمقروء',
                       onPressed: id.isEmpty ? null : () => markRead(id),
