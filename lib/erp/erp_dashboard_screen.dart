@@ -6,6 +6,11 @@ const _pink = Color(0xFFFF27C3);
 const _canvas = Color(0xFFF7F5FA);
 
 const Map<String, Map<String, List<String>>> _modules = {
+  'إدارة التطبيقات': {
+    'بيانات أساسية': ['إعدادات هوية التطبيق', 'إدارة الشعار والصور', 'إدارة ألوان التطبيقات', 'إدارة صلاحيات التطبيقات', 'إدارة صور الأصناف والفئات', 'إدارة صور الموردين والعملاء', 'إدارة شركات الشحن', 'إعدادات عامة للتطبيقات'],
+    'حركات': ['مراجعة طلبات تعديل التطبيقات', 'سجل تغييرات الهوية', 'إدارة إصدارات التطبيقات'],
+    'تقارير': ['تقرير التطبيقات', 'تقرير الصلاحيات', 'تقرير تغييرات الإعدادات'],
+  },
   'إدارة البرنامج': {
     'بيانات أساسية': ['بيانات الشركة', 'الفروع ومراكز التكلفة', 'المستخدمون والصلاحيات', 'إعدادات النظام', 'سجل العمليات', 'واجهة API والربط الخارجي', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات'],
     'حركات': ['إدارة الجلسات', 'سجل الدخول والخروج', 'النسخ الاحتياطي', 'إعداد نقاط الربط', 'اختبار الاتصال الخارجي'],
@@ -51,6 +56,13 @@ class ErpDashboardScreen extends StatefulWidget {
 
 class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   String _module = 'إدارة البرنامج';
+  String _appName = 'سلسلة';
+  Color _appPrimary = const Color(0xFF3E007D);
+  Color _appAccent = const Color(0xFFFFA015);
+  bool _allowImageManagement = true;
+  bool _allowThemeManagement = true;
+  bool _allowPermissionManagement = true;
+  final List<String> _activityLog = ['تم فتح لوحة ERP', 'تم تجهيز أقسام المخازن والفروع', 'تمت إضافة نماذج إدارة المستندات'];
   String _group = 'بيانات أساسية';
   String _page = 'بيانات الشركة';
   String _search = '';
@@ -82,7 +94,23 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         {'الكود': 'CASH-002', 'الاسم': 'خزينة فرع العبور', 'النوع': 'فرعية', 'الفرع': 'العبور', 'الرصيد': '24,800 ج.م', 'الحالة': 'نشط'},
       ];
     }
-    if (page.contains('إعادة الطلب') || page.contains('النفاد')) {\n      return [\n        {'الصنف': 'زيت عباد الشمس', 'المخزن': 'المخزن الرئيسي', 'الرصيد الحالي': '12 كرتونة', 'الحد الأدنى': '20 كرتونة', 'الكمية المقترحة': '28 كرتونة', 'الحالة': 'تنبيه تجريبي'},\n        {'الصنف': 'مكرونة 400 جم', 'المخزن': 'المخزن الرئيسي', 'الرصيد الحالي': '8 كراتين', 'الحد الأدنى': '15 كرتونة', 'الكمية المقترحة': '22 كرتونة', 'الحالة': 'تنبيه تجريبي'},\n      ];\n    }\n    if (page.contains('الصلاحية') || page.contains('التشغيلات')) {\n      return [\n        {'الصنف': 'عصير معبأ', 'رقم التشغيلة': 'BATCH-DEMO-01', 'تاريخ الصلاحية': 'بيانات توضيحية', 'الرصيد': '6 كراتين', 'الحالة': 'يتطلب متابعة'},\n      ];\n    }\n    if (page.contains('الجرد') || page == 'جرد فعلي') {\n      return [\n        {'رقم المحضر': 'COUNT-DEMO-001', 'المخزن': 'المخزن الرئيسي', 'التاريخ': '—', 'عدد الأصناف': '—', 'الحالة': 'مسودة تجريبية'},\n      ];\n    }\n    if (page.contains('الأصناف') || page == 'دليل الأصناف') {
+    if (page.contains('إعادة الطلب') || page.contains('النفاد')) {
+      return [
+        {'الصنف': 'زيت عباد الشمس', 'المخزن': 'المخزن الرئيسي', 'الرصيد الحالي': '12 كرتونة', 'الحد الأدنى': '20 كرتونة', 'الكمية المقترحة': '28 كرتونة', 'الحالة': 'تنبيه تجريبي'},
+        {'الصنف': 'مكرونة 400 جم', 'المخزن': 'المخزن الرئيسي', 'الرصيد الحالي': '8 كراتين', 'الحد الأدنى': '15 كرتونة', 'الكمية المقترحة': '22 كرتونة', 'الحالة': 'تنبيه تجريبي'},
+      ];
+    }
+    if (page.contains('الصلاحية') || page.contains('التشغيلات')) {
+      return [
+        {'الصنف': 'عصير معبأ', 'رقم التشغيلة': 'BATCH-DEMO-01', 'تاريخ الصلاحية': 'بيانات توضيحية', 'الرصيد': '6 كراتين', 'الحالة': 'يتطلب متابعة'},
+      ];
+    }
+    if (page.contains('الجرد') || page == 'جرد فعلي') {
+      return [
+        {'رقم المحضر': 'COUNT-DEMO-001', 'المخزن': 'المخزن الرئيسي', 'التاريخ': '—', 'عدد الأصناف': '—', 'الحالة': 'مسودة تجريبية'},
+      ];
+    }
+    if (page.contains('الأصناف') || page == 'دليل الأصناف') {
       return [
         {'الكود': 'SKU-001', 'الاسم': 'زيت عباد الشمس', 'المجموعة': 'زيوت', 'الوحدة': 'كرتونة', 'المخزون': '120', 'الحالة': 'نشط'},
         {'الكود': 'SKU-002', 'الاسم': 'مكرونة 400 جم', 'المجموعة': 'مكرونات', 'الوحدة': 'كرتونة', 'المخزون': '85', 'الحالة': 'نشط'},
@@ -149,9 +177,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         drawer: compact ? Drawer(child: _sidebar()) : null,
         body: Row(children: [
           if (!compact) SizedBox(width: 275, child: _sidebar()),
-          Expanded(child: Column(children: [
-            _header(compact),
-            Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _workspace())),
+          Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Expanded(child: Column(children: [
+              _header(compact),
+              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _workspace())),
+            ])),
+            if (!compact) SizedBox(width: 286, child: _rightPanel()),
           ])),
         ]),
       );
@@ -290,6 +321,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 }),
             ]);
           }).toList(),
+          const Padding(padding: EdgeInsets.fromLTRB(16, 16, 16, 8), child: Text('تطبيقات قيد التطوير', style: TextStyle(color: _orange, fontWeight: FontWeight.w900, fontSize: 12))),
+          _appLink('تطبيق سلسلة', 'التطبيق الرئيسي', Icons.apps_rounded, true),
+          _appLink('تطبيق رقم 2', 'جاري إنشاؤه', Icons.phone_android_rounded, false),
+          _appLink('تطبيق رقم 3', 'جاري إنشاؤه', Icons.web_rounded, false),
         )),
         const Divider(color: Colors.white24, height: 1),
         const Padding(padding: EdgeInsets.all(14), child: Column(children: [
@@ -318,6 +353,95 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     if (name.contains('الدعم')) return Icons.support_agent_rounded;
     return Icons.query_stats_rounded;
   }
+
+  Widget _appLink(String title, String subtitle, IconData icon, bool active) => ListTile(
+    dense: true,
+    leading: Icon(icon, color: active ? _orange : Colors.white70, size: 19),
+    title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+    subtitle: Text(subtitle, style: TextStyle(color: active ? Colors.white70 : Colors.white54, fontSize: 10)),
+    onTap: active ? () => _open('إدارة التطبيقات', 'بيانات أساسية', 'إعدادات هوية التطبيق') : () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$title — $subtitle'))),
+  );
+
+  Widget _rightPanel() => Container(
+    color: Colors.white,
+    decoration: const BoxDecoration(border: Border(left: BorderSide(color: Color(0xFFECE7F2)))),
+    child: SafeArea(child: ListView(padding: const EdgeInsets.all(16), children: [
+      Row(children: [const Icon(Icons.notifications_active_outlined, color: _purple), const SizedBox(width: 8), const Expanded(child: Text('لوحة التنبيهات', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 16))), Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: const Color(0xFFFFF1D9), borderRadius: BorderRadius.circular(20)), child: const Text('3', style: TextStyle(color: Color(0xFF9A5A00), fontWeight: FontWeight.w900)))]),
+      const SizedBox(height: 12),
+      _notice(Icons.inventory_2_outlined, 'مراجعة المخزون', 'راجع حدود إعادة الطلب والصلاحية', _orange),
+      _notice(Icons.security_outlined, 'صلاحيات المستخدمين', 'إعداد سياسات الوصول قبل التشغيل', _pink),
+      _notice(Icons.cloud_off_outlined, 'الربط بقاعدة البيانات', 'بعض الشاشات ما زالت تجريبية', _purple),
+      const SizedBox(height: 22),
+      const Divider(color: Color(0xFFECE7F2)),
+      const SizedBox(height: 12),
+      const Row(children: [Icon(Icons.history_rounded, color: _purple), SizedBox(width: 8), Expanded(child: Text('سجل النشاطات', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 16)))]),
+      const SizedBox(height: 12),
+      ..._activityLog.map((entry) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.circle, size: 7, color: _orange), const SizedBox(width: 9), Expanded(child: Text(entry, style: const TextStyle(fontSize: 11, height: 1.5, color: Colors.black87)))]))),
+      const SizedBox(height: 12),
+      const Text('ملاحظة: التنبيهات وسجل النشاطات حاليًا أمثلة محلية، وليسا متصلين بعد بأحداث النظام الفعلية.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
+    ])),
+  );
+
+  Widget _notice(IconData icon, String title, String detail, Color color) => Container(
+    margin: const EdgeInsets.only(bottom: 9),
+    padding: const EdgeInsets.all(11),
+    decoration: BoxDecoration(color: _canvas, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFECE7F2))),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: color, size: 19), const SizedBox(width: 9), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11)), const SizedBox(height: 4), Text(detail, style: const TextStyle(color: Colors.black54, fontSize: 10, height: 1.5))]))]),
+  );
+
+  Widget _appManagement() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(gradient: const LinearGradient(colors: [_purple, Color(0xFF6E2BA6)]), borderRadius: BorderRadius.circular(20)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('إدارة التطبيقات', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+      SizedBox(height: 8),
+      Text('مكان موحد لتخصيص الهوية والألوان والصور والصلاحيات وإعدادات التطبيقات التابعة لسلسلة.', style: TextStyle(color: Colors.white70, height: 1.7)),
+    ])),
+    const SizedBox(height: 18),
+    Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Text('هوية التطبيق الحالي', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 14),
+      TextFormField(initialValue: _appName, decoration: const InputDecoration(labelText: 'اسم التطبيق', border: OutlineInputBorder()), onChanged: (v) => setState(() => _appName = v)),
+      const SizedBox(height: 12),
+      Wrap(spacing: 10, runSpacing: 10, children: [
+        _colorChoice('بنفسجي', const Color(0xFF3E007D), _appPrimary, (v) => setState(() => _appPrimary = v)),
+        _colorChoice('برتقالي', const Color(0xFFFFA015), _appAccent, (v) => setState(() => _appAccent = v)),
+        _colorChoice('وردي', const Color(0xFFFF27C3), _appPrimary, (v) => setState(() => _appPrimary = v)),
+        _colorChoice('أزرق', const Color(0xFF1565C0), _appPrimary, (v) => setState(() => _appPrimary = v)),
+      ]),
+      const SizedBox(height: 14),
+      Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: _appPrimary, borderRadius: BorderRadius.circular(14)), child: Row(children: [const Icon(Icons.apps_rounded, color: Colors.white, size: 30), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_appName.trim().isEmpty ? 'اسم التطبيق' : _appName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)), const Text('معاينة الألوان المختارة', style: TextStyle(color: Colors.white70, fontSize: 11))])), Container(width: 18, height: 18, decoration: BoxDecoration(color: _appAccent, shape: BoxShape.circle))])),
+      const SizedBox(height: 18),
+      const Text('إدارة الملفات والصور', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
+      const SizedBox(height: 8),
+      _managementTile(Icons.image_outlined, 'شعار التطبيق وصورة البداية', 'تحديد ملفات الهوية التي ستستخدم عند ربط رفع الملفات'),
+      _managementTile(Icons.category_outlined, 'صور الأصناف والفئات', 'إضافة صور المنتجات وتصنيفات المواد الغذائية'),
+      _managementTile(Icons.factory_outlined, 'صور الموردين والعملاء', 'إدارة الشعارات والصور والبيانات التعريفية'),
+      _managementTile(Icons.local_shipping_outlined, 'شركات الشحن', 'صور الشركات وبيانات التواصل وخيارات التوصيل'),
+      const SizedBox(height: 18),
+      const Text('صلاحيات الإدارة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
+      const SizedBox(height: 8),
+      SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowThemeManagement, onChanged: (v) => setState(() => _allowThemeManagement = v), title: const Text('السماح بتعديل الاسم والألوان'), subtitle: const Text('إعداد محلي للواجهة فقط')),
+      SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowImageManagement, onChanged: (v) => setState(() => _allowImageManagement = v), title: const Text('السماح بإدارة الصور'), subtitle: const Text('يتطلب لاحقًا ربط التخزين والصلاحيات بالخادم')),
+      SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowPermissionManagement, onChanged: (v) => setState(() => _allowPermissionManagement = v), title: const Text('السماح بإدارة صلاحيات المستخدمين'), subtitle: const Text('ليس بديلًا عن صلاحيات قاعدة البيانات')),
+      const SizedBox(height: 12),
+      FilledButton.icon(onPressed: () => setState(() => _activityLog.insert(0, 'تم تعديل إعدادات واجهة إدارة التطبيقات محليًا')), icon: const Icon(Icons.save_outlined), label: const Text('تسجيل التعديلات في سجل النشاطات')),
+      const SizedBox(height: 8),
+      const Text('تنبيه: هذه المعاينة تغيّر الحالة داخل الواجهة الحالية فقط. حفظ الهوية ورفع الصور وتطبيق الصلاحيات على المستخدمين يحتاج تخزينًا وقاعدة بيانات وخادمًا موثوقًا.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.7)),
+    ])),
+  ]);
+
+  Widget _colorChoice(String label, Color color, Color selected, ValueChanged<Color> onSelect) => OutlinedButton(
+    onPressed: () => onSelect(color),
+    style: OutlinedButton.styleFrom(side: BorderSide(color: selected == color ? _purple : const Color(0xFFECE7F2), width: selected == color ? 2 : 1), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [Container(width: 16, height: 16, decoration: BoxDecoration(color: color, shape: BoxShape.circle)), const SizedBox(width: 7), Text(label)]),
+  );
+
+  Widget _managementTile(IconData icon, String title, String detail) => ListTile(
+    contentPadding: EdgeInsets.zero,
+    leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFF1E9FA), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: _purple)),
+    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+    subtitle: Text(detail, style: const TextStyle(fontSize: 11, height: 1.5)),
+    trailing: const Icon(Icons.chevron_left_rounded, color: _purple),
+  );
 
   Widget _header(bool compact) => Container(height: 76, padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 25), decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFECE7F2)))), child: Row(children: [
     if (compact) Builder(builder: (ctx) => IconButton(onPressed: () => Scaffold.of(ctx).openDrawer(), icon: const Icon(Icons.menu_rounded, color: _purple))),
