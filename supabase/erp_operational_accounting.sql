@@ -133,6 +133,8 @@ declare
   v_tax numeric(14,2);
   v_total numeric(14,2);
   v_cost numeric(14,2);
+  v_line_count bigint;
+  v_movement_count bigint;
   v_net numeric(14,2);
   v_variance numeric(14,2);
   v_mapping public.erp_operational_account_mappings%rowtype;
@@ -211,8 +213,18 @@ begin
     and m.reference_id = p_document_id
     and m.reference_type = case when p_kind = 'purchase' then 'purchase_document' else 'sales_document' end;
 
-  if v_cost <= 0 and p_kind = 'sales' and v_doc_type <> 'return' then
-    raise exception 'تعذر تحديد تكلفة البضاعة المباعة من حركات المخزون';
+  if p_kind = 'purchase' then
+    select count(*) into v_line_count from public.erp_purchase_lines where document_id = p_document_id;
+  else
+    select count(*) into v_line_count from public.erp_sales_lines where document_id = p_document_id;
+  end if;
+  select count(*) into v_movement_count
+  from public.erp_inventory_movements m
+  where m.company_id = v_company_id
+    and m.reference_id = p_document_id
+    and m.reference_type = case when p_kind = 'purchase' then 'purchase_document' else 'sales_document' end;
+  if v_line_count = 0 or v_movement_count <> v_line_count then
+    raise exception 'حركات المخزون لا تطابق عدد بنود المستند؛ راجع المستند قبل الترحيل المحاسبي';
   end if;
 
   if p_kind = 'sales' then
