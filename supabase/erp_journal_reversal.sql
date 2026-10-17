@@ -66,7 +66,7 @@ begin
 
   insert into public.erp_journal_entries (
     company_id, branch_id, fiscal_period_id, entry_date, description,
-    source_type, source_id, status, created_by, posted_by, posted_at
+    source_type, source_id, status, created_by
   ) values (
     v_original.company_id,
     v_original.branch_id,
@@ -76,7 +76,7 @@ begin
      order by fp.starts_on desc limit 1),
     p_reversal_date,
     'عكس القيد رقم ' || v_original.entry_number::text || ' — ' || v_reason,
-    'reversal', v_original.id, 'posted', auth.uid(), auth.uid(), now()
+    'reversal', v_original.id, 'draft', auth.uid()
   ) returning id into v_reversal_id;
 
   insert into public.erp_journal_lines (
@@ -88,6 +88,10 @@ begin
     jl.credit, jl.debit, jl.party_id, jl.branch_id
   from public.erp_journal_lines jl
   where jl.entry_id = v_original.id;
+
+  update public.erp_journal_entries
+     set status = 'posted', posted_by = auth.uid(), posted_at = now(), updated_at = now()
+   where id = v_reversal_id;
 
   return v_reversal_id;
 end;
