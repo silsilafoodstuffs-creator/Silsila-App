@@ -75,6 +75,9 @@ class StoryService {
     if ((caption ?? '').trim().length > 300) {
       throw ArgumentError('وصف القصة يجب ألا يتجاوز 300 حرف.');
     }
+    if (activityType != null && activityType.trim().length > 120) {
+      throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
+    }
 
     if (cleanType != 'image' && cleanType != 'video') {
       throw ArgumentError('نوع القصة يجب أن يكون image أو video.');
@@ -111,10 +114,14 @@ class StoryService {
 
   /// حذف قصة يملكها المستخدم الحالي.
   Future<void> deleteStory(String storyId) async {
+    final id = storyId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('معرّف القصة مطلوب.');
+    }
     await _client
         .from('stories')
         .delete()
-        .eq('id', storyId)
+        .eq('id', id)
         .eq('user_id', _userId);
   }
 
