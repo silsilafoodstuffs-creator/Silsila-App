@@ -1,0 +1,467 @@
+-- Silsila core database foundation
+-- Apply this migration before 02_activity_classifications.sql in Supabase SQL Editor.
+BEGIN;
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  full_name TEXT NOT NULL DEFAULT '',
+  phone TEXT,
+  whatsapp_phone TEXT,
+  account_type TEXT NOT NULL DEFAULT 'عميل',
+  activity_type TEXT NOT NULL DEFAULT 'مواد غذائية',
+  customer_type TEXT,
+  supplier_type TEXT,
+  delegate_type TEXT,
+  governorate TEXT,
+  district TEXT,
+  area TEXT,
+  address TEXT,
+  landmark TEXT,
+  account_status TEXT NOT NULL DEFAULT 'pending',
+  avatar_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  parent_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+  activity_type TEXT NOT NULL DEFAULT 'مواد غذائية',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (name, activity_type)
+);
+
+CREATE TABLE IF NOT EXISTS public.products (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  supplier_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  brand TEXT,
+  sku TEXT,
+  image_url TEXT,
+  price NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (price >= 0),
+  unit TEXT NOT NULL DEFAULT 'وحدة',
+  stock_quantity NUMERIC(12,3) NOT NULL DEFAULT 0 CHECK (stock_quantity >= 0),
+  minimum_quantity NUMERIC(12,3) NOT NULL DEFAULT 1 CHECK (minimum_quantity > 0),
+  activity_type TEXT NOT NULL DEFAULT 'مواد غذائية',
+  is_available BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.supplier_details (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID NOT NULL UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE,
+  business_name TEXT NOT NULL DEFAULT '',
+  description TEXT,
+  logo_url TEXT,
+  cover_url TEXT,
+  supplier_type TEXT,
+  activity_type TEXT NOT NULL DEFAULT 'مواد غذائية',
+  pricing_policy TEXT,
+  minimum_invoice NUMERIC(12,2),
+  minimum_items INTEGER,
+  accepts_negotiation BOOLEAN NOT NULL DEFAULT FALSE,
+  is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  rating NUMERIC(3,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.addresses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL DEFAULT 'العنوان الرئيسي',
+  recipient_name TEXT,
+  phone TEXT,
+  governorate TEXT NOT NULL,
+  district TEXT,
+  area TEXT,
+  address TEXT NOT NULL,
+  landmark TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
+  is_default BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_number TEXT NOT NULL UNIQUE DEFAULT ('SIL-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 10))),
+  customer_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE RESTRICT,
+  supplier_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  payment_method TEXT NOT NULL DEFAULT 'cash',
+  payment_status TEXT NOT NULL DEFAULT 'pending',
+  subtotal NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
+  delivery_fee NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (delivery_fee >= 0),
+  discount_amount NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (discount_amount >= 0),
+  total_amount NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (total_amount >= 0),
+  delivery_address JSONB NOT NULL DEFAULT '{}'::jsonb,
+  customer_note TEXT,
+  supplier_note TEXT,
+  cancellation_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.order_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES public.products(id) ON DELETE SET NULL,
+  product_name TEXT NOT NULL,
+  unit TEXT NOT NULL DEFAULT 'وحدة',
+  quantity NUMERIC(12,3) NOT NULL CHECK (quantity > 0),
+  unit_price NUMERIC(12,2) NOT NULL CHECK (unit_price >= 0),
+  line_total NUMERIC(12,2) NOT NULL CHECK (line_total >= 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.cart_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
+  quantity NUMERIC(12,3) NOT NULL DEFAULT 1 CHECK (quantity > 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id, product_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.favorites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
+  supplier_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (product_id IS NOT NULL OR supplier_id IS NOT NULL)
+);
+
+CREATE TABLE IF NOT EXISTS public.offers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  supplier_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES public.products(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  original_price NUMERIC(12,2),
+  offer_price NUMERIC(12,2),
+  starts_at TIMESTAMPTZ,
+  ends_at TIMESTAMPTZ,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.stories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  media_url TEXT NOT NULL,
+  media_type TEXT NOT NULL DEFAULT 'image',
+  caption TEXT,
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '1 hour'),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.trader_market_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  post_type TEXT NOT NULL CHECK (post_type IN ('buy','sell')),
+  title TEXT NOT NULL,
+  details TEXT NOT NULL DEFAULT '',
+  category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
+  quantity TEXT,
+  governorate TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.reviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  reviewer_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  reviewed_user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL,
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (reviewer_id, order_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  notification_type TEXT NOT NULL DEFAULT 'general',
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.wallets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES public.profiles(id) ON DELETE CASCADE,
+  currency TEXT NOT NULL DEFAULT 'EGP',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.wallet_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wallet_id UUID NOT NULL REFERENCES public.wallets(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  amount NUMERIC(12,2) NOT NULL CHECK (amount <> 0),
+  transaction_type TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  reference TEXT,
+  description TEXT,
+  idempotency_key TEXT UNIQUE,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.wallet_topup_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
+  payment_method TEXT NOT NULL,
+  proof_url TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  reviewed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  review_note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.support_tickets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  subject TEXT NOT NULL,
+  message TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  priority TEXT NOT NULL DEFAULT 'normal',
+  assigned_to UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.loyalty_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  points INTEGER NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  reference TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_account_type ON public.profiles(account_type, account_status);
+CREATE INDEX IF NOT EXISTS idx_products_supplier ON public.products(supplier_id, is_available);
+CREATE INDEX IF NOT EXISTS idx_products_category ON public.products(category_id, is_available);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_created ON public.orders(customer_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_supplier_created ON public.orders(supplier_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_order_items_order ON public.order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON public.notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user_created ON public.wallet_transactions(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_market_posts_status_created ON public.trader_market_posts(status, created_at DESC);
+
+-- Keep the profile record in sync with Supabase Auth user metadata.
+CREATE OR REPLACE FUNCTION public.silsila_handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (
+    id, full_name, phone, whatsapp_phone, account_type, activity_type,
+    customer_type, supplier_type, delegate_type, governorate, district,
+    area, address, landmark, account_status
+  ) VALUES (
+    NEW.id,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+    NEW.phone,
+    NEW.raw_user_meta_data->>'whatsapp_phone',
+    COALESCE(NEW.raw_user_meta_data->>'account_type', 'عميل'),
+    COALESCE(NEW.raw_user_meta_data->>'activity_type', 'مواد غذائية'),
+    NEW.raw_user_meta_data->>'customer_type',
+    NEW.raw_user_meta_data->>'supplier_type',
+    NEW.raw_user_meta_data->>'delegate_type',
+    NEW.raw_user_meta_data->>'governorate',
+    NEW.raw_user_meta_data->>'district',
+    NEW.raw_user_meta_data->>'area',
+    NEW.raw_user_meta_data->>'address',
+    NEW.raw_user_meta_data->>'landmark',
+    'pending'
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    full_name = EXCLUDED.full_name,
+    phone = EXCLUDED.phone,
+    whatsapp_phone = EXCLUDED.whatsapp_phone,
+    account_type = EXCLUDED.account_type,
+    activity_type = EXCLUDED.activity_type,
+    customer_type = EXCLUDED.customer_type,
+    supplier_type = EXCLUDED.supplier_type,
+    delegate_type = EXCLUDED.delegate_type,
+    governorate = EXCLUDED.governorate,
+    district = EXCLUDED.district,
+    area = EXCLUDED.area,
+    address = EXCLUDED.address,
+    landmark = EXCLUDED.landmark,
+    updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created_silsila ON auth.users;
+CREATE TRIGGER on_auth_user_created_silsila
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE FUNCTION public.silsila_handle_new_user();
+
+-- Enable row-level security for user-owned and marketplace data.
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.supplier_details ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.addresses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.order_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.cart_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.favorites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.offers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.stories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.trader_market_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallet_topup_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.loyalty_transactions ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "profiles_select_authenticated" ON public.profiles;
+CREATE POLICY "profiles_select_authenticated" ON public.profiles
+FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
+CREATE POLICY "profiles_update_own" ON public.profiles
+FOR UPDATE TO authenticated USING (id = auth.uid()) WITH CHECK (id = auth.uid());
+
+DROP POLICY IF EXISTS "categories_read_active" ON public.categories;
+CREATE POLICY "categories_read_active" ON public.categories
+FOR SELECT TO anon, authenticated USING (is_active = true);
+
+DROP POLICY IF EXISTS "products_read_available" ON public.products;
+CREATE POLICY "products_read_available" ON public.products
+FOR SELECT TO anon, authenticated USING (is_available = true);
+DROP POLICY IF EXISTS "products_manage_own" ON public.products;
+CREATE POLICY "products_manage_own" ON public.products
+FOR ALL TO authenticated USING (supplier_id = auth.uid()) WITH CHECK (supplier_id = auth.uid());
+
+DROP POLICY IF EXISTS "supplier_details_read" ON public.supplier_details;
+CREATE POLICY "supplier_details_read" ON public.supplier_details
+FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "supplier_details_manage_own" ON public.supplier_details;
+CREATE POLICY "supplier_details_manage_own" ON public.supplier_details
+FOR ALL TO authenticated USING (profile_id = auth.uid()) WITH CHECK (profile_id = auth.uid());
+
+DROP POLICY IF EXISTS "addresses_manage_own" ON public.addresses;
+CREATE POLICY "addresses_manage_own" ON public.addresses
+FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "orders_read_participant" ON public.orders;
+CREATE POLICY "orders_read_participant" ON public.orders
+FOR SELECT TO authenticated USING (customer_id = auth.uid() OR supplier_id = auth.uid());
+DROP POLICY IF EXISTS "orders_create_customer" ON public.orders;
+CREATE POLICY "orders_create_customer" ON public.orders
+FOR INSERT TO authenticated WITH CHECK (customer_id = auth.uid());
+DROP POLICY IF EXISTS "orders_update_participant" ON public.orders;
+CREATE POLICY "orders_update_participant" ON public.orders
+FOR UPDATE TO authenticated USING (customer_id = auth.uid() OR supplier_id = auth.uid())
+WITH CHECK (customer_id = auth.uid() OR supplier_id = auth.uid());
+
+DROP POLICY IF EXISTS "order_items_read_participant" ON public.order_items;
+CREATE POLICY "order_items_read_participant" ON public.order_items
+FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_id AND
+    (o.customer_id = auth.uid() OR o.supplier_id = auth.uid()))
+);
+DROP POLICY IF EXISTS "order_items_create_customer_order" ON public.order_items;
+CREATE POLICY "order_items_create_customer_order" ON public.order_items
+FOR INSERT TO authenticated WITH CHECK (
+  EXISTS (SELECT 1 FROM public.orders o WHERE o.id = order_id AND o.customer_id = auth.uid())
+);
+
+DROP POLICY IF EXISTS "cart_items_manage_own" ON public.cart_items;
+CREATE POLICY "cart_items_manage_own" ON public.cart_items
+FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "favorites_manage_own" ON public.favorites;
+CREATE POLICY "favorites_manage_own" ON public.favorites
+FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "offers_read_active" ON public.offers;
+CREATE POLICY "offers_read_active" ON public.offers
+FOR SELECT TO anon, authenticated USING (is_active = true AND (ends_at IS NULL OR ends_at > NOW()));
+DROP POLICY IF EXISTS "offers_manage_own" ON public.offers;
+CREATE POLICY "offers_manage_own" ON public.offers
+FOR ALL TO authenticated USING (supplier_id = auth.uid()) WITH CHECK (supplier_id = auth.uid());
+
+DROP POLICY IF EXISTS "stories_read_unexpired" ON public.stories;
+CREATE POLICY "stories_read_unexpired" ON public.stories
+FOR SELECT TO anon, authenticated USING (expires_at > NOW());
+DROP POLICY IF EXISTS "stories_manage_own" ON public.stories;
+CREATE POLICY "stories_manage_own" ON public.stories
+FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "market_posts_read_active" ON public.trader_market_posts;
+CREATE POLICY "market_posts_read_active" ON public.trader_market_posts
+FOR SELECT TO anon, authenticated USING (status = 'active');
+DROP POLICY IF EXISTS "market_posts_manage_own" ON public.trader_market_posts;
+CREATE POLICY "market_posts_manage_own" ON public.trader_market_posts
+FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "reviews_read_all" ON public.reviews;
+CREATE POLICY "reviews_read_all" ON public.reviews
+FOR SELECT TO anon, authenticated USING (true);
+DROP POLICY IF EXISTS "reviews_create_own" ON public.reviews;
+CREATE POLICY "reviews_create_own" ON public.reviews
+FOR INSERT TO authenticated WITH CHECK (reviewer_id = auth.uid());
+
+DROP POLICY IF EXISTS "notifications_manage_own" ON public.notifications;
+CREATE POLICY "notifications_manage_own" ON public.notifications
+FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "wallets_read_own" ON public.wallets;
+CREATE POLICY "wallets_read_own" ON public.wallets
+FOR SELECT TO authenticated USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "wallet_transactions_read_own" ON public.wallet_transactions;
+CREATE POLICY "wallet_transactions_read_own" ON public.wallet_transactions
+FOR SELECT TO authenticated USING (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "wallet_topup_requests_read_own" ON public.wallet_topup_requests;
+CREATE POLICY "wallet_topup_requests_read_own" ON public.wallet_topup_requests
+FOR SELECT TO authenticated USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "wallet_topup_requests_create_own" ON public.wallet_topup_requests;
+CREATE POLICY "wallet_topup_requests_create_own" ON public.wallet_topup_requests
+FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "support_tickets_read_own" ON public.support_tickets;
+CREATE POLICY "support_tickets_read_own" ON public.support_tickets
+FOR SELECT TO authenticated USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "support_tickets_create_own" ON public.support_tickets;
+CREATE POLICY "support_tickets_create_own" ON public.support_tickets
+FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+
+DROP POLICY IF EXISTS "loyalty_transactions_read_own" ON public.loyalty_transactions;
+CREATE POLICY "loyalty_transactions_read_own" ON public.loyalty_transactions
+FOR SELECT TO authenticated USING (user_id = auth.uid());
+
+COMMIT;
