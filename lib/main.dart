@@ -17,6 +17,7 @@ import 'services/support_service.dart';
 import 'services/delivery_service.dart';
 import 'services/favorite_service.dart';
 import 'services/loyalty_service.dart';
+import 'services/address_service.dart';
 import 'services/review_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
@@ -1470,6 +1471,11 @@ class _MainShellState extends State<MainShell> {
             Icons.settings_outlined,
             'إعدادات الحساب',
             () => openPage('إعدادات الحساب', const ProfileEditorScreen()),
+          ),
+          menuItem(
+            Icons.location_on_outlined,
+            'عناويني المحفوظة',
+            () => openPage('عناويني المحفوظة', const AddressBookScreen()),
           ),
           if (isApprovedSupplier)
             menuItem(
@@ -4188,6 +4194,188 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class AddressBookScreen extends StatefulWidget {
+  const AddressBookScreen({super.key});
+
+  @override
+  State<AddressBookScreen> createState() => _AddressBookScreenState();
+}
+
+class _AddressBookScreenState extends State<AddressBookScreen> {
+  final service = AddressService();
+  List<Map<String, dynamic>> addresses = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadAddresses();
+  }
+
+  Future<void> loadAddresses() async {
+    try {
+      final rows = await service.getAddresses();
+      if (!mounted) return;
+      setState(() { addresses = rows; error = null; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'سجّل الدخول لعرض عناوينك المحفوظة.');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> editAddress({Map<String, dynamic>? existing}) async {
+    final title = TextEditingController(text: (existing?['title'] ?? '').toString());
+    final governorate = TextEditingController(text: (existing?['governorate'] ?? '').toString());
+    final district = TextEditingController(text: (existing?['district'] ?? '').toString());
+    final village = TextEditingController(text: (existing?['village'] ?? '').toString());
+    final landmark = TextEditingController(text: (existing?['landmark'] ?? '').toString());
+    final address = TextEditingController(text: (existing?['address'] ?? '').toString());
+    bool isDefault = existing?['is_default'] == true;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(existing == null ? 'إضافة عنوان جديد' : 'تعديل العنوان'),
+          content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: title, decoration: const InputDecoration(labelText: 'اسم العنوان (المنزل، المخزن...)')),
+            TextField(controller: governorate, decoration: const InputDecoration(labelText: 'المحافظة')),
+            TextField(controller: district, decoration: const InputDecoration(labelText: 'المركز أو المدينة')),
+            TextField(controller: village, decoration: const InputDecoration(labelText: 'القرية أو الحي')),
+            TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'العنوان بالتفصيل')),
+            TextField(controller: landmark, decoration: const InputDecoration(labelText: 'علامة مميزة (اختياري)')),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: isDefault,
+              title: const Text('جعله العنوان الافتراضي'),
+              onChanged: (value) => setDialogState(() => isDefault = value ?? false),
+            ),
+          ])),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ العنوان')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      try {
+        final args = {
+          'title': title.text,
+          'governorate': governorate.text,
+          'district': district.text,
+          'village': village.text,
+          'landmark': landmark.text,
+          'address': address.text,
+          'isDefault': isDefault,
+        };
+        if (existing == null) {
+          await service.addAddress(
+            title: args['title'] as String,
+            governorate: args['governorate'] as String,
+            address: args['address'] as String,
+            district: args['district'] as String,
+            village: args['village'] as String,
+            landmark: args['landmark'] as String,
+            isDefault: args['isDefault'] as bool,
+          );
+        } else {
+          await service.updateAddress(
+            addressId: existing['id'].toString(),
+            title: args['title'] as String,
+            governorate: args['governorate'] as String,
+            address: args['address'] as String,
+            district: args['district'] as String,
+            village: args['village'] as String,
+            landmark: args['landmark'] as String,
+            isDefault: args['isDefault'] as bool,
+          );
+        }
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ العنوان.')));
+        await loadAddresses();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ العنوان: $e')));
+      }
+    }
+    title.dispose();
+    governorate.dispose();
+    district.dispose();
+    village.dispose();
+    landmark.dispose();
+    address.dispose();
+  }
+
+  Future<void> deleteAddress(Map<String, dynamic> item) async {
+    try {
+      await service.deleteAddress(item['id'].toString());
+      await loadAddresses();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حذف العنوان: $e')));
+    }
+  }
+
+  Future<void> makeDefault(Map<String, dynamic> item) async {
+    try {
+      await service.setDefaultAddress(item['id'].toString());
+      await loadAddresses();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعيين العنوان الافتراضي: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadAddresses,
+      child: ListView(padding: const EdgeInsets.all(16), children: [
+        Row(children: [
+          const Expanded(child: Text('عناويني المحفوظة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+          FilledButton.icon(onPressed: () => editAddress(), icon: const Icon(Icons.add), label: const Text('إضافة')),
+        ]),
+        if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+        if (addresses.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text('لم تحفظ عناوين بعد.', textAlign: TextAlign.center)),
+        ...addresses.map((item) {
+          final isDefault = item['is_default'] == true;
+          final subtitle = [
+            item['governorate'],
+            item['district'],
+            item['village'],
+            item['address'],
+            if ((item['landmark'] ?? '').toString().isNotEmpty) 'علامة مميزة: ${item['landmark']}',
+          ].where((value) => value != null && value.toString().trim().isNotEmpty).join(' • ');
+          return Card(
+            color: Colors.white,
+            child: ListTile(
+              leading: Icon(isDefault ? Icons.location_on : Icons.location_on_outlined, color: isDefault ? orange : purple),
+              title: Row(children: [
+                Expanded(child: Text((item['title'] ?? 'عنوان').toString())),
+                if (isDefault) const Chip(label: Text('افتراضي')),
+              ]),
+              subtitle: Text(subtitle),
+              isThreeLine: true,
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') editAddress(existing: item);
+                  if (value == 'default') makeDefault(item);
+                  if (value == 'delete') deleteAddress(item);
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit', child: Text('تعديل')),
+                  if (!isDefault) const PopupMenuItem(value: 'default', child: Text('تعيين افتراضي')),
+                  const PopupMenuItem(value: 'delete', child: Text('حذف')),
+                ],
+              ),
+            ),
+          );
+        }),
+      ]),
     );
   }
 }
