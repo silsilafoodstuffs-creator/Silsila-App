@@ -3721,8 +3721,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
 /// توحيد رقم الهاتف إلى صيغة E.164 المطلوبة لمصادقة الهاتف.
 /// يدعم أرقام مصر المحلية مثل 010... و02...، والأرقام الدولية.
-String normalizePhoneForAuth(String input) {
-  final asciiInput = input.trim().replaceAllMapped(
+String normalizeArabicDigits(String input) {
+  return input.replaceAllMapped(
     RegExp(r'[٠-٩۰-۹]'),
     (match) {
       final code = match.group(0)!.codeUnitAt(0);
@@ -3732,6 +3732,10 @@ String normalizePhoneForAuth(String input) {
       return String.fromCharCode(0x30 + digit);
     },
   );
+}
+
+String normalizePhoneForAuth(String input) {
+  final asciiInput = normalizeArabicDigits(input.trim());
   final compact = asciiInput.replaceAll(RegExp(r'[\s().-]'), '');
   final digits = compact.replaceAll(RegExp(r'\D'), '');
 
@@ -3795,7 +3799,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   
   Future<void> verifyCode() async {
-    final code = codeController.text.trim();
+    final code = normalizeArabicDigits(codeController.text.trim());
 
     if (code.length != 6 || int.tryParse(code) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -4050,7 +4054,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> updatePassword() async {
-    final token = code.text.trim();
+    final token = normalizeArabicDigits(code.text.trim());
     if (token.length != 6 || int.tryParse(token) == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل رمز التحقق المكوّن من 6 أرقام.'))); return; }
     final passwordError = passwordValidator(password.text);
     if (passwordError != null || password.text != confirmation.text) {
