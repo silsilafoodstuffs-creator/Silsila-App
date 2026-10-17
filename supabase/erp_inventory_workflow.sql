@@ -51,6 +51,7 @@ as $$
 declare
   v_id uuid;
   v_current numeric(18,3);
+  v_warehouse_branch uuid;
   v_inventory_value numeric(18,4);
   v_effective_cost numeric(14,4) := p_unit_cost;
   v_in numeric(14,3);
@@ -81,11 +82,16 @@ begin
     raise exception 'نوع الحركة المخزنية غير مدعوم';
   end if;
 
-  if not exists (
-    select 1 from public.erp_warehouses w
-    where w.id = p_warehouse_id and w.company_id = p_company_id and w.is_active
-  ) then
+  select w.branch_id into v_warehouse_branch
+  from public.erp_warehouses w
+  where w.id = p_warehouse_id and w.company_id = p_company_id and w.is_active;
+  if not found then
     raise exception 'المخزن غير نشط أو لا يتبع الشركة المحددة';
+  end if;
+  if p_branch_id is null then
+    p_branch_id := v_warehouse_branch;
+  elsif v_warehouse_branch is not null and p_branch_id <> v_warehouse_branch then
+    raise exception 'فرع الحركة يجب أن يطابق فرع المخزن';
   end if;
   if not exists (
     select 1 from public.erp_items i
