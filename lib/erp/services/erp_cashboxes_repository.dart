@@ -40,10 +40,14 @@ class ErpCashboxesRepository {
     if (code.trim().isEmpty || name.trim().isEmpty || accountId.isEmpty) {
       throw ArgumentError('كود الخزينة واسمها وحساب الأستاذ حقول مطلوبة.');
     }
+    final masked = _blank(accountNumberMasked);
+    if (masked != null && !RegExp(r'^\\d{4}$').hasMatch(masked)) {
+      throw ArgumentError('أدخل آخر أربعة أرقام فقط من الحساب البنكي.');
+    }
     await _db.from('erp_cashboxes').insert({
       'company_id': companyId.trim(), 'cashbox_code': code.trim(), 'cashbox_name': name.trim(),
       'account_id': accountId, 'branch_id': branchId, 'is_bank_account': isBank,
-      'bank_name': _blank(bankName), 'account_number_masked': _blank(accountNumberMasked),
+      'bank_name': _blank(bankName), 'account_number_masked': masked,
       'is_active': true,
     });
   }
