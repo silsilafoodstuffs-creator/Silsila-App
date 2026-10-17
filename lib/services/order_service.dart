@@ -73,8 +73,16 @@ class OrderService {
       throw ArgumentError('يجب تحديد المورد.');
     }
 
+    if (cleanSupplierId.length > 200) {
+      throw ArgumentError('معرّف المورد غير صالح.');
+    }
+
     if (items.isEmpty) {
       throw ArgumentError('لا يمكن إنشاء طلب دون منتجات.');
+    }
+
+    if (items.length > 100) {
+      throw ArgumentError('لا يمكن أن يتجاوز الطلب 100 صنف مختلف.');
     }
 
     if (!paymentMethods.contains(paymentMethod.trim())) {
