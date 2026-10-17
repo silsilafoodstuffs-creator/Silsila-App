@@ -45,14 +45,22 @@ class AccountService {
       throw ArgumentError('يرجى إدخال الاسم.');
     }
 
+    final requestedPhone = _emptyToNull(phone);
+    final currentPhone = _emptyToNull(_client.auth.currentUser?.phone);
+    if (requestedPhone != null && requestedPhone != currentPhone) {
+      throw StateError(
+        'تغيير رقم الهاتف يحتاج إلى تحقق OTP من Supabase Auth، '
+        'ولا يمكن تغييره بتعديل الملف الشخصي فقط.',
+      );
+    }
+
     final data = <String, dynamic>{
       'full_name': cleanName,
-      'phone': _emptyToNull(phone),
       'whatsapp_phone': _emptyToNull(whatsappPhone),
       'activity_type': _emptyToNull(activityType),
       'governorate': _emptyToNull(governorate),
       'district': _emptyToNull(district),
-      'village': _emptyToNull(village),
+      'area': _emptyToNull(village),
       'address': _emptyToNull(address),
       'landmark': _emptyToNull(landmark),
     };
@@ -80,7 +88,7 @@ class AccountService {
       'activity_type',
       'governorate',
       'district',
-      'village',
+      'area',
       'address',
     ];
 
