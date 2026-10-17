@@ -169,7 +169,12 @@ class SupplierProductService {
     }
 
     if (description != null) {
-      updates['description'] = description.trim();
+      final cleanDescription = description.trim();
+      if (cleanDescription.length > 5000) {
+        throw ArgumentError('وصف المنتج يجب ألا يتجاوز 5000 حرف.');
+      }
+      updates['description'] =
+          cleanDescription.isEmpty ? null : cleanDescription;
     }
 
     if (price != null) {
@@ -247,7 +252,10 @@ class SupplierProductService {
 
     await _client
         .from('products')
-        .update({'is_active': false})
+        .update({
+          'is_active': false,
+          'is_available': false,
+        })
         .eq('id', productId)
         .eq('supplier_id', user.id);
   }
@@ -264,7 +272,10 @@ class SupplierProductService {
 
     await _client
         .from('products')
-        .update({'is_active': true})
+        .update({
+          'is_active': true,
+          'is_available': true,
+        })
         .eq('id', productId)
         .eq('supplier_id', user.id);
   }
