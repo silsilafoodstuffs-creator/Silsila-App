@@ -65,7 +65,10 @@ class CartItem {
 
   static int _toInt(dynamic value, {int fallback = 0}) {
     if (value is int) return value;
-    if (value is num) return value.toInt();
+    if (value is num) {
+      if (!value.isFinite || value % 1 != 0) return fallback;
+      return value.toInt();
+    }
 
     return int.tryParse(value?.toString() ?? '') ?? fallback;
   }
