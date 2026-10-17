@@ -39,7 +39,7 @@ BEGIN
     RAISE EXCEPTION 'يجب تحديد عنوان التوصيل';
   END IF;
 
-  IF p_payment_method NOT IN ('cash','supplier_credit','wallet','bank_transfer','account_balance') THEN
+  IF p_payment_method NOT IN ('نقدي','آجل مورد','محفظة كاش','تحويل بنكي','من الرصيد') THEN
     RAISE EXCEPTION 'طريقة الدفع غير مدعومة';
   END IF;
 
@@ -74,7 +74,7 @@ BEGIN
     customer_id, supplier_id, total_amount, subtotal, status,
     payment_method, payment_status, delivery_address, notes
   ) VALUES (
-    v_customer_id, p_supplier_id, v_total, v_total, 'pending',
+    v_customer_id, p_supplier_id, v_total, v_total, 'انتظار قبول',
     p_payment_method, 'pending', btrim(p_delivery_address), NULLIF(btrim(COALESCE(p_notes,'')), '')
   )
   RETURNING id INTO v_order_id;
