@@ -11,7 +11,12 @@ class SupplierProductService {
     String supplierId, {
     bool activeOnly = true,
     String? category,
+    int limit = 100,
   }) async {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+
     final cleanSupplierId = supplierId.trim();
     if (cleanSupplierId.isEmpty) {
       throw ArgumentError('معرّف المورد مطلوب.');
@@ -29,7 +34,7 @@ class SupplierProductService {
       query = query.eq('category', category.trim());
     }
 
-    final rows = await query.order('name');
+    final rows = await query.order('name').limit(limit);
 
     return List<Map<String, dynamic>>.from(rows);
   }
