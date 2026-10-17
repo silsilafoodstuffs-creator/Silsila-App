@@ -16,50 +16,54 @@ class SupplierService {
 
   SupabaseClient get _requireClient {
     final client = _client;
+
     if (client == null) {
       throw StateError('اتصال Supabase غير متاح.');
     }
+
     return client;
   }
 
-  /// جلب الموردين النشطين مع بياناتهم الأساسية.
-  ///
-  /// يفترض أن profiles يحتوي على role وfull_name،
-  /// وأن supplier_details يحتوي على supplier_id.
+  /// جلب الموردين مع بياناتهم الأساسية.
   Future<List<Map<String, dynamic>>> getSuppliers({
     String? activityType,
     String? supplierType,
     String? search,
     int limit = 50,
   }) async {
-    final client = _requireClient;
-
     if (limit < 1 || limit > 200) {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
 
-    var query = client
+    var query = _requireClient
         .from('supplier_directory')
         .select(
           'id, full_name, activity_type, supplier_type, '
           'governorate, district, account_status',
-        )
-        .order('full_name')
+        );
+
+    final activity = _clean(activityType);
+    final type = _clean(supplierType);
+    final term = _clean(search);
+
+    if (activity != null) {
+      query = query.eq('activity_type', activity);
+    }
+
+    if (type != null) {
+      query = query.eq('supplier_type', type);
+    }
+
+    if (term != null) {
+      query = query.ilike(
+        'full_name',
+        '%${_escapeLike(term)}%',
+      );
+    }
+
+    final response = await query
+        .order('full_name', ascending: true)
         .limit(limit);
-
-    if (activityType != null && activityType.trim().isNotEmpty) {
-      query = query.eq('activity_type', activityType.trim());
-    }
-
-    if (supplierType != null && supplierType.trim().isNotEmpty) {
-      query = query.eq('supplier_type', supplierType.trim());
-    }
-
-    if (search != null && search.trim().isNotEmpty) {
-      query = query.ilike('full_name', '%${search.trim()}%');
-    }
-
-    final response = await query;
 
     return List<Map<String, dynamic>>.from(response);
   }
@@ -68,7 +72,9 @@ class SupplierService {
   Future<Map<String, dynamic>?> getSupplierById(
     String supplierId,
   ) async {
-    if (supplierId.trim().isEmpty) {
+    final cleanId = _clean(supplierId);
+
+    if (cleanId == null) {
       throw ArgumentError('معرّف المورد مطلوب.');
     }
 
@@ -78,26 +84,51 @@ class SupplierService {
           'id, full_name, activity_type, supplier_type, '
           'governorate, district, account_status',
         )
-        .eq('id', supplierId.trim())
+        .eq('id', cleanId)
         .maybeSingle();
 
-    return response;
+    if (response == null) return null;
+
+    return Map<String, dynamic>.from(response);
   }
 
-  /// جلب تفاصيل المورد من جدول supplier_details.
+  /// جلب التفاصيل العامة لمورد واحد.
   Future<Map<String, dynamic>?> getSupplierDetails(
     String supplierId,
   ) async {
-    if (supplierId.trim().isEmpty) {
+    final cleanId = _clean(supplierId);
+
+    if (cleanId == null) {
       throw ArgumentError('معرّف المورد مطلوب.');
     }
 
     final response = await _requireClient
         .from('supplier_public_details')
         .select()
-        .eq('supplier_id', supplierId.trim())
+        .eq('supplier_id', cleanId)
         .maybeSingle();
 
-    return response;
+    if (response == null) return null;
+
+    return Map<String, dynamic>.from(response);
+  }
+
+  /// تنظيف النصوص وتحويل الفارغ إلى null.
+  String? _clean(String? value) {
+    final result = value?.trim();
+
+    if (result == null || result.isEmpty) {
+      return null;
+    }
+
+    return result;
+  }
+
+  /// تهريب الرموز الخاصة بأنماط البحث.
+  String _escapeLike(String value) {
+    return value
+        .replaceAll(r'\', r'\\')
+        .replaceAll('%', r'\%')
+        .replaceAll('_', r'\_');
   }
 }
