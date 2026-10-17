@@ -21,7 +21,7 @@ class ErpOperationalDocumentsRepository {
     final table = kind == ErpOperationalKind.purchase
       ? 'erp_purchase_documents' : 'erp_sales_documents';
     final rows = await _db.from(table)
-      .select('id, company_id, branch_id, warehouse_id, document_number, document_date, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes')
+      .select('id, company_id, branch_id, warehouse_id, supplier_id, customer_id, document_number, document_date, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes')
       .eq('company_id', companyId.trim())
       .order('document_date', ascending: false)
       .limit(300);
@@ -87,6 +87,23 @@ class ErpOperationalDocumentsRepository {
       final row = await _db.from('erp_sales_documents').insert(payload).select('id').single();
       return row['id'].toString();
     }
+  }
+
+  Future<Map<String, dynamic>?> resolvePrice({
+    required String companyId, required String itemId, required String kind,
+    required double quantity, String? partyId,
+  }) async {
+    final result = await _db.rpc('erp_resolve_item_price', params: {
+      'p_company_id': companyId.trim(),
+      'p_item_id': itemId,
+      'p_price_kind': kind,
+      'p_quantity': quantity,
+      'p_party_id': partyId,
+      'p_price_date': DateTime.now().toIso8601String().substring(0, 10),
+    });
+    if (result is List && result.isNotEmpty) return Map<String, dynamic>.from(result.first as Map);
+    if (result is Map) return Map<String, dynamic>.from(result);
+    return null;
   }
 
   Future<void> addLine({
