@@ -352,6 +352,19 @@ for insert to authenticated with check (
   status = 'draft' and (created_by is null or created_by = auth.uid())
   and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
 );
+
+-- Draft edits only; posting status changes are performed by validated server RPCs.
+drop policy if exists erp_purchase_documents_update_operator on public.erp_purchase_documents;
+create policy erp_purchase_documents_update_operator on public.erp_purchase_documents
+for update to authenticated
+using (status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[]))
+with check (status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[]));
+drop policy if exists erp_sales_documents_update_operator on public.erp_sales_documents;
+create policy erp_sales_documents_update_operator on public.erp_sales_documents
+for update to authenticated
+using (status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[]))
+with check (status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[]));
+
 drop policy if exists erp_cash_vouchers_insert_operator on public.erp_cash_vouchers;
 create policy erp_cash_vouchers_insert_operator on public.erp_cash_vouchers
 for insert to authenticated with check (
