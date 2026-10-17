@@ -70,8 +70,8 @@ class StoryService {
       throw ArgumentError('نوع القصة يجب أن يكون image أو video.');
     }
 
-    if (duration <= Duration.zero) {
-      throw ArgumentError('مدة القصة يجب أن تكون أكبر من صفر.');
+    if (duration <= Duration.zero || duration > const Duration(hours: 1)) {
+      throw ArgumentError('مدة القصة يجب أن تكون أكبر من صفر ولا تتجاوز ساعة واحدة.');
     }
 
     final now = DateTime.now().toUtc();
