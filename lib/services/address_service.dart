@@ -37,6 +37,10 @@ class AddressService {
     double? longitude,
     bool isDefault = false,
   }) async {
+    final cleanAddressId = addressId.trim();
+    if (cleanAddressId.isEmpty) {
+      throw ArgumentError('معرّف العنوان مطلوب.');
+    }
     final cleanTitle = title.trim();
     final cleanGovernorate = governorate.trim();
     final cleanAddress = address.trim();
@@ -130,7 +134,7 @@ class AddressService {
 
     if (isDefault == true) {
       return _saveDefaultAddress(
-        addressId: addressId.trim(),
+        addressId: cleanAddressId,
         title: cleanTitle,
         governorate: cleanGovernorate,
         address: cleanAddress,
@@ -160,7 +164,7 @@ class AddressService {
     final response = await _client
         .from('addresses')
         .update(updates)
-        .eq('id', addressId)
+        .eq('id', cleanAddressId)
         .eq('user_id', userId)
         .select()
         .single();
@@ -206,10 +210,14 @@ class AddressService {
 
   /// حذف عنوان محفوظ.
   Future<void> deleteAddress(String addressId) async {
+    final id = addressId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('معرّف العنوان مطلوب.');
+    }
     await _client
         .from('addresses')
         .delete()
-        .eq('id', addressId)
+        .eq('id', id)
         .eq('user_id', _userId);
   }
 
