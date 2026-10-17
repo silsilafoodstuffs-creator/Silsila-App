@@ -173,6 +173,11 @@ begin
       select 1 from public.erp_accounts a where a.id = new.deductions_account_id
         and a.company_id = new.company_id and a.is_active and a.is_postable
     ) then raise exception 'حساب استقطاعات الرواتب غير صالح'; end if;
+    if new.expense_account_id is not null and (
+      new.expense_account_id = new.payable_account_id
+      or new.expense_account_id = new.deductions_account_id
+      or (new.payable_account_id is not null and new.payable_account_id = new.deductions_account_id)
+    ) then raise exception 'يجب فصل حساب مصروف الرواتب عن حساب المستحقات والاستقطاعات'; end if;
   elsif tg_table_name = 'erp_payroll_lines' then
     select company_id into v_employee_company from public.erp_employees where id = new.employee_id;
     select company_id into v_run_company from public.erp_payroll_runs where id = new.payroll_run_id;
