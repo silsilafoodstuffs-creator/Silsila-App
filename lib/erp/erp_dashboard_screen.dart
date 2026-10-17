@@ -73,6 +73,7 @@ class ErpDashboardScreen extends StatefulWidget {
 }
 
 class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
+  bool _sidebarVisible = true;
   String _module = 'إدارة البرنامج';
   String _selectedAppKey = 'silsila';
   String _appName = 'سلسلة';
@@ -328,7 +329,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         backgroundColor: _canvas,
         drawer: compact ? Drawer(child: _sidebar()) : null,
         body: Row(children: [
-          if (!compact) SizedBox(width: 275, child: _sidebar()),
+          if (!compact && _sidebarVisible) SizedBox(width: 275, child: _sidebar()),
           Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: Column(children: [
               _header(compact),
@@ -637,7 +638,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   );
 
   Widget _header(bool compact) => Container(height: 76, padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 25), decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFECE7F2)))), child: Row(children: [
-    if (compact) Builder(builder: (ctx) => IconButton(onPressed: () => Scaffold.of(ctx).openDrawer(), icon: const Icon(Icons.menu_rounded, color: _purple))),
+    if (compact)
+      Builder(builder: (ctx) => IconButton(
+        tooltip: 'عرض القوائم الرئيسية',
+        onPressed: () => Scaffold.of(ctx).openDrawer(),
+        icon: const Icon(Icons.menu_rounded, color: _purple),
+      ))
+    else
+      IconButton(
+        tooltip: _sidebarVisible ? 'إخفاء القوائم الرئيسية' : 'إظهار القوائم الرئيسية',
+        onPressed: () => setState(() => _sidebarVisible = !_sidebarVisible),
+        icon: Icon(Icons.menu_rounded, color: _purple),
+      ),
     Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(_module, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 18)),
       const SizedBox(height: 4),
