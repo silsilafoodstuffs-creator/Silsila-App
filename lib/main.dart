@@ -3552,7 +3552,8 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
     final service = WalletService();
     final balance = await service.getBalance();
     final transactions = await service.getTransactions(limit: 30);
-    return {'balance': balance, 'transactions': transactions};
+    final topUps = await service.getMyTopUpRequests(limit: 30);
+    return {'balance': balance, 'transactions': transactions, 'topUps': topUps};
   }
 
   Future<void> reload() async {
@@ -3674,6 +3675,7 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
         final data = snapshot.data ?? const {};
         final balance = data['balance'] as double? ?? 0;
         final transactions = (data['transactions'] as List<Map<String, dynamic>>?) ?? const [];
+        final topUps = (data['topUps'] as List<Map<String, dynamic>>?) ?? const [];
         return RefreshIndicator(
           onRefresh: reload,
           child: ListView(
@@ -3726,6 +3728,41 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
                     title: Text(type),
                     subtitle: Text([status, if (date.isNotEmpty) date.split('T').first].where((v) => v.isNotEmpty).join(' • ')),
                     trailing: Text('${amount ?? 0} ج.م', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                );
+              }),
+              const SizedBox(height: 22),
+              const Text('طلبات الشحن وحالة المراجعة', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (topUps.isEmpty)
+                const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('لا توجد طلبات شحن سابقة.'))),
+              ...topUps.map((request) {
+                final amount = request['amount'];
+                final status = (request['status'] ?? 'pending').toString();
+                final method = (request['payment_method'] ?? '').toString();
+                final reference = (request['reference'] ?? '').toString();
+                final date = request['created_at']?.toString() ?? '';
+                final note = (request['review_note'] ?? '').toString();
+                final statusLabel = switch (status) {
+                  'approved' => 'تم الاعتماد',
+                  'rejected' => 'مرفوض',
+                  'pending' => 'قيد المراجعة',
+                  _ => status,
+                };
+                return Card(
+                  color: Colors.white,
+                  child: ListTile(
+                    leading: Icon(
+                      status == 'approved' ? Icons.check_circle_outline : status == 'rejected' ? Icons.cancel_outlined : Icons.hourglass_top,
+                      color: status == 'approved' ? Colors.green : status == 'rejected' ? Colors.red : orange,
+                    ),
+                    title: Text('${amount ?? 0} ج.م • $statusLabel'),
+                    subtitle: Text([
+                      if (method.isNotEmpty) method,
+                      if (reference.isNotEmpty) 'مرجع: $reference',
+                      if (date.isNotEmpty) date.split('T').first,
+                      if (note.isNotEmpty) note,
+                    ].join(' • ')),
                   ),
                 );
               }),
