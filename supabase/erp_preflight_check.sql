@@ -1,0 +1,61 @@
+-- Silsila ERP installation preflight. Read-only diagnostics for Supabase SQL Editor.
+-- Run after the ERP migrations. No application records are changed.
+
+select
+  x.object_name,
+  x.object_type,
+  case
+    when x.object_type in ('table','view') and to_regclass('public.' || x.object_name) is not null then 'موجود'
+    when x.object_type = 'function' and exists (
+      select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.proname = x.object_name
+    ) then 'موجود'
+    else 'غير موجود'
+  end as installation_status
+from (values
+  ('erp_companies','table'),
+  ('erp_company_members','table'),
+  ('erp_accounts','table'),
+  ('erp_journal_entries','table'),
+  ('erp_journal_lines','table'),
+  ('erp_fiscal_periods','table'),
+  ('erp_account_ledger_totals','view'),
+  ('erp_account_tree_metrics','view'),
+  ('erp_general_ledger','view'),
+  ('erp_save_journal_draft','function'),
+  ('erp_post_journal_entry','function'),
+  ('erp_get_trial_balance','function'),
+  ('erp_reverse_journal_entry','function'),
+  ('erp_run_movement_audit','function')
+) as x(object_name, object_type)
+order by x.object_type, x.object_name;
+
+select
+  c.relname as table_name,
+  c.relrowsecurity as rls_enabled,
+  c.relforcerowsecurity as rls_forced,
+  count(p.polname)::integer as policy_count
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+left join pg_policy p on p.polrelid = c.oid
+where n.nspname = 'public'
+  and c.relkind in ('r','p')
+  and c.relname like 'erp_%'
+group by c.relname, c.relrowsecurity, c.relforcerowsecurity
+order by c.relname;
+
+select
+  p.proname as function_name,
+  pg_get_function_identity_arguments(p.oid) as arguments,
+  has_function_privilege('authenticated', p.oid, 'EXECUTE') as authenticated_can_execute
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname in (
+    'erp_save_journal_draft',
+    'erp_post_journal_entry',
+    'erp_get_trial_balance',
+    'erp_reverse_journal_entry',
+    'erp_run_movement_audit'
+  )
+order by p.proname;
