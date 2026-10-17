@@ -22,10 +22,15 @@ class UserService {
 
   /// جلب بيانات مستخدم بواسطة المعرّف.
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    final cleanUserId = userId.trim();
+    if (cleanUserId.isEmpty) {
+      throw ArgumentError('معرّف المستخدم مطلوب.');
+    }
+
     final result = await _client
         .from('profiles')
         .select()
-        .eq('id', userId)
+        .eq('id', cleanUserId)
         .maybeSingle();
 
     return result;
@@ -92,7 +97,7 @@ class UserService {
       'admin_update_account_status',
       params: {
         'p_user_id': userId.trim(),
-        'p_status': status,
+        'p_status': status.trim(),
       },
     );
   }
@@ -160,6 +165,10 @@ class UserService {
     }
     if (ticketId.trim().isEmpty) {
       throw ArgumentError('معرّف تذكرة الدعم مطلوب.');
+    }
+    const allowedTicketStatuses = {'open', 'in_progress', 'resolved', 'closed'};
+    if (!allowedTicketStatuses.contains(status.trim())) {
+      throw ArgumentError('حالة تذكرة الدعم غير صحيحة.');
     }
     if (reply != null && reply.trim().length > 5000) {
       throw ArgumentError('الرد يجب ألا يتجاوز 5000 حرف.');
