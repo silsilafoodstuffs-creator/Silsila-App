@@ -85,7 +85,9 @@ class AddressService {
       throw ArgumentError('معرّف العنوان مطلوب.');
     }
 
-    _userId;
+    if (_client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
     await _client.rpc(
       'set_default_address',
       params: {'p_address_id': id},
