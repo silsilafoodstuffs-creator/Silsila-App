@@ -395,6 +395,11 @@ for insert to authenticated with check (
   and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
 );
 
+-- Cash voucher posting is performed only through the validated SECURITY DEFINER RPC.
+-- Do not allow direct client updates/deletes to bypass that workflow.
+drop policy if exists erp_cash_vouchers_update_operator on public.erp_cash_vouchers;
+drop policy if exists erp_cash_vouchers_delete_admin on public.erp_cash_vouchers;
+
 -- Document lines inherit company access through their header and must reference
 -- items belonging to that same company.
 drop policy if exists erp_purchase_lines_select_member on public.erp_purchase_lines;
