@@ -276,10 +276,10 @@ class WelcomeScreen extends StatelessWidget {
                       foregroundColor: purple,
                       padding: const EdgeInsets.all(16),
                     ),
-                    onPressed: () => Navigator.pushReplacement(
+                    onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const MainShell(),
+                        builder: (_) => const EntryOptionsScreen(),
                       ),
                     ),
                     child: const Text(
@@ -308,6 +308,133 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class EntryOptionsScreen extends StatelessWidget {
+  const EntryOptionsScreen({super.key});
+
+  void _open(BuildContext context, Widget page) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            appBar: AppBar(title: const Text('سلسلة Silsila')),
+            body: page,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('ابدأ مع سلسلة')),
+        body: ListView(
+          padding: const EdgeInsets.all(22),
+          children: [
+            const SizedBox(height: 12),
+            const Icon(Icons.hub_rounded, size: 76, color: purple),
+            const SizedBox(height: 12),
+            const Text(
+              'اختار طريقة دخولك',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'سلسلة .. بنربط السوق ببعضه',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: purple, fontSize: 17),
+            ),
+            const SizedBox(height: 26),
+            _EntryOptionTile(
+              icon: Icons.login_rounded,
+              title: 'تسجيل الدخول',
+              subtitle: 'لديك حساب بالفعل',
+              onTap: () => _open(context, const LoginScreen()),
+            ),
+            const SizedBox(height: 12),
+            _EntryOptionTile(
+              icon: Icons.person_add_alt_1_rounded,
+              title: 'إنشاء مستخدم جديد',
+              subtitle: 'التسجيل كعميل',
+              color: orange,
+              onTap: () => _open(
+                context,
+                const RegisterScreen(initialAccountType: 'عميل'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _EntryOptionTile(
+              icon: Icons.add_business_rounded,
+              title: 'تسجيل نشاط جديد',
+              subtitle: 'مورد أو مندوب أو شركة شحن أو إدارة نشاط',
+              color: pink,
+              onTap: () => _open(
+                context,
+                const RegisterScreen(initialAccountType: 'إدارة نشاط'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const MainShell()),
+                (route) => false,
+              ),
+              icon: const Icon(Icons.storefront_outlined),
+              label: const Text('استكشاف التطبيق كزائر'),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'يمكنك استكشاف واجهة التطبيق كزائر. يلزم تسجيل الدخول لإتمام العمليات المرتبطة بحسابك.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.black54, height: 1.6),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EntryOptionTile extends StatelessWidget {
+  const _EntryOptionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.color = purple,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.white,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        leading: CircleAvatar(
+          backgroundColor: color.withOpacity(.12),
+          child: Icon(icon, color: color),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.chevron_left),
+        onTap: onTap,
       ),
     );
   }
@@ -1100,7 +1227,12 @@ class _ClassificationScreenState extends State<ClassificationScreen> {
 }
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({
+    super.key,
+    this.initialAccountType = 'عميل',
+  });
+
+  final String initialAccountType;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -1115,7 +1247,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final passwordController = TextEditingController();
 
   String activity = 'مواد غذائية';
-  String accountType = 'عميل';
+  late String accountType;
+
+  @override
+  void initState() {
+    super.initState();
+    const accountTypes = {'عميل', 'مورد', 'مندوب', 'شركة شحن', 'إدارة نشاط'};
+    accountType = accountTypes.contains(widget.initialAccountType)
+        ? widget.initialAccountType
+        : 'عميل';
+  }
   String? customerType;
   String? supplierType;
   String? delegateType;
@@ -1433,7 +1574,13 @@ class _LoginScreenState extends State<LoginScreen> {
         phone: phone.text.trim(),
         password: password.text,
       );
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainShell()),
+          (route) => false,
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
