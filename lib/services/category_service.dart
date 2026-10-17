@@ -63,8 +63,29 @@ class CategoryService {
   }) async {
     final cleanName = name.trim();
 
-    if (cleanName.isEmpty) {
-      throw ArgumentError('اسم القسم مطلوب.');
+    if (cleanName.isEmpty || cleanName.length > 120) {
+      throw ArgumentError('اسم القسم مطلوب ويجب ألا يتجاوز 120 حرفًا.');
+    }
+    if (parentId != null && parentId <= 0) {
+      throw ArgumentError('معرّف القسم الرئيسي غير صالح.');
+    }
+    if (sortOrder < 0) {
+      throw ArgumentError('ترتيب القسم لا يمكن أن يكون سالبًا.');
+    }
+    if ((icon ?? '').trim().length > 80) {
+      throw ArgumentError('اسم أيقونة القسم طويل أكثر من اللازم.');
+    }
+    if ((imageUrl ?? '').trim().isNotEmpty) {
+      final uri = Uri.tryParse(imageUrl!.trim());
+      if (uri == null ||
+          !uri.hasScheme ||
+          (uri.scheme != 'https' && uri.scheme != 'http') ||
+          uri.host.isEmpty) {
+        throw ArgumentError('رابط صورة القسم غير صالح.');
+      }
+    }
+    if (activityType != null && activityType.trim().length > 120) {
+      throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
     }
 
     final result = await _client
@@ -96,23 +117,37 @@ class CategoryService {
     int? sortOrder,
     bool? isActive,
   }) async {
+    if (categoryId <= 0) {
+      throw ArgumentError('معرّف القسم غير صالح.');
+    }
     final updates = <String, dynamic>{};
 
     if (name != null) {
-      if (name.trim().isEmpty) {
-        throw ArgumentError('اسم القسم لا يمكن أن يكون فارغًا.');
+      final cleanName = name.trim();
+      if (cleanName.isEmpty || cleanName.length > 120) {
+        throw ArgumentError('اسم القسم مطلوب ويجب ألا يتجاوز 120 حرفًا.');
       }
-      updates['name'] = name.trim();
+      updates['name'] = cleanName;
     }
 
-    if (parentId != null) updates['parent_id'] = parentId;
+    if (parentId != null) {
+      if (parentId <= 0 || parentId == categoryId) {
+        throw ArgumentError('معرّف القسم الرئيسي غير صالح.');
+      }
+      updates['parent_id'] = parentId;
+    }
     if (icon != null) updates['icon'] = icon;
     if (imageUrl != null) updates['image_url'] = imageUrl;
     if (activityType != null) {
       final cleanedActivity = activityType.trim();
       updates['activity_type'] = cleanedActivity.isEmpty ? null : cleanedActivity;
     }
-    if (sortOrder != null) updates['sort_order'] = sortOrder;
+    if (sortOrder != null) {
+      if (sortOrder < 0) {
+        throw ArgumentError('ترتيب القسم لا يمكن أن يكون سالبًا.');
+      }
+      updates['sort_order'] = sortOrder;
+    }
     if (isActive != null) updates['is_active'] = isActive;
 
     if (updates.isEmpty) return;
@@ -125,6 +160,9 @@ class CategoryService {
 
   /// تعطيل قسم دون حذفه نهائيًا.
   Future<void> deactivateCategory(int categoryId) async {
+    if (categoryId <= 0) {
+      throw ArgumentError('معرّف القسم غير صالح.');
+    }
     await _client
         .from('categories')
         .update({'is_active': false})
