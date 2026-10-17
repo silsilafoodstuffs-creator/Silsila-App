@@ -6,6 +6,7 @@ import 'erp_inventory_screen.dart';
 import 'erp_cash_vouchers_screen.dart';
 import 'erp_operational_documents_screen.dart';
 import 'erp_hr_operations_screen.dart';
+import 'erp_payroll_screen.dart';
 
 class ErpMovementAuditScreen extends StatefulWidget {
   const ErpMovementAuditScreen({super.key});
@@ -124,6 +125,10 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
           initialCompanyId: _company.text.trim(),
           kind: ErpOperationalKind.sales,
         ),
+      ));
+    } else if (route == 'hr' && (issue['area'] ?? '').toString() == 'الرواتب') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpPayrollScreen(initialCompanyId: _company.text.trim()),
       ));
     } else if (route == 'hr') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
