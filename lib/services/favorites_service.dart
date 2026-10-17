@@ -37,6 +37,10 @@ class FavoritesService {
       throw ArgumentError('معرّف المورد مطلوب.');
     }
 
+    if (id.length > 200) {
+      throw ArgumentError('معرّف المورد طويل أكثر من اللازم.');
+    }
+
     return id;
   }
 
