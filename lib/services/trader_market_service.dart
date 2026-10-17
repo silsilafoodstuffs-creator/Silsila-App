@@ -320,30 +320,6 @@ class TraderMarketService {
         .toList(growable: false);
   }
 }
-).hasMatch(phone)) {
-      throw ArgumentError(
-        'رقم التواصل يجب أن يكون بصيغة دولية صحيحة، مثل +201012345678.',
-      );
-    }
-  }
-
-  void _validateQuantity(double? quantity) {
-    if (quantity != null &&
-        (!quantity.isFinite || quantity <= 0)) {
-      throw ArgumentError(
-        'الكمية يجب أن تكون رقمًا أكبر من صفر.',
-      );
-    }
-  }
-
-  void _validateTargetPrice(double? price) {
-    if (price != null && (!price.isFinite || price < 0)) {
-      throw ArgumentError(
-        'السعر يجب أن يكون رقمًا صالحًا وغير سالب.',
-      );
-    }
-  }
-
   void _validateOptionalText(
     String? value,
     String fieldName,
