@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import '../services/erp_journal_repository.dart';
 
 class ErpJournalEntriesScreen extends StatefulWidget {
-  const ErpJournalEntriesScreen({super.key, this.initialCompanyId});
+  const ErpJournalEntriesScreen({super.key, this.initialCompanyId, this.initialEntryId});
 
   final String? initialCompanyId;
+  final String? initialEntryId;
 
   @override
   State<ErpJournalEntriesScreen> createState() => _ErpJournalEntriesScreenState();
@@ -21,6 +22,9 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
   void initState() {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
+    if ((widget.initialEntryId ?? '').trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialEntry());
+    }
   }
 
   @override
@@ -54,6 +58,27 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
         _loading = false;
         _error = 'تعذر تحميل القيود: $e';
       });
+    }
+  }
+
+  Future<void> _openInitialEntry() async {
+    await _load();
+    if (!mounted) return;
+    Map<String, dynamic>? target;
+    for (final entry in _entries) {
+      if (_str(entry, 'id') == widget.initialEntryId) {
+        target = entry;
+        break;
+      }
+    }
+    if (target == null) {
+      setState(() => _error = 'لم يتم العثور على القيد المطلوب ضمن القيود المتاحة للمستخدم.');
+      return;
+    }
+    if (_str(target, 'status') == 'draft') {
+      await _createDraft(existing: target);
+    } else {
+      await _showEntryDetails(target);
     }
   }
 
