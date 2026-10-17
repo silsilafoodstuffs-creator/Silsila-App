@@ -90,11 +90,18 @@ jobs:
 
           s = p.read_text()
 
+          imports = (
+              "import java.util.Properties\\n"
+              "import java.io.FileInputStream\\n"
+          )
+          if "import java.util.Properties" not in s:
+              s = imports + s
+
           props = """
-          val keystoreProperties = java.util.Properties()
+          val keystoreProperties = Properties()
           val keystorePropertiesFile = rootProject.file("key.properties")
           if (keystorePropertiesFile.exists()) {
-              keystoreProperties.load(java.io.FileInputStream(keystorePropertiesFile))
+              keystoreProperties.load(FileInputStream(keystorePropertiesFile))
           }
 
           """
