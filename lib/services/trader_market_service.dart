@@ -1,16 +1,31 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TraderMarketService {
-  TraderMarketService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  TraderMarketService({SupabaseClient? client}) : _client = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  SupabaseClient get _requireClient {
+    if (_client != null) {
+      return _client!;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      throw StateError(
+        'اتصال Supabase غير متاح. يرجى المحاولة لاحقًا.',
+      );
+    }
+  }
 
   String get _userId {
-    final user = _client.auth.currentUser;
+    final user = _requireClient.auth.currentUser;
+
     if (user == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
+
     return user.id;
   }
 
@@ -24,18 +39,18 @@ class TraderMarketService {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
 
-    var query = _client
+    var query = _requireClient
         .from('trader_market_posts')
         .select()
         .eq('is_active', true);
 
-    final activity = activityType?.trim();
-    if (activity != null && activity.isNotEmpty) {
+    final activity = _clean(activityType);
+    if (activity != null) {
       query = query.eq('activity_type', activity);
     }
 
-    final type = postType?.trim();
-    if (type != null && type.isNotEmpty) {
+    final type = _clean(postType);
+    if (type != null) {
       query = query.eq('post_type', type);
     }
 
@@ -43,24 +58,21 @@ class TraderMarketService {
         .order('created_at', ascending: false)
         .limit(limit);
 
-    return List<Map<String, dynamic>>.from(response);
+    return _mapRows(response);
   }
 
   /// جلب منشورات المستخدم الحالي.
   Future<List<Map<String, dynamic>>> getMyPosts() async {
-    final response = await _client
+    final response = await _requireClient
         .from('trader_market_posts')
         .select()
         .eq('user_id', _userId)
         .order('created_at', ascending: false);
 
-    return List<Map<String, dynamic>>.from(response);
+    return _mapRows(response);
   }
 
   /// نشر طلب شراء أو عرض بيع في سوق التجار.
-  ///
-  /// استخدم postType بقيمة متوافقة مع قاعدة البيانات،
-  /// مثل: request أو offer.
   Future<Map<String, dynamic>> createPost({
     required String title,
     required String description,
@@ -73,29 +85,36 @@ class TraderMarketService {
     String? governorate,
     String? contactPhone,
   }) async {
-    final cleanTitle = title.trim();
-    final cleanDescription = description.trim();
-    final cleanType = postType.trim();
+    final cleanTitle = _requiredText(
+      title,
+      'عنوان المنشور مطلوب.',
+      maxLength: 200,
+    );
 
-    if (cleanTitle.isEmpty ||
-        cleanDescription.isEmpty ||
-        cleanType.isEmpty) {
-      throw ArgumentError('يرجى إدخال العنوان والوصف ونوع المنشور.');
-    }
-    if (cleanTitle.length > 200 ||
-        cleanDescription.length > 10000 ||
-        cleanType.length > 80) {
-      throw ArgumentError('العنوان أو الوصف أو نوع المنشور تجاوز الحد المسموح.');
-    }
+    final cleanDescription = _requiredText(
+      description,
+      'وصف المنشور مطلوب.',
+      maxLength: 10000,
+    );
 
-    if (quantity != null && (!quantity.isFinite || quantity <= 0)) {
-      throw ArgumentError('الكمية يجب أن تكون أكبر من صفر.');
-    }
+    final cleanType = _requiredText(
+      postType,
+      'نوع المنشور مطلوب.',
+      maxLength: 80,
+    );
 
-    if (targetPrice != null &&
-        (!targetPrice.isFinite || targetPrice < 0)) {
-      throw ArgumentError('السعر لا يمكن أن يكون سالبًا.');
-    }
+    _validateQuantity(quantity);
+    _validateTargetPrice(targetPrice);
+
+    _validateOptionalText(
+      activityType,
+      'نوع النشاط',
+      120,
+    );
+    _validateOptionalText(category, 'القسم', 120);
+    _validateOptionalText(unit, 'الوحدة', 60);
+    _validateOptionalText(governorate, 'المحافظة', 100);
+    _validateOptionalText(contactPhone, 'رقم التواصل', 40);
 
     final data = <String, dynamic>{
       'user_id': _userId,
@@ -119,7 +138,7 @@ class TraderMarketService {
       data['target_price'] = targetPrice;
     }
 
-    final response = await _client
+    final response = await _requireClient
         .from('trader_market_posts')
         .insert(data)
         .select()
@@ -140,65 +159,120 @@ class TraderMarketService {
     String? governorate,
     bool? isActive,
   }) async {
-    final cleanTitle = title.trim();
-    final cleanDescription = description.trim();
+    final cleanPostId = _requiredText(
+      postId,
+      'معرّف المنشور مطلوب.',
+      maxLength: 200,
+    );
 
-    final cleanPostId = postId.trim();
-    if (cleanPostId.isEmpty) {
-      throw ArgumentError('معرّف المنشور مطلوب.');
-    }
-    if (cleanTitle.isEmpty || cleanDescription.isEmpty) {
-      throw ArgumentError('يرجى إدخال العنوان والوصف.');
-    }
-    if (cleanTitle.length > 200 || cleanDescription.length > 10000) {
-      throw ArgumentError('العنوان أو الوصف تجاوز الحد المسموح.');
-    }
+    final cleanTitle = _requiredText(
+      title,
+      'عنوان المنشور مطلوب.',
+      maxLength: 200,
+    );
 
-    if (quantity != null && (!quantity.isFinite || quantity <= 0)) {
-      throw ArgumentError('الكمية يجب أن تكون أكبر من صفر.');
-    }
+    final cleanDescription = _requiredText(
+      description,
+      'وصف المنشور مطلوب.',
+      maxLength: 10000,
+    );
 
-    if (targetPrice != null &&
-        (!targetPrice.isFinite || targetPrice < 0)) {
-      throw ArgumentError('السعر يجب أن يكون رقمًا صحيحًا غير سالب.');
-    }
+    _validateQuantity(quantity);
+    _validateTargetPrice(targetPrice);
+
+    _validateOptionalText(category, 'القسم', 120);
+    _validateOptionalText(unit, 'الوحدة', 60);
+    _validateOptionalText(governorate, 'المحافظة', 100);
 
     final data = <String, dynamic>{
       'title': cleanTitle,
       'description': cleanDescription,
-      'category': _emptyToNull(category),
+      'category': _clean(category),
       'quantity': quantity,
-      'unit': _emptyToNull(unit),
+      'unit': _clean(unit),
       'target_price': targetPrice,
-      'governorate': _emptyToNull(governorate),
+      'governorate': _clean(governorate),
     };
 
     if (isActive != null) {
       data['is_active'] = isActive;
     }
 
-    final response = await _client
+    final response = await _requireClient
         .from('trader_market_posts')
         .update(data)
         .eq('id', cleanPostId)
         .eq('user_id', _userId)
         .select()
-        .single();
+        .maybeSingle();
+
+    if (response == null) {
+      throw StateError(
+        'المنشور غير موجود أو لا تملك صلاحية تعديله.',
+      );
+    }
 
     return Map<String, dynamic>.from(response);
   }
 
   /// حذف منشور يملكه المستخدم الحالي.
   Future<void> deletePost(String postId) async {
-    final id = postId.trim();
-    if (id.isEmpty) {
-      throw ArgumentError('معرّف المنشور مطلوب.');
-    }
-    await _client
+    final cleanPostId = _requiredText(
+      postId,
+      'معرّف المنشور مطلوب.',
+      maxLength: 200,
+    );
+
+    await _requireClient
         .from('trader_market_posts')
         .delete()
-        .eq('id', id)
+        .eq('id', cleanPostId)
         .eq('user_id', _userId);
+  }
+
+  void _validateQuantity(double? quantity) {
+    if (quantity != null &&
+        (!quantity.isFinite || quantity <= 0)) {
+      throw ArgumentError(
+        'الكمية يجب أن تكون رقمًا أكبر من صفر.',
+      );
+    }
+  }
+
+  void _validateTargetPrice(double? price) {
+    if (price != null && (!price.isFinite || price < 0)) {
+      throw ArgumentError(
+        'السعر يجب أن يكون رقمًا صالحًا وغير سالب.',
+      );
+    }
+  }
+
+  void _validateOptionalText(
+    String? value,
+    String fieldName,
+    int maxLength,
+  ) {
+    final cleaned = _clean(value);
+
+    if (cleaned != null && cleaned.length > maxLength) {
+      throw ArgumentError(
+        '$fieldName يجب ألا يتجاوز $maxLength حرفًا.',
+      );
+    }
+  }
+
+  String _requiredText(
+    String value,
+    String message, {
+    required int maxLength,
+  }) {
+    final cleaned = value.trim();
+
+    if (cleaned.isEmpty || cleaned.length > maxLength) {
+      throw ArgumentError(message);
+    }
+
+    return cleaned;
   }
 
   void _addIfNotEmpty(
@@ -206,14 +280,31 @@ class TraderMarketService {
     String key,
     String? value,
   ) {
-    final cleaned = _emptyToNull(value);
+    final cleaned = _clean(value);
+
     if (cleaned != null) {
       data[key] = cleaned;
     }
   }
 
-  String? _emptyToNull(String? value) {
+  String? _clean(String? value) {
     final cleaned = value?.trim();
-    return cleaned == null || cleaned.isEmpty ? null : cleaned;
+
+    if (cleaned == null || cleaned.isEmpty) {
+      return null;
+    }
+
+    return cleaned;
+  }
+
+  List<Map<String, dynamic>> _mapRows(dynamic response) {
+    if (response is! List) {
+      throw StateError('تعذر قراءة منشورات سوق التجار.');
+    }
+
+    return response
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
   }
 }
