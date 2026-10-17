@@ -240,7 +240,10 @@ class OrderService {
 
   int _toInt(dynamic value) {
     if (value is int) return value;
-    if (value is num) return value.toInt();
+    if (value is num) {
+      if (!value.isFinite || value != value.toInt()) return 0;
+      return value.toInt();
+    }
 
     return int.tryParse(value?.toString() ?? '') ?? 0;
   }
