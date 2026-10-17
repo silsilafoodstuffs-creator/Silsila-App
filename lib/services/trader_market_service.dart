@@ -235,7 +235,15 @@ class TraderMarketService {
     final phone = _clean(value);
     if (phone == null) return;
 
-    if (!RegExp(r'^\+[1-9]\d{7,14}    if (quantity != null &&
+    if (!RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(phone)) {
+      throw ArgumentError(
+        'رقم التواصل يجب أن يكون بصيغة دولية صحيحة، مثل +201012345678.',
+      );
+    }
+  }
+
+  void _validateQuantity(double? quantity) {
+    if (quantity != null &&
         (!quantity.isFinite || quantity <= 0)) {
       throw ArgumentError(
         'الكمية يجب أن تكون رقمًا أكبر من صفر.',
