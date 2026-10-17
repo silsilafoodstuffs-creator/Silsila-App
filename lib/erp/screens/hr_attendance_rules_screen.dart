@@ -102,7 +102,24 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
         _num(s.missDay,'نسيان بصمة اليوم',readOnly:!canEdit,width:260),
       ])),
       _heading('قواعد الغياب'),
-      _numberFields([_num(s.excused1,'غياب بإذن: مرة',readOnly:!canEdit),_num(s.excused2,'غياب بإذن: مرتان',readOnly:!canEdit),_num(s.excused3,'غياب بإذن: 3 فأكثر',readOnly:!canEdit),_num(s.absent1,'غياب دون إذن: مرة',readOnly:!canEdit),_num(s.absent2,'غياب دون إذن: مرتان',readOnly:!canEdit),_num(s.absent3,'غياب دون إذن: 3 فأكثر',readOnly:!canEdit),_num(s.sick,'غياب مرضي: قيمة اليوم',readOnly:!canEdit),_num(s.injury,'إصابة عمل: قيمة اليوم',readOnly:!canEdit)]),
+      _absenceRules(
+        title: 'غياب بإذن',
+        rules: s.excusedRules,
+        canEdit: canEdit,
+        onAdd: () => setState(s.addExcusedRule),
+        onRemove: (index) => setState(() => s.removeExcusedRule(index)),
+      ),
+      _absenceRules(
+        title: 'غياب دون إذن',
+        rules: s.absentRules,
+        canEdit: canEdit,
+        onAdd: () => setState(s.addAbsentRule),
+        onRemove: (index) => setState(() => s.removeAbsentRule(index)),
+      ),
+      _numberFields([
+        _num(s.sick,'غياب مرضي: قيمة اليوم',readOnly:!canEdit),
+        _num(s.injury,'إصابة عمل: قيمة اليوم',readOnly:!canEdit),
+      ]),
       _heading('قواعد الإجازات — قيمة اليوم الإضافي'),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
         _num(s.weeklyLeave,'الأسبوعية',readOnly:!canEdit,width:245),
@@ -126,6 +143,47 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
     Expanded(child:TextField(controller:c,readOnly:readOnly,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:8)))),
   ]));
   Widget _numberFields(List<Widget> children)=>Wrap(spacing:9,runSpacing:9,children:children);
+
+  Widget _absenceRules({
+    required String title,
+    required List<TextEditingController> rules,
+    required bool canEdit,
+    required VoidCallback onAdd,
+    required ValueChanged<int> onRemove,
+  }) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(rules.length, (index) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _num(rules[index], 'قيمة الغياب ${index + 1}', readOnly: !canEdit, width: 260),
+              IconButton(
+                tooltip: 'حذف قاعدة $title',
+                onPressed: canEdit && rules.length > 1 ? () => onRemove(index) : null,
+                icon: const Icon(Icons.delete_outline, color: _red),
+              ),
+            ],
+          )),
+        ),
+        if (canEdit)
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add_circle_outline, color: _orange),
+              label: Text('إضافة قاعدة $title'),
+            ),
+          ),
+      ],
+    ),
+  );
 
   int? _mins(String t){final p=t.split(':');if(p.length!=2)return null;final h=int.tryParse(p[0]),m=int.tryParse(p[1]);if(h==null||m==null||h>23||h<0||m>59||m<0)return null;return h*60+m;}
   String _hours(String a,String b){final x=_mins(a),y=_mins(b);if(x==null||y==null)return '—';final n=(y-x+1440)%1440;return n==0?'24 ساعة':(n~/60).toString()+' ساعة '+(n%60==0?'':(n%60).toString()+' دقيقة');}
@@ -163,12 +221,28 @@ class _Shift {
     action.removeAt(index);
   }
   final missIn=TextEditingController(text:'1'),missOut=TextEditingController(text:'1'),missDay=TextEditingController(text:'1');
-  final excused1=TextEditingController(text:'0'),excused2=TextEditingController(text:'0'),excused3=TextEditingController(text:'0');
-  final absent1=TextEditingController(text:'1'),absent2=TextEditingController(text:'1'),absent3=TextEditingController(text:'1'),sick=TextEditingController(text:'0'),injury=TextEditingController(text:'0');
+  final excusedRules = <TextEditingController>[
+    TextEditingController(text:'0'),
+  ];
+  final absentRules = <TextEditingController>[
+    TextEditingController(text:'1'),
+  ];
+  final sick=TextEditingController(text:'0'),injury=TextEditingController(text:'0');
+
+  void addExcusedRule() => excusedRules.add(TextEditingController(text:'0'));
+  void addAbsentRule() => absentRules.add(TextEditingController(text:'1'));
+  void removeExcusedRule(int index) {
+    if (excusedRules.length <= 1) return;
+    excusedRules.removeAt(index).dispose();
+  }
+  void removeAbsentRule(int index) {
+    if (absentRules.length <= 1) return;
+    absentRules.removeAt(index).dispose();
+  }
   final weeklyLeave=TextEditingController(text:'1'),publicLeave=TextEditingController(text:'1'),annualLeave=TextEditingController(text:'1');
   final days=<String>{'الجمعة'},depts=<String>{'كل الإدارات'},branches=<String>{'كل الفروع'},employees=<String>{};
   final employeeText=TextEditingController();
-  void dispose(){for(final c in [name,start,end,graceIn,graceOut,monthGrace,multiplier,earlyIn,earlyOut,lateOut,missIn,missOut,missDay,excused1,excused2,excused3,absent1,absent2,absent3,sick,injury,weeklyLeave,publicLeave,annualLeave,employeeText,...from,...to,...value]){c.dispose();}}
+  void dispose(){for(final c in [name,start,end,graceIn,graceOut,monthGrace,multiplier,earlyIn,earlyOut,lateOut,missIn,missOut,missDay,sick,injury,weeklyLeave,publicLeave,annualLeave,employeeText,...excusedRules,...absentRules,...from,...to,...value]){c.dispose();}}
 }
 
 class HrFingerprintDevicesScreen extends StatefulWidget {
