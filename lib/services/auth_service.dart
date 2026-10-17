@@ -34,8 +34,11 @@ class AuthService {
       throw ArgumentError('يرجى إدخال رقم الهاتف.');
     }
 
-    if (password.length < 8) {
-      throw ArgumentError('يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.');
+    if (!_isStrongPassword(password)) {
+      throw ArgumentError(
+        'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، '
+        'وحرف كبير وحرف صغير ورقم ورمز.',
+      );
     }
 
     return _requireClient.auth.signUp(
@@ -91,6 +94,14 @@ class AuthService {
       phone: phone.trim(),
       token: token.trim(),
     );
+  }
+
+  bool _isStrongPassword(String value) {
+    return value.length >= 8 &&
+        RegExp(r'[A-Z]').hasMatch(value) &&
+        RegExp(r'[a-z]').hasMatch(value) &&
+        RegExp(r'[0-9]').hasMatch(value) &&
+        RegExp(r'[^A-Za-z0-9]').hasMatch(value);
   }
 
   /// التحقق من وجود جلسة دخول حالية.
