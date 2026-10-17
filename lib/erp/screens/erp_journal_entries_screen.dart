@@ -144,12 +144,14 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                             Row(children: [
                               Expanded(child: TextField(
                                 controller: line.debit,
+                                onChanged: (_) => refresh(() {}),
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 decoration: const InputDecoration(labelText: 'مدين', prefixText: 'ج.م '),
                               )),
                               const SizedBox(width: 10),
                               Expanded(child: TextField(
                                 controller: line.credit,
+                                onChanged: (_) => refresh(() {}),
                                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                 decoration: const InputDecoration(labelText: 'دائن', prefixText: 'ج.م '),
                               )),
