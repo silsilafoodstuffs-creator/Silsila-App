@@ -85,10 +85,15 @@ class SupportService {
 
   /// جلب تفاصيل تذكرة تخص المستخدم الحالي.
   Future<Map<String, dynamic>?> getTicket(String ticketId) async {
+    final id = ticketId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('معرّف التذكرة مطلوب.');
+    }
+
     final response = await _client
         .from('support_tickets')
         .select()
-        .eq('id', ticketId)
+        .eq('id', id)
         .eq('user_id', _userId)
         .maybeSingle();
 
