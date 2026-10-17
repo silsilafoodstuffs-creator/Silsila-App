@@ -101,6 +101,10 @@ class DeliveryService {
       throw ArgumentError('معرّف الشحنة مطلوب.');
     }
 
+    if (cleanDeliveryId.length > 200) {
+      throw ArgumentError('معرّف الشحنة طويل أكثر من اللازم.');
+    }
+
     if (!allowedStatuses.contains(cleanStatus)) {
       throw ArgumentError('حالة الشحنة غير مدعومة.');
     }
@@ -244,6 +248,10 @@ class DeliveryService {
     final cleanDeliveryId = deliveryId.trim();
     if (cleanDeliveryId.isEmpty) {
       throw ArgumentError('معرّف الشحنة مطلوب.');
+    }
+
+    if (cleanDeliveryId.length > 200) {
+      throw ArgumentError('معرّف الشحنة طويل أكثر من اللازم.');
     }
 
     final response = await _requireClient
