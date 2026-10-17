@@ -91,6 +91,21 @@ class ErpJournalRepository {
     return result.toString();
   }
 
+  Future<String> reverseEntry({
+    required String entryId,
+    required DateTime reversalDate,
+    required String reason,
+  }) async {
+    if (entryId.trim().isEmpty) throw ArgumentError('معرّف القيد مطلوب.');
+    if (reason.trim().isEmpty) throw ArgumentError('سبب العكس مطلوب.');
+    final result = await _db.rpc('erp_reverse_journal_entry', params: {
+      'p_entry_id': entryId.trim(),
+      'p_reversal_date': _dateOnly(reversalDate),
+      'p_reason': reason.trim(),
+    });
+    return result.toString();
+  }
+
   Future<String> postEntry(String entryId) async {
     final result = await _db.rpc(
       'erp_post_journal_entry',
