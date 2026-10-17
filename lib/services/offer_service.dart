@@ -23,12 +23,13 @@ class OfferService {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
 
+    final now = DateTime.now().toUtc().toIso8601String();
     var query = _client
         .from('offers')
         .select()
         .eq('is_active', true)
-        .lte('starts_at', DateTime.now().toUtc().toIso8601String())
-        .gte('ends_at', DateTime.now().toUtc().toIso8601String());
+        .or('starts_at.is.null,starts_at.lte.$now')
+        .or('ends_at.is.null,ends_at.gte.$now');
 
     final activity = activityType?.trim();
     if (activity != null && activity.isNotEmpty) {
@@ -56,8 +57,8 @@ class OfferService {
       final now = DateTime.now().toUtc().toIso8601String();
       query = query
           .eq('is_active', true)
-          .lte('starts_at', now)
-          .gte('ends_at', now);
+          .or('starts_at.is.null,starts_at.lte.$now')
+          .or('ends_at.is.null,ends_at.gte.$now');
     }
 
     final response = await query
