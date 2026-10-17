@@ -120,6 +120,34 @@ class UserService {
     );
   }
 
+  /// جلب تذاكر الدعم المفتوحة للمسؤول المعتمد.
+  Future<List<Map<String, dynamic>>> getPendingSupportTickets() async {
+    if (_client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+    final response = await _client.rpc('admin_list_support_tickets');
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  /// تحديث حالة تذكرة الدعم وإرسال رد للمستخدم عند الحاجة.
+  Future<void> updateSupportTicket({
+    required String ticketId,
+    required String status,
+    String? reply,
+  }) async {
+    if (_client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+    await _client.rpc(
+      'admin_update_support_ticket',
+      params: {
+        'p_ticket_id': ticketId.trim(),
+        'p_status': status,
+        'p_reply': reply?.trim(),
+      },
+    );
+  }
+
   /// هل يوجد مستخدم مسجل الدخول؟
   bool get isLoggedIn => _client.auth.currentUser != null;
 
