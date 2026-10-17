@@ -3563,6 +3563,7 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
 
   Future<void> requestTopUp() async {
     final amountController = TextEditingController();
+    final referenceController = TextEditingController();
     String method = 'تحويل بنكي';
     final accepted = await showDialog<bool>(
       context: context,
@@ -3576,6 +3577,11 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
                 controller: amountController,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(labelText: 'مبلغ الشحن بالجنيه'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: referenceController,
+                decoration: const InputDecoration(labelText: 'رقم مرجع التحويل أو الإيداع (اختياري)'),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
@@ -3613,11 +3619,14 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
 
     if (accepted != true) {
       amountController.dispose();
+      referenceController.dispose();
       return;
     }
 
     final amount = double.tryParse(amountController.text.trim());
+    final paymentReference = referenceController.text.trim();
     amountController.dispose();
+    referenceController.dispose();
     if (amount == null || !amount.isFinite || amount <= 0) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -3631,6 +3640,7 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
       await WalletService().requestTopUp(
         amount: amount,
         paymentMethod: method,
+        reference: paymentReference.isEmpty ? null : paymentReference,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
