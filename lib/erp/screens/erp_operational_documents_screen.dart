@@ -6,9 +6,11 @@ class ErpOperationalDocumentsScreen extends StatefulWidget {
     super.key,
     this.initialCompanyId,
     this.kind = ErpOperationalKind.purchase,
+    this.initialDocumentType,
   });
   final String? initialCompanyId;
   final ErpOperationalKind kind;
+  final String? initialDocumentType;
 
   @override
   State<ErpOperationalDocumentsScreen> createState() => _ErpOperationalDocumentsScreenState();
