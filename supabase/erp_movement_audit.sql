@@ -520,6 +520,141 @@ begin
     and (p_area = 'كل الحركات' or p_area = 'المبيعات')
     and (i.id is null or i.company_id <> d.company_id)
 
+
+  union all
+
+  select
+    'employee:' || e.id::text || ':branch',
+    'الموظفون',
+    e.id,
+    e.employee_code,
+    e.hire_date,
+    e.full_name,
+    'خطأ',
+    'EMPLOYEE_BRANCH_MISMATCH',
+    'فرع الموظف لا يتبع الشركة نفسها أو أن الفرع غير موجود.',
+    'hr'
+  from public.erp_employees e
+  left join public.erp_branches b on b.id = e.branch_id
+  where e.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الموظفون')
+    and e.branch_id is not null
+    and (b.id is null or b.company_id <> e.company_id)
+
+  union all
+
+  select
+    'attendance:' || a.id::text || ':employee',
+    'الحضور والانصراف',
+    a.id,
+    e.employee_code,
+    a.work_date,
+    e.full_name,
+    'خطأ',
+    'ATTENDANCE_EMPLOYEE_MISMATCH',
+    'سجل الحضور يشير إلى موظف لا يتبع الشركة نفسها أو غير موجود.',
+    'hr'
+  from public.erp_attendance_records a
+  left join public.erp_employees e on e.id = a.employee_id
+  where a.company_id = p_company_id
+    and (p_start_date is null or a.work_date >= p_start_date)
+    and (p_end_date is null or a.work_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'الحضور والانصراف')
+    and (e.id is null or e.company_id <> a.company_id)
+
+  union all
+
+  select
+    'attendance:' || a.id::text || ':checkin',
+    'الحضور والانصراف',
+    a.id,
+    e.employee_code,
+    a.work_date,
+    e.full_name,
+    'تحذير',
+    'ATTENDANCE_NO_CHECKIN',
+    'سجل الحضور بحالة حضور أو تأخير لا يحتوي على وقت دخول.',
+    'hr'
+  from public.erp_attendance_records a
+  join public.erp_employees e on e.id = a.employee_id
+  where a.company_id = p_company_id
+    and (p_start_date is null or a.work_date >= p_start_date)
+    and (p_end_date is null or a.work_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'الحضور والانصراف')
+    and a.attendance_status in ('present','late')
+    and a.check_in is null
+
+  union all
+
+  select
+    'leave:' || l.id::text || ':employee',
+    'الإجازات',
+    l.id,
+    e.employee_code,
+    l.starts_on,
+    e.full_name,
+    'خطأ',
+    'LEAVE_EMPLOYEE_MISMATCH',
+    'طلب الإجازة يشير إلى موظف لا يتبع الشركة نفسها أو غير موجود.',
+    'hr'
+  from public.erp_leave_requests l
+  left join public.erp_employees e on e.id = l.employee_id
+  where l.company_id = p_company_id
+    and (p_start_date is null or l.starts_on >= p_start_date)
+    and (p_end_date is null or l.starts_on <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'الإجازات')
+    and (e.id is null or e.company_id <> l.company_id)
+
+  union all
+
+  select
+    'payroll:' || r.id::text || ':totals',
+    'الرواتب',
+    r.id,
+    r.run_code,
+    r.period_start,
+    'مسير رواتب',
+    'خطأ',
+    'PAYROLL_TOTAL_MISMATCH',
+    'إجماليات مسير الرواتب لا تتفق مع مجموع تفاصيل الموظفين.',
+    'hr'
+  from public.erp_payroll_runs r
+  left join lateral (
+    select count(*)::integer as employee_count,
+      coalesce(sum(l.gross_amount),0)::numeric(16,2) as gross_total,
+      coalesce(sum(l.deductions),0)::numeric(16,2) as deduction_total,
+      coalesce(sum(l.net_amount),0)::numeric(16,2) as net_total
+    from public.erp_payroll_lines l where l.payroll_run_id = r.id
+  ) s on true
+  where r.company_id = p_company_id
+    and (p_start_date is null or r.period_start >= p_start_date)
+    and (p_end_date is null or r.period_start <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'الرواتب')
+    and (r.employee_count <> s.employee_count or r.gross_total <> s.gross_total
+      or r.deduction_total <> s.deduction_total or r.net_total <> s.net_total)
+
+  union all
+
+  select
+    'payroll-line:' || l.id::text || ':employee',
+    'الرواتب',
+    r.id,
+    r.run_code,
+    r.period_start,
+    'تفصيل راتب بموظف غير تابع للشركة',
+    'خطأ',
+    'PAYROLL_EMPLOYEE_MISMATCH',
+    'تفصيل مسير الرواتب يشير إلى موظف لا يتبع الشركة نفسها.',
+    'hr'
+  from public.erp_payroll_lines l
+  join public.erp_payroll_runs r on r.id = l.payroll_run_id
+  left join public.erp_employees e on e.id = l.employee_id
+  where r.company_id = p_company_id
+    and (p_start_date is null or r.period_start >= p_start_date)
+    and (p_end_date is null or r.period_start <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'الرواتب')
+    and (e.id is null or e.company_id <> r.company_id)
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
