@@ -177,7 +177,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   @override
   Widget build(BuildContext context) {
-    final draftCount = _rows.where((r) => ['draft','approved'].contains(_s(r['status']))).length;
+    final draftCount = _rows.where((r) => _s(r['status']) == 'draft').length;
     return Directionality(textDirection: TextDirection.rtl, child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
