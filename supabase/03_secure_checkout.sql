@@ -63,7 +63,7 @@ BEGIN
       FROM public.products
      WHERE id = v_product_id
        AND supplier_id = p_supplier_id
-     FOR SHARE;
+     FOR UPDATE;
 
     IF NOT FOUND OR NOT COALESCE(v_available, FALSE) THEN
       RAISE EXCEPTION 'يوجد منتج غير متاح أو لا يتبع المورد المحدد';
@@ -110,6 +110,16 @@ BEGIN
       v_order_id, v_product_id, v_name, COALESCE(v_unit,'وحدة'), v_quantity,
       v_price, v_price * v_quantity, v_price * v_quantity
     );
+
+    -- A stock value of zero means inventory is not tracked for this item.
+    UPDATE public.products
+       SET stock_quantity = CASE
+         WHEN stock_quantity > 0 THEN stock_quantity - v_quantity
+         ELSE stock_quantity
+       END,
+       updated_at = NOW()
+     WHERE id = v_product_id
+       AND supplier_id = p_supplier_id;
   END LOOP;
 
   SELECT to_jsonb(o) INTO v_order FROM public.orders o WHERE o.id = v_order_id;
