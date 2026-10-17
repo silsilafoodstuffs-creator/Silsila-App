@@ -488,6 +488,8 @@ class _MainShellState extends State<MainShell> {
   final cart = <String, int>{};
   final cartProducts = <String, Product>{};
   final searchController = TextEditingController();
+  final GlobalKey<_MarketPostsSectionState> marketPostsKey =
+      GlobalKey<_MarketPostsSectionState>();
   final productService = ProductService();
   final supplierService = SupplierService();
   final categoryService = CategoryService();
@@ -1216,16 +1218,29 @@ class _MainShellState extends State<MainShell> {
           const Text('طلبات شراء وعروض بيع بين التجار.'),
           const SizedBox(height: 14),
           FilledButton.icon(
-            onPressed: () => openPage(
-              'إضافة إعلان',
-              const MarketPostScreen(),
-            ),
+            onPressed: () async {
+              final published = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute<bool>(
+                  builder: (_) => Directionality(
+                    textDirection: TextDirection.rtl,
+                    child: Scaffold(
+                      appBar: AppBar(title: const Text('إضافة إعلان')),
+                      body: const MarketPostScreen(),
+                    ),
+                  ),
+                ),
+              );
+              if (published == true) {
+                await marketPostsKey.currentState?.refresh();
+              }
+            },
             icon: const Icon(Icons.add),
             label: const Text('إضافة طلب شراء أو عرض بيع'),
           ),
           const SizedBox(height: 10),
           const SizedBox(height: 12),
-          const MarketPostsSection(),
+          MarketPostsSection(key: marketPostsKey),
         ],
       );
 
@@ -4173,8 +4188,13 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
   }
 
   Future<void> refresh() async {
-    setState(() => postsFuture = TraderMarketService().getPosts());
-    await postsFuture;
+    final nextFuture = TraderMarketService().getPosts();
+    setState(() => postsFuture = nextFuture);
+    try {
+      await nextFuture;
+    } catch (_) {
+      // يعرض FutureBuilder رسالة الخطأ وزر إعادة المحاولة.
+    }
   }
 
   @override
@@ -4223,10 +4243,12 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
             final title = (post['title'] ?? 'إعلان').toString();
             final details = (post['description'] ?? post['details'] ?? '').toString();
             final quantity = post['quantity'];
+            final targetPrice = post['target_price'];
             final governorate = (post['governorate'] ?? '').toString();
             final subtitle = [
               isBuy ? 'طلب شراء' : 'عرض بيع',
               if (quantity != null) 'الكمية: $quantity ${post['unit'] ?? ''}',
+              if (targetPrice != null) 'السعر: $targetPrice جنيه',
               if (governorate.isNotEmpty) governorate,
               details,
             ].where((part) => part.toString().trim().isNotEmpty).join('\n');
