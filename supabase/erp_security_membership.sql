@@ -92,14 +92,14 @@ create or replace function public.erp_require_journal_draft_on_insert()
 returns trigger
 language plpgsql
 set search_path = public
-as $
+as $$
 begin
   if new.status <> 'draft' or new.posted_at is not null or new.posted_by is not null then
     raise exception 'يجب إنشاء القيد كمسودة ثم ترحيله بإجراء محاسبي معتمد';
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists erp_journal_draft_insert_guard on public.erp_journal_entries;
 create trigger erp_journal_draft_insert_guard
