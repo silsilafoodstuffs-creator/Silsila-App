@@ -80,8 +80,10 @@ class SupplierProductService {
           'price': price,
           'unit': unit.trim(),
           'min_quantity': minQuantity,
+          'minimum_quantity': minQuantity,
           'image_url': imageUrl,
           'is_active': true,
+          'is_available': true,
         })
         .select()
         .single();
@@ -138,11 +140,15 @@ class SupplierProductService {
         throw ArgumentError('الحد الأدنى للكمية يجب أن يكون أكبر من صفر.');
       }
       updates['min_quantity'] = minQuantity;
+      updates['minimum_quantity'] = minQuantity;
     }
 
     if (categoryId != null) updates['category_id'] = categoryId;
     if (imageUrl != null) updates['image_url'] = imageUrl;
-    if (isActive != null) updates['is_active'] = isActive;
+    if (isActive != null) {
+      updates['is_active'] = isActive;
+      updates['is_available'] = isActive;
+    }
 
     if (updates.isEmpty) return;
 
