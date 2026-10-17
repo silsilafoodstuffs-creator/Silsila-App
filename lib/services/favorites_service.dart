@@ -59,7 +59,7 @@ class FavoritesService {
       if (value == null) continue;
 
       final id = value.toString().trim();
-      if (id.isNotEmpty && seen.add(id)) {
+      if (id.isNotEmpty && id.length <= 200 && seen.add(id)) {
         ids.add(id);
       }
     }
