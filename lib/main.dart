@@ -3722,16 +3722,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
 /// توحيد رقم الهاتف إلى صيغة E.164 المطلوبة لمصادقة الهاتف.
 /// يدعم أرقام مصر المحلية مثل 010... و02...، والأرقام الدولية.
 String normalizePhoneForAuth(String input) {
-  final compact = input.trim().replaceAll(RegExp(r'[\s().-]'), '');
+  final asciiInput = input.trim().replaceAllMapped(
+    RegExp(r'[٠-٩۰-۹]'),
+    (match) {
+      final code = match.group(0)!.codeUnitAt(0);
+      final digit = code >= 0x0660 && code <= 0x0669
+          ? code - 0x0660
+          : code - 0x06F0;
+      return String.fromCharCode(0x30 + digit);
+    },
+  );
+  final compact = asciiInput.replaceAll(RegExp(r'[\s().-]'), '');
   final digits = compact.replaceAll(RegExp(r'\D'), '');
 
-  if (compact.startsWith('+')) return '+$digits';
-  if (digits.startsWith('00')) return '+${digits.substring(2)}';
-  if (digits.startsWith('20')) return '+$digits';
+  if (compact.startsWith('+')) return '+' + digits;
+  if (digits.startsWith('00')) return '+' + digits.substring(2);
+  if (digits.startsWith('20')) return '+' + digits;
   if (digits.startsWith('0') && (digits.length == 10 || digits.length == 11)) {
-    return '+20${digits.substring(1)}';
+    return '+20' + digits.substring(1);
   }
-  return '+$digits';
+  return '+' + digits;
 }
 
 String? requiredValidator(String? value) {
