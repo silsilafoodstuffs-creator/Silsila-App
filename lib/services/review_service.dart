@@ -231,6 +231,10 @@ class ReviewService {
       throw ArgumentError('معرّف البيانات أطول من الحد المسموح.');
     }
 
+    if (cleaned.contains(r'\n') || cleaned.contains(r'\r')) {
+      throw ArgumentError('معرّف البيانات يحتوي على محارف غير صالحة.');
+    }
+
     return cleaned;
   }
 
