@@ -40,6 +40,18 @@ class ErpJournalRepository {
     return rows.map((row) => Map<String, dynamic>.from(row)).toList();
   }
 
+  Future<List<Map<String, dynamic>>> fetchEntryLines({
+    required String entryId,
+  }) async {
+    if (entryId.trim().isEmpty) throw ArgumentError('معرّف القيد مطلوب.');
+    final rows = await _db
+        .from('erp_journal_lines')
+        .select('id, entry_id, account_id, description, debit, credit, erp_accounts(account_code, account_name)')
+        .eq('entry_id', entryId.trim())
+        .order('created_at');
+    return rows.map((row) => Map<String, dynamic>.from(row)).toList();
+  }
+
   Future<List<Map<String, dynamic>>> fetchPostableAccounts({
     required String companyId,
   }) async {
