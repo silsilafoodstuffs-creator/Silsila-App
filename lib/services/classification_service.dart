@@ -66,23 +66,30 @@ class ClassificationService {
     'مندوب جوكر',
   ];
 
-  Future<List<String>> getActivityTypes() async {
+  static const Map<String, List<String>> _fallbackByRole = {
+    'customer': defaultCustomerTypes,
+    'supplier': defaultSupplierTypes,
+    'delegate': defaultDelegateTypes,
+  };
+
+  /// جلب أنواع الأنشطة من قاعدة البيانات،
+  /// مع استخدام القائمة الافتراضية عند تعذر الجلب.
+  Future<List<String>> getActivityTypes() {
     return _loadNames(
       table: 'activity_types',
       fallback: defaultActivityTypes,
     );
   }
 
+  /// جلب تصنيفات الحساب حسب الدور.
+  ///
+  /// الأدوار المدعومة:
+  /// customer, supplier, delegate
   Future<List<String>> getAccountClassifications(
     String accountRole,
   ) async {
-    final Map<String, List<String>> fallbackByRole = {
-      'customer': defaultCustomerTypes,
-      'supplier': defaultSupplierTypes,
-      'delegate': defaultDelegateTypes,
-    };
-
-    final fallback = fallbackByRole[accountRole];
+    final role = accountRole.trim().toLowerCase();
+    final fallback = _fallbackByRole[role];
 
     if (fallback == null) {
       throw ArgumentError.value(
@@ -93,35 +100,41 @@ class ClassificationService {
     }
 
     final client = _client;
-    if (client == null) return fallback;
+    if (client == null) {
+      return List<String>.unmodifiable(fallback);
+    }
 
     try {
       final response = await client
           .from('account_classifications')
           .select('classification_name')
-          .eq('account_role', accountRole)
+          .eq('account_role', role)
           .eq('is_active', true)
           .order('sort_order');
 
-      final names = response
-          .map<String>(
-            (row) => row['classification_name'].toString(),
-          )
-          .where((name) => name.isNotEmpty)
-          .toList();
+      final names = _extractNames(
+        response,
+        field: 'classification_name',
+      );
 
-      return names.isEmpty ? fallback : names;
+      return names.isEmpty
+          ? List<String>.unmodifiable(fallback)
+          : names;
     } catch (_) {
-      return fallback;
+      return List<String>.unmodifiable(fallback);
     }
   }
 
+  /// تحميل أسماء من جدول يحتوي على حقل name.
   Future<List<String>> _loadNames({
     required String table,
     required List<String> fallback,
   }) async {
     final client = _client;
-    if (client == null) return fallback;
+
+    if (client == null) {
+      return List<String>.unmodifiable(fallback);
+    }
 
     try {
       final response = await client
@@ -130,14 +143,42 @@ class ClassificationService {
           .eq('is_active', true)
           .order('sort_order');
 
-      final names = response
-          .map<String>((row) => row['name'].toString())
-          .where((name) => name.isNotEmpty)
-          .toList();
+      final names = _extractNames(
+        response,
+        field: 'name',
+      );
 
-      return names.isEmpty ? fallback : names;
+      return names.isEmpty
+          ? List<String>.unmodifiable(fallback)
+          : names;
     } catch (_) {
-      return fallback;
+      return List<String>.unmodifiable(fallback);
     }
+  }
+
+  /// تنظيف الأسماء وإزالة القيم الفارغة والتكرارات،
+  /// مع الحفاظ على ترتيب النتائج القادمة من قاعدة البيانات.
+  List<String> _extractNames(
+    List<dynamic> rows, {
+    required String field,
+  }) {
+    final names = <String>[];
+    final seen = <String>{};
+
+    for (final item in rows) {
+      if (item is! Map) continue;
+
+      final rawValue = item[field];
+      if (rawValue == null) continue;
+
+      final name = rawValue.toString().trim();
+      if (name.isEmpty) continue;
+
+      if (seen.add(name)) {
+        names.add(name);
+      }
+    }
+
+    return List<String>.unmodifiable(names);
   }
 }
