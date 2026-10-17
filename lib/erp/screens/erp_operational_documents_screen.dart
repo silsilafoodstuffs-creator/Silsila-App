@@ -81,6 +81,66 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
   }
 
+
+  String _partyLabel(String? id) {
+    final matches = _parties.where((r) => _s(r['id']) == id);
+    return matches.isEmpty ? 'اختر الطرف' : _s(matches.first['party_code']) + ' — ' + _s(matches.first['party_name']);
+  }
+  String _warehouseLabel(String? id) {
+    final matches = _warehouses.where((r) => _s(r['id']) == id);
+    return matches.isEmpty ? 'اختر المخزن' : _s(matches.first['warehouse_code']) + ' — ' + _s(matches.first['warehouse_name']);
+  }
+  String _itemLabel(String? id) {
+    final matches = _items.where((r) => _s(r['id']) == id);
+    return matches.isEmpty ? 'اختر الصنف' : _s(matches.first['item_code']) + ' — ' + _s(matches.first['item_name']);
+  }
+
+  Future<void> _createDraft() async {
+    if (_partyId == null || _warehouseId == null || _documentNumber.text.trim().isEmpty) {
+      setState(() => _error = 'أكمل رقم المستند والطرف والمخزن.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final id = await _repo.createDraft(
+        companyId: _company.text, kind: widget.kind, documentNumber: _documentNumber.text,
+        documentType: _documentType, partyId: _partyId!, warehouseId: _warehouseId!, notes: _notes.text,
+      );
+      if (!mounted) return;
+      _documentNumber.clear(); _notes.clear();
+      setState(() { _saving = false; _selectedDocumentId = id; _message = 'تم إنشاء مسودة المستند. أضف البنود ثم رحّلها.'; });
+      await _load();
+      if (mounted) setState(() => _selectedDocumentId = id);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _saving = false; _error = 'تعذر إنشاء المسودة: $e'; });
+    }
+  }
+
+  Future<void> _addLine() async {
+    final selected = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
+    if (selected.isEmpty || _s(selected.first['status']) != 'draft') {
+      setState(() => _error = 'اختر مستندًا بحالة مسودة لإضافة بند.');
+      return;
+    }
+    final quantity = double.tryParse(_quantity.text.trim()) ?? -1;
+    final price = double.tryParse(_unitPrice.text.trim()) ?? -1;
+    final discount = double.tryParse(_discount.text.trim()) ?? -1;
+    final tax = double.tryParse(_tax.text.trim()) ?? -1;
+    if (_itemId == null) { setState(() => _error = 'اختر الصنف.'); return; }
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      await _repo.addLine(documentId: _selectedDocumentId!, kind: widget.kind,
+        itemId: _itemId!, quantity: quantity, unitPrice: price, discount: discount, tax: tax);
+      if (!mounted) return;
+      setState(() { _saving = false; _message = 'تمت إضافة البند وتحديث إجمالي المستند.'; });
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _saving = false; _error = 'تعذرت إضافة البند: $e'; });
+    }
+  }
+
   Future<void> _post(Map<String, dynamic> row) async {
     final number = _s(row['document_number']);
     final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
