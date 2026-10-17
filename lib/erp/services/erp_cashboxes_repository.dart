@@ -41,7 +41,7 @@ class ErpCashboxesRepository {
       throw ArgumentError('كود الخزينة واسمها وحساب الأستاذ حقول مطلوبة.');
     }
     final masked = _blank(accountNumberMasked);
-    if (masked != null && !RegExp(r'^\\d{4}$').hasMatch(masked)) {
+    if (masked != null && !RegExp(r'^\d{4}$').hasMatch(masked)) {
       throw ArgumentError('أدخل آخر أربعة أرقام فقط من الحساب البنكي.');
     }
     await _db.from('erp_cashboxes').insert({
