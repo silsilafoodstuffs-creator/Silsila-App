@@ -46,6 +46,10 @@ class ProductService {
     final cleanSupplierId = _clean(supplierId);
     final cleanSearch = _clean(search);
 
+    if (cleanSupplierId != null && cleanSupplierId.length > 200) {
+      throw ArgumentError('معرّف المورد طويل أكثر من اللازم.');
+    }
+
     if (cleanSearch != null && cleanSearch.length > 150) {
       throw ArgumentError('عبارة البحث طويلة أكثر من اللازم.');
     }
@@ -115,6 +119,10 @@ class ProductService {
 
     if (cleanSupplierId == null) {
       throw ArgumentError('معرّف المورد مطلوب.');
+    }
+
+    if (cleanSupplierId.length > 200) {
+      throw ArgumentError('معرّف المورد طويل أكثر من اللازم.');
     }
 
     return getProducts(
