@@ -271,7 +271,7 @@ begin
     'خطأ',
     'ITEM_GROUP_COMPANY_MISMATCH',
     'مجموعة الصنف لا تتبع الشركة نفسها أو أنها غير موجودة.',
-    'items'
+    'groups'
   from public.erp_items i
   left join public.erp_item_groups g on g.id = i.group_id
   where i.company_id = p_company_id
@@ -942,6 +942,53 @@ begin
     and (p_end_date is null or d.document_date <= p_end_date)
     and (p_area = 'كل الحركات' or p_area = 'المبيعات')
     and lines.line_count <> moves.movement_count
+
+  union all
+
+  select
+    'item-group:' || g.id::text || ':parent',
+    'مجموعات الأصناف',
+    g.id,
+    g.group_code,
+    null::date,
+    g.group_name,
+    'خطأ',
+    'ITEM_GROUP_PARENT_INVALID',
+    'المجموعة الرئيسية غير موجودة أو لا تتبع الشركة نفسها.',
+    'groups'
+  from public.erp_item_groups g
+  left join public.erp_item_groups p on p.id = g.parent_id
+  where g.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'مجموعات الأصناف')
+    and g.parent_id is not null
+    and (p.id is null or p.company_id <> g.company_id)
+
+  union all
+
+  (with recursive group_walk(start_id, current_id, company_id, path, has_cycle) as (
+    select g.id, g.id, g.company_id, array[g.id]::uuid[], false
+    from public.erp_item_groups g where g.company_id = p_company_id
+    union all
+    select w.start_id, child.id, w.company_id, w.path || child.id, child.id = any(w.path)
+    from group_walk w
+    join public.erp_item_groups child on child.parent_id = w.current_id and child.company_id = w.company_id
+    where not w.has_cycle
+  )
+  select
+    'item-group:' || g.id::text || ':cycle',
+    'مجموعات الأصناف',
+    g.id,
+    g.group_code,
+    null::date,
+    g.group_name,
+    'خطأ',
+    'ITEM_GROUP_HIERARCHY_CYCLE',
+    'توجد علاقة دائرية في شجرة مجموعات الأصناف.',
+    'groups'
+  from public.erp_item_groups g
+  where g.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'مجموعات الأصناف')
+    and g.id in (select start_id from group_walk where has_cycle))
 
   order by document_date nulls last, area, document_number;
 end;
