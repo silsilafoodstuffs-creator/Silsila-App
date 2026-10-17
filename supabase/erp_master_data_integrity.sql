@@ -20,6 +20,22 @@ begin
         raise exception 'فرع المخزن غير نشط أو لا يتبع الشركة نفسها';
       end if;
     end if;
+  elsif tg_table_name = 'erp_item_groups' then
+    if new.parent_id is not null then
+      select company_id into v_company from public.erp_item_groups where id = new.parent_id;
+      if v_company is distinct from new.company_id then
+        raise exception 'المجموعة الأب يجب أن تتبع الشركة نفسها';
+      end if;
+      with recursive descendants(id, path) as (
+        select g.id, array[g.id]::uuid[] from public.erp_item_groups g where g.id = new.id
+        union all
+        select child.id, d.path || child.id
+        from descendants d join public.erp_item_groups child on child.parent_id = d.id
+        where not child.id = any(d.path)
+      )
+      select exists(select 1 from descendants where id = new.parent_id) into v_cycle;
+      if coalesce(v_cycle, false) then raise exception 'لا يمكن وضع المجموعة تحت أحد أحفادها'; end if;
+    end if;
   elsif tg_table_name = 'erp_items' then
     if new.group_id is not null then
       select company_id, is_active into v_company, v_active from public.erp_item_groups where id = new.group_id;
@@ -76,6 +92,11 @@ $$;
 drop trigger if exists erp_warehouse_branch_guard on public.erp_warehouses;
 create trigger erp_warehouse_branch_guard
 before insert or update of company_id, branch_id on public.erp_warehouses
+for each row execute function public.erp_validate_master_data_links();
+
+drop trigger if exists erp_item_group_parent_guard on public.erp_item_groups;
+create trigger erp_item_group_parent_guard
+before insert or update of company_id, parent_id on public.erp_item_groups
 for each row execute function public.erp_validate_master_data_links();
 
 drop trigger if exists erp_item_group_guard on public.erp_items;
