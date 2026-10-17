@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS public.addresses (
   governorate TEXT NOT NULL,
   district TEXT,
   area TEXT,
+  village TEXT,
   address TEXT NOT NULL,
   landmark TEXT,
   latitude DOUBLE PRECISION,
@@ -222,7 +223,10 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   title TEXT NOT NULL,
   body TEXT NOT NULL DEFAULT '',
   notification_type TEXT NOT NULL DEFAULT 'general',
+  type TEXT,
+  order_id BIGINT REFERENCES public.orders(id) ON DELETE SET NULL,
   data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  is_read BOOLEAN NOT NULL DEFAULT FALSE,
   read_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
