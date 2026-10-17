@@ -35,11 +35,15 @@ class WalletService {
 
     final balance = wallet['balance'];
 
-    if (balance is num) {
-      return balance.toDouble();
+    final parsedBalance = balance is num
+        ? balance.toDouble()
+        : double.tryParse(balance?.toString() ?? '');
+
+    if (parsedBalance == null || !parsedBalance.isFinite) {
+      throw StateError('تعذر قراءة رصيد المحفظة بصورة صحيحة.');
     }
 
-    return double.tryParse(balance?.toString() ?? '') ?? 0;
+    return parsedBalance;
   }
 
   /// جلب سجل معاملات المحفظة.
