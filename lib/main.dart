@@ -17,6 +17,7 @@ import 'services/support_service.dart';
 import 'services/delivery_service.dart';
 import 'services/favorite_service.dart';
 import 'services/loyalty_service.dart';
+import 'services/review_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 
@@ -4365,6 +4366,81 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     await ordersFuture;
   }
 
+  Future<void> changeSupplierOrderStatus(Map<String, dynamic> order, String nextStatus) async {
+    final id = int.tryParse((order['id'] ?? '').toString());
+    if (id == null) return;
+    try {
+      await OrderStatusService().updateOrderStatus(orderId: id, status: nextStatus);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم تحديث الطلب إلى: $nextStatus')));
+      await reload();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحديث الطلب: $e')));
+    }
+  }
+
+  Future<void> cancelCustomerOrder(Map<String, dynamic> order) async {
+    final id = int.tryParse((order['id'] ?? '').toString());
+    if (id == null) return;
+    try {
+      await OrderStatusService().cancelOrder(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إلغاء الطلب.')));
+      await reload();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إلغاء الطلب: $e')));
+    }
+  }
+
+  Future<void> reviewSupplier(Map<String, dynamic> order) async {
+    final supplierId = (order['supplier_id'] ?? '').toString();
+    final orderId = (order['id'] ?? '').toString();
+    if (supplierId.isEmpty || orderId.isEmpty) return;
+    final comment = TextEditingController();
+    int rating = 5;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('تقييم المورد'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('كيف كانت تجربتك مع هذا المورد؟'),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              children: List.generate(5, (index) {
+                final value = index + 1;
+                return IconButton(
+                  onPressed: () => setDialogState(() => rating = value),
+                  icon: Icon(value <= rating ? Icons.star : Icons.star_border, color: orange, size: 30),
+                );
+              }),
+            ),
+            TextField(controller: comment, maxLines: 3, decoration: const InputDecoration(labelText: 'تعليق اختياري')),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('إرسال التقييم')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      try {
+        await ReviewService().addReview(
+          supplierId: supplierId,
+          orderId: orderId,
+          rating: rating,
+          comment: comment.text,
+        );
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('شكرًا لك، تم إرسال تقييمك.')));
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التقييم: $e')));
+      }
+    }
+    comment.dispose();
+  }
+
   Color statusColor(String status) {
     switch (status) {
       case 'تم التسليم':
@@ -4459,6 +4535,62 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: Text('الدفع: ${order['payment_method']}'),
+                      ),
+                    const SizedBox(height: 10),
+                    FutureBuilder<List<Map<String, dynamic>>>(
+                      future: OrderStatusService().getOrderItems(int.tryParse((order['id'] ?? '').toString()) ?? 0),
+                      builder: (context, itemSnapshot) {
+                        if (itemSnapshot.connectionState == ConnectionState.waiting) {
+                          return const LinearProgressIndicator(minHeight: 2);
+                        }
+                        if (itemSnapshot.hasError) {
+                          return const Align(alignment: Alignment.centerRight, child: Text('تعذر تحميل تفاصيل الأصناف.'));
+                        }
+                        final items = itemSnapshot.data ?? const <Map<String, dynamic>>[];
+                        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          const Text('الأصناف', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ...items.map((item) => ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text((item['product_name'] ?? 'منتج').toString()),
+                            subtitle: Text('${item['quantity'] ?? 0} ${item['unit'] ?? ''} × ${item['unit_price'] ?? 0} ج.م'),
+                            trailing: Text('${item['line_total'] ?? item['total_price'] ?? 0} ج.م'),
+                          )),
+                        ]);
+                      },
+                    ),
+                    if (isSupplier) ...[
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        if (status == 'انتظار قبول')
+                          FilledButton(onPressed: () => changeSupplierOrderStatus(order, 'تنفيذ'), child: const Text('قبول الطلب')),
+                        if (status == 'تنفيذ')
+                          FilledButton(onPressed: () => changeSupplierOrderStatus(order, 'تحميل'), child: const Text('بدء التحميل')),
+                        if (status == 'تحميل')
+                          FilledButton(onPressed: () => changeSupplierOrderStatus(order, 'توصيل'), child: const Text('إرسال للتوصيل')),
+                        if (status == 'توصيل')
+                          FilledButton(onPressed: () => changeSupplierOrderStatus(order, 'تم التسليم'), child: const Text('تأكيد التسليم')),
+                        if (status == 'انتظار قبول' || status == 'تنفيذ')
+                          OutlinedButton(onPressed: () => changeSupplierOrderStatus(order, 'مُلغي'), child: const Text('إلغاء الطلب')),
+                      ]),
+                    ],
+                    if (!isSupplier && status == 'انتظار قبول')
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton.icon(
+                          onPressed: () => cancelCustomerOrder(order),
+                          icon: const Icon(Icons.cancel_outlined),
+                          label: const Text('إلغاء الطلب'),
+                        ),
+                      ),
+                    if (!isSupplier && status == 'تم التسليم')
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          onPressed: () => reviewSupplier(order),
+                          icon: const Icon(Icons.star_outline),
+                          label: const Text('تقييم المورد'),
+                        ),
                       ),
                   ],
                 ),
