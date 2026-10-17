@@ -116,8 +116,11 @@ begin
      or old.created_by is distinct from new.created_by then
     raise exception 'لا يمكن تغيير الشركة أو رقم المستند أو منشئه';
   end if;
+  if new.status = 'approved' then
+    raise exception 'اعتماد المستند يحتاج مسار اعتماد مخصصًا غير متاح في هذه النسخة';
+  end if;
   if new.status = 'posted' then
-    if old.status not in ('draft','approved') then
+    if old.status <> 'draft' then
       raise exception 'لا يمكن ترحيل المستند من حالته الحالية';
     end if;
     if tg_table_name = 'erp_purchase_documents' then
@@ -252,7 +255,7 @@ begin
   if not public.erp_user_has_company_role(v_doc.company_id, array['owner','admin','manager','accountant']::text[]) then
     raise exception 'ليست لديك صلاحية ترحيل مستند المشتريات';
   end if;
-  if v_doc.status not in ('draft','approved') then raise exception 'يمكن ترحيل المسودة أو المستند المعتمد فقط'; end if;
+  if v_doc.status <> 'draft' then raise exception 'يمكن ترحيل المسودات فقط؛ الاعتماد يحتاج مسارًا مخصصًا'; end if;
   if v_doc.document_type not in ('receipt','invoice','return') then
     raise exception 'نوع المستند لا ينشئ حركة مخزنية؛ لا يمكن ترحيله كاستلام';
   end if;
@@ -309,7 +312,7 @@ begin
   if not public.erp_user_has_company_role(v_doc.company_id, array['owner','admin','manager','accountant']::text[]) then
     raise exception 'ليست لديك صلاحية ترحيل مستند المبيعات';
   end if;
-  if v_doc.status not in ('draft','approved') then raise exception 'يمكن ترحيل المسودة أو المستند المعتمد فقط'; end if;
+  if v_doc.status <> 'draft' then raise exception 'يمكن ترحيل المسودات فقط؛ الاعتماد يحتاج مسارًا مخصصًا'; end if;
   if v_doc.document_type not in ('delivery','invoice','return') then
     raise exception 'نوع المستند لا ينشئ حركة مخزنية؛ لا يمكن ترحيله كصرف';
   end if;
