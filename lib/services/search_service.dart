@@ -15,9 +15,8 @@ class SearchService {
     _validateLimit(limit);
 
     var request = _client
-        .from('profiles')
-        .select()
-        .eq('role', 'supplier');
+        .from('supplier_directory')
+        .select('id, full_name, activity_type, supplier_type, governorate, district, account_status');
 
     final term = query?.trim();
     if (term != null && term.isNotEmpty) {
