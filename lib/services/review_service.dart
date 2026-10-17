@@ -135,6 +135,10 @@ class ReviewService {
     final cleanComment = _cleanComment(comment);
     final reviewerId = _userId;
 
+    if (cleanSupplierId == reviewerId) {
+      throw ArgumentError('لا يمكنك تقييم حسابك الشخصي.');
+    }
+
     final response = await _requireClient
         .from('reviews')
         .insert({
