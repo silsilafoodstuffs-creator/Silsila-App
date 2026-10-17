@@ -74,6 +74,27 @@ SET supplier_id = COALESCE(supplier_id, profile_id),
 CREATE UNIQUE INDEX IF NOT EXISTS idx_supplier_details_supplier_id
   ON public.supplier_details(supplier_id);
 
+CREATE OR REPLACE FUNCTION public.silsila_sync_supplier_details_compatibility()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $
+BEGIN
+  NEW.profile_id := COALESCE(NEW.profile_id, NEW.supplier_id);
+  NEW.supplier_id := COALESCE(NEW.supplier_id, NEW.profile_id);
+  NEW.description := COALESCE(NEW.business_description, NEW.description);
+  NEW.business_description := COALESCE(NEW.business_description, NEW.description);
+  NEW.minimum_invoice := COALESCE(NEW.minimum_order_amount, NEW.minimum_invoice);
+  NEW.minimum_order_amount := COALESCE(NEW.minimum_order_amount, NEW.minimum_invoice);
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS silsila_supplier_details_compatibility ON public.supplier_details;
+CREATE TRIGGER silsila_supplier_details_compatibility
+BEFORE INSERT OR UPDATE ON public.supplier_details
+FOR EACH ROW EXECUTE FUNCTION public.silsila_sync_supplier_details_compatibility();
+
 ALTER TABLE public.offers
   ADD COLUMN IF NOT EXISTS activity_type TEXT,
   ADD COLUMN IF NOT EXISTS discount_percentage NUMERIC(5,2);
@@ -92,5 +113,29 @@ SET role = CASE
   ELSE 'customer'
 END
 WHERE role IS NULL OR btrim(role) = '';
+
+CREATE OR REPLACE FUNCTION public.silsila_sync_profile_role()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $
+BEGIN
+  IF NEW.role IS NULL OR btrim(NEW.role) = '' THEN
+    NEW.role := CASE
+      WHEN NEW.account_type IN ('مورد', 'supplier') THEN 'supplier'
+      WHEN NEW.account_type IN ('مندوب', 'delegate') THEN 'delegate'
+      WHEN NEW.account_type IN ('شركة شحن', 'shipping_company') THEN 'shipping_company'
+      WHEN NEW.account_type IN ('إدارة نشاط', 'admin', 'management') THEN 'admin'
+      ELSE 'customer'
+    END;
+  END IF;
+  RETURN NEW;
+END;
+$;
+
+DROP TRIGGER IF EXISTS silsila_profiles_role_compatibility ON public.profiles;
+CREATE TRIGGER silsila_profiles_role_compatibility
+BEFORE INSERT OR UPDATE OF account_type, role ON public.profiles
+FOR EACH ROW EXECUTE FUNCTION public.silsila_sync_profile_role();
 
 COMMIT;
