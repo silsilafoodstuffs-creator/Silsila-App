@@ -1,10 +1,33 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupplierProductService {
-  SupplierProductService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  SupplierProductService({SupabaseClient? client}) : _client = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  SupabaseClient get _requireClient {
+    if (_client != null) {
+      return _client!;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      throw StateError(
+        'اتصال Supabase غير متاح. يرجى المحاولة لاحقًا.',
+      );
+    }
+  }
+
+  String get _userId {
+    final user = _requireClient.auth.currentUser;
+
+    if (user == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+
+    return user.id;
+  }
 
   /// جلب منتجات مورد محدد.
   Future<List<Map<String, dynamic>>> getSupplierProducts(
@@ -13,15 +36,17 @@ class SupplierProductService {
     String? category,
     int limit = 100,
   }) async {
+    final cleanSupplierId = supplierId.trim();
+
+    if (cleanSupplierId.isEmpty) {
+      throw ArgumentError('معرّف المورد مطلوب.');
+    }
+
     if (limit < 1 || limit > 200) {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
 
-    final cleanSupplierId = supplierId.trim();
-    if (cleanSupplierId.isEmpty) {
-      throw ArgumentError('معرّف المورد مطلوب.');
-    }
-    var query = _client
+    var query = _requireClient
         .from('products')
         .select()
         .eq('supplier_id', cleanSupplierId);
@@ -30,27 +55,34 @@ class SupplierProductService {
       query = query.eq('is_active', true);
     }
 
-    if (category != null && category.trim().isNotEmpty) {
-      query = query.eq('category', category.trim());
+    final cleanCategory = category?.trim();
+
+    if (cleanCategory != null && cleanCategory.isNotEmpty) {
+      query = query.eq('category', cleanCategory);
     }
 
     final rows = await query.order('name').limit(limit);
 
-    return List<Map<String, dynamic>>.from(rows);
+    return _mapRows(rows);
   }
 
   /// جلب منتج بواسطة المعرّف.
   Future<Map<String, dynamic>?> getProductById(
     int productId,
   ) async {
-    if (productId <= 0) {
-      throw ArgumentError('معرّف المنتج غير صالح.');
-    }
-    return await _client
+    _validateProductId(productId);
+
+    final result = await _requireClient
         .from('products')
         .select()
         .eq('id', productId)
         .maybeSingle();
+
+    if (result == null) {
+      return null;
+    }
+
+    return Map<String, dynamic>.from(result);
   }
 
   /// إضافة منتج جديد للمورد الحالي.
@@ -66,62 +98,57 @@ class SupplierProductService {
     num stockQuantity = 0,
     bool trackInventory = false,
   }) async {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً.');
+    final cleanName = _requiredText(
+      name,
+      'اسم المنتج مطلوب.',
+      maxLength: 200,
+    );
+
+    final cleanCategory = _requiredText(
+      category,
+      'قسم المنتج مطلوب.',
+      maxLength: 120,
+    );
+
+    final cleanUnit = _requiredText(
+      unit,
+      'وحدة المنتج مطلوبة.',
+      maxLength: 60,
+    );
+
+    _validatePrice(price);
+    _validateMinimumQuantity(minQuantity);
+    _validateStock(stockQuantity);
+    _validateCategoryId(categoryId);
+
+    final cleanDescription = _clean(description);
+
+    if (cleanDescription != null &&
+        cleanDescription.length > 5000) {
+      throw ArgumentError(
+        'وصف المنتج يجب ألا يتجاوز 5000 حرف.',
+      );
     }
 
-    final cleanName = name.trim();
-    final cleanCategory = category.trim();
-    final cleanUnit = unit.trim();
-    if (cleanName.isEmpty || cleanName.length > 200) {
-      throw ArgumentError('اسم المنتج مطلوب وألا يتجاوز 200 حرفًا.');
+    final cleanImageUrl = _clean(imageUrl);
+
+    if (cleanImageUrl != null) {
+      _validateImageUrl(cleanImageUrl);
     }
 
-    if (cleanCategory.isEmpty || cleanCategory.length > 120) {
-      throw ArgumentError('قسم المنتج مطلوب ويجب ألا يتجاوز 120 حرفًا.');
-    }
-    if (cleanUnit.isEmpty || cleanUnit.length > 60) {
-      throw ArgumentError('وحدة المنتج مطلوبة ويجب ألا تتجاوز 60 حرفًا.');
-    }
-
-    if (!price.isFinite ||
-        price < 0 ||
-        !minQuantity.isFinite ||
-        minQuantity <= 0 ||
-        !stockQuantity.isFinite ||
-        stockQuantity < 0) {
-      throw ArgumentError('السعر والحد الأدنى والمخزون يجب أن تكون قيمًا صحيحة.');
-    }
-    if (categoryId != null && categoryId <= 0) {
-      throw ArgumentError('معرّف قسم المنتج غير صالح.');
-    }
-    if ((description ?? '').trim().length > 5000) {
-      throw ArgumentError('وصف المنتج يجب ألا يتجاوز 5000 حرف.');
-    }
-    if (imageUrl != null && imageUrl.trim().isNotEmpty) {
-      final uri = Uri.tryParse(imageUrl.trim());
-      if (uri == null ||
-          !uri.hasScheme ||
-          (uri.scheme != 'https' && uri.scheme != 'http') ||
-          uri.host.isEmpty) {
-        throw ArgumentError('رابط صورة المنتج غير صالح.');
-      }
-    }
-
-    final result = await _client
+    final result = await _requireClient
         .from('products')
         .insert({
-          'supplier_id': user.id,
+          'supplier_id': _userId,
           'name': cleanName,
           'category': cleanCategory,
           'category_id': categoryId,
-          'description': description?.trim(),
+          'description': cleanDescription,
           'price': price,
           'unit': cleanUnit,
           'min_quantity': minQuantity,
           'minimum_quantity': minQuantity,
-          'image_url': imageUrl,
+          'image_url': cleanImageUrl,
           'stock_quantity': stockQuantity,
           'track_inventory': trackInventory,
           'is_active': true,
@@ -130,10 +157,10 @@ class SupplierProductService {
         .select()
         .single();
 
-    return result;
+    return Map<String, dynamic>.from(result);
   }
 
-  /// تحديث بيانات منتج.
+  /// تحديث بيانات منتج يملكه المورد الحالي.
   Future<void> updateProduct({
     required int productId,
     String? name,
@@ -148,140 +175,212 @@ class SupplierProductService {
     bool? trackInventory,
     bool? isActive,
   }) async {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً.');
-    }
-    if (productId <= 0) {
-      throw ArgumentError('معرّف المنتج غير صالح.');
-    }
+    _validateProductId(productId);
 
+    final userId = _userId;
     final updates = <String, dynamic>{};
 
     if (name != null) {
-      if (name.trim().isEmpty) {
-        throw ArgumentError('اسم المنتج مطلوب.');
-      }
-      updates['name'] = name.trim();
+      updates['name'] = _requiredText(
+        name,
+        'اسم المنتج مطلوب.',
+        maxLength: 200,
+      );
     }
 
     if (category != null) {
-      final cleanedCategory = category.trim();
-      if (cleanedCategory.isEmpty || cleanedCategory.length > 120) {
-        throw ArgumentError('قسم المنتج مطلوب ويجب ألا يتجاوز 120 حرفًا.');
-      }
-      updates['category'] = cleanedCategory;
+      updates['category'] = _requiredText(
+        category,
+        'قسم المنتج مطلوب.',
+        maxLength: 120,
+      );
     }
 
     if (description != null) {
-      final cleanDescription = description.trim();
-      if (cleanDescription.length > 5000) {
-        throw ArgumentError('وصف المنتج يجب ألا يتجاوز 5000 حرف.');
+      final cleanedDescription = _clean(description);
+
+      if (cleanedDescription != null &&
+          cleanedDescription.length > 5000) {
+        throw ArgumentError(
+          'وصف المنتج يجب ألا يتجاوز 5000 حرف.',
+        );
       }
-      updates['description'] =
-          cleanDescription.isEmpty ? null : cleanDescription;
+
+      updates['description'] = cleanedDescription;
     }
 
     if (price != null) {
-      if (!price.isFinite || price < 0) {
-        throw ArgumentError('السعر لا يمكن أن يكون سالبًا.');
-      }
+      _validatePrice(price);
       updates['price'] = price;
     }
 
     if (unit != null) {
-      final cleanedUnit = unit.trim();
-      if (cleanedUnit.isEmpty || cleanedUnit.length > 60) {
-        throw ArgumentError('وحدة المنتج مطلوبة ويجب ألا تتجاوز 60 حرفًا.');
-      }
-      updates['unit'] = cleanedUnit;
+      updates['unit'] = _requiredText(
+        unit,
+        'وحدة المنتج مطلوبة.',
+        maxLength: 60,
+      );
     }
 
     if (minQuantity != null) {
-      if (!minQuantity.isFinite || minQuantity <= 0) {
-        throw ArgumentError('الحد الأدنى للكمية يجب أن يكون أكبر من صفر.');
-      }
+      _validateMinimumQuantity(minQuantity);
       updates['min_quantity'] = minQuantity;
       updates['minimum_quantity'] = minQuantity;
     }
 
-    if (stockQuantity != null) {
-      if (!stockQuantity.isFinite || stockQuantity < 0) {
-        throw ArgumentError('المخزون لا يمكن أن يكون سالبًا.');
-      }
-      updates['stock_quantity'] = stockQuantity;
-    }
-    if (trackInventory != null) updates['track_inventory'] = trackInventory;
     if (categoryId != null) {
-      if (categoryId <= 0) {
-        throw ArgumentError('معرّف قسم المنتج غير صالح.');
-      }
+      _validateCategoryId(categoryId);
       updates['category_id'] = categoryId;
     }
+
     if (imageUrl != null) {
-      final cleanedImageUrl = imageUrl.trim();
-      if (cleanedImageUrl.isNotEmpty) {
-        final uri = Uri.tryParse(cleanedImageUrl);
-        if (uri == null ||
-            !uri.hasScheme ||
-            (uri.scheme != 'https' && uri.scheme != 'http') ||
-            uri.host.isEmpty) {
-          throw ArgumentError('رابط صورة المنتج غير صالح.');
-        }
+      final cleanImageUrl = _clean(imageUrl);
+
+      if (cleanImageUrl != null) {
+        _validateImageUrl(cleanImageUrl);
       }
-      updates['image_url'] = cleanedImageUrl.isEmpty ? null : cleanedImageUrl;
+
+      updates['image_url'] = cleanImageUrl;
     }
+
+    if (stockQuantity != null) {
+      _validateStock(stockQuantity);
+      updates['stock_quantity'] = stockQuantity;
+    }
+
+    if (trackInventory != null) {
+      updates['track_inventory'] = trackInventory;
+    }
+
     if (isActive != null) {
       updates['is_active'] = isActive;
       updates['is_available'] = isActive;
     }
 
-    if (updates.isEmpty) return;
+    if (updates.isEmpty) {
+      return;
+    }
 
-    await _client
+    await _requireClient
         .from('products')
         .update(updates)
         .eq('id', productId)
-        .eq('supplier_id', user.id);
+        .eq('supplier_id', userId);
   }
 
   /// إخفاء المنتج دون حذفه نهائيًا.
   Future<void> deactivateProduct(int productId) async {
-    if (productId <= 0) {
-      throw ArgumentError('معرّف المنتج غير صالح.');
-    }
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً.');
-    }
-
-    await _client
-        .from('products')
-        .update({
-          'is_active': false,
-          'is_available': false,
-        })
-        .eq('id', productId)
-        .eq('supplier_id', user.id);
+    await _setProductAvailability(
+      productId: productId,
+      isActive: false,
+    );
   }
 
   /// إعادة تفعيل المنتج.
   Future<void> activateProduct(int productId) async {
+    await _setProductAvailability(
+      productId: productId,
+      isActive: true,
+    );
+  }
+
+  Future<void> _setProductAvailability({
+    required int productId,
+    required bool isActive,
+  }) async {
+    _validateProductId(productId);
+
+    await _requireClient
+        .from('products')
+        .update({
+          'is_active': isActive,
+          'is_available': isActive,
+        })
+        .eq('id', productId)
+        .eq('supplier_id', _userId);
+  }
+
+  void _validateProductId(int productId) {
     if (productId <= 0) {
       throw ArgumentError('معرّف المنتج غير صالح.');
     }
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً.');
+  }
+
+  void _validateCategoryId(int? categoryId) {
+    if (categoryId != null && categoryId <= 0) {
+      throw ArgumentError('معرّف قسم المنتج غير صالح.');
+    }
+  }
+
+  void _validatePrice(num price) {
+    if (!price.isFinite || price < 0) {
+      throw ArgumentError(
+        'السعر يجب أن يكون رقمًا صالحًا وغير سالب.',
+      );
+    }
+  }
+
+  void _validateMinimumQuantity(num quantity) {
+    if (!quantity.isFinite || quantity <= 0) {
+      throw ArgumentError(
+        'الحد الأدنى للكمية يجب أن يكون أكبر من صفر.',
+      );
+    }
+  }
+
+  void _validateStock(num quantity) {
+    if (!quantity.isFinite || quantity < 0) {
+      throw ArgumentError(
+        'كمية المخزون يجب ألا تكون سالبة.',
+      );
+    }
+  }
+
+  String _requiredText(
+    String value,
+    String message, {
+    required int maxLength,
+  }) {
+    final cleaned = value.trim();
+
+    if (cleaned.isEmpty || cleaned.length > maxLength) {
+      throw ArgumentError(
+        '$message يجب ألا يتجاوز $maxLength حرفًا.',
+      );
     }
 
-    await _client
-        .from('products')
-        .update({
-          'is_active': true,
-          'is_available': true,
-        })
-        .eq('id', productId)
-        .eq('supplier_id', user.id);
+    return cleaned;
+  }
+
+  String? _clean(String? value) {
+    final cleaned = value?.trim();
+
+    if (cleaned == null || cleaned.isEmpty) {
+      return null;
+    }
+
+    return cleaned;
+  }
+
+  void _validateImageUrl(String value) {
+    final uri = Uri.tryParse(value);
+
+    if (uri == null ||
+        !uri.hasScheme ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      throw ArgumentError('رابط صورة المنتج غير صالح.');
+    }
+  }
+
+  List<Map<String, dynamic>> _mapRows(dynamic response) {
+    if (response is! List) {
+      throw StateError('تعذر قراءة بيانات المنتجات.');
+    }
+
+    return response
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
   }
 }
