@@ -162,7 +162,7 @@ class ReviewService {
         .from('reviews')
         .delete()
         .eq('id', id)
-        .eq('customer_id', _userId);
+        .eq('reviewer_id', _userId);
   }
 
   void _validateLimit(int limit) {
