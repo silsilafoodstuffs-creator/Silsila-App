@@ -15,6 +15,7 @@ select
   coalesce(sum(case when m.movement_date::date = current_date then m.quantity_out else 0 end), 0)::numeric(18,3) as today_quantity_out,
   max(m.movement_date) as last_movement_at
 from public.erp_inventory_movements m
+where m.movement_date <= now()
 group by m.company_id, m.branch_id, m.warehouse_id, m.item_id;
 
 
