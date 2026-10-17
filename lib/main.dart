@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'services/trader_market_service.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -839,23 +840,8 @@ class _MainShellState extends State<MainShell> {
             label: const Text('إضافة طلب شراء أو عرض بيع'),
           ),
           const SizedBox(height: 10),
-          const MarketCard(
-            title: 'مطلوب زيت خليط',
-            type: 'طلب شراء',
-            details: 'مثال توضيحي لطلب توريد.',
-            color: purple,
-          ),
-          const MarketCard(
-            title: 'عرض مكرونة معبأة',
-            type: 'عرض بيع',
-            details: 'مثال توضيحي لعرض مورد.',
-            color: orange,
-          ),
           const SizedBox(height: 12),
-          const Text(
-            'الإعلانات المعروضة تجريبية وليست عروضًا مؤكدة.',
-            style: TextStyle(color: Colors.black54),
-          ),
+          const MarketPostsSection(),
         ],
       );
 
@@ -1870,6 +1856,93 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 }
 
+class MarketPostsSection extends StatefulWidget {
+  const MarketPostsSection({super.key});
+
+  @override
+  State<MarketPostsSection> createState() => _MarketPostsSectionState();
+}
+
+class _MarketPostsSectionState extends State<MarketPostsSection> {
+  late Future<List<Map<String, dynamic>>> postsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    postsFuture = TraderMarketService().getPosts();
+  }
+
+  Future<void> refresh() async {
+    setState(() => postsFuture = TraderMarketService().getPosts());
+    await postsFuture;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: postsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(28),
+            child: Center(child: CircularProgressIndicator(color: purple)),
+          );
+        }
+        if (snapshot.hasError) {
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Icon(Icons.cloud_off_outlined, size: 38, color: purple),
+                  const SizedBox(height: 8),
+                  const Text('تعذر تحميل إعلانات السوق من قاعدة البيانات.'),
+                  TextButton(
+                    onPressed: refresh,
+                    child: const Text('إعادة المحاولة'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        final posts = snapshot.data ?? const <Map<String, dynamic>>[];
+        if (posts.isEmpty) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(22),
+              child: Center(child: Text('لا توجد إعلانات منشورة حتى الآن.')),
+            ),
+          );
+        }
+        return Column(
+          children: posts.map((post) {
+            final type = (post['post_type'] ?? '').toString();
+            final isBuy = type == 'buy' || type == 'request';
+            final color = isBuy ? purple : orange;
+            final title = (post['title'] ?? 'إعلان').toString();
+            final details = (post['description'] ?? post['details'] ?? '').toString();
+            final quantity = post['quantity'];
+            final governorate = (post['governorate'] ?? '').toString();
+            final subtitle = [
+              isBuy ? 'طلب شراء' : 'عرض بيع',
+              if (quantity != null) 'الكمية: $quantity ${post['unit'] ?? ''}',
+              if (governorate.isNotEmpty) governorate,
+              details,
+            ].where((part) => part.toString().trim().isNotEmpty).join('\\n');
+            return MarketCard(
+              title: title,
+              type: isBuy ? 'طلب شراء' : 'عرض بيع',
+              details: subtitle,
+              color: color,
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
 class MarketPostScreen extends StatefulWidget {
   const MarketPostScreen({super.key});
 
@@ -1881,12 +1954,49 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final titleController = TextEditingController();
   final detailsController = TextEditingController();
   String type = 'buy';
+  bool busy = false;
 
   @override
   void dispose() {
     titleController.dispose();
     detailsController.dispose();
     super.dispose();
+  }
+
+  Future<void> savePost() async {
+    if (titleController.text.trim().isEmpty ||
+        detailsController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('أدخل عنوان الإعلان والتفاصيل.')),
+      );
+      return;
+    }
+
+    setState(() => busy = true);
+    try {
+      await TraderMarketService().createPost(
+        title: titleController.text.trim(),
+        description: detailsController.text.trim(),
+        postType: type,
+        activityType: 'مواد غذائية',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم نشر الإعلان في سوق التجار.')),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تعذر نشر الإعلان. تأكد من تسجيل الدخول وإعداد قاعدة البيانات.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   @override
@@ -1915,14 +2025,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'واجهة الإعلان جاهزة. حفظ الإعلان يحتاج ربط حقول الجدول وسياساته.',
-                ),
-              ),
-            ),
-            child: const Text('حفظ الإعلان'),
+            onPressed: busy ? null : savePost,
+            child: Text(busy ? 'جارٍ النشر...' : 'نشر الإعلان'),
           ),
         ],
       );
