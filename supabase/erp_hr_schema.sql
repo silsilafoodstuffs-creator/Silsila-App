@@ -131,5 +131,58 @@ begin
 end;
 $$;
 
+
+-- Database-level tenant integrity: do not rely only on Flutter validation.
+create or replace function public.erp_validate_hr_company_links()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $
+declare
+  v_employee_company uuid;
+  v_branch_company uuid;
+  v_run_company uuid;
+begin
+  if tg_table_name = 'erp_employees' then
+    if new.branch_id is not null then
+      select company_id into v_branch_company from public.erp_branches where id = new.branch_id;
+      if v_branch_company is distinct from new.company_id then
+        raise exception 'فرع الموظف يجب أن يتبع الشركة نفسها';
+      end if;
+    end if;
+  elsif tg_table_name in ('erp_attendance_records','erp_leave_requests') then
+    select company_id into v_employee_company from public.erp_employees where id = new.employee_id;
+    if v_employee_company is distinct from new.company_id then
+      raise exception 'الموظف يجب أن يتبع شركة السجل نفسه';
+    end if;
+  elsif tg_table_name = 'erp_payroll_lines' then
+    select company_id into v_employee_company from public.erp_employees where id = new.employee_id;
+    select company_id into v_run_company from public.erp_payroll_runs where id = new.payroll_run_id;
+    if v_employee_company is distinct from new.company_id
+       or v_run_company is distinct from new.company_id then
+      raise exception 'الموظف ومسير الرواتب يجب أن يتبعوا الشركة نفسها';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists erp_employees_company_guard on public.erp_employees;
+create trigger erp_employees_company_guard before insert or update of company_id, branch_id
+on public.erp_employees for each row execute function public.erp_validate_hr_company_links();
+
+drop trigger if exists erp_attendance_company_guard on public.erp_attendance_records;
+create trigger erp_attendance_company_guard before insert or update of company_id, employee_id
+on public.erp_attendance_records for each row execute function public.erp_validate_hr_company_links();
+
+drop trigger if exists erp_leave_company_guard on public.erp_leave_requests;
+create trigger erp_leave_company_guard before insert or update of company_id, employee_id
+on public.erp_leave_requests for each row execute function public.erp_validate_hr_company_links();
+
+drop trigger if exists erp_payroll_line_company_guard on public.erp_payroll_lines;
+create trigger erp_payroll_line_company_guard before insert or update of company_id, employee_id, payroll_run_id
+on public.erp_payroll_lines for each row execute function public.erp_validate_hr_company_links();
+
 -- No direct access grants are added here. Apply membership-aware policies and
 -- role grants only after reviewing the target company's HR access requirements.
