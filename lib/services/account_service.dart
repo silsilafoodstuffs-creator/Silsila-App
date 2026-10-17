@@ -8,9 +8,11 @@ class AccountService {
 
   String get _userId {
     final user = _client.auth.currentUser;
+
     if (user == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
+
     return user.id;
   }
 
@@ -27,7 +29,10 @@ class AccountService {
     return Map<String, dynamic>.from(response);
   }
 
-  /// تحديث الاسم ورقم التواصل وبيانات النشاط.
+  /// تحديث الاسم وبيانات التواصل والنشاط والعنوان.
+  ///
+  /// تغيير رقم الهاتف الأساسي يتطلب تحققًا من Supabase Auth.
+  /// لذلك لا يتم تغيير رقم الهاتف الأساسي من هذه الدالة.
   Future<Map<String, dynamic>> updateMyAccount({
     required String fullName,
     String? phone,
@@ -45,13 +50,31 @@ class AccountService {
       throw ArgumentError('يرجى إدخال الاسم.');
     }
 
+    if (cleanName.length > 120) {
+      throw ArgumentError('الاسم طويل جدًا.');
+    }
+
     final requestedPhone = _emptyToNull(phone);
-    final currentPhone = _emptyToNull(_client.auth.currentUser?.phone);
-    if (requestedPhone != null && requestedPhone != currentPhone) {
-      throw StateError(
-        'تغيير رقم الهاتف يحتاج إلى تحقق OTP من Supabase Auth، '
-        'ولا يمكن تغييره بتعديل الملف الشخصي فقط.',
+
+    if (requestedPhone != null) {
+      final profile = await getMyAccount();
+
+      final profilePhone = _emptyToNull(
+        profile?['phone']?.toString(),
       );
+
+      final authPhone = _emptyToNull(
+        _client.auth.currentUser?.phone,
+      );
+
+      final currentPhone = profilePhone ?? authPhone;
+
+      if (requestedPhone != currentPhone) {
+        throw StateError(
+          'تغيير رقم الهاتف يحتاج إلى تحقق OTP من Supabase Auth، '
+          'ولا يمكن تغييره بتعديل الملف الشخصي فقط.',
+        );
+      }
     }
 
     final data = <String, dynamic>{
@@ -96,6 +119,7 @@ class AccountService {
 
     for (final field in fields) {
       final value = profile[field];
+
       if (value != null && value.toString().trim().isNotEmpty) {
         completed++;
       }
@@ -106,9 +130,7 @@ class AccountService {
 
   /// تحديث كلمة المرور للحساب الحالي.
   Future<void> changePassword(String newPassword) async {
-    final password = newPassword.trim();
-
-    if (!_isStrongPassword(password)) {
+    if (!_isStrongPassword(newPassword)) {
       throw ArgumentError(
         'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، '
         'وحرف كبير وحرف صغير ورقم ورمز.',
@@ -116,10 +138,11 @@ class AccountService {
     }
 
     await _client.auth.updateUser(
-      UserAttributes(password: password),
+      UserAttributes(password: newPassword),
     );
   }
 
+  /// التحقق من قوة كلمة المرور.
   bool _isStrongPassword(String value) {
     return value.length >= 8 &&
         RegExp(r'[A-Z]').hasMatch(value) &&
@@ -128,8 +151,10 @@ class AccountService {
         RegExp(r'[^A-Za-z0-9]').hasMatch(value);
   }
 
+  /// تحويل النص الفارغ إلى null وتنظيف المسافات المحيطة.
   String? _emptyToNull(String? value) {
     final cleaned = value?.trim();
+
     return cleaned == null || cleaned.isEmpty ? null : cleaned;
   }
 }
