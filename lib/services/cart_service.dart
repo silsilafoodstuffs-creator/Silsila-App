@@ -134,6 +134,18 @@ class CartService extends ChangeNotifier {
         quantity: initialQuantity,
       );
     } else {
+      if (existing.supplierId != newItem.supplierId) {
+        throw StateError(
+          'تغيّر المورد المرتبط بهذا المنتج. احذف المنتج من السلة وأضفه من جديد.',
+        );
+      }
+      if (existing.price != newItem.price ||
+          existing.minQuantity != newItem.minQuantity) {
+        throw StateError(
+          'تغيّر سعر المنتج أو الحد الأدنى للطلب. احذف المنتج من السلة وأضفه من جديد لتحديث بياناته.',
+        );
+      }
+
       final nextQuantity = existing.quantity + quantity;
       if (nextQuantity > maxQuantityPerProduct) {
         throw ArgumentError('تجاوزت الحد الأقصى لكمية هذا المنتج.');
