@@ -101,8 +101,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         if (_rows.isEmpty && !_loading) const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد مستندات للعرض؛ لم تُضف بيانات تجريبية.')),
         ..._rows.map((r) {
           final status = _s(r['status']);
-          final canPost = ['draft','approved'].contains(status);
           final type = _s(r['document_type']);
+          final eligibleType = widget.kind == ErpOperationalKind.purchase
+              ? ['receipt','invoice','return'].contains(type)
+              : ['delivery','invoice','return'].contains(type);
+          final canPost = ['draft','approved'].contains(status) && eligibleType;
           final date = _s(r['document_date']);
           return Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -118,6 +121,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               const SizedBox(height: 4),
               Text('الإجمالي: ${_money(r['grand_total'])} ج.م • المدفوع: ${_money(r['paid_total'])} ج.م'),
               if (_s(r['notes']).isNotEmpty) Text('ملاحظات: ${_s(r['notes'])}'),
+              if (!canPost && ['draft','approved'].contains(status)) const Padding(padding: EdgeInsets.only(top: 6), child: Text('هذا النوع لا ينشئ حركة مخزنية مباشرة، لذلك لا يظهر له زر الترحيل هنا.', style: TextStyle(color: Colors.black54, fontSize: 12))),
               if (canPost) Align(alignment: Alignment.centerLeft, child: FilledButton.icon(
                 onPressed: _loading ? null : () => _post(r),
                 icon: const Icon(Icons.verified_outlined),
