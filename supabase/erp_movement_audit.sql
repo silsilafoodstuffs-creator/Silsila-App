@@ -943,8 +943,6 @@ begin
     and (p_area = 'كل الحركات' or p_area = 'المبيعات')
     and lines.line_count <> moves.movement_count
 
-  union all
-
   order by document_date nulls last, area, document_number;
 end;
 $$;
