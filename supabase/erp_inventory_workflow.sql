@@ -17,6 +17,15 @@ select
 from public.erp_inventory_movements m
 group by m.company_id, m.branch_id, m.warehouse_id, m.item_id;
 
+
+-- Read access for the stock ledger is membership-scoped; writes remain RPC-only.
+grant select on public.erp_inventory_movements to authenticated;
+drop policy if exists erp_inventory_movements_select_member on public.erp_inventory_movements;
+create policy erp_inventory_movements_select_member
+on public.erp_inventory_movements
+for select to authenticated
+using (public.erp_user_can_access_company(company_id));
+
 create or replace function public.erp_record_inventory_movement(
   p_company_id uuid,
   p_warehouse_id uuid,
