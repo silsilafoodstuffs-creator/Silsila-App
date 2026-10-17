@@ -81,15 +81,17 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       _heading('قواعد الحضور المتأخر — شرائح متتابعة'),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
         headingRowColor:WidgetStateProperty.all(const Color(0xFFF1E9FA)),
-        columns:const [DataColumn(label:Text('الحالة')),DataColumn(label:Text('من دقيقة')),DataColumn(label:Text('إلى دقيقة')),DataColumn(label:Text('قيمة الدقيقة')),DataColumn(label:Text('احتساب'))],
-        rows:List.generate(5,(n)=>DataRow(cells:[
+        columns:const [DataColumn(label:Text('الحالة')),DataColumn(label:Text('من دقيقة')),DataColumn(label:Text('إلى دقيقة')),DataColumn(label:Text('قيمة الدقيقة')),DataColumn(label:Text('احتساب')),DataColumn(label:Text('حذف'))],
+        rows:List.generate(s.from.length,(n)=>DataRow(cells:[
           DataCell(Text('تأخير '+(n+1).toString())),
-          DataCell(SizedBox(width:82,child:TextField(controller:s.from[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder()),onChanged:canEdit?(_)=>setState((){}):null))),
-          DataCell(SizedBox(width:82,child:TextField(controller:s.to[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder()),onChanged:canEdit?(_)=>setState((){}):null))),
-          DataCell(SizedBox(width:90,child:TextField(controller:s.value[n],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
+          DataCell(SizedBox(width:72,child:TextField(controller:s.from[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:9)),onChanged:canEdit?(_)=>setState((){}):null))),
+          DataCell(SizedBox(width:72,child:TextField(controller:s.to[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:9)),onChanged:canEdit?(_)=>setState((){}):null))),
+          DataCell(SizedBox(width:78,child:TextField(controller:s.value[n],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:9))))),
           DataCell(DropdownButton<String>(value:s.action[n],items:const[DropdownMenuItem(value:'خصم',child:Text('خصم')),DropdownMenuItem(value:'إضافي',child:Text('إضافي'))],onChanged:canEdit?(v)=>setState(()=>s.action[n]=v??'خصم'):null)),
+          DataCell(IconButton(tooltip:'حذف قاعدة التأخير',onPressed:canEdit&&s.from.length>1?()=>setState(()=>s.removeLateRule(n)):null,icon:const Icon(Icons.delete_outline,color:_red))),
         ])),
       )),
+      if(canEdit) Align(alignment:Alignment.centerRight,child:OutlinedButton.icon(onPressed:()=>setState(()=>s.addLateRule()),icon:const Icon(Icons.add_circle_outline,color:_orange),label:const Text('إضافة قاعدة حضور متأخر'))),
       Text(_validateRanges(s),style:TextStyle(color:_validateRanges(s).startsWith('سليم')?_green:_red,fontWeight:FontWeight.w700,fontSize:12)),
       _heading('قواعد نسيان البصمة'),
       _numberFields([_num(s.missIn,'نسيان بصمة الحضور — قيمة الحالة',readOnly:!canEdit),_num(s.missOut,'نسيان بصمة الانصراف — قيمة الحالة',readOnly:!canEdit),_num(s.missDay,'نسيان بصمة اليوم — قيمة الحالة',readOnly:!canEdit)]),
@@ -114,7 +116,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
 
   int? _mins(String t){final p=t.split(':');if(p.length!=2)return null;final h=int.tryParse(p[0]),m=int.tryParse(p[1]);if(h==null||m==null||h>23||h<0||m>59||m<0)return null;return h*60+m;}
   String _hours(String a,String b){final x=_mins(a),y=_mins(b);if(x==null||y==null)return '—';final n=(y-x+1440)%1440;return n==0?'24 ساعة':(n~/60).toString()+' ساعة '+(n%60==0?'':(n%60).toString()+' دقيقة');}
-  String _validateRanges(_Shift s){for(var i=0;i<5;i++){final a=int.tryParse(s.from[i].text),b=int.tryParse(s.to[i].text);if(a==null||b==null||a<0||b<a)return 'راجع بداية ونهاية الشريحة '+(i+1).toString();if(i>0&&a!=(int.tryParse(s.to[i-1].text)??-2)+1)return 'تنبيه: الشريحة '+(i+1).toString()+' يجب أن تبدأ بعد الشريحة السابقة بدقيقة';}return 'سليم: الشرائح متتابعة.';}
+  String _validateRanges(_Shift s){for(var i=0;i<s.from.length;i++){final a=int.tryParse(s.from[i].text),b=int.tryParse(s.to[i].text);if(a==null||b==null||a<0||b<a)return 'راجع بداية ونهاية الشريحة '+(i+1).toString();if(i>0&&a!=(int.tryParse(s.to[i-1].text)??-2)+1)return 'تنبيه: الشريحة '+(i+1).toString()+' يجب أن تبدأ بعد الشريحة السابقة بدقيقة';}return 'سليم: الشرائح متتابعة.';}
 
   void _assign(_Shift s){showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(title:const Text('استحضار وتنسيب موظفين'),content:SizedBox(width:460,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
     const Text('الإدارات'),...departments.map((d)=>CheckboxListTile(dense:true,value:s.depts.contains(d),title:Text(d),onChanged:(v)=>refresh(()=>v==true?s.depts.add(d):s.depts.remove(d)))),
@@ -131,7 +133,22 @@ class _Shift {
   final earlyIn=TextEditingController(text:'0'),earlyOut=TextEditingController(text:'1'),lateOut=TextEditingController(text:'0');
   final from=List.generate(5,(i)=>TextEditingController(text:(i==0?1:i*10+1).toString()));
   final to=List.generate(5,(i)=>TextEditingController(text:(i==4?999:(i+1)*10).toString()));
-  final value=List.generate(5,(_)=>TextEditingController(text:'1'));final action=List.generate(5,(_)=>'خصم');
+  final value=List.generate(5,(_)=>TextEditingController(text:'1'));
+  final action=List<String>.generate(5,(_)=>'خصم');
+  void addLateRule(){
+    final lastEnd=int.tryParse(to.last.text)??0;
+    from.add(TextEditingController(text:(lastEnd+1).toString()));
+    to.add(TextEditingController(text:(lastEnd+10).toString()));
+    value.add(TextEditingController(text:'1'));
+    action.add('خصم');
+  }
+  void removeLateRule(int index){
+    if(from.length<=1)return;
+    from.removeAt(index).dispose();
+    to.removeAt(index).dispose();
+    value.removeAt(index).dispose();
+    action.removeAt(index);
+  }
   final missIn=TextEditingController(text:'1'),missOut=TextEditingController(text:'1'),missDay=TextEditingController(text:'1');
   final excused1=TextEditingController(text:'0'),excused2=TextEditingController(text:'0'),excused3=TextEditingController(text:'0');
   final absent1=TextEditingController(text:'1'),absent2=TextEditingController(text:'1'),absent3=TextEditingController(text:'1'),sick=TextEditingController(text:'0'),injury=TextEditingController(text:'0');
