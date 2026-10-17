@@ -226,8 +226,10 @@ class AddressService {
       throw ArgumentError('يجب إدخال خط العرض وخط الطول معًا.');
     }
     if (latitude != null &&
-        (latitude < -90 || latitude > 90 ||
-            longitude! < -180 || longitude! > 180)) {
+        (!latitude.isFinite ||
+            !longitude!.isFinite ||
+            latitude < -90 || latitude > 90 ||
+            longitude < -180 || longitude > 180)) {
       throw ArgumentError('إحداثيات الموقع خارج النطاق الصحيح.');
     }
   }
