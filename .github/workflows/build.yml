@@ -98,7 +98,7 @@ jobs:
               s = imports + s
 
           if 'ndkVersion = "27.0.12077973"' not in s:
-              s = s.replace("android {", 'android {\\n    ndkVersion = "27.0.12077973"', 1)
+              s = s.replace("android {", 'android {\n    ndkVersion = "27.0.12077973"', 1)
 
           props = """
           val keystoreProperties = Properties()
