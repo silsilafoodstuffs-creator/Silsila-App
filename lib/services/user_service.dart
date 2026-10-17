@@ -92,6 +92,34 @@ class UserService {
     return List<Map<String, dynamic>>.from(response as List);
   }
 
+  /// جلب طلبات شحن المحفظة التي تنتظر مراجعة المسؤول.
+  Future<List<Map<String, dynamic>>> getPendingTopUps() async {
+    if (_client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+    final response = await _client.rpc('admin_list_pending_topups');
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
+  /// اعتماد طلب شحن أو رفضه من خلال إجراء إداري آمن.
+  Future<void> reviewTopUp({
+    required String requestId,
+    required bool approve,
+    String? note,
+  }) async {
+    if (_client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+    await _client.rpc(
+      'admin_review_wallet_topup',
+      params: {
+        'p_request_id': requestId.trim(),
+        'p_approve': approve,
+        'p_note': note?.trim(),
+      },
+    );
+  }
+
   /// هل يوجد مستخدم مسجل الدخول؟
   bool get isLoggedIn => _client.auth.currentUser != null;
 
