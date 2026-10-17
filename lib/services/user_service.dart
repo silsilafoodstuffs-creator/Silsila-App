@@ -60,6 +60,7 @@ class UserService {
   }) async {
     const allowedStatuses = {
       'pending',
+      'approved',
       'active',
       'suspended',
       'rejected',
@@ -69,10 +70,17 @@ class UserService {
       throw ArgumentError('حالة الحساب غير صحيحة.');
     }
 
-    await _client
-        .from('profiles')
-        .update({'status': status})
-        .eq('id', userId);
+    if (_client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+
+    await _client.rpc(
+      'admin_update_account_status',
+      params: {
+        'p_user_id': userId.trim(),
+        'p_status': status,
+      },
+    );
   }
 
   /// هل يوجد مستخدم مسجل الدخول؟
