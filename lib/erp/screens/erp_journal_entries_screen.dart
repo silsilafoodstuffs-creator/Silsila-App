@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/erp_journal_repository.dart';
 
 class ErpJournalEntriesScreen extends StatefulWidget {
-  const ErpJournalEntriesScreen({super.key});
+  const ErpJournalEntriesScreen({super.key, this.initialCompanyId});
+
+  final String? initialCompanyId;
 
   @override
   State<ErpJournalEntriesScreen> createState() => _ErpJournalEntriesScreenState();
@@ -14,6 +16,12 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
   List<Map<String, dynamic>> _entries = [];
   bool _loading = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _company.text = widget.initialCompanyId ?? '';
+  }
 
   @override
   void dispose() {
