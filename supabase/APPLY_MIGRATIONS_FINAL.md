@@ -20,6 +20,7 @@
 16. `16_admin_wallet_topups.sql`
 17. `17_order_notifications.sql`
 18. `18_shipping_operations.sql`
+19. `19_admin_support_tickets.sql`
 
 تجنب تشغيل النسخ القديمة `03_secure_checkout.sql` و`04_service_compatibility.sql`؛ استخدم النسخ ذات اللاحقة `fixed` المذكورة أعلاه.
 
