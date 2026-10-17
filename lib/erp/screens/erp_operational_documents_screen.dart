@@ -17,7 +17,22 @@ class ErpOperationalDocumentsScreen extends StatefulWidget {
 class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsScreen> {
   final _repo = ErpOperationalDocumentsRepository();
   final _company = TextEditingController();
+  final _documentNumber = TextEditingController();
+  final _notes = TextEditingController();
+  final _quantity = TextEditingController(text: '1');
+  final _unitPrice = TextEditingController(text: '0');
+  final _discount = TextEditingController(text: '0');
+  final _tax = TextEditingController(text: '0');
   List<Map<String, dynamic>> _rows = [];
+  List<Map<String, dynamic>> _parties = [];
+  List<Map<String, dynamic>> _warehouses = [];
+  List<Map<String, dynamic>> _items = [];
+  String? _partyId;
+  String? _warehouseId;
+  String? _itemId;
+  String? _selectedDocumentId;
+  String _documentType = 'invoice';
+  bool _saving = false;
   bool _loading = false;
   String? _error;
   String? _message;
@@ -29,7 +44,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     _company.text = widget.initialCompanyId ?? '';
   }
   @override
-  void dispose() { _company.dispose(); super.dispose(); }
+  void dispose() {
+    _company.dispose(); _documentNumber.dispose(); _notes.dispose(); _quantity.dispose();
+    _unitPrice.dispose(); _discount.dispose(); _tax.dispose(); super.dispose();
+  }
 
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
@@ -42,9 +60,21 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
     setState(() { _loading = true; _error = null; _message = null; });
     try {
-      final rows = await _repo.fetchDocuments(companyId: _company.text, kind: widget.kind);
+      final results = await Future.wait([
+        _repo.fetchDocuments(companyId: _company.text, kind: widget.kind),
+        _repo.fetchParties(_company.text, widget.kind),
+        _repo.fetchWarehouses(_company.text),
+        _repo.fetchItems(_company.text),
+      ]);
       if (!mounted) return;
-      setState(() { _rows = rows; _loading = false; });
+      setState(() {
+        _rows = results[0]; _parties = results[1]; _warehouses = results[2]; _items = results[3];
+        if (!_parties.any((r) => _s(r['id']) == _partyId)) _partyId = _parties.isEmpty ? null : _s(_parties.first['id']);
+        if (!_warehouses.any((r) => _s(r['id']) == _warehouseId)) _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
+        if (!_items.any((r) => _s(r['id']) == _itemId)) _itemId = _items.isEmpty ? null : _s(_items.first['id']);
+        if (_selectedDocumentId != null && !_rows.any((r) => _s(r['id']) == _selectedDocumentId)) _selectedDocumentId = null;
+        _loading = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر تحميل المستندات: $e'; });
