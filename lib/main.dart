@@ -4226,6 +4226,10 @@ class MarketPostScreen extends StatefulWidget {
 class _MarketPostScreenState extends State<MarketPostScreen> {
   final titleController = TextEditingController();
   final detailsController = TextEditingController();
+  final quantityController = TextEditingController();
+  final unitController = TextEditingController();
+  final priceController = TextEditingController();
+  final governorateController = TextEditingController();
   String type = 'buy';
   bool busy = false;
 
@@ -4233,6 +4237,10 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   void dispose() {
     titleController.dispose();
     detailsController.dispose();
+    quantityController.dispose();
+    unitController.dispose();
+    priceController.dispose();
+    governorateController.dispose();
     super.dispose();
   }
 
@@ -4245,6 +4253,18 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       return;
     }
 
+    final quantityText = quantityController.text.trim();
+    final priceText = priceController.text.trim();
+    final quantity = quantityText.isEmpty ? null : double.tryParse(quantityText);
+    final targetPrice = priceText.isEmpty ? null : double.tryParse(priceText);
+    if ((quantityText.isNotEmpty && (quantity == null || !quantity.isFinite || quantity <= 0)) ||
+        (priceText.isNotEmpty && (targetPrice == null || !targetPrice.isFinite || targetPrice < 0))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('راجع الكمية والسعر؛ يجب إدخال أرقام صحيحة.')),
+      );
+      return;
+    }
+
     setState(() => busy = true);
     try {
       await TraderMarketService().createPost(
@@ -4252,6 +4272,10 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         description: detailsController.text.trim(),
         postType: type,
         activityType: 'مواد غذائية',
+        quantity: quantity,
+        unit: unitController.text.trim().isEmpty ? null : unitController.text.trim(),
+        targetPrice: targetPrice,
+        governorate: governorateController.text.trim().isEmpty ? null : governorateController.text.trim(),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -4295,6 +4319,28 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             controller: detailsController,
             maxLines: 4,
             decoration: const InputDecoration(labelText: 'التفاصيل'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: quantityController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'الكمية (اختياري)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: unitController,
+            decoration: const InputDecoration(labelText: 'وحدة القياس (كرتونة، كيلو...)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: priceController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(labelText: type == 'buy' ? 'السعر المستهدف بالجنيه (اختياري)' : 'سعر العرض بالجنيه (اختياري)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: governorateController,
+            decoration: const InputDecoration(labelText: 'المحافظة (اختياري)'),
           ),
           const SizedBox(height: 16),
           FilledButton(
