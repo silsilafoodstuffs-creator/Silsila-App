@@ -28,6 +28,9 @@ class OrderStatusService {
   Future<List<Map<String, dynamic>>> getOrderHistory(
     int orderId,
   ) async {
+    if (orderId <= 0) {
+      throw ArgumentError('رقم الطلب غير صالح.');
+    }
     final userId = _userId;
 
     final order = await _client
@@ -65,6 +68,9 @@ class OrderStatusService {
 
   /// جلب أصناف طلب يملكه المستخدم الحالي.
   Future<List<Map<String, dynamic>>> getOrderItems(int orderId) async {
+    if (orderId <= 0) {
+      throw ArgumentError('رقم الطلب غير صالح.');
+    }
     await getOrderHistory(orderId);
     final rows = await _client
         .from('order_items')
@@ -76,6 +82,9 @@ class OrderStatusService {
 
   /// إلغاء طلب العميل قبل بدء التنفيذ.
   Future<void> cancelOrder(int orderId) async {
+    if (orderId <= 0) {
+      throw ArgumentError('رقم الطلب غير صالح.');
+    }
     await _client.rpc(
       'cancel_customer_order',
       params: {'p_order_id': orderId},
@@ -90,8 +99,14 @@ class OrderStatusService {
   }) async {
     final cleanStatus = status.trim();
 
+    if (orderId <= 0) {
+      throw ArgumentError('رقم الطلب غير صالح.');
+    }
     if (!allowedStatuses.contains(cleanStatus)) {
       throw ArgumentError('حالة الطلب غير صحيحة.');
+    }
+    if (note != null && note.trim().length > 1000) {
+      throw ArgumentError('ملاحظة حالة الطلب يجب ألا تتجاوز 1000 حرف.');
     }
 
     final userId = _userId;
