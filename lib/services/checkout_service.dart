@@ -80,8 +80,6 @@ class CheckoutService {
       deliveryAddress: deliveryAddress,
     );
 
-    final user = _client.auth.currentUser!;
-
     final groupedItems = <String, List<CartItem>>{};
 
     for (final item in items) {
