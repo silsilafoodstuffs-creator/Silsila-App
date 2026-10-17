@@ -92,7 +92,7 @@ create or replace function public.erp_guard_journal_entry_update()
 returns trigger
 language plpgsql
 set search_path = public
-as $
+as $$
 begin
   if old.company_id is distinct from new.company_id
      or old.entry_number is distinct from new.entry_number
@@ -109,7 +109,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists erp_journal_entry_immutable_guard on public.erp_journal_entries;
 create trigger erp_journal_entry_immutable_guard
@@ -238,3 +238,93 @@ grant select, insert, update, delete on public.erp_companies, public.erp_branche
   public.erp_fiscal_periods, public.erp_accounts, public.erp_cashboxes,
   public.erp_warehouses, public.erp_item_groups, public.erp_items, public.erp_parties,
   public.erp_journal_entries, public.erp_journal_lines to authenticated;
+
+
+-- Operational document headers use membership-scoped reads and role-limited writes.
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['erp_purchase_documents','erp_sales_documents']
+  loop
+    execute format('drop policy if exists %I on public.%I', t || '_select_member', t);
+    execute format('create policy %I on public.%I for select to authenticated using (public.erp_user_can_access_company(company_id))', t || '_select_member', t);
+    execute format('drop policy if exists %I on public.%I', t || '_insert_operator', t);
+    execute format('create policy %I on public.%I for insert to authenticated with check (public.erp_user_has_company_role(company_id, array[''owner'',''admin'',''manager'',''operator'',''accountant'']::text[]))', t || '_insert_operator', t);
+    execute format('drop policy if exists %I on public.%I', t || '_update_operator', t);
+    execute format('create policy %I on public.%I for update to authenticated using (public.erp_user_has_company_role(company_id, array[''owner'',''admin'',''manager'',''operator'',''accountant'']::text[])) with check (public.erp_user_has_company_role(company_id, array[''owner'',''admin'',''manager'',''operator'',''accountant'']::text[]))', t || '_update_operator', t);
+    execute format('drop policy if exists %I on public.%I', t || '_delete_admin', t);
+    execute format('create policy %I on public.%I for delete to authenticated using (status = ''draft'' and public.erp_user_has_company_role(company_id, array[''owner'',''admin'']::text[]))', t || '_delete_admin', t);
+  end loop;
+end;
+$$;
+
+-- Document lines inherit company access through their header and must reference
+-- items belonging to that same company.
+drop policy if exists erp_purchase_lines_select_member on public.erp_purchase_lines;
+create policy erp_purchase_lines_select_member on public.erp_purchase_lines
+for select to authenticated using (exists (
+  select 1 from public.erp_purchase_documents d
+  where d.id = document_id and public.erp_user_can_access_company(d.company_id)
+));
+drop policy if exists erp_purchase_lines_insert_operator on public.erp_purchase_lines;
+create policy erp_purchase_lines_insert_operator on public.erp_purchase_lines
+for insert to authenticated with check (exists (
+  select 1 from public.erp_purchase_documents d
+  join public.erp_items i on i.id = item_id and i.company_id = d.company_id
+  where d.id = document_id and d.status = 'draft'
+    and public.erp_user_has_company_role(d.company_id, array['owner','admin','manager','operator','accountant']::text[])
+));
+drop policy if exists erp_purchase_lines_update_operator on public.erp_purchase_lines;
+create policy erp_purchase_lines_update_operator on public.erp_purchase_lines
+for update to authenticated using (exists (
+  select 1 from public.erp_purchase_documents d where d.id = document_id and d.status = 'draft'
+    and public.erp_user_has_company_role(d.company_id, array['owner','admin','manager','operator','accountant']::text[])
+)) with check (exists (
+  select 1 from public.erp_purchase_documents d
+  join public.erp_items i on i.id = item_id and i.company_id = d.company_id
+  where d.id = document_id and d.status = 'draft'
+    and public.erp_user_has_company_role(d.company_id, array['owner','admin','manager','operator','accountant']::text[])
+));
+drop policy if exists erp_purchase_lines_delete_operator on public.erp_purchase_lines;
+create policy erp_purchase_lines_delete_operator on public.erp_purchase_lines
+for delete to authenticated using (exists (
+  select 1 from public.erp_purchase_documents d where d.id = document_id and d.status = 'draft'
+    and public.erp_user_has_company_role(d.company_id, array['owner','admin','manager','operator','accountant']::text[])
+));
+
+drop policy if exists erp_sales_lines_select_member on public.erp_sales_lines;
+create policy erp_sales_lines_select_member on public.erp_sales_lines
+for select to authenticated using (exists (
+  select 1 from public.erp_sales_documents d
+  where d.id = document_id and public.erp_user_can_access_company(d.company_id)
+));
+drop policy if exists erp_sales_lines_insert_operator on public.erp_sales_lines;
+create policy erp_sales_lines_insert_operator on public.erp_sales_lines
+for insert to authenticated with check (exists (
+  select 1 from public.erp_sales_documents d
+  join public.erp_items i on i.id = item_id and i.company_id = d.company_id
+  where d.id = document_id and d.status = 'draft'
+    and public.erp_user_has_company_role(d.company_id, array['owner','admin','manager','operator','accountant']::text[])
+));
+drop policy if exists erp_sales_lines_update_operator on public.erp_sales_lines;
+create policy erp_sales_lines_update_operator on public.erp_sales_lines
+for update to authenticated using (exists (
+  select 1 from public.erp_sales_documents d where d.id = document_id and d.status = 'draft'
+    and public.erp_user_has_company_role(d.company_id, array['owner','admin','manager','operator','accountant']::text[])
+)) with check (exists (
+  select 1 from public.erp_sales_documents d
+  join public.erp_items i on i.id = item_id and i.company_id = d.company_id
+  where d.id = document_id and d.status = 'draft'
+    and public.erp_user_has_company_role(d.company_id, array['owner','admin','manager','operator','accountant']::text[])
+));
+drop policy if exists erp_sales_lines_delete_operator on public.erp_sales_lines;
+create policy erp_sales_lines_delete_operator on public.erp_sales_lines
+for delete to authenticated using (exists (
+  select 1 from public.erp_sales_documents d where d.id = document_id and d.status = 'draft'
+    and public.erp_user_has_company_role(d.company_id, array['owner','admin','manager','operator','accountant']::text[])
+));
+
+grant select, insert, update, delete on public.erp_purchase_documents, public.erp_purchase_lines,
+  public.erp_sales_documents, public.erp_sales_lines to authenticated;
+
