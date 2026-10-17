@@ -5425,6 +5425,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سجّل الدخول أولًا لإتمام الطلب.')));
       return;
     }
+    if (address.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل عنوان التوصيل بالتفصيل قبل تأكيد الطلب.')));
+      return;
+    }
+    if (widget.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('السلة فارغة؛ أضف منتجات أولًا.')));
+      return;
+    }
     final items = <CartItem>[];
     for (final row in widget.items) {
       final p = row['product'] as Product;
