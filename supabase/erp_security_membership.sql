@@ -87,6 +87,25 @@ create policy erp_members_delete_admin
 on public.erp_company_members for delete to authenticated
 using (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
 
+
+create or replace function public.erp_require_journal_draft_on_insert()
+returns trigger
+language plpgsql
+set search_path = public
+as $
+begin
+  if new.status <> 'draft' or new.posted_at is not null or new.posted_by is not null then
+    raise exception 'يجب إنشاء القيد كمسودة ثم ترحيله بإجراء محاسبي معتمد';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists erp_journal_draft_insert_guard on public.erp_journal_entries;
+create trigger erp_journal_draft_insert_guard
+before insert on public.erp_journal_entries
+for each row execute function public.erp_require_journal_draft_on_insert();
+
 -- Prevent changes to posted journal headers and keep immutable identifiers stable.
 create or replace function public.erp_guard_journal_entry_update()
 returns trigger
@@ -213,7 +232,8 @@ for select to authenticated using (public.erp_user_can_access_company(company_id
 drop policy if exists erp_journal_entries_insert_accounting on public.erp_journal_entries;
 create policy erp_journal_entries_insert_accounting on public.erp_journal_entries
 for insert to authenticated
-with check (public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]));
+with check (status = 'draft' and posted_at is null and posted_by is null
+  and public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]));
 
 drop policy if exists erp_journal_entries_update_accounting on public.erp_journal_entries;
 create policy erp_journal_entries_update_accounting on public.erp_journal_entries
