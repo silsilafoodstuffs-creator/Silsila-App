@@ -93,6 +93,10 @@ returns trigger
 language plpgsql
 set search_path = public
 as $$
+declare
+  v_count integer;
+  v_debit numeric(18,2);
+  v_credit numeric(18,2);
 begin
   if old.company_id is distinct from new.company_id
      or old.entry_number is distinct from new.entry_number
@@ -106,6 +110,26 @@ begin
   end if;
   if new.status not in ('draft','posted') then
     raise exception 'حالة القيد غير مسموح بها';
+  end if;
+  if new.status = 'posted' then
+    select count(*), coalesce(sum(l.debit),0), coalesce(sum(l.credit),0)
+      into v_count, v_debit, v_credit
+    from public.erp_journal_lines l where l.entry_id = old.id;
+    if v_count < 2 or v_debit <= 0 or v_debit <> v_credit then
+      raise exception 'لا يمكن ترحيل القيد دون سطور متوازنة';
+    end if;
+    if exists (
+      select 1 from public.erp_journal_lines l
+      join public.erp_accounts a on a.id = l.account_id
+      where l.entry_id = old.id
+        and (a.company_id <> old.company_id or not a.is_active or not a.is_postable)
+    ) then raise exception 'القيد يحتوي على حساب غير صالح'; end if;
+    if exists (
+      select 1 from public.erp_fiscal_periods fp
+      where fp.company_id = old.company_id
+        and new.entry_date between fp.starts_on and fp.ends_on
+        and fp.status = 'closed'
+    ) then raise exception 'لا يمكن ترحيل القيد داخل فترة مالية مغلقة'; end if;
   end if;
   return new;
 end;
