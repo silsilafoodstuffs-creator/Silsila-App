@@ -3778,8 +3778,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 /// توحيد رقم الهاتف إلى صيغة E.164 المطلوبة لمصادقة الهاتف.
 /// يدعم أرقام مصر المحلية مثل 010... و02...، والأرقام الدولية.
 String normalizePhoneForAuth(String input) {
-  final compact = input.trim().replaceAll(RegExp(r'[\\s().-]'), '');
-  final digits = compact.replaceAll(RegExp(r'\\D'), '');
+  final compact = input.trim().replaceAll(RegExp(r'[\s().-]'), '');
+  final digits = compact.replaceAll(RegExp(r'\D'), '');
 
   if (compact.startsWith('+')) return '+$digits';
   if (digits.startsWith('00')) return '+${digits.substring(2)}';
@@ -3950,6 +3950,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final phone = TextEditingController();
   final password = TextEditingController();
   bool busy = false;
+  bool obscurePassword = true;
 
   @override
   void dispose() {
@@ -4027,10 +4028,15 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: password,
-            obscureText: true,
-            decoration: const InputDecoration(
+            obscureText: obscurePassword,
+            decoration: InputDecoration(
               labelText: 'اكتب كلمة المرور الخاصة بك',
-              prefixIcon: Icon(Icons.lock),
+              prefixIcon: const Icon(Icons.lock),
+              suffixIcon: IconButton(
+                tooltip: obscurePassword ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور',
+                onPressed: () => setState(() => obscurePassword = !obscurePassword),
+                icon: Icon(obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+              ),
             ),
           ),
           const SizedBox(height: 18),
