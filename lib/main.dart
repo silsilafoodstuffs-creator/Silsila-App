@@ -574,10 +574,10 @@ class _MainShellState extends State<MainShell> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const Directionality(
+        builder: (_) => Directionality(
           textDirection: TextDirection.rtl,
           child: Scaffold(
-            appBar: AppBar(title: Text('الإشعارات')),
+            appBar: AppBar(title: const Text('الإشعارات')),
             body: NotificationsScreen(),
           ),
         ),
@@ -1923,7 +1923,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
                 isThreeLine: true,
                 trailing: IconButton(
                   tooltip: active ? 'إيقاف المنتج' : 'المنتج متوقف',
-                  onPressed: active && id != null && !busyIds.contains(id) ? () => deactivate(product) : null,
+                  onPressed: active && id != null && !busyIds.contains(id) ? () => deactivateProduct(product) : null,
                   icon: Icon(active ? Icons.pause_circle_outline : Icons.check_circle_outline, color: active ? orange : Colors.grey),
                 ),
               ),
@@ -5757,10 +5757,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const Directionality(
+        builder: (_) => Directionality(
           textDirection: TextDirection.rtl,
           child: Scaffold(
-            appBar: AppBar(title: Text('عناويني المحفوظة')),
+            appBar: AppBar(title: const Text('عناويني المحفوظة')),
             body: AddressBookScreen(),
           ),
         ),
