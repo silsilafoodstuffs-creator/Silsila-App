@@ -87,6 +87,35 @@ create policy erp_members_delete_admin
 on public.erp_company_members for delete to authenticated
 using (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
 
+-- Prevent changes to posted journal headers and keep immutable identifiers stable.
+create or replace function public.erp_guard_journal_entry_update()
+returns trigger
+language plpgsql
+set search_path = public
+as $
+begin
+  if old.company_id is distinct from new.company_id
+     or old.entry_number is distinct from new.entry_number
+     or old.source_type is distinct from new.source_type
+     or old.source_id is distinct from new.source_id
+     or old.created_by is distinct from new.created_by then
+    raise exception 'لا يمكن تغيير الشركة أو رقم القيد أو مصدره أو منشئه';
+  end if;
+  if old.status <> 'draft' then
+    raise exception 'القيد المرحّل غير قابل للتعديل؛ استخدم إجراء العكس المحاسبي';
+  end if;
+  if new.status not in ('draft','posted') then
+    raise exception 'حالة القيد غير مسموح بها';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists erp_journal_entry_immutable_guard on public.erp_journal_entries;
+create trigger erp_journal_entry_immutable_guard
+before update on public.erp_journal_entries
+for each row execute function public.erp_guard_journal_entry_update();
+
 -- Company master record: members may read; owner/admin manage.
 drop policy if exists erp_companies_select_member on public.erp_companies;
 create policy erp_companies_select_member on public.erp_companies
