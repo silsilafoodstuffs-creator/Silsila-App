@@ -12,6 +12,7 @@ import 'services/offer_service.dart';
 import 'services/story_service.dart';
 import 'services/user_service.dart';
 import 'services/support_service.dart';
+import 'services/delivery_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 
@@ -1301,6 +1302,11 @@ class _MainShellState extends State<MainShell> {
             () => openPage('الدعم والشكاوى', const SupportScreen()),
           ),
           menuItem(
+            Icons.local_shipping_outlined,
+            'الشحن والتوصيل',
+            () => openPage('الشحن والتوصيل', const DeliveryScreen()),
+          ),
+          menuItem(
             Icons.favorite_border,
             'المفضلة',
             () => openPage(
@@ -1360,6 +1366,143 @@ class _MainShellState extends State<MainShell> {
         trailing: const Icon(Icons.chevron_left),
         onTap: onTap,
       ),
+    );
+  }
+}
+
+class DeliveryScreen extends StatefulWidget {
+  const DeliveryScreen({super.key});
+
+  @override
+  State<DeliveryScreen> createState() => _DeliveryScreenState();
+}
+
+class _DeliveryScreenState extends State<DeliveryScreen> {
+  final service = DeliveryService();
+  final orderIdController = TextEditingController();
+  final pickupController = TextEditingController();
+  final deliveryController = TextEditingController();
+  final notesController = TextEditingController();
+  List<Map<String, dynamic>> companies = [];
+  List<Map<String, dynamic>> deliveries = [];
+  String? companyId;
+  bool loading = true;
+  bool sending = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadDeliveryData();
+  }
+
+  @override
+  void dispose() {
+    orderIdController.dispose();
+    pickupController.dispose();
+    deliveryController.dispose();
+    notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> loadDeliveryData() async {
+    try {
+      final loadedCompanies = await service.getShippingCompanies();
+      final loadedDeliveries = await service.getMyDeliveries();
+      if (!mounted) return;
+      setState(() {
+        companies = loadedCompanies;
+        deliveries = loadedDeliveries;
+        if (companyId == null && companies.isNotEmpty) {
+          companyId = companies.first['id']?.toString();
+        }
+        error = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'تعذر تحميل شركات الشحن أو الشحنات السابقة.');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> submitDelivery() async {
+    final orderText = orderIdController.text.trim();
+    if (int.tryParse(orderText) == null ||
+        (companyId ?? '').isEmpty ||
+        pickupController.text.trim().isEmpty ||
+        deliveryController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أكمل رقم الطلب وشركة الشحن وعنوانَي الاستلام والتوصيل.')));
+      return;
+    }
+    setState(() => sending = true);
+    try {
+      await service.createDelivery(
+        orderId: orderText,
+        shippingCompanyId: companyId!,
+        pickupAddress: pickupController.text,
+        deliveryAddress: deliveryController.text,
+        notes: notesController.text,
+      );
+      if (!mounted) return;
+      orderIdController.clear();
+      pickupController.clear();
+      deliveryController.clear();
+      notesController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب التوصيل.')));
+      await loadDeliveryData();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إنشاء الشحنة: $e')));
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text('طلب شحن وتوصيل', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+        if (loading) const LinearProgressIndicator(minHeight: 2),
+        if (error != null) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(error!)),
+        if (companies.isEmpty && !loading)
+          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('لا توجد شركات شحن نشطة حاليًا.')),
+        TextField(controller: orderIdController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'رقم الطلب')),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          value: companies.any((company) => company['id']?.toString() == companyId) ? companyId : null,
+          decoration: const InputDecoration(labelText: 'شركة الشحن'),
+          items: companies.map((company) => DropdownMenuItem<String>(
+            value: company['id'].toString(),
+            child: Text((company['name'] ?? 'شركة شحن').toString()),
+          )).toList(),
+          onChanged: companies.isEmpty ? null : (value) => setState(() => companyId = value),
+        ),
+        const SizedBox(height: 10),
+        TextField(controller: pickupController, maxLines: 2, decoration: const InputDecoration(labelText: 'عنوان الاستلام')),
+        const SizedBox(height: 10),
+        TextField(controller: deliveryController, maxLines: 2, decoration: const InputDecoration(labelText: 'عنوان التوصيل')),
+        const SizedBox(height: 10),
+        TextField(controller: notesController, decoration: const InputDecoration(labelText: 'ملاحظات (اختياري)')),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: sending || companies.isEmpty ? null : submitDelivery,
+          icon: sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.local_shipping),
+          label: Text(sending ? 'جارٍ إرسال الطلب...' : 'طلب التوصيل'),
+        ),
+        const Divider(height: 32),
+        const Text('شحناتي السابقة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        if (!loading && deliveries.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('لا توجد شحنات سابقة.')),
+        ...deliveries.map((delivery) => Card(
+          child: ListTile(
+            leading: const Icon(Icons.local_shipping_outlined, color: purple),
+            title: Text('طلب رقم ${delivery['order_id'] ?? '-'}'),
+            subtitle: Text((delivery['delivery_address'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis),
+            trailing: Text((delivery['status'] ?? 'pending').toString()),
+          ),
+        )),
+      ],
     );
   }
 }
