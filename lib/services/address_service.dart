@@ -91,6 +91,8 @@ class AddressService {
 
     _validateTextLength(cleanTitle, 'اسم العنوان', 100);
     _validateTextLength(cleanGovernorate, 'المحافظة', 100);
+    _validateSingleLine(cleanTitle, 'اسم العنوان');
+    _validateSingleLine(cleanGovernorate, 'المحافظة');
     _validateTextLength(cleanAddress, 'العنوان بالتفصيل', 2000);
     _validateOptionalLength(district, 'المركز', 150);
     _validateOptionalLength(village, 'القرية', 150);
@@ -168,6 +170,8 @@ class AddressService {
     _validateTextLength(cleanId, 'معرّف العنوان', 200);
     _validateTextLength(cleanTitle, 'اسم العنوان', 100);
     _validateTextLength(cleanGovernorate, 'المحافظة', 100);
+    _validateSingleLine(cleanTitle, 'اسم العنوان');
+    _validateSingleLine(cleanGovernorate, 'المحافظة');
     _validateTextLength(cleanAddress, 'العنوان بالتفصيل', 2000);
     _validateOptionalLength(district, 'المركز', 150);
     _validateOptionalLength(village, 'القرية', 150);
@@ -300,6 +304,12 @@ class AddressService {
       throw ArgumentError(
         'إحداثيات الموقع خارج النطاق الصحيح.',
       );
+    }
+  }
+
+  void _validateSingleLine(String value, String fieldName) {
+    if (value.contains(r'\n') || value.contains(r'\r')) {
+      throw ArgumentError('$fieldName يجب أن يكون في سطر واحد.');
     }
   }
 
