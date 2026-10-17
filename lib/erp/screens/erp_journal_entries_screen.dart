@@ -173,9 +173,33 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                               if (lines.length > 2)
                                 IconButton(
                                   tooltip: 'حذف السطر',
-                                  onPressed: () => refresh(() {
-                                    lines.removeAt(index).dispose();
-                                  }),
+                                  onPressed: () async {
+                                    final confirmed = await showDialog<bool>(
+                                      context: dialogContext,
+                                      builder: (confirmContext) => AlertDialog(
+                                        title: const Text('تأكيد الحذف'),
+                                        content: Text('هل ترغب في حذف السطر \${index + 1} من القيد؟'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(confirmContext, false),
+                                            child: const Text('لأ'),
+                                          ),
+                                          FilledButton(
+                                            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                                            onPressed: () => Navigator.pop(confirmContext, true),
+                                            child: const Text('أه، احذف'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed == true) {
+                                      refresh(() {
+                                        if (index < lines.length) {
+                                          lines.removeAt(index).dispose();
+                                        }
+                                      });
+                                    }
+                                  },
                                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                                 ),
                             ]),
