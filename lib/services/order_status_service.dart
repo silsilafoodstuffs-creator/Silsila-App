@@ -63,6 +63,25 @@ class OrderStatusService {
     return List<Map<String, dynamic>>.from(rows);
   }
 
+  /// جلب أصناف طلب يملكه المستخدم الحالي.
+  Future<List<Map<String, dynamic>>> getOrderItems(int orderId) async {
+    await getOrderHistory(orderId);
+    final rows = await _client
+        .from('order_items')
+        .select('product_name, unit, quantity, unit_price, line_total, total_price')
+        .eq('order_id', orderId)
+        .order('id');
+    return List<Map<String, dynamic>>.from(rows);
+  }
+
+  /// إلغاء طلب العميل قبل بدء التنفيذ.
+  Future<void> cancelOrder(int orderId) async {
+    await _client.rpc(
+      'cancel_customer_order',
+      params: {'p_order_id': orderId},
+    );
+  }
+
   /// تحديث حالة الطلب بواسطة المورد.
   Future<Map<String, dynamic>> updateOrderStatus({
     required int orderId,
