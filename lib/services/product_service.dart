@@ -1,26 +1,30 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProductService {
-  ProductService({SupabaseClient? client})
-      : _client = client ?? _defaultClient;
+  ProductService({SupabaseClient? client}) : _client = client;
 
   final SupabaseClient? _client;
 
-  static SupabaseClient? get _defaultClient {
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client != null) {
+      return client;
+    }
+
     try {
       return Supabase.instance.client;
     } catch (_) {
-      return null;
+      throw StateError(
+        'اتصال Supabase غير متاح. يرجى المحاولة لاحقًا.',
+      );
     }
   }
 
-  SupabaseClient get _requireClient {
-    final client = _client;
-    if (client == null) {
-      throw StateError('اتصال Supabase غير متاح.');
-    }
-    return client;
-  }
+  static const String _productColumns =
+      'id, supplier_id, name, category, category_id, '
+      'description, price, unit, min_quantity, '
+      'activity_type, is_active, created_at';
 
   /// جلب المنتجات النشطة مع إمكانية التصفية.
   Future<List<Map<String, dynamic>>> getProducts({
@@ -31,74 +35,123 @@ class ProductService {
     String? search,
     int limit = 50,
   }) async {
-    if (limit < 1 || limit > 200) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    _validateLimit(limit);
+
+    if (categoryId != null && categoryId <= 0) {
+      throw ArgumentError('رقم القسم غير صالح.');
     }
+
+    final cleanActivityType = _clean(activityType);
+    final cleanCategory = _clean(category);
+    final cleanSupplierId = _clean(supplierId);
+    final cleanSearch = _clean(search);
 
     var query = _requireClient
         .from('products')
-        .select(
-          'id, supplier_id, name, category, category_id, '
-          'description, price, unit, min_quantity, '
-          'activity_type, is_active, created_at',
-        )
-        .eq('is_active', true)
-        .order('name')
-        .limit(limit);
+        .select(_productColumns)
+        .eq('is_active', true);
 
-    if (activityType != null && activityType.trim().isNotEmpty) {
-      query = query.eq('activity_type', activityType.trim());
+    if (cleanActivityType != null) {
+      query = query.eq('activity_type', cleanActivityType);
     }
 
-    if (category != null && category.trim().isNotEmpty) {
-      query = query.eq('category', category.trim());
+    if (cleanCategory != null) {
+      query = query.eq('category', cleanCategory);
     }
 
     if (categoryId != null) {
       query = query.eq('category_id', categoryId);
     }
 
-    if (supplierId != null && supplierId.trim().isNotEmpty) {
-      query = query.eq('supplier_id', supplierId.trim());
+    if (cleanSupplierId != null) {
+      query = query.eq('supplier_id', cleanSupplierId);
     }
 
-    if (search != null && search.trim().isNotEmpty) {
-      query = query.ilike('name', '%${search.trim()}%');
+    if (cleanSearch != null) {
+      final escapedSearch = _escapeLikePattern(cleanSearch);
+      query = query.ilike('name', '%$escapedSearch%');
     }
 
-    final response = await query;
+    final response = await query
+        .order('name', ascending: true)
+        .limit(limit);
 
-    return List<Map<String, dynamic>>.from(response);
+    return _mapRows(response);
   }
 
-  /// جلب تفاصيل منتج واحد.
+  /// جلب تفاصيل منتج نشط باستخدام رقمه.
   Future<Map<String, dynamic>?> getProductById(
     int productId,
   ) async {
+    if (productId <= 0) {
+      throw ArgumentError('رقم المنتج غير صالح.');
+    }
+
     final response = await _requireClient
         .from('products')
-        .select(
-          'id, supplier_id, name, category, category_id, '
-          'description, price, unit, min_quantity, '
-          'activity_type, is_active, created_at',
-        )
+        .select(_productColumns)
         .eq('id', productId)
         .eq('is_active', true)
         .maybeSingle();
 
-    return response;
+    if (response == null) {
+      return null;
+    }
+
+    return Map<String, dynamic>.from(response);
   }
 
-  /// جلب المنتجات التابعة لمورد محدد.
+  /// جلب المنتجات النشطة التابعة لمورد محدد.
   Future<List<Map<String, dynamic>>> getSupplierProducts(
     String supplierId, {
     String? activityType,
     int limit = 100,
   }) async {
+    final cleanSupplierId = _clean(supplierId);
+
+    if (cleanSupplierId == null) {
+      throw ArgumentError('معرّف المورد مطلوب.');
+    }
+
     return getProducts(
-      supplierId: supplierId,
+      supplierId: cleanSupplierId,
       activityType: activityType,
       limit: limit,
     );
+  }
+
+  void _validateLimit(int limit) {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+  }
+
+  String? _clean(String? value) {
+    final result = value?.trim();
+
+    if (result == null || result.isEmpty) {
+      return null;
+    }
+
+    return result;
+  }
+
+  /// التعامل مع الرموز الخاصة في نمط البحث.
+  String _escapeLikePattern(String value) {
+    return value
+        .replaceAll(r'\', r'\\')
+        .replaceAll('%', r'\%')
+        .replaceAll('_', r'\_');
+  }
+
+  List<Map<String, dynamic>> _mapRows(dynamic response) {
+    if (response is! List) {
+      throw StateError('تعذر قراءة قائمة المنتجات.');
+    }
+
+    return response
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
   }
 }
