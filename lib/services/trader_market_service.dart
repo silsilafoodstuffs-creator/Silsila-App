@@ -115,6 +115,7 @@ class TraderMarketService {
     _validateOptionalText(unit, 'الوحدة', 60);
     _validateOptionalText(governorate, 'المحافظة', 100);
     _validateOptionalText(contactPhone, 'رقم التواصل', 40);
+    _validateContactPhone(contactPhone);
 
     final data = <String, dynamic>{
       'user_id': _userId,
@@ -228,6 +229,94 @@ class TraderMarketService {
         .delete()
         .eq('id', cleanPostId)
         .eq('user_id', _userId);
+  }
+
+  void _validateContactPhone(String? value) {
+    final phone = _clean(value);
+    if (phone == null) return;
+
+    if (!RegExp(r'^\+[1-9]\d{7,14}    if (quantity != null &&
+        (!quantity.isFinite || quantity <= 0)) {
+      throw ArgumentError(
+        'الكمية يجب أن تكون رقمًا أكبر من صفر.',
+      );
+    }
+  }
+
+  void _validateTargetPrice(double? price) {
+    if (price != null && (!price.isFinite || price < 0)) {
+      throw ArgumentError(
+        'السعر يجب أن يكون رقمًا صالحًا وغير سالب.',
+      );
+    }
+  }
+
+  void _validateOptionalText(
+    String? value,
+    String fieldName,
+    int maxLength,
+  ) {
+    final cleaned = _clean(value);
+
+    if (cleaned != null && cleaned.length > maxLength) {
+      throw ArgumentError(
+        '$fieldName يجب ألا يتجاوز $maxLength حرفًا.',
+      );
+    }
+  }
+
+  String _requiredText(
+    String value,
+    String message, {
+    required int maxLength,
+  }) {
+    final cleaned = value.trim();
+
+    if (cleaned.isEmpty || cleaned.length > maxLength) {
+      throw ArgumentError(message);
+    }
+
+    return cleaned;
+  }
+
+  void _addIfNotEmpty(
+    Map<String, dynamic> data,
+    String key,
+    String? value,
+  ) {
+    final cleaned = _clean(value);
+
+    if (cleaned != null) {
+      data[key] = cleaned;
+    }
+  }
+
+  String? _clean(String? value) {
+    final cleaned = value?.trim();
+
+    if (cleaned == null || cleaned.isEmpty) {
+      return null;
+    }
+
+    return cleaned;
+  }
+
+  List<Map<String, dynamic>> _mapRows(dynamic response) {
+    if (response is! List) {
+      throw StateError('تعذر قراءة منشورات سوق التجار.');
+    }
+
+    return response
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+  }
+}
+).hasMatch(phone)) {
+      throw ArgumentError(
+        'رقم التواصل يجب أن يكون بصيغة دولية صحيحة، مثل +201012345678.',
+      );
+    }
   }
 
   void _validateQuantity(double? quantity) {
