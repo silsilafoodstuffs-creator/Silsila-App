@@ -3621,9 +3621,7 @@ String? requiredValidator(String? value) {
 
 class OtpVerificationScreen extends StatefulWidget {
   const OtpVerificationScreen({super.key, required this.phone});
-
   final String phone;
-
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
@@ -3631,16 +3629,62 @@ class OtpVerificationScreen extends StatefulWidget {
 class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   final codeController = TextEditingController();
   bool busy = false;
-
   @override
-  void dispose() {
-    codeController.dispose();
-    super.dispose();
-  }
+  void dispose() { codeController.dispose(); super.dispose(); }
 
   Future<void> verifyCode() async {
     final code = codeController.text.trim();
-    if (!RegExp(r'^\d{6}
+    if (code.length != 6 || int.tryParse(code) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل رمز التحقق المكوّن من 6 أرقام.')));
+      return;
+    }
+    final client = database;
+    if (client == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.')));
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      await client.auth.verifyOTP(phone: widget.phone, token: code, type: OtpType.sms);
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const MainShell()), (route) => false);
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('رمز التحقق غير صحيح أو انتهت صلاحيته. حاول مرة أخرى.')));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> resendCode() async {
+    final client = database;
+    if (client == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.')));
+      return;
+    }
+    try {
+      await client.auth.resend(phone: widget.phone, type: OtpType.sms);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم طلب إرسال رمز جديد إلى هاتفك.')));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال رمز جديد. حاول لاحقًا.')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(20), children: [
+    const Icon(Icons.verified_user_outlined, size: 64, color: purple),
+    const SizedBox(height: 12),
+    const Text('تأكيد رقم الهاتف', textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+    const SizedBox(height: 8),
+    Text('أدخل رمز التحقق المرسل إلى ${widget.phone}', textAlign: TextAlign.center),
+    const SizedBox(height: 20),
+    TextField(controller: codeController, keyboardType: TextInputType.number, maxLength: 6, textAlign: TextAlign.center, autofillHints: const [AutofillHints.oneTimeCode], decoration: const InputDecoration(labelText: 'رمز التحقق', prefixIcon: Icon(Icons.password))),
+    const SizedBox(height: 12),
+    FilledButton(onPressed: busy ? null : verifyCode, child: Text(busy ? 'جارٍ التحقق...' : 'تأكيد وتفعيل الحساب')),
+    TextButton(onPressed: busy ? null : resendCode, child: const Text('إعادة إرسال الرمز')),
+  ]);
+}
+
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
