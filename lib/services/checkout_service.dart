@@ -77,14 +77,7 @@ class CheckoutService {
     }
   }
 
-  /// إنشاء طلب مستقل لكل مورد في السلة.
-  ///
-  /// يفترض هذا الكود أن:
-  /// orders يحتوي على customer_id و supplier_id و total_amount
-  /// و status و payment_method و delivery_address و notes.
-  ///
-  /// ويفترض أن order_items يحتوي على order_id و product_id
-  /// و quantity و unit_price و total_price.
+  /// إنشاء طلبات الموردين في معاملة واحدة؛ تفشل السلة كاملة إذا تعذر أي جزء.
   Future<List<Map<String, dynamic>>> checkout({
     required List<CartItem> items,
     required String paymentMethod,
@@ -97,45 +90,34 @@ class CheckoutService {
       deliveryAddress: deliveryAddress,
     );
 
-    final groupedItems = <String, List<CartItem>>{};
+    final response = await _client.rpc(
+      'place_multi_supplier_checkout',
+      params: {
+        'p_items': items
+            .map((item) => {
+                  'supplier_id': item.supplierId,
+                  'product_id': item.productId,
+                  'quantity': item.quantity,
+                })
+            .toList(),
+        'p_payment_method': _toDatabasePaymentMethod(paymentMethod),
+        'p_delivery_address': deliveryAddress.trim(),
+        'p_notes': notes?.trim(),
+      },
+    );
 
-    for (final item in items) {
-      groupedItems
-          .putIfAbsent(item.supplierId, () => [])
-          .add(item);
+    if (response is List) {
+      return response
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
     }
 
-    final createdOrders = <Map<String, dynamic>>[];
-
-    for (final entry in groupedItems.entries) {
-      final supplierId = entry.key;
-      final supplierItems = entry.value;
-
-      // يتم حساب الأسعار والتحقق منها داخل PostgreSQL؛
-      // لا نرسل سعر العميل باعتباره مصدرًا موثوقًا.
-      final response = await _client.rpc(
-        'place_supplier_order',
-        params: {
-          'p_supplier_id': supplierId,
-          'p_items': supplierItems
-              .map((item) => {
-                    'product_id': item.productId,
-                    'quantity': item.quantity,
-                  })
-              .toList(),
-          'p_payment_method': _toDatabasePaymentMethod(paymentMethod),
-          'p_delivery_address': deliveryAddress.trim(),
-          'p_notes': notes?.trim(),
-        },
-      );
-
-      if (response is Map) {
-        createdOrders.add(Map<String, dynamic>.from(response));
-      } else {
-        throw StateError('لم تُرجع قاعدة البيانات بيانات الطلب بصورة صحيحة.');
-      }
+    if (response is Map && response['orders'] is List) {
+      return (response['orders'] as List)
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
     }
 
-    return createdOrders;
+    throw StateError('لم تُرجع قاعدة البيانات قائمة الطلبات بصورة صحيحة.');
   }
 }
