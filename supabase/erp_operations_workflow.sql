@@ -201,7 +201,7 @@ begin
   if p_kind = 'purchase' then
     insert into public.erp_purchase_lines(document_id, item_id, quantity, unit_price, discount_amount, tax_amount, line_total)
     values (p_document_id, p_item_id, p_quantity, p_unit_price, coalesce(p_discount,0), coalesce(p_tax,0),
-      p_quantity * p_unit_price - coalesce(p_discount,0) + coalesce(p_tax,0))
+      round(p_quantity * p_unit_price,2) - coalesce(p_discount,0) + coalesce(p_tax,0))
     returning id into v_line_id;
 
     select coalesce(sum(quantity * unit_price),0), coalesce(sum(discount_amount),0), coalesce(sum(tax_amount),0)
@@ -213,7 +213,7 @@ begin
   else
     insert into public.erp_sales_lines(document_id, item_id, quantity, unit_price, discount_amount, tax_amount, line_total)
     values (p_document_id, p_item_id, p_quantity, p_unit_price, coalesce(p_discount,0), coalesce(p_tax,0),
-      p_quantity * p_unit_price - coalesce(p_discount,0) + coalesce(p_tax,0))
+      round(p_quantity * p_unit_price,2) - coalesce(p_discount,0) + coalesce(p_tax,0))
     returning id into v_line_id;
 
     select coalesce(sum(quantity * unit_price),0), coalesce(sum(discount_amount),0), coalesce(sum(tax_amount),0)
@@ -259,7 +259,7 @@ begin
   if v_doc.warehouse_id is null then raise exception 'اختر مخزنًا للمستند قبل الترحيل'; end if;
   if not exists (select 1 from public.erp_warehouses w where w.id = v_doc.warehouse_id and w.company_id = v_doc.company_id and w.is_active) then
     raise exception 'المخزن غير نشط أو لا يتبع الشركة'; end if;
-  select count(*)::integer, round(coalesce(sum(l.quantity * l.unit_price),0),2),
+  select count(*)::integer, coalesce(sum(round(l.quantity * l.unit_price,2)),0),
     coalesce(sum(l.discount_amount),0), coalesce(sum(l.tax_amount),0), coalesce(sum(l.line_total),0)
     into v_count, v_subtotal, v_discount, v_tax, v_line_total
   from public.erp_purchase_lines l where l.document_id = v_doc.id;
@@ -316,7 +316,7 @@ begin
   if v_doc.warehouse_id is null then raise exception 'اختر مخزنًا للمستند قبل الترحيل'; end if;
   if not exists (select 1 from public.erp_warehouses w where w.id = v_doc.warehouse_id and w.company_id = v_doc.company_id and w.is_active) then
     raise exception 'المخزن غير نشط أو لا يتبع الشركة'; end if;
-  select count(*)::integer, round(coalesce(sum(l.quantity * l.unit_price),0),2),
+  select count(*)::integer, coalesce(sum(round(l.quantity * l.unit_price,2)),0),
     coalesce(sum(l.discount_amount),0), coalesce(sum(l.tax_amount),0), coalesce(sum(l.line_total),0)
     into v_count, v_subtotal, v_discount, v_tax, v_line_total
   from public.erp_sales_lines l where l.document_id = v_doc.id;
