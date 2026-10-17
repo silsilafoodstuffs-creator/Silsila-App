@@ -170,6 +170,37 @@ begin
 
   union all
 
+  with recursive account_walk(start_id, current_id, company_id, path, has_cycle) as (
+    select a.id, a.id, a.company_id, array[a.id]::uuid[], false
+    from public.erp_accounts a
+    where a.company_id = p_company_id
+    union all
+    select w.start_id, child.id, w.company_id, w.path || child.id,
+      child.id = any(w.path)
+    from account_walk w
+    join public.erp_accounts child
+      on child.parent_id = w.current_id
+     and child.company_id = w.company_id
+    where not w.has_cycle
+  )
+  select
+    'account:' || a.id::text || ':cycle',
+    'الحسابات',
+    a.id,
+    a.account_code,
+    null::date,
+    a.account_name,
+    'خطأ',
+    'ACCOUNT_HIERARCHY_CYCLE',
+    'يوجد مسار دائري في شجرة الحسابات؛ يجب تصحيح العلاقة يدويًا قبل استخدام التقارير الهرمية.',
+    'accounts'
+  from public.erp_accounts a
+  where a.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الحسابات')
+    and a.id in (select start_id from account_walk where has_cycle)
+
+  union all
+
   select
     'cashbox:' || c.id::text || ':account',
     'الخزائن والبنوك',
