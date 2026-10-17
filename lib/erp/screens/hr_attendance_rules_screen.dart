@@ -51,7 +51,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
         Container(width:135,padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFF1E9FA),borderRadius:BorderRadius.circular(10)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('عدد الساعات'),Text(_hours(s.start.text,s.end.text),style:const TextStyle(color:_purple,fontSize:17,fontWeight:FontWeight.w900))])),
       ]),
       _heading('العطلة الأسبوعية — اختيار متعدد'),
-      Wrap(spacing:5,children:weekdays.map((d)=>FilterChip(label:Text(d),selected:s.days.contains(d),selectedColor:const Color(0xFFFFE4BB),onSelected:(v)=>setState(()=>v?s.days.add(d):s.days.remove(d))).toList()),
+      Wrap(spacing:5,children:weekdays.map((d)=>FilterChip(label:Text(d),selected:s.days.contains(d),selectedColor:const Color(0xFFFFE4BB),onSelected:(v)=>setState(()=>v?s.days.add(d):s.days.remove(d)))).toList()),
       _heading('قواعد السماح'),
       _numberFields([_num(s.graceIn,'سماح بداية الحضور بالدقائق'),_num(s.graceOut,'سماح نهاية الانصراف بالدقائق'),_num(s.monthGrace,'إجمالي السماح الشهري بالدقائق'),_num(s.multiplier,'معامل خصم الدقائق المتجاوزة')]),
       _heading('قواعد الحضور والانصراف'),
@@ -92,7 +92,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
     const Text('الإدارات'),...departments.map((d)=>CheckboxListTile(dense:true,value:s.depts.contains(d),title:Text(d),onChanged:(v)=>refresh(()=>v==true?s.depts.add(d):s.depts.remove(d)))),
     const Divider(),const Text('الفروع'),...branches.map((b)=>CheckboxListTile(dense:true,value:s.branches.contains(b),title:Text(b),onChanged:(v)=>refresh(()=>v==true?s.branches.add(b):s.branches.remove(b)))),
     const SizedBox(height:8),TextField(controller:s.employeeText,decoration:const InputDecoration(labelText:'أرقام الموظفين مفصولة بفاصلة',border:OutlineInputBorder())),
-  ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){s.employees..clear()..addAll(s.employeeText.text.split(',').map((x)=>x.trim()).where((x)=>x.isNotEmpty));Navigator.pop(ctx);setState((){});},child:const Text('تطبيق'))]));}
+  ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){s.employees..clear()..addAll(s.employeeText.text.split(',').map((x)=>x.trim()).where((x)=>x.isNotEmpty));Navigator.pop(ctx);setState((){});},child:const Text('تطبيق'))])));}
   void _message(String m)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));
 }
 
