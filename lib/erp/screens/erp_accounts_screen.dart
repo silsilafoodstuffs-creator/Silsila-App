@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/erp_accounts_repository.dart';
 
 class ErpAccountsScreen extends StatefulWidget {
-  const ErpAccountsScreen({super.key});
+  const ErpAccountsScreen({super.key, this.initialCompanyId});
+
+  final String? initialCompanyId;
 
   @override
   State<ErpAccountsScreen> createState() => _ErpAccountsScreenState();
@@ -16,6 +18,12 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
   bool _loading = false;
   bool _activeOnly = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _company.text = widget.initialCompanyId ?? '';
+  }
 
   @override
   void dispose() {
