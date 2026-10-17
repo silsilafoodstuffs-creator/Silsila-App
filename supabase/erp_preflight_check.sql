@@ -32,6 +32,7 @@ from (values
   ('erp_sales_documents','table'),
   ('erp_sales_lines','table'),
   ('erp_stock_balances','view'),
+  ('erp_cash_vouchers','table'),
   ('erp_employee_directory','view'),
   ('erp_account_ledger_totals','view'),
   ('erp_account_tree_metrics','view'),
@@ -43,6 +44,7 @@ from (values
   ('erp_run_movement_audit','function'),
   ('erp_post_purchase_document','function'),
   ('erp_post_sales_document','function'),
+  ('erp_post_cash_voucher','function'),
   ('erp_record_inventory_movement','function'),
   ('erp_transfer_inventory_between_warehouses','function')
 ) as x(object_name, object_type)
@@ -77,6 +79,7 @@ where n.nspname = 'public'
     'erp_run_movement_audit',
     'erp_post_purchase_document',
     'erp_post_sales_document',
+    'erp_post_cash_voucher',
     'erp_record_inventory_movement',
     'erp_transfer_inventory_between_warehouses'
   )
