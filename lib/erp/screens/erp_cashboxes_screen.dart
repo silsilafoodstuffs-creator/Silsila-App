@@ -133,7 +133,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
               items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فرع')), ..._branches.map((b) => DropdownMenuItem<String>(value: _s(b['id']), child: Text(_branchLabel(_s(b['id'])))))],
               onChanged: (v) => setState(() => _branchId = v),
             ),
-            CheckboxListTile(value: _isBank, onChanged: (v) => setState(() => _isBank = v ?? false), title: const Text('هذا حساب بنكي'), contentPadding: EdgeInsets.zero),
+            CheckboxListTile(value: _isBank, onChanged: widget.initialBankOnly ? null : (v) => setState(() => _isBank = v ?? false), title: const Text('هذا حساب بنكي'), contentPadding: EdgeInsets.zero),
             if (_isBank) ...[
               TextField(controller: _bankName, decoration: const InputDecoration(labelText: 'اسم البنك')),
               TextField(controller: _maskedNumber, decoration: const InputDecoration(labelText: 'رقم الحساب بشكل مخفي')),
