@@ -26,7 +26,13 @@ class WalletService {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
 
-    return user.id;
+    final id = user.id.trim();
+
+    if (id.isEmpty || id.length > 200) {
+      throw StateError('معرّف المستخدم غير صالح. يرجى تسجيل الدخول مرة أخرى.');
+    }
+
+    return id;
   }
 
   /// جلب المحفظة الحالية للمستخدم.
