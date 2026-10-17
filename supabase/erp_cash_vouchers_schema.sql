@@ -104,13 +104,55 @@ begin
   end if;
   if new.status = 'posted' then
     if new.journal_entry_id is null or not exists (
-      select 1 from public.erp_journal_entries j
+      select 1
+      from public.erp_journal_entries j
+      join public.erp_cashboxes src on src.id = new.source_cashbox_id
+      left join public.erp_cashboxes dst on dst.id = new.destination_cashbox_id
       where j.id = new.journal_entry_id
         and j.company_id = new.company_id
         and j.status = 'posted'
+        and j.entry_date = new.voucher_date
+        and (select count(*) from public.erp_journal_lines l where l.entry_id = j.id) = 2
+        and (select coalesce(sum(l.debit),0) from public.erp_journal_lines l where l.entry_id = j.id) = new.amount
+        and (select coalesce(sum(l.credit),0) from public.erp_journal_lines l where l.entry_id = j.id) = new.amount
+        and (
+          (new.voucher_type = 'receipt' and exists (
+            select 1 from public.erp_journal_lines l
+            where l.entry_id = j.id and l.account_id = src.account_id
+              and l.debit = new.amount and l.credit = 0
+          ) and exists (
+            select 1 from public.erp_journal_lines l
+            where l.entry_id = j.id and l.account_id = new.counter_account_id
+              and l.debit = 0 and l.credit = new.amount
+          ))
+          or
+          (new.voucher_type = 'payment' and exists (
+            select 1 from public.erp_journal_lines l
+            where l.entry_id = j.id and l.account_id = new.counter_account_id
+              and l.debit = new.amount and l.credit = 0
+          ) and exists (
+            select 1 from public.erp_journal_lines l
+            where l.entry_id = j.id and l.account_id = src.account_id
+              and l.debit = 0 and l.credit = new.amount
+          ))
+          or
+          (new.voucher_type = 'transfer' and dst.id is not null and exists (
+            select 1 from public.erp_journal_lines l
+            where l.entry_id = j.id and l.account_id = dst.account_id
+              and l.debit = new.amount and l.credit = 0
+          ) and exists (
+            select 1 from public.erp_journal_lines l
+            where l.entry_id = j.id and l.account_id = src.account_id
+              and l.debit = 0 and l.credit = new.amount
+          ))
+        )
     ) then
-      raise exception 'لا يمكن ترحيل سند الخزينة دون قيد يومية مرحّل تابع للشركة نفسها';
+      raise exception 'لا يمكن ترحيل السند دون قيد يومية متوازن ومطابق لقيمته وخزينته';
     end if;
+    if exists (
+      select 1 from public.erp_cash_vouchers other_v
+      where other_v.id <> new.id and other_v.journal_entry_id = new.journal_entry_id
+    ) then raise exception 'قيد اليومية مرتبط بسند خزينة آخر'; end if;
   end if;
   return new;
 end;
