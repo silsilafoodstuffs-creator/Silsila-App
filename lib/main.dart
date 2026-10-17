@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'services/trader_market_service.dart';
 import 'services/order_status_service.dart';
+import 'services/wallet_service.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -1083,15 +1084,7 @@ class _MainShellState extends State<MainShell> {
           menuItem(
             Icons.account_balance_wallet_outlined,
             'رصيدي ونقاطي',
-            () => openPage(
-              'رصيدي ونقاطي',
-              const SimpleListPage(
-                title: 'الرصيد والنقاط',
-                details:
-                    'الأرصدة والنقاط ستظهر بعد تفعيل نظام الحسابات.',
-                icon: Icons.account_balance_wallet,
-              ),
-            ),
+            () => openPage('رصيدي ونقاطي', const WalletOverviewScreen()),
           ),
           menuItem(
             Icons.settings_outlined,
@@ -2023,6 +2016,211 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           ),
         ],
       );
+}
+
+class WalletOverviewScreen extends StatefulWidget {
+  const WalletOverviewScreen({super.key});
+
+  @override
+  State<WalletOverviewScreen> createState() => _WalletOverviewScreenState();
+}
+
+class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
+  late Future<Map<String, dynamic>> walletFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    walletFuture = loadWallet();
+  }
+
+  Future<Map<String, dynamic>> loadWallet() async {
+    final service = WalletService();
+    final balance = await service.getBalance();
+    final transactions = await service.getTransactions(limit: 30);
+    return {'balance': balance, 'transactions': transactions};
+  }
+
+  Future<void> reload() async {
+    setState(() => walletFuture = loadWallet());
+    await walletFuture;
+  }
+
+  Future<void> requestTopUp() async {
+    final amountController = TextEditingController();
+    String method = 'تحويل بنكي';
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('طلب شحن المحفظة'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'مبلغ الشحن بالجنيه'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: method,
+                decoration: const InputDecoration(labelText: 'طريقة الدفع'),
+                items: const [
+                  DropdownMenuItem(value: 'تحويل بنكي', child: Text('تحويل بنكي')),
+                  DropdownMenuItem(value: 'محفظة إلكترونية', child: Text('محفظة إلكترونية')),
+                  DropdownMenuItem(value: 'إيداع نقدي', child: Text('إيداع نقدي')),
+                ],
+                onChanged: (value) => setDialogState(
+                  () => method = value ?? 'تحويل بنكي',
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'سيُسجل الطلب للمراجعة، ولن يتغير الرصيد قبل اعتماد الشحن.',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('إرسال الطلب'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (accepted != true) {
+      amountController.dispose();
+      return;
+    }
+
+    final amount = double.tryParse(amountController.text.trim());
+    amountController.dispose();
+    if (amount == null || !amount.isFinite || amount <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('أدخل مبلغًا صحيحًا أكبر من صفر.')),
+        );
+      }
+      return;
+    }
+
+    try {
+      await WalletService().requestTopUp(
+        amount: amount,
+        paymentMethod: method,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم تسجيل طلب الشحن للمراجعة.')),
+        );
+        await reload();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر إرسال طلب الشحن. سجّل الدخول وحاول مرة أخرى.')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: walletFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: purple));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.account_balance_wallet_outlined, size: 58, color: purple),
+                  const SizedBox(height: 12),
+                  const Text('سجّل الدخول لعرض محفظتك ومعاملاتك.'),
+                  TextButton(onPressed: reload, child: const Text('إعادة المحاولة')),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final data = snapshot.data ?? const {};
+        final balance = data['balance'] as double? ?? 0;
+        final transactions = (data['transactions'] as List<Map<String, dynamic>>?) ?? const [];
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [purple, Color(0xFF7026A8)]),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('الرصيد المتاح', style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${balance.toStringAsFixed(2)} ج.م',
+                      style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: requestTopUp,
+                      icon: const Icon(Icons.add_card),
+                      label: const Text('طلب شحن المحفظة'),
+                      style: FilledButton.styleFrom(backgroundColor: orange, foregroundColor: purple),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text('آخر المعاملات', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (transactions.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(18),
+                    child: Text('لا توجد معاملات مسجلة حتى الآن.'),
+                  ),
+                ),
+              ...transactions.map((transaction) {
+                final amount = transaction['amount'];
+                final type = (transaction['transaction_type'] ?? transaction['description'] ?? 'معاملة').toString();
+                final status = (transaction['status'] ?? '').toString();
+                final date = transaction['created_at']?.toString() ?? '';
+                return Card(
+                  color: Colors.white,
+                  child: ListTile(
+                    leading: const Icon(Icons.swap_horiz, color: purple),
+                    title: Text(type),
+                    subtitle: Text([status, if (date.isNotEmpty) date.split('T').first].where((v) => v.isNotEmpty).join(' • ')),
+                    trailing: Text('${amount ?? 0} ج.م', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 class MyOrdersScreen extends StatefulWidget {
