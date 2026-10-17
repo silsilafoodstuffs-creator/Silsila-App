@@ -87,6 +87,38 @@ class ErpInventoryRepository {
     return result.toString();
   }
 
+  Future<String> transferInventory({
+    required String companyId,
+    required String sourceWarehouseId,
+    required String targetWarehouseId,
+    required String itemId,
+    required double quantity,
+    required double unitCost,
+    String? notes,
+    String? batchNumber,
+    DateTime? expiryDate,
+  }) async {
+    if (sourceWarehouseId == targetWarehouseId) {
+      throw ArgumentError('يجب اختيار مخزنين مختلفين.');
+    }
+    if (quantity <= 0 || unitCost < 0) {
+      throw ArgumentError('الكمية أكبر من صفر والتكلفة لا تقل عن صفر.');
+    }
+    final result = await _db.rpc('erp_transfer_inventory_between_warehouses', params: {
+      'p_company_id': companyId.trim(),
+      'p_source_warehouse_id': sourceWarehouseId,
+      'p_target_warehouse_id': targetWarehouseId,
+      'p_item_id': itemId,
+      'p_quantity': quantity,
+      'p_unit_cost': unitCost,
+      'p_transfer_date': DateTime.now().toUtc().toIso8601String(),
+      'p_batch_number': batchNumber,
+      'p_expiry_date': expiryDate == null ? null : _dateOnly(expiryDate),
+      'p_notes': notes,
+    });
+    return result.toString();
+  }
+
   static String _dateOnly(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-'
       '${date.month.toString().padLeft(2, '0')}-'
