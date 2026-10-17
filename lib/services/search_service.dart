@@ -45,6 +45,10 @@ class SearchService {
 
     final activity = _clean(activityType);
 
+    if (activity != null && activity.length > 100) {
+      throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
+    }
+
     if (activity != null) {
       request = request.eq('activity_type', activity);
     }
@@ -146,6 +150,10 @@ class SearchService {
 
     if (cleanGovernorate == null) {
       throw ArgumentError('يرجى تحديد المحافظة.');
+    }
+
+    if (cleanGovernorate.length > 100) {
+      throw ArgumentError('اسم المحافظة طويل أكثر من اللازم.');
     }
 
     var request = _requireClient
