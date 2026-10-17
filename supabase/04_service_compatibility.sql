@@ -151,8 +151,26 @@ CREATE POLICY "shipping_companies_read_active" ON public.shipping_companies
 FOR SELECT TO anon, authenticated USING (is_active = TRUE);
 
 DROP POLICY IF EXISTS "deliveries_manage_own" ON public.deliveries;
-CREATE POLICY "deliveries_manage_own" ON public.deliveries
-FOR ALL TO authenticated USING (requested_by = auth.uid()) WITH CHECK (requested_by = auth.uid());
+DROP POLICY IF EXISTS "deliveries_read_participant" ON public.deliveries;
+DROP POLICY IF EXISTS "deliveries_create_participant" ON public.deliveries;
+CREATE POLICY "deliveries_read_participant" ON public.deliveries
+FOR SELECT TO authenticated USING (
+  requested_by = auth.uid()
+  OR EXISTS (
+    SELECT 1 FROM public.orders o
+    WHERE o.id = deliveries.order_id
+      AND (o.customer_id = auth.uid() OR o.supplier_id = auth.uid())
+  )
+);
+CREATE POLICY "deliveries_create_participant" ON public.deliveries
+FOR INSERT TO authenticated WITH CHECK (
+  requested_by = auth.uid()
+  AND EXISTS (
+    SELECT 1 FROM public.orders o
+    WHERE o.id = deliveries.order_id
+      AND (o.customer_id = auth.uid() OR o.supplier_id = auth.uid())
+  )
+);
 
 DROP POLICY IF EXISTS "user_goals_manage_own" ON public.user_goals;
 CREATE POLICY "user_goals_manage_own" ON public.user_goals
