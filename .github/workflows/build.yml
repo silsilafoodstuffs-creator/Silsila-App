@@ -3,6 +3,12 @@ name: Build Silsila Android App
 'on':
   # Manual only during development; enable push builds after implementation is complete.
   workflow_dispatch:
+    inputs:
+      test_login:
+        description: 'Enable direct login for the two designated test accounts (testing only)'
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -148,7 +154,8 @@ jobs:
         continue-on-error: true
 
       - name: Build Android APK
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release --dart-define=SILSILA_TEST_LOGIN=${{ inputs.test_login }}
 
       - name: Verify APK signature
         shell: bash
