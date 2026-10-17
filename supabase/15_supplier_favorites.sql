@@ -1,9 +1,15 @@
 -- Persist supplier favorites separately from product favorites.
 BEGIN;
 
+DELETE FROM public.favorites a
+USING public.favorites b
+WHERE a.user_id = b.user_id
+  AND a.product_id = b.product_id
+  AND a.product_id IS NOT NULL
+  AND a.id > b.id;
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_favorites_user_product_unique
-  ON public.favorites(user_id, product_id)
-  WHERE product_id IS NOT NULL;
+  ON public.favorites(user_id, product_id);
 
 CREATE TABLE IF NOT EXISTS public.supplier_favorites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
