@@ -3570,10 +3570,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   labelText: 'تأكيد كلمة المرور',
                   prefixIcon: Icon(Icons.lock_reset_outlined),
                 ),
-                validator: (v) => v != passwordController.text
-                    ? 'كلمتا المرور غير متطابقتين'
-                    : null,
-              ),
+                
+validator: (v) {
+  if (v == null || v.isEmpty) {
+    return 'أعد كتابة كلمة المرور';
+  }
+
+  if (v != passwordController.text) {
+    return 'كلمتا المرور غير متطابقتين';
+  }
+
+  return null;
+},
+
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
@@ -3613,12 +3622,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
+
 String? requiredValidator(String? value) {
   if (value == null || value.trim().isEmpty) {
     return 'هذا الحقل مطلوب';
   }
   return null;
 }
+
+String? passwordValidator(String? value) {
+  if (value == null || value.isEmpty) {
+    return 'أدخل كلمة المرور';
+  }
+
+  if (value.length < 8) {
+    return 'يجب ألا تقل كلمة المرور عن 8 أحرف';
+  }
+
+  if (!RegExp(r'[A-Z]').hasMatch(value)) {
+    return 'أضف حرفًا إنجليزيًا كبيرًا';
+  }
+
+  if (!RegExp(r'[a-z]').hasMatch(value)) {
+    return 'أضف حرفًا إنجليزيًا صغيرًا';
+  }
+
+  if (!RegExp(r'[0-9]').hasMatch(value)) {
+    return 'أضف رقمًا واحدًا على الأقل';
+  }
+
+  if (!RegExp(r'[^A-Za-z0-9]').hasMatch(value)) {
+    return 'أضف رمزًا خاصًا مثل @ أو #';
+  }
+
+  return null;
+}
+
 
 class OtpVerificationScreen extends StatefulWidget {
   const OtpVerificationScreen({super.key, required this.phone});
