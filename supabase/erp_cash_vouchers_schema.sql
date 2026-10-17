@@ -88,6 +88,25 @@ before insert or update of company_id, branch_id, voucher_type, source_cashbox_i
   destination_cashbox_id, counter_account_id, party_id
 on public.erp_cash_vouchers for each row execute function public.erp_validate_cash_voucher_links();
 
+
+create or replace function public.erp_require_cash_voucher_draft()
+returns trigger
+language plpgsql
+set search_path = public
+as $
+begin
+  if new.status <> 'draft' or new.journal_entry_id is not null or new.posted_at is not null then
+    raise exception 'يجب إنشاء سند الخزينة كمسودة دون قيد مرتبط';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists erp_cash_voucher_draft_insert_guard on public.erp_cash_vouchers;
+create trigger erp_cash_voucher_draft_insert_guard
+before insert on public.erp_cash_vouchers
+for each row execute function public.erp_require_cash_voucher_draft();
+
 -- Cash voucher headers become immutable after posting; corrections use reversal vouchers.
 create or replace function public.erp_guard_cash_voucher_update()
 returns trigger
