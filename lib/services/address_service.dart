@@ -52,10 +52,17 @@ class AddressService {
     final userId = _userId;
 
     if (isDefault) {
-      await _client
-          .from('addresses')
-          .update({'is_default': false})
-          .eq('user_id', userId);
+      return _saveDefaultAddress(
+        addressId: null,
+        title: cleanTitle,
+        governorate: cleanGovernorate,
+        address: cleanAddress,
+        district: district,
+        village: village,
+        landmark: landmark,
+        latitude: latitude,
+        longitude: longitude,
+      );
     }
 
     final response = await _client
@@ -70,7 +77,7 @@ class AddressService {
           'landmark': _emptyToNull(landmark),
           'latitude': latitude,
           'longitude': longitude,
-          'is_default': isDefault,
+          'is_default': false,
         })
         .select()
         .single();
@@ -122,10 +129,17 @@ class AddressService {
     final userId = _userId;
 
     if (isDefault == true) {
-      await _client
-          .from('addresses')
-          .update({'is_default': false})
-          .eq('user_id', userId);
+      return _saveDefaultAddress(
+        addressId: addressId.trim(),
+        title: cleanTitle,
+        governorate: cleanGovernorate,
+        address: cleanAddress,
+        district: district,
+        village: village,
+        landmark: landmark,
+        latitude: latitude,
+        longitude: longitude,
+      );
     }
 
     final updates = <String, dynamic>{
@@ -152,6 +166,42 @@ class AddressService {
         .single();
 
     return Map<String, dynamic>.from(response);
+  }
+
+  /// Save a default address atomically through a database transaction.
+  Future<Map<String, dynamic>> _saveDefaultAddress({
+    required String? addressId,
+    required String title,
+    required String governorate,
+    required String address,
+    String? district,
+    String? village,
+    String? landmark,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final response = await _client.rpc(
+      'save_default_address',
+      params: {
+        'p_address_id': addressId,
+        'p_title': title,
+        'p_governorate': governorate,
+        'p_address': address,
+        'p_district': _emptyToNull(district),
+        'p_village': _emptyToNull(village),
+        'p_landmark': _emptyToNull(landmark),
+        'p_latitude': latitude,
+        'p_longitude': longitude,
+      },
+    );
+
+    if (response is List && response.isNotEmpty) {
+      return Map<String, dynamic>.from(response.first as Map);
+    }
+    if (response is Map) {
+      return Map<String, dynamic>.from(response);
+    }
+    throw StateError('لم تُرجع قاعدة البيانات العنوان الافتراضي بصورة صحيحة.');
   }
 
   /// حذف عنوان محفوظ.
