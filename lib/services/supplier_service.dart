@@ -93,7 +93,7 @@ class SupplierService {
     }
 
     final response = await _requireClient
-        .from('supplier_details')
+        .from('supplier_public_details')
         .select()
         .eq('supplier_id', supplierId.trim())
         .maybeSingle();
