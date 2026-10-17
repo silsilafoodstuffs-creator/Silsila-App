@@ -138,7 +138,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = public
-as $
+as $$
 declare
   v_employee_company uuid;
   v_branch_company uuid;
@@ -166,7 +166,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists erp_employees_company_guard on public.erp_employees;
 create trigger erp_employees_company_guard before insert or update of company_id, branch_id
