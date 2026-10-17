@@ -1434,6 +1434,12 @@ class _MainShellState extends State<MainShell> {
               'مراجعة الحسابات الجديدة',
               () => openPage('مراجعة الحسابات', const AdminApprovalsScreen()),
             ),
+          if (isAdmin)
+            menuItem(
+              Icons.account_balance_wallet,
+              'مراجعة طلبات شحن المحافظ',
+              () => openPage('مراجعة شحن المحافظ', const AdminTopUpReviewScreen()),
+            ),
           menuItem(
             Icons.logout_rounded,
             'تسجيل الخروج',
@@ -2022,6 +2028,117 @@ class _SupportScreenState extends State<SupportScreen> {
           ),
         )),
       ],
+    );
+  }
+}
+
+class AdminTopUpReviewScreen extends StatefulWidget {
+  const AdminTopUpReviewScreen({super.key});
+
+  @override
+  State<AdminTopUpReviewScreen> createState() => _AdminTopUpReviewScreenState();
+}
+
+class _AdminTopUpReviewScreenState extends State<AdminTopUpReviewScreen> {
+  final service = UserService();
+  List<Map<String, dynamic>> requests = [];
+  final busyIds = <String>{};
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadRequests();
+  }
+
+  Future<void> loadRequests() async {
+    try {
+      final rows = await service.getPendingTopUps();
+      if (!mounted) return;
+      setState(() { requests = rows; error = null; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { error = 'هذه الشاشة للمسؤول المعتمد فقط، وتحتاج تطبيق ترحيل مراجعة المحافظ.'; });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> review(Map<String, dynamic> request, bool approve) async {
+    final id = (request['id'] ?? '').toString();
+    if (id.isEmpty || busyIds.contains(id)) return;
+    setState(() => busyIds.add(id));
+    try {
+      await service.reviewTopUp(
+        requestId: id,
+        approve: approve,
+        note: approve ? 'تمت مراجعة واعتماد الشحن.' : 'تم رفض طلب الشحن بعد المراجعة.',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(approve ? 'تم اعتماد الشحن وإضافة الرصيد.' : 'تم رفض طلب الشحن.'),
+      ));
+      await loadRequests();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذرت مراجعة الطلب: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => busyIds.remove(id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadRequests,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('طلبات شحن المحفظة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+          const SizedBox(height: 8),
+          const Text('لا يُضاف أي مبلغ إلى رصيد المستخدم إلا بعد الاعتماد من الإدارة.'),
+          if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+          if (requests.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text('لا توجد طلبات شحن معلقة.', textAlign: TextAlign.center)),
+          ...requests.map((request) {
+            final id = (request['id'] ?? '').toString();
+            final busy = busyIds.contains(id);
+            final name = (request['full_name'] ?? 'مستخدم').toString();
+            final amount = request['amount'] ?? 0;
+            final method = (request['payment_method'] ?? '').toString();
+            final reference = (request['reference'] ?? '').toString();
+            final date = request['created_at']?.toString() ?? '';
+            return Card(
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(name, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Text('المبلغ: $amount ج.م'),
+                  Text('طريقة الدفع: $method'),
+                  if (reference.isNotEmpty) Text('مرجع الدفع: $reference'),
+                  if (date.isNotEmpty) Text('التاريخ: ${date.split('T').first}'),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: OutlinedButton(
+                      onPressed: busy ? null : () => review(request, false),
+                      child: const Text('رفض الطلب'),
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: FilledButton(
+                      onPressed: busy ? null : () => review(request, true),
+                      child: Text(busy ? 'جارٍ الحفظ...' : 'اعتماد وإضافة الرصيد'),
+                    )),
+                  ]),
+                ]),
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 }
