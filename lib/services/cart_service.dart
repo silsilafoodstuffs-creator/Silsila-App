@@ -151,6 +151,8 @@ class CartService extends ChangeNotifier {
           ? newItem.minQuantity
           : quantity;
 
+      _validateLineTotal(newItem.price, initialQuantity);
+
       _items[newItem.productId] = newItem.copyWith(
         quantity: initialQuantity,
       );
@@ -177,6 +179,8 @@ class CartService extends ChangeNotifier {
           'تجاوزت الحد الأقصى لكمية هذا المنتج.',
         );
       }
+
+      _validateLineTotal(existing.price, nextQuantity);
 
       _items[newItem.productId] = existing.copyWith(
         quantity: nextQuantity,
@@ -206,6 +210,8 @@ class CartService extends ChangeNotifier {
 
     if (quantity == existing.quantity) return;
 
+    _validateLineTotal(existing.price, quantity);
+
     _items[productId] = existing.copyWith(
       quantity: quantity,
     );
@@ -225,8 +231,11 @@ class CartService extends ChangeNotifier {
       );
     }
 
+    final nextQuantity = existing.quantity + 1;
+    _validateLineTotal(existing.price, nextQuantity);
+
     _items[productId] = existing.copyWith(
-      quantity: existing.quantity + 1,
+      quantity: nextQuantity,
     );
 
     notifyListeners();
@@ -260,6 +269,17 @@ class CartService extends ChangeNotifier {
 
     _items.clear();
     notifyListeners();
+  }
+
+  /// منع تجاوز إجمالي السطر لقيمة رقمية قابلة للتمثيل.
+  void _validateLineTotal(double price, int quantity) {
+    final total = price * quantity;
+
+    if (!total.isFinite) {
+      throw ArgumentError(
+        'إجمالي المنتج أكبر من القيمة التي يمكن حسابها بأمان.',
+      );
+    }
   }
 
   /// التحقق من وجود منتج في السلة.
