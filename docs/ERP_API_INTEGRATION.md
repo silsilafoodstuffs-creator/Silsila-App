@@ -148,7 +148,7 @@
 - أضيفت الدالة `erp_transfer_inventory_between_warehouses` لإنشاء حركتي تحويل متقابلتين (صرف من المصدر وإضافة للهدف) داخل معاملة واحدة، مع رفض المخزن نفسه كمصدر وهدف والتحقق من الرصيد.
 - أضيفت شاشة `lib/erp/screens/erp_inventory_screen.dart` وخدمة `lib/erp/services/erp_inventory_repository.dart`. ترتبط بها خيارات أرصدة الأصناف وكارت الصنف والجرد والإضافة والصرف والتحويل والتسوية في لوحة ERP؛ وهي حاليًا دفتر حركة أساسي وليست بديلًا عن شاشات أوامر الشراء/البيع الكاملة.
 - أضيفت سياسات قراءة لدفتر المخزون، وسياسات العضوية للمبيعات والمشتريات وبنودها داخل `erp_security_membership.sql`. ابدأ بتطبيق `erp_operations_schema.sql` قبل `erp_security_membership.sql` حتى تكون الجداول موجودة عند إنشاء السياسات.
-- الترتيب المقترح بعد هذه الإضافات: `erp_schema.sql`، `erp_operations_schema.sql`، `erp_master_data_schema.sql`، `erp_master_data_integrity.sql`، `erp_hr_schema.sql`، `erp_cash_vouchers_schema.sql`، `erp_account_integrity.sql`، `erp_account_tree_metrics.sql`، `erp_journal_workflow.sql`، `erp_security_membership.sql`، `erp_fiscal_period_workflow.sql`، `erp_hr_workflow.sql`، `erp_payroll_workflow.sql`، `erp_ledger_reports.sql`، `erp_journal_reversal.sql`، `erp_inventory_workflow.sql`، `erp_operations_workflow.sql`، `erp_cash_voucher_workflow.sql`، `erp_movement_audit.sql`، ثم `erp_preflight_check.sql`.
+- الترتيب المقترح بعد هذه الإضافات: `erp_schema.sql`، `erp_operations_schema.sql`، `erp_master_data_schema.sql`، `erp_master_data_integrity.sql`، `erp_hr_schema.sql`، `erp_cash_vouchers_schema.sql`، `erp_account_integrity.sql`، `erp_account_tree_metrics.sql`، `erp_journal_workflow.sql`، `erp_security_membership.sql`، `erp_fiscal_period_workflow.sql`، `erp_hr_workflow.sql`، `erp_payroll_workflow.sql`، `erp_ledger_reports.sql`، `erp_journal_reversal.sql`، `erp_inventory_workflow.sql`، `erp_operations_workflow.sql`، `erp_cash_voucher_workflow.sql`، `erp_operational_accounting.sql`، `erp_movement_audit.sql`، ثم `erp_preflight_check.sql`.
 - هذه الملفات لم تُطبّق على Supabase. لا يمكن اعتبار أي وظيفة قاعدة بيانات عاملة حتى تطبيق SQL والتحقق منه في المشروع المستهدف.
 
 ## الموارد البشرية والحضور والرواتب
@@ -216,4 +216,11 @@
 - أضيف `supabase/erp_price_resolution.sql` والدالة `erp_resolve_item_price` لحساب السعر بحسب نوع القائمة (بيع/شراء)، والطرف المحدد إن وجد، وحد الكمية، ونسبة الخصم، وتاريخ سريان السعر، مع الرجوع لسعر الصنف الأساسي عند عدم وجود سطر مطابق.
 - الدالة للقراءة فقط، وتتحقق من صلاحية الوصول للشركة ومن انتماء الصنف والطرف إليها. أضيفت إلى فحص ما قبل التشغيل.
 - أضيفت معاينة للسعر الفعلي في شاشة قوائم الأسعار، وزر في شاشة مستندات المبيعات والمشتريات لجلب سعر الصنف وفق الطرف والكمية وتعبئة سعر الوحدة والخصم في النموذج قبل إضافة البند. يجب مراجعة السعر وتأكيده قبل الحفظ؛ وتُسجّل القيمة النهائية في سطر المستند ولا يعاد تسعير المستندات المرحلة تلقائيًا.
+
+## ربط المشتريات والمبيعات بالأستاذ العام
+- أضيف `supabase/erp_operational_accounting.sql` لإنشاء خريطة حسابات تشغيلية خاصة بكل شركة، ودالة `erp_post_operational_document_accounting` لإنشاء قيد يومية متوازن مرتبط بمستند مشتريات أو مبيعات سبق ترحيله مخزنيًا.
+- يدعم القيد فواتير/استلامات المشتريات، مرتجعات المشتريات مع حساب فروق تقييم، فواتير/تسليمات المبيعات، ومرتجعات المبيعات. تكلفة البضاعة المباعة أو المرتجعة تُستخرج من حركات المخزون المرتبطة بالمستند، ويُرفض الترحيل إذا لم يطابق عدد الحركات عدد البنود.
+- أضيفت شاشة `lib/erp/screens/erp_operational_account_mappings_screen.dart` لإعداد حساب العملاء والموردين والإيرادات والمرتجعات والمخزون وتكلفة المبيعات وفروق تقييم مرتجع المشتريات، وحسابات الضرائب الاختيارية. أضيفت إلى «الحسابات المالية» باسم «خريطة الحسابات التشغيلية».
+- أضيف زر «إنشاء / مراجعة القيد المحاسبي» للمستندات المرحلة في شاشة المشتريات والمبيعات. العملية idempotent: إعادة الطلب بعد نجاحه تعيد معرّف القيد الموجود بدل إنشاء قيد مكرر.
+- يجب إعداد خريطة الحسابات ومراجعة الحسابات والضرائب مع المحاسب قبل الاستخدام الفعلي. لم يتم تطبيق SQL على Supabase ولم يتم تشغيل الاختبارات أو البناء بعد.
 
