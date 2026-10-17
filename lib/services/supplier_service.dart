@@ -42,7 +42,7 @@ class SupplierService {
         .from('supplier_directory')
         .select(
           'id, full_name, activity_type, supplier_type, '
-          'governorate, district, address, account_status',
+          'governorate, district, account_status',
         )
         .order('full_name')
         .limit(limit);
@@ -76,7 +76,7 @@ class SupplierService {
         .from('supplier_directory')
         .select(
           'id, full_name, activity_type, supplier_type, '
-          'governorate, district, address, account_status',
+          'governorate, district, account_status',
         )
         .eq('id', supplierId.trim())
         .maybeSingle();
