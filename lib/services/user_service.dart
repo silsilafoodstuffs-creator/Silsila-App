@@ -83,6 +83,15 @@ class UserService {
     );
   }
 
+  /// جلب الحسابات المعلقة للمسؤول المعتمد فقط.
+  Future<List<Map<String, dynamic>>> getPendingAccounts() async {
+    if (_client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+    final response = await _client.rpc('admin_list_pending_accounts');
+    return List<Map<String, dynamic>>.from(response as List);
+  }
+
   /// هل يوجد مستخدم مسجل الدخول؟
   bool get isLoggedIn => _client.auth.currentUser != null;
 
