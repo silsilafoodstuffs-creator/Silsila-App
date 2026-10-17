@@ -36,6 +36,34 @@ declare
   v_account_id uuid;
   v_company_id uuid;
 begin
+  if (
+    select count(*) from unnest(array[
+      new.accounts_receivable_account_id,
+      new.accounts_payable_account_id,
+      new.sales_revenue_account_id,
+      new.sales_returns_account_id,
+      new.inventory_account_id,
+      new.cost_of_goods_sold_account_id,
+      new.purchase_return_variance_account_id,
+      new.sales_tax_payable_account_id,
+      new.purchase_tax_credit_account_id
+    ]) as x(account_id) where account_id is not null
+  ) <> (
+    select count(distinct account_id) from unnest(array[
+      new.accounts_receivable_account_id,
+      new.accounts_payable_account_id,
+      new.sales_revenue_account_id,
+      new.sales_returns_account_id,
+      new.inventory_account_id,
+      new.cost_of_goods_sold_account_id,
+      new.purchase_return_variance_account_id,
+      new.sales_tax_payable_account_id,
+      new.purchase_tax_credit_account_id
+    ]) as x(account_id) where account_id is not null
+  ) then
+    raise exception 'لا يمكن استخدام حساب الأستاذ نفسه لأكثر من دور في خريطة الحسابات التشغيلية';
+  end if;
+
   foreach v_account_id in array array[
     new.accounts_receivable_account_id,
     new.accounts_payable_account_id,
