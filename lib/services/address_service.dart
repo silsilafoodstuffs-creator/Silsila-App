@@ -2,15 +2,35 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AddressService {
   AddressService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+      : _client = client ?? _defaultClient;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  static SupabaseClient? get _defaultClient {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client == null) {
+      throw StateError('اتصال Supabase غير متاح.');
+    }
+
+    return client;
+  }
 
   String get _userId {
-    final user = _client.auth.currentUser;
+    final user = _requireClient.auth.currentUser;
+
     if (user == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
+
     return user.id;
   }
 
@@ -18,18 +38,31 @@ class AddressService {
   Future<List<Map<String, dynamic>>> getAddresses({
     int limit = 100,
   }) async {
-    if (limit < 1 || limit > 200) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
-    }
+    _validateLimit(limit);
 
-    final response = await _client
+    final response = await _requireClient
         .from('addresses')
         .select()
         .eq('user_id', _userId)
+        .order('is_default', ascending: false)
         .order('created_at', ascending: false)
         .limit(limit);
 
     return List<Map<String, dynamic>>.from(response);
+  }
+
+  /// جلب العنوان الافتراضي للمستخدم الحالي.
+  Future<Map<String, dynamic>?> getDefaultAddress() async {
+    final response = await _requireClient
+        .from('addresses')
+        .select()
+        .eq('user_id', _userId)
+        .eq('is_default', true)
+        .maybeSingle();
+
+    if (response == null) return null;
+
+    return Map<String, dynamic>.from(response);
   }
 
   /// إضافة عنوان جديد.
@@ -44,15 +77,11 @@ class AddressService {
     double? longitude,
     bool isDefault = false,
   }) async {
-    final cleanTitle = title.trim();
-    final cleanGovernorate = governorate.trim();
-    final cleanAddress = address.trim();
-
-    if (cleanTitle.isEmpty ||
-        cleanGovernorate.isEmpty ||
-        cleanAddress.isEmpty) {
-      throw ArgumentError('يرجى إدخال اسم العنوان والمحافظة والعنوان بالتفصيل.');
-    }
+    final cleanTitle = _requiredText(title, 'اسم العنوان');
+    final cleanGovernorate =
+        _requiredText(governorate, 'المحافظة');
+    final cleanAddress =
+        _requiredText(address, 'العنوان بالتفصيل');
 
     _validateCoordinates(latitude, longitude);
 
@@ -72,7 +101,7 @@ class AddressService {
       );
     }
 
-    final response = await _client
+    final response = await _requireClient
         .from('addresses')
         .insert({
           'user_id': userId,
@@ -92,17 +121,11 @@ class AddressService {
     return Map<String, dynamic>.from(response);
   }
 
-  /// تعيين عنوان حالي كعنوان افتراضي.
+  /// تعيين عنوان محفوظ كعنوان افتراضي.
   Future<void> setDefaultAddress(String addressId) async {
-    final id = addressId.trim();
-    if (id.isEmpty) {
-      throw ArgumentError('معرّف العنوان مطلوب.');
-    }
+    final id = _requiredText(addressId, 'معرّف العنوان');
 
-    if (_client.auth.currentUser == null) {
-      throw StateError('يجب تسجيل الدخول أولاً.');
-    }
-    await _client.rpc(
+    await _requireClient.rpc(
       'set_default_address',
       params: {'p_address_id': id},
     );
@@ -121,19 +144,13 @@ class AddressService {
     double? longitude,
     bool? isDefault,
   }) async {
-    final cleanAddressId = addressId.trim();
-    if (cleanAddressId.isEmpty) {
-      throw ArgumentError('معرّف العنوان مطلوب.');
-    }
-    final cleanTitle = title.trim();
-    final cleanGovernorate = governorate.trim();
-    final cleanAddress = address.trim();
-
-    if (cleanTitle.isEmpty ||
-        cleanGovernorate.isEmpty ||
-        cleanAddress.isEmpty) {
-      throw ArgumentError('يرجى إدخال اسم العنوان والمحافظة والعنوان بالتفصيل.');
-    }
+    final cleanId =
+        _requiredText(addressId, 'معرّف العنوان');
+    final cleanTitle = _requiredText(title, 'اسم العنوان');
+    final cleanGovernorate =
+        _requiredText(governorate, 'المحافظة');
+    final cleanAddress =
+        _requiredText(address, 'العنوان بالتفصيل');
 
     _validateCoordinates(latitude, longitude);
 
@@ -141,7 +158,7 @@ class AddressService {
 
     if (isDefault == true) {
       return _saveDefaultAddress(
-        addressId: cleanAddressId,
+        addressId: cleanId,
         title: cleanTitle,
         governorate: cleanGovernorate,
         address: cleanAddress,
@@ -168,18 +185,24 @@ class AddressService {
       updates['is_default'] = isDefault;
     }
 
-    final response = await _client
+    final response = await _requireClient
         .from('addresses')
         .update(updates)
-        .eq('id', cleanAddressId)
+        .eq('id', cleanId)
         .eq('user_id', userId)
         .select()
-        .single();
+        .maybeSingle();
+
+    if (response == null) {
+      throw StateError(
+        'لم يتم العثور على العنوان أو لا تملك صلاحية تعديله.',
+      );
+    }
 
     return Map<String, dynamic>.from(response);
   }
 
-  /// Save a default address atomically through a database transaction.
+  /// حفظ عنوان افتراضي عبر إجراء قاعدة البيانات.
   Future<Map<String, dynamic>> _saveDefaultAddress({
     required String? addressId,
     required String title,
@@ -191,7 +214,7 @@ class AddressService {
     double? latitude,
     double? longitude,
   }) async {
-    final response = await _client.rpc(
+    final response = await _requireClient.rpc(
       'save_default_address',
       params: {
         'p_address_id': addressId,
@@ -206,49 +229,80 @@ class AddressService {
       },
     );
 
-    if (response is List && response.isNotEmpty) {
-      return Map<String, dynamic>.from(response.first as Map);
-    }
     if (response is Map) {
       return Map<String, dynamic>.from(response);
     }
-    throw StateError('لم تُرجع قاعدة البيانات العنوان الافتراضي بصورة صحيحة.');
+
+    if (response is List && response.isNotEmpty) {
+      final first = response.first;
+
+      if (first is Map) {
+        return Map<String, dynamic>.from(first);
+      }
+    }
+
+    throw StateError(
+      'لم تُرجع قاعدة البيانات بيانات العنوان الافتراضي بصورة صحيحة.',
+    );
   }
 
-  /// حذف عنوان محفوظ.
+  /// حذف عنوان من حساب المستخدم الحالي.
   Future<void> deleteAddress(String addressId) async {
-    final id = addressId.trim();
-    if (id.isEmpty) {
-      throw ArgumentError('معرّف العنوان مطلوب.');
-    }
-    await _client
+    final id = _requiredText(addressId, 'معرّف العنوان');
+
+    await _requireClient
         .from('addresses')
         .delete()
         .eq('id', id)
         .eq('user_id', _userId);
   }
 
-  void _validateCoordinates(double? latitude, double? longitude) {
+  /// التحقق من صحة إحداثيات الموقع.
+  void _validateCoordinates(
+    double? latitude,
+    double? longitude,
+  ) {
     if ((latitude == null) != (longitude == null)) {
-      throw ArgumentError('يجب إدخال خط العرض وخط الطول معًا.');
+      throw ArgumentError(
+        'يجب إدخال خط العرض وخط الطول معًا.',
+      );
     }
 
-    final lat = latitude;
-    final lon = longitude;
-    if (lat == null || lon == null) return;
+    if (latitude == null || longitude == null) return;
 
-    if (!lat.isFinite ||
-        !lon.isFinite ||
-        lat < -90 ||
-        lat > 90 ||
-        lon < -180 ||
-        lon > 180) {
-      throw ArgumentError('إحداثيات الموقع خارج النطاق الصحيح.');
+    if (!latitude.isFinite ||
+        !longitude.isFinite ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180) {
+      throw ArgumentError(
+        'إحداثيات الموقع خارج النطاق الصحيح.',
+      );
     }
+  }
+
+  void _validateLimit(int limit) {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+  }
+
+  String _requiredText(String? value, String fieldName) {
+    final cleaned = value?.trim();
+
+    if (cleaned == null || cleaned.isEmpty) {
+      throw ArgumentError('يرجى إدخال $fieldName.');
+    }
+
+    return cleaned;
   }
 
   String? _emptyToNull(String? value) {
     final cleaned = value?.trim();
-    return cleaned == null || cleaned.isEmpty ? null : cleaned;
+
+    return cleaned == null || cleaned.isEmpty
+        ? null
+        : cleaned;
   }
 }
