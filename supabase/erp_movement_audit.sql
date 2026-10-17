@@ -990,6 +990,56 @@ begin
     and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'مجموعات الأصناف')
     and g.id in (select start_id from group_walk where has_cycle))
 
+  union all
+
+  select
+    'purchase:' || d.id::text || ':accounting',
+    'المشتريات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'القيد المحاسبي غير موجود',
+    'تحذير',
+    'PURCHASE_ACCOUNTING_MISSING',
+    'المستند المخزني مرحّل ولم يُنشأ له قيد أستاذ عام عبر خريطة الحسابات التشغيلية.',
+    'purchases'
+  from public.erp_purchase_documents d
+  where d.company_id = p_company_id and d.status = 'posted'
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and d.document_type in ('receipt','invoice','return')
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and not exists (
+      select 1 from public.erp_journal_entries j
+      where j.company_id = d.company_id and j.source_type = 'purchase_accounting'
+        and j.source_id = d.id and j.status = 'posted'
+    )
+
+  union all
+
+  select
+    'sale:' || d.id::text || ':accounting',
+    'المبيعات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'القيد المحاسبي غير موجود',
+    'تحذير',
+    'SALE_ACCOUNTING_MISSING',
+    'المستند المخزني مرحّل ولم يُنشأ له قيد أستاذ عام عبر خريطة الحسابات التشغيلية.',
+    'sales'
+  from public.erp_sales_documents d
+  where d.company_id = p_company_id and d.status = 'posted'
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and d.document_type in ('delivery','invoice','return')
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and not exists (
+      select 1 from public.erp_journal_entries j
+      where j.company_id = d.company_id and j.source_type = 'sales_accounting'
+        and j.source_id = d.id and j.status = 'posted'
+    )
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
