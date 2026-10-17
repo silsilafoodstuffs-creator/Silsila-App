@@ -3494,14 +3494,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   },
                 ),
               ],
+             
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: governorate,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'المحافظة'),
+                decoration: const InputDecoration(
+                  labelText: 'المحافظة',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
                 items: const [
-                  DropdownMenuItem(value: 'القاهرة', child: Text('القاهرة')),
-                  DropdownMenuItem(value: 'الجيزة', child: Text('الجيزة')),
+                  DropdownMenuItem(
+                    value: 'القاهرة',
+                    child: Text('القاهرة'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الجيزة',
+                    child: Text('الجيزة'),
+                  ),
                   DropdownMenuItem(
                     value: 'القليوبية',
                     child: Text('القليوبية'),
@@ -3513,6 +3523,94 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   DropdownMenuItem(
                     value: 'الشرقية',
                     child: Text('الشرقية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الدقهلية',
+                    child: Text('الدقهلية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'البحيرة',
+                    child: Text('البحيرة'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الغربية',
+                    child: Text('الغربية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'المنوفية',
+                    child: Text('المنوفية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'كفر الشيخ',
+                    child: Text('كفر الشيخ'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'دمياط',
+                    child: Text('دمياط'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'بورسعيد',
+                    child: Text('بورسعيد'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الإسماعيلية',
+                    child: Text('الإسماعيلية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'السويس',
+                    child: Text('السويس'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'شمال سيناء',
+                    child: Text('شمال سيناء'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'جنوب سيناء',
+                    child: Text('جنوب سيناء'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'بني سويف',
+                    child: Text('بني سويف'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الفيوم',
+                    child: Text('الفيوم'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'المنيا',
+                    child: Text('المنيا'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'أسيوط',
+                    child: Text('أسيوط'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'سوهاج',
+                    child: Text('سوهاج'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'قنا',
+                    child: Text('قنا'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الأقصر',
+                    child: Text('الأقصر'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'أسوان',
+                    child: Text('أسوان'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'البحر الأحمر',
+                    child: Text('البحر الأحمر'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الوادي الجديد',
+                    child: Text('الوادي الجديد'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'مطروح',
+                    child: Text('مطروح'),
                   ),
                 ],
                 onChanged: (v) =>
@@ -3560,19 +3658,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'كلمة المرور',
-                  helperText: '8 أحرف على الأقل مع حرف كبير وصغير ورقم ورمز',
+                  helperText:
+                      '8 أحرف على الأقل مع حرف كبير وصغير ورقم ورمز',
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
                 validator: (v) {
                   if (v == null || v.length < 8) {
                     return 'كلمة المرور يجب ألا تقل عن 8 أحرف';
                   }
+
                   if (!RegExp(r'[A-Z]').hasMatch(v) ||
                       !RegExp(r'[a-z]').hasMatch(v) ||
                       !RegExp(r'\d').hasMatch(v) ||
                       !RegExp(r'[^A-Za-z0-9]').hasMatch(v)) {
                     return 'أضف حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا';
                   }
+
                   return null;
                 },
               ),
@@ -3584,19 +3685,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   labelText: 'تأكيد كلمة المرور',
                   prefixIcon: Icon(Icons.lock_reset_outlined),
                 ),
-                
-validator: (v) {
-  if (v == null || v.isEmpty) {
-    return 'أعد كتابة كلمة المرور';
-  }
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'أعد كتابة كلمة المرور';
+                  }
 
-  if (v != passwordController.text) {
-    return 'كلمتا المرور غير متطابقتين';
-  }
+                  if (v != passwordController.text) {
+                    return 'كلمتا المرور غير متطابقتين';
+                  }
 
-  return null;
-},
-),
+                  return null;
+                },
+              ),
+
               const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
