@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'cart_service.dart';
+
 class CheckoutService {
   CheckoutService({SupabaseClient? client})
       : _client = client ?? Supabase.instance.client;
@@ -14,15 +16,14 @@ class CheckoutService {
     'account_balance',
   ];
 
-  /// التحقق من بيانات الطلب قبل الإرسال.
+  /// التحقق من بيانات الطلب قبل إرساله.
   void validateCheckout({
-    required String supplierId,
-    required List<Map<String, dynamic>> items,
+    required List<CartItem> items,
     required String paymentMethod,
     required String deliveryAddress,
   }) {
-    if (supplierId.trim().isEmpty) {
-      throw ArgumentError('يجب تحديد المورد.');
+    if (_client.auth.currentUser == null) {
+      throw Exception('يجب تسجيل الدخول قبل إتمام الطلب.');
     }
 
     if (items.isEmpty) {
@@ -38,110 +39,113 @@ class CheckoutService {
     }
 
     for (final item in items) {
-      final productId = item['product_id'];
-      final quantity = item['quantity'];
-      final price = item['unit_price'];
-
-      if (productId == null ||
-          quantity is! num ||
-          price is! num ||
-          quantity <= 0 ||
-          price < 0) {
-        throw ArgumentError('توجد بيانات غير صحيحة في أحد المنتجات.');
+      if (item.productId <= 0 ||
+          item.supplierId.trim().isEmpty ||
+          item.name.trim().isEmpty ||
+          item.quantity < item.minQuantity ||
+          item.minQuantity < 1 ||
+          item.price < 0) {
+        throw ArgumentError(
+          'توجد بيانات غير صحيحة في المنتج: ${item.name}.',
+        );
       }
     }
   }
 
-  /// حساب إجمالي الطلب.
-  double calculateTotal(List<Map<String, dynamic>> items) {
-    var total = 0.0;
-
-    for (final item in items) {
-      final quantity = item['quantity'] as num;
-      final price = item['unit_price'] as num;
-
-      total += quantity * price;
-    }
-
-    return total;
+  /// حساب إجمالي عناصر السلة.
+  double calculateTotal(List<CartItem> items) {
+    return items.fold<double>(
+      0,
+      (total, item) => total + item.total,
+    );
   }
 
-  /// إنشاء طلب لمورد واحد مع عناصره.
+  /// إنشاء طلب مستقل لكل مورد في السلة.
   ///
-  /// ملاحظة: يجب مراجعة أسماء الأعمدة وأنواع المعرّفات
-  /// مع مخطط قاعدة البيانات قبل استخدام هذه الدالة.
-  Future<Map<String, dynamic>> checkout({
-    required String supplierId,
-    required List<Map<String, dynamic>> items,
+  /// يفترض هذا الكود أن:
+  /// orders يحتوي على customer_id و supplier_id و total_amount
+  /// و status و payment_method و delivery_address و notes.
+  ///
+  /// ويفترض أن order_items يحتوي على order_id و product_id
+  /// و quantity و unit_price و total_price.
+  Future<List<Map<String, dynamic>>> checkout({
+    required List<CartItem> items,
     required String paymentMethod,
     required String deliveryAddress,
     String? notes,
   }) async {
-    final user = _client.auth.currentUser;
-
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول قبل إتمام الطلب.');
-    }
-
     validateCheckout(
-      supplierId: supplierId,
       items: items,
       paymentMethod: paymentMethod,
       deliveryAddress: deliveryAddress,
     );
 
-    final total = calculateTotal(items);
+    final user = _client.auth.currentUser!;
 
-    // إنشاء الطلب الرئيسي.
-    final order = await _client
-        .from('orders')
-        .insert({
-          'customer_id': user.id,
-          'supplier_id': supplierId,
-          'total_amount': total,
-          'status': 'pending',
-          'payment_method': paymentMethod,
-          'delivery_address': deliveryAddress.trim(),
-          'notes': notes?.trim(),
-        })
-        .select()
-        .single();
+    final groupedItems = <String, List<CartItem>>{};
 
-    final orderId = order['id'];
-
-    try {
-      // تجهيز عناصر الطلب.
-      final orderItems = items.map((item) {
-        final quantity = item['quantity'] as num;
-        final unitPrice = item['unit_price'] as num;
-
-        return {
-          'order_id': orderId,
-          'product_id': item['product_id'],
-          'quantity': quantity,
-          'unit_price': unitPrice,
-          'total_price': quantity * unitPrice,
-        };
-      }).toList();
-
-      await _client.from('order_items').insert(orderItems);
-
-      return order;
-    } catch (_) {
-      // محاولة تنظيف الطلب إذا فشل إدخال عناصره.
-      // الأفضل لاحقًا تنفيذ العملية كلها داخل RPC
-      // لضمان المعاملة الذرية في قاعدة البيانات.
-      try {
-        await _client
-            .from('orders')
-            .delete()
-            .eq('id', orderId)
-            .eq('customer_id', user.id);
-      } catch (_) {
-        // لا نخفي الخطأ الأصلي إذا فشل التنظيف.
-      }
-
-      rethrow;
+    for (final item in items) {
+      groupedItems
+          .putIfAbsent(item.supplierId, () => [])
+          .add(item);
     }
+
+    final createdOrders = <Map<String, dynamic>>[];
+
+    for (final entry in groupedItems.entries) {
+      final supplierId = entry.key;
+      final supplierItems = entry.value;
+      final total = calculateTotal(supplierItems);
+
+      final order = await _client
+          .from('orders')
+          .insert({
+            'customer_id': user.id,
+            'supplier_id': supplierId,
+            'total_amount': total,
+            'status': 'pending',
+            'payment_method': paymentMethod,
+            'delivery_address': deliveryAddress.trim(),
+            'notes': notes?.trim(),
+          })
+          .select()
+          .single();
+
+      final orderId = order['id'];
+
+      try {
+        final orderItems = supplierItems.map((item) {
+          return {
+            'order_id': orderId,
+            'product_id': item.productId,
+            'quantity': item.quantity,
+            'unit_price': item.price,
+            'total_price': item.total,
+          };
+        }).toList();
+
+        await _client
+            .from('order_items')
+            .insert(orderItems);
+
+        createdOrders.add(order);
+      } catch (_) {
+        // حذف الطلب الحالي إذا تعذر حفظ تفاصيله.
+        // يتطلب ذلك أن تسمح سياسات قاعدة البيانات بالحذف.
+        try {
+          await _client
+              .from('orders')
+              .delete()
+              .eq('id', orderId)
+              .eq('customer_id', user.id);
+        } catch (_) {
+          // الاحتفاظ بالخطأ الأصلي.
+        }
+
+        rethrow;
+      }
+    }
+
+    return createdOrders;
   }
 }
