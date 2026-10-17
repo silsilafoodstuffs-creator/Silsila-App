@@ -4468,7 +4468,7 @@ class _LoginScreenState extends State<LoginScreen> {
       defaultValue: false,
     );
     final enteredPhone = normalizeArabicDigits(phone.text.trim())
-        .replaceAll(RegExp(r'[\s\-()]'), '')
+        .replaceAll(RegExp(r'[\s\-()]'), '');
 
     if (testLoginEnabled &&
         (enteredPhone == '01002251795' || enteredPhone == '01019617100')) {
