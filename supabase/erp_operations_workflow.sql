@@ -72,6 +72,30 @@ before insert or update of document_id, item_id
 on public.erp_sales_lines for each row execute function public.erp_validate_operational_company_links();
 
 
+
+create or replace function public.erp_require_operational_draft_on_insert()
+returns trigger
+language plpgsql
+set search_path = public
+as $
+begin
+  if new.status <> 'draft' then
+    raise exception 'يجب إنشاء مستند المبيعات أو المشتريات كمسودة ثم ترحيله عبر الإجراء المعتمد';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists erp_purchase_document_draft_insert_guard on public.erp_purchase_documents;
+create trigger erp_purchase_document_draft_insert_guard
+before insert on public.erp_purchase_documents
+for each row execute function public.erp_require_operational_draft_on_insert();
+
+drop trigger if exists erp_sales_document_draft_insert_guard on public.erp_sales_documents;
+create trigger erp_sales_document_draft_insert_guard
+before insert on public.erp_sales_documents
+for each row execute function public.erp_require_operational_draft_on_insert();
+
 -- Direct status updates cannot bypass posting: a posted operational document must
 -- already have its matching movement ledger rows, and posted headers are immutable.
 create or replace function public.erp_guard_operational_document_update()
