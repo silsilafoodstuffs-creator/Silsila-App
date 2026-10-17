@@ -36,6 +36,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     'البنوك',
     'المخازن',
     'الأصناف',
+    'مجموعات الأصناف',
     'الفترات المالية',
     'المخزون',
     'المبيعات',
