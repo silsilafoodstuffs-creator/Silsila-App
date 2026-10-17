@@ -336,7 +336,7 @@ drop policy if exists erp_payroll_lines_select_member on public.erp_payroll_line
 create policy erp_payroll_lines_select_member on public.erp_payroll_lines
 for select to authenticated using (exists (
   select 1 from public.erp_payroll_runs r
-  where r.id = payroll_run_id and r.company_id = company_id
+  where r.id = payroll_run_id and r.company_id = erp_payroll_lines.company_id
     and public.erp_user_can_access_company(r.company_id)
 ));
 drop policy if exists erp_payroll_lines_insert_accounting on public.erp_payroll_lines;
@@ -344,26 +344,26 @@ create policy erp_payroll_lines_insert_accounting on public.erp_payroll_lines
 for insert to authenticated with check (exists (
   select 1 from public.erp_payroll_runs r
   join public.erp_employees e on e.id = employee_id and e.company_id = r.company_id
-  where r.id = payroll_run_id and r.company_id = company_id and r.status = 'draft'
+  where r.id = payroll_run_id and r.company_id = erp_payroll_lines.company_id and r.status = 'draft'
     and public.erp_user_has_company_role(r.company_id, array['owner','admin','accountant']::text[])
 ));
 drop policy if exists erp_payroll_lines_update_accounting on public.erp_payroll_lines;
 create policy erp_payroll_lines_update_accounting on public.erp_payroll_lines
 for update to authenticated using (exists (
   select 1 from public.erp_payroll_runs r
-  where r.id = payroll_run_id and r.company_id = company_id and r.status = 'draft'
+  where r.id = payroll_run_id and r.company_id = erp_payroll_lines.company_id and r.status = 'draft'
     and public.erp_user_has_company_role(r.company_id, array['owner','admin','accountant']::text[])
 )) with check (exists (
   select 1 from public.erp_payroll_runs r
   join public.erp_employees e on e.id = employee_id and e.company_id = r.company_id
-  where r.id = payroll_run_id and r.company_id = company_id and r.status = 'draft'
+  where r.id = payroll_run_id and r.company_id = erp_payroll_lines.company_id and r.status = 'draft'
     and public.erp_user_has_company_role(r.company_id, array['owner','admin','accountant']::text[])
 ));
 drop policy if exists erp_payroll_lines_delete_accounting on public.erp_payroll_lines;
 create policy erp_payroll_lines_delete_accounting on public.erp_payroll_lines
 for delete to authenticated using (exists (
   select 1 from public.erp_payroll_runs r
-  where r.id = payroll_run_id and r.company_id = company_id and r.status = 'draft'
+  where r.id = payroll_run_id and r.company_id = erp_payroll_lines.company_id and r.status = 'draft'
     and public.erp_user_has_company_role(r.company_id, array['owner','admin','accountant']::text[])
 ));
 
