@@ -159,6 +159,10 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
             Expanded(child: TextField(controller: _district, decoration: const InputDecoration(labelText: 'المنطقة / المركز', border: OutlineInputBorder()))),
           ]),
           const SizedBox(height: 8),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: Text('تنبيه محاسبي: الرصيد الافتتاحي في بطاقة الطرف لا ينشئ قيد أستاذ عام. لا تستخدمه كرصيد معتمد قبل إدخال قيد افتتاحي متوازن ومراجعته.', style: TextStyle(color: Color(0xFF9A5700), fontSize: 12, height: 1.5)),
+          ),
           Row(children: [
             Expanded(child: TextField(controller: _creditLimit, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'حد الائتمان', border: OutlineInputBorder()))),
             const SizedBox(width: 6),
