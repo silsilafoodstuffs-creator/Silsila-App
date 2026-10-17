@@ -83,14 +83,32 @@ class OfferService {
     if (cleanTitle.isEmpty || cleanDescription.isEmpty) {
       throw ArgumentError('يرجى إدخال عنوان العرض ووصفه.');
     }
+    if (cleanTitle.length > 200 || cleanDescription.length > 5000) {
+      throw ArgumentError('عنوان العرض أو وصفه تجاوز الحد المسموح.');
+    }
 
     if (!endsAt.isAfter(startsAt)) {
       throw ArgumentError('تاريخ انتهاء العرض يجب أن يكون بعد بدايته.');
     }
 
     if (discountPercentage != null &&
-        (discountPercentage <= 0 || discountPercentage > 100)) {
+        (!discountPercentage.isFinite ||
+            discountPercentage <= 0 ||
+            discountPercentage > 100)) {
       throw ArgumentError('نسبة الخصم يجب أن تكون أكبر من صفر وحتى 100%.');
+    }
+
+    if (imageUrl != null && imageUrl.trim().isNotEmpty) {
+      final uri = Uri.tryParse(imageUrl.trim());
+      if (uri == null ||
+          !uri.hasScheme ||
+          (uri.scheme != 'https' && uri.scheme != 'http') ||
+          uri.host.isEmpty) {
+        throw ArgumentError('رابط صورة العرض غير صالح.');
+      }
+    }
+    if (activityType != null && activityType.trim().length > 120) {
+      throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
     }
 
     final data = <String, dynamic>{
