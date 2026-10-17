@@ -3450,17 +3450,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 validator: requiredValidator,
               ),
+             
               const SizedBox(height: 12),
               TextFormField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(
                   labelText: 'رقم الهاتف المسجل لدينا',
+                  prefixIcon: Icon(Icons.phone_rounded),
+                  helperText: 'أدخل رقم الهاتف بالأرقام المصرية أو الدولية',
                 ),
-                validator: (v) =>
-                    v == null || v.trim().length < 8
-                        ? 'أدخل رقم هاتف صحيحًا'
-                        : null,
+                validator: (v) {
+                  final value = v?.trim() ?? '';
+                  final digits = value.replaceAll(RegExp(r'\D'), '');
+
+                  if (value.isEmpty) {
+                    return 'أدخل رقم الهاتف';
+                  }
+
+                  if (RegExp(r'[A-Za-z]').hasMatch(value)) {
+                    return 'رقم الهاتف لا يجب أن يحتوي على حروف';
+                  }
+
+                  if (digits.length < 10 || digits.length > 15) {
+                    return 'أدخل رقم هاتف صحيحًا من 10 إلى 15 رقمًا';
+                  }
+
+                  return null;
+                },
               ),
               const SizedBox(height: 8),
               CheckboxListTile(
@@ -3469,7 +3486,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 title: const Text('رقم واتساب هو نفس رقم الهاتف'),
                 onChanged: (v) =>
                     setState(() => sameWhatsApp = v ?? true),
-              ), 
+              ),
               if (!sameWhatsApp) ...[
                 const SizedBox(height: 8),
                 TextFormField(
@@ -3478,22 +3495,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: const InputDecoration(
                     labelText: 'رقم واتساب',
                     prefixIcon: Icon(Icons.phone_android_rounded),
+                    helperText: 'أدخل رقم واتساب بالأرقام المصرية أو الدولية',
                   ),
                   validator: (v) {
                     final value = v?.trim() ?? '';
+                    final digits = value.replaceAll(RegExp(r'\D'), '');
 
                     if (value.isEmpty) {
                       return 'أدخل رقم واتساب';
                     }
 
-                    if (value.replaceAll(RegExp(r'\D'), '').length < 8) {
-                      return 'أدخل رقم واتساب صحيحًا';
+                    if (RegExp(r'[A-Za-z]').hasMatch(value)) {
+                      return 'رقم واتساب لا يجب أن يحتوي على حروف';
+                    }
+
+                    if (digits.length < 10 || digits.length > 15) {
+                      return 'أدخل رقم واتساب صحيحًا من 10 إلى 15 رقمًا';
                     }
 
                     return null;
                   },
                 ),
               ],
+
              
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
