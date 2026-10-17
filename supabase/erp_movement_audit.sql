@@ -844,6 +844,49 @@ begin
     and (p_end_date is null or l1.starts_on <= p_end_date)
     and (p_area = 'كل الحركات' or p_area = 'الإجازات')
 
+
+  union all
+
+  select
+    'purchase:' || d.id::text || ':branch',
+    'المشتريات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'فرع المستند لا يطابق فرع المخزن',
+    'خطأ',
+    'PURCHASE_BRANCH_WAREHOUSE_MISMATCH',
+    'فرع مستند المشتريات يختلف عن فرع المخزن المرتبط به.',
+    'purchases'
+  from public.erp_purchase_documents d
+  join public.erp_warehouses w on w.id = d.warehouse_id
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and w.branch_id is not null and d.branch_id is distinct from w.branch_id
+
+  union all
+
+  select
+    'sale:' || d.id::text || ':branch',
+    'المبيعات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'فرع المستند لا يطابق فرع المخزن',
+    'خطأ',
+    'SALE_BRANCH_WAREHOUSE_MISMATCH',
+    'فرع مستند المبيعات يختلف عن فرع المخزن المرتبط به.',
+    'sales'
+  from public.erp_sales_documents d
+  join public.erp_warehouses w on w.id = d.warehouse_id
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and w.branch_id is not null and d.branch_id is distinct from w.branch_id
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
