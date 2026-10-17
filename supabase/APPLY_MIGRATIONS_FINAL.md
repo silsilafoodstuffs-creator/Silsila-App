@@ -15,6 +15,7 @@
 11. `11_approved_supplier_details_view.sql`
 12. `12_wallet_order_payments.sql`
 13. `13_wallet_order_refunds.sql`
+14. `14_atomic_multi_supplier_checkout.sql`
 
 تجنب تشغيل النسخ القديمة `03_secure_checkout.sql` و`04_service_compatibility.sql`؛ استخدم النسخ ذات اللاحقة `fixed` المذكورة أعلاه.
 
