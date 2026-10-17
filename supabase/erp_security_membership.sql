@@ -412,6 +412,19 @@ grant select, insert, update, delete on public.erp_purchase_documents, public.er
 
 
 
+
+-- Leave requests start pending; only management may decide them.
+drop policy if exists erp_leave_requests_insert_operator on public.erp_leave_requests;
+create policy erp_leave_requests_insert_operator on public.erp_leave_requests
+for insert to authenticated with check (
+  status = 'pending' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
+);
+drop policy if exists erp_leave_requests_update_operator on public.erp_leave_requests;
+create policy erp_leave_requests_update_operator on public.erp_leave_requests
+for update to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin','manager']::text[]))
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager']::text[]));
+
 -- Salary-bearing employee and payroll records are restricted to management/accounting.
 drop policy if exists erp_employees_select_hr on public.erp_employees;
 create policy erp_employees_select_hr on public.erp_employees
