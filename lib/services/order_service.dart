@@ -77,7 +77,6 @@ class OrderService {
     final client = _requireClient;
 
     final preparedItems = <Map<String, dynamic>>[];
-    double totalAmount = 0;
 
     for (final item in items) {
       final productId = _toInt(item['product_id']);
@@ -88,49 +87,33 @@ class OrderService {
         throw ArgumentError('بيانات أحد المنتجات غير صحيحة.');
       }
 
-      final lineTotal = quantity * price;
-      totalAmount += lineTotal;
-
       preparedItems.add({
         'product_id': productId,
         'quantity': quantity,
-        'unit_price': price,
-        'total_price': lineTotal,
       });
     }
 
-    final order = await client
-        .from('orders')
-        .insert({
-          'customer_id': _userId,
-          'supplier_id': supplierId.trim(),
-          'total_amount': totalAmount,
-          'status': 'انتظار قبول',
-          'payment_method': paymentMethod,
-          'delivery_address': _clean(deliveryAddress),
-          'notes': _clean(notes),
-        })
-        .select('id')
-        .single();
-
-    final orderId = _toInt(order['id']);
-
-    try {
-      final rows = preparedItems
-          .map((item) => {
-                ...item,
-                'order_id': orderId,
-              })
-          .toList();
-
-      await client.from('order_items').insert(rows);
-    } catch (_) {
-      // لا نحذف الطلب تلقائيًا؛ يجب تنفيذ إنشاء الطلب
-      // وعناصره في معاملة قاعدة بيانات واحدة في النسخة النهائية.
-      rethrow;
+    final cleanAddress = _clean(deliveryAddress);
+    if (cleanAddress == null) {
+      throw ArgumentError('يجب تحديد عنوان التوصيل.');
     }
 
-    return orderId;
+    final response = await client.rpc(
+      'place_supplier_order',
+      params: {
+        'p_supplier_id': supplierId.trim(),
+        'p_items': preparedItems,
+        'p_payment_method': paymentMethod,
+        'p_delivery_address': cleanAddress,
+        'p_notes': _clean(notes),
+      },
+    );
+
+    if (response is! Map) {
+      throw StateError('لم تُرجع قاعدة البيانات بيانات الطلب بصورة صحيحة.');
+    }
+
+    return _toInt(response['id']);
   }
 
   /// جلب طلبات المستخدم الحالي.
