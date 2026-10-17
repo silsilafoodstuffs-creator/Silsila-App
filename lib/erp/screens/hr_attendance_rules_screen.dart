@@ -305,6 +305,36 @@ class _HrFingerprintDevicesScreenState extends State<HrFingerprintDevicesScreen>
     if(d.method=='IP')TextField(controller:d.port,decoration:const InputDecoration(labelText:'المنفذ')),
     if(d.method=='USB')TextField(controller:d.usb,decoration:const InputDecoration(labelText:'معرّف USB / المنفذ')),
   ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){setState(()=>old==null?devices.add(d):devices[index!]=d);Navigator.pop(ctx);},child:const Text('حفظ'))])));}
+  Future<void> _confirmDeviceDelete(int index, _Device device) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تأكيد حذف جهاز البصمة'),
+        content: Text('هل تريد حذف الجهاز «${device.name.text}»؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('لا'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _red),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('نعم'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      if (index >= 0 && index < devices.length && identical(devices[index], device)) {
+        devices.removeAt(index);
+      } else {
+        devices.remove(device);
+      }
+    });
+    device.dispose();
+  }
+
   void _test(_Device d){setState(()=>d.connected=false);_msg(d.method=='IP'?'اختبار IP الفعلي يحتاج موصل الجهاز والتحقق من الوصول إلى الشبكة.':'اختبار USB يحتاج إضافة دعم أصلي أو خدمة وسيطة.');}
   void _pull(_Device d){setState(()=>d.note='لم تُسحب حركات فعلية بعد؛ يلزم ربط موصل '+d.method+' وتخزين السجلات مع منع التكرار.');_msg(d.note);}
   void _msg(String s)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));
