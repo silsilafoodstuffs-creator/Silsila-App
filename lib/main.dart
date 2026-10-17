@@ -4279,6 +4279,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final unitController = TextEditingController();
   final priceController = TextEditingController();
   final governorateController = TextEditingController();
+  final categoryController = TextEditingController();
+  final contactPhoneController = TextEditingController();
   String type = 'buy';
   bool busy = false;
 
@@ -4290,6 +4292,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     unitController.dispose();
     priceController.dispose();
     governorateController.dispose();
+    categoryController.dispose();
+    contactPhoneController.dispose();
     super.dispose();
   }
 
@@ -4325,6 +4329,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         unit: unitController.text.trim().isEmpty ? null : unitController.text.trim(),
         targetPrice: targetPrice,
         governorate: governorateController.text.trim().isEmpty ? null : governorateController.text.trim(),
+        category: categoryController.text.trim().isEmpty ? null : categoryController.text.trim(),
+        contactPhone: contactPhoneController.text.trim().isEmpty ? null : normalizePhoneForAuth(contactPhoneController.text),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -4388,8 +4394,19 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           ),
           const SizedBox(height: 12),
           TextField(
+            controller: categoryController,
+            decoration: const InputDecoration(labelText: 'القسم أو الصنف (اختياري)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
             controller: governorateController,
             decoration: const InputDecoration(labelText: 'المحافظة (اختياري)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: contactPhoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'رقم للتواصل (اختياري)', prefixIcon: Icon(Icons.phone_outlined)),
           ),
           const SizedBox(height: 16),
           FilledButton(
