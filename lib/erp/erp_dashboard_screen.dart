@@ -13,8 +13,8 @@ const Map<String, Map<String, List<String>>> _modules = {
     'تقارير': ['تقرير التطبيقات', 'تقرير الصلاحيات', 'تقرير تغييرات الإعدادات'],
   },
   'إدارة البرنامج': {
-    'بيانات أساسية': ['بيانات الشركة', 'الفروع ومراكز التكلفة', 'المستخدمون والصلاحيات', 'إعدادات النظام', 'سجل العمليات', 'واجهة API والربط الخارجي', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات'],
-    'حركات': ['إدارة الجلسات', 'سجل الدخول والخروج', 'النسخ الاحتياطي', 'إعداد نقاط الربط', 'اختبار الاتصال الخارجي'],
+    'بيانات أساسية': ['بيانات الشركة', 'الفروع ومراكز التكلفة', 'المستخدمون والصلاحيات', 'إعدادات النظام', 'سجل العمليات', 'واجهة API والربط الخارجي', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات', 'سياسات التسعير والخصومات', 'توزيع الأصناف على المندوبين', 'قيود البيع والشراء'],
+    'حركات': ['اختبار ومراجعة الحركات', 'قائمة اعتماد القيود', 'إدارة الجلسات', 'سجل الدخول والخروج', 'النسخ الاحتياطي', 'إعداد نقاط الربط', 'اختبار الاتصال الخارجي'],
     'تقارير': ['تقرير المستخدمين', 'تقرير نشاط النظام', 'تقرير استهلاك API', 'تقرير أخطاء التكامل'],
   },
   'الحسابات المالية': {
@@ -313,7 +313,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: Column(children: [
               _header(compact),
-              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'شجرة الحسابات' ? _accountTree() : _workspace())),
+              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'شجرة الحسابات' ? _accountTree() : _page == 'اختبار ومراجعة الحركات' ? _movementAuditScreen() : _page == 'المستخدمون والصلاحيات' ? _permissionsScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? _delegateAllocationScreen() : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _workspace())),
             ])),
             if (!compact) SizedBox(width: 286, child: _rightPanel()),
           ])),
@@ -897,6 +897,130 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final whole = parts[0].replaceAllMapped(RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (m) => ',');
     return (value < 0 ? '-' : '') + whole + '.' + parts[1];
   }
+  String _auditPeriod = 'من بداية النظام حتى تاريخه';
+  String _auditStart = '2026-01-01';
+  String _auditEnd = '2026-10-17';
+  String _auditModule = 'كل الحركات';
+  final Set<String> _auditChecked = {};
+  final Map<String, bool> _permissionDraft = {};
+  String _permissionRole = 'مدير النظام';
+  String _pricingMode = 'نسبة';
+  String _pricingDirection = 'زيادة';
+  final TextEditingController _basePriceController = TextEditingController();
+  final TextEditingController _priceLimitController = TextEditingController();
+  final TextEditingController _priceValueController = TextEditingController();
+  final TextEditingController _invoiceDiscountController = TextEditingController();
+  final TextEditingController _itemDiscountController = TextEditingController();
+  String _restrictionTarget = 'الصنف';
+  String _restrictionAction = 'إيقاف البيع';
+  final TextEditingController _restrictionItem = TextEditingController();
+  final TextEditingController _restrictionCustomer = TextEditingController();
+  final TextEditingController _restrictionDelegate = TextEditingController();
+  final Set<String> _allocatedItems = {};
+  final Set<String> _approvedJournals = {};
+
+  Widget _movementAuditScreen() {
+    const areas = ['كل الحركات','العملاء','الموردون','المخازن','الأصناف','البنوك','الخزائن','الموظفون','القيود المحاسبية','المبيعات','المشتريات','المردودات','التحويلات'];
+    final rows = _auditSampleRows.where((r) => _auditModule == 'كل الحركات' || r['area'] == _auditModule).toList();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _screenHeading('اختبار ومراجعة الحركات', 'تجميع الحركات حسب المجال والفترة، وإظهار الأخطاء المقترحة للمراجعة'),
+      Wrap(spacing: 10, runSpacing: 10, children: [
+        SizedBox(width: 230, child: DropdownButtonFormField<String>(value: _auditPeriod, decoration: const InputDecoration(labelText: 'الفترة', border: OutlineInputBorder()), items: const ['من بداية النظام حتى تاريخه','شهر محدد','من تاريخ إلى تاريخ'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(), onChanged:(v)=>setState(()=>_auditPeriod=v ?? _auditPeriod)),
+        SizedBox(width: 220, child: DropdownButtonFormField<String>(value: _auditModule, decoration: const InputDecoration(labelText: 'تجميع الحركات حسب', border: OutlineInputBorder()), items: areas.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(), onChanged:(v)=>setState(()=>_auditModule=v ?? _auditModule)),
+        if (_auditPeriod != 'من بداية النظام حتى تاريخه') SizedBox(width: 180, child: TextFormField(initialValue:_auditStart, decoration:const InputDecoration(labelText:'من تاريخ / الشهر', border:OutlineInputBorder()), onChanged:(v)=>_auditStart=v)),
+        if (_auditPeriod == 'من تاريخ إلى تاريخ') SizedBox(width: 180, child: TextFormField(initialValue:_auditEnd, decoration:const InputDecoration(labelText:'إلى تاريخ', border:OutlineInputBorder()), onChanged:(v)=>_auditEnd=v)),
+      ]),
+      const SizedBox(height:12),
+      _notice(Icons.info_outline, 'حالة الفحص', 'المعروض حاليًا نموذج توضيحي. تشغيل اختبار فعلي لكل الحركات يتطلب ربطه ببيانات النظام وقواعد التحقق قبل إصدار تقرير أخطاء حقيقي.', _orange),
+      const SizedBox(height:12),
+      Wrap(spacing:8,runSpacing:8,children:[_summaryChip('حركات في العينة',rows.length.toString(),_purple),_summaryChip('تحتاج مراجعة',rows.where((r)=>r['issue']!='سليم').length.toString(),_orange),_summaryChip('تمت مراجعتها',_auditChecked.length.toString(),const Color(0xFF18865A))]),
+      const SizedBox(height:12),
+      ...rows.map((r) => Card(child: Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Row(children:[Expanded(child:Text('${r['area']} • ${r['name']}',style:const TextStyle(fontWeight:FontWeight.w900,color:_purple))),Text('${r['date']}')]),
+        const SizedBox(height:6),
+        Text('المستند: ${r['doc']} • القيمة: ${r['value']} ج.م'),
+        const SizedBox(height:5),
+        Row(children:[Expanded(child:Text('نتيجة الفحص: ${r['issue']}',style:TextStyle(color:r['issue']=='سليم'?const Color(0xFF18865A):const Color(0xFFD32F2F),fontWeight:FontWeight.w700))),OutlinedButton.icon(onPressed:()=>_showAuditFix(r),icon:const Icon(Icons.build_circle_outlined),label:const Text('ضبط الحركة'))]),
+        CheckboxListTile(contentPadding:EdgeInsets.zero,dense:true,value:_auditChecked.contains(r['doc']),onChanged:(v)=>setState(()=>v==true?_auditChecked.add(r['doc'] as String):_auditChecked.remove(r['doc'] as String)),title:const Text('تمت المراجعة يدويًا'))
+      ])))),
+    ]);
+  }
+
+  static const List<Map<String,String>> _auditSampleRows = [
+    {'area':'العملاء','name':'فاتورة عميل','date':'2026-10-15','doc':'SAL-1042','value':'12500','issue':'حساب العميل غير محدد'},
+    {'area':'الموردون','name':'فاتورة مورد','date':'2026-10-14','doc':'PUR-209','value':'8400','issue':'سليم'},
+    {'area':'المخازن','name':'صرف مخزني','date':'2026-10-12','doc':'INV-077','value':'3100','issue':'كمية الصرف أكبر من المتاح'},
+    {'area':'البنوك','name':'إيداع بنكي','date':'2026-10-11','doc':'BNK-031','value':'5000','issue':'مرجع البنك غير موجود'},
+    {'area':'الخزائن','name':'أمر صرف','date':'2026-10-10','doc':'CSH-014','value':'2200','issue':'سليم'},
+    {'area':'الموظفون','name':'عهدة مندوب','date':'2026-10-09','doc':'EMP-008','value':'1500','issue':'مركز التكلفة غير محدد'},
+    {'area':'القيود المحاسبية','name':'قيد يومية','date':'2026-10-08','doc':'JV-301','value':'18000','issue':'القيد غير متوازن'},
+    {'area':'المبيعات','name':'فاتورة مبيعات','date':'2026-10-07','doc':'SAL-1038','value':'7600','issue':'سليم'},
+    {'area':'المشتريات','name':'فاتورة مشتريات','date':'2026-10-06','doc':'PUR-201','value':'9200','issue':'ضريبة غير محددة'},
+    {'area':'المردودات','name':'مرتجع مبيعات','date':'2026-10-05','doc':'RET-015','value':'800','issue':'المستند الأصلي غير مربوط'},
+    {'area':'التحويلات','name':'تحويل مخزني','date':'2026-10-04','doc':'TRF-026','value':'4200','issue':'مخزن الوجهة غير محدد'},
+    {'area':'الأصناف','name':'حركة صنف','date':'2026-10-03','doc':'ITM-422','value':'0','issue':'سليم'},
+  ];
+
+  void _showAuditFix(Map<String,String> row) {
+    final controller=TextEditingController(text:row['issue']);
+    showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:Text('ضبط الحركة ${row['doc']}'),content:TextField(controller:controller,maxLines:3,decoration:const InputDecoration(labelText:'ملاحظة الضبط المقترح',border:OutlineInputBorder())),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:(){setState(()=>_activityLog.insert(0,'مراجعة ${row['doc']}: ${controller.text}'));Navigator.pop(ctx);ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('سُجلت ملاحظة المراجعة محليًا؛ لم يتم تعديل المستند الأصلي.')));},child:const Text('تسجيل الملاحظة'))]));
+  }
+
+  Widget _permissionsScreen() {
+    const roles=['مدير النظام','مدير مالي','مدير مخازن','موظف مبيعات','موظف مشتريات','أمين خزينة','مندوب مبيعات','مندوب تسليم','مراجع'];
+    const rights=['عرض','إضافة','تعديل','حذف','اعتماد','عكس الحركة','ترحيل','تصدير','طباعة','تخطي ربط المستند الأصلي','تخطي التحضير'];
+    const scopes=['بيانات أساسية','الحسابات المالية','المخازن والفروع','المبيعات والعملاء','المشتريات والموردون','الموارد البشرية','إدارة البرنامج','سياسات التسعير','توزيع الأصناف','قيود البيع والشراء'];
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('المستخدمون والصلاحيات','تحديد الصلاحيات حسب نوع المستخدم والدور الوظيفي'),
+      Wrap(spacing:10,children:[SizedBox(width:260,child:DropdownButtonFormField<String>(value:_permissionRole,decoration:const InputDecoration(labelText:'تصنيف المستخدم / الدور',border:OutlineInputBorder()),items:roles.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_permissionRole=v??_permissionRole)),),FilledButton.icon(onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('مسودة الصلاحيات محلية فقط؛ يلزم حفظها بالخادم مع تطبيق RLS.'))),icon:const Icon(Icons.save),label:const Text('حفظ المسودة'))]),
+      const SizedBox(height:12),
+      const Text('ضع علامة صح لمنح الصلاحية وأزلها لمنعها. لا تطبق هذه الاختيارات حماية فعلية قبل ربطها بهوية المستخدم والخادم وسياسات قاعدة البيانات.',style:TextStyle(color:Colors.black54,height:1.6)),
+      const SizedBox(height:8),
+      ...scopes.map((scope)=>Card(child:ExpansionTile(title:Text(scope,style:const TextStyle(fontWeight:FontWeight.w800,color:_purple)),children:[Padding(padding:const EdgeInsets.all(12),child:Wrap(spacing:12,runSpacing:4,children:rights.map((right){final key='$_permissionRole::$scope::$right';final enabled=_permissionDraft[key]??(_permissionRole=='مدير النظام'&&right!='عكس الحركة');return SizedBox(width:145,child:CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,value:enabled,onChanged:(v)=>setState(()=>_permissionDraft[key]=v??false),title:Text(right,style:const TextStyle(fontSize:12))));}).toList()))]))),
+    ]);
+  }
+
+  Widget _pricingPolicyScreen() {
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('سياسات التسعير والخصومات','حد تسعير الصنف والزيادة أو النقصان وحدود خصم الصنف والفاتورة'),
+      Wrap(spacing:12,runSpacing:12,children:[_fieldBox('سعر الصنف الأساسي',_basePriceController),_fieldBox('حد التسعير المعتمد',_priceLimitController),SizedBox(width:220,child:DropdownButtonFormField<String>(value:_pricingMode,decoration:const InputDecoration(labelText:'طريقة التعديل',border:OutlineInputBorder()),items:const ['نسبة','قيمة'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_pricingMode=v??_pricingMode))),SizedBox(width:220,child:DropdownButtonFormField<String>(value:_pricingDirection,decoration:const InputDecoration(labelText:'الاتجاه من حد التسعير',border:OutlineInputBorder()),items:const ['زيادة','نقصان'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_pricingDirection=v??_pricingDirection)),),_fieldBox(_pricingMode=='نسبة'?'نسبة الزيادة / النقصان %':'قيمة الزيادة / النقصان',_priceValueController),_fieldBox('أقصى خصم على إجمالي الفاتورة %',_invoiceDiscountController),_fieldBox('أقصى خصم على مستوى الصنف %',_itemDiscountController)]),
+      const SizedBox(height:12),
+      FilledButton.icon(onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم إعداد حقول السياسة في الواجهة فقط؛ لم تُحفظ السياسة على الخادم بعد.'))),icon:const Icon(Icons.save),label:const Text('حفظ مسودة السياسة')),
+      const SizedBox(height:8),
+      const Text('يجب أن يُحسب السعر النهائي من حد التسعير المسجل للصنف، مع منع تجاوز صلاحية المستخدم وحدود الخصم. يلزم ربط الحقول ببيانات الأصناف وقاعدة البيانات قبل تطبيقها على الفواتير.',style:TextStyle(color:Colors.black54,height:1.6))]);
+  }
+
+  Widget _delegateAllocationScreen() {
+    const delegates=['مندوب مبيعات 01','مندوب مبيعات 02','مندوب مبيعات 03','مندوب مبيعات 04'];
+    const items=['زيت طعام 1 لتر','أرز 1 كجم','سكر 1 كجم','مكرونة 400 جم','سمن نباتي','شاي','جبن أبيض','منظفات'];
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('توزيع الأصناف على المندوبين','تخصيص الأصناف المهمة التي يُسمح لكل مندوب ببيعها'),
+      const Text('اختيار الصنف والمندوب أدناه تجريبي حتى ربط دليل الأصناف والمندوبين الفعلي.',style:TextStyle(color:Colors.black54)),
+      const SizedBox(height:10),
+      ...delegates.map((delegate)=>Card(child:ExpansionTile(title:Text(delegate,style:const TextStyle(fontWeight:FontWeight.w800,color:_purple)),children:items.map((item){final key='$delegate::$item';return CheckboxListTile(value:_allocatedItems.contains(key),onChanged:(v)=>setState(()=>v==true?_allocatedItems.add(key):_allocatedItems.remove(key)),title:Text(item),subtitle:const Text('السماح ببيع الصنف المهم لهذا المندوب'));}).toList()))),
+      FilledButton.icon(onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('توزيع الأصناف مسودة محلية ولم يُحفظ بالخادم.'))),icon:const Icon(Icons.save),label:const Text('حفظ التوزيع'))]);
+  }
+
+  Widget _transactionRestrictionsScreen() {
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('قيود البيع والشراء','إيقاف البيع أو الشراء أو تحديد الحد حسب الصنف أو الفاتورة أو العميل أو المندوب'),
+      Wrap(spacing:12,runSpacing:12,children:[SizedBox(width:220,child:DropdownButtonFormField<String>(value:_restrictionAction,decoration:const InputDecoration(labelText:'الإجراء',border:OutlineInputBorder()),items:const ['إيقاف البيع','إيقاف الشراء','تحديد حد البيع'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_restrictionAction=v??_restrictionAction))),SizedBox(width:220,child:DropdownButtonFormField<String>(value:_restrictionTarget,decoration:const InputDecoration(labelText:'مستوى تطبيق القيد',border:OutlineInputBorder()),items:const ['الصنف','الفاتورة الواحدة','العميل','المندوب'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_restrictionTarget=v??_restrictionTarget))),_fieldBox('كود الصنف / الفاتورة / العميل / المندوب',_restrictionItem),_fieldBox('العميل (اختياري)',_restrictionCustomer),_fieldBox('المندوب (اختياري)',_restrictionDelegate)]),
+      const SizedBox(height:12),
+      FilledButton.icon(onPressed:()=>showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('إضافة قيد'),content:Text('الإجراء: $_restrictionAction • المستوى: $_restrictionTarget • المعرف: ${_restrictionItem.text}'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق')),FilledButton(onPressed:(){setState(()=>_activityLog.insert(0,'مسودة قيد: $_restrictionAction / $_restrictionTarget / ${_restrictionItem.text}'));Navigator.pop(ctx);},child:const Text('حفظ المسودة'))])),icon:const Icon(Icons.block),label:const Text('إضافة قيد / إيقاف')),
+      const SizedBox(height:8),
+      const Text('هذه مسودة واجهة؛ منع البيع أو الشراء الفعلي يجب أن يُطبق أيضًا في منطق حفظ الفاتورة والخادم، وليس في الشاشة وحدها.',style:TextStyle(color:Colors.black54,height:1.6))]);
+  }
+
+  Widget _journalApprovalScreen() {
+    const journals=[('JV-301','قيد مشتريات','2026-10-08','18,000','غير متوازن'),('JV-302','قيد مبيعات','2026-10-09','7,600','بانتظار الاعتماد'),('JV-303','قيد خزينة','2026-10-10','2,200','بانتظار الاعتماد')];
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('قائمة اعتماد القيود','مراجعة القيود قبل اعتمادها أو إعادتها للتعديل أو تسجيل طلب عكس'),
+      const Text('القيود أدناه أمثلة للواجهة فقط، ولا تمثل قيودًا محفوظة في دفتر الأستاذ.',style:TextStyle(color:Colors.black54)),
+      const SizedBox(height:10),
+      ...journals.map((j)=>Card(child:ListTile(title:Text('${j.$1} • ${j.$2}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${j.$3} • ${j.$4} ج.م • ${j.$5}'),trailing:Wrap(spacing:3,children:[IconButton(tooltip:'اعتماد',onPressed:()=>setState(()=>_approvedJournals.add(j.$1)),icon:const Icon(Icons.check_circle_outline,color:Color(0xFF18865A))),IconButton(tooltip:'إعادة للتعديل',onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تم تسجيل طلب إعادة ${j.$1} للمراجعة محليًا.'))),icon:const Icon(Icons.edit_outlined,color:_orange)),IconButton(tooltip:'طلب عكس',onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تم تسجيل طلب عكس ${j.$1} محليًا؛ لم يُعكس القيد.'))),icon:const Icon(Icons.undo,color:_pink))]),leading:Icon(_approvedJournals.contains(j.$1)?Icons.verified:Icons.pending_actions,color:_approvedJournals.contains(j.$1)?const Color(0xFF18865A):_orange)))),
+      const SizedBox(height:8),
+      const Text('زر الاعتماد في هذه المرحلة يسجل اختيارًا داخل الجلسة فقط؛ الترحيل المالي الحقيقي يتطلب التحقق من توازن القيد وصلاحية المستخدم وحالة الفترة المالية.',style:TextStyle(color:Colors.black54,height:1.6))]);
+  }
+
+  Widget _screenHeading(String title,String subtitle)=>Padding(padding:const EdgeInsets.only(bottom:14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:_purple,fontSize:22,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(subtitle,style:const TextStyle(color:Colors.black54,height:1.5))]));
+  Widget _summaryChip(String label,String value,Color color)=>Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),decoration:BoxDecoration(color:color.withOpacity(.09),borderRadius:BorderRadius.circular(10)),child:Text('$label: $value',style:TextStyle(color:color,fontWeight:FontWeight.w800)));
+  Widget _fieldBox(String label,TextEditingController controller)=>SizedBox(width:220,child:TextField(controller:controller,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:label,border:const OutlineInputBorder())));
+
   Widget _about() => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Text('عن البرنامج', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
     SizedBox(height: 12),
