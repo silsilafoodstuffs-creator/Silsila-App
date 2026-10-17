@@ -27,7 +27,7 @@ class ReviewService {
     final response = await _client
         .from('reviews')
         .select()
-        .eq('supplier_id', supplierId.trim())
+        .eq('reviewed_user_id', supplierId.trim())
         .order('created_at', ascending: false)
         .limit(limit);
 
@@ -45,7 +45,7 @@ class ReviewService {
     final reviews = await _client
         .from('reviews')
         .select('rating')
-        .eq('supplier_id', cleanSupplierId);
+        .eq('reviewed_user_id', cleanSupplierId);
 
     final rows = List<Map<String, dynamic>>.from(reviews);
     var total = 0.0;
@@ -110,9 +110,9 @@ class ReviewService {
     final response = await _client
         .from('reviews')
         .insert({
-          'customer_id': _userId,
-          'supplier_id': supplierId.trim(),
-          'order_id': orderId.trim(),
+          'reviewer_id': _userId,
+          'reviewed_user_id': supplierId.trim(),
+          'order_id': parsedOrderId,
           'rating': rating,
           'comment': _emptyToNull(comment),
         })
@@ -145,7 +145,7 @@ class ReviewService {
           'comment': _emptyToNull(comment),
         })
         .eq('id', reviewId.trim())
-        .eq('customer_id', _userId)
+        .eq('reviewer_id', _userId)
         .select()
         .single();
 
