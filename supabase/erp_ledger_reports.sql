@@ -62,9 +62,9 @@ begin
     a.account_name,
     a.account_type,
     a.normal_balance,
-    coalesce(sum(jl.debit), 0)::numeric as debit_total,
-    coalesce(sum(jl.credit), 0)::numeric as credit_total,
-    coalesce(sum(jl.debit - jl.credit), 0)::numeric as net_balance
+    coalesce(sum(case when je.id is not null then jl.debit else 0 end), 0)::numeric as debit_total,
+    coalesce(sum(case when je.id is not null then jl.credit else 0 end), 0)::numeric as credit_total,
+    coalesce(sum(case when je.id is not null then jl.debit - jl.credit else 0 end), 0)::numeric as net_balance
   from public.erp_accounts a
   left join public.erp_journal_lines jl on jl.account_id = a.id
   left join public.erp_journal_entries je
