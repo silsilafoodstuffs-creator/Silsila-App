@@ -77,14 +77,14 @@ create or replace function public.erp_require_operational_draft_on_insert()
 returns trigger
 language plpgsql
 set search_path = public
-as $
+as $$
 begin
   if new.status <> 'draft' then
     raise exception 'يجب إنشاء مستند المبيعات أو المشتريات كمسودة ثم ترحيله عبر الإجراء المعتمد';
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists erp_purchase_document_draft_insert_guard on public.erp_purchase_documents;
 create trigger erp_purchase_document_draft_insert_guard
