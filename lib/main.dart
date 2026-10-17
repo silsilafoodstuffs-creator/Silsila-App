@@ -8,6 +8,7 @@ import 'services/notification_service.dart';
 import 'services/product_service.dart';
 import 'services/supplier_service.dart';
 import 'services/category_service.dart';
+import 'services/supplier_product_service.dart';
 import 'services/offer_service.dart';
 import 'services/story_service.dart';
 import 'services/user_service.dart';
@@ -488,6 +489,7 @@ class _MainShellState extends State<MainShell> {
   List<Map<String, dynamic>> liveSuppliers = [];
   bool loadingLiveSuppliers = false;
   bool isAdmin = false;
+  bool isApprovedSupplier = false;
   bool loadingLiveProducts = false;
   String? productLoadMessage;
 
@@ -531,9 +533,13 @@ class _MainShellState extends State<MainShell> {
   Future<void> loadCurrentRole() async {
     try {
       final profile = await ProfileService().getMyProfile();
-      if (mounted) setState(() => isAdmin = profile?['role'] == 'admin');
+      if (mounted) setState(() {
+        isAdmin = profile?['role'] == 'admin';
+        isApprovedSupplier = profile?['role'] == 'supplier' &&
+            ['approved', 'active', 'مفعل', 'معتمد'].contains(profile?['account_status']);
+      });
     } catch (_) {
-      if (mounted) setState(() => isAdmin = false);
+      if (mounted) setState(() { isAdmin = false; isApprovedSupplier = false; });
     }
   }
 
@@ -1324,6 +1330,12 @@ class _MainShellState extends State<MainShell> {
             'إعدادات الحساب',
             () => openPage('إعدادات الحساب', const ProfileEditorScreen()),
           ),
+          if (isApprovedSupplier)
+            menuItem(
+              Icons.inventory_2_outlined,
+              'إدارة منتجاتي',
+              () => openPage('إدارة منتجاتي', const SupplierProductsScreen()),
+            ),
           if (isAdmin)
             menuItem(
               Icons.admin_panel_settings_outlined,
@@ -1365,6 +1377,164 @@ class _MainShellState extends State<MainShell> {
         title: Text(title),
         trailing: const Icon(Icons.chevron_left),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class SupplierProductsScreen extends StatefulWidget {
+  const SupplierProductsScreen({super.key});
+
+  @override
+  State<SupplierProductsScreen> createState() => _SupplierProductsScreenState();
+}
+
+class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
+  final service = SupplierProductService();
+  List<Map<String, dynamic>> products = [];
+  bool loading = true;
+  String? error;
+  final busyIds = <int>{};
+
+  @override
+  void initState() {
+    super.initState();
+    loadProducts();
+  }
+
+  Future<void> loadProducts() async {
+    try {
+      final userId = database?.auth.currentUser?.id;
+      if (userId == null) throw StateError('يجب تسجيل الدخول أولًا.');
+      final rows = await service.getSupplierProducts(userId, activeOnly: false);
+      if (!mounted) return;
+      setState(() { products = rows; error = null; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { error = 'تعذر تحميل منتجاتك. تأكد من اعتماد حساب المورد وتطبيق ترحيلات Supabase.'; });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> addProduct() async {
+    final name = TextEditingController();
+    final category = TextEditingController(text: 'زيوت');
+    final price = TextEditingController();
+    final unit = TextEditingController(text: 'كرتونة');
+    final minimum = TextEditingController(text: '1');
+    final stock = TextEditingController(text: '0');
+    bool trackStock = false;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('إضافة منتج جديد'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم المنتج')),
+              TextField(controller: category, decoration: const InputDecoration(labelText: 'القسم')),
+              TextField(controller: price, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'سعر الجملة')),
+              TextField(controller: unit, decoration: const InputDecoration(labelText: 'وحدة البيع')),
+              TextField(controller: minimum, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الحد الأدنى للكمية')),
+              TextField(controller: stock, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الكمية المتاحة')),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: trackStock,
+                title: const Text('تتبع المخزون ومنع البيع بعد النفاد'),
+                onChanged: (value) => setDialogState(() => trackStock = value ?? false),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ المنتج')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      try {
+        final parsedPrice = num.tryParse(price.text.trim());
+        final parsedMinimum = num.tryParse(minimum.text.trim());
+        final parsedStock = num.tryParse(stock.text.trim()) ?? 0;
+        if (parsedPrice == null || parsedMinimum == null) {
+          throw ArgumentError('أدخل سعرًا وحدًا أدنى صحيحين.');
+        }
+        await service.createProduct(
+          name: name.text,
+          category: category.text,
+          price: parsedPrice,
+          unit: unit.text,
+          minQuantity: parsedMinimum,
+          stockQuantity: parsedStock,
+          trackInventory: trackStock,
+        );
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نشر المنتج.')));
+        await loadProducts();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إضافة المنتج: $e')));
+      }
+    }
+    name.dispose();
+    category.dispose();
+    price.dispose();
+    unit.dispose();
+    minimum.dispose();
+    stock.dispose();
+  }
+
+  Future<void> deactivate(Map<String, dynamic> product) async {
+    final rawId = product['id'];
+    final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+    if (id == null || busyIds.contains(id)) return;
+    setState(() => busyIds.add(id));
+    try {
+      await service.deactivateProduct(id);
+      await loadProducts();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إيقاف المنتج: $e')));
+    } finally {
+      if (mounted) setState(() => busyIds.remove(id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadProducts,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Row(children: [
+            const Expanded(child: Text('منتجاتي', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+            FilledButton.icon(onPressed: addProduct, icon: const Icon(Icons.add), label: const Text('إضافة')),
+          ]),
+          if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+          if (products.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text('لم تنشر منتجات بعد.', textAlign: TextAlign.center)),
+          ...products.map((product) {
+            final rawId = product['id'];
+            final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+            final active = product['is_active'] == true || product['is_available'] == true;
+            return Card(
+              color: Colors.white,
+              child: ListTile(
+                leading: const Icon(Icons.inventory_2_outlined, color: purple),
+                title: Text((product['name'] ?? '').toString()),
+                subtitle: Text('${product['category'] ?? 'بدون قسم'} • ${product['price'] ?? 0} ج.م / ${product['unit'] ?? 'وحدة'}'
+                    '\nالحد الأدنى: ${product['min_quantity'] ?? product['minimum_quantity'] ?? 1}'
+                    '\nالمخزون: ${product['track_inventory'] == true ? product['stock_quantity'] : 'غير متتبع'}'),
+                isThreeLine: true,
+                trailing: IconButton(
+                  tooltip: active ? 'إيقاف المنتج' : 'المنتج متوقف',
+                  onPressed: active && id != null && !busyIds.contains(id) ? () => deactivate(product) : null,
+                  icon: Icon(active ? Icons.pause_circle_outline : Icons.check_circle_outline, color: active ? orange : Colors.grey),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
