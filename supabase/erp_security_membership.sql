@@ -325,7 +325,8 @@ $$;
 drop policy if exists erp_purchase_documents_insert_operator on public.erp_purchase_documents;
 create policy erp_purchase_documents_insert_operator on public.erp_purchase_documents
 for insert to authenticated with check (
-  status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
+  status = 'draft' and (created_by is null or created_by = auth.uid())
+  and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
 );
 drop policy if exists erp_sales_documents_insert_operator on public.erp_sales_documents;
 create policy erp_sales_documents_insert_operator on public.erp_sales_documents
@@ -435,7 +436,7 @@ using (public.erp_user_has_company_role(company_id, array['owner','admin','accou
 drop policy if exists erp_payroll_runs_insert_accounting on public.erp_payroll_runs;
 create policy erp_payroll_runs_insert_accounting on public.erp_payroll_runs
 for insert to authenticated
-with check (status = 'draft' and journal_entry_id is null
+with check (status = 'draft' and journal_entry_id is null and (created_by is null or created_by = auth.uid())
   and public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]));
 drop policy if exists erp_payroll_runs_update_accounting on public.erp_payroll_runs;
 create policy erp_payroll_runs_update_accounting on public.erp_payroll_runs
