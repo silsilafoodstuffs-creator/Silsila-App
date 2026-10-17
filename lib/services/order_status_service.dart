@@ -96,22 +96,16 @@ class OrderStatusService {
       );
     }
 
-    final updated = await _client
-        .from('orders')
-        .update({'status': cleanStatus})
-        .eq('id', orderId)
-        .eq('supplier_id', userId)
-        .select()
-        .single();
+    final updated = await _client.rpc(
+      'transition_supplier_order_status',
+      params: {
+        'p_order_id': orderId,
+        'p_new_status': cleanStatus,
+        'p_note': _clean(note),
+      },
+    );
 
-    await _client.from('order_status_history').insert({
-      'order_id': orderId,
-      'status': cleanStatus,
-      'changed_by': userId,
-      'note': _clean(note),
-    });
-
-    return Map<String, dynamic>.from(updated);
+    return Map<String, dynamic>.from(updated as Map);
   }
 
   bool _canMove(String current, String next) {
