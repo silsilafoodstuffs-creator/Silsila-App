@@ -5,6 +5,7 @@ import 'screens/erp_accounts_screen.dart';
 import 'screens/erp_journal_entries_screen.dart';
 import 'screens/erp_ledger_reports_screen.dart';
 import 'screens/erp_movement_audit_screen.dart';
+import 'screens/erp_inventory_screen.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -320,7 +321,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: Column(children: [
               _header(compact),
-              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _page == 'شجرة الحسابات' ? const ErpAccountsScreen() : _page == 'قيود اليومية' ? const ErpJournalEntriesScreen() : _page == 'ميزان المراجعة' ? const ErpLedgerReportsScreen(kind: ErpLedgerReportKind.trialBalance) : _page == 'الأستاذ العام' ? const ErpLedgerReportsScreen(kind: ErpLedgerReportKind.generalLedger) : _page == 'حركة حساب' ? const ErpLedgerReportsScreen(kind: ErpLedgerReportKind.accountMovement) : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'اختبار ومراجعة الحركات' ? const ErpMovementAuditScreen() : _page == 'المستخدمون والصلاحيات' ? _permissionsScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? _delegateAllocationScreen() : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _page == 'قواعد الورديات والحضور والانصراف' ? const HrShiftRulesScreen() : _page == 'أجهزة البصمة وربط الحضور' ? const HrFingerprintDevicesScreen() : _workspace())),
+              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _page == 'شجرة الحسابات' ? const ErpAccountsScreen() : _page == 'قيود اليومية' ? const ErpJournalEntriesScreen() : _page == 'ميزان المراجعة' ? const ErpLedgerReportsScreen(kind: ErpLedgerReportKind.trialBalance) : _page == 'الأستاذ العام' ? const ErpLedgerReportsScreen(kind: ErpLedgerReportKind.generalLedger) : _page == 'حركة حساب' ? const ErpLedgerReportsScreen(kind: ErpLedgerReportKind.accountMovement) : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'اختبار ومراجعة الحركات' ? const ErpMovementAuditScreen() : _page == 'أرصدة الأصناف' || _page == 'كارت الصنف' || _page == 'الجرد والفروق' || _page == 'إذن إضافة' || _page == 'إذن صرف' || _page == 'تحويل مخزني' || _page == 'تسوية جرد' || _page == 'جرد فعلي' ? const ErpInventoryScreen() : _page == 'المستخدمون والصلاحيات' ? _permissionsScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? _delegateAllocationScreen() : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _page == 'قواعد الورديات والحضور والانصراف' ? const HrShiftRulesScreen() : _page == 'أجهزة البصمة وربط الحضور' ? const HrFingerprintDevicesScreen() : _workspace())),
             ])),
             if (!compact) SizedBox(width: 286, child: _rightPanel()),
           ])),
