@@ -255,6 +255,7 @@ CREATE TABLE IF NOT EXISTS public.wallet_topup_requests (
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   amount NUMERIC(12,2) NOT NULL CHECK (amount > 0),
   payment_method TEXT NOT NULL,
+  reference TEXT,
   proof_url TEXT,
   status TEXT NOT NULL DEFAULT 'pending',
   reviewed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
