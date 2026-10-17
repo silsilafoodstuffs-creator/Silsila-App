@@ -1447,6 +1447,12 @@ class _MainShellState extends State<MainShell> {
               'إدارة شركات الشحن',
               () => openPage('إدارة شركات الشحن', const AdminShippingCompaniesScreen()),
             ),
+          if (isAdmin)
+            menuItem(
+              Icons.support_agent,
+              'إدارة تذاكر الدعم',
+              () => openPage('إدارة تذاكر الدعم', const AdminSupportTicketsScreen()),
+            ),
           menuItem(
             Icons.logout_rounded,
             'تسجيل الخروج',
@@ -2117,6 +2123,132 @@ class _SupportScreenState extends State<SupportScreen> {
           ),
         )),
       ],
+    );
+  }
+}
+
+class AdminSupportTicketsScreen extends StatefulWidget {
+  const AdminSupportTicketsScreen({super.key});
+
+  @override
+  State<AdminSupportTicketsScreen> createState() => _AdminSupportTicketsScreenState();
+}
+
+class _AdminSupportTicketsScreenState extends State<AdminSupportTicketsScreen> {
+  final service = UserService();
+  List<Map<String, dynamic>> tickets = [];
+  final busyIds = <String>{};
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadTickets();
+  }
+
+  Future<void> loadTickets() async {
+    try {
+      final rows = await service.getPendingSupportTickets();
+      if (!mounted) return;
+      setState(() { tickets = rows; error = null; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'هذه الشاشة متاحة للمسؤول المعتمد فقط، وتحتاج تطبيق ترحيل الدعم.');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> respond(Map<String, dynamic> ticket) async {
+    final id = (ticket['id'] ?? '').toString();
+    if (id.isEmpty || busyIds.contains(id)) return;
+    final reply = TextEditingController(text: (ticket['admin_reply'] ?? '').toString());
+    String status = 'in_progress';
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('الرد على تذكرة الدعم'),
+          content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text((ticket['subject'] ?? '').toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text((ticket['message'] ?? '').toString()),
+            const SizedBox(height: 12),
+            TextField(controller: reply, maxLines: 4, decoration: const InputDecoration(labelText: 'الرد الذي سيصل للمستخدم')),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              value: status,
+              decoration: const InputDecoration(labelText: 'حالة التذكرة'),
+              items: const [
+                DropdownMenuItem(value: 'open', child: Text('مفتوحة')),
+                DropdownMenuItem(value: 'in_progress', child: Text('قيد المعالجة')),
+                DropdownMenuItem(value: 'resolved', child: Text('تم الحل')),
+                DropdownMenuItem(value: 'closed', child: Text('مغلقة')),
+              ],
+              onChanged: (value) => setDialogState(() => status = value ?? 'in_progress'),
+            ),
+          ])),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ وإرسال')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      setState(() => busyIds.add(id));
+      try {
+        await service.updateSupportTicket(
+          ticketId: id,
+          status: status,
+          reply: reply.text.trim().isEmpty ? null : reply.text.trim(),
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث التذكرة وإرسال الرد.')));
+        await loadTickets();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحديث التذكرة: $e')));
+      } finally {
+        if (mounted) setState(() => busyIds.remove(id));
+      }
+    }
+    reply.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadTickets,
+      child: ListView(padding: const EdgeInsets.all(16), children: [
+        const Text('تذاكر الدعم المفتوحة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+        if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+        if (tickets.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text('لا توجد تذاكر مفتوحة.', textAlign: TextAlign.center)),
+        ...tickets.map((ticket) {
+          final id = (ticket['id'] ?? '').toString();
+          final date = ticket['created_at']?.toString() ?? '';
+          return Card(
+            color: Colors.white,
+            child: ListTile(
+              leading: const Icon(Icons.support_agent, color: purple),
+              title: Text((ticket['subject'] ?? 'تذكرة دعم').toString()),
+              subtitle: Text([
+                (ticket['full_name'] ?? 'مستخدم').toString(),
+                (ticket['category'] ?? 'general').toString(),
+                (ticket['status'] ?? 'open').toString(),
+                if (date.isNotEmpty) date.split('T').first,
+              ].join(' • ')),
+              trailing: IconButton(
+                onPressed: busyIds.contains(id) ? null : () => respond(ticket),
+                icon: const Icon(Icons.reply, color: orange),
+                tooltip: 'مراجعة والرد',
+              ),
+              onTap: () => respond(ticket),
+            ),
+          );
+        }),
+      ]),
     );
   }
 }
