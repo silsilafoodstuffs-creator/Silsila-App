@@ -6,6 +6,8 @@ import 'services/wallet_service.dart';
 import 'services/profile_service.dart';
 import 'services/notification_service.dart';
 import 'services/product_service.dart';
+import 'services/checkout_service.dart';
+import 'services/cart_service.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -1043,10 +1045,12 @@ class _MainShellState extends State<MainShell> {
                         'إتمام الطلب',
                         CheckoutScreen(
                           total: total,
-                          itemCount: cart.values.fold<int>(
-                            0,
-                            (a, b) => a + b,
-                          ),
+                          itemCount: cart.values.fold<int>(0, (a, b) => a + b),
+                          items: entries.map((entry) => <String, dynamic>{
+                            'product': allProducts.firstWhere((p) => p.name == entry.key),
+                            'quantity': entry.value,
+                          }).toList(),
+                          onSuccess: () { if (mounted) setState(() => cart.clear()); },
                         ),
                       ),
                       child: const Text('متابعة إتمام الطلب'),
@@ -3059,62 +3063,64 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 }
 
-class CheckoutScreen extends StatelessWidget {
-  const CheckoutScreen({
-    super.key,
-    required this.total,
-    required this.itemCount,
-  });
-
+class CheckoutScreen extends StatefulWidget {
+  const CheckoutScreen({super.key, required this.total, required this.itemCount, required this.items, required this.onSuccess});
   final double total;
   final int itemCount;
-
+  final List<Map<String, dynamic>> items;
+  final VoidCallback onSuccess;
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        Card(
-          child: ListTile(
-            title: const Text('عدد الوحدات'),
-            trailing: Text('$itemCount'),
-          ),
-        ),
-        Card(
-          child: ListTile(
-            title: const Text('الإجمالي التقديري'),
-            trailing: Text('${total.toStringAsFixed(2)} ج.م'),
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'طريقة الدفع',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        ...[
-          'نقدي',
-          'آجل من المورد',
-          'محفظة كاش',
-          'تحويل بنكي',
-          'من الرصيد',
-        ].map(
-          (method) => ListTile(
-            leading: const Icon(Icons.payments_outlined, color: purple),
-            title: Text(method),
-            trailing: const Icon(Icons.chevron_left),
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('طريقة الدفع المختارة: $method')),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'هذه شاشة تجهيز الطلب. إرسال الطلب وحفظ بنوده يحتاج استكمال الربط مع جداول الطلبات وسياسات قاعدة البيانات.',
-          style: TextStyle(color: Colors.black54),
-        ),
-      ],
-    );
+  State<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+class _CheckoutScreenState extends State<CheckoutScreen> {
+  final address = TextEditingController();
+  final notes = TextEditingController();
+  final service = CheckoutService();
+  String method = 'نقدي';
+  bool busy = false;
+  @override
+  void dispose() { address.dispose(); notes.dispose(); super.dispose(); }
+  Future<void> send() async {
+    if (database?.auth.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سجّل الدخول أولًا لإتمام الطلب.')));
+      return;
+    }
+    final items = <CartItem>[];
+    for (final row in widget.items) {
+      final p = row['product'] as Product;
+      if (p.id == null || (p.supplierId ?? '').isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يمكن طلب المنتجات التوضيحية؛ اختر منتجًا منشورًا من مورد.')));
+        return;
+      }
+      items.add(CartItem(productId: p.id!, name: p.name, supplierId: p.supplierId!, category: p.category, unit: p.unit, price: p.price, minQuantity: p.minQuantity, quantity: row['quantity'] as int));
+    }
+    setState(() => busy = true);
+    try {
+      final code = {'نقدي':'cash','آجل مورد':'supplier_credit','محفظة كاش':'wallet','تحويل بنكي':'bank_transfer','من الرصيد':'account_balance'}[method]!;
+      final created = await service.checkout(items: items, paymentMethod: code, deliveryAddress: address.text, notes: notes.text);
+      if (!mounted) return;
+      widget.onSuccess();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم إنشاء ${created.length} طلب.')));
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $e')));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
+  @override
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
+    Card(child: ListTile(title: const Text('عدد الوحدات'), trailing: Text('${widget.itemCount}'))),
+    Card(child: ListTile(title: const Text('الإجمالي التقديري'), trailing: Text('${widget.total.toStringAsFixed(2)} ج.م'))),
+    TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'عنوان التوصيل بالتفصيل')),
+    const SizedBox(height: 10),
+    TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات إضافية')),
+    const SizedBox(height: 10),
+    const Text('طريقة الدفع', style: TextStyle(fontWeight: FontWeight.bold)),
+    ...['نقدي','آجل مورد','محفظة كاش','تحويل بنكي','من الرصيد'].map((v) => RadioListTile<String>(value: v, groupValue: method, title: Text(v), onChanged: (x) => setState(() => method = x ?? 'نقدي'))),
+    FilledButton(onPressed: busy ? null : send, child: Text(busy ? 'جارٍ الإرسال...' : 'تأكيد وإرسال الطلب')),
+    const Text('يتم التحقق من السعر داخل قاعدة البيانات عند إنشاء الطلب.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+  ]);
 }
 
 class MarketPostScreen extends StatefulWidget {
