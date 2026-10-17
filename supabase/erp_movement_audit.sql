@@ -170,7 +170,7 @@ begin
 
   union all
 
-  with recursive account_walk(start_id, current_id, company_id, path, has_cycle) as (
+  (with recursive account_walk(start_id, current_id, company_id, path, has_cycle) as (
     select a.id, a.id, a.company_id, array[a.id]::uuid[], false
     from public.erp_accounts a
     where a.company_id = p_company_id
@@ -197,7 +197,7 @@ begin
   from public.erp_accounts a
   where a.company_id = p_company_id
     and (p_area = 'كل الحركات' or p_area = 'الحسابات')
-    and a.id in (select start_id from account_walk where has_cycle)
+    and a.id in (select start_id from account_walk where has_cycle))
 
   union all
 
