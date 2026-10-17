@@ -25,6 +25,8 @@ DECLARE
   v_name TEXT;
   v_unit TEXT;
   v_available BOOLEAN;
+  v_minimum_quantity NUMERIC(12,3);
+  v_stock_quantity NUMERIC(12,3);
   v_order JSONB;
 BEGIN
   IF v_customer_id IS NULL THEN
@@ -56,8 +58,8 @@ BEGIN
       RAISE EXCEPTION 'بيانات المنتج أو الكمية غير صحيحة';
     END IF;
 
-    SELECT price, name, unit, is_available
-      INTO v_price, v_name, v_unit, v_available
+    SELECT price, name, unit, is_available, minimum_quantity, stock_quantity
+      INTO v_price, v_name, v_unit, v_available, v_minimum_quantity, v_stock_quantity
       FROM public.products
      WHERE id = v_product_id
        AND supplier_id = p_supplier_id
@@ -65,6 +67,14 @@ BEGIN
 
     IF NOT FOUND OR NOT COALESCE(v_available, FALSE) THEN
       RAISE EXCEPTION 'يوجد منتج غير متاح أو لا يتبع المورد المحدد';
+    END IF;
+
+    IF v_quantity < COALESCE(v_minimum_quantity, 1) THEN
+      RAISE EXCEPTION 'الكمية أقل من الحد الأدنى للمنتج %', v_name;
+    END IF;
+
+    IF COALESCE(v_stock_quantity, 0) > 0 AND v_quantity > v_stock_quantity THEN
+      RAISE EXCEPTION 'الكمية المطلوبة تتجاوز المخزون المتاح للمنتج %', v_name;
     END IF;
 
     v_total := v_total + (v_price * v_quantity);
