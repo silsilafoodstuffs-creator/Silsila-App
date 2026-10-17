@@ -2118,7 +2118,23 @@ class _SupportScreenState extends State<SupportScreen> {
           child: ListTile(
             leading: const Icon(Icons.support_agent, color: purple),
             title: Text((ticket['subject'] ?? 'تذكرة دعم').toString()),
-            subtitle: Text((ticket['message'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text((ticket['message'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis),
+                if ((ticket['admin_reply'] ?? '').toString().trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 5),
+                    child: Text(
+                      'رد سلسلة: ${ticket['admin_reply']}',
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: purple, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+              ],
+            ),
             trailing: Text((ticket['status'] ?? 'open').toString()),
           ),
         )),
