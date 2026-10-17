@@ -288,9 +288,15 @@ create policy erp_journal_lines_insert_accounting on public.erp_journal_lines
 for insert to authenticated
 with check (exists (
   select 1 from public.erp_journal_entries e
-  join public.erp_accounts a on a.id = account_id and a.company_id = e.company_id
-  where e.id = entry_id
+  join public.erp_accounts a on a.id = erp_journal_lines.account_id and a.company_id = e.company_id
+  where e.id = erp_journal_lines.entry_id
     and e.status = 'draft'
+    and (erp_journal_lines.party_id is null or exists (
+      select 1 from public.erp_parties p where p.id = erp_journal_lines.party_id and p.company_id = e.company_id
+    ))
+    and (erp_journal_lines.branch_id is null or exists (
+      select 1 from public.erp_branches b where b.id = erp_journal_lines.branch_id and b.company_id = e.company_id
+    ))
     and public.erp_user_has_company_role(e.company_id, array['owner','admin','accountant']::text[])
 ));
 
@@ -304,8 +310,14 @@ using (exists (
 ))
 with check (exists (
   select 1 from public.erp_journal_entries e
-  join public.erp_accounts a on a.id = account_id and a.company_id = e.company_id
-  where e.id = entry_id and e.status = 'draft'
+  join public.erp_accounts a on a.id = erp_journal_lines.account_id and a.company_id = e.company_id
+  where e.id = erp_journal_lines.entry_id and e.status = 'draft'
+    and (erp_journal_lines.party_id is null or exists (
+      select 1 from public.erp_parties p where p.id = erp_journal_lines.party_id and p.company_id = e.company_id
+    ))
+    and (erp_journal_lines.branch_id is null or exists (
+      select 1 from public.erp_branches b where b.id = erp_journal_lines.branch_id and b.company_id = e.company_id
+    ))
     and public.erp_user_has_company_role(e.company_id, array['owner','admin','accountant']::text[])
 ));
 
