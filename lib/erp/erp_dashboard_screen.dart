@@ -97,6 +97,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   String _group = 'بيانات أساسية';
   String _page = 'بيانات الشركة';
   String _search = '';
+  Map<String, String>? _selectedRecord;
   final Map<String, List<Map<String, String>>> _saved = {};
 
   List<String> get _pages => _modules[_module]![_group]!;
@@ -212,7 +213,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   void _editCurrentRecord() {
     final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
     if (rows.isEmpty) { _showActionMessage('لا يوجد سجل لتعديله في شاشة $_page'); return; }
-    final controllers = <String, TextEditingController>{for (final entry in rows.first.entries) entry.key: TextEditingController(text: entry.value)};
+    final selected = _selectedRecord;
+    final selectedIndex = selected == null ? 0 : rows.indexWhere((row) => _sameRecord(row, selected));
+    final targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    final controllers = <String, TextEditingController>{for (final entry in rows[targetIndex].entries) entry.key: TextEditingController(text: entry.value)};
     showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
       title: Text('تعديل سجل — $_page'),
       content: SizedBox(width: 460, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: controllers.entries.map((entry) => Padding(
@@ -221,14 +225,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
         FilledButton(onPressed: () {
-          rows[0] = {for (final entry in controllers.entries) entry.key: entry.value.text.trim()};
-          setState(() => _saved[_page] = rows);
+          final updated = {for (final entry in controllers.entries) entry.key: entry.value.text.trim()};
+          rows[targetIndex] = updated;
+          setState(() { _saved[_page] = rows; _selectedRecord = updated; });
           Navigator.pop(dialogContext);
           _showActionMessage('تم تعديل سجل محلي في شاشة $_page');
         }, child: const Text('حفظ التعديل')),
       ],
     )).then((_) { for (final controller in controllers.values) { controller.dispose(); } });
   }
+
+  bool _sameRecord(Map<String, String> a, Map<String, String> b) => a.length == b.length && a.entries.every((entry) => b[entry.key] == entry.value);
 
   String _currentPageCsv() {
     final rows = _rows;
@@ -644,7 +651,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       const SizedBox(height: 16),
       if (_group == 'تقارير') const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('نموذج تقارير تجريبي؛ ستظهر المؤشرات الفعلية بعد ربط مصادر البيانات واعتماد المعادلات المحاسبية.', style: TextStyle(color: Colors.black54, height: 1.6))),
       if (_rows.isEmpty) const Padding(padding: EdgeInsets.all(28), child: Text('لا توجد نتائج مطابقة.', textAlign: TextAlign.center))
-      else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), columns: _rows.first.keys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(cells: _rows.first.keys.map((k) => DataCell(Text(r[k] ?? '—'))).toList())).toList())),
+      else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _rows.first.keys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _rows.first.keys.map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
       const SizedBox(height: 12),
       Text('عدد السجلات المعروضة: ${_rows.length} • بيانات توضيحية', style: const TextStyle(color: Colors.black45, fontSize: 11)),
     ])),
