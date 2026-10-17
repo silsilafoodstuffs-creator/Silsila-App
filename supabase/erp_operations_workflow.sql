@@ -84,8 +84,8 @@ declare
   v_movements bigint;
   v_reference text;
 begin
-  if old.status = 'posted' then
-    raise exception 'المستند المرحّل غير قابل للتعديل';
+  if old.status in ('posted','cancelled') then
+    raise exception 'المستند المرحّل أو الملغي غير قابل للتعديل';
   end if;
   if old.company_id is distinct from new.company_id
      or old.document_number is distinct from new.document_number
@@ -93,6 +93,9 @@ begin
     raise exception 'لا يمكن تغيير الشركة أو رقم المستند أو منشئه';
   end if;
   if new.status = 'posted' then
+    if old.status not in ('draft','approved') then
+      raise exception 'لا يمكن ترحيل المستند من حالته الحالية';
+    end if;
     if tg_table_name = 'erp_purchase_documents' then
       v_reference := 'purchase_document';
       select count(*) into v_lines from public.erp_purchase_lines where document_id = old.id;
