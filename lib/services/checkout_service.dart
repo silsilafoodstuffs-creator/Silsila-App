@@ -60,6 +60,23 @@ class CheckoutService {
     );
   }
 
+  String _toDatabasePaymentMethod(String method) {
+    switch (method) {
+      case 'cash':
+        return 'نقدي';
+      case 'supplier_credit':
+        return 'آجل مورد';
+      case 'wallet':
+        return 'محفظة كاش';
+      case 'bank_transfer':
+        return 'تحويل بنكي';
+      case 'account_balance':
+        return 'من الرصيد';
+      default:
+        throw ArgumentError('طريقة الدفع غير مدعومة.');
+    }
+  }
+
   /// إنشاء طلب مستقل لكل مورد في السلة.
   ///
   /// يفترض هذا الكود أن:
@@ -106,7 +123,7 @@ class CheckoutService {
                     'quantity': item.quantity,
                   })
               .toList(),
-          'p_payment_method': paymentMethod,
+          'p_payment_method': _toDatabasePaymentMethod(paymentMethod),
           'p_delivery_address': deliveryAddress.trim(),
           'p_notes': notes?.trim(),
         },
