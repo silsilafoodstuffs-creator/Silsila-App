@@ -67,10 +67,17 @@ class DeliveryService {
     if (!allowed.contains(status)) {
       throw ArgumentError('حالة الشحنة غير مدعومة.');
     }
+    final cleanDeliveryId = deliveryId.trim();
+    if (cleanDeliveryId.isEmpty) {
+      throw ArgumentError('معرّف الشحنة مطلوب.');
+    }
+    if (note != null && note.trim().length > 1000) {
+      throw ArgumentError('ملاحظة الشحنة يجب ألا تتجاوز 1000 حرف.');
+    }
     final response = await _client.rpc(
       'shipping_company_update_delivery_status',
       params: {
-        'p_delivery_id': deliveryId.trim(),
+        'p_delivery_id': cleanDeliveryId,
         'p_new_status': status,
         'p_note': _emptyToNull(note),
       },
@@ -124,6 +131,16 @@ class DeliveryService {
         cleanPickup.isEmpty ||
         cleanDelivery.isEmpty) {
       throw ArgumentError('يرجى استكمال بيانات الشحنة والعناوين.');
+    }
+    final parsedOrderId = int.tryParse(cleanOrderId);
+    if (parsedOrderId == null || parsedOrderId <= 0) {
+      throw ArgumentError('رقم الطلب المرتبط بالشحنة غير صحيح.');
+    }
+    if (cleanPickup.length > 2000 || cleanDelivery.length > 2000) {
+      throw ArgumentError('عنوان الاستلام أو التسليم طويل أكثر من اللازم.');
+    }
+    if (notes != null && notes.trim().length > 2000) {
+      throw ArgumentError('ملاحظات الشحنة يجب ألا تتجاوز 2000 حرف.');
     }
 
     final response = await _client
