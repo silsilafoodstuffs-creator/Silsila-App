@@ -158,6 +158,13 @@ class AddressService {
     final cleanAddress =
         _requiredText(address, 'العنوان بالتفصيل');
 
+    _validateTextLength(cleanId, 'معرّف العنوان', 200);
+    _validateTextLength(cleanTitle, 'اسم العنوان', 100);
+    _validateTextLength(cleanGovernorate, 'المحافظة', 100);
+    _validateTextLength(cleanAddress, 'العنوان بالتفصيل', 2000);
+    _validateOptionalLength(district, 'المركز', 150);
+    _validateOptionalLength(village, 'القرية', 150);
+    _validateOptionalLength(landmark, 'علامة مميزة', 300);
     _validateCoordinates(latitude, longitude);
 
     final userId = _userId;
