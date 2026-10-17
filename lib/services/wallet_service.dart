@@ -93,8 +93,13 @@ class WalletService {
     required String paymentMethod,
     String? reference,
   }) async {
-    if (!amount.isFinite || amount <= 0) {
-      throw ArgumentError('مبلغ الشحن يجب أن يكون أكبر من صفر.');
+    if (!amount.isFinite ||
+        amount <= 0 ||
+        amount > 9999999999.99 ||
+        amount != (amount * 100).roundToDouble() / 100) {
+      throw ArgumentError(
+        'مبلغ الشحن يجب أن يكون موجبًا وبحد أقصى منزلتين عشريتين.',
+      );
     }
 
     final method = paymentMethod.trim();
