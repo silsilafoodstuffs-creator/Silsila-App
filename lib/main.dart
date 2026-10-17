@@ -3809,29 +3809,65 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 }
 
-class ForgotPasswordScreen extends StatelessWidget {
+class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
+  @override
+  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+}
+
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  final phone = TextEditingController();
+  final code = TextEditingController();
+  final password = TextEditingController();
+  final confirmation = TextEditingController();
+  bool codeSent = false;
+  bool busy = false;
+  @override
+  void dispose() { phone.dispose(); code.dispose(); password.dispose(); confirmation.dispose(); super.dispose(); }
+
+  Future<void> sendCode() async {
+    final value = phone.text.trim();
+    if (value.length < 8) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل رقم الهاتف المسجل.'))); return; }
+    final client = database;
+    if (client == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.'))); return; }
+    setState(() => busy = true);
+    try { await client.auth.signInWithOtp(phone: value, shouldCreateUser: false); if (mounted) { setState(() => codeSent = true); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم طلب إرسال رمز التحقق.'))); } }
+    catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال الرمز. راجع إعدادات الرسائل النصية.'))); }
+    finally { if (mounted) setState(() => busy = false); }
+  }
+
+  Future<void> updatePassword() async {
+    final token = code.text.trim();
+    if (token.length != 6 || int.tryParse(token) == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل رمز التحقق المكوّن من 6 أرقام.'))); return; }
+    if (password.text.length < 8 || password.text != confirmation.text) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تأكد من أن كلمة المرور 8 أحرف على الأقل وأن التأكيد مطابق.'))); return; }
+    final client = database;
+    if (client == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.'))); return; }
+    setState(() => busy = true);
+    try {
+      await client.auth.verifyOTP(phone: phone.text.trim(), token: token, type: OtpType.sms);
+      await client.auth.updateUser(UserAttributes(password: password.text));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث كلمة المرور بنجاح.')));
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const MainShell()), (route) => false);
+    } catch (_) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر تحديث كلمة المرور. تحقق من الرمز وحاول مرة أخرى.'))); }
+    finally { if (mounted) setState(() => busy = false); }
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: const [
-        Icon(Icons.lock_reset, size: 60, color: purple),
-        SizedBox(height: 12),
-        Text(
-          'استعادة كلمة المرور',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        SizedBox(height: 12),
-        Text(
-          'خدمة استعادة كلمة المرور عبر الهاتف غير مكتملة الإعداد حاليًا. تواصل مع الدعم للمساعدة في استعادة الحساب.',
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(20), children: [
+    const Icon(Icons.lock_reset, size: 60, color: purple),
+    const SizedBox(height: 12),
+    const Text('استعادة كلمة المرور', textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+    const SizedBox(height: 16),
+    TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف المسجل', prefixIcon: Icon(Icons.phone))),
+    FilledButton(onPressed: busy ? null : sendCode, child: Text(busy ? 'جارٍ الإرسال...' : 'إرسال رمز التحقق')),
+    if (codeSent) ...[
+      TextField(controller: code, keyboardType: TextInputType.number, maxLength: 6, decoration: const InputDecoration(labelText: 'رمز التحقق')),
+      TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'كلمة المرور الجديدة')),
+      TextField(controller: confirmation, obscureText: true, decoration: const InputDecoration(labelText: 'تأكيد كلمة المرور')),
+      FilledButton(onPressed: busy ? null : updatePassword, child: Text(busy ? 'جارٍ التحديث...' : 'تحديث كلمة المرور')),
+    ],
+  ]);
 }
 
 class MarketPostsSection extends StatefulWidget {
