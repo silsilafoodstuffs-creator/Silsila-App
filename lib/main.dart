@@ -795,12 +795,6 @@ class _MainShellState extends State<MainShell> {
     return Icons.shopping_basket;
   }
 
-  @override
-  void dispose() {
-    searchController.dispose();
-    super.dispose();
-  }
-
   Product? productForCartKey(String key) {
     final stored = cartProducts[key];
     if (stored != null) return stored;
