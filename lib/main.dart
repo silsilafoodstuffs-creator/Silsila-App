@@ -4,6 +4,7 @@ import 'services/trader_market_service.dart';
 import 'services/order_status_service.dart';
 import 'services/wallet_service.dart';
 import 'services/profile_service.dart';
+import 'services/notification_service.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -526,12 +527,7 @@ class _MainShellState extends State<MainShell> {
             icon: const Icon(Icons.notifications_none),
             onPressed: () => openPage(
               'الإشعارات',
-              const SimpleListPage(
-                title: 'الإشعارات',
-                details:
-                    'ستظهر هنا تحديثات الطلبات والعروض والتنبيهات بعد تفعيلها.',
-                icon: Icons.notifications,
-              ),
+              const NotificationsScreen(),
             ),
           ),
           actions: [
@@ -2034,6 +2030,132 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           ),
         ],
       );
+}
+
+class NotificationsScreen extends StatefulWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  late Future<List<Map<String, dynamic>>> notificationsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    notificationsFuture = NotificationService().getMyNotifications();
+  }
+
+  Future<void> reload() async {
+    setState(() => notificationsFuture = NotificationService().getMyNotifications());
+    await notificationsFuture;
+  }
+
+  Future<void> markRead(String id) async {
+    try {
+      await NotificationService().markAsRead(id);
+      await reload();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر تحديث الإشعار.')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: notificationsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: purple));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.notifications_off_outlined, size: 56, color: purple),
+                  const Text('سجّل الدخول لعرض إشعارات حسابك.'),
+                  TextButton(onPressed: reload, child: const Text('إعادة المحاولة')),
+                ],
+              ),
+            ),
+          );
+        }
+        final notifications = snapshot.data ?? const <Map<String, dynamic>>[];
+        if (notifications.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: reload,
+            child: ListView(
+              children: const [
+                SizedBox(height: 100),
+                Icon(Icons.notifications_none, size: 62, color: purple),
+                SizedBox(height: 12),
+                Center(child: Text('لا توجد إشعارات جديدة.')),
+              ],
+            ),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    try {
+                      await NotificationService().markAllAsRead();
+                      await reload();
+                    } catch (_) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('تعذر تحديث الإشعارات.')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.done_all),
+                  label: const Text('تعليم الكل كمقروء'),
+                ),
+              ),
+              ...notifications.map((item) {
+                final id = (item['id'] ?? '').toString();
+                final isRead = item['is_read'] == true;
+                final title = (item['title'] ?? 'إشعار').toString();
+                final body = (item['body'] ?? '').toString();
+                final date = item['created_at']?.toString() ?? '';
+                return Card(
+                  color: isRead ? Colors.white : const Color(0xFFF3ECFA),
+                  child: ListTile(
+                    leading: Icon(
+                      isRead ? Icons.notifications_none : Icons.notifications_active,
+                      color: isRead ? Colors.blueGrey : purple,
+                    ),
+                    title: Text(title, style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.bold)),
+                    subtitle: Text([body, if (date.isNotEmpty) date.split('T').first].where((v) => v.isNotEmpty).join('\\n')),
+                    trailing: isRead ? null : IconButton(
+                      tooltip: 'تعليم كمقروء',
+                      onPressed: id.isEmpty ? null : () => markRead(id),
+                      icon: const Icon(Icons.done),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 class ProfileEditorScreen extends StatefulWidget {
