@@ -53,15 +53,22 @@ class OrderStatusService {
     return List<Map<String, dynamic>>.from(rows);
   }
 
-  /// جميع طلبات المستخدم الحالية.
-  Future<List<Map<String, dynamic>>> getMyOrders() async {
+  /// طلبات المستخدم الحالية، من الأحدث إلى الأقدم.
+  Future<List<Map<String, dynamic>>> getMyOrders({
+    int limit = 100,
+  }) async {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+
     final userId = _userId;
 
     final rows = await _client
         .from('orders')
         .select()
         .or('customer_id.eq.$userId,supplier_id.eq.$userId')
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .limit(limit);
 
     return List<Map<String, dynamic>>.from(rows);
   }
