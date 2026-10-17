@@ -33,7 +33,7 @@ class FavoritesService {
   /// جلب معرّفات الموردين المفضلين للمستخدم الحالي.
   Future<List<String>> getFavoriteSupplierIds() async {
     final response = await _requireClient
-        .from('favorites')
+        .from('supplier_favorites')
         .select('supplier_id')
         .eq('user_id', _userId);
 
@@ -49,7 +49,7 @@ class FavoritesService {
     }
 
     final response = await _requireClient
-        .from('favorites')
+        .from('supplier_favorites')
         .select('supplier_id')
         .eq('user_id', _userId)
         .eq('supplier_id', supplierId.trim())
@@ -64,7 +64,7 @@ class FavoritesService {
       throw ArgumentError('معرّف المورد مطلوب.');
     }
 
-    await _requireClient.from('favorites').upsert(
+    await _requireClient.from('supplier_favorites').upsert(
       {
         'user_id': _userId,
         'supplier_id': supplierId.trim(),
@@ -81,7 +81,7 @@ class FavoritesService {
     }
 
     await _requireClient
-        .from('favorites')
+        .from('supplier_favorites')
         .delete()
         .eq('user_id', _userId)
         .eq('supplier_id', supplierId.trim());
