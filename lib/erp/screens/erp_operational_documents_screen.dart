@@ -56,6 +56,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await _load(clearMessage: false);
         if (mounted && _selectedDocumentId != null) {
+          final selected = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
+          if (selected.isNotEmpty) setState(() => _documentType = _s(selected.first['document_type']));
           await _loadLines(_selectedDocumentId!);
         }
       });
