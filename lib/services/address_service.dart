@@ -169,7 +169,7 @@ class AddressService {
     }
     if (latitude != null &&
         (latitude < -90 || latitude > 90 ||
-            longitude! < -180 || longitude > 180)) {
+            longitude! < -180 || longitude! > 180)) {
       throw ArgumentError('إحداثيات الموقع خارج النطاق الصحيح.');
     }
   }
