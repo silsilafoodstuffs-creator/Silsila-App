@@ -91,7 +91,6 @@ where n.nspname = 'public'
     'erp_approve_payroll_run',
     'erp_post_payroll_run',
     'erp_decide_leave_request',
-    'erp_guard_fiscal_period',
     'erp_record_inventory_movement',
     'erp_transfer_inventory_between_warehouses'
   )
