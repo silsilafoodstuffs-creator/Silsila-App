@@ -125,8 +125,12 @@ begin
   if old.company_id is distinct from new.company_id
      or old.run_code is distinct from new.run_code
      or old.period_start is distinct from new.period_start
-     or old.period_end is distinct from new.period_end then
+     or old.period_end is distinct from new.period_end
+     or old.created_by is distinct from new.created_by then
     raise exception 'لا يمكن تغيير الشركة أو كود مسير الرواتب أو فترته';
+  end if;
+  if old.journal_entry_id is distinct from new.journal_entry_id and new.status <> 'posted' then
+    raise exception 'ربط قيد اليومية يتم أثناء الترحيل المحاسبي فقط';
   end if;
   if old.status in ('posted','paid','cancelled') then
     raise exception 'مسير الرواتب المرحّل أو المصروف أو الملغي غير قابل للتعديل';
