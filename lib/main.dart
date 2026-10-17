@@ -6,6 +6,7 @@ import 'services/wallet_service.dart';
 import 'services/profile_service.dart';
 import 'services/notification_service.dart';
 import 'services/product_service.dart';
+import 'services/supplier_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 
@@ -474,7 +475,10 @@ class _MainShellState extends State<MainShell> {
   final cartProducts = <String, Product>{};
   final searchController = TextEditingController();
   final productService = ProductService();
+  final supplierService = SupplierService();
   List<Product> liveProducts = [];
+  List<Map<String, dynamic>> liveSuppliers = [];
+  bool loadingLiveSuppliers = false;
   bool loadingLiveProducts = false;
   String? productLoadMessage;
 
@@ -485,6 +489,22 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     loadLiveProducts();
+    loadLiveSuppliers();
+  }
+
+  Future<void> loadLiveSuppliers() async {
+    if (database == null) return;
+    if (mounted) setState(() => loadingLiveSuppliers = true);
+    try {
+      final rows = await supplierService.getSuppliers(activityType: activity, limit: 100);
+      if (!mounted) return;
+      setState(() => liveSuppliers = rows);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => liveSuppliers = []);
+    } finally {
+      if (mounted) setState(() => loadingLiveSuppliers = false);
+    }
   }
 
   Future<void> loadLiveProducts() async {
@@ -757,6 +777,7 @@ class _MainShellState extends State<MainShell> {
               liveProducts = [];
             });
             loadLiveProducts();
+            loadLiveSuppliers();
           },
         ),
         const SizedBox(height: 12),
@@ -828,7 +849,11 @@ class _MainShellState extends State<MainShell> {
           'موردون مقترحون',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
-        ...suppliers.map(supplierTile),
+        if (loadingLiveSuppliers) const LinearProgressIndicator(minHeight: 2),
+        if (liveSuppliers.isNotEmpty)
+          ...liveSuppliers.map(supplierDirectoryTile)
+        else
+          ...suppliers.map(supplierTile),
       ],
     );
   }
@@ -895,6 +920,47 @@ class _MainShellState extends State<MainShell> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget supplierDirectoryTile(Map<String, dynamic> supplier) {
+    final id = (supplier['id'] ?? '').toString();
+    final name = (supplier['full_name'] ?? 'مورد سلسلة').toString();
+    final location = [
+      supplier['governorate'],
+      supplier['district'],
+    ].where((value) => value != null && value.toString().trim().isNotEmpty)
+      .join(' • ');
+    final favoriteKey = 'supplier:$id';
+    final favorite = favorites.contains(favoriteKey);
+    return Card(
+      color: Colors.white,
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: Color(0xFFEFE6F8),
+          child: Icon(Icons.store, color: purple),
+        ),
+        title: Text(name),
+        subtitle: Text(location.isEmpty ? 'مورد معتمد على سلسلة' : location),
+        trailing: IconButton(
+          icon: Icon(favorite ? Icons.favorite : Icons.favorite_border,
+            color: favorite ? pink : purple),
+          onPressed: () => setState(() {
+            favorite ? favorites.remove(favoriteKey) : favorites.add(favoriteKey);
+          }),
+        ),
+        onTap: () => openPage(
+          name,
+          SimpleListPage(
+            title: name,
+            details: 'النشاط: ${supplier['activity_type'] ?? 'غير محدد'}\\n'
+                'التصنيف: ${supplier['supplier_type'] ?? 'غير محدد'}\\n'
+                'الموقع: ${location.isEmpty ? 'لم يُحدد' : location}\\n'
+                'العنوان: ${supplier['address'] ?? 'لم يُحدد'}',
+            icon: Icons.store,
+          ),
+        ),
       ),
     );
   }
