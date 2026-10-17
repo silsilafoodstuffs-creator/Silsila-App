@@ -121,6 +121,20 @@ class AuthService {
         RegExp(r'[^A-Za-z0-9]').hasMatch(value);
   }
 
+  /// تحويل الأرقام العربية والهندية إلى أرقام إنجليزية.
+  String _normalizeDigits(String value) {
+    return value.replaceAllMapped(
+      RegExp(r'[٠-٩۰-۹]'),
+      (match) {
+        final code = match.group(0)!.codeUnitAt(0);
+        final digit = code >= 0x0660 && code <= 0x0669
+            ? code - 0x0660
+            : code - 0x06F0;
+        return String.fromCharCode(0x30 + digit);
+      },
+    );
+  }
+
   /// توحيد رقم الهاتف إلى صيغة E.164 قبل إرساله إلى Supabase.
   /// يحوّل أرقام مصر المحلية مثل 01012345678 إلى +201012345678.
   String _normalizePhone(String value) {
