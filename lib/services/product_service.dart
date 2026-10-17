@@ -62,37 +62,31 @@ class ProductService {
       throw ArgumentError('عبارة البحث طويلة أكثر من اللازم.');
     }
 
-    var query = _requireClient
+    final response = await _requireClient
         .from('products')
         .select(_productColumns)
-        .eq('is_active', true);
-
-    if (cleanActivityType != null) {
-      query = query.eq('activity_type', cleanActivityType);
-    }
-
-    if (cleanCategory != null) {
-      query = query.eq('category', cleanCategory);
-    }
-
-    if (categoryId != null) {
-      query = query.eq('category_id', categoryId);
-    }
-
-    if (cleanSupplierId != null) {
-      query = query.eq('supplier_id', cleanSupplierId);
-    }
-
-    if (cleanSearch != null) {
-      final escapedSearch = _escapeLikePattern(cleanSearch);
-      query = query.ilike('name', '%$escapedSearch%');
-    }
-
-    final response = await query
+        .eq('is_active', true)
         .order('name', ascending: true)
         .limit(limit);
 
-    return _mapRows(response);
+    var rows = _mapRows(response);
+    if (cleanActivityType != null) {
+      rows = rows.where((row) => row['activity_type']?.toString() == cleanActivityType).toList();
+    }
+    if (cleanCategory != null) {
+      rows = rows.where((row) => row['category']?.toString() == cleanCategory).toList();
+    }
+    if (categoryId != null) {
+      rows = rows.where((row) => row['category_id'] == categoryId).toList();
+    }
+    if (cleanSupplierId != null) {
+      rows = rows.where((row) => row['supplier_id']?.toString() == cleanSupplierId).toList();
+    }
+    if (cleanSearch != null) {
+      final term = cleanSearch.toLowerCase();
+      rows = rows.where((row) => (row['name'] ?? '').toString().toLowerCase().contains(term)).toList();
+    }
+    return rows;
   }
 
   /// جلب تفاصيل منتج نشط باستخدام رقمه.
