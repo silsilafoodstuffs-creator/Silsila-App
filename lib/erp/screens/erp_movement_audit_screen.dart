@@ -40,6 +40,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     'الحضور والانصراف',
     'الإجازات',
     'الرواتب',
+    'سندات الخزائن',
   ];
 
   @override
