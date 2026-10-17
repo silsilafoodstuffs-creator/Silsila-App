@@ -35,9 +35,9 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   }
   String _s(dynamic v) => (v ?? '').toString();
 
-  Future<void> _load() async {
+  Future<void> _load({bool clearMessage = true}) async {
     if (_company.text.trim().isEmpty) { setState(() => _error = 'أدخل معرّف الشركة أولًا.'); return; }
-    setState(() { _loading = true; _error = null; _message = null; });
+    setState(() { _loading = true; _error = null; if (clearMessage) _message = null; });
     try {
       final values = await Future.wait([
         _repo.fetchCashboxes(_company.text),
@@ -66,7 +66,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
       if (!mounted) return;
       _code.clear(); _name.clear(); _bankName.clear(); _maskedNumber.clear();
       setState(() { _saving = false; _message = 'تمت إضافة ' + (_isBank ? 'الحساب البنكي.' : 'الخزينة.'); });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذرت إضافة الخزينة أو البنك: $e'; });
@@ -79,7 +79,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
       await _repo.setActive(_s(row['id']), row['is_active'] != true);
       if (!mounted) return;
       setState(() { _saving = false; _message = 'تم تحديث الحالة.'; });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر تحديث الحالة: $e'; });
