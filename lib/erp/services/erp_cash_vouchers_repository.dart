@@ -59,6 +59,7 @@ class ErpCashVouchersRepository {
     }
     await _db.from('erp_cash_vouchers').insert({
       'company_id': companyId.trim(),
+      'created_by': _db.auth.currentUser?.id,
       'voucher_number': voucherNumber.trim(),
       'voucher_date': DateTime.now().toIso8601String().substring(0, 10),
       'voucher_type': voucherType,
