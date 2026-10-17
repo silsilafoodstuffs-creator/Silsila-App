@@ -65,6 +65,7 @@ from (values
   ('erp_guard_fiscal_period','function'),
   ('erp_validate_master_data_links','function'),
   ('erp_resolve_item_price','function'),
+  ('erp_create_price_list','function'),
   ('erp_validate_cash_voucher_links','function'),
   ('erp_require_cash_voucher_draft','function'),
   ('erp_guard_cash_voucher_update','function'),
@@ -115,6 +116,7 @@ where n.nspname = 'public'
     'erp_require_cash_voucher_draft',
     'erp_guard_cash_voucher_update',
     'erp_validate_master_data_links',
-    'erp_resolve_item_price'
+    'erp_resolve_item_price',
+    'erp_create_price_list'
   )
 order by p.proname;
