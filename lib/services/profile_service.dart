@@ -83,7 +83,7 @@ class ProfileService {
   /// تحديث حالة الحساب.
   ///
   /// تتطلب صلاحيات RLS مناسبة في قاعدة البيانات.
-  Future<void> updateAccountStatus(String status) async {
+  Future<void> updateAccountStatus({required String userId, required String status}) async {
     final client = _requireClient;
     final user = client.auth.currentUser;
 
@@ -102,7 +102,7 @@ class ProfileService {
     await client.rpc(
       'admin_update_account_status',
       params: {
-        'p_user_id': user.id,
+        'p_user_id': userId.trim(),
         'p_status': status,
       },
     );
