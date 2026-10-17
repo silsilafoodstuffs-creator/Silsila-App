@@ -1,3 +1,4 @@
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -16,9 +17,11 @@ class AuthService {
 
   SupabaseClient get _requireClient {
     final client = _client;
+
     if (client == null) {
       throw StateError('اتصال Supabase غير متاح.');
     }
+
     return client;
   }
 
@@ -28,10 +31,10 @@ class AuthService {
     required String password,
     Map<String, dynamic> metadata = const {},
   }) async {
-    final normalizedPhone = phone.trim();
+    final normalizedPhone = _normalizePhone(phone);
 
-    if (normalizedPhone.isEmpty) {
-      throw ArgumentError('يرجى إدخال رقم الهاتف.');
+    if (!_isValidPhone(normalizedPhone)) {
+      throw ArgumentError('يرجى إدخال رقم هاتف صحيح.');
     }
 
     if (!_isStrongPassword(password)) {
@@ -44,7 +47,7 @@ class AuthService {
     return _requireClient.auth.signUp(
       phone: normalizedPhone,
       password: password,
-      data: metadata,
+      data: Map<String, dynamic>.from(metadata),
     );
   }
 
@@ -53,12 +56,16 @@ class AuthService {
     required String phone,
     required String password,
   }) async {
-    if (phone.trim().isEmpty || password.isEmpty) {
-      throw ArgumentError('يرجى إدخال رقم الهاتف وكلمة المرور.');
+    final normalizedPhone = _normalizePhone(phone);
+
+    if (!_isValidPhone(normalizedPhone) || password.isEmpty) {
+      throw ArgumentError(
+        'يرجى إدخال رقم الهاتف الصحيح وكلمة المرور.',
+      );
     }
 
     return _requireClient.auth.signInWithPassword(
-      phone: phone.trim(),
+      phone: normalizedPhone,
       password: password,
     );
   }
@@ -70,13 +77,15 @@ class AuthService {
 
   /// إعادة إرسال رمز التحقق إلى الهاتف.
   Future<void> resendPhoneOtp(String phone) async {
-    if (phone.trim().isEmpty) {
-      throw ArgumentError('يرجى إدخال رقم الهاتف.');
+    final normalizedPhone = _normalizePhone(phone);
+
+    if (!_isValidPhone(normalizedPhone)) {
+      throw ArgumentError('يرجى إدخال رقم هاتف صحيح.');
     }
 
     await _requireClient.auth.resend(
       type: OtpType.sms,
-      phone: phone.trim(),
+      phone: normalizedPhone,
     );
   }
 
@@ -85,17 +94,25 @@ class AuthService {
     required String phone,
     required String token,
   }) async {
-    if (phone.trim().isEmpty || token.trim().isEmpty) {
-      throw ArgumentError('يرجى إدخال رقم الهاتف ورمز التحقق.');
+    final normalizedPhone = _normalizePhone(phone);
+    final normalizedToken = token.trim();
+
+    if (!_isValidPhone(normalizedPhone)) {
+      throw ArgumentError('يرجى إدخال رقم هاتف صحيح.');
+    }
+
+    if (!RegExp(r'^\d{6}$').hasMatch(normalizedToken)) {
+      throw ArgumentError('رمز التحقق يجب أن يتكون من 6 أرقام.');
     }
 
     return _requireClient.auth.verifyOTP(
       type: OtpType.sms,
-      phone: phone.trim(),
-      token: token.trim(),
+      phone: normalizedPhone,
+      token: normalizedToken,
     );
   }
 
+  /// التحقق من قوة كلمة المرور.
   bool _isStrongPassword(String value) {
     return value.length >= 8 &&
         RegExp(r'[A-Z]').hasMatch(value) &&
@@ -104,12 +121,25 @@ class AuthService {
         RegExp(r'[^A-Za-z0-9]').hasMatch(value);
   }
 
-  /// التحقق من وجود جلسة دخول حالية.
-  bool get isLoggedIn => _client?.auth.currentSession != null;
+  /// تنظيف رقم الهاتف مع الحفاظ على علامة الدولة.
+  String _normalizePhone(String value) {
+    return value.trim().replaceAll(RegExp(r'[\s()-]'), '');
+  }
 
-  /// الحصول على معرّف المستخدم الحالي.
-  String? get currentUserId => _client?.auth.currentUser?.id;
+  /// التحقق الأساسي من صيغة رقم الهاتف.
+  bool _isValidPhone(String value) {
+    return RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(value);
+  }
 
-  /// الحصول على رقم الهاتف المسجل.
-  String? get currentPhone => _client?.auth.currentUser?.phone;
+  /// هل توجد جلسة دخول حالية؟
+  bool get isLoggedIn =>
+      _client?.auth.currentSession != null;
+
+  /// معرّف المستخدم الحالي.
+  String? get currentUserId =>
+      _client?.auth.currentUser?.id;
+
+  /// رقم الهاتف المسجل.
+  String? get currentPhone =>
+      _client?.auth.currentUser?.phone;
 }
