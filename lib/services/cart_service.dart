@@ -72,6 +72,8 @@ class CartItem {
 }
 
 class CartService extends ChangeNotifier {
+  static const int maxQuantityPerProduct = 1000000;
+
   final Map<int, CartItem> _items = {};
 
   List<CartItem> get items =>
@@ -102,9 +104,15 @@ class CartService extends ChangeNotifier {
     if (newItem.name.trim().isEmpty) {
       throw ArgumentError('اسم المنتج مطلوب.');
     }
+    if (!newItem.price.isFinite || newItem.price < 0) {
+      throw ArgumentError('سعر المنتج غير صالح.');
+    }
+    if (newItem.minQuantity < 1) {
+      throw ArgumentError('الحد الأدنى لكمية المنتج غير صالح.');
+    }
 
-    if (quantity < 1) {
-      throw ArgumentError('الكمية يجب أن تكون أكبر من صفر.');
+    if (quantity < 1 || quantity > maxQuantityPerProduct) {
+      throw ArgumentError('الكمية يجب أن تكون بين 1 والحد الأقصى المسموح.');
     }
 
     final existing = _items[newItem.productId];
@@ -118,8 +126,12 @@ class CartService extends ChangeNotifier {
         quantity: initialQuantity,
       );
     } else {
+      final nextQuantity = existing.quantity + quantity;
+      if (nextQuantity > maxQuantityPerProduct) {
+        throw ArgumentError('تجاوزت الحد الأقصى لكمية هذا المنتج.');
+      }
       _items[newItem.productId] = existing.copyWith(
-        quantity: existing.quantity + quantity,
+        quantity: nextQuantity,
       );
     }
 
@@ -136,6 +148,9 @@ class CartService extends ChangeNotifier {
         'الحد الأدنى للطلب هو ${existing.minQuantity}.',
       );
     }
+    if (quantity > maxQuantityPerProduct) {
+      throw ArgumentError('تجاوزت الحد الأقصى لكمية هذا المنتج.');
+    }
 
     _items[productId] = existing.copyWith(quantity: quantity);
     notifyListeners();
@@ -146,6 +161,9 @@ class CartService extends ChangeNotifier {
     final existing = _items[productId];
     if (existing == null) return;
 
+    if (existing.quantity >= maxQuantityPerProduct) {
+      throw ArgumentError('تجاوزت الحد الأقصى لكمية هذا المنتج.');
+    }
     _items[productId] = existing.copyWith(
       quantity: existing.quantity + 1,
     );
