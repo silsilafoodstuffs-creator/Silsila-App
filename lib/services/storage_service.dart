@@ -3,10 +3,9 @@ import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StorageService {
-  StorageService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  StorageService({SupabaseClient? client}) : _client = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
 
   static const String productBucket = 'products';
   static const String offerBucket = 'offers';
@@ -33,14 +32,44 @@ class StorageService {
     'video/quicktime',
   };
 
+  static const int maxImageBytes = 10 * 1024 * 1024;
+  static const int maxStoryVideoBytes = 50 * 1024 * 1024;
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client != null) {
+      return client;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      throw StateError(
+        'اتصال Supabase غير متاح. يرجى المحاولة لاحقًا.',
+      );
+    }
+  }
+
+  String get _userId {
+    final user = _requireClient.auth.currentUser;
+
+    if (user == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+
+    return user.id;
+  }
+
   void _validateBucket(String bucket) {
     if (!_allowedBuckets.contains(bucket)) {
       throw ArgumentError('نوع التخزين غير مسموح به.');
     }
   }
 
-  void _validateContentType(String bucket, String contentType) {
+  String _validateContentType(String bucket, String contentType) {
     final normalizedType = contentType.trim().toLowerCase();
+
     final isImage = _allowedImageTypes.contains(normalizedType);
     final isStoryVideo = bucket == storyBucket &&
         _allowedStoryVideoTypes.contains(normalizedType);
@@ -52,17 +81,54 @@ class StorageService {
             : 'صيغة الصورة غير مدعومة.',
       );
     }
+
+    return normalizedType;
   }
 
-  String get _userId {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw StateError('يجب تسجيل الدخول أولاً.');
+  void _validateFileSize({
+    required String bucket,
+    required String contentType,
+    required int byteLength,
+  }) {
+    if (byteLength <= 0) {
+      throw ArgumentError('الملف فارغ.');
     }
-    return user.id;
+
+    final isVideo = _allowedStoryVideoTypes.contains(contentType);
+    final maximum = isVideo ? maxStoryVideoBytes : maxImageBytes;
+
+    if (byteLength > maximum) {
+      final limitMb = maximum ~/ (1024 * 1024);
+
+      throw ArgumentError(
+        'حجم الملف يتجاوز الحد المسموح وهو $limitMb ميجابايت.',
+      );
+    }
   }
 
-  /// رفع صورة أو ملف إلى مجلد المستخدم.
+  String _sanitizeFileName(String fileName) {
+    final trimmed = fileName.trim();
+
+    if (trimmed.isEmpty) {
+      throw ArgumentError('اسم الملف مطلوب.');
+    }
+
+    final normalized = trimmed
+        .replaceAll(r'\', '/')
+        .split('/')
+        .last
+        .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+
+    if (normalized.isEmpty ||
+        normalized == '.' ||
+        normalized == '..') {
+      throw ArgumentError('اسم الملف غير صالح.');
+    }
+
+    return normalized;
+  }
+
+  /// رفع صورة أو فيديو قصة إلى مجلد المستخدم.
   Future<String> uploadFile({
     required String bucket,
     required String fileName,
@@ -70,33 +136,38 @@ class StorageService {
     String contentType = 'image/jpeg',
   }) async {
     _validateBucket(bucket);
-    _validateContentType(bucket, contentType);
 
-    if (bytes.isEmpty) {
-      throw ArgumentError('الملف فارغ.');
-    }
+    final normalizedType = _validateContentType(
+      bucket,
+      contentType,
+    );
 
-    final cleanName = fileName
-        .trim()
-        .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+    _validateFileSize(
+      bucket: bucket,
+      contentType: normalizedType,
+      byteLength: bytes.length,
+    );
 
-    if (cleanName.isEmpty) {
-      throw ArgumentError('اسم الملف غير صالح.');
-    }
+    final cleanName = _sanitizeFileName(fileName);
+    final userId = _userId;
 
-    final path =
-        '$_userId/${DateTime.now().toUtc().millisecondsSinceEpoch}_$cleanName';
+    final timestamp = DateTime.now()
+        .toUtc()
+        .millisecondsSinceEpoch;
 
-    await _client.storage.from(bucket).uploadBinary(
-          path,
-          bytes,
-          fileOptions: FileOptions(
-            contentType: contentType,
-            upsert: false,
-          ),
-        );
+    final path = '$userId/${timestamp}_$cleanName';
+    final client = _requireClient;
 
-    return _client.storage.from(bucket).getPublicUrl(path);
+    await client.storage.from(bucket).uploadBinary(
+      path,
+      bytes,
+      fileOptions: FileOptions(
+        contentType: normalizedType,
+        upsert: false,
+      ),
+    );
+
+    return client.storage.from(bucket).getPublicUrl(path);
   }
 
   /// رفع صورة منتج.
@@ -155,23 +226,37 @@ class StorageService {
     );
   }
 
-  /// حذف ملف من مساره داخل Bucket.
+  /// حذف ملف من مساره داخل مساحة التخزين.
   Future<void> deleteFile({
     required String bucket,
     required String path,
   }) async {
     _validateBucket(bucket);
+
     final cleanPath = path.trim();
 
     if (cleanPath.isEmpty) {
       throw ArgumentError('مسار الملف مطلوب.');
     }
 
-    // لا يُسمح بالحذف إلا من مجلد المستخدم الحالي.
-    if (!cleanPath.startsWith('$_userId/')) {
-      throw StateError('لا يمكنك حذف ملف لا يخص حسابك.');
+    if (cleanPath.startsWith('/') ||
+        cleanPath.contains(r'\') ||
+        cleanPath.split('/').any(
+          (segment) => segment == '.' || segment == '..',
+        )) {
+      throw ArgumentError('مسار الملف غير صالح.');
     }
 
-    await _client.storage.from(bucket).remove([cleanPath]);
+    final userId = _userId;
+
+    if (!cleanPath.startsWith('$userId/')) {
+      throw StateError(
+        'لا يمكنك حذف ملف لا يخص حسابك.',
+      );
+    }
+
+    await _requireClient.storage
+        .from(bucket)
+        .remove([cleanPath]);
   }
 }
