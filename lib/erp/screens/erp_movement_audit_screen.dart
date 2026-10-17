@@ -8,6 +8,7 @@ import 'erp_operational_documents_screen.dart';
 import 'erp_hr_operations_screen.dart';
 import 'erp_payroll_screen.dart';
 import 'erp_fiscal_periods_screen.dart';
+import 'erp_inventory_master_screen.dart';
 
 class ErpMovementAuditScreen extends StatefulWidget {
   const ErpMovementAuditScreen({super.key});
@@ -142,6 +143,14 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     } else if (route == 'fiscal_periods') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
         builder: (_) => ErpFiscalPeriodsScreen(initialCompanyId: _company.text.trim()),
+      ));
+    } else if (route == 'warehouses') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpInventoryMasterScreen(initialCompanyId: _company.text.trim(), initialView: 'warehouses'),
+      ));
+    } else if (route == 'items') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpInventoryMasterScreen(initialCompanyId: _company.text.trim(), initialView: 'items'),
       ));
     } else if (route == 'inventory') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
