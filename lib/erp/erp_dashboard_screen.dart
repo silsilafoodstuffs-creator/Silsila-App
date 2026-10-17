@@ -99,6 +99,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   String _page = 'بيانات الشركة';
   String _search = '';
   String _accountSearch = '';
+  final TextEditingController _accountSearchController = TextEditingController();
   Map<String, String>? _selectedRecord;
   final Map<String, List<Map<String, String>>> _saved = {};
 
@@ -850,8 +851,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
         const Expanded(child: Text('دليل الحسابات الهرمي', style: TextStyle(color: _purple, fontSize: 22, fontWeight: FontWeight.w900))),
-        TextButton.icon(onPressed: () => setState(() { _accountSearch = ''; _expandedAccounts.addAll(_allAccountCodes(_chartOfAccounts)); }), icon: const Icon(Icons.unfold_more), label: const Text('فرد الكل')),
-        TextButton.icon(onPressed: () => setState(() { _accountSearch = ''; _expandedAccounts.clear(); }), icon: const Icon(Icons.unfold_less), label: const Text('طي الكل')),
+        TextButton.icon(onPressed: () { _accountSearchController.clear(); setState(() { _accountSearch = ''; _expandedAccounts.addAll(_allAccountCodes(_chartOfAccounts)); }); }, icon: const Icon(Icons.unfold_more), label: const Text('فرد الكل')),
+        TextButton.icon(onPressed: () { _accountSearchController.clear(); setState(() { _accountSearch = ''; _expandedAccounts.clear(); }); }, icon: const Icon(Icons.unfold_less), label: const Text('طي الكل')),
       ]),
       const Text('هيكل حسابات مبدئي وفق التصنيف المحاسبي الشائع. الأرصدة وعدد الحركات ومعدلات التغير المعروضة بيانات توضيحية وليست أرصدة دفتر أستاذ فعلية.', style: TextStyle(height: 1.6, color: Colors.black54)),
       const SizedBox(height: 12),
@@ -862,7 +863,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _summaryChip('إجمالي القيم المطلقة', _money(absoluteTotal) + ' ج.م', _pink),
       ]),
       const SizedBox(height: 12),
-      TextField(onChanged: (v) => setState(() { _accountSearch = v; if (v.trim().isNotEmpty) _expandedAccounts.addAll(_matchingAncestorCodes(_chartOfAccounts, v.trim().toLowerCase())); }), decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'ابحث بكود الحساب أو اسمه أو طبيعته', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+      TextField(controller: _accountSearchController, onChanged: (v) => setState(() { _accountSearch = v; if (v.trim().isNotEmpty) _expandedAccounts.addAll(_matchingAncestorCodes(_chartOfAccounts, v.trim().toLowerCase())); }), decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'ابحث بكود الحساب أو اسمه أو طبيعته', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))), 
       const SizedBox(height: 12),
       SingleChildScrollView(scrollDirection: Axis.horizontal, child: Container(constraints: const BoxConstraints(minWidth: 1000), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Container(color: _purple, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: const Row(children: [
@@ -913,8 +914,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   List<Widget> _accountNodeRows(_AccountNode node, int depth, String query) {
     final hasChildren = node.children.isNotEmpty;
-    final children = node.children.where((n) => query.isEmpty || n.code.toLowerCase().contains(query) || n.name.toLowerCase().contains(query) || n.nature.toLowerCase().contains(query) || n.children.any((c) => c.code.toLowerCase().contains(query) || c.name.toLowerCase().contains(query) || c.children.any((g) => g.code.toLowerCase().contains(query) || g.name.toLowerCase().contains(query) || g.nature.toLowerCase().contains(query)))).toList();
-    final expanded = _expandedAccounts.contains(node.code) || (query.isNotEmpty && children.isNotEmpty && children.any((child) => _accountNodeHasMatch(child, query)));
+    final children = node.children.where((child) => query.isEmpty || _accountNodeHasMatch(child, query)).toList();
+    final expanded = _expandedAccounts.contains(node.code);
     final balance = _displayAccountBalance(node);
     final movements = _displayAccountMovements(node);
     final share = _totalAbsoluteAnalyticalBalance(_chartOfAccounts) == 0 ? 0.0 : balance.abs() / _totalAbsoluteAnalyticalBalance(_chartOfAccounts) * 100;
