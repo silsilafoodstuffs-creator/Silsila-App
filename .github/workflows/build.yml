@@ -1,10 +1,8 @@
 name: Build Silsila Android App
 
 'on':
+  # Manual only during development; enable push builds after implementation is complete.
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 permissions:
   contents: read
