@@ -4412,13 +4412,23 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
             value: governorate,
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'المحافظة'),
-            items: const [
-              DropdownMenuItem(value: 'القاهرة', child: Text('القاهرة')),
-              DropdownMenuItem(value: 'الجيزة', child: Text('الجيزة')),
-              DropdownMenuItem(value: 'القليوبية', child: Text('القليوبية')),
-              DropdownMenuItem(value: 'الإسكندرية', child: Text('الإسكندرية')),
-              DropdownMenuItem(value: 'الشرقية', child: Text('الشرقية')),
-            ],
+            
+                items: const [
+                  DropdownMenuItem(value: 'القاهرة', child: Text('القاهرة')),
+                  DropdownMenuItem(value: 'الجيزة', child: Text('الجيزة')),
+                  DropdownMenuItem(
+                    value: 'القليوبية',
+                    child: Text('القليوبية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الإسكندرية',
+                    child: Text('الإسكندرية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الشرقية',
+                    child: Text('الشرقية'),
+                  ),
+                ],
             onChanged: (value) => setState(() => governorate = value ?? governorate),
           ),
           const SizedBox(height: 12),
