@@ -4244,12 +4244,16 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
             final details = (post['description'] ?? post['details'] ?? '').toString();
             final quantity = post['quantity'];
             final targetPrice = post['target_price'];
+            final category = (post['category'] ?? '').toString();
             final governorate = (post['governorate'] ?? '').toString();
+            final contactPhone = (post['contact_phone'] ?? '').toString();
             final subtitle = [
               isBuy ? 'طلب شراء' : 'عرض بيع',
+              if (category.isNotEmpty) 'القسم: $category',
               if (quantity != null) 'الكمية: $quantity ${post['unit'] ?? ''}',
               if (targetPrice != null) 'السعر: $targetPrice جنيه',
               if (governorate.isNotEmpty) governorate,
+              if (contactPhone.isNotEmpty) 'للتواصل: $contactPhone',
               details,
             ].where((part) => part.toString().trim().isNotEmpty).join('\n');
             return MarketCard(
