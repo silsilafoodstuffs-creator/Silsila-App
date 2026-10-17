@@ -132,6 +132,44 @@ CREATE TABLE IF NOT EXISTS public.deliveries (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+UPDATE public.profiles p
+SET points_balance = COALESCE((
+  SELECT SUM(t.points)::INTEGER
+  FROM public.loyalty_transactions t
+  WHERE t.user_id = p.id
+), 0);
+
+CREATE OR REPLACE FUNCTION public.silsila_sync_loyalty_balance()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.profiles
+       SET points_balance = points_balance + NEW.points
+     WHERE id = NEW.user_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE public.profiles
+       SET points_balance = points_balance - OLD.points
+     WHERE id = OLD.user_id;
+    RETURN OLD;
+  ELSIF TG_OP = 'UPDATE' THEN
+    UPDATE public.profiles
+       SET points_balance = points_balance - OLD.points + NEW.points
+     WHERE id = NEW.user_id;
+    RETURN NEW;
+  END IF;
+  RETURN NULL;
+END;
+$;
+
+DROP TRIGGER IF EXISTS silsila_loyalty_balance_sync ON public.loyalty_transactions;
+CREATE TRIGGER silsila_loyalty_balance_sync
+AFTER INSERT OR UPDATE OR DELETE ON public.loyalty_transactions
+FOR EACH ROW EXECUTE FUNCTION public.silsila_sync_loyalty_balance();
+
 CREATE TABLE IF NOT EXISTS public.user_goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
