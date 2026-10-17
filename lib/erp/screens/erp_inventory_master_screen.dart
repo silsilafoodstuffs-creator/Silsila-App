@@ -54,9 +54,9 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
 
-  Future<void> _load() async {
+  Future<void> _load({bool clearMessage = true}) async {
     if (_company.text.trim().isEmpty) { setState(() => _error = 'أدخل معرّف الشركة أولًا.'); return; }
-    setState(() { _loading = true; _error = null; _message = null; });
+    setState(() { _loading = true; _error = null; if (clearMessage) _message = null; });
     try {
       final values = await Future.wait([
         _repo.fetchWarehouses(_company.text),
@@ -85,7 +85,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       if (!mounted) return;
       _groupCode.clear(); _groupName.clear();
       setState(() { _saving = false; _message = 'تمت إضافة مجموعة الأصناف.'; });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذرت إضافة مجموعة الأصناف: $e'; });
@@ -100,7 +100,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       if (!mounted) return;
       _warehouseCode.clear(); _warehouseName.clear(); _address.clear();
       setState(() { _saving = false; _message = 'تمت إضافة المخزن.'; });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذرت إضافة المخزن: $e'; });
@@ -119,7 +119,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       if (!mounted) return;
       _itemCode.clear(); _itemName.clear(); _barcode.clear(); _purchasePrice.text = '0'; _salePrice.text = '0'; _reorder.text = '0';
       setState(() { _saving = false; _message = 'تمت إضافة الصنف.'; });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذرت إضافة الصنف: $e'; });
@@ -134,7 +134,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       else await _repo.setWarehouseActive(_s(row['id']), row['is_active'] != true);
       if (!mounted) return;
       setState(() { _saving = false; _message = 'تم تحديث الحالة.'; });
-      await _load();
+      await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر تحديث الحالة: $e'; });
