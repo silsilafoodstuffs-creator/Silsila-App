@@ -197,6 +197,7 @@ begin
   if p_item_id is null or p_quantity is null or p_quantity <= 0
      or p_unit_cost is null or p_unit_cost < 0 or p_transfer_date is null then
     raise exception 'الصنف والتاريخ والكمية الموجبة والتكلفة الصحيحة مطلوبة'; end if;
+  if p_transfer_date > now() then raise exception 'لا يمكن تحويل مخزون بتاريخ مستقبلي'; end if;
 
   if not exists (select 1 from public.erp_items i
     where i.id = p_item_id and i.company_id = p_company_id and i.is_active) then
