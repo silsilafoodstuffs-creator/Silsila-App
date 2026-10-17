@@ -46,6 +46,7 @@ class CheckoutService {
       if (item.productId <= 0 ||
           item.supplierId.trim().isEmpty ||
           item.name.trim().isEmpty ||
+          item.unit.trim().isEmpty ||
           item.quantity < item.minQuantity ||
           item.quantity > CartService.maxQuantityPerProduct ||
           item.minQuantity < 1 ||
