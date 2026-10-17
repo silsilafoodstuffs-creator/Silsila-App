@@ -1511,6 +1511,9 @@ class SupplierDetailScreen extends StatefulWidget {
 class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
   final supplierService = SupplierService();
   final productService = SupplierProductService();
+  final reviewService = ReviewService();
+  Map<String, dynamic>? ratingSummary;
+  List<Map<String, dynamic>> reviews = [];
   Map<String, dynamic>? supplier;
   Map<String, dynamic>? details;
   List<Map<String, dynamic>> products = [];
@@ -1528,11 +1531,21 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
       final profile = await supplierService.getSupplierById(widget.supplierId);
       final supplierDetails = await supplierService.getSupplierDetails(widget.supplierId);
       final supplierProducts = await productService.getSupplierProducts(widget.supplierId);
+      Map<String, dynamic>? loadedRating;
+      List<Map<String, dynamic>> loadedReviews = [];
+      try {
+        loadedRating = await reviewService.getSupplierRating(widget.supplierId);
+        loadedReviews = await reviewService.getSupplierReviews(widget.supplierId, limit: 20);
+      } catch (_) {
+        // Supplier and catalog remain visible if reviews are not configured yet.
+      }
       if (!mounted) return;
       setState(() {
         supplier = profile;
         details = supplierDetails;
         products = supplierProducts;
+        ratingSummary = loadedRating;
+        reviews = loadedReviews;
         error = null;
       });
     } catch (_) {
@@ -1567,7 +1580,8 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator(color: purple));
     final name = (supplier?['full_name'] ?? widget.fallbackName).toString();
-    final rating = details?['rating'];
+    final rating = ratingSummary?['average'] ?? details?['rating'];
+    final reviewCount = ratingSummary?['count'] ?? 0;
     final minimumInvoice = details?['minimum_invoice'];
     return RefreshIndicator(
       onRefresh: loadSupplier,
@@ -1590,7 +1604,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                   Padding(padding: const EdgeInsets.only(top: 8), child: Text(details!['description'].toString())),
                 if (minimumInvoice != null) Text('الحد الأدنى للفاتورة: $minimumInvoice ج.م'),
                 if (details?['minimum_items'] != null) Text('الحد الأدنى للأصناف: ${details?['minimum_items']}'),
-                if (rating is num) Text('التقييم: ${rating.toStringAsFixed(1)} / 5'),
+                if (rating is num) Text('التقييم: ${rating.toStringAsFixed(1)} / 5 • ${reviewCount} تقييم'),
                 Text(details?['accepts_negotiation'] == true ? 'الأسعار قابلة للتفاوض' : 'راجع سياسة الأسعار مع المورد'),
                 if (details?['is_verified'] == true)
                   const Padding(padding: EdgeInsets.only(top: 8), child: Chip(label: Text('مورد موثّق'))),
@@ -1618,6 +1632,17 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
               ),
             );
           }),
+          const SizedBox(height: 20),
+          const Text('آراء العملاء', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: purple)),
+          if (reviews.isEmpty)
+            const Padding(padding: EdgeInsets.all(16), child: Text('لا توجد تقييمات منشورة لهذا المورد بعد.')),
+          ...reviews.map((review) => Card(
+            child: ListTile(
+              leading: const Icon(Icons.star, color: orange),
+              title: Text('${review['rating'] ?? 0} / 5'),
+              subtitle: Text((review['comment'] ?? 'بدون تعليق').toString()),
+            ),
+          )),
         ],
       ),
     );
