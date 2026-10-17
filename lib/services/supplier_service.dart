@@ -74,7 +74,7 @@ class SupplierService {
     }
 
     final response = await _requireClient
-        .from('profiles')
+        .from('supplier_directory')
         .select(
           'id, full_name, activity_type, supplier_type, '
           'governorate, district, address, account_status',
