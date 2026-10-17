@@ -3469,7 +3469,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 title: const Text('رقم واتساب هو نفس رقم الهاتف'),
                 onChanged: (v) =>
                     setState(() => sameWhatsApp = v ?? true),
-              ),
+              ), 
               if (!sameWhatsApp) ...[
                 const SizedBox(height: 8),
                 TextFormField(
@@ -3477,7 +3477,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
                     labelText: 'رقم واتساب',
+                    prefixIcon: Icon(Icons.phone_android_rounded),
                   ),
+                  validator: (v) {
+                    final value = v?.trim() ?? '';
+
+                    if (value.isEmpty) {
+                      return 'أدخل رقم واتساب';
+                    }
+
+                    if (value.replaceAll(RegExp(r'\D'), '').length < 8) {
+                      return 'أدخل رقم واتساب صحيحًا';
+                    }
+
+                    return null;
+                  },
                 ),
               ],
               const SizedBox(height: 12),
