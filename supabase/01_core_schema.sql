@@ -402,8 +402,6 @@ DROP POLICY IF EXISTS "orders_read_participant" ON public.orders;
 CREATE POLICY "orders_read_participant" ON public.orders
 FOR SELECT TO authenticated USING (customer_id = auth.uid() OR supplier_id = auth.uid());
 DROP POLICY IF EXISTS "orders_create_customer" ON public.orders;
-CREATE POLICY "orders_create_customer" ON public.orders
-FOR INSERT TO authenticated WITH CHECK (customer_id = auth.uid());
 DROP POLICY IF EXISTS "orders_update_participant" ON public.orders;
 
 DROP POLICY IF EXISTS "order_items_read_participant" ON public.order_items;
