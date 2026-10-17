@@ -181,6 +181,43 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         if (_loading) const LinearProgressIndicator(),
         if (_error != null) _notice(_error!, Colors.red),
         if (_message != null) _notice(_message!, Colors.green),
+
+        Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('إنشاء مستند جديد', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+            const SizedBox(height: 8),
+            TextField(controller: _documentNumber, decoration: const InputDecoration(labelText: 'رقم المستند *', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _documentType, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'نوع المستند', border: OutlineInputBorder()),
+              items: (widget.kind == ErpOperationalKind.purchase
+                ? const <String, String>{'order':'طلب شراء','receipt':'استلام مشتريات','invoice':'فاتورة مشتريات','return':'مرتجع مشتريات'}
+                : const <String, String>{'quotation':'عرض سعر','order':'أمر بيع','delivery':'إذن تحميل','invoice':'فاتورة مبيعات','return':'مرتجع مبيعات'})
+                .entries.map((e) => DropdownMenuItem<String>(value: e.key, child: Text(e.value))).toList(),
+              onChanged: (v) => setState(() => _documentType = v ?? _documentType),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _partyId, isExpanded: true,
+              decoration: InputDecoration(labelText: widget.kind == ErpOperationalKind.purchase ? 'المورد' : 'العميل', border: const OutlineInputBorder()),
+              items: _parties.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_partyLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
+              onChanged: (v) => setState(() => _partyId = v),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _warehouseId, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'المخزن', border: OutlineInputBorder()),
+              items: _warehouses.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_warehouseLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
+              onChanged: (v) => setState(() => _warehouseId = v),
+            ),
+            const SizedBox(height: 8),
+            TextField(controller: _notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            FilledButton.icon(onPressed: _saving ? null : _createDraft, icon: const Icon(Icons.add), label: const Text('إنشاء المسودة')),
+          ],
+        ))),
         const SizedBox(height: 10),
         Wrap(spacing: 8, children: [
           _metric('المستندات', '${_rows.length}'),
@@ -189,6 +226,35 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         ]),
         const SizedBox(height: 10),
         if (_rows.isEmpty && !_loading) const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد مستندات للعرض؛ لم تُضف بيانات تجريبية.')),
+
+        if (_selectedDocumentId != null && _rows.any((r) => _s(r['id']) == _selectedDocumentId && _s(r['status']) == 'draft'))
+          Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('إضافة بند للمستند المحدد', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _itemId, isExpanded: true,
+                decoration: const InputDecoration(labelText: 'الصنف', border: OutlineInputBorder()),
+                items: _items.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_itemLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
+                onChanged: (v) => setState(() => _itemId = v),
+              ),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: TextField(controller: _quantity, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الكمية', border: OutlineInputBorder()))),
+                const SizedBox(width: 6),
+                Expanded(child: TextField(controller: _unitPrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: InputDecoration(labelText: widget.kind == ErpOperationalKind.purchase ? 'سعر الشراء' : 'سعر البيع', border: const OutlineInputBorder()))),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: TextField(controller: _discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الخصم', border: OutlineInputBorder()))),
+                const SizedBox(width: 6),
+                Expanded(child: TextField(controller: _tax, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الضريبة', border: OutlineInputBorder()))),
+              ]),
+              const SizedBox(height: 8),
+              FilledButton.icon(onPressed: _saving ? null : _addLine, icon: const Icon(Icons.playlist_add), label: const Text('إضافة البند')),
+            ],
+          ))),
         ..._rows.map((r) {
           final status = _s(r['status']);
           final type = _s(r['document_type']);
