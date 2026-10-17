@@ -34,8 +34,12 @@ class CheckoutService {
       throw ArgumentError('طريقة الدفع غير مدعومة.');
     }
 
-    if (deliveryAddress.trim().isEmpty) {
+    final cleanAddress = deliveryAddress.trim();
+    if (cleanAddress.isEmpty) {
       throw ArgumentError('يجب تحديد عنوان التوصيل.');
+    }
+    if (cleanAddress.length > 2000) {
+      throw ArgumentError('عنوان التوصيل طويل أكثر من اللازم.');
     }
 
     for (final item in items) {
@@ -44,7 +48,10 @@ class CheckoutService {
           item.name.trim().isEmpty ||
           item.quantity < item.minQuantity ||
           item.minQuantity < 1 ||
-          item.price < 0) {
+          !item.price.isFinite ||
+          item.price < 0 ||
+          !item.total.isFinite ||
+          item.total < 0) {
         throw ArgumentError(
           'توجد بيانات غير صحيحة في المنتج: ${item.name}.',
         );
@@ -90,6 +97,11 @@ class CheckoutService {
       deliveryAddress: deliveryAddress,
     );
 
+    final cleanNotes = notes?.trim();
+    if (cleanNotes != null && cleanNotes.length > 2000) {
+      throw ArgumentError('ملاحظات الطلب يجب ألا تتجاوز 2000 حرف.');
+    }
+
     final response = await _client.rpc(
       'place_multi_supplier_checkout',
       params: {
@@ -102,7 +114,7 @@ class CheckoutService {
             .toList(),
         'p_payment_method': _toDatabasePaymentMethod(paymentMethod),
         'p_delivery_address': deliveryAddress.trim(),
-        'p_notes': notes?.trim(),
+        'p_notes': cleanNotes == null || cleanNotes.isEmpty ? null : cleanNotes,
       },
     );
 
