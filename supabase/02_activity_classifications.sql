@@ -32,6 +32,32 @@ VALUES
     ('أنشطة أخرى', 19)
 ON CONFLICT (name) DO NOTHING;
 
+-- 1.1 أقسام المواد الغذائية الأساسية للتطبيق
+INSERT INTO public.categories (name, activity_type, sort_order, is_active)
+VALUES
+  ('سمنات', 'مواد غذائية', 1, TRUE),
+  ('زيوت', 'مواد غذائية', 2, TRUE),
+  ('مكرونات', 'مواد غذائية', 3, TRUE),
+  ('بقوليات', 'مواد غذائية', 4, TRUE),
+  ('مشروبات ساخنة', 'مواد غذائية', 5, TRUE),
+  ('مشروبات غازية', 'مواد غذائية', 6, TRUE),
+  ('جبن', 'مواد غذائية', 7, TRUE),
+  ('ألبان', 'مواد غذائية', 8, TRUE),
+  ('عصائر', 'مواد غذائية', 9, TRUE),
+  ('مقرمشات', 'مواد غذائية', 10, TRUE),
+  ('منظفات', 'مواد غذائية', 11, TRUE),
+  ('خردوات', 'مواد غذائية', 12, TRUE),
+  ('مكملات طعام', 'مواد غذائية', 13, TRUE),
+  ('مكملات حلويات', 'مواد غذائية', 14, TRUE),
+  ('معلبات', 'مواد غذائية', 15, TRUE),
+  ('ورقيات', 'مواد غذائية', 16, TRUE),
+  ('مخبوزات', 'مواد غذائية', 17, TRUE),
+  ('حلويات', 'مواد غذائية', 18, TRUE),
+  ('شيكولاتة', 'مواد غذائية', 19, TRUE),
+  ('أصناف أخرى', 'مواد غذائية', 20, TRUE)
+ON CONFLICT (name, activity_type) DO UPDATE
+SET sort_order = EXCLUDED.sort_order, is_active = TRUE;
+
 -- 2. بيانات تصنيف الحسابات
 ALTER TABLE public.profiles
     ADD COLUMN IF NOT EXISTS activity_type TEXT DEFAULT 'مواد غذائية',
