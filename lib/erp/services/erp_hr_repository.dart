@@ -56,6 +56,42 @@ class ErpHrRepository {
     });
   }
 
+  Future<List<Map<String, dynamic>>> fetchLeaveRequests(String companyId) async {
+    final rows = await _db.from('erp_leave_requests')
+      .select('id, employee_id, leave_type, starts_on, ends_on, requested_days, reason, status, approved_at')
+      .eq('company_id', companyId.trim()).order('starts_on', ascending: false).limit(300);
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<void> createLeaveRequest({
+    required String companyId,
+    required String employeeId,
+    required String leaveType,
+    required DateTime start,
+    required DateTime end,
+    required String reason,
+  }) async {
+    if (start.isAfter(end)) throw ArgumentError('تاريخ بداية الإجازة يجب ألا يتجاوز نهايتها.');
+    final days = end.difference(DateTime(start.year, start.month, start.day)).inDays + 1;
+    await _db.from('erp_leave_requests').insert({
+      'company_id': companyId.trim(),
+      'employee_id': employeeId,
+      'leave_type': leaveType,
+      'starts_on': _dateOnly(start),
+      'ends_on': _dateOnly(end),
+      'requested_days': days,
+      'reason': _blankToNull(reason),
+      'status': 'pending',
+    });
+  }
+
+  Future<void> decideLeave(String requestId, String decision) async {
+    await _db.rpc('erp_decide_leave_request', params: {
+      'p_request_id': requestId,
+      'p_decision': decision,
+    });
+  }
+
   Future<void> checkIn({
     required String companyId,
     required String employeeId,
