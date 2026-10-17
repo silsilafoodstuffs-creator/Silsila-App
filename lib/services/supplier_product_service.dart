@@ -51,6 +51,8 @@ class SupplierProductService {
     num minQuantity = 1,
     int? categoryId,
     String? imageUrl,
+    num stockQuantity = 0,
+    bool trackInventory = false,
   }) async {
     final user = _client.auth.currentUser;
     if (user == null) {
@@ -65,7 +67,7 @@ class SupplierProductService {
       throw ArgumentError('قسم المنتج مطلوب.');
     }
 
-    if (price < 0 || minQuantity <= 0) {
+    if (price < 0 || minQuantity <= 0 || stockQuantity < 0) {
       throw ArgumentError('السعر والكمية يجب أن يكونا صحيحين.');
     }
 
@@ -82,6 +84,8 @@ class SupplierProductService {
           'min_quantity': minQuantity,
           'minimum_quantity': minQuantity,
           'image_url': imageUrl,
+          'stock_quantity': stockQuantity,
+          'track_inventory': trackInventory,
           'is_active': true,
           'is_available': true,
         })
@@ -102,6 +106,8 @@ class SupplierProductService {
     num? minQuantity,
     int? categoryId,
     String? imageUrl,
+    num? stockQuantity,
+    bool? trackInventory,
     bool? isActive,
   }) async {
     final user = _client.auth.currentUser;
@@ -143,6 +149,13 @@ class SupplierProductService {
       updates['minimum_quantity'] = minQuantity;
     }
 
+    if (stockQuantity != null) {
+      if (stockQuantity < 0) {
+        throw ArgumentError('المخزون لا يمكن أن يكون سالبًا.');
+      }
+      updates['stock_quantity'] = stockQuantity;
+    }
+    if (trackInventory != null) updates['track_inventory'] = trackInventory;
     if (categoryId != null) updates['category_id'] = categoryId;
     if (imageUrl != null) updates['image_url'] = imageUrl;
     if (isActive != null) {
