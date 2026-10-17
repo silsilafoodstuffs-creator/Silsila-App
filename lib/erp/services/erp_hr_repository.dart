@@ -15,8 +15,8 @@ class ErpHrRepository {
   }
 
   Future<List<Map<String, dynamic>>> fetchEmployees(String companyId) async {
-    final rows = await _db.from('erp_employees')
-      .select('id, employee_code, full_name, phone, job_title, department_name, hire_date, employment_status, base_salary, branch_id')
+    final rows = await _db.from('erp_employee_directory')
+      .select('id, employee_code, full_name, phone, job_title, department_name, hire_date, employment_status, is_active, branch_id')
       .eq('company_id', companyId.trim()).order('employee_code').limit(1000);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
