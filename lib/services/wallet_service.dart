@@ -60,6 +60,24 @@ class WalletService {
     return List<Map<String, dynamic>>.from(response);
   }
 
+  /// جلب طلبات شحن المحفظة السابقة وحالات مراجعتها.
+  Future<List<Map<String, dynamic>>> getMyTopUpRequests({
+    int limit = 50,
+  }) async {
+    if (limit < 1 || limit > 200) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    }
+
+    final response = await _client
+        .from('wallet_topup_requests')
+        .select('id, amount, payment_method, reference, status, review_note, created_at')
+        .eq('user_id', _userId)
+        .order('created_at', ascending: false)
+        .limit(limit);
+
+    return List<Map<String, dynamic>>.from(response);
+  }
+
   /// طلب شحن المحفظة.
   ///
   /// لا يضيف هذا الإجراء أموالًا إلى الرصيد؛
