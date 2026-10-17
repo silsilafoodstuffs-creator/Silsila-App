@@ -4076,7 +4076,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> updatePassword() async {
     final token = code.text.trim();
     if (token.length != 6 || int.tryParse(token) == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل رمز التحقق المكوّن من 6 أرقام.'))); return; }
-    if (password.text.length < 8 || password.text != confirmation.text) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تأكد من أن كلمة المرور 8 أحرف على الأقل وأن التأكيد مطابق.'))); return; }
+    final passwordError = passwordValidator(password.text);
+    if (passwordError != null || password.text != confirmation.text) {
+      final message = passwordError ?? 'كلمتا المرور غير متطابقتين.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      return;
+    }
     final client = database;
     if (client == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.'))); return; }
     setState(() => busy = true);
