@@ -12,6 +12,7 @@
 8. `08_supplier_data_privacy.sql`
 9. `09_approved_marketplace_policies.sql`
 10. `10_admin_account_queue.sql`
+11. `11_approved_supplier_details_view.sql`
 
 تجنب تشغيل النسخ القديمة `03_secure_checkout.sql` و`04_service_compatibility.sql`؛ استخدم النسخ ذات اللاحقة `fixed` المذكورة أعلاه.
 
