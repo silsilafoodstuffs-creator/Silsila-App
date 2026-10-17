@@ -27,7 +27,9 @@ class FavoriteService {
 
     final keys = <String>{};
     for (final row in results[0] as List) {
-      keys.add('product:${row['product_id']}');
+      if (row['product_id'] != null) {
+        keys.add('product:${row['product_id']}');
+      }
     }
     for (final row in results[1] as List) {
       keys.add('supplier:${row['supplier_id']}');
