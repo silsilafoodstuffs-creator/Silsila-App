@@ -71,6 +71,9 @@ begin
   if p_movement_date is null then
     raise exception 'تاريخ الحركة مطلوب';
   end if;
+  if p_movement_date > now() then
+    raise exception 'لا يمكن تسجيل حركة مخزنية بتاريخ مستقبلي؛ احتفظ بالمستند مسودة حتى موعده';
+  end if;
   if v_kind not in ('opening','purchase_receipt','sales_issue','customer_return','supplier_return','transfer_in','transfer_out','adjustment','waste') then
     raise exception 'نوع الحركة المخزنية غير مدعوم';
   end if;
