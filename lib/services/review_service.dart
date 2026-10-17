@@ -41,34 +41,47 @@ class ReviewService {
     if (supplierId.trim().isEmpty) {
       throw ArgumentError('معرّف المورد مطلوب.');
     }
+    final cleanSupplierId = supplierId.trim();
     final reviews = await _client
         .from('reviews')
         .select('rating')
-        .eq('supplier_id', supplierId);
+        .eq('supplier_id', cleanSupplierId);
 
-    final ratings = List<Map<String, dynamic>>.from(reviews);
+    final rows = List<Map<String, dynamic>>.from(reviews);
+    var total = 0.0;
+    var validCount = 0;
 
-    if (ratings.isEmpty) {
+    for (final review in rows) {
+      final rawRating = review['rating'];
+      final rating = rawRating is num
+          ? rawRating.toDouble()
+          : double.tryParse(rawRating?.toString() ?? '');
+
+      // Ignore malformed rows instead of including them in the average's
+      // denominator or presenting an invalid score.
+      if (rating == null ||
+          !rating.isFinite ||
+          rating < 1 ||
+          rating > 5) {
+        continue;
+      }
+
+      total += rating;
+      validCount++;
+    }
+
+    if (validCount == 0) {
       return {
         'average': 0.0,
         'count': 0,
       };
     }
 
-    var total = 0.0;
-
-    for (final review in ratings) {
-      final rating = review['rating'];
-      if (rating is num) {
-        total += rating.toDouble();
-      }
-    }
-
     return {
       'average': double.parse(
-        (total / ratings.length).toStringAsFixed(1),
+        (total / validCount).toStringAsFixed(1),
       ),
-      'count': ratings.length,
+      'count': validCount,
     };
   }
 
