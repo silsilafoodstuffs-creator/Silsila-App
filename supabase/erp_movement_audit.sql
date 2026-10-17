@@ -710,6 +710,28 @@ begin
     and (c.id is null or c.company_id <> v.company_id or not c.is_active
       or a.id is null or a.company_id <> v.company_id or not a.is_active or not a.is_postable)
 
+
+  union all
+
+  select
+    'journal:' || e.id::text || ':posting_metadata',
+    'القيود المحاسبية',
+    e.id,
+    e.entry_number::text,
+    e.entry_date,
+    e.description,
+    'تحذير',
+    'JOURNAL_POST_METADATA_MISSING',
+    'القيد مرحّل لكن بيانات المستخدم أو توقيت الترحيل ناقصة.',
+    'journal_reversal'
+  from public.erp_journal_entries e
+  where e.company_id = p_company_id
+    and (p_start_date is null or e.entry_date >= p_start_date)
+    and (p_end_date is null or e.entry_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'القيود المحاسبية')
+    and e.status = 'posted'
+    and (e.posted_by is null or e.posted_at is null)
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
