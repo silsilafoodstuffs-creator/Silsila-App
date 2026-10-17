@@ -67,7 +67,9 @@ class CartItem {
 
   static double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
-    return double.tryParse(value?.toString() ?? '') ?? 0;
+    final raw = value?.toString().trim() ?? '';
+    if (raw.isEmpty) return double.nan;
+    return double.tryParse(raw) ?? double.nan;
   }
 }
 
