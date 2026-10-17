@@ -5458,12 +5458,12 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('لأ'),
+            child: const Text('لا'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('أه، احذف'),
+            child: const Text('نعم'),
           ),
         ],
       ),
