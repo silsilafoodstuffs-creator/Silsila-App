@@ -47,6 +47,7 @@ class CheckoutService {
           item.supplierId.trim().isEmpty ||
           item.name.trim().isEmpty ||
           item.quantity < item.minQuantity ||
+          item.quantity > CartService.maxQuantityPerProduct ||
           item.minQuantity < 1 ||
           !item.price.isFinite ||
           item.price < 0 ||
@@ -56,6 +57,11 @@ class CheckoutService {
           'توجد بيانات غير صحيحة في المنتج: ${item.name}.',
         );
       }
+    }
+
+    final total = calculateTotal(items);
+    if (!total.isFinite || total < 0) {
+      throw ArgumentError('إجمالي الطلب غير صالح.');
     }
   }
 
