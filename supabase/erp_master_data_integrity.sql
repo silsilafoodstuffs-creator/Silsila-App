@@ -12,6 +12,7 @@ declare
   v_company uuid;
   v_postable boolean;
   v_active boolean;
+  v_cycle boolean;
 begin
   if tg_table_name = 'erp_warehouses' then
     if new.branch_id is not null then
