@@ -16,6 +16,15 @@ from (values
   ('erp_companies','table'),
   ('erp_company_members','table'),
   ('erp_accounts','table'),
+  ('erp_parties','table'),
+  ('erp_branches','table'),
+  ('erp_cashboxes','table'),
+  ('erp_item_groups','table'),
+  ('erp_item_units','table'),
+  ('erp_party_contacts','table'),
+  ('erp_price_lists','table'),
+  ('erp_price_list_lines','table'),
+  ('erp_party_price_lists','table'),
   ('erp_journal_entries','table'),
   ('erp_journal_lines','table'),
   ('erp_fiscal_periods','table'),
@@ -52,6 +61,9 @@ from (values
   ('erp_decide_leave_request','function'),
   ('erp_guard_fiscal_period','function'),
   ('erp_validate_master_data_links','function'),
+  ('erp_validate_cash_voucher_links','function'),
+  ('erp_require_cash_voucher_draft','function'),
+  ('erp_guard_cash_voucher_update','function'),
   ('erp_record_inventory_movement','function'),
   ('erp_transfer_inventory_between_warehouses','function')
 ) as x(object_name, object_type)
@@ -93,6 +105,10 @@ where n.nspname = 'public'
     'erp_post_payroll_run',
     'erp_decide_leave_request',
     'erp_record_inventory_movement',
-    'erp_transfer_inventory_between_warehouses'
+    'erp_transfer_inventory_between_warehouses',
+    'erp_validate_cash_voucher_links',
+    'erp_require_cash_voucher_draft',
+    'erp_guard_cash_voucher_update',
+    'erp_validate_master_data_links'
   )
 order by p.proname;
