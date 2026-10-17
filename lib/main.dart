@@ -4390,8 +4390,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Future<void> reload() async {
-    setState(() => notificationsFuture = NotificationService().getMyNotifications());
-    await notificationsFuture;
+    final nextRequest = NotificationService().getMyNotifications();
+    setState(() => notificationsFuture = nextRequest);
+
+    // يظل الخطأ ظاهرًا في FutureBuilder دون استثناء غير معالج
+    // عند السحب للتحديث أو الضغط على إعادة المحاولة.
+    try {
+      await nextRequest;
+    } catch (_) {
+      // يعرض FutureBuilder حالة الخطأ ورسالة إعادة المحاولة.
+    }
   }
 
   Future<void> markRead(String id) async {
