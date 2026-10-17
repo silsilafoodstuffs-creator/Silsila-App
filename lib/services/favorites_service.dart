@@ -17,16 +17,26 @@ class FavoritesService {
   SupabaseClient get _requireClient {
     final client = _client;
     if (client == null) {
-      throw StateError('اتصال Supabase غير متاح.');
+      throw StateError('اتصال Supabase غير متاح حالياً.');
     }
     return client;
   }
 
   String get _userId {
     final id = _requireClient.auth.currentUser?.id;
-    if (id == null) {
+    if (id == null || id.trim().isEmpty) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
+    return id;
+  }
+
+  String _normalizeSupplierId(String supplierId) {
+    final id = supplierId.trim();
+
+    if (id.isEmpty) {
+      throw ArgumentError('معرّف المورد مطلوب.');
+    }
+
     return id;
   }
 
@@ -37,22 +47,32 @@ class FavoritesService {
         .select('supplier_id')
         .eq('user_id', _userId);
 
-    return response
-        .map<String>((row) => row['supplier_id'].toString())
-        .toList();
+    final ids = <String>[];
+    final seen = <String>{};
+
+    for (final row in response) {
+      final value = row['supplier_id'];
+      if (value == null) continue;
+
+      final id = value.toString().trim();
+      if (id.isNotEmpty && seen.add(id)) {
+        ids.add(id);
+      }
+    }
+
+    return ids;
   }
 
   /// التحقق مما إذا كان المورد ضمن المفضلة.
   Future<bool> isFavorite(String supplierId) async {
-    if (supplierId.trim().isEmpty) {
-      throw ArgumentError('معرّف المورد مطلوب.');
-    }
+    final id = _normalizeSupplierId(supplierId);
+    final userId = _userId;
 
     final response = await _requireClient
         .from('supplier_favorites')
         .select('supplier_id')
-        .eq('user_id', _userId)
-        .eq('supplier_id', supplierId.trim())
+        .eq('user_id', userId)
+        .eq('supplier_id', id)
         .maybeSingle();
 
     return response != null;
@@ -60,14 +80,13 @@ class FavoritesService {
 
   /// إضافة مورد إلى المفضلة.
   Future<void> addFavorite(String supplierId) async {
-    if (supplierId.trim().isEmpty) {
-      throw ArgumentError('معرّف المورد مطلوب.');
-    }
+    final id = _normalizeSupplierId(supplierId);
+    final userId = _userId;
 
     await _requireClient.from('supplier_favorites').upsert(
       {
-        'user_id': _userId,
-        'supplier_id': supplierId.trim(),
+        'user_id': userId,
+        'supplier_id': id,
       },
       onConflict: 'user_id,supplier_id',
       ignoreDuplicates: true,
@@ -76,27 +95,28 @@ class FavoritesService {
 
   /// إزالة مورد من المفضلة.
   Future<void> removeFavorite(String supplierId) async {
-    if (supplierId.trim().isEmpty) {
-      throw ArgumentError('معرّف المورد مطلوب.');
-    }
+    final id = _normalizeSupplierId(supplierId);
+    final userId = _userId;
 
     await _requireClient
         .from('supplier_favorites')
         .delete()
-        .eq('user_id', _userId)
-        .eq('supplier_id', supplierId.trim());
+        .eq('user_id', userId)
+        .eq('supplier_id', id);
   }
 
   /// تبديل حالة المورد بين الإضافة والحذف.
+  ///
+  /// تعيد true إذا أُضيف المورد، وfalse إذا أُزيل.
   Future<bool> toggleFavorite(String supplierId) async {
-    final favorite = await isFavorite(supplierId);
+    final id = _normalizeSupplierId(supplierId);
 
-    if (favorite) {
-      await removeFavorite(supplierId);
+    if (await isFavorite(id)) {
+      await removeFavorite(id);
       return false;
     }
 
-    await addFavorite(supplierId);
+    await addFavorite(id);
     return true;
   }
 }
