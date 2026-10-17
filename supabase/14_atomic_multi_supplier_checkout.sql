@@ -60,6 +60,15 @@ BEGIN
     GROUP BY x.supplier_id, x.product_id
     ORDER BY x.product_id, x.supplier_id
   LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM public.profiles p
+      WHERE p.id = v_item.supplier_id
+        AND p.role = 'supplier'
+        AND p.account_status IN ('approved', 'active', 'مفعل', 'معتمد')
+    ) THEN
+      RAISE EXCEPTION 'لا يمكن الطلب من مورد غير معتمد أو غير نشط';
+    END IF;
+
     SELECT id, supplier_id, price, name, unit, is_available,
            minimum_quantity, stock_quantity, track_inventory
       INTO v_product
