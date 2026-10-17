@@ -651,3 +651,7 @@ grant select, insert, update, delete on public.erp_employees, public.erp_attenda
   public.erp_leave_requests, public.erp_payroll_runs, public.erp_payroll_lines,
   public.erp_cash_vouchers to authenticated;
 
+grant select, insert, update, delete on public.erp_item_units, public.erp_party_contacts,
+  public.erp_price_lists, public.erp_price_list_lines, public.erp_party_price_lists
+  to authenticated;
+
