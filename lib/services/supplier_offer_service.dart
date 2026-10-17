@@ -78,7 +78,7 @@ class SupplierOfferService {
 
   /// تعديل عرض يملكه المورد الحالي.
   Future<void> updateOffer({
-    required int offerId,
+    required String offerId,
     String? title,
     String? description,
     DateTime? startsAt,
@@ -117,7 +117,7 @@ class SupplierOfferService {
       final current = await _client
           .from('offers')
           .select('starts_at, ends_at')
-          .eq('id', offerId)
+          .eq('id', offerId.trim())
           .eq('supplier_id', user.id)
           .maybeSingle();
 
