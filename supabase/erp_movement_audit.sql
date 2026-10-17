@@ -732,6 +732,65 @@ begin
     and e.status = 'posted'
     and (e.posted_by is null or e.posted_at is null)
 
+
+  union all
+
+  select
+    'purchase:' || d.id::text || ':totals',
+    'المشتريات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'إجماليات مستند مشتريات غير مطابقة',
+    'خطأ',
+    'PURCHASE_TOTALS_MISMATCH',
+    'إجماليات رأس المستند لا تطابق مجموع البنود.',
+    'purchases'
+  from public.erp_purchase_documents d
+  left join lateral (
+    select round(coalesce(sum(l.quantity * l.unit_price),0),2) as subtotal,
+      coalesce(sum(l.discount_amount),0) as discount_total,
+      coalesce(sum(l.tax_amount),0) as tax_total,
+      coalesce(sum(l.line_total),0) as grand_total
+    from public.erp_purchase_lines l where l.document_id = d.id
+  ) s on true
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (d.subtotal <> s.subtotal or d.discount_total <> s.discount_total
+      or d.tax_total <> s.tax_total or d.grand_total <> s.grand_total
+      or d.grand_total <> s.subtotal - s.discount_total + s.tax_total)
+
+  union all
+
+  select
+    'sale:' || d.id::text || ':totals',
+    'المبيعات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'إجماليات مستند مبيعات غير مطابقة',
+    'خطأ',
+    'SALE_TOTALS_MISMATCH',
+    'إجماليات رأس المستند لا تطابق مجموع البنود.',
+    'sales'
+  from public.erp_sales_documents d
+  left join lateral (
+    select round(coalesce(sum(l.quantity * l.unit_price),0),2) as subtotal,
+      coalesce(sum(l.discount_amount),0) as discount_total,
+      coalesce(sum(l.tax_amount),0) as tax_total,
+      coalesce(sum(l.line_total),0) as grand_total
+    from public.erp_sales_lines l where l.document_id = d.id
+  ) s on true
+  where d.company_id = p_company_id
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (d.subtotal <> s.subtotal or d.discount_total <> s.discount_total
+      or d.tax_total <> s.tax_total or d.grand_total <> s.grand_total
+      or d.grand_total <> s.subtotal - s.discount_total + s.tax_total)
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
