@@ -162,7 +162,7 @@ BEGIN
 
   RETURN v_order;
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.cancel_customer_order(p_order_id BIGINT)
 RETURNS BOOLEAN
@@ -199,7 +199,7 @@ BEGIN
 
   RETURN TRUE;
 END;
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.transition_supplier_order_status(BIGINT, TEXT, TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.cancel_customer_order(BIGINT) FROM PUBLIC;
