@@ -45,6 +45,9 @@ from (values
   ('erp_post_purchase_document','function'),
   ('erp_post_sales_document','function'),
   ('erp_post_cash_voucher','function'),
+  ('erp_recalculate_payroll_run','function'),
+  ('erp_approve_payroll_run','function'),
+  ('erp_post_payroll_run','function'),
   ('erp_record_inventory_movement','function'),
   ('erp_transfer_inventory_between_warehouses','function')
 ) as x(object_name, object_type)
@@ -80,6 +83,9 @@ where n.nspname = 'public'
     'erp_post_purchase_document',
     'erp_post_sales_document',
     'erp_post_cash_voucher',
+    'erp_recalculate_payroll_run',
+    'erp_approve_payroll_run',
+    'erp_post_payroll_run',
     'erp_record_inventory_movement',
     'erp_transfer_inventory_between_warehouses'
   )
