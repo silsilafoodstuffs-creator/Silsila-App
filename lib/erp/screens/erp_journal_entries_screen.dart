@@ -49,7 +49,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
     }
   }
 
-  Future<void> _createDraft() async {
+  Future<void> _createDraft({Map<String, dynamic>? existing}) async {
     if (_company.text.trim().isEmpty) {
       setState(() => _error = 'أدخل معرّف الشركة قبل إنشاء القيد.');
       return;
@@ -67,9 +67,29 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       return;
     }
 
-    final description = TextEditingController();
-    DateTime entryDate = DateTime.now();
-    final lines = <_JournalLineDraft>[_JournalLineDraft(), _JournalLineDraft()];
+    final description = TextEditingController(
+      text: existing == null ? '' : _str(existing, 'description'),
+    );
+    DateTime entryDate = DateTime.tryParse(_str(existing ?? {}, 'entry_date')) ?? DateTime.now();
+    final lines = <_JournalLineDraft>[];
+    if (existing != null) {
+      try {
+        final savedLines = await _repo.fetchEntryLines(entryId: _str(existing, 'id'));
+        for (final row in savedLines) {
+          final line = _JournalLineDraft()
+            ..accountId = _str(row, 'account_id')
+            ..memo.text = _str(row, 'description')
+            ..debit.text = _str(row, 'debit')
+            ..credit.text = _str(row, 'credit');
+          lines.add(line);
+        }
+      } catch (e) {
+        description.dispose();
+        setState(() => _error = 'تعذر تحميل سطور المسودة: $e');
+        return;
+      }
+    }
+    if (lines.isEmpty) lines.addAll([_JournalLineDraft(), _JournalLineDraft()]);
     String? dialogError;
 
     await showDialog<void>(
@@ -77,7 +97,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, refresh) => AlertDialog(
-          title: const Text('إنشاء قيد يومية — مسودة'),
+          title: Text(existing == null ? 'إنشاء قيد يومية — مسودة' : 'تعديل مسودة القيد رقم ${_str(existing, 'entry_number')}'),
           content: SizedBox(
             width: 760,
             child: SingleChildScrollView(
@@ -220,6 +240,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                     entryDate: entryDate,
                     description: description.text,
                     lines: payload,
+                    entryId: existing == null ? null : _str(existing, 'id'),
                   );
                   if (!dialogContext.mounted) return;
                   Navigator.pop(dialogContext);
@@ -269,6 +290,62 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _showEntryDetails(Map<String, dynamic> entry) async {
+    final id = _str(entry, 'id');
+    try {
+      final lines = await _repo.fetchEntryLines(entryId: id);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('تفاصيل القيد رقم ${_str(entry, 'entry_number')}'),
+          content: SizedBox(
+            width: 720,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('البيان: ${_str(entry, 'description')}'),
+                  Text('التاريخ: ${_str(entry, 'entry_date')} • الحالة: ${_str(entry, 'status')}'),
+                  const Divider(),
+                  if (lines.isEmpty) const Text('لا توجد سطور متاحة لهذا القيد.'),
+                  ...lines.map((line) {
+                    final account = line['erp_accounts'];
+                    final accountMap = account is Map
+                        ? Map<String, dynamic>.from(account)
+                        : <String, dynamic>{};
+                    return ListTile(
+                      dense: true,
+                      title: Text('${accountMap['account_code'] ?? ''} — ${accountMap['account_name'] ?? _str(line, 'account_id')}'),
+                      subtitle: Text(_str(line, 'description')),
+                      trailing: Text('مدين ${_str(line, 'debit')}\nدائن ${_str(line, 'credit')}'),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            if (_str(entry, 'status') == 'draft')
+              TextButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _createDraft(existing: entry);
+                },
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('تعديل المسودة'),
+              ),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق')),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'تعذر تحميل تفاصيل القيد: $e');
+    }
   }
 
   Future<void> _post(Map<String, dynamic> entry) async {
@@ -378,13 +455,29 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                   'التاريخ: ${_str(entry, 'entry_date')} • الحالة: ${status == 'posted' ? 'مرحّل' : status == 'reversed' ? 'معكوس' : 'مسودة'}',
                 ),
                 isThreeLine: false,
-                trailing: status == 'draft'
-                    ? IconButton(
+                onTap: () => _showEntryDetails(entry),
+                trailing: Wrap(
+                  spacing: 0,
+                  children: [
+                    IconButton(
+                      tooltip: 'عرض السطور',
+                      onPressed: _loading ? null : () => _showEntryDetails(entry),
+                      icon: const Icon(Icons.visibility_outlined, color: Color(0xFF3E007D)),
+                    ),
+                    if (status == 'draft')
+                      IconButton(
+                        tooltip: 'تعديل المسودة',
+                        onPressed: _loading ? null : () => _createDraft(existing: entry),
+                        icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015)),
+                      ),
+                    if (status == 'draft')
+                      IconButton(
                         tooltip: 'ترحيل القيد',
                         onPressed: _loading ? null : () => _post(entry),
-                        icon: const Icon(Icons.task_alt, color: Color(0xFFFFA015)),
-                      )
-                    : null,
+                        icon: const Icon(Icons.task_alt, color: Color(0xFF18865A)),
+                      ),
+                  ],
+                ),
               ),
             );
           }),
