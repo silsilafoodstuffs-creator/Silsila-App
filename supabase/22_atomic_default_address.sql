@@ -14,6 +14,9 @@ BEGIN
     RAISE EXCEPTION 'يجب تسجيل الدخول أولاً';
   END IF;
 
+  -- Coordinate this operation with the atomic insert/update function in migration 23.
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_user_id::TEXT, 0));
+
   IF NOT EXISTS (
     SELECT 1
     FROM public.addresses a
