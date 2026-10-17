@@ -102,7 +102,61 @@ ALTER TABLE public.offers
 ALTER TABLE public.stories
   ADD COLUMN IF NOT EXISTS activity_type TEXT;
 
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT;
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS role TEXT,
+  ADD COLUMN IF NOT EXISTS points_balance INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE public.support_tickets
+  ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general',
+  ADD COLUMN IF NOT EXISTS order_id BIGINT REFERENCES public.orders(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS public.shipping_companies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  profile_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  phone TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.deliveries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id BIGINT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+  shipping_company_id UUID NOT NULL REFERENCES public.shipping_companies(id) ON DELETE RESTRICT,
+  requested_by UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  pickup_address TEXT NOT NULL,
+  delivery_address TEXT NOT NULL,
+  notes TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.user_goals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  current_value NUMERIC(12,2) NOT NULL DEFAULT 0,
+  target_value NUMERIC(12,2) NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.deliveries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.shipping_companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_goals ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "shipping_companies_read_active" ON public.shipping_companies;
+CREATE POLICY "shipping_companies_read_active" ON public.shipping_companies
+FOR SELECT TO anon, authenticated USING (is_active = TRUE);
+
+DROP POLICY IF EXISTS "deliveries_manage_own" ON public.deliveries;
+CREATE POLICY "deliveries_manage_own" ON public.deliveries
+FOR ALL TO authenticated USING (requested_by = auth.uid()) WITH CHECK (requested_by = auth.uid());
+
+DROP POLICY IF EXISTS "user_goals_manage_own" ON public.user_goals;
+CREATE POLICY "user_goals_manage_own" ON public.user_goals
+FOR ALL TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
 
 UPDATE public.profiles
 SET role = CASE
