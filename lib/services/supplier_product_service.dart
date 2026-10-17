@@ -12,10 +12,14 @@ class SupplierProductService {
     bool activeOnly = true,
     String? category,
   }) async {
+    final cleanSupplierId = supplierId.trim();
+    if (cleanSupplierId.isEmpty) {
+      throw ArgumentError('معرّف المورد مطلوب.');
+    }
     var query = _client
         .from('products')
         .select()
-        .eq('supplier_id', supplierId);
+        .eq('supplier_id', cleanSupplierId);
 
     if (activeOnly) {
       query = query.eq('is_active', true);
@@ -34,6 +38,9 @@ class SupplierProductService {
   Future<Map<String, dynamic>?> getProductById(
     int productId,
   ) async {
+    if (productId <= 0) {
+      throw ArgumentError('معرّف المنتج غير صالح.');
+    }
     return await _client
         .from('products')
         .select()
@@ -140,6 +147,9 @@ class SupplierProductService {
     if (user == null) {
       throw Exception('يجب تسجيل الدخول أولاً.');
     }
+    if (productId <= 0) {
+      throw ArgumentError('معرّف المنتج غير صالح.');
+    }
 
     final updates = <String, dynamic>{};
 
@@ -227,6 +237,9 @@ class SupplierProductService {
 
   /// إخفاء المنتج دون حذفه نهائيًا.
   Future<void> deactivateProduct(int productId) async {
+    if (productId <= 0) {
+      throw ArgumentError('معرّف المنتج غير صالح.');
+    }
     final user = _client.auth.currentUser;
     if (user == null) {
       throw Exception('يجب تسجيل الدخول أولاً.');
@@ -241,6 +254,9 @@ class SupplierProductService {
 
   /// إعادة تفعيل المنتج.
   Future<void> activateProduct(int productId) async {
+    if (productId <= 0) {
+      throw ArgumentError('معرّف المنتج غير صالح.');
+    }
     final user = _client.auth.currentUser;
     if (user == null) {
       throw Exception('يجب تسجيل الدخول أولاً.');
