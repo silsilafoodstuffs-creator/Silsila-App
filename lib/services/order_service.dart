@@ -134,20 +134,41 @@ class OrderService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  /// جلب عناصر طلب معين.
+  /// جلب عناصر طلب يملكه العميل الحالي فقط.
   Future<List<Map<String, dynamic>>> getOrderItems(
     int orderId,
   ) async {
-    final response = await _requireClient
+    if (orderId <= 0) {
+      throw ArgumentError('رقم الطلب غير صالح.');
+    }
+
+    final client = _requireClient;
+    final order = await client
+        .from('orders')
+        .select('id')
+        .eq('id', orderId)
+        .eq('customer_id', _userId)
+        .maybeSingle();
+
+    if (order == null) {
+      throw StateError('الطلب غير موجود أو لا تملك صلاحية الوصول إليه.');
+    }
+
+    final response = await client
         .from('order_items')
         .select()
-        .eq('order_id', orderId);
+        .eq('order_id', orderId)
+        .order('id');
 
     return List<Map<String, dynamic>>.from(response);
   }
 
-  /// إلغاء طلب ما زال في انتظار القبول.
+  /// إلغاء طلب العميل عبر إجراء قاعدة البيانات الآمن.
   Future<void> cancelPendingOrder(int orderId) async {
+    if (orderId <= 0) {
+      throw ArgumentError('رقم الطلب غير صالح.');
+    }
+
     await _requireClient.rpc(
       'cancel_customer_order',
       params: {'p_order_id': orderId},
