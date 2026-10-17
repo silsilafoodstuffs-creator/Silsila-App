@@ -78,7 +78,7 @@ create or replace function public.erp_guard_operational_document_update()
 returns trigger
 language plpgsql
 set search_path = public
-as $
+as $$
 declare
   v_lines bigint;
   v_movements bigint;
@@ -111,7 +111,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists erp_purchase_document_post_guard on public.erp_purchase_documents;
 create trigger erp_purchase_document_post_guard
