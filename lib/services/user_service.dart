@@ -41,13 +41,24 @@ class UserService {
       throw Exception('يجب تسجيل الدخول أولاً.');
     }
 
+    final cleanName = fullName.trim();
+    if (cleanName.isEmpty || cleanName.length > 120) {
+      throw ArgumentError('الاسم مطلوب ويجب ألا يتجاوز 120 حرفًا.');
+    }
+
+    final cleanWhatsapp = whatsappPhone?.trim();
+    if (cleanWhatsapp != null && cleanWhatsapp.length > 30) {
+      throw ArgumentError('رقم واتساب طويل أكثر من اللازم.');
+    }
+
     final updates = <String, dynamic>{
-      'full_name': fullName.trim(),
+      'full_name': cleanName,
       'updated_at': DateTime.now().toIso8601String(),
     };
 
-    if (whatsappPhone != null) {
-      updates['whatsapp_phone'] = whatsappPhone.trim();
+    if (cleanWhatsapp != null) {
+      updates['whatsapp_phone'] =
+          cleanWhatsapp.isEmpty ? null : cleanWhatsapp;
     }
 
     await _client.from('profiles').update(updates).eq('id', user.id);
@@ -68,6 +79,9 @@ class UserService {
 
     if (!allowedStatuses.contains(status)) {
       throw ArgumentError('حالة الحساب غير صحيحة.');
+    }
+    if (userId.trim().isEmpty) {
+      throw ArgumentError('معرّف المستخدم مطلوب.');
     }
 
     if (_client.auth.currentUser == null) {
@@ -110,6 +124,12 @@ class UserService {
     if (_client.auth.currentUser == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
+    if (requestId.trim().isEmpty) {
+      throw ArgumentError('معرّف طلب شحن المحفظة مطلوب.');
+    }
+    if (note != null && note.trim().length > 1000) {
+      throw ArgumentError('ملاحظة المراجعة يجب ألا تتجاوز 1000 حرف.');
+    }
     await _client.rpc(
       'admin_review_wallet_topup',
       params: {
@@ -137,6 +157,12 @@ class UserService {
   }) async {
     if (_client.auth.currentUser == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+    if (ticketId.trim().isEmpty) {
+      throw ArgumentError('معرّف تذكرة الدعم مطلوب.');
+    }
+    if (reply != null && reply.trim().length > 5000) {
+      throw ArgumentError('الرد يجب ألا يتجاوز 5000 حرف.');
     }
     await _client.rpc(
       'admin_update_support_ticket',
