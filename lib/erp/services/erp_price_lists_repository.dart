@@ -73,6 +73,24 @@ class ErpPriceListsRepository {
       'company_id': companyId.trim(), 'party_id': partyId, 'price_list_id': listId,
     }, onConflict: 'party_id,price_list_id');
   }
+  Future<Map<String, dynamic>?> resolvePrice({
+    required String companyId, required String itemId, required String kind,
+    required double quantity, String? partyId, DateTime? priceDate,
+  }) async {
+    final day = (priceDate ?? DateTime.now()).toIso8601String().substring(0, 10);
+    final result = await _db.rpc('erp_resolve_item_price', params: {
+      'p_company_id': companyId.trim(),
+      'p_item_id': itemId,
+      'p_price_kind': kind,
+      'p_quantity': quantity,
+      'p_party_id': partyId,
+      'p_price_date': day,
+    });
+    if (result is List && result.isNotEmpty) return Map<String, dynamic>.from(result.first as Map);
+    if (result is Map) return Map<String, dynamic>.from(result);
+    return null;
+  }
+
   Future<void> setListActive(String id, bool active) async {
     await _db.from('erp_price_lists').update({'is_active': active}).eq('id', id);
   }
