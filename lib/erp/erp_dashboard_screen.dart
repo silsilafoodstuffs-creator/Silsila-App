@@ -720,13 +720,30 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     }).toList()),
     const SizedBox(height: 18),
     Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [
-        Container(width: 44, height: 44, decoration: BoxDecoration(color: const Color(0xFFF1E9FA), borderRadius: BorderRadius.circular(13)), child: Icon(_iconFor(_module), color: _purple)),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_page, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _purple)), const SizedBox(height: 4), Text('$_module • $_group', style: const TextStyle(color: Colors.black54, fontSize: 12))])),
-      ]),
-      const SizedBox(height: 12),
-      _recordToolbar(includeAdd: _group != 'تقارير'),
+      LayoutBuilder(builder: (context, constraints) {
+        final titleBlock = Row(children: [
+          Container(width: 44, height: 44, decoration: BoxDecoration(color: const Color(0xFFF1E9FA), borderRadius: BorderRadius.circular(13)), child: Icon(_iconFor(_module), color: _purple)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(_page, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _purple)),
+            const SizedBox(height: 4),
+            Text('$_module • $_group', style: const TextStyle(color: Colors.black54, fontSize: 12)),
+          ])),
+        ]);
+        final toolbar = _recordToolbar(includeAdd: _group != 'تقارير');
+        if (constraints.maxWidth >= 760) {
+          return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+            Expanded(child: titleBlock),
+            const SizedBox(width: 12),
+            Flexible(child: Align(alignment: Alignment.centerLeft, child: toolbar)),
+          ]);
+        }
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          titleBlock,
+          const SizedBox(height: 12),
+          toolbar,
+        ]);
+      }),
       const SizedBox(height: 18),
       Wrap(spacing: 8, runSpacing: 8, children: _pages.map((p) => ActionChip(
         label: Text(p, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
