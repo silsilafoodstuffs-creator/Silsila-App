@@ -46,6 +46,10 @@ class ProductService {
     final cleanSupplierId = _clean(supplierId);
     final cleanSearch = _clean(search);
 
+    if (cleanSearch != null && cleanSearch.length > 150) {
+      throw ArgumentError('عبارة البحث طويلة أكثر من اللازم.');
+    }
+
     var query = _requireClient
         .from('products')
         .select(_productColumns)
