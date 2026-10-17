@@ -4552,7 +4552,9 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
       await service.saveMyProfile(
         fullName: nameController.text,
         activityType: activity,
-        whatsappPhone: whatsappController.text,
+        whatsappPhone: whatsappController.text.trim().isEmpty
+            ? null
+            : normalizePhoneForAuth(whatsappController.text),
         governorate: governorate,
         district: districtController.text,
         area: areaController.text,
@@ -4621,6 +4623,15 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
             controller: whatsappController,
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(labelText: 'رقم واتساب'),
+            validator: (value) {
+              final input = value?.trim() ?? '';
+              if (input.isEmpty) return null;
+              final normalized = normalizePhoneForAuth(input);
+              if (!RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(normalized)) {
+                return 'أدخل رقم واتساب صحيحًا';
+              }
+              return null;
+            },
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
