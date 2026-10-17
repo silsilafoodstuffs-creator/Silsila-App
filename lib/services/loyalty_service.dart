@@ -64,9 +64,14 @@ class LoyaltyService {
     required num currentValue,
     required num targetValue,
   }) {
-    if (targetValue <= 0) return 0;
+    if (!currentValue.isFinite ||
+        !targetValue.isFinite ||
+        targetValue <= 0) {
+      return 0;
+    }
 
     final progress = currentValue / targetValue * 100;
+    if (!progress.isFinite) return 0;
 
     return progress.clamp(0, 100).toDouble();
   }
