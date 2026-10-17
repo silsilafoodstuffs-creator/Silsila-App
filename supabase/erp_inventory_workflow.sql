@@ -51,6 +51,8 @@ as $$
 declare
   v_id uuid;
   v_current numeric(18,3);
+  v_inventory_value numeric(18,4);
+  v_effective_cost numeric(14,4) := p_unit_cost;
   v_in numeric(14,3);
   v_out numeric(14,3);
   v_kind text := lower(trim(p_movement_type));
@@ -130,6 +132,14 @@ begin
     if v_current < p_quantity then
       raise exception 'الرصيد غير كافٍ. الرصيد الحالي % والكمية المطلوبة %', v_current, p_quantity;
     end if;
+    select coalesce(sum(m.quantity_in * m.unit_cost) - sum(m.quantity_out * m.unit_cost),0)
+      into v_inventory_value
+    from public.erp_inventory_movements m
+    where m.company_id = p_company_id and m.warehouse_id = p_warehouse_id
+      and m.item_id = p_item_id and m.movement_date <= p_movement_date;
+    if v_current > 0 then
+      v_effective_cost := greatest(v_inventory_value / v_current, 0);
+    end if;
   end if;
 
   insert into public.erp_inventory_movements(
@@ -138,7 +148,7 @@ begin
     reference_id, batch_number, expiry_date, notes, created_by
   ) values (
     p_company_id, p_branch_id, p_warehouse_id, p_item_id, p_movement_date,
-    v_kind, v_in, v_out, p_unit_cost, nullif(trim(p_reference_type), ''),
+    v_kind, v_in, v_out, v_effective_cost, nullif(trim(p_reference_type), ''),
     p_reference_id, nullif(trim(p_batch_number), ''), p_expiry_date,
     nullif(trim(p_notes), ''), auth.uid()
   ) returning id into v_id;
@@ -185,6 +195,8 @@ as $$
 declare
   v_transfer_id uuid := gen_random_uuid();
   v_source_balance numeric(18,3);
+  v_source_value numeric(18,4);
+  v_effective_cost numeric(14,4) := p_unit_cost;
   v_source_branch uuid;
   v_target_branch uuid;
 begin
@@ -236,6 +248,14 @@ begin
   if v_source_balance < p_quantity then
     raise exception 'رصيد مخزن الصرف غير كافٍ. المتاح % والمطلوب %', v_source_balance, p_quantity;
   end if;
+  select coalesce(sum(m.quantity_in * m.unit_cost) - sum(m.quantity_out * m.unit_cost),0)
+    into v_source_value
+  from public.erp_inventory_movements m
+  where m.company_id = p_company_id and m.warehouse_id = p_source_warehouse_id
+    and m.item_id = p_item_id and m.movement_date <= p_transfer_date;
+  if v_source_balance > 0 then
+    v_effective_cost := greatest(v_source_value / v_source_balance, 0);
+  end if;
 
   insert into public.erp_inventory_movements(
     company_id, branch_id, warehouse_id, item_id, movement_date, movement_type,
@@ -243,7 +263,7 @@ begin
     batch_number, expiry_date, notes, created_by
   ) values (
     p_company_id, v_source_branch, p_source_warehouse_id, p_item_id, p_transfer_date,
-    'transfer_out', 0, p_quantity, p_unit_cost, 'warehouse_transfer', v_transfer_id,
+    'transfer_out', 0, p_quantity, v_effective_cost, 'warehouse_transfer', v_transfer_id,
     nullif(trim(p_batch_number), ''), p_expiry_date, nullif(trim(p_notes), ''), auth.uid()
   );
 
@@ -253,7 +273,7 @@ begin
     batch_number, expiry_date, notes, created_by
   ) values (
     p_company_id, v_target_branch, p_target_warehouse_id, p_item_id, p_transfer_date,
-    'transfer_in', p_quantity, 0, p_unit_cost, 'warehouse_transfer', v_transfer_id,
+    'transfer_in', p_quantity, 0, v_effective_cost, 'warehouse_transfer', v_transfer_id,
     nullif(trim(p_batch_number), ''), p_expiry_date, nullif(trim(p_notes), ''), auth.uid()
   );
 
