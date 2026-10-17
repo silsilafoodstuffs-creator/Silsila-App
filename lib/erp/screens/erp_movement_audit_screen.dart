@@ -128,6 +128,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
         builder: (_) => ErpOperationalDocumentsScreen(
           initialCompanyId: _company.text.trim(),
           kind: ErpOperationalKind.purchase,
+          initialDocumentId: (issue['document_id'] ?? '').toString().isEmpty ? null : (issue['document_id'] ?? '').toString(),
         ),
       ));
     } else if (route == 'sales') {
@@ -135,6 +136,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
         builder: (_) => ErpOperationalDocumentsScreen(
           initialCompanyId: _company.text.trim(),
           kind: ErpOperationalKind.sales,
+          initialDocumentId: (issue['document_id'] ?? '').toString().isEmpty ? null : (issue['document_id'] ?? '').toString(),
         ),
       ));
     } else if (route == 'hr' && (issue['area'] ?? '').toString() == 'الرواتب') {
