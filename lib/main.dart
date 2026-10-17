@@ -21,6 +21,7 @@ import 'services/address_service.dart';
 import 'services/review_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
+import 'screens/registration/registration_success_screen.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -3632,26 +3633,70 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   @override
   void dispose() { codeController.dispose(); super.dispose(); }
 
+  
   Future<void> verifyCode() async {
     final code = codeController.text.trim();
+
     if (code.length != 6 || int.tryParse(code) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل رمز التحقق المكوّن من 6 أرقام.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('أدخل رمز التحقق المكوّن من 6 أرقام.'),
+        ),
+      );
       return;
     }
+
     final client = database;
     if (client == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('الاتصال بالخدمة غير متاح حاليًا.'),
+        ),
+      );
       return;
     }
+
     setState(() => busy = true);
+
     try {
-      await client.auth.verifyOTP(phone: widget.phone, token: code, type: OtpType.sms);
+      await client.auth.verifyOTP(
+        phone: widget.phone,
+        token: code,
+        type: OtpType.sms,
+      );
+
       if (!mounted) return;
-      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const MainShell()), (route) => false);
+
+      await Navigator.push<bool>(
+        context,
+        MaterialPageRoute<bool>(
+          builder: (_) => SilsilaRegistrationSuccessScreen(
+            onContinue: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const MainShell(),
+                ),
+                (route) => false,
+              );
+            },
+          ),
+        ),
+      );
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('رمز التحقق غير صحيح أو انتهت صلاحيته. حاول مرة أخرى.')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'رمز التحقق غير صحيح أو انتهت صلاحيته. حاول مرة أخرى.',
+            ),
+          ),
+        );
+      }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted) {
+        setState(() => busy = false);
+      }
     }
   }
 
