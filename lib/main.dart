@@ -494,7 +494,7 @@ class _MainShellState extends State<MainShell> {
 
   List<String> get visibleCategoryNames => liveCategoryNames.isNotEmpty
       ? ['الكل', ...liveCategoryNames]
-      : foodCategories;
+      : categories;
 
   @override
   void initState() {
@@ -845,8 +845,7 @@ class _MainShellState extends State<MainShell> {
           child: ListView(
             scrollDirection: Axis.horizontal,
             children: [
-              'الكل',
-              ...categories,
+              ...visibleCategoryNames,
             ].map((category) {
               return Padding(
                 padding: const EdgeInsets.only(left: 8),
