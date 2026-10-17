@@ -22,8 +22,29 @@ begin
     raise exception 'الفترة المالية تتداخل مع فترة أخرى للشركة نفسها';
   end if;
 
+  if tg_op = 'UPDATE' and old.company_id is distinct from new.company_id then
+    raise exception 'لا يمكن نقل فترة مالية إلى شركة أخرى';
+  end if;
+
   if tg_op = 'UPDATE' and old.status = 'closed' and new.status <> 'closed' then
     raise exception 'الفترة المالية المغلقة لا تُفتح مرة أخرى من شاشة التشغيل';
+  end if;
+
+  if tg_op = 'UPDATE' and old.status = 'closed'
+     and (old.starts_on is distinct from new.starts_on
+       or old.ends_on is distinct from new.ends_on
+       or old.period_name is distinct from new.period_name) then
+    raise exception 'بيانات الفترة المالية المغلقة غير قابلة للتغيير';
+  end if;
+
+  if tg_op = 'UPDATE'
+     and (old.starts_on is distinct from new.starts_on or old.ends_on is distinct from new.ends_on)
+     and exists (
+       select 1 from public.erp_journal_entries e
+       where e.company_id = old.company_id and e.status = 'posted'
+         and e.entry_date between old.starts_on and old.ends_on
+     ) then
+    raise exception 'لا يمكن تغيير تواريخ فترة تحتوي على قيود مرحّلة';
   end if;
 
   if new.status = 'closed' and exists (
