@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'screens/hr_attendance_rules_screen.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -39,7 +40,7 @@ const Map<String, Map<String, List<String>>> _modules = {
   },
   'الموارد البشرية والرواتب': {
     'بيانات أساسية': ['هيكل الشركة', 'الإدارات والأقسام', 'الوظائف والدرجات', 'ملف الموظف', 'العقود', 'أنواع الإجازات', 'مكونات الراتب', 'الاستحقاقات والاستقطاعات', 'سياسات العمولة'],
-    'حركات': ['الحضور والانصراف', 'الإجازات والأذونات', 'الجزاءات والمكافآت', 'السلف', 'تقييم الأداء', 'مسير الرواتب', 'صرف الرواتب', 'عمولات المبيعات', 'تسوية سلفة'],
+    'حركات': ['الحضور والانصراف', 'أجهزة البصمة وربط الحضور', 'قواعد الورديات والحضور والانصراف', 'الإجازات والأذونات', 'الجزاءات والمكافآت', 'السلف', 'تقييم الأداء', 'مسير الرواتب', 'صرف الرواتب', 'عمولات المبيعات', 'تسوية سلفة'],
     'تقارير': ['كشف العاملين', 'الحضور والغياب', 'رصيد الإجازات', 'انتهاء العقود', 'ملخص الرواتب', 'مفردات المرتب', 'عمولات المندوبين'],
   },
   'علاقات العملاء CRM': {
@@ -313,7 +314,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: Column(children: [
               _header(compact),
-              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'شجرة الحسابات' ? _accountTree() : _page == 'اختبار ومراجعة الحركات' ? _movementAuditScreen() : _page == 'المستخدمون والصلاحيات' ? _permissionsScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? _delegateAllocationScreen() : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _workspace())),
+              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'شجرة الحسابات' ? _accountTree() : _page == 'اختبار ومراجعة الحركات' ? _movementAuditScreen() : _page == 'المستخدمون والصلاحيات' ? _permissionsScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? _delegateAllocationScreen() : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _page == 'قواعد الورديات والحضور والانصراف' ? const HrShiftRulesScreen() : _page == 'أجهزة البصمة وربط الحضور' ? const HrFingerprintDevicesScreen() : _workspace())),
             ])),
             if (!compact) SizedBox(width: 286, child: _rightPanel()),
           ])),
@@ -709,8 +710,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   });
 
   Widget _quick(String title, IconData icon, VoidCallback action) => OutlinedButton.icon(
-    onPressed: action, icon: Icon(icon, size: 19), label: Text(title),
-    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, backgroundColor: _purple, overlayColor: Colors.white24, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16), side: const BorderSide(color: _purple), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)), textStyle: const TextStyle(fontWeight: FontWeight.w800)),
+    onPressed: action, icon: Icon(icon, size: 19, color: _orange), label: Text(title),
+    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, iconColor: _orange, backgroundColor: _purple, overlayColor: Colors.white24, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16), side: const BorderSide(color: _purple), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)), textStyle: const TextStyle(fontWeight: FontWeight.w800)),
   );
 
   Widget _workspace() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
