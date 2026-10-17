@@ -187,6 +187,116 @@ begin
     and (p_area = 'كل الحركات' or p_area = 'الخزائن' or p_area = 'البنوك')
     and (c.account_id is null or a.id is null or a.company_id <> c.company_id or not a.is_active or not a.is_postable)
 
+
+  union all
+
+  select
+    'warehouse:' || w.id::text || ':branch',
+    'المخازن',
+    w.id,
+    w.warehouse_code,
+    null::date,
+    w.warehouse_name,
+    'خطأ',
+    'WAREHOUSE_BRANCH_COMPANY_MISMATCH',
+    'المخزن مربوط بفرع تابع لشركة أخرى أو بفرع غير موجود.',
+    'warehouses'
+  from public.erp_warehouses w
+  left join public.erp_branches b on b.id = w.branch_id
+  where w.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'المخازن')
+    and w.branch_id is not null
+    and (b.id is null or b.company_id <> w.company_id)
+
+  union all
+
+  select
+    'cashbox:' || c.id::text || ':branch',
+    'الخزائن والبنوك',
+    c.id,
+    c.cashbox_code,
+    null::date,
+    c.cashbox_name,
+    'خطأ',
+    'CASHBOX_BRANCH_COMPANY_MISMATCH',
+    'الخزينة أو الحساب البنكي مربوط بفرع لا يتبع الشركة نفسها.',
+    'cashboxes'
+  from public.erp_cashboxes c
+  left join public.erp_branches b on b.id = c.branch_id
+  where c.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الخزائن' or p_area = 'البنوك')
+    and c.branch_id is not null
+    and (b.id is null or b.company_id <> c.company_id)
+
+  union all
+
+  select
+    'item:' || i.id::text || ':group',
+    'الأصناف',
+    i.id,
+    i.item_code,
+    null::date,
+    i.item_name,
+    'خطأ',
+    'ITEM_GROUP_COMPANY_MISMATCH',
+    'مجموعة الصنف لا تتبع الشركة نفسها أو أنها غير موجودة.',
+    'items'
+  from public.erp_items i
+  left join public.erp_item_groups g on g.id = i.group_id
+  where i.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الأصناف')
+    and i.group_id is not null
+    and (g.id is null or g.company_id <> i.company_id)
+
+  union all
+
+  select
+    'fiscal-period:' || p1.id::text || ':overlap',
+    'الفترات المالية',
+    p1.id,
+    p1.period_name,
+    p1.starts_on,
+    p1.period_name,
+    'تحذير',
+    'FISCAL_PERIOD_OVERLAP',
+    'توجد فترة مالية أخرى متداخلة مع هذه الفترة داخل الشركة.',
+    'fiscal_periods'
+  from public.erp_fiscal_periods p1
+  where p1.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الفترات المالية')
+    and exists (
+      select 1
+      from public.erp_fiscal_periods p2
+      where p2.company_id = p1.company_id
+        and p2.id <> p1.id
+        and daterange(p2.starts_on, p2.ends_on, '[]')
+            && daterange(p1.starts_on, p1.ends_on, '[]')
+    )
+
+  union all
+
+  select
+    'journal:' || e.id::text || ':period_missing',
+    'القيود المحاسبية',
+    e.id,
+    e.entry_number::text,
+    e.entry_date,
+    e.description,
+    'تحذير',
+    'JOURNAL_NO_FISCAL_PERIOD',
+    'تاريخ القيد لا يقع داخل أي فترة مالية معرفة للشركة.',
+    case when e.status = 'draft' then 'journal_draft' else 'journal_reversal' end
+  from public.erp_journal_entries e
+  where e.company_id = p_company_id
+    and (p_start_date is null or e.entry_date >= p_start_date)
+    and (p_end_date is null or e.entry_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'القيود المحاسبية')
+    and not exists (
+      select 1 from public.erp_fiscal_periods fp
+      where fp.company_id = e.company_id
+        and e.entry_date between fp.starts_on and fp.ends_on
+    )
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
