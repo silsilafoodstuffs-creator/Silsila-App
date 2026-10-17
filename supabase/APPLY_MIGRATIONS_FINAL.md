@@ -21,6 +21,7 @@
 17. `17_order_notifications.sql`
 18. `18_shipping_operations.sql`
 19. `19_admin_support_tickets.sql`
+20. `20_profile_privilege_hardening.sql`
 
 تجنب تشغيل النسخ القديمة `03_secure_checkout.sql` و`04_service_compatibility.sql`؛ استخدم النسخ ذات اللاحقة `fixed` المذكورة أعلاه.
 
@@ -29,3 +30,20 @@
 بعد الترحيلات، عيّن حساب المسؤول الموثوق يدويًا من SQL Editor: حدّث حسابه ليكون `account_type = 'إدارة نشاط'` و`role = 'admin'`. لا تمنح هذه الصلاحية من واجهة التسجيل. ترحيل الخصوصية الأخير يجعل بيانات الضرائب والسجل التجاري خاصة بالمورد ولا يعرض عنوان الملف الشخصي ضمن دليل الموردين. ترحيل السياسات الأخير يمنع الحسابات غير المعتمدة من نشر المنتجات والعروض والقصص وإعلانات السوق، ويشترط طلبًا مسلّمًا لإضافة تقييم.
 
 ترحيلات GitHub لا تُطبّق تلقائيًا على Supabase. شغّل كل ملف يدويًا بالترتيب، ولا تضع مفتاح `service_role` داخل تطبيق Flutter.
+
+
+## إعداد أول مسؤول بشكل آمن
+
+بعد تطبيق جميع الترحيلات، يجب تعيين حساب المسؤول الأول يدويًا من Supabase SQL Editor باستخدام معرّف مستخدم موثوق من جدول Authentication. لا تسمح بترقية الحساب من داخل التطبيق.
+
+```sql
+BEGIN;
+ALTER TABLE public.profiles DISABLE TRIGGER silsila_profiles_role_compatibility;
+UPDATE public.profiles
+SET role = 'admin', account_status = 'approved', updated_at = NOW()
+WHERE id = 'ضع-UUID-حساب-المسؤول-الموثوق-هنا';
+ALTER TABLE public.profiles ENABLE TRIGGER silsila_profiles_role_compatibility;
+COMMIT;
+```
+
+استبدل القيمة بالـ UUID الصحيح فقط، وتأكد من وجود صف الملف الشخصي لهذا المستخدم. لا تشغّل هذا الإجراء على حساب غير موثوق.
