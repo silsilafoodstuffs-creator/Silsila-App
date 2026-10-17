@@ -178,7 +178,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                                       context: dialogContext,
                                       builder: (confirmContext) => AlertDialog(
                                         title: const Text('تأكيد الحذف'),
-                                        content: Text('هل ترغب في حذف السطر \${index + 1} من القيد؟'),
+                                        content: Text('هل ترغب في حذف السطر ${index + 1} من القيد؟'),
                                         actions: [
                                           TextButton(
                                             onPressed: () => Navigator.pop(confirmContext, false),
