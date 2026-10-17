@@ -41,6 +41,8 @@ from (values
   ('erp_get_trial_balance','function'),
   ('erp_reverse_journal_entry','function'),
   ('erp_run_movement_audit','function'),
+  ('erp_post_purchase_document','function'),
+  ('erp_post_sales_document','function'),
   ('erp_record_inventory_movement','function'),
   ('erp_transfer_inventory_between_warehouses','function')
 ) as x(object_name, object_type)
@@ -73,6 +75,8 @@ where n.nspname = 'public'
     'erp_get_trial_balance',
     'erp_reverse_journal_entry',
     'erp_run_movement_audit',
+    'erp_post_purchase_document',
+    'erp_post_sales_document',
     'erp_record_inventory_movement',
     'erp_transfer_inventory_between_warehouses'
   )
