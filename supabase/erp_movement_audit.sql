@@ -655,6 +655,52 @@ begin
     and (p_area = 'كل الحركات' or p_area = 'الرواتب')
     and (e.id is null or e.company_id <> r.company_id)
 
+
+  union all
+
+  select
+    'cash-voucher:' || v.id::text || ':journal',
+    'سندات الخزائن',
+    v.id,
+    v.voucher_number,
+    v.voucher_date,
+    v.description,
+    'خطأ',
+    'CASH_VOUCHER_POSTED_WITHOUT_JOURNAL',
+    'سند الخزينة مرحّل لكن لا يرتبط بقيد يومية مرحّل صالح.',
+    'cash_vouchers'
+  from public.erp_cash_vouchers v
+  left join public.erp_journal_entries j on j.id = v.journal_entry_id
+  where v.company_id = p_company_id
+    and (p_start_date is null or v.voucher_date >= p_start_date)
+    and (p_end_date is null or v.voucher_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'سندات الخزائن')
+    and v.status = 'posted'
+    and (j.id is null or j.company_id <> v.company_id or j.status <> 'posted')
+
+  union all
+
+  select
+    'cash-voucher:' || v.id::text || ':account',
+    'سندات الخزائن',
+    v.id,
+    v.voucher_number,
+    v.voucher_date,
+    v.description,
+    'خطأ',
+    'CASH_VOUCHER_INVALID_CASHBOX',
+    'سند الخزينة مرتبط بخزينة غير صالحة أو بحساب أستاذ غير نشط.',
+    'cash_vouchers'
+  from public.erp_cash_vouchers v
+  left join public.erp_cashboxes c on c.id = v.source_cashbox_id
+  left join public.erp_accounts a on a.id = c.account_id
+  where v.company_id = p_company_id
+    and (p_start_date is null or v.voucher_date >= p_start_date)
+    and (p_end_date is null or v.voucher_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'سندات الخزائن')
+    and (c.id is null or c.company_id <> v.company_id or not c.is_active
+      or a.id is null or a.company_id <> v.company_id or not a.is_active or not a.is_postable)
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
