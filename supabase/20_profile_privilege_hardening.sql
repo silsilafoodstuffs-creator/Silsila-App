@@ -19,7 +19,7 @@ BEGIN
     ) INTO v_is_admin_actor;
   END IF;
 
-  IF TG_OP = 'UPDATE' AND OLD.role = 'admin' THEN
+  IF TG_OP = 'UPDATE' AND OLD.role = 'admin' AND NEW.role = 'admin' THEN
     -- An existing trusted administrator retains the role; a non-admin cannot acquire it here.
     NEW.role := 'admin';
   ELSE
@@ -51,10 +51,10 @@ CREATE TRIGGER silsila_profiles_role_compatibility
 BEFORE INSERT OR UPDATE OF account_type, role, account_status ON public.profiles
 FOR EACH ROW EXECUTE FUNCTION public.silsila_sync_profile_role();
 
--- Force existing self-selected management accounts to remain non-admin.
+-- Remove pre-existing client-assigned administrator roles before a trusted
+-- operator bootstraps the first administrator through controlled SQL.
 UPDATE public.profiles
    SET role = 'management'
- WHERE account_type IN ('إدارة نشاط', 'management', 'admin')
-   AND role <> 'admin';
+ WHERE role = 'admin';
 
 COMMIT;
