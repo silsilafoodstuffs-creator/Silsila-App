@@ -3656,16 +3656,20 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Future<void> resendCode() async {
+    if (busy) return;
     final client = database;
     if (client == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.')));
       return;
     }
+    setState(() => busy = true);
     try {
       await client.auth.resend(phone: widget.phone, type: OtpType.sms);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم طلب إرسال رمز جديد إلى هاتفك.')));
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر إرسال رمز جديد. حاول لاحقًا.')));
+    } finally {
+      if (mounted) setState(() => busy = false);
     }
   }
 
