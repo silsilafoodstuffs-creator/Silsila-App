@@ -192,8 +192,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             if (name.text.trim().isEmpty) return;
             final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
             rows.insert(0, {'الكود': code.text.trim().isEmpty ? 'NEW-${rows.length + 1}' : code.text.trim(), 'الاسم': name.text.trim(), 'الوصف': details.text.trim(), 'الحالة': 'مسودة'});
-            setState(() => _saved[_page] = rows);
+            setState(() {
+              _saved[_page] = rows;
+              _selectedRecord = Map<String, String>.from(rows.first);
+              _activityLog.insert(0, 'تمت إضافة سجل جديد في شاشة $_page داخل الجلسة الحالية');
+            });
             Navigator.pop(dctx);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('تمت إضافة السجل محليًا. لم يُحفظ في قاعدة البيانات.')),
+            );
           }, child: const Text('حفظ السجل')),
         ],
       ),
@@ -734,8 +741,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       const SizedBox(height: 12),
       Text('عدد السجلات المعروضة: ${_rows.length} • بيانات توضيحية', style: const TextStyle(color: Colors.black45, fontSize: 11)),
     ])),
-    const SizedBox(height: 18),
-    _about(),
   ]);
 
   Widget _about() => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
