@@ -413,7 +413,7 @@ grant select, insert, update, delete on public.erp_purchase_documents, public.er
 drop policy if exists erp_employees_select_hr on public.erp_employees;
 create policy erp_employees_select_hr on public.erp_employees
 for select to authenticated
-using (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[]));
+using (public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]));
 drop policy if exists erp_employees_insert_hr on public.erp_employees;
 create policy erp_employees_insert_hr on public.erp_employees
 for insert to authenticated
