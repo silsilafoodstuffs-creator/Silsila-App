@@ -1,6 +1,6 @@
 -- Silsila ERP master-data extensions: alternate units, party contacts, and price lists.
--- Apply only after erp_schema.sql succeeds. These tables remain closed by RLS until
--- company/branch authorization policies and trusted write paths are implemented.
+-- Apply only after erp_schema.sql succeeds. RLS is enabled below; apply
+-- erp_security_membership.sql for company-scoped policies before client access.
 
 create table if not exists public.erp_item_units (
   id uuid primary key default gen_random_uuid(),
