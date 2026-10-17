@@ -7,10 +7,12 @@ class ErpOperationalDocumentsScreen extends StatefulWidget {
     this.initialCompanyId,
     this.kind = ErpOperationalKind.purchase,
     this.initialDocumentType,
+    this.initialDocumentId,
   });
   final String? initialCompanyId;
   final ErpOperationalKind kind;
   final String? initialDocumentType;
+  final String? initialDocumentId;
 
   @override
   State<ErpOperationalDocumentsScreen> createState() => _ErpOperationalDocumentsScreenState();
@@ -45,6 +47,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   void initState() {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
+    _documentType = widget.initialDocumentType ?? 'invoice';
+    _selectedDocumentId = widget.initialDocumentId;
+    if (widget.initialDocumentId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _load();
+        if (mounted && _selectedDocumentId != null) {
+          await _loadLines(_selectedDocumentId!);
+        }
+      });
+    }
   }
   @override
   void dispose() {
