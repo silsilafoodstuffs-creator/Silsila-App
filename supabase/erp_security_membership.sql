@@ -116,6 +116,19 @@ create trigger erp_journal_entry_immutable_guard
 before update on public.erp_journal_entries
 for each row execute function public.erp_guard_journal_entry_update();
 
+-- Safe employee directory for attendance operators: intentionally excludes salary,
+-- national identifiers, personal notes, and other sensitive fields.
+create or replace view public.erp_employee_directory
+as
+select
+  e.id, e.company_id, e.branch_id, e.employee_code, e.full_name,
+  e.phone, e.job_title, e.department_name, e.hire_date,
+  e.employment_status, e.is_active
+from public.erp_employees e
+where public.erp_user_can_access_company(e.company_id);
+
+grant select on public.erp_employee_directory to authenticated;
+
 -- Company master record: members may read; owner/admin manage.
 drop policy if exists erp_companies_select_member on public.erp_companies;
 create policy erp_companies_select_member on public.erp_companies
