@@ -148,14 +148,14 @@
 - أضيفت الدالة `erp_transfer_inventory_between_warehouses` لإنشاء حركتي تحويل متقابلتين (صرف من المصدر وإضافة للهدف) داخل معاملة واحدة، مع رفض المخزن نفسه كمصدر وهدف والتحقق من الرصيد.
 - أضيفت شاشة `lib/erp/screens/erp_inventory_screen.dart` وخدمة `lib/erp/services/erp_inventory_repository.dart`. ترتبط بها خيارات أرصدة الأصناف وكارت الصنف والجرد والإضافة والصرف والتحويل والتسوية في لوحة ERP؛ وهي حاليًا دفتر حركة أساسي وليست بديلًا عن شاشات أوامر الشراء/البيع الكاملة.
 - أضيفت سياسات قراءة لدفتر المخزون، وسياسات العضوية للمبيعات والمشتريات وبنودها داخل `erp_security_membership.sql`. ابدأ بتطبيق `erp_operations_schema.sql` قبل `erp_security_membership.sql` حتى تكون الجداول موجودة عند إنشاء السياسات.
-- الترتيب المقترح بعد هذه الإضافات: `erp_schema.sql`، `erp_operations_schema.sql`، `erp_master_data_schema.sql`، `erp_hr_schema.sql`، `erp_cash_vouchers_schema.sql`، `erp_account_integrity.sql`، `erp_account_tree_metrics.sql`، `erp_journal_workflow.sql`، `erp_security_membership.sql`، `erp_payroll_workflow.sql`، `erp_ledger_reports.sql`، `erp_journal_reversal.sql`، `erp_inventory_workflow.sql`، `erp_operations_workflow.sql`، `erp_cash_voucher_workflow.sql`، `erp_movement_audit.sql`، ثم `erp_preflight_check.sql`.
+- الترتيب المقترح بعد هذه الإضافات: `erp_schema.sql`، `erp_operations_schema.sql`، `erp_master_data_schema.sql`، `erp_hr_schema.sql`، `erp_cash_vouchers_schema.sql`، `erp_account_integrity.sql`، `erp_account_tree_metrics.sql`، `erp_journal_workflow.sql`، `erp_security_membership.sql`، `erp_hr_workflow.sql`، `erp_payroll_workflow.sql`، `erp_ledger_reports.sql`، `erp_journal_reversal.sql`، `erp_inventory_workflow.sql`، `erp_operations_workflow.sql`، `erp_cash_voucher_workflow.sql`، `erp_movement_audit.sql`، ثم `erp_preflight_check.sql`.
 - هذه الملفات لم تُطبّق على Supabase. لا يمكن اعتبار أي وظيفة قاعدة بيانات عاملة حتى تطبيق SQL والتحقق منه في المشروع المستهدف.
 
 ## الموارد البشرية والحضور والرواتب
 - أضيف `supabase/erp_hr_schema.sql` لتأسيس ملفات الموظفين، الحضور والانصراف، طلبات الإجازات، مسيرات الرواتب وتفاصيلها، مع قيود تحقق على التواريخ والمبالغ وعدم تكرار الموظف في اليوم أو المسير.
 - أضيفت سياسات RLS لملفات الموظفين والرواتب؛ بيانات الراتب محصورة في أدوار الإدارة والمحاسبة، بينما الحضور والإجازات تخضع لعضوية الشركة وصلاحياتها.
 - توسع تقرير المراجعة ليشمل فرع الموظف، ارتباط سجلات الحضور والإجازات بالموظف والشركة، اكتمال وقت الدخول، ومطابقة إجماليات مسير الرواتب مع تفاصيل الموظفين.
-- أضيفت شاشة تشغيل أولية لدليل الموظفين وتسجيل الحضور والانصراف في `lib/erp/screens/erp_hr_operations_screen.dart` وخدمة `lib/erp/services/erp_hr_repository.dart` وربطهما بقائمة ملف الموظف والحضور والانصراف. إدارة الإجازات ومسيرات الرواتب ما زالت تحتاج شاشاتها وإجراءات الاعتماد والصرف. لم يُطبّق SQL على Supabase.
+- أضيفت شاشة تشغيل لدليل الموظفين وتسجيل الحضور والانصراف وطلبات الإجازة في `lib/erp/screens/erp_hr_operations_screen.dart` وخدمة `lib/erp/services/erp_hr_repository.dart`. أضيفت دالة اعتماد/رفض الإجازات للأدوار الإدارية، ومسير الرواتب له شاشة منفصلة. صرف الرواتب الفعلي يحتاج ربطًا بسند صرف خزينة. لم يُطبّق SQL على Supabase.
 
 ## ترحيل مستندات المشتريات والمبيعات إلى المخزون
 - أضيف `supabase/erp_operations_workflow.sql` لفرض توافق المورد/العميل/المخزن/الفرع والصنف مع شركة المستند على مستوى قاعدة البيانات.
