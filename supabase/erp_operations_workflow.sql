@@ -71,6 +71,58 @@ create trigger erp_sales_line_company_guard
 before insert or update of document_id, item_id
 on public.erp_sales_lines for each row execute function public.erp_validate_operational_company_links();
 
+
+-- Direct status updates cannot bypass posting: a posted operational document must
+-- already have its matching movement ledger rows, and posted headers are immutable.
+create or replace function public.erp_guard_operational_document_update()
+returns trigger
+language plpgsql
+set search_path = public
+as $
+declare
+  v_lines bigint;
+  v_movements bigint;
+  v_reference text;
+begin
+  if old.status = 'posted' then
+    raise exception 'المستند المرحّل غير قابل للتعديل';
+  end if;
+  if old.company_id is distinct from new.company_id
+     or old.document_number is distinct from new.document_number
+     or old.created_by is distinct from new.created_by then
+    raise exception 'لا يمكن تغيير الشركة أو رقم المستند أو منشئه';
+  end if;
+  if new.status = 'posted' then
+    if tg_table_name = 'erp_purchase_documents' then
+      v_reference := 'purchase_document';
+      select count(*) into v_lines from public.erp_purchase_lines where document_id = old.id;
+    else
+      v_reference := 'sales_document';
+      select count(*) into v_lines from public.erp_sales_lines where document_id = old.id;
+    end if;
+    select count(*) into v_movements
+    from public.erp_inventory_movements m
+    where m.company_id = old.company_id
+      and m.reference_type = v_reference
+      and m.reference_id = old.id;
+    if v_lines = 0 or v_movements < v_lines then
+      raise exception 'لا يمكن ترحيل المستند قبل إنشاء حركات المخزون المطابقة لكل بند';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists erp_purchase_document_post_guard on public.erp_purchase_documents;
+create trigger erp_purchase_document_post_guard
+before update on public.erp_purchase_documents
+for each row execute function public.erp_guard_operational_document_update();
+
+drop trigger if exists erp_sales_document_post_guard on public.erp_sales_documents;
+create trigger erp_sales_document_post_guard
+before update on public.erp_sales_documents
+for each row execute function public.erp_guard_operational_document_update();
+
 create or replace function public.erp_post_purchase_document(p_document_id uuid)
 returns uuid
 language plpgsql
