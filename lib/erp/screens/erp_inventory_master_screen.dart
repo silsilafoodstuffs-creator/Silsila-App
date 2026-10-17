@@ -141,6 +141,11 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     }
   }
 
+  String _groupName(String? id) {
+    final rows = _groups.where((g) => _s(g['id']) == id);
+    return rows.isEmpty ? 'بدون مجموعة' : _s(rows.first['group_code']) + ' — ' + _s(rows.first['group_name']);
+  }
+
   String _branchName(String? id) {
     final rows = _branches.where((b) => _s(b['id']) == id);
     return rows.isEmpty ? 'بدون فرع محدد' : _s(rows.first['branch_code']) + ' — ' + _s(rows.first['branch_name']);
@@ -254,7 +259,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         ..._items.map((i) => Card(child: ListTile(
           leading: const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
           title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
-          subtitle: Text('الوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + '\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
+          subtitle: Text(_groupName(_s(i['group_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + '\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
           isThreeLine: true,
           trailing: IconButton(onPressed: _saving ? null : () => _toggle(i, true), icon: Icon(i['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
         ))),
