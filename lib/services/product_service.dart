@@ -46,6 +46,14 @@ class ProductService {
     final cleanSupplierId = _clean(supplierId);
     final cleanSearch = _clean(search);
 
+    if (cleanActivityType != null && cleanActivityType.length > 100) {
+      throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
+    }
+
+    if (cleanCategory != null && cleanCategory.length > 150) {
+      throw ArgumentError('اسم القسم طويل أكثر من اللازم.');
+    }
+
     if (cleanSupplierId != null && cleanSupplierId.length > 200) {
       throw ArgumentError('معرّف المورد طويل أكثر من اللازم.');
     }
