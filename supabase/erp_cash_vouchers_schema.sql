@@ -47,7 +47,9 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = public
-as $$
+as $
+declare
+  v_source_branch uuid;
 begin
   if new.branch_id is not null and not exists (
     select 1 from public.erp_branches b where b.id = new.branch_id and b.company_id = new.company_id
@@ -59,6 +61,12 @@ begin
     where c.id = new.source_cashbox_id and c.company_id = new.company_id
       and c.is_active and a.is_active and a.is_postable
   ) then raise exception 'الخزينة المصدر غير نشطة أو غير مرتبطة بحساب أستاذ صالح'; end if;
+  select branch_id into v_source_branch from public.erp_cashboxes
+  where id = new.source_cashbox_id and company_id = new.company_id;
+  if new.branch_id is null then new.branch_id := v_source_branch;
+  elsif v_source_branch is not null and new.branch_id <> v_source_branch then
+    raise exception 'فرع سند الخزينة يجب أن يطابق فرع خزينة المصدر';
+  end if;
 
   if new.voucher_type = 'transfer' then
     if not exists (
