@@ -135,17 +135,13 @@ class SupplierOrderService {
       throw Exception('لا يمكن تغيير حالة الطلب من $currentStatus إلى $newStatus.');
     }
 
-    await _client
-        .from('orders')
-        .update({'status': newStatus})
-        .eq('id', orderId)
-        .eq('supplier_id', user.id);
-
-    await _client.from('order_status_history').insert({
-      'order_id': orderId,
-      'status': newStatus,
-      'changed_by': user.id,
-      'note': note,
-    });
+    await _client.rpc(
+      'transition_supplier_order_status',
+      params: {
+        'p_order_id': orderId,
+        'p_new_status': newStatus,
+        'p_note': note,
+      },
+    );
   }
 }
