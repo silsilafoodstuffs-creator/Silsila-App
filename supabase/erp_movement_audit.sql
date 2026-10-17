@@ -1,0 +1,197 @@
+-- Data-driven ERP audit for currently implemented ERP tables.
+-- Read-only: reports findings and never changes source records.
+create or replace function public.erp_run_movement_audit(
+  p_company_id uuid,
+  p_start_date date default null,
+  p_end_date date default null,
+  p_area text default 'كل الحركات'
+)
+returns table (
+  issue_id text,
+  area text,
+  document_id uuid,
+  document_number text,
+  document_date date,
+  document_title text,
+  severity text,
+  issue_code text,
+  issue_message text,
+  repair_route text
+)
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  if p_company_id is null then
+    raise exception 'معرّف الشركة مطلوب';
+  end if;
+  if p_start_date is not null and p_end_date is not null and p_start_date > p_end_date then
+    raise exception 'تاريخ البداية يجب ألا يتجاوز تاريخ النهاية';
+  end if;
+
+  return query
+  select
+    'journal:' || e.id::text || ':lines' as issue_id,
+    'القيود المحاسبية'::text as area,
+    e.id as document_id,
+    e.entry_number::text as document_number,
+    e.entry_date as document_date,
+    e.description as document_title,
+    'خطأ'::text as severity,
+    'JOURNAL_NO_LINES'::text as issue_code,
+    'القيد لا يحتوي على أي سطور.'::text as issue_message,
+    case when e.status = 'draft' then 'journal_draft' else 'journal_reversal' end::text as repair_route
+  from public.erp_journal_entries e
+  where e.company_id = p_company_id
+    and (p_start_date is null or e.entry_date >= p_start_date)
+    and (p_end_date is null or e.entry_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'القيود المحاسبية')
+    and not exists (select 1 from public.erp_journal_lines l where l.entry_id = e.id)
+
+  union all
+
+  select
+    'journal:' || e.id::text || ':balance',
+    'القيود المحاسبية',
+    e.id,
+    e.entry_number::text,
+    e.entry_date,
+    e.description,
+    'خطأ',
+    'JOURNAL_UNBALANCED',
+    'إجمالي المدين لا يساوي إجمالي الدائن أو يساوي صفرًا.',
+    case when e.status = 'draft' then 'journal_draft' else 'journal_reversal' end
+  from public.erp_journal_entries e
+  join lateral (
+    select count(*) as line_count, coalesce(sum(l.debit),0) as debit_total,
+      coalesce(sum(l.credit),0) as credit_total
+    from public.erp_journal_lines l where l.entry_id = e.id
+  ) s on true
+  where e.company_id = p_company_id
+    and (p_start_date is null or e.entry_date >= p_start_date)
+    and (p_end_date is null or e.entry_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'القيود المحاسبية')
+    and s.line_count > 0
+    and (s.line_count < 2 or s.debit_total <= 0 or s.debit_total <> s.credit_total)
+
+  union all
+
+  select
+    'journal:' || e.id::text || ':account',
+    'القيود المحاسبية',
+    e.id,
+    e.entry_number::text,
+    e.entry_date,
+    e.description,
+    'خطأ',
+    'JOURNAL_INVALID_ACCOUNT',
+    'يوجد حساب غير نشط أو غير قابل للترحيل أو لا يتبع الشركة نفسها.',
+    case when e.status = 'draft' then 'journal_draft' else 'journal_reversal' end
+  from public.erp_journal_entries e
+  where e.company_id = p_company_id
+    and (p_start_date is null or e.entry_date >= p_start_date)
+    and (p_end_date is null or e.entry_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'القيود المحاسبية')
+    and exists (
+      select 1
+      from public.erp_journal_lines l
+      left join public.erp_accounts a on a.id = l.account_id
+      where l.entry_id = e.id
+        and (a.id is null or a.company_id <> e.company_id or not a.is_active or not a.is_postable)
+    )
+
+  union all
+
+  select
+    'journal:' || e.id::text || ':period',
+    'القيود المحاسبية',
+    e.id,
+    e.entry_number::text,
+    e.entry_date,
+    e.description,
+    'خطأ',
+    'JOURNAL_CLOSED_PERIOD',
+    'تاريخ القيد يقع داخل فترة مالية مغلقة.',
+    case when e.status = 'draft' then 'journal_draft' else 'journal_reversal' end
+  from public.erp_journal_entries e
+  where e.company_id = p_company_id
+    and (p_start_date is null or e.entry_date >= p_start_date)
+    and (p_end_date is null or e.entry_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'القيود المحاسبية')
+    and exists (
+      select 1 from public.erp_fiscal_periods fp
+      where fp.company_id = e.company_id
+        and e.entry_date between fp.starts_on and fp.ends_on
+        and fp.status = 'closed'
+    )
+
+  union all
+
+  select
+    'account:' || a.id::text || ':parent',
+    'الحسابات',
+    a.id,
+    a.account_code,
+    null::date,
+    a.account_name,
+    'خطأ',
+    'ACCOUNT_INVALID_PARENT',
+    'الحساب الأب لا يتبع الشركة نفسها أو أنه حساب تحليلي قابل للترحيل.',
+    'accounts'
+  from public.erp_accounts a
+  left join public.erp_accounts p on p.id = a.parent_id
+  where a.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الحسابات')
+    and a.parent_id is not null
+    and (p.id is null or p.company_id <> a.company_id or p.is_postable)
+
+  union all
+
+  select
+    'account:' || a.id::text || ':children',
+    'الحسابات',
+    a.id,
+    a.account_code,
+    null::date,
+    a.account_name,
+    'خطأ',
+    'ACCOUNT_POSTABLE_WITH_CHILDREN',
+    'الحساب قابل للترحيل رغم وجود حسابات فرعية تحته.',
+    'accounts'
+  from public.erp_accounts a
+  where a.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الحسابات')
+    and a.is_postable
+    and exists (
+      select 1 from public.erp_accounts child
+      where child.parent_id = a.id and child.company_id = a.company_id
+    )
+
+  union all
+
+  select
+    'cashbox:' || c.id::text || ':account',
+    'الخزائن والبنوك',
+    c.id,
+    c.cashbox_code,
+    null::date,
+    c.cashbox_name,
+    'تحذير',
+    'CASHBOX_ACCOUNT_MISSING',
+    'الخزينة أو الحساب البنكي غير مربوط بحساب أستاذ عام صالح.',
+    'accounts'
+  from public.erp_cashboxes c
+  left join public.erp_accounts a on a.id = c.account_id
+  where c.company_id = p_company_id
+    and (p_area = 'كل الحركات' or p_area = 'الخزائن' or p_area = 'البنوك')
+    and (c.account_id is null or a.id is null or a.company_id <> c.company_id or not a.is_active or not a.is_postable)
+
+  order by document_date nulls last, area, document_number;
+end;
+$$;
+
+revoke all on function public.erp_run_movement_audit(uuid,date,date,text) from public, anon;
+grant execute on function public.erp_run_movement_audit(uuid,date,date,text) to authenticated;
+comment on function public.erp_run_movement_audit(uuid,date,date,text) is
+  'Read-only integrity audit for journal entries, chart of accounts, and cashbox/bank account links currently present in the ERP schema.';
