@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/erp_operational_documents_repository.dart';
+import '../services/erp_operational_accounting_repository.dart';
 
 class ErpOperationalDocumentsScreen extends StatefulWidget {
   const ErpOperationalDocumentsScreen({
@@ -20,6 +21,7 @@ class ErpOperationalDocumentsScreen extends StatefulWidget {
 
 class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsScreen> {
   final _repo = ErpOperationalDocumentsRepository();
+  final _accountingRepo = ErpOperationalAccountingRepository();
   final _company = TextEditingController();
   final _documentNumber = TextEditingController();
   final _notes = TextEditingController();
@@ -163,6 +165,31 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       if (mounted) setState(() => _lines = rows);
     } catch (e) {
       if (mounted) setState(() => _error = 'تعذر تحميل بنود المستند: $e');
+    }
+  }
+
+  Future<void> _postAccounting(Map<String, dynamic> row) async {
+    final number = _s(row['document_number']);
+    final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('ترحيل الأثر المحاسبي'),
+      content: Text('سيُنشأ قيد يومية مرتبط بالمستند $number اعتمادًا على خريطة الحسابات التشغيلية وتكلفة حركات المخزون. يمكن تكرار الطلب بأمان بعد نجاحه.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('إنشاء القيد')),
+      ],
+    ));
+    if (yes != true || !mounted) return;
+    setState(() { _loading = true; _error = null; _message = null; });
+    try {
+      final id = await _accountingRepo.postDocumentAccounting(
+        _s(row['id']), widget.kind == ErpOperationalKind.purchase ? 'purchase' : 'sales',
+      );
+      if (!mounted) return;
+      setState(() { _loading = false; _message = 'تم إنشاء/تأكيد القيد المحاسبي للمستند $number. رقم معرّف القيد: $id'; });
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _loading = false; _error = 'تعذر ترحيل الأثر المحاسبي: $e'; });
     }
   }
 
@@ -318,6 +345,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 onPressed: _loading ? null : () => _post(r),
                 icon: const Icon(Icons.verified_outlined),
                 label: const Text('ترحيل وتسجيل حركة المخزون'),
+              )),
+              if (status == 'posted' && eligibleType) Align(alignment: Alignment.centerLeft, child: OutlinedButton.icon(
+                onPressed: _loading ? null : () => _postAccounting(r),
+                icon: const Icon(Icons.account_balance_outlined),
+                label: const Text('إنشاء / مراجعة القيد المحاسبي'),
               )),
             ],
           ))));
