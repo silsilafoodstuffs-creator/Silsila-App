@@ -1001,7 +1001,7 @@ class _MainShellState extends State<MainShell> {
             details: 'النشاط: ${supplier['activity_type'] ?? 'غير محدد'}\n'
                 'التصنيف: ${supplier['supplier_type'] ?? 'غير محدد'}\n'
                 'الموقع: ${location.isEmpty ? 'لم يُحدد' : location}\n'
-                'العنوان: ${supplier['address'] ?? 'لم يُحدد'}',
+                'العنوان التفصيلي: يُتاح بعد التواصل مع المورد.',
             icon: Icons.store,
           ),
         ),
