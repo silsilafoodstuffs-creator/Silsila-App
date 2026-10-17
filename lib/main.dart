@@ -4312,8 +4312,1603 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
 
     final quantityText = quantityController.text.trim();
     final priceText = priceController.text.trim();
+    final contactText = contactPhoneController.text.trim();
+    final normalizedContact = contactText.isEmpty ? null : normalizePhoneForAuth(contactText);
     final quantity = quantityText.isEmpty ? null : double.tryParse(quantityText);
     final targetPrice = priceText.isEmpty ? null : double.tryParse(priceText);
+    if (contactText.isNotEmpty &&
+        !RegExp(r'^\\+[1-9]\\d{7,14}
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('راجع الكمية والسعر؛ يجب إدخال أرقام صحيحة.')),
+      );
+      return;
+    }
+
+    setState(() => busy = true);
+    try {
+      await TraderMarketService().createPost(
+        title: titleController.text.trim(),
+        description: detailsController.text.trim(),
+        postType: type,
+        activityType: 'مواد غذائية',
+        quantity: quantity,
+        unit: unitController.text.trim().isEmpty ? null : unitController.text.trim(),
+        targetPrice: targetPrice,
+        governorate: governorateController.text.trim().isEmpty ? null : governorateController.text.trim(),
+        category: categoryController.text.trim().isEmpty ? null : categoryController.text.trim(),
+        contactPhone: normalizedContact,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم نشر الإعلان في سوق التجار.')),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تعذر نشر الإعلان. تأكد من تسجيل الدخول وإعداد قاعدة البيانات.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          DropdownButtonFormField<String>(
+            value: type,
+            decoration: const InputDecoration(labelText: 'نوع الإعلان'),
+            items: const [
+              DropdownMenuItem(value: 'buy', child: Text('طلب شراء')),
+              DropdownMenuItem(value: 'sell', child: Text('عرض بيع')),
+            ],
+            onChanged: (v) => setState(() => type = v ?? 'buy'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: titleController,
+            decoration: const InputDecoration(labelText: 'عنوان الإعلان'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: detailsController,
+            maxLines: 4,
+            decoration: const InputDecoration(labelText: 'التفاصيل'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: quantityController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'الكمية (اختياري)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: unitController,
+            decoration: const InputDecoration(labelText: 'وحدة القياس (كرتونة، كيلو...)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: priceController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(labelText: type == 'buy' ? 'السعر المستهدف بالجنيه (اختياري)' : 'سعر العرض بالجنيه (اختياري)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: categoryController,
+            decoration: const InputDecoration(labelText: 'القسم أو الصنف (اختياري)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: governorateController,
+            decoration: const InputDecoration(labelText: 'المحافظة (اختياري)'),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: contactPhoneController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'رقم للتواصل (اختياري)', prefixIcon: Icon(Icons.phone_outlined)),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: busy ? null : savePost,
+            child: Text(busy ? 'جارٍ النشر...' : 'نشر الإعلان'),
+          ),
+        ],
+      );
+}
+
+class NotificationsScreen extends StatefulWidget {
+  const NotificationsScreen({super.key});
+
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
+  late Future<List<Map<String, dynamic>>> notificationsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    notificationsFuture = NotificationService().getMyNotifications();
+  }
+
+  Future<void> reload() async {
+    setState(() => notificationsFuture = NotificationService().getMyNotifications());
+    await notificationsFuture;
+  }
+
+  Future<void> markRead(String id) async {
+    try {
+      await NotificationService().markAsRead(id);
+      await reload();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر تحديث الإشعار.')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: notificationsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: purple));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.notifications_off_outlined, size: 56, color: purple),
+                  const Text('سجّل الدخول لعرض إشعارات حسابك.'),
+                  TextButton(onPressed: reload, child: const Text('إعادة المحاولة')),
+                ],
+              ),
+            ),
+          );
+        }
+        final notifications = snapshot.data ?? const <Map<String, dynamic>>[];
+        if (notifications.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: reload,
+            child: ListView(
+              children: const [
+                SizedBox(height: 100),
+                Icon(Icons.notifications_none, size: 62, color: purple),
+                SizedBox(height: 12),
+                Center(child: Text('لا توجد إشعارات جديدة.')),
+              ],
+            ),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(
+            padding: const EdgeInsets.all(12),
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: () async {
+                    try {
+                      await NotificationService().markAllAsRead();
+                      await reload();
+                    } catch (_) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('تعذر تحديث الإشعارات.')),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.done_all),
+                  label: const Text('تعليم الكل كمقروء'),
+                ),
+              ),
+              ...notifications.map((item) {
+                final id = (item['id'] ?? '').toString();
+                final isRead = item['is_read'] == true;
+                final title = (item['title'] ?? 'إشعار').toString();
+                final body = (item['body'] ?? '').toString();
+                final date = item['created_at']?.toString() ?? '';
+                return Card(
+                  color: isRead ? Colors.white : const Color(0xFFF3ECFA),
+                  child: ListTile(
+                    leading: Icon(
+                      isRead ? Icons.notifications_none : Icons.notifications_active,
+                      color: isRead ? Colors.blueGrey : purple,
+                    ),
+                    title: Text(title, style: TextStyle(fontWeight: isRead ? FontWeight.normal : FontWeight.bold)),
+                    subtitle: Text([body, if (date.isNotEmpty) date.split('T').first].where((v) => v.isNotEmpty).join('\n')),
+                    trailing: isRead ? null : IconButton(
+                      tooltip: 'تعليم كمقروء',
+                      onPressed: id.isEmpty ? null : () => markRead(id),
+                      icon: const Icon(Icons.done),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class ProfileEditorScreen extends StatefulWidget {
+  const ProfileEditorScreen({super.key});
+
+  @override
+  State<ProfileEditorScreen> createState() => _ProfileEditorScreenState();
+}
+
+class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
+  final formKey = GlobalKey<FormState>();
+  final nameController = TextEditingController();
+  final whatsappController = TextEditingController();
+  final districtController = TextEditingController();
+  final areaController = TextEditingController();
+  final addressController = TextEditingController();
+  final service = ProfileService();
+  String activity = 'مواد غذائية';
+  String governorate = 'القاهرة';
+  bool loading = true;
+  bool saving = false;
+  String? loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    loadProfile();
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    whatsappController.dispose();
+    districtController.dispose();
+    areaController.dispose();
+    addressController.dispose();
+    super.dispose();
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final profile = await service.getMyProfile();
+      if (profile != null) {
+        nameController.text = (profile['full_name'] ?? '').toString();
+        whatsappController.text = (profile['whatsapp_phone'] ?? '').toString();
+        districtController.text = (profile['district'] ?? '').toString();
+        areaController.text = (profile['area'] ?? '').toString();
+        addressController.text = (profile['address'] ?? '').toString();
+        final savedActivity = (profile['activity_type'] ?? '').toString();
+        if (activityTypes.contains(savedActivity)) activity = savedActivity;
+        final savedGovernorate = (profile['governorate'] ?? '').toString();
+        if (const ['القاهرة','الجيزة','القليوبية','الإسكندرية','الشرقية'].contains(savedGovernorate)) {
+          governorate = savedGovernorate;
+        }
+      }
+    } catch (_) {
+      loadError = 'تعذر تحميل البيانات. تأكد من تسجيل الدخول.';
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> saveProfile() async {
+    if (!formKey.currentState!.validate()) return;
+    setState(() => saving = true);
+    try {
+      await service.saveMyProfile(
+        fullName: nameController.text,
+        activityType: activity,
+        whatsappPhone: whatsappController.text,
+        governorate: governorate,
+        district: districtController.text,
+        area: areaController.text,
+        address: addressController.text,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم حفظ بيانات الحساب.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر حفظ البيانات. تأكد من تسجيل الدخول وصلاحيات الحساب.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(child: CircularProgressIndicator(color: purple));
+    }
+    if (loadError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.person_off_outlined, size: 58, color: purple),
+              Text(loadError!, textAlign: TextAlign.center),
+              TextButton(onPressed: () => setState(() { loading = true; loadError = null; loadProfile(); }), child: const Text('إعادة المحاولة')),
+            ],
+          ),
+        ),
+      );
+    }
+    return Form(
+      key: formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Icon(Icons.manage_accounts_outlined, size: 58, color: purple),
+          const SizedBox(height: 8),
+          const Text('بيانات الحساب', textAlign: TextAlign.center, style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 18),
+          TextFormField(
+            controller: nameController,
+            decoration: const InputDecoration(labelText: 'الاسم أو اسم النشاط'),
+            validator: requiredValidator,
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: activity,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'نوع النشاط'),
+            items: activityTypes.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+            onChanged: (value) => setState(() => activity = value ?? activity),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: whatsappController,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'رقم واتساب'),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: governorate,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'المحافظة'),
+            
+                items: const [
+                  DropdownMenuItem(value: 'القاهرة', child: Text('القاهرة')),
+                  DropdownMenuItem(value: 'الجيزة', child: Text('الجيزة')),
+                  DropdownMenuItem(
+                    value: 'القليوبية',
+                    child: Text('القليوبية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الإسكندرية',
+                    child: Text('الإسكندرية'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'الشرقية',
+                    child: Text('الشرقية'),
+                  ),
+                ],
+            onChanged: (value) => setState(() => governorate = value ?? governorate),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(controller: districtController, decoration: const InputDecoration(labelText: 'المركز أو المدينة')),
+          const SizedBox(height: 12),
+          TextFormField(controller: areaController, decoration: const InputDecoration(labelText: 'القرية أو الحي')),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: addressController,
+            maxLines: 2,
+            decoration: const InputDecoration(labelText: 'العنوان بالتفصيل'),
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: saving ? null : saveProfile,
+            icon: const Icon(Icons.save_outlined),
+            label: Text(saving ? 'جارٍ الحفظ...' : 'حفظ البيانات'),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'تغيير نوع الحساب وحالة الاعتماد ورقم الدخول يخضع لصلاحيات النظام.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AddressBookScreen extends StatefulWidget {
+  const AddressBookScreen({super.key});
+
+  @override
+  State<AddressBookScreen> createState() => _AddressBookScreenState();
+}
+
+class _AddressBookScreenState extends State<AddressBookScreen> {
+  final service = AddressService();
+  List<Map<String, dynamic>> addresses = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadAddresses();
+  }
+
+  Future<void> loadAddresses() async {
+    try {
+      final rows = await service.getAddresses();
+      if (!mounted) return;
+      setState(() { addresses = rows; error = null; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'سجّل الدخول لعرض عناوينك المحفوظة.');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> editAddress({Map<String, dynamic>? existing}) async {
+    final title = TextEditingController(text: (existing?['title'] ?? '').toString());
+    final governorate = TextEditingController(text: (existing?['governorate'] ?? '').toString());
+    final district = TextEditingController(text: (existing?['district'] ?? '').toString());
+    final village = TextEditingController(text: (existing?['village'] ?? '').toString());
+    final landmark = TextEditingController(text: (existing?['landmark'] ?? '').toString());
+    final address = TextEditingController(text: (existing?['address'] ?? '').toString());
+    bool isDefault = existing?['is_default'] == true;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(existing == null ? 'إضافة عنوان جديد' : 'تعديل العنوان'),
+          content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: title, decoration: const InputDecoration(labelText: 'اسم العنوان (المنزل، المخزن...)')),
+            TextField(controller: governorate, decoration: const InputDecoration(labelText: 'المحافظة')),
+            TextField(controller: district, decoration: const InputDecoration(labelText: 'المركز أو المدينة')),
+            TextField(controller: village, decoration: const InputDecoration(labelText: 'القرية أو الحي')),
+            TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'العنوان بالتفصيل')),
+            TextField(controller: landmark, decoration: const InputDecoration(labelText: 'علامة مميزة (اختياري)')),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: isDefault,
+              title: const Text('جعله العنوان الافتراضي'),
+              onChanged: (value) => setDialogState(() => isDefault = value ?? false),
+            ),
+          ])),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ العنوان')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      try {
+        final args = {
+          'title': title.text,
+          'governorate': governorate.text,
+          'district': district.text,
+          'village': village.text,
+          'landmark': landmark.text,
+          'address': address.text,
+          'isDefault': isDefault,
+        };
+        if (existing == null) {
+          await service.addAddress(
+            title: args['title'] as String,
+            governorate: args['governorate'] as String,
+            address: args['address'] as String,
+            district: args['district'] as String,
+            village: args['village'] as String,
+            landmark: args['landmark'] as String,
+            isDefault: args['isDefault'] as bool,
+          );
+        } else {
+          await service.updateAddress(
+            addressId: existing['id'].toString(),
+            title: args['title'] as String,
+            governorate: args['governorate'] as String,
+            address: args['address'] as String,
+            district: args['district'] as String,
+            village: args['village'] as String,
+            landmark: args['landmark'] as String,
+            isDefault: args['isDefault'] as bool,
+          );
+        }
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ العنوان.')));
+        await loadAddresses();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ العنوان: $e')));
+      }
+    }
+    title.dispose();
+    governorate.dispose();
+    district.dispose();
+    village.dispose();
+    landmark.dispose();
+    address.dispose();
+  }
+
+  Future<void> deleteAddress(Map<String, dynamic> item) async {
+    try {
+      await service.deleteAddress(item['id'].toString());
+      await loadAddresses();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حذف العنوان: $e')));
+    }
+  }
+
+  Future<void> makeDefault(Map<String, dynamic> item) async {
+    try {
+      await service.setDefaultAddress(item['id'].toString());
+      await loadAddresses();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعيين العنوان الافتراضي: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadAddresses,
+      child: ListView(padding: const EdgeInsets.all(16), children: [
+        Row(children: [
+          const Expanded(child: Text('عناويني المحفوظة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+          FilledButton.icon(onPressed: () => editAddress(), icon: const Icon(Icons.add), label: const Text('إضافة')),
+        ]),
+        if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+        if (addresses.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text('لم تحفظ عناوين بعد.', textAlign: TextAlign.center)),
+        ...addresses.map((item) {
+          final isDefault = item['is_default'] == true;
+          final subtitle = [
+            item['governorate'],
+            item['district'],
+            item['village'],
+            item['address'],
+            if ((item['landmark'] ?? '').toString().isNotEmpty) 'علامة مميزة: ${item['landmark']}',
+          ].where((value) => value != null && value.toString().trim().isNotEmpty).join(' • ');
+          return Card(
+            color: Colors.white,
+            child: ListTile(
+              leading: Icon(isDefault ? Icons.location_on : Icons.location_on_outlined, color: isDefault ? orange : purple),
+              title: Row(children: [
+                Expanded(child: Text((item['title'] ?? 'عنوان').toString())),
+                if (isDefault) const Chip(label: Text('افتراضي')),
+              ]),
+              subtitle: Text(subtitle),
+              isThreeLine: true,
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') editAddress(existing: item);
+                  if (value == 'default') makeDefault(item);
+                  if (value == 'delete') deleteAddress(item);
+                },
+                itemBuilder: (_) => [
+                  const PopupMenuItem(value: 'edit', child: Text('تعديل')),
+                  if (!isDefault) const PopupMenuItem(value: 'default', child: Text('تعيين افتراضي')),
+                  const PopupMenuItem(value: 'delete', child: Text('حذف')),
+                ],
+              ),
+            ),
+          );
+        }),
+      ]),
+    );
+  }
+}
+
+class LoyaltyOverviewScreen extends StatefulWidget {
+  const LoyaltyOverviewScreen({super.key});
+
+  @override
+  State<LoyaltyOverviewScreen> createState() => _LoyaltyOverviewScreenState();
+}
+
+class _LoyaltyOverviewScreenState extends State<LoyaltyOverviewScreen> {
+  final service = LoyaltyService();
+  late Future<Map<String, dynamic>> dataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    dataFuture = loadData();
+  }
+
+  Future<Map<String, dynamic>> loadData() async {
+    final results = await Future.wait([
+      service.getPointsBalance(),
+      service.getPointsHistory(limit: 50),
+      service.getMyGoals(),
+    ]);
+    return {
+      'balance': results[0] as int,
+      'history': results[1] as List<Map<String, dynamic>>,
+      'goals': results[2] as List<Map<String, dynamic>>,
+    };
+  }
+
+  Future<void> reload() async {
+    setState(() => dataFuture = loadData());
+    await dataFuture;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: dataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: purple));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.stars_outlined, size: 58, color: purple),
+                const Text('سجّل الدخول لعرض نقاط الولاء وأهدافك.', textAlign: TextAlign.center),
+                TextButton(onPressed: reload, child: const Text('إعادة المحاولة')),
+              ]),
+            ),
+          );
+        }
+        final data = snapshot.data ?? const {};
+        final balance = data['balance'] as int? ?? 0;
+        final history = (data['history'] as List<Map<String, dynamic>>?) ?? const [];
+        final goals = (data['goals'] as List<Map<String, dynamic>>?) ?? const [];
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+            Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [purple, Color(0xFF7026A8), pink]),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('رصيد نقاط سلسلة', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 8),
+                Text('$balance نقطة', style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text('تابع تعاملاتك وأهدافك واستفد من برنامج الولاء.', style: TextStyle(color: Colors.white)),
+              ]),
+            ),
+            const SizedBox(height: 20),
+            const Text('أهدافي', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+            if (goals.isEmpty)
+              const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('ستظهر أهدافك هنا عند إضافتها إلى حسابك.'))),
+            ...goals.map((goal) {
+              final title = (goal['title'] ?? goal['name'] ?? 'هدف جديد').toString();
+              final current = num.tryParse((goal['current_value'] ?? 0).toString()) ?? 0;
+              final target = num.tryParse((goal['target_value'] ?? goal['target'] ?? 0).toString()) ?? 0;
+              final progress = service.calculateGoalProgress(currentValue: current, targetValue: target);
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(value: progress / 100, color: orange, backgroundColor: purple.withOpacity(.1)),
+                    const SizedBox(height: 6),
+                    Text('$current من $target • ${progress.toStringAsFixed(0)}%'),
+                  ]),
+                ),
+              );
+            }),
+            const SizedBox(height: 20),
+            const Text('سجل النقاط', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+            if (history.isEmpty)
+              const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('لا توجد حركات نقاط مسجلة حتى الآن.'))),
+            ...history.map((entry) {
+              final points = entry['points'] ?? 0;
+              final description = (entry['description'] ?? 'حركة نقاط').toString();
+              final date = entry['created_at']?.toString() ?? '';
+              return Card(
+                child: ListTile(
+                  leading: Icon(Icons.stars, color: (points is num && points < 0) ? Colors.red : orange),
+                  title: Text(description),
+                  subtitle: Text(date.isEmpty ? '' : date.split('T').first),
+                  trailing: Text('$points نقطة', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              );
+            }),
+          ]),
+        );
+      },
+    );
+  }
+}
+
+class WalletOverviewScreen extends StatefulWidget {
+  const WalletOverviewScreen({super.key});
+
+  @override
+  State<WalletOverviewScreen> createState() => _WalletOverviewScreenState();
+}
+
+class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
+  late Future<Map<String, dynamic>> walletFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    walletFuture = loadWallet();
+  }
+
+  Future<Map<String, dynamic>> loadWallet() async {
+    final service = WalletService();
+    final balance = await service.getBalance();
+    final transactions = await service.getTransactions(limit: 30);
+    final topUps = await service.getMyTopUpRequests(limit: 30);
+    return {'balance': balance, 'transactions': transactions, 'topUps': topUps};
+  }
+
+  Future<void> reload() async {
+    setState(() => walletFuture = loadWallet());
+    await walletFuture;
+  }
+
+  Future<void> requestTopUp() async {
+    final amountController = TextEditingController();
+    final referenceController = TextEditingController();
+    String method = 'تحويل بنكي';
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('طلب شحن المحفظة'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'مبلغ الشحن بالجنيه'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: referenceController,
+                decoration: const InputDecoration(labelText: 'رقم مرجع التحويل أو الإيداع (اختياري)'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: method,
+                decoration: const InputDecoration(labelText: 'طريقة الدفع'),
+                items: const [
+                  DropdownMenuItem(value: 'تحويل بنكي', child: Text('تحويل بنكي')),
+                  DropdownMenuItem(value: 'محفظة إلكترونية', child: Text('محفظة إلكترونية')),
+                  DropdownMenuItem(value: 'إيداع نقدي', child: Text('إيداع نقدي')),
+                ],
+                onChanged: (value) => setDialogState(
+                  () => method = value ?? 'تحويل بنكي',
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'سيُسجل الطلب للمراجعة، ولن يتغير الرصيد قبل اعتماد الشحن.',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('إلغاء'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('إرسال الطلب'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (accepted != true) {
+      amountController.dispose();
+      referenceController.dispose();
+      return;
+    }
+
+    final amount = double.tryParse(amountController.text.trim());
+    final paymentReference = referenceController.text.trim();
+    amountController.dispose();
+    referenceController.dispose();
+    if (amount == null || !amount.isFinite || amount <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('أدخل مبلغًا صحيحًا أكبر من صفر.')),
+        );
+      }
+      return;
+    }
+
+    try {
+      await WalletService().requestTopUp(
+        amount: amount,
+        paymentMethod: method,
+        reference: paymentReference.isEmpty ? null : paymentReference,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم تسجيل طلب الشحن للمراجعة.')),
+        );
+        await reload();
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر إرسال طلب الشحن. سجّل الدخول وحاول مرة أخرى.')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: walletFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: purple));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.account_balance_wallet_outlined, size: 58, color: purple),
+                  const SizedBox(height: 12),
+                  const Text('سجّل الدخول لعرض محفظتك ومعاملاتك.'),
+                  TextButton(onPressed: reload, child: const Text('إعادة المحاولة')),
+                ],
+              ),
+            ),
+          );
+        }
+
+        final data = snapshot.data ?? const {};
+        final balance = data['balance'] as double? ?? 0;
+        final transactions = (data['transactions'] as List<Map<String, dynamic>>?) ?? const [];
+        final topUps = (data['topUps'] as List<Map<String, dynamic>>?) ?? const [];
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [purple, Color(0xFF7026A8)]),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('الرصيد المتاح', style: TextStyle(color: Colors.white70)),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${balance.toStringAsFixed(2)} ج.م',
+                      style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: requestTopUp,
+                      icon: const Icon(Icons.add_card),
+                      label: const Text('طلب شحن المحفظة'),
+                      style: FilledButton.styleFrom(backgroundColor: orange, foregroundColor: purple),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text('آخر المعاملات', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (transactions.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(18),
+                    child: Text('لا توجد معاملات مسجلة حتى الآن.'),
+                  ),
+                ),
+              ...transactions.map((transaction) {
+                final amount = transaction['amount'];
+                final type = (transaction['transaction_type'] ?? transaction['description'] ?? 'معاملة').toString();
+                final status = (transaction['status'] ?? '').toString();
+                final date = transaction['created_at']?.toString() ?? '';
+                return Card(
+                  color: Colors.white,
+                  child: ListTile(
+                    leading: const Icon(Icons.swap_horiz, color: purple),
+                    title: Text(type),
+                    subtitle: Text([status, if (date.isNotEmpty) date.split('T').first].where((v) => v.isNotEmpty).join(' • ')),
+                    trailing: Text('${amount ?? 0} ج.م', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                );
+              }),
+              const SizedBox(height: 22),
+              const Text('طلبات الشحن وحالة المراجعة', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              if (topUps.isEmpty)
+                const Card(child: Padding(padding: EdgeInsets.all(18), child: Text('لا توجد طلبات شحن سابقة.'))),
+              ...topUps.map((request) {
+                final amount = request['amount'];
+                final status = (request['status'] ?? 'pending').toString();
+                final method = (request['payment_method'] ?? '').toString();
+                final reference = (request['reference'] ?? '').toString();
+                final date = request['created_at']?.toString() ?? '';
+                final note = (request['review_note'] ?? '').toString();
+                final statusLabel = switch (status) {
+                  'approved' => 'تم الاعتماد',
+                  'rejected' => 'مرفوض',
+                  'pending' => 'قيد المراجعة',
+                  _ => status,
+                };
+                return Card(
+                  color: Colors.white,
+                  child: ListTile(
+                    leading: Icon(
+                      status == 'approved' ? Icons.check_circle_outline : status == 'rejected' ? Icons.cancel_outlined : Icons.hourglass_top,
+                      color: status == 'approved' ? Colors.green : status == 'rejected' ? Colors.red : orange,
+                    ),
+                    title: Text('${amount ?? 0} ج.م • $statusLabel'),
+                    subtitle: Text([
+                      if (method.isNotEmpty) method,
+                      if (reference.isNotEmpty) 'مرجع: $reference',
+                      if (date.isNotEmpty) date.split('T').first,
+                      if (note.isNotEmpty) note,
+                    ].join(' • ')),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class MyOrdersScreen extends StatefulWidget {
+  const MyOrdersScreen({super.key});
+
+  @override
+  State<MyOrdersScreen> createState() => _MyOrdersScreenState();
+}
+
+class _MyOrdersScreenState extends State<MyOrdersScreen> {
+  late Future<List<Map<String, dynamic>>> ordersFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    ordersFuture = OrderStatusService().getMyOrders();
+  }
+
+  Future<void> reload() async {
+    setState(() => ordersFuture = OrderStatusService().getMyOrders());
+    await ordersFuture;
+  }
+
+  Future<void> changeSupplierOrderStatus(Map<String, dynamic> order, String nextStatus) async {
+    final id = int.tryParse((order['id'] ?? '').toString());
+    if (id == null) return;
+    try {
+      await OrderStatusService().updateOrderStatus(orderId: id, status: nextStatus);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم تحديث الطلب إلى: $nextStatus')));
+      await reload();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحديث الطلب: $e')));
+    }
+  }
+
+  Future<void> cancelCustomerOrder(Map<String, dynamic> order) async {
+    final id = int.tryParse((order['id'] ?? '').toString());
+    if (id == null) return;
+    try {
+      await OrderStatusService().cancelOrder(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إلغاء الطلب.')));
+      await reload();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إلغاء الطلب: $e')));
+    }
+  }
+
+  Future<void> reviewSupplier(Map<String, dynamic> order) async {
+    final supplierId = (order['supplier_id'] ?? '').toString();
+    final orderId = (order['id'] ?? '').toString();
+    if (supplierId.isEmpty || orderId.isEmpty) return;
+    final comment = TextEditingController();
+    int rating = 5;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('تقييم المورد'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Text('كيف كانت تجربتك مع هذا المورد؟'),
+            const SizedBox(height: 8),
+            Wrap(
+              alignment: WrapAlignment.center,
+              children: List.generate(5, (index) {
+                final value = index + 1;
+                return IconButton(
+                  onPressed: () => setDialogState(() => rating = value),
+                  icon: Icon(value <= rating ? Icons.star : Icons.star_border, color: orange, size: 30),
+                );
+              }),
+            ),
+            TextField(controller: comment, maxLines: 3, decoration: const InputDecoration(labelText: 'تعليق اختياري')),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('إرسال التقييم')),
+          ],
+        ),
+      ),
+    );
+    if (accepted == true) {
+      try {
+        await ReviewService().addReview(
+          supplierId: supplierId,
+          orderId: orderId,
+          rating: rating,
+          comment: comment.text,
+        );
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('شكرًا لك، تم إرسال تقييمك.')));
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التقييم: $e')));
+      }
+    }
+    comment.dispose();
+  }
+
+  Color statusColor(String status) {
+    switch (status) {
+      case 'تم التسليم':
+        return Colors.green;
+      case 'مُلغي':
+        return Colors.red;
+      case 'توصيل':
+        return orange;
+      case 'تحميل':
+      case 'تنفيذ':
+        return purple;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: ordersFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: purple));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.receipt_long, size: 56, color: purple),
+                  const SizedBox(height: 12),
+                  const Text('سجّل الدخول لعرض طلباتك، أو تحقق من اتصال قاعدة البيانات.'),
+                  const SizedBox(height: 8),
+                  TextButton(onPressed: reload, child: const Text('إعادة المحاولة')),
+                ],
+              ),
+            ),
+          );
+        }
+        final orders = snapshot.data ?? const <Map<String, dynamic>>[];
+        if (orders.isEmpty) {
+          return RefreshIndicator(
+            onRefresh: reload,
+            child: ListView(
+              children: const [
+                SizedBox(height: 100),
+                Icon(Icons.receipt_long_outlined, size: 62, color: purple),
+                SizedBox(height: 12),
+                Center(child: Text('لا توجد طلبات مسجلة حتى الآن.')),
+              ],
+            ),
+          );
+        }
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: orders.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              final order = orders[index];
+              final status = (order['status'] ?? 'انتظار قبول').toString();
+              final number = (order['order_number'] ?? order['id'] ?? '').toString();
+              final total = order['total_amount'];
+              final date = order['created_at']?.toString() ?? '';
+              final isSupplier = order['supplier_id'] ==
+                  database?.auth.currentUser?.id;
+              return Card(
+                color: Colors.white,
+                child: ExpansionTile(
+                  leading: CircleAvatar(
+                    backgroundColor: statusColor(status).withOpacity(.12),
+                    child: Icon(Icons.receipt_long, color: statusColor(status)),
+                  ),
+                  title: Text('طلب #$number', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('${isSupplier ? 'طلب وارد' : 'طلبك'} • $status'),
+                  trailing: const Icon(Icons.expand_more),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Text('الإجمالي: ${total ?? 0} ج.م'),
+                    ),
+                    if (date.isNotEmpty)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text('تاريخ الطلب: ${date.split('T').first}'),
+                      ),
+                    if (order['payment_method'] != null)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text('الدفع: ${order['payment_method']}'),
+                      ),
+                    const SizedBox(height: 10),
+                    FutureBuilder<List<Map<String, dynamic>>>(
+                      future: OrderStatusService().getOrderItems(int.tryParse((order['id'] ?? '').toString()) ?? 0),
+                      builder: (context, itemSnapshot) {
+                        if (itemSnapshot.connectionState == ConnectionState.waiting) {
+                          return const LinearProgressIndicator(minHeight: 2);
+                        }
+                        if (itemSnapshot.hasError) {
+                          return const Align(alignment: Alignment.centerRight, child: Text('تعذر تحميل تفاصيل الأصناف.'));
+                        }
+                        final items = itemSnapshot.data ?? const <Map<String, dynamic>>[];
+                        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          const Text('الأصناف', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ...items.map((item) => ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            title: Text((item['product_name'] ?? 'منتج').toString()),
+                            subtitle: Text('${item['quantity'] ?? 0} ${item['unit'] ?? ''} × ${item['unit_price'] ?? 0} ج.م'),
+                            trailing: Text('${item['line_total'] ?? item['total_price'] ?? 0} ج.م'),
+                          )),
+                        ]);
+                      },
+                    ),
+                    if (isSupplier) ...[
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        if (status == 'انتظار قبول')
+                          FilledButton(onPressed: () => changeSupplierOrderStatus(order, 'تنفيذ'), child: const Text('قبول الطلب')),
+                        if (status == 'تنفيذ')
+                          FilledButton(onPressed: () => changeSupplierOrderStatus(order, 'تحميل'), child: const Text('بدء التحميل')),
+                        if (status == 'تحميل')
+                          FilledButton(onPressed: () => changeSupplierOrderStatus(order, 'توصيل'), child: const Text('إرسال للتوصيل')),
+                        if (status == 'توصيل')
+                          FilledButton(onPressed: () => changeSupplierOrderStatus(order, 'تم التسليم'), child: const Text('تأكيد التسليم')),
+                        if (status == 'انتظار قبول' || status == 'تنفيذ')
+                          OutlinedButton(onPressed: () => changeSupplierOrderStatus(order, 'مُلغي'), child: const Text('إلغاء الطلب')),
+                      ]),
+                    ],
+                    if (!isSupplier && status == 'انتظار قبول')
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: OutlinedButton.icon(
+                          onPressed: () => cancelCustomerOrder(order),
+                          icon: const Icon(Icons.cancel_outlined),
+                          label: const Text('إلغاء الطلب'),
+                        ),
+                      ),
+                    if (!isSupplier && status == 'تم التسليم')
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: FilledButton.icon(
+                          onPressed: () => reviewSupplier(order),
+                          icon: const Icon(Icons.star_outline),
+                          label: const Text('تقييم المورد'),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+}
+
+class FavoritesScreen extends StatelessWidget {
+  const FavoritesScreen({super.key, required this.names});
+
+  final List<String> names;
+
+  @override
+  Widget build(BuildContext context) {
+    if (names.isEmpty) {
+      return const Center(child: Text('لم تضف عناصر للمفضلة بعد.'));
+    }
+
+    return ListView(
+      children: names
+          .map(
+            (name) => ListTile(
+              leading: const Icon(Icons.favorite, color: pink),
+              title: Text(name),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class SimpleListPage extends StatelessWidget {
+  const SimpleListPage({
+    super.key,
+    required this.title,
+    required this.details,
+    required this.icon,
+  });
+
+  final String title;
+  final String details;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          Icon(icon, size: 64, color: purple),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(details, textAlign: TextAlign.center),
+        ],
+      );
+}
+
+class MarketCard extends StatelessWidget {
+  const MarketCard({
+    super.key,
+    required this.title,
+    required this.type,
+    required this.details,
+    required this.color,
+  });
+
+  final String title;
+  final String type;
+  final String details;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        color: Colors.white,
+        child: ListTile(
+          leading: CircleAvatar(
+            backgroundColor: color.withOpacity(.12),
+            child: Icon(Icons.storefront, color: color),
+          ),
+          title: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text('$type\n$details'),
+          isThreeLine: true,
+        ),
+      );
+}
+).hasMatch(code)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('أدخل رمز التحقق المكوّن من 6 أرقام.')),
+      );
+      return;
+    }
+
+    final client = database;
+    if (client == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا.')),
+      );
+      return;
+    }
+
+    setState(() => busy = true);
+    try {
+      await client.auth.verifyOTP(
+        phone: widget.phone,
+        token: code,
+        type: OtpType.sms,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم تفعيل الحساب بنجاح.')),
+        );
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const MainShell()),
+          (route) => false,
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('رمز التحقق غير صحيح أو انتهت صلاحيته. حاول مرة أخرى.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 24),
+        const Icon(Icons.verified_user_outlined, size: 68, color: purple),
+        const SizedBox(height: 18),
+        const Text(
+          'تأكيد رقم الهاتف',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'أدخل رمز التحقق المكوّن من 6 أرقام المرسل إلى ${widget.phone}',
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        TextField(
+          controller: codeController,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 26,
+            letterSpacing: 10,
+            fontWeight: FontWeight.bold,
+          ),
+          decoration: const InputDecoration(
+            labelText: 'رمز التحقق',
+            counterText: '',
+            prefixIcon: Icon(Icons.password),
+          ),
+        ),
+        const SizedBox(height: 18),
+        FilledButton(
+          onPressed: busy ? null : verifyCode,
+          child: Text(busy ? 'جارٍ التحقق...' : 'تأكيد وتفعيل الحساب'),
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'يلزم تفعيل إرسال رسائل SMS وإعداد مزود الهاتف في مشروع Supabase.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.black54, height: 1.5),
+        ),
+      ],
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class CheckoutScreen extends StatefulWidget {
+  const CheckoutScreen({super.key, required this.total, required this.itemCount, required this.items, required this.onSuccess});
+  final double total;
+  final int itemCount;
+  final List<Map<String, dynamic>> items;
+  final VoidCallback onSuccess;
+  @override
+  State<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+class _CheckoutScreenState extends State<CheckoutScreen> {
+  final address = TextEditingController();
+  final notes = TextEditingController();
+  final service = CheckoutService();
+  final addressService = AddressService();
+  List<Map<String, dynamic>> savedAddresses = [];
+  String? selectedAddressId;
+  String method = 'نقدي';
+  bool busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadSavedAddresses();
+  }
+
+  Future<void> loadSavedAddresses() async {
+    if (database?.auth.currentUser == null) return;
+    try {
+      final rows = await addressService.getAddresses();
+      if (!mounted) return;
+      setState(() {
+        savedAddresses = rows;
+        Map<String, dynamic>? preferred;
+        for (final row in rows) {
+          if (row['is_default'] == true) {
+            preferred = row;
+            break;
+          }
+        }
+        if (preferred != null) {
+          selectedAddressId = preferred['id']?.toString();
+          address.text = formatAddress(preferred);
+        } else if (rows.isNotEmpty && address.text.trim().isEmpty) {
+          selectedAddressId = rows.first['id']?.toString();
+          address.text = formatAddress(rows.first);
+        }
+      });
+    } catch (_) {
+      // Manual address entry remains available if saved addresses cannot be loaded.
+    }
+  }
+
+  String formatAddress(Map<String, dynamic> item) {
+    return [
+      item['governorate'],
+      item['district'],
+      item['village'],
+      item['address'],
+      if ((item['landmark'] ?? '').toString().trim().isNotEmpty) 'علامة مميزة: ${item['landmark']}',
+    ].where((value) => value != null && value.toString().trim().isNotEmpty).join('، ');
+  }
+
+  Future<void> openAddressBook() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            appBar: AppBar(title: Text('عناويني المحفوظة')),
+            body: AddressBookScreen(),
+          ),
+        ),
+      ),
+    );
+    await loadSavedAddresses();
+  }
+  @override
+  void dispose() { address.dispose(); notes.dispose(); super.dispose(); }
+  Future<void> send() async {
+    if (database?.auth.currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سجّل الدخول أولًا لإتمام الطلب.')));
+      return;
+    }
+    if (address.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل عنوان التوصيل بالتفصيل قبل تأكيد الطلب.')));
+      return;
+    }
+    if (widget.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('السلة فارغة؛ أضف منتجات أولًا.')));
+      return;
+    }
+    final items = <CartItem>[];
+    for (final row in widget.items) {
+      final p = row['product'] as Product;
+      if (p.id == null || (p.supplierId ?? '').isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('لا يمكن طلب المنتجات التوضيحية؛ اختر منتجًا منشورًا من مورد.')));
+        return;
+      }
+      items.add(CartItem(productId: p.id!, name: p.name, supplierId: p.supplierId!, category: p.category, unit: p.unit, price: p.price, minQuantity: p.minQuantity, quantity: row['quantity'] as int));
+    }
+    setState(() => busy = true);
+    try {
+      final code = {'نقدي':'cash','آجل مورد':'supplier_credit','محفظة كاش':'wallet','تحويل بنكي':'bank_transfer','من الرصيد':'account_balance'}[method]!;
+      final created = await service.checkout(items: items, paymentMethod: code, deliveryAddress: address.text, notes: notes.text);
+      if (!mounted) return;
+      widget.onSuccess();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم إنشاء ${created.length} طلب.')));
+      Navigator.pop(context);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الطلب: $e')));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+  @override
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(16), children: [
+    Card(child: ListTile(title: const Text('عدد الوحدات'), trailing: Text('${widget.itemCount}'))),
+    Card(child: ListTile(title: const Text('الإجمالي التقديري'), trailing: Text('${widget.total.toStringAsFixed(2)} ج.م'))),
+    if (savedAddresses.isNotEmpty)
+      DropdownButtonFormField<String>(
+        value: savedAddresses.any((item) => item['id']?.toString() == selectedAddressId) ? selectedAddressId : null,
+        decoration: const InputDecoration(labelText: 'اختر عنوانًا محفوظًا'),
+        items: savedAddresses.map((item) => DropdownMenuItem<String>(
+          value: item['id'].toString(),
+          child: Text((item['title'] ?? 'عنوان محفوظ').toString()),
+        )).toList(),
+        onChanged: (value) {
+          Map<String, dynamic>? selected;
+          for (final item in savedAddresses) {
+            if (item['id']?.toString() == value) {
+              selected = item;
+              break;
+            }
+          }
+          if (selected == null) return;
+          setState(() {
+            selectedAddressId = value;
+            address.text = formatAddress(selected);
+          });
+        },
+      ),
+    TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'عنوان التوصيل بالتفصيل')),
+    Align(
+      alignment: Alignment.centerRight,
+      child: TextButton.icon(
+        onPressed: openAddressBook,
+        icon: const Icon(Icons.location_on_outlined),
+        label: const Text('إدارة العناوين المحفوظة'),
+      ),
+    ),
+    const SizedBox(height: 10),
+    TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات إضافية')),
+    const SizedBox(height: 10),
+    const Text('طريقة الدفع', style: TextStyle(fontWeight: FontWeight.bold)),
+    ...['نقدي','آجل مورد','محفظة كاش','تحويل بنكي','من الرصيد'].map((v) => RadioListTile<String>(value: v, groupValue: method, title: Text(v), onChanged: (x) => setState(() => method = x ?? 'نقدي'))),
+    FilledButton(onPressed: busy ? null : send, child: Text(busy ? 'جارٍ الإرسال...' : 'تأكيد وإرسال الطلب')),
+    const Text('يتم التحقق من السعر داخل قاعدة البيانات عند إنشاء الطلب.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+  ]);
+}
+
+).hasMatch(normalizedContact ?? '')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('أدخل رقم تواصل صحيحًا أو اترك الحقل فارغًا.')),
+      );
+      return;
+    }
     if ((quantityText.isNotEmpty && (quantity == null || !quantity.isFinite || quantity <= 0)) ||
         (priceText.isNotEmpty && (targetPrice == null || !targetPrice.isFinite || targetPrice < 0))) {
       ScaffoldMessenger.of(context).showSnackBar(
