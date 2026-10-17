@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/erp_movement_audit_repository.dart';
 import 'erp_accounts_screen.dart';
 import 'erp_journal_entries_screen.dart';
+import 'erp_inventory_screen.dart';
 
 class ErpMovementAuditScreen extends StatefulWidget {
   const ErpMovementAuditScreen({super.key});
@@ -29,6 +30,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     'المخازن',
     'الأصناف',
     'الفترات المالية',
+    'المخزون',
   ];
 
   @override
@@ -94,6 +96,10 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
           initialCompanyId: _company.text.trim(),
           initialEntryId: (issue['document_id'] ?? '').toString(),
         ),
+      ));
+    } else if (route == 'inventory') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpInventoryScreen(initialCompanyId: _company.text.trim()),
       ));
     } else if (route == 'accounts') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
