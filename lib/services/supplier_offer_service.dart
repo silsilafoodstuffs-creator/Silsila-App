@@ -1,32 +1,55 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupplierOfferService {
-  SupplierOfferService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  SupplierOfferService({SupabaseClient? client}) : _client = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client != null) {
+      return client;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      throw StateError(
+        'اتصال Supabase غير متاح. يرجى المحاولة لاحقًا.',
+      );
+    }
+  }
+
+  String get _userId {
+    final user = _requireClient.auth.currentUser;
+
+    if (user == null) {
+      throw StateError('يجب تسجيل الدخول أولاً.');
+    }
+
+    return user.id;
+  }
 
   /// جلب عروض المورد الحالي.
   Future<List<Map<String, dynamic>>> getMyOffers({
     bool activeOnly = false,
   }) async {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً.');
-    }
-
-    var query = _client
+    var query = _requireClient
         .from('offers')
         .select()
-        .eq('supplier_id', user.id);
+        .eq('supplier_id', _userId);
 
     if (activeOnly) {
       query = query.eq('is_active', true);
     }
 
-    final rows = await query.order('created_at', ascending: false);
+    final rows = await query.order(
+      'created_at',
+      ascending: false,
+    );
 
-    return List<Map<String, dynamic>>.from(rows);
+    return _mapRows(rows);
   }
 
   /// إنشاء عرض جديد.
@@ -39,41 +62,57 @@ class SupplierOfferService {
     String? activityType,
     double? discountPercentage,
   }) async {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً.');
+    final cleanTitle = _requiredText(
+      title,
+      'عنوان العرض مطلوب.',
+    );
+
+    if (cleanTitle.length > 200) {
+      throw ArgumentError(
+        'عنوان العرض يجب ألا يتجاوز 200 حرف.',
+      );
     }
 
-    if (title.trim().isEmpty) {
-      throw ArgumentError('عنوان العرض مطلوب.');
+    _validateDates(startsAt, endsAt);
+    _validateDiscount(discountPercentage);
+
+    final cleanDescription = _clean(description);
+    final cleanImageUrl = _clean(imageUrl);
+    final cleanActivityType = _clean(activityType);
+
+    if (cleanDescription != null &&
+        cleanDescription.length > 3000) {
+      throw ArgumentError(
+        'وصف العرض يجب ألا يتجاوز 3000 حرف.',
+      );
     }
 
-    if (!endsAt.isAfter(startsAt)) {
-      throw ArgumentError('تاريخ انتهاء العرض يجب أن يكون بعد تاريخ بدايته.');
+    if (cleanActivityType != null &&
+        cleanActivityType.length > 120) {
+      throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
     }
 
-    if (discountPercentage != null &&
-        (discountPercentage < 0 || discountPercentage > 100)) {
-      throw ArgumentError('نسبة الخصم يجب أن تكون بين 0 و100.');
+    if (cleanImageUrl != null) {
+      _validateWebUrl(cleanImageUrl, 'رابط صورة العرض غير صحيح.');
     }
 
-    final result = await _client
+    final response = await _requireClient
         .from('offers')
         .insert({
-          'supplier_id': user.id,
-          'title': title.trim(),
-          'description': description?.trim(),
-          'starts_at': startsAt.toIso8601String(),
-          'ends_at': endsAt.toIso8601String(),
-          'image_url': imageUrl,
-          'activity_type': activityType,
+          'supplier_id': _userId,
+          'title': cleanTitle,
+          'description': cleanDescription,
+          'starts_at': startsAt.toUtc().toIso8601String(),
+          'ends_at': endsAt.toUtc().toIso8601String(),
+          'image_url': cleanImageUrl,
+          'activity_type': cleanActivityType,
           'discount_percentage': discountPercentage,
           'is_active': true,
         })
         .select()
         .single();
 
-    return result;
+    return Map<String, dynamic>.from(response);
   }
 
   /// تعديل عرض يملكه المورد الحالي.
@@ -87,99 +126,201 @@ class SupplierOfferService {
     double? discountPercentage,
     bool? isActive,
   }) async {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً.');
-    }
+    final cleanOfferId = _requiredText(
+      offerId,
+      'معرّف العرض مطلوب.',
+    );
 
+    final userId = _userId;
     final updates = <String, dynamic>{};
 
     if (title != null) {
-      if (title.trim().isEmpty) {
-        throw ArgumentError('عنوان العرض مطلوب.');
+      final cleanTitle = _requiredText(
+        title,
+        'عنوان العرض مطلوب.',
+      );
+
+      if (cleanTitle.length > 200) {
+        throw ArgumentError(
+          'عنوان العرض يجب ألا يتجاوز 200 حرف.',
+        );
       }
-      updates['title'] = title.trim();
+
+      updates['title'] = cleanTitle;
     }
 
     if (description != null) {
-      updates['description'] = description.trim();
-    }
+      final cleanDescription = _clean(description);
 
-    if (startsAt != null) {
-      updates['starts_at'] = startsAt.toIso8601String();
-    }
-
-    if (endsAt != null) {
-      updates['ends_at'] = endsAt.toIso8601String();
-    }
-
-    if (startsAt != null || endsAt != null) {
-      final current = await _client
-          .from('offers')
-          .select('starts_at, ends_at')
-          .eq('id', offerId.trim())
-          .eq('supplier_id', user.id)
-          .maybeSingle();
-
-      if (current == null) {
-        throw Exception('العرض غير موجود.');
+      if (cleanDescription != null &&
+          cleanDescription.length > 3000) {
+        throw ArgumentError(
+          'وصف العرض يجب ألا يتجاوز 3000 حرف.',
+        );
       }
 
-      final effectiveStart =
-          startsAt ?? DateTime.parse(current['starts_at'].toString());
-      final effectiveEnd =
-          endsAt ?? DateTime.parse(current['ends_at'].toString());
-
-      if (!effectiveEnd.isAfter(effectiveStart)) {
-        throw ArgumentError('تاريخ انتهاء العرض يجب أن يكون بعد بدايته.');
-      }
+      updates['description'] = cleanDescription;
     }
 
-    if (imageUrl != null) updates['image_url'] = imageUrl;
+    if (imageUrl != null) {
+      final cleanImageUrl = _clean(imageUrl);
+
+      if (cleanImageUrl != null) {
+        _validateWebUrl(
+          cleanImageUrl,
+          'رابط صورة العرض غير صحيح.',
+        );
+      }
+
+      updates['image_url'] = cleanImageUrl;
+    }
 
     if (discountPercentage != null) {
-      if (discountPercentage < 0 || discountPercentage > 100) {
-        throw ArgumentError('نسبة الخصم يجب أن تكون بين 0 و100.');
-      }
+      _validateDiscount(discountPercentage);
       updates['discount_percentage'] = discountPercentage;
     }
 
-    if (isActive != null) updates['is_active'] = isActive;
+    if (startsAt != null || endsAt != null) {
+      final current = await _requireClient
+          .from('offers')
+          .select('starts_at, ends_at')
+          .eq('id', cleanOfferId)
+          .eq('supplier_id', userId)
+          .maybeSingle();
 
-    if (updates.isEmpty) return;
+      if (current == null) {
+        throw StateError(
+          'العرض غير موجود أو لا تملك صلاحية تعديله.',
+        );
+      }
 
-    await _client
+      final currentStart = DateTime.tryParse(
+        current['starts_at']?.toString() ?? '',
+      );
+
+      final currentEnd = DateTime.tryParse(
+        current['ends_at']?.toString() ?? '',
+      );
+
+      if (currentStart == null || currentEnd == null) {
+        throw StateError(
+          'تعذر قراءة تواريخ العرض الحالية.',
+        );
+      }
+
+      final effectiveStart = startsAt ?? currentStart;
+      final effectiveEnd = endsAt ?? currentEnd;
+
+      _validateDates(effectiveStart, effectiveEnd);
+
+      if (startsAt != null) {
+        updates['starts_at'] =
+            startsAt.toUtc().toIso8601String();
+      }
+
+      if (endsAt != null) {
+        updates['ends_at'] =
+            endsAt.toUtc().toIso8601String();
+      }
+    }
+
+    if (isActive != null) {
+      updates['is_active'] = isActive;
+    }
+
+    if (updates.isEmpty) {
+      return;
+    }
+
+    await _requireClient
         .from('offers')
         .update(updates)
-        .eq('id', offerId)
-        .eq('supplier_id', user.id);
+        .eq('id', cleanOfferId)
+        .eq('supplier_id', userId);
   }
 
   /// إيقاف العرض دون حذفه.
   Future<void> deactivateOffer(int offerId) async {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً.');
+    if (offerId <= 0) {
+      throw ArgumentError('رقم العرض غير صالح.');
     }
 
-    await _client
+    await _requireClient
         .from('offers')
         .update({'is_active': false})
         .eq('id', offerId)
-        .eq('supplier_id', user.id);
+        .eq('supplier_id', _userId);
   }
 
   /// حذف عرض يملكه المورد الحالي.
   Future<void> deleteOffer(int offerId) async {
-    final user = _client.auth.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً.');
+    if (offerId <= 0) {
+      throw ArgumentError('رقم العرض غير صالح.');
     }
 
-    await _client
+    await _requireClient
         .from('offers')
         .delete()
         .eq('id', offerId)
-        .eq('supplier_id', user.id);
+        .eq('supplier_id', _userId);
+  }
+
+  void _validateDates(DateTime startsAt, DateTime endsAt) {
+    if (!endsAt.isAfter(startsAt)) {
+      throw ArgumentError(
+        'تاريخ انتهاء العرض يجب أن يكون بعد تاريخ بدايته.',
+      );
+    }
+  }
+
+  void _validateDiscount(double? discount) {
+    if (discount != null &&
+        (!discount.isFinite || discount < 0 || discount > 100)) {
+      throw ArgumentError(
+        'نسبة الخصم يجب أن تكون بين 0 و100.',
+      );
+    }
+  }
+
+  void _validateWebUrl(String value, String message) {
+    final uri = Uri.tryParse(value);
+
+    if (uri == null ||
+        !uri.hasScheme ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      throw ArgumentError(message);
+    }
+  }
+
+  String _requiredText(String value, String message) {
+    final cleaned = value.trim();
+
+    if (cleaned.isEmpty) {
+      throw ArgumentError(message);
+    }
+
+    return cleaned;
+  }
+
+  String? _clean(String? value) {
+    final cleaned = value?.trim();
+
+    if (cleaned == null || cleaned.isEmpty) {
+      return null;
+    }
+
+    return cleaned;
+  }
+
+  List<Map<String, dynamic>> _mapRows(dynamic response) {
+    if (response is! List) {
+      throw StateError('تعذر قراءة بيانات العروض.');
+    }
+
+    return response
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
   }
 }
