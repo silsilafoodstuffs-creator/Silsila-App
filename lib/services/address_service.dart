@@ -83,6 +83,12 @@ class AddressService {
     final cleanAddress =
         _requiredText(address, 'العنوان بالتفصيل');
 
+    _validateTextLength(cleanTitle, 'اسم العنوان', 100);
+    _validateTextLength(cleanGovernorate, 'المحافظة', 100);
+    _validateTextLength(cleanAddress, 'العنوان بالتفصيل', 2000);
+    _validateOptionalLength(district, 'المركز', 150);
+    _validateOptionalLength(village, 'القرية', 150);
+    _validateOptionalLength(landmark, 'علامة مميزة', 300);
     _validateCoordinates(latitude, longitude);
 
     final userId = _userId;
@@ -279,6 +285,27 @@ class AddressService {
       throw ArgumentError(
         'إحداثيات الموقع خارج النطاق الصحيح.',
       );
+    }
+  }
+
+  void _validateTextLength(
+    String value,
+    String fieldName,
+    int maxLength,
+  ) {
+    if (value.length > maxLength) {
+      throw ArgumentError('$fieldName يجب ألا يتجاوز $maxLength حرفًا.');
+    }
+  }
+
+  void _validateOptionalLength(
+    String? value,
+    String fieldName,
+    int maxLength,
+  ) {
+    final cleaned = value?.trim();
+    if (cleaned != null && cleaned.length > maxLength) {
+      throw ArgumentError('$fieldName يجب ألا يتجاوز $maxLength حرفًا.');
     }
   }
 
