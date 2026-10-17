@@ -202,19 +202,40 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       ])),
     ])),
     const Divider(color: Colors.white24, height: 1),
-    Expanded(child: ListView(padding: const EdgeInsets.symmetric(vertical: 10), children: _modules.keys.map((name) {
-      final selected = name == _module;
-      return Padding(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2), child: ListTile(
-        dense: true,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        selected: selected,
-        selectedTileColor: Colors.white.withValues(alpha: .14),
-        leading: Icon(_iconFor(name), color: selected ? _orange : Colors.white70, size: 21),
-        title: Text(name, style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: selected ? FontWeight.w800 : FontWeight.w500)),
-        trailing: Icon(selected ? Icons.keyboard_arrow_down_rounded : Icons.chevron_left_rounded, color: Colors.white60, size: 18),
-        onTap: () => setState(() { _module = name; _group = 'بيانات أساسية'; _page = _modules[name]![_group]!.first; _search = ''; }),
-      ));
-    }).toList())),
+    Expanded(child: ListView(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      children: _modules.keys.expand((name) {
+        final selected = name == _module;
+        return <Widget>[
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2), child: ListTile(
+            dense: true,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            selected: selected,
+            selectedTileColor: Colors.white.withValues(alpha: .14),
+            leading: Icon(_iconFor(name), color: selected ? _orange : Colors.white70, size: 21),
+            title: Text(name, style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: selected ? FontWeight.w800 : FontWeight.w500)),
+            trailing: Icon(selected ? Icons.keyboard_arrow_down_rounded : Icons.chevron_left_rounded, color: Colors.white60, size: 18),
+            onTap: () => setState(() { _module = name; _group = 'بيانات أساسية'; _page = _modules[name]![_group]!.first; _search = ''; }),
+          )),
+          if (selected)
+            ..._modules[name]!.entries.expand((entry) => <Widget>[
+              Padding(padding: const EdgeInsetsDirectional.only(start: 24, end: 14, top: 8, bottom: 3), child: Text(entry.key, style: const TextStyle(color: _orange, fontWeight: FontWeight.w800, fontSize: 11))),
+              ...entry.value.map((page) => Padding(
+                padding: const EdgeInsetsDirectional.only(start: 24, end: 10),
+                child: ListTile(
+                  dense: true,
+                  visualDensity: const VisualDensity(vertical: -3),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+                  minLeadingWidth: 12,
+                  leading: Icon(page == _page ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: page == _page ? _orange : Colors.white38, size: 12),
+                  title: Text(page, style: TextStyle(color: page == _page ? Colors.white : Colors.white70, fontSize: 11, fontWeight: page == _page ? FontWeight.w800 : FontWeight.normal)),
+                  onTap: () => setState(() { _module = name; _group = entry.key; _page = page; _search = ''; }),
+                ),
+              )),
+            ]),
+        ];
+      }).toList(),
+    )),
     const Divider(color: Colors.white24, height: 1),
     const Padding(padding: EdgeInsets.all(14), child: Column(children: [
       Text('سلسلة للبرمجيات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
