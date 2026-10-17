@@ -140,7 +140,7 @@ RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_user_id UUID := auth.uid();
   v_current_status TEXT;
@@ -189,7 +189,7 @@ RETURNS BOOLEAN
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_user_id UUID := auth.uid();
   v_current_status TEXT;
