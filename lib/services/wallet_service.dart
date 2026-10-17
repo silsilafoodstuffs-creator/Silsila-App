@@ -93,8 +93,11 @@ class WalletService {
 
     final method = paymentMethod.trim();
 
-    if (method.isEmpty) {
-      throw ArgumentError('يرجى تحديد طريقة الدفع.');
+    if (method.isEmpty || method.length > 80) {
+      throw ArgumentError('يرجى تحديد طريقة دفع صحيحة.');
+    }
+    if (reference != null && reference.trim().length > 200) {
+      throw ArgumentError('الرقم المرجعي يجب ألا يتجاوز 200 حرف.');
     }
 
     final response = await _client
