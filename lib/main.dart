@@ -571,7 +571,7 @@ class _MainShellState extends State<MainShell> {
 
   void addToCart(Product product) {
     setState(() {
-      cart[product.name] = (cart[product.name] ?? 0) + 1;
+      cart[product.name] = (cart[product.name] ?? 0) + (cart.containsKey(product.name) ? 1 : product.minQuantity);
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
