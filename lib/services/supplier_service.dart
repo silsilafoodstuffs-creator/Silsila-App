@@ -39,7 +39,7 @@ class SupplierService {
     }
 
     var query = client
-        .from('profiles')
+        .from('supplier_directory')
         .select(
           'id, full_name, activity_type, supplier_type, '
           'governorate, district, address, account_status',
