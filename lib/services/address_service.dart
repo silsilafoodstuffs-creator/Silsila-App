@@ -80,18 +80,16 @@ class AddressService {
 
   /// تعيين عنوان حالي كعنوان افتراضي.
   Future<void> setDefaultAddress(String addressId) async {
-    final userId = _userId;
+    final id = addressId.trim();
+    if (id.isEmpty) {
+      throw ArgumentError('معرّف العنوان مطلوب.');
+    }
 
-    await _client
-        .from('addresses')
-        .update({'is_default': false})
-        .eq('user_id', userId);
-
-    await _client
-        .from('addresses')
-        .update({'is_default': true})
-        .eq('id', addressId)
-        .eq('user_id', userId);
+    _userId;
+    await _client.rpc(
+      'set_default_address',
+      params: {'p_address_id': id},
+    );
   }
 
   /// تعديل عنوان محفوظ.
