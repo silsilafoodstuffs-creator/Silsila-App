@@ -198,6 +198,83 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ).then((_) { code.dispose(); name.dispose(); details.dispose(); });
   }
 
+  void _showActionMessage(String message) {
+    setState(() => _activityLog.insert(0, message));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _saveCurrentPage() {
+    setState(() => _activityLog.insert(0, 'تم حفظ حالة شاشة $_page داخل الجلسة الحالية'));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التغييرات المحلية لهذه الشاشة. الحفظ الدائم يتطلب ربط قاعدة البيانات.')));
+  }
+
+  void _editCurrentRecord() {
+    final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
+    if (rows.isEmpty) { _showActionMessage('لا يوجد سجل لتعديله في شاشة $_page'); return; }
+    final controllers = <String, TextEditingController>{for (final entry in rows.first.entries) entry.key: TextEditingController(text: entry.value)};
+    showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      title: Text('تعديل سجل — $_page'),
+      content: SizedBox(width: 460, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: controllers.entries.map((entry) => Padding(
+        padding: const EdgeInsets.only(bottom: 10), child: TextField(controller: entry.value, decoration: InputDecoration(labelText: entry.key)),
+      )).toList()))),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+        FilledButton(onPressed: () {
+          rows[0] = {for (final entry in controllers.entries) entry.key: entry.value.text.trim()};
+          setState(() => _saved[_page] = rows);
+          Navigator.pop(dialogContext);
+          _showActionMessage('تم تعديل سجل محلي في شاشة $_page');
+        }, child: const Text('حفظ التعديل')),
+      ],
+    )).then((_) { for (final controller in controllers.values) { controller.dispose(); } });
+  }
+
+  String _currentPageCsv() {
+    final rows = _rows;
+    if (rows.isEmpty) return '';
+    final keys = rows.first.keys.toList();
+    String cell(String value) => '"${value.replaceAll('"', '""')}"';
+    return [keys.map(cell).join(','), ...rows.map((row) => keys.map((key) => cell(row[key] ?? '')).join(','))].join('\\r\\n');
+  }
+
+  void _exportExcel() {
+    final csv = _currentPageCsv();
+    if (csv.isEmpty) { _showActionMessage('لا توجد بيانات لتصديرها من شاشة $_page'); return; }
+    Clipboard.setData(ClipboardData(text: csv));
+    _showActionMessage('تم تجهيز بيانات $_page بصيغة CSV المتوافقة مع Excel ونسخها للحافظة');
+  }
+
+  void _showPrintPreview({required bool pdf}) {
+    final rows = _rows;
+    showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      title: Text(pdf ? 'تصدير PDF — $_page' : 'معاينة الطباعة — $_page'),
+      content: SizedBox(width: 560, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('سلسلة Silsila • $_module • $_group', style: const TextStyle(color: _purple, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 8), Text('الشاشة: $_page • عدد السجلات: ${rows.length}'), const Divider(),
+        if (rows.isEmpty) const Text('لا توجد بيانات لعرضها.')
+        else ...rows.take(30).map((row) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Text(row.entries.map((e) => '${e.key}: ${e.value}').join('  |  ')))),
+        if (rows.length > 30) const Text('تم عرض أول 30 سجلًا في المعاينة.'),
+        const SizedBox(height: 8),
+        Text(pdf ? 'هذه معاينة تجهيز PDF؛ يلزم إضافة محرك PDF للتنزيل الفعلي.' : 'هذه معاينة للطباعة؛ إرسالها إلى الطابعة يحتاج تفعيل خدمة الطباعة في نسخة التشغيل.', style: const TextStyle(color: Colors.black54, fontSize: 11)),
+      ]))),
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+    ));
+  }
+
+  Widget _recordAction(String label, IconData icon, VoidCallback action) => OutlinedButton.icon(
+    onPressed: action, icon: Icon(icon, size: 16), label: Text(label),
+    style: OutlinedButton.styleFrom(foregroundColor: _purple, backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12), side: const BorderSide(color: Color(0xFFE5DDED)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)), textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+  );
+
+  Widget _recordToolbar({bool includeAdd = true}) => Wrap(spacing: 7, runSpacing: 7, children: [
+    if (includeAdd) _recordAction('إضافة', Icons.add_rounded, _openAddDialog),
+    _recordAction('تعديل', Icons.edit_outlined, _editCurrentRecord),
+    _recordAction('حفظ', Icons.save_outlined, _saveCurrentPage),
+    _recordAction('طباعة', Icons.print_outlined, () => _showPrintPreview(pdf: false)),
+    _recordAction('تصدير Excel', Icons.table_view_outlined, _exportExcel),
+    _recordAction('تصدير PDF', Icons.picture_as_pdf_outlined, () => _showPrintPreview(pdf: true)),
+  ]);
+
   @override
   Widget build(BuildContext context) {
     return Directionality(textDirection: TextDirection.rtl, child: LayoutBuilder(builder: (context, c) {
@@ -210,7 +287,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: Column(children: [
               _header(compact),
-              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _workspace())),
+              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _workspace())),
             ])),
             if (!compact) SizedBox(width: 286, child: _rightPanel()),
           ])),
@@ -352,6 +429,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 }),
             ]);
           }).toList(),
+          const SizedBox(height: 8),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: ListTile(dense: true, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), selected: _page == 'عن البرنامج', selectedTileColor: Colors.white.withValues(alpha: .14), leading: const Icon(Icons.info_outline_rounded, color: _orange, size: 20), title: const Text('عن البرنامج', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)), onTap: () => setState(() { _page = 'عن البرنامج'; _search = ''; }))),
           ],
         )),
         const Divider(color: Colors.white24, height: 1),
@@ -395,7 +474,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       const SizedBox(height: 12),
       const Row(children: [Icon(Icons.history_rounded, color: _purple), SizedBox(width: 8), Expanded(child: Text('سجل النشاطات', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 16)))]),
       const SizedBox(height: 12),
-      ..._activityLog.map((entry) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.circle, size: 7, color: _orange), const SizedBox(width: 9), Expanded(child: Text(entry, style: const TextStyle(fontSize: 11, height: 1.5, color: Colors.black87)))]))),
+      ..._activityLog.map((entry) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.circle, size: 7, color: _orange), const SizedBox(width: 9), Expanded(child: Text(entry, style: const TextStyle(fontSize: 11, height: 1.5, color: Colors.black87, fontWeight: FontWeight.w700)))]))),
       const SizedBox(height: 12),
       const Text('ملاحظة: التنبيهات وسجل النشاطات حاليًا أمثلة محلية، وليسا متصلين بعد بأحداث النظام الفعلية.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
     ])),
@@ -405,10 +484,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     margin: const EdgeInsets.only(bottom: 9),
     padding: const EdgeInsets.all(11),
     decoration: BoxDecoration(color: _canvas, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFECE7F2))),
-    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: color, size: 19), const SizedBox(width: 9), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 11)), const SizedBox(height: 4), Text(detail, style: const TextStyle(color: Colors.black54, fontSize: 10, height: 1.5))]))]),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(icon, color: color, size: 19), const SizedBox(width: 9), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: _purple)), const SizedBox(height: 4), Text(detail, style: const TextStyle(color: Colors.black87, fontSize: 10, height: 1.5, fontWeight: FontWeight.w700))]))]),
   );
 
   Widget _appManagement() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    _recordToolbar(includeAdd: false),
+    const SizedBox(height: 12),
     Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(gradient: const LinearGradient(colors: [_purple, Color(0xFF6E2BA6)]), borderRadius: BorderRadius.circular(20)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('إدارة التطبيقات', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
       SizedBox(height: 8),
@@ -531,7 +612,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _quick('ملف الموظف', Icons.badge_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'ملف الموظف')),
     ]),
     const SizedBox(height: 22),
-    _about(),
   ]);
 
   void _open(String module, String group, String page) => setState(() { _module = module; _group = group; _page = page; _search = ''; });
@@ -552,8 +632,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Container(width: 44, height: 44, decoration: BoxDecoration(color: const Color(0xFFF1E9FA), borderRadius: BorderRadius.circular(13)), child: Icon(_iconFor(_module), color: _purple)),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_page, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _purple)), const SizedBox(height: 4), Text('$_module • $_group', style: const TextStyle(color: Colors.black54, fontSize: 12))])),
-        if (_group != 'تقارير') FilledButton.icon(onPressed: _openAddDialog, icon: const Icon(Icons.add_rounded, size: 18), label: const Text('إضافة')),
       ]),
+      const SizedBox(height: 12),
+      _recordToolbar(includeAdd: _group != 'تقارير'),
       const SizedBox(height: 18),
       Wrap(spacing: 8, runSpacing: 8, children: _pages.map((p) => ActionChip(label: Text(p), backgroundColor: p == _page ? const Color(0xFFF1E9FA) : const Color(0xFFF9F7FB), side: BorderSide(color: p == _page ? _purple : const Color(0xFFECE7F2)), onPressed: () => setState(() => _page = p))).toList()),
       const SizedBox(height: 16),
