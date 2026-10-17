@@ -11,6 +11,7 @@ import 'services/category_service.dart';
 import 'services/offer_service.dart';
 import 'services/story_service.dart';
 import 'services/user_service.dart';
+import 'services/support_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 
@@ -1295,6 +1296,11 @@ class _MainShellState extends State<MainShell> {
             () => openPage('سجل طلباتي', const MyOrdersScreen()),
           ),
           menuItem(
+            Icons.support_agent,
+            'الدعم والشكاوى',
+            () => openPage('الدعم والشكاوى', const SupportScreen()),
+          ),
+          menuItem(
             Icons.favorite_border,
             'المفضلة',
             () => openPage(
@@ -1354,6 +1360,132 @@ class _MainShellState extends State<MainShell> {
         trailing: const Icon(Icons.chevron_left),
         onTap: onTap,
       ),
+    );
+  }
+}
+
+class SupportScreen extends StatefulWidget {
+  const SupportScreen({super.key});
+
+  @override
+  State<SupportScreen> createState() => _SupportScreenState();
+}
+
+class _SupportScreenState extends State<SupportScreen> {
+  final service = SupportService();
+  final subjectController = TextEditingController();
+  final messageController = TextEditingController();
+  final orderIdController = TextEditingController();
+  String category = 'general';
+  List<Map<String, dynamic>> tickets = [];
+  bool loading = true;
+  bool sending = false;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadTickets();
+  }
+
+  @override
+  void dispose() {
+    subjectController.dispose();
+    messageController.dispose();
+    orderIdController.dispose();
+    super.dispose();
+  }
+
+  Future<void> loadTickets() async {
+    try {
+      final rows = await service.getMyTickets();
+      if (!mounted) return;
+      setState(() { tickets = rows; error = null; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { error = 'سجّل الدخول لعرض تذاكر الدعم.'; });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> submitTicket() async {
+    if (sending) return;
+    if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل عنوان الشكوى والتفاصيل.')));
+      return;
+    }
+    final orderText = orderIdController.text.trim();
+    if (orderText.isNotEmpty && int.tryParse(orderText) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('رقم الطلب يجب أن يكون رقمًا صحيحًا.')));
+      return;
+    }
+    setState(() => sending = true);
+    try {
+      await service.createTicket(
+        subject: subjectController.text,
+        message: messageController.text,
+        category: category,
+        orderId: orderText.isEmpty ? null : orderText,
+      );
+      if (!mounted) return;
+      subjectController.clear();
+      messageController.clear();
+      orderIdController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال تذكرة الدعم.')));
+      await loadTickets();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التذكرة: $e')));
+    } finally {
+      if (mounted) setState(() => sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        const Text('الدعم الفني والشكاوى', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+        const SizedBox(height: 12),
+        TextField(controller: subjectController, decoration: const InputDecoration(labelText: 'عنوان الشكوى أو الاستفسار')),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          value: category,
+          decoration: const InputDecoration(labelText: 'نوع التذكرة'),
+          items: const [
+            DropdownMenuItem(value: 'general', child: Text('استفسار عام')),
+            DropdownMenuItem(value: 'orders', child: Text('الطلبات')),
+            DropdownMenuItem(value: 'payments', child: Text('الدفع والمحفظة')),
+            DropdownMenuItem(value: 'account', child: Text('الحساب والتفعيل')),
+            DropdownMenuItem(value: 'technical', child: Text('مشكلة تقنية')),
+          ],
+          onChanged: (value) => setState(() => category = value ?? 'general'),
+        ),
+        const SizedBox(height: 10),
+        TextField(controller: orderIdController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'رقم الطلب (اختياري)')),
+        const SizedBox(height: 10),
+        TextField(controller: messageController, minLines: 3, maxLines: 6, decoration: const InputDecoration(labelText: 'اشرح المشكلة بالتفصيل')),
+        const SizedBox(height: 12),
+        FilledButton.icon(
+          onPressed: sending ? null : submitTicket,
+          icon: sending ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.send),
+          label: Text(sending ? 'جارٍ الإرسال...' : 'إرسال التذكرة'),
+        ),
+        const Divider(height: 32),
+        const Text('تذاكري السابقة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        if (loading) const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator(color: purple))),
+        if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+        if (!loading && tickets.isEmpty && error == null) const Padding(padding: EdgeInsets.all(16), child: Text('لا توجد تذاكر سابقة.')),
+        ...tickets.map((ticket) => Card(
+          child: ListTile(
+            leading: const Icon(Icons.support_agent, color: purple),
+            title: Text((ticket['subject'] ?? 'تذكرة دعم').toString()),
+            subtitle: Text((ticket['message'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis),
+            trailing: Text((ticket['status'] ?? 'open').toString()),
+          ),
+        )),
+      ],
     );
   }
 }
