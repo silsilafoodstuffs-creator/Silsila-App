@@ -13,6 +13,47 @@ class StorageService {
   static const String storyBucket = 'stories';
   static const String profileBucket = 'profiles';
 
+  static const Set<String> _allowedBuckets = {
+    productBucket,
+    offerBucket,
+    storyBucket,
+    profileBucket,
+  };
+
+  static const Set<String> _allowedImageTypes = {
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+  };
+
+  static const Set<String> _allowedStoryVideoTypes = {
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',
+  };
+
+  void _validateBucket(String bucket) {
+    if (!_allowedBuckets.contains(bucket)) {
+      throw ArgumentError('نوع التخزين غير مسموح به.');
+    }
+  }
+
+  void _validateContentType(String bucket, String contentType) {
+    final normalizedType = contentType.trim().toLowerCase();
+    final isImage = _allowedImageTypes.contains(normalizedType);
+    final isStoryVideo = bucket == storyBucket &&
+        _allowedStoryVideoTypes.contains(normalizedType);
+
+    if (!isImage && !isStoryVideo) {
+      throw ArgumentError(
+        bucket == storyBucket
+            ? 'صيغة القصة يجب أن تكون صورة أو فيديو مدعومًا.'
+            : 'صيغة الصورة غير مدعومة.',
+      );
+    }
+  }
+
   String get _userId {
     final user = _client.auth.currentUser;
     if (user == null) {
@@ -28,6 +69,9 @@ class StorageService {
     required Uint8List bytes,
     String contentType = 'image/jpeg',
   }) async {
+    _validateBucket(bucket);
+    _validateContentType(bucket, contentType);
+
     if (bytes.isEmpty) {
       throw ArgumentError('الملف فارغ.');
     }
@@ -116,6 +160,7 @@ class StorageService {
     required String bucket,
     required String path,
   }) async {
+    _validateBucket(bucket);
     final cleanPath = path.trim();
 
     if (cleanPath.isEmpty) {
