@@ -16,6 +16,7 @@ import 'services/user_service.dart';
 import 'services/support_service.dart';
 import 'services/delivery_service.dart';
 import 'services/favorite_service.dart';
+import 'services/loyalty_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 
@@ -1410,6 +1411,11 @@ class _MainShellState extends State<MainShell> {
             Icons.account_balance_wallet_outlined,
             'رصيدي ونقاطي',
             () => openPage('رصيدي ونقاطي', const WalletOverviewScreen()),
+          ),
+          menuItem(
+            Icons.stars_outlined,
+            'نقاط الولاء وأهدافي',
+            () => openPage('نقاط الولاء وأهدافي', const LoyaltyOverviewScreen()),
           ),
           menuItem(
             Icons.settings_outlined,
@@ -3616,6 +3622,128 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class LoyaltyOverviewScreen extends StatefulWidget {
+  const LoyaltyOverviewScreen({super.key});
+
+  @override
+  State<LoyaltyOverviewScreen> createState() => _LoyaltyOverviewScreenState();
+}
+
+class _LoyaltyOverviewScreenState extends State<LoyaltyOverviewScreen> {
+  final service = LoyaltyService();
+  late Future<Map<String, dynamic>> dataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    dataFuture = loadData();
+  }
+
+  Future<Map<String, dynamic>> loadData() async {
+    final results = await Future.wait([
+      service.getPointsBalance(),
+      service.getPointsHistory(limit: 50),
+      service.getMyGoals(),
+    ]);
+    return {
+      'balance': results[0] as int,
+      'history': results[1] as List<Map<String, dynamic>>,
+      'goals': results[2] as List<Map<String, dynamic>>,
+    };
+  }
+
+  Future<void> reload() async {
+    setState(() => dataFuture = loadData());
+    await dataFuture;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: dataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: purple));
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.stars_outlined, size: 58, color: purple),
+                const Text('سجّل الدخول لعرض نقاط الولاء وأهدافك.', textAlign: TextAlign.center),
+                TextButton(onPressed: reload, child: const Text('إعادة المحاولة')),
+              ]),
+            ),
+          );
+        }
+        final data = snapshot.data ?? const {};
+        final balance = data['balance'] as int? ?? 0;
+        final history = (data['history'] as List<Map<String, dynamic>>?) ?? const [];
+        final goals = (data['goals'] as List<Map<String, dynamic>>?) ?? const [];
+        return RefreshIndicator(
+          onRefresh: reload,
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+            Container(
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [purple, Color(0xFF7026A8), pink]),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('رصيد نقاط سلسلة', style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 8),
+                Text('$balance نقطة', style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text('تابع تعاملاتك وأهدافك واستفد من برنامج الولاء.', style: TextStyle(color: Colors.white)),
+              ]),
+            ),
+            const SizedBox(height: 20),
+            const Text('أهدافي', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+            if (goals.isEmpty)
+              const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('ستظهر أهدافك هنا عند إضافتها إلى حسابك.'))),
+            ...goals.map((goal) {
+              final title = (goal['title'] ?? goal['name'] ?? 'هدف جديد').toString();
+              final current = num.tryParse((goal['current_value'] ?? 0).toString()) ?? 0;
+              final target = num.tryParse((goal['target_value'] ?? goal['target'] ?? 0).toString()) ?? 0;
+              final progress = service.calculateGoalProgress(currentValue: current, targetValue: target);
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(value: progress / 100, color: orange, backgroundColor: purple.withOpacity(.1)),
+                    const SizedBox(height: 6),
+                    Text('$current من $target • ${progress.toStringAsFixed(0)}%'),
+                  ]),
+                ),
+              );
+            }),
+            const SizedBox(height: 20),
+            const Text('سجل النقاط', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+            if (history.isEmpty)
+              const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('لا توجد حركات نقاط مسجلة حتى الآن.'))),
+            ...history.map((entry) {
+              final points = entry['points'] ?? 0;
+              final description = (entry['description'] ?? 'حركة نقاط').toString();
+              final date = entry['created_at']?.toString() ?? '';
+              return Card(
+                child: ListTile(
+                  leading: Icon(Icons.stars, color: (points is num && points < 0) ? Colors.red : orange),
+                  title: Text(description),
+                  subtitle: Text(date.isEmpty ? '' : date.split('T').first),
+                  trailing: Text('$points نقطة', style: const TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              );
+            }),
+          ]),
+        );
+      },
     );
   }
 }
