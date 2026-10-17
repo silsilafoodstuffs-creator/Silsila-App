@@ -7,9 +7,9 @@ const _canvas = Color(0xFFF7F5FA);
 
 const Map<String, Map<String, List<String>>> _modules = {
   'إدارة البرنامج': {
-    'بيانات أساسية': ['بيانات الشركة', 'الفروع ومراكز التكلفة', 'المستخدمون والصلاحيات', 'إعدادات النظام', 'سجل العمليات'],
-    'حركات': ['إدارة الجلسات', 'سجل الدخول والخروج', 'النسخ الاحتياطي'],
-    'تقارير': ['تقرير المستخدمين', 'تقرير نشاط النظام'],
+    'بيانات أساسية': ['بيانات الشركة', 'الفروع ومراكز التكلفة', 'المستخدمون والصلاحيات', 'إعدادات النظام', 'سجل العمليات', 'واجهة API والربط الخارجي', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات'],
+    'حركات': ['إدارة الجلسات', 'سجل الدخول والخروج', 'النسخ الاحتياطي', 'إعداد نقاط الربط', 'اختبار الاتصال الخارجي'],
+    'تقارير': ['تقرير المستخدمين', 'تقرير نشاط النظام', 'تقرير استهلاك API', 'تقرير أخطاء التكامل'],
   },
   'الحسابات العامة': {
     'بيانات أساسية': ['شجرة الحسابات', 'الفترات المالية', 'مراكز التكلفة', 'العملات'],
@@ -129,6 +129,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         {'الكود': 'SKU-003', 'الاسم': 'سمن نباتي', 'المجموعة': 'سمنات', 'الوحدة': 'كرتونة', 'المخزون': '42', 'الحالة': 'نشط'},
       ];
     }
+    if (page.contains('API') || page.contains('الربط الخارجي') || page.contains('التكامل')) {
+      return [
+        {'البند': 'حالة واجهة API', 'القيمة': 'غير مفعّلة', 'التفاصيل': 'تحتاج إعداد الخادم والمصادقة', 'الحالة': 'تجهيز'},
+        {'البند': 'نمط الربط', 'القيمة': 'REST / JSON', 'التفاصيل': 'قابل للتحديد عند التنفيذ', 'الحالة': 'تصميم'},
+        {'البند': 'سجل الطلبات', 'القيمة': 'غير متصل', 'التفاصيل': 'لن تُحفظ طلبات فعلية قبل ربط الخادم', 'الحالة': 'غير متصل'},
+      ];
+    }
     if (page.contains('المورد')) {
       return [{'الكود': 'SUP-001', 'الاسم': 'مورد تجريبي', 'التصنيف': 'موزع رئيسي', 'الهاتف': '01000000000', 'الرصيد': '0 ج.م', 'الحالة': 'نشط'}];
     }
@@ -191,58 +198,140 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     }));
   }
 
-  Widget _sidebar() => Container(color: _purple, child: SafeArea(child: Column(children: [
-    const Padding(padding: EdgeInsets.all(20), child: Row(children: [
-      CircleAvatar(backgroundColor: Colors.white, radius: 24, child: Icon(Icons.hub_rounded, color: _purple, size: 30)),
-      SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('سلسلة Silsila', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
-        SizedBox(height: 4),
-        Text('ERP • إدارة موارد المؤسسة', style: TextStyle(color: Colors.white70, fontSize: 11)),
-      ])),
-    ])),
-    const Divider(color: Colors.white24, height: 1),
-    Expanded(child: ListView(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      children: _modules.keys.expand((name) {
-        final selected = name == _module;
-        return <Widget>[
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2), child: ListTile(
-            dense: true,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            selected: selected,
-            selectedTileColor: Colors.white.withValues(alpha: .14),
-            leading: Icon(_iconFor(name), color: selected ? _orange : Colors.white70, size: 21),
-            title: Text(name, style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: selected ? FontWeight.w800 : FontWeight.w500)),
-            trailing: Icon(selected ? Icons.keyboard_arrow_down_rounded : Icons.chevron_left_rounded, color: Colors.white60, size: 18),
-            onTap: () => setState(() { _module = name; _group = 'بيانات أساسية'; _page = _modules[name]![_group]!.first; _search = ''; }),
-          )),
-          if (selected)
-            ..._modules[name]!.entries.expand((entry) => <Widget>[
-              Padding(padding: const EdgeInsetsDirectional.only(start: 24, end: 14, top: 8, bottom: 3), child: Text(entry.key, style: const TextStyle(color: _orange, fontWeight: FontWeight.w800, fontSize: 11))),
-              ...entry.value.map((page) => Padding(
-                padding: const EdgeInsetsDirectional.only(start: 24, end: 10),
-                child: ListTile(
-                  dense: true,
-                  visualDensity: const VisualDensity(vertical: -3),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-                  minLeadingWidth: 12,
-                  leading: Icon(page == _page ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: page == _page ? _orange : Colors.white38, size: 12),
-                  title: Text(page, style: TextStyle(color: page == _page ? Colors.white : Colors.white70, fontSize: 11, fontWeight: page == _page ? FontWeight.w800 : FontWeight.normal)),
-                  onTap: () => setState(() { _module = name; _group = entry.key; _page = page; _search = ''; }),
-                ),
-              )),
-            ]),
-        ];
-      }).toList(),
-    )),
-    const Divider(color: Colors.white24, height: 1),
-    const Padding(padding: EdgeInsets.all(14), child: Column(children: [
-      Text('سلسلة للبرمجيات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      SizedBox(height: 4),
-      Text('بنربط السوق ببعضه', style: TextStyle(color: _orange, fontSize: 12)),
-    ])),
-  ])));
+  final Set<String> _expandedModules = {'إدارة البرنامج'};
+  final Set<String> _expandedGroups = {'إدارة البرنامج::بيانات أساسية'};
+
+  Widget _sidebar() => Container(
+    color: _purple,
+    child: SafeArea(
+      child: Column(children: [
+        const Padding(
+          padding: EdgeInsets.all(20),
+          child: Row(children: [
+            CircleAvatar(backgroundColor: Colors.white, radius: 24, child: Icon(Icons.hub_rounded, color: _purple, size: 30)),
+            SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('سلسلة Silsila', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
+              SizedBox(height: 4),
+              Text('ERP • إدارة موارد المؤسسة', style: TextStyle(color: Colors.white70, fontSize: 11)),
+            ])),
+          ]),
+        ),
+        const Divider(color: Colors.white24, height: 1),
+        Expanded(child: ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: _modules.entries.map((moduleEntry) {
+            final name = moduleEntry.key;
+            final moduleOpen = _expandedModules.contains(name);
+            final selectedModule = name == _module;
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
+                child: Row(children: [
+                  Expanded(child: ListTile(
+                    dense: true,
+                    visualDensity: const VisualDensity(vertical: -2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    selected: selectedModule,
+                    selectedTileColor: Colors.white.withValues(alpha: .14),
+                    leading: Icon(_iconFor(name), color: selectedModule ? _orange : Colors.white70, size: 20),
+                    title: Text(name, style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: selectedModule ? FontWeight.w800 : FontWeight.w500)),
+                    onTap: () => setState(() {
+                      _module = name;
+                      _group = moduleEntry.value.keys.first;
+                      _page = moduleEntry.value[_group]!.first;
+                      _search = '';
+                      if (!moduleOpen) _expandedModules.add(name);
+                    }),
+                  )),
+                  IconButton(
+                    tooltip: moduleOpen ? 'طي القائمة' : 'توسيع القائمة',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => setState(() {
+                      if (moduleOpen) {
+                        _expandedModules.remove(name);
+                        _expandedGroups.removeWhere((key) => key.startsWith('$name::'));
+                      } else {
+                        _expandedModules.add(name);
+                      }
+                    }),
+                    icon: Text(moduleOpen ? '−' : '+', style: const TextStyle(color: _orange, fontSize: 25, fontWeight: FontWeight.w700)),
+                  ),
+                ]),
+              ),
+              if (moduleOpen)
+                ...moduleEntry.value.entries.map((groupEntry) {
+                  final groupKey = '$name::${groupEntry.key}';
+                  final groupOpen = _expandedGroups.contains(groupKey);
+                  final selectedGroup = selectedModule && _group == groupEntry.key;
+                  return Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 13, end: 8),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      Row(children: [
+                        Expanded(child: ListTile(
+                          dense: true,
+                          visualDensity: const VisualDensity(vertical: -3),
+                          contentPadding: const EdgeInsetsDirectional.only(start: 10, end: 2),
+                          selected: selectedGroup,
+                          selectedTileColor: Colors.white.withValues(alpha: .08),
+                          title: Text(groupEntry.key, style: TextStyle(color: selectedGroup ? _orange : Colors.white70, fontSize: 11, fontWeight: FontWeight.w800)),
+                          onTap: () => setState(() {
+                            _module = name;
+                            _group = groupEntry.key;
+                            _page = groupEntry.value.first;
+                            _search = '';
+                            _expandedGroups.add(groupKey);
+                          }),
+                        )),
+                        IconButton(
+                          tooltip: groupOpen ? 'طي الشاشات' : 'عرض الشاشات',
+                          visualDensity: VisualDensity.compact,
+                          constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                          onPressed: () => setState(() {
+                            if (groupOpen) {
+                              _expandedGroups.remove(groupKey);
+                            } else {
+                              _expandedGroups.add(groupKey);
+                            }
+                          }),
+                          icon: Text(groupOpen ? '−' : '+', style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w700)),
+                        ),
+                      ]),
+                      if (groupOpen)
+                        ...groupEntry.value.map((page) => Padding(
+                          padding: const EdgeInsetsDirectional.only(start: 20, end: 5),
+                          child: ListTile(
+                            dense: true,
+                            visualDensity: const VisualDensity(vertical: -3),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 9),
+                            minLeadingWidth: 12,
+                            leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: page == _page && selectedModule ? _orange : Colors.white38, size: 11),
+                            title: Text(page, style: TextStyle(color: page == _page && selectedModule ? Colors.white : Colors.white70, fontSize: 10.5, fontWeight: page == _page && selectedModule ? FontWeight.w800 : FontWeight.normal)),
+                            onTap: () => setState(() {
+                              _module = name;
+                              _group = groupEntry.key;
+                              _page = page;
+                              _search = '';
+                              _expandedModules.add(name);
+                              _expandedGroups.add(groupKey);
+                            }),
+                          ),
+                        )),
+                    ]),
+                  );
+                }),
+            ]);
+          }).toList(),
+        )),
+        const Divider(color: Colors.white24, height: 1),
+        const Padding(padding: EdgeInsets.all(14), child: Column(children: [
+          Text('سلسلة للبرمجيات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          SizedBox(height: 4),
+          Text('بنربط السوق ببعضه', style: TextStyle(color: _orange, fontSize: 12)),
+        ])),
+      ]),
+    ),
+  );
 
   IconData _iconFor(String name) {
     if (name.contains('إدارة البرنامج')) return Icons.settings_suggest_rounded;
