@@ -26,6 +26,9 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     'الحسابات',
     'الخزائن',
     'البنوك',
+    'المخازن',
+    'الأصناف',
+    'الفترات المالية',
   ];
 
   @override
