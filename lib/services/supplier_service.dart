@@ -45,15 +45,28 @@ class SupplierService {
         .limit(limit);
 
     var rows = List<Map<String, dynamic>>.from(response);
-    if (activity != null) {
-      rows = rows.where((row) => row['activity_type']?.toString() == activity).toList();
+    final activity = activityType?.trim();
+    final type = supplierType?.trim();
+    final term = search?.trim();
+
+    if (activity != null && activity.isNotEmpty) {
+      rows = rows
+          .where((row) => row['activity_type']?.toString() == activity)
+          .toList();
     }
-    if (type != null) {
-      rows = rows.where((row) => row['supplier_type']?.toString() == type).toList();
+    if (type != null && type.isNotEmpty) {
+      rows = rows
+          .where((row) => row['supplier_type']?.toString() == type)
+          .toList();
     }
-    if (term != null) {
+    if (term != null && term.isNotEmpty) {
       final needle = term.toLowerCase();
-      rows = rows.where((row) => (row['full_name'] ?? '').toString().toLowerCase().contains(needle)).toList();
+      rows = rows
+          .where((row) => (row['full_name'] ?? '')
+              .toString()
+              .toLowerCase()
+              .contains(needle))
+          .toList();
     }
     return rows;
   }
