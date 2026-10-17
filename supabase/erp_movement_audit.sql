@@ -413,7 +413,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات' or p_area = 'الموردون')
     and (
       p.id is null or p.company_id <> d.company_id
       or p.party_kind not in ('supplier','both')
@@ -437,7 +437,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات' or p_area = 'الموردون')
     and not exists (select 1 from public.erp_purchase_lines l where l.document_id = d.id)
 
   union all
@@ -459,7 +459,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات' or p_area = 'الموردون')
     and (i.id is null or i.company_id <> d.company_id)
 
   union all
@@ -481,7 +481,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات' or p_area = 'العملاء')
     and (
       p.id is null or p.company_id <> d.company_id
       or p.party_kind not in ('customer','both')
@@ -505,7 +505,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات' or p_area = 'العملاء')
     and not exists (select 1 from public.erp_sales_lines l where l.document_id = d.id)
 
   union all
@@ -527,7 +527,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات' or p_area = 'العملاء')
     and (i.id is null or i.company_id <> d.company_id)
 
 
@@ -758,7 +758,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات' or p_area = 'الموردون')
     and (d.subtotal <> s.subtotal or d.discount_total <> s.discount_total
       or d.tax_total <> s.tax_total or d.grand_total <> s.grand_total
       or d.grand_total <> s.subtotal - s.discount_total + s.tax_total)
@@ -787,7 +787,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات' or p_area = 'العملاء')
     and (d.subtotal <> s.subtotal or d.discount_total <> s.discount_total
       or d.tax_total <> s.tax_total or d.grand_total <> s.grand_total
       or d.grand_total <> s.subtotal - s.discount_total + s.tax_total)
@@ -863,7 +863,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات' or p_area = 'الموردون')
     and w.branch_id is not null and d.branch_id is distinct from w.branch_id
 
   union all
@@ -884,7 +884,7 @@ begin
   where d.company_id = p_company_id
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات' or p_area = 'العملاء')
     and w.branch_id is not null and d.branch_id is distinct from w.branch_id
 
   union all
@@ -913,7 +913,7 @@ begin
   where d.company_id = p_company_id and d.status = 'posted'
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات' or p_area = 'الموردون')
     and lines.line_count <> moves.movement_count
 
   union all
@@ -942,7 +942,7 @@ begin
   where d.company_id = p_company_id and d.status = 'posted'
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
-    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات' or p_area = 'العملاء')
     and lines.line_count <> moves.movement_count
 
   union all
@@ -1010,7 +1010,7 @@ begin
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
     and d.document_type in ('receipt','invoice','return')
-    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات' or p_area = 'الموردون')
     and not exists (
       select 1 from public.erp_journal_entries j
       where j.company_id = d.company_id and j.source_type = 'purchase_accounting'
@@ -1035,7 +1035,7 @@ begin
     and (p_start_date is null or d.document_date >= p_start_date)
     and (p_end_date is null or d.document_date <= p_end_date)
     and d.document_type in ('delivery','invoice','return')
-    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات' or p_area = 'العملاء')
     and not exists (
       select 1 from public.erp_journal_entries j
       where j.company_id = d.company_id and j.source_type = 'sales_accounting'
