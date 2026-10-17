@@ -87,11 +87,11 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     final code = (issue['issue_code'] ?? '').toString();
     if (route == 'journal_draft' || route == 'journal_reversal') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => const ErpJournalEntriesScreen(),
+        builder: (_) => ErpJournalEntriesScreen(initialCompanyId: _company.text.trim()),
       ));
     } else if (route == 'accounts') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => const ErpAccountsScreen(),
+        builder: (_) => ErpAccountsScreen(initialCompanyId: _company.text.trim()),
       ));
     } else {
       await showDialog<void>(
