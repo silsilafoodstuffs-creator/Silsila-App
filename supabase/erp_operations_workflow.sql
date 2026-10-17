@@ -157,7 +157,7 @@ begin
   loop
     perform public.erp_record_inventory_movement(
       v_doc.company_id, v_doc.warehouse_id, v_line.item_id, v_movement_type,
-      v_line.quantity, v_line.unit_price, v_doc.branch_id, v_doc.document_date::timestamptz,
+      v_line.quantity, v_line.unit_price, v_doc.branch_id, case when v_doc.document_date = current_date then now() else (v_doc.document_date + time '23:59:59')::timestamptz end,
       'purchase_document', v_doc.id, v_line.batch_number, v_line.expiry_date,
       'مستند مشتريات ' || v_doc.document_number
     );
@@ -202,7 +202,7 @@ begin
   loop
     perform public.erp_record_inventory_movement(
       v_doc.company_id, v_doc.warehouse_id, v_line.item_id, v_movement_type,
-      v_line.quantity, v_line.unit_price, v_doc.branch_id, v_doc.document_date::timestamptz,
+      v_line.quantity, v_line.unit_price, v_doc.branch_id, case when v_doc.document_date = current_date then now() else (v_doc.document_date + time '23:59:59')::timestamptz end,
       'sales_document', v_doc.id, v_line.batch_number, v_line.expiry_date,
       'مستند مبيعات ' || v_doc.document_number
     );
