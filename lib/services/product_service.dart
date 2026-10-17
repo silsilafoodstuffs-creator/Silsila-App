@@ -150,14 +150,6 @@ class ProductService {
     return result;
   }
 
-  /// التعامل مع الرموز الخاصة في نمط البحث.
-  String _escapeLikePattern(String value) {
-    return value
-        .replaceAll(r'\', r'\\')
-        .replaceAll('%', r'\%')
-        .replaceAll('_', r'\_');
-  }
-
   List<Map<String, dynamic>> _mapRows(dynamic response) {
     if (response is! List) {
       throw StateError('تعذر قراءة قائمة المنتجات.');
