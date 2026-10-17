@@ -8,6 +8,7 @@ import 'services/notification_service.dart';
 import 'services/product_service.dart';
 import 'services/supplier_service.dart';
 import 'services/offer_service.dart';
+import 'services/story_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 
@@ -1242,6 +1243,11 @@ class _MainShellState extends State<MainShell> {
             () => openPage('العروض', OffersScreen(activityType: activity)),
           ),
           menuItem(
+            Icons.auto_awesome,
+            'قصص الموردين',
+            () => openPage('قصص الموردين', StoriesScreen(activityType: activity)),
+          ),
+          menuItem(
             Icons.receipt_long,
             'سجل طلباتي',
             () => openPage('سجل طلباتي', const MyOrdersScreen()),
@@ -1299,6 +1305,79 @@ class _MainShellState extends State<MainShell> {
         title: Text(title),
         trailing: const Icon(Icons.chevron_left),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class StoriesScreen extends StatefulWidget {
+  const StoriesScreen({super.key, required this.activityType});
+  final String activityType;
+
+  @override
+  State<StoriesScreen> createState() => _StoriesScreenState();
+}
+
+class _StoriesScreenState extends State<StoriesScreen> {
+  final service = StoryService();
+  List<Map<String, dynamic>> stories = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadStories();
+  }
+
+  Future<void> loadStories() async {
+    setState(() { loading = true; error = null; });
+    try {
+      final rows = await service.getActiveStories(activityType: widget.activityType);
+      if (!mounted) return;
+      setState(() => stories = rows);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { stories = []; error = 'تعذر تحميل القصص حاليًا.'; });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: loadStories,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('قصص الموردين', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+          const SizedBox(height: 8),
+          const Text('تختفي القصة تلقائيًا عند انتهاء مدتها.'),
+          if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center)),
+          if (stories.isEmpty && error == null)
+            const Padding(padding: EdgeInsets.all(28), child: Text('لا توجد قصص نشطة حاليًا.', textAlign: TextAlign.center)),
+          ...stories.map((story) {
+            final url = (story['media_url'] ?? '').toString();
+            final isVideo = (story['media_type'] ?? 'image').toString() == 'video';
+            final caption = (story['caption'] ?? '').toString();
+            return Card(
+              clipBehavior: Clip.antiAlias,
+              color: Colors.white,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                if (isVideo)
+                  const SizedBox(height: 190, child: Center(child: Icon(Icons.play_circle_outline, size: 70, color: purple)))
+                else if (url.isNotEmpty)
+                  Image.network(url, height: 190, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox(height: 190, child: Center(child: Icon(Icons.broken_image_outlined, size: 48))))
+                else
+                  const SizedBox(height: 190, child: Center(child: Icon(Icons.image_outlined, size: 48))),
+                if (caption.isNotEmpty) Padding(padding: const EdgeInsets.all(12), child: Text(caption)),
+              ]),
+            );
+          }),
+        ],
       ),
     );
   }
