@@ -106,3 +106,6 @@ comment on view public.erp_account_ledger_totals is
   'Posted journal totals by account; respects underlying table RLS through security_invoker.';
 comment on view public.erp_account_tree_metrics is
   'Recursive account hierarchy metrics based on posted journal entries; apply company and branch authorization policies before client access.';
+
+-- Explicit grants are required for PostgREST clients; security_invoker keeps base RLS active.
+grant select on public.erp_account_ledger_totals, public.erp_account_tree_metrics to authenticated;
