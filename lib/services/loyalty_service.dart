@@ -25,9 +25,22 @@ class LoyaltyService {
     if (response == null) return 0;
 
     final value = response['points_balance'];
-    if (value is num) return value.toInt();
+    final int? points;
+    if (value is int) {
+      points = value;
+    } else if (value is num) {
+      if (!value.isFinite || value < 0 || value > 9007199254740991) {
+        throw StateError('تعذر قراءة رصيد النقاط بصورة صحيحة.');
+      }
+      points = value.toInt();
+    } else {
+      points = int.tryParse(value?.toString() ?? '');
+    }
 
-    return int.tryParse(value?.toString() ?? '') ?? 0;
+    if (points == null || points < 0) {
+      throw StateError('تعذر قراءة رصيد النقاط بصورة صحيحة.');
+    }
+    return points;
   }
 
   /// جلب سجل حركات النقاط.
