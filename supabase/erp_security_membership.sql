@@ -151,7 +151,7 @@ declare
   t text;
 begin
   foreach t in array array[
-    'erp_branches','erp_fiscal_periods','erp_accounts','erp_cashboxes',
+    'erp_branches','erp_fiscal_periods','erp_accounts','erp_cashboxes','erp_cash_vouchers',
     'erp_warehouses','erp_item_groups','erp_items','erp_parties',
     'erp_attendance_records','erp_leave_requests'
   ]
@@ -419,5 +419,6 @@ for delete to authenticated using (exists (
 ));
 
 grant select, insert, update, delete on public.erp_employees, public.erp_attendance_records,
-  public.erp_leave_requests, public.erp_payroll_runs, public.erp_payroll_lines to authenticated;
+  public.erp_leave_requests, public.erp_payroll_runs, public.erp_payroll_lines,
+  public.erp_cash_vouchers to authenticated;
 
