@@ -98,6 +98,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   String _group = 'بيانات أساسية';
   String _page = 'بيانات الشركة';
   String _search = '';
+  String _accountSearch = '';
   Map<String, String>? _selectedRecord;
   final Map<String, List<Map<String, String>>> _saved = {};
 
@@ -314,7 +315,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: Column(children: [
               _header(compact),
-              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'شجرة الحسابات' ? _accountTree() : _page == 'اختبار ومراجعة الحركات' ? _movementAuditScreen() : _page == 'المستخدمون والصلاحيات' ? _permissionsScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? _delegateAllocationScreen() : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _page == 'قواعد الورديات والحضور والانصراف' ? const HrShiftRulesScreen() : _page == 'أجهزة البصمة وربط الحضور' ? const HrFingerprintDevicesScreen() : _workspace())),
+              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _page == 'شجرة الحسابات' ? _accountTree() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'اختبار ومراجعة الحركات' ? _movementAuditScreen() : _page == 'المستخدمون والصلاحيات' ? _permissionsScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? _delegateAllocationScreen() : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _page == 'قواعد الورديات والحضور والانصراف' ? const HrShiftRulesScreen() : _page == 'أجهزة البصمة وربط الحضور' ? const HrFingerprintDevicesScreen() : _workspace())),
             ])),
             if (!compact) SizedBox(width: 286, child: _rightPanel()),
           ])),
@@ -839,25 +840,37 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   ];
 
   Widget _accountTree() {
-    final query = _search.trim().toLowerCase();
+    final query = _accountSearch.trim().toLowerCase();
     bool matches(_AccountNode n) => query.isEmpty || n.code.toLowerCase().contains(query) || n.name.toLowerCase().contains(query) || n.nature.toLowerCase().contains(query) || n.children.any(matches);
     final roots = _chartOfAccounts.where(matches).toList();
+    final accountCount = _allAccountCodes(_chartOfAccounts).length;
+    final analyticalCount = _countAnalyticalAccounts(_chartOfAccounts);
+    final movementCount = _totalAccountMovements(_chartOfAccounts);
+    final absoluteTotal = _totalAbsoluteAnalyticalBalance(_chartOfAccounts);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
         const Expanded(child: Text('دليل الحسابات الهرمي', style: TextStyle(color: _purple, fontSize: 22, fontWeight: FontWeight.w900))),
-        TextButton.icon(onPressed: () => setState(() => _expandedAccounts.addAll(_allAccountCodes(_chartOfAccounts))), icon: const Icon(Icons.unfold_more), label: const Text('فرد الكل')),
-        TextButton.icon(onPressed: () => setState(() => _expandedAccounts.clear()), icon: const Icon(Icons.unfold_less), label: const Text('طي الكل')),
+        TextButton.icon(onPressed: () => setState(() { _accountSearch = ''; _expandedAccounts.addAll(_allAccountCodes(_chartOfAccounts)); }), icon: const Icon(Icons.unfold_more), label: const Text('فرد الكل')),
+        TextButton.icon(onPressed: () => setState(() { _accountSearch = ''; _expandedAccounts.clear(); }), icon: const Icon(Icons.unfold_less), label: const Text('طي الكل')),
       ]),
       const Text('هيكل حسابات مبدئي وفق التصنيف المحاسبي الشائع. الأرصدة وعدد الحركات ومعدلات التغير المعروضة بيانات توضيحية وليست أرصدة دفتر أستاذ فعلية.', style: TextStyle(height: 1.6, color: Colors.black54)),
       const SizedBox(height: 12),
-      TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'ابحث بكود الحساب أو اسمه أو طبيعته', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        _summaryChip('إجمالي الحسابات', accountCount.toString(), _purple),
+        _summaryChip('الحسابات التحليلية', analyticalCount.toString(), const Color(0xFF16834A)),
+        _summaryChip('عدد الحركات التوضيحي', movementCount.toString(), _orange),
+        _summaryChip('إجمالي القيم المطلقة', _money(absoluteTotal) + ' ج.م', _pink),
+      ]),
+      const SizedBox(height: 12),
+      TextField(onChanged: (v) => setState(() { _accountSearch = v; if (v.trim().isNotEmpty) _expandedAccounts.addAll(_matchingAncestorCodes(_chartOfAccounts, v.trim().toLowerCase())); }), decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'ابحث بكود الحساب أو اسمه أو طبيعته', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
       const SizedBox(height: 12),
       SingleChildScrollView(scrollDirection: Axis.horizontal, child: Container(constraints: const BoxConstraints(minWidth: 1000), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Container(color: _purple, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: const Row(children: [
           SizedBox(width: 340, child: Text('الحساب / الكود / الحسابات التابعة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
           SizedBox(width: 145, child: Text('الرصيد (ج.م)', textAlign: TextAlign.end, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
           SizedBox(width: 110, child: Text('عدد الحركات', textAlign: TextAlign.end, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
-          SizedBox(width: 130, child: Text('مؤشر تحليلي', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+          SizedBox(width: 105, child: Text('نسبة من الإجمالي', textAlign: TextAlign.end, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+          SizedBox(width: 125, child: Text('مؤشر الحساب', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
           SizedBox(width: 115, child: Text('معدل التغير', textAlign: TextAlign.end, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
         ])),
         ...roots.expand((n) => _accountNodeRows(n, 0, query)),
@@ -873,27 +886,58 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return result;
   }
 
+  int _countAnalyticalAccounts(List<_AccountNode> nodes) => nodes.fold<int>(0, (sum, node) => sum + (node.analytical ? 1 : 0) + _countAnalyticalAccounts(node.children));
+
+  int _totalAccountMovements(List<_AccountNode> nodes) => nodes.fold<int>(0, (sum, node) => sum + node.movements + _totalAccountMovements(node.children));
+
+  double _totalAbsoluteAnalyticalBalance(List<_AccountNode> nodes) => nodes.fold<double>(0, (sum, node) => sum + (node.analytical ? node.balance.abs() : 0) + _totalAbsoluteAnalyticalBalance(node.children));
+
+  double _displayAccountBalance(_AccountNode node) => node.analytical ? node.balance : node.balance + node.children.fold<double>(0, (sum, child) => sum + _displayAccountBalance(child));
+
+  int _displayAccountMovements(_AccountNode node) => node.movements + node.children.fold<int>(0, (sum, child) => sum + _displayAccountMovements(child));
+
+  int _descendantAccountCount(_AccountNode node) => node.children.fold<int>(0, (sum, child) => sum + 1 + _descendantAccountCount(child));
+
+  Set<String> _matchingAncestorCodes(List<_AccountNode> nodes, String query) {
+    final result = <String>{};
+    for (final node in nodes) {
+      final childMatches = _matchingAncestorCodes(node.children, query);
+      final selfMatches = node.code.toLowerCase().contains(query) || node.name.toLowerCase().contains(query) || node.nature.toLowerCase().contains(query);
+      if (childMatches.isNotEmpty || selfMatches) {
+        if (node.children.isNotEmpty && childMatches.isNotEmpty) result.add(node.code);
+        result.addAll(childMatches);
+      }
+    }
+    return result;
+  }
+
   List<Widget> _accountNodeRows(_AccountNode node, int depth, String query) {
     final hasChildren = node.children.isNotEmpty;
-    final expanded = _expandedAccounts.contains(node.code) || query.isNotEmpty;
-    final children = node.children.where((n) => query.isEmpty || n.code.toLowerCase().contains(query) || n.name.toLowerCase().contains(query) || n.children.any((c) => c.code.toLowerCase().contains(query) || c.name.toLowerCase().contains(query))).toList();
+    final children = node.children.where((n) => query.isEmpty || n.code.toLowerCase().contains(query) || n.name.toLowerCase().contains(query) || n.nature.toLowerCase().contains(query) || n.children.any((c) => c.code.toLowerCase().contains(query) || c.name.toLowerCase().contains(query) || c.children.any((g) => g.code.toLowerCase().contains(query) || g.name.toLowerCase().contains(query) || g.nature.toLowerCase().contains(query)))).toList();
+    final expanded = _expandedAccounts.contains(node.code) || (query.isNotEmpty && children.isNotEmpty && children.any((child) => _accountNodeHasMatch(child, query)));
+    final balance = _displayAccountBalance(node);
+    final movements = _displayAccountMovements(node);
+    final share = _totalAbsoluteAnalyticalBalance(_chartOfAccounts) == 0 ? 0.0 : balance.abs() / _totalAbsoluteAnalyticalBalance(_chartOfAccounts) * 100;
     final color = node.change > 0 ? const Color(0xFF18865A) : node.change < 0 ? const Color(0xFFD32F2F) : Colors.grey;
     final row = Container(decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF0ECF4)))), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), child: Row(children: [
       SizedBox(width: 340, child: Row(children: [
         SizedBox(width: depth * 20.0),
-        if (hasChildren) IconButton(visualDensity: VisualDensity.compact, tooltip: expanded ? 'طي الحسابات التابعة' : 'فرد الحسابات التابعة', onPressed: () => setState(() { if (_expandedAccounts.contains(node.code)) { _expandedAccounts.remove(node.code); } else { _expandedAccounts.add(node.code); } }), icon: Icon(expanded ? Icons.remove_circle_outline : Icons.add_circle_outline, color: _purple, size: 20)) else const SizedBox(width: 36),
+        if (hasChildren) IconButton(visualDensity: VisualDensity.compact, tooltip: expanded ? 'طي الحسابات التابعة' : 'فرد الحسابات التابعة', onPressed: () => setState(() { if (expanded) { _expandedAccounts.remove(node.code); } else { _expandedAccounts.add(node.code); } }), icon: Icon(expanded ? Icons.remove_circle_outline : Icons.add_circle_outline, color: _purple, size: 20)) else const SizedBox(width: 36),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(node.name, style: TextStyle(fontWeight: hasChildren ? FontWeight.w900 : FontWeight.w600, color: hasChildren ? _purple : Colors.black87)),
-          Text(node.code + ' • ' + node.nature + ' • ' + node.children.length.toString() + ' حساب تابع', style: const TextStyle(fontSize: 11, color: Colors.black54)),
+          Text(node.code + ' • ' + node.nature + ' • ' + _descendantAccountCount(node).toString() + ' حساب تابع', style: const TextStyle(fontSize: 11, color: Colors.black54)),
         ])),
       ])),
-      SizedBox(width: 145, child: Text(_money(node.balance), textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w700))),
-      SizedBox(width: 110, child: Text(node.movements.toString(), textAlign: TextAlign.end)),
-      SizedBox(width: 130, child: Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: node.analytical ? const Color(0xFFE8F5E9) : const Color(0xFFF1E9FA), borderRadius: BorderRadius.circular(20)), child: Text(node.analytical ? 'تحليلي' : 'تجميعي', style: TextStyle(color: node.analytical ? const Color(0xFF18865A) : _purple, fontWeight: FontWeight.w800, fontSize: 11))))),
+      SizedBox(width: 145, child: Text(_money(balance), textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w700))),
+      SizedBox(width: 110, child: Text(movements.toString(), textAlign: TextAlign.end)),
+      SizedBox(width: 105, child: Text(share.toStringAsFixed(2) + '%', textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w800, color: _purple))),
+      SizedBox(width: 125, child: Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: node.analytical ? const Color(0xFFE8F5E9) : const Color(0xFFF1E9FA), borderRadius: BorderRadius.circular(20)), child: Text(node.analytical ? 'تحليلي' : 'تجميعي', style: TextStyle(color: node.analytical ? const Color(0xFF18865A) : _purple, fontWeight: FontWeight.w800, fontSize: 11))))),
       SizedBox(width: 115, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [Icon(node.change > 0 ? Icons.trending_up : node.change < 0 ? Icons.trending_down : Icons.trending_flat, color: color, size: 17), const SizedBox(width: 3), Text((node.change > 0 ? '+' : '') + node.change.toStringAsFixed(1) + '%', style: TextStyle(color: color, fontWeight: FontWeight.w800))])),
     ]));
     return [row, if (hasChildren && expanded) ...children.expand((child) => _accountNodeRows(child, depth + 1, query))];
   }
+
+  bool _accountNodeHasMatch(_AccountNode node, String query) => node.code.toLowerCase().contains(query) || node.name.toLowerCase().contains(query) || node.nature.toLowerCase().contains(query) || node.children.any((child) => _accountNodeHasMatch(child, query));
 
   String _money(double value) {
     final parts = value.abs().toStringAsFixed(2).split('.');
