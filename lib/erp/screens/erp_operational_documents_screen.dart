@@ -134,6 +134,42 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
   }
 
+  Future<void> _applyPriceList() async {
+    final quantity = double.tryParse(_quantity.text.trim()) ?? 0;
+    if (_itemId == null || _partyId == null || quantity <= 0) {
+      setState(() => _error = 'اختر مستندًا وطرفًا وصنفًا، وأدخل كمية صحيحة قبل جلب السعر.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final price = await _repo.resolvePrice(
+        companyId: _company.text,
+        itemId: _itemId!,
+        kind: widget.kind == ErpOperationalKind.purchase ? 'purchase' : 'sale',
+        quantity: quantity,
+        partyId: _partyId,
+      );
+      if (!mounted) return;
+      if (price == null) {
+        setState(() { _saving = false; _error = 'لم ترجع قاعدة البيانات سعرًا للصنف المحدد.'; });
+        return;
+      }
+      final unit = _n(price['base_unit_price']);
+      final percent = _n(price['discount_percent']);
+      final amountDiscount = quantity * unit * percent / 100;
+      setState(() {
+        _unitPrice.text = unit.toStringAsFixed(4);
+        _discount.text = amountDiscount.toStringAsFixed(2);
+        _saving = false;
+        _message = 'تم تطبيق سعر الوحدة والخصم من ' + _s(price['price_source']) +
+          (_s(price['price_list_name']).isEmpty ? '' : ' • ' + _s(price['price_list_name']));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _saving = false; _error = 'تعذر جلب سعر القائمة: $e'; });
+    }
+  }
+
   Future<void> _addLine() async {
     final selected = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
     if (selected.isEmpty || _s(selected.first['status']) != 'draft') {
@@ -304,6 +340,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 Expanded(child: TextField(controller: _tax, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الضريبة', border: OutlineInputBorder()))),
               ]),
               const SizedBox(height: 8),
+              OutlinedButton.icon(onPressed: _saving ? null : _applyPriceList, icon: const Icon(Icons.price_check_outlined), label: const Text('جلب سعر القائمة للطرف والكمية')),
+              const SizedBox(height: 8),
               FilledButton.icon(onPressed: _saving ? null : _addLine, icon: const Icon(Icons.playlist_add), label: const Text('إضافة البند')),
             ],
           ))),
@@ -326,7 +364,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               : ['delivery','invoice','return'].contains(type);
           final canPost = status == 'draft' && eligibleType;
           final date = _s(r['document_date']);
-          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () async { setState(() => _selectedDocumentId = _s(r['id'])); await _loadLines(_s(r['id'])); }, child: Padding(padding: const EdgeInsets.all(12), child: Column(
+          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () async { setState(() { _selectedDocumentId = _s(r['id']); _partyId = _s(widget.kind == ErpOperationalKind.purchase ? r['supplier_id'] : r['customer_id']); _warehouseId = _s(r['warehouse_id']); }); await _loadLines(_s(r['id'])); }, child: Padding(padding: const EdgeInsets.all(12), child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(children: [
