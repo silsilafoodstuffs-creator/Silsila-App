@@ -4,6 +4,7 @@ import 'erp_accounts_screen.dart';
 import 'erp_journal_entries_screen.dart';
 import 'erp_inventory_screen.dart';
 import 'erp_cash_vouchers_screen.dart';
+import 'erp_cashboxes_screen.dart';
 import 'erp_operational_documents_screen.dart';
 import 'erp_hr_operations_screen.dart';
 import 'erp_payroll_screen.dart';
@@ -113,6 +114,10 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
           initialCompanyId: _company.text.trim(),
           initialEntryId: (issue['document_id'] ?? '').toString(),
         ),
+      ));
+    } else if (route == 'cashboxes') {
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ErpCashboxesScreen(initialCompanyId: _company.text.trim()),
       ));
     } else if (route == 'cash_vouchers') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
