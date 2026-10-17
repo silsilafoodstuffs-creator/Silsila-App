@@ -1005,13 +1005,10 @@ class _MainShellState extends State<MainShell> {
         ),
         onTap: () => openPage(
           name,
-          SimpleListPage(
-            title: name,
-            details: 'النشاط: ${supplier['activity_type'] ?? 'غير محدد'}\n'
-                'التصنيف: ${supplier['supplier_type'] ?? 'غير محدد'}\n'
-                'الموقع: ${location.isEmpty ? 'لم يُحدد' : location}\n'
-                'العنوان التفصيلي: يُتاح بعد التواصل مع المورد.',
-            icon: Icons.store,
+          SupplierDetailScreen(
+            supplierId: id,
+            fallbackName: name,
+            onAddToCart: addToCart,
           ),
         ),
       ),
@@ -1378,6 +1375,137 @@ class _MainShellState extends State<MainShell> {
         title: Text(title),
         trailing: const Icon(Icons.chevron_left),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class SupplierDetailScreen extends StatefulWidget {
+  const SupplierDetailScreen({
+    super.key,
+    required this.supplierId,
+    required this.fallbackName,
+    required this.onAddToCart,
+  });
+  final String supplierId;
+  final String fallbackName;
+  final ValueChanged<Product> onAddToCart;
+
+  @override
+  State<SupplierDetailScreen> createState() => _SupplierDetailScreenState();
+}
+
+class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
+  final supplierService = SupplierService();
+  final productService = SupplierProductService();
+  Map<String, dynamic>? supplier;
+  Map<String, dynamic>? details;
+  List<Map<String, dynamic>> products = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    loadSupplier();
+  }
+
+  Future<void> loadSupplier() async {
+    try {
+      final profile = await supplierService.getSupplierById(widget.supplierId);
+      final supplierDetails = await supplierService.getSupplierDetails(widget.supplierId);
+      final supplierProducts = await productService.getSupplierProducts(widget.supplierId);
+      if (!mounted) return;
+      setState(() {
+        supplier = profile;
+        details = supplierDetails;
+        products = supplierProducts;
+        error = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => error = 'تعذر تحميل بيانات المورد ومنتجاته.');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Product toProduct(Map<String, dynamic> row) {
+    final rawId = row['id'];
+    final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+    final rawPrice = row['price'];
+    final price = rawPrice is num ? rawPrice.toDouble() : double.tryParse(rawPrice?.toString() ?? '') ?? 0;
+    final rawMinimum = row['min_quantity'] ?? row['minimum_quantity'];
+    final minimum = rawMinimum is num ? rawMinimum.toInt() : int.tryParse(rawMinimum?.toString() ?? '') ?? 1;
+    final category = (row['category'] ?? '').toString();
+    return Product(
+      (row['name'] ?? '').toString(),
+      category,
+      price,
+      (row['unit'] ?? 'وحدة').toString(),
+      Icons.shopping_basket,
+      id: id,
+      supplierId: row['supplier_id']?.toString(),
+      minQuantity: minimum < 1 ? 1 : minimum,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    final name = (supplier?['full_name'] ?? widget.fallbackName).toString();
+    final rating = details?['rating'];
+    final minimumInvoice = details?['minimum_invoice'];
+    return RefreshIndicator(
+      onRefresh: loadSupplier,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Card(
+            color: Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.store, size: 52, color: purple),
+                const SizedBox(height: 8),
+                Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                Text('نوع المورد: ${details?['supplier_type'] ?? supplier?['supplier_type'] ?? 'غير محدد'}'),
+                Text('النشاط: ${details?['activity_type'] ?? supplier?['activity_type'] ?? 'غير محدد'}'),
+                if ((supplier?['governorate'] ?? '').toString().isNotEmpty)
+                  Text('المحافظة: ${supplier?['governorate']}'),
+                if (details?['description'] != null && details!['description'].toString().trim().isNotEmpty)
+                  Padding(padding: const EdgeInsets.only(top: 8), child: Text(details!['description'].toString())),
+                if (minimumInvoice != null) Text('الحد الأدنى للفاتورة: $minimumInvoice ج.م'),
+                if (details?['minimum_items'] != null) Text('الحد الأدنى للأصناف: ${details?['minimum_items']}'),
+                if (rating is num) Text('التقييم: ${rating.toStringAsFixed(1)} / 5'),
+                Text(details?['accepts_negotiation'] == true ? 'الأسعار قابلة للتفاوض' : 'راجع سياسة الأسعار مع المورد'),
+                if (details?['is_verified'] == true)
+                  const Padding(padding: EdgeInsets.only(top: 8), child: Chip(label: Text('مورد موثّق'))),
+              ]),
+            ),
+          ),
+          if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
+          const SizedBox(height: 8),
+          const Text('منتجات المورد', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: purple)),
+          if (products.isEmpty && error == null)
+            const Padding(padding: EdgeInsets.all(20), child: Text('لا توجد منتجات منشورة حاليًا.', textAlign: TextAlign.center)),
+          ...products.map((row) {
+            final product = toProduct(row);
+            return Card(
+              color: Colors.white,
+              child: ListTile(
+                leading: const Icon(Icons.inventory_2_outlined, color: purple),
+                title: Text(product.name),
+                subtitle: Text('${product.price.toStringAsFixed(2)} ج.م / ${product.unit} • الحد الأدنى ${product.minQuantity}'),
+                trailing: IconButton(
+                  tooltip: 'إضافة للسلة',
+                  icon: const Icon(Icons.add_shopping_cart, color: orange),
+                  onPressed: product.id == null ? null : () => widget.onAddToCart(product),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
