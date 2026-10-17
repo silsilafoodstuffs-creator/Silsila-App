@@ -107,6 +107,14 @@ begin
     raise exception 'التسوية تتطلب تحديد اتجاه الزيادة أو النقص؛ استخدم حركة واردة أو منصرفة مناسبة';
   end if;
 
+  if v_out > 0 and exists (
+    select 1 from public.erp_inventory_movements m
+    where m.company_id = p_company_id and m.warehouse_id = p_warehouse_id
+      and m.item_id = p_item_id and m.movement_date > p_movement_date
+  ) then
+    raise exception 'لا يمكن تسجيل صرف بتاريخ أقدم من حركات لاحقة للصنف؛ راجع التسلسل الزمني أولًا';
+  end if;
+
   if v_out > 0 then
     select coalesce(sum(m.quantity_in - m.quantity_out), 0)
       into v_current
@@ -204,6 +212,14 @@ begin
   perform pg_advisory_xact_lock(hashtextextended(
     p_company_id::text || ':' || greatest(p_source_warehouse_id::text, p_target_warehouse_id::text) || ':' || p_item_id::text, 0
   ));
+
+  if exists (
+    select 1 from public.erp_inventory_movements m
+    where m.company_id = p_company_id and m.warehouse_id = p_source_warehouse_id
+      and m.item_id = p_item_id and m.movement_date > p_transfer_date
+  ) then
+    raise exception 'لا يمكن تحويل مخزون بتاريخ أقدم من حركات لاحقة للصنف في مخزن المصدر';
+  end if;
 
   select coalesce(sum(m.quantity_in - m.quantity_out),0)
     into v_source_balance
