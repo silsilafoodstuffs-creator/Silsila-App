@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'erp/erp_dashboard_screen.dart';
 import 'services/trader_market_service.dart';
 import 'services/order_status_service.dart';
 import 'services/wallet_service.dart';
@@ -265,10 +267,12 @@ class SilsilaApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const Directionality(
-        textDirection: TextDirection.rtl,
-        child: WelcomeScreen(),
-      ),
+      home: kIsWeb
+          ? const ErpDashboardScreen()
+          : const Directionality(
+              textDirection: TextDirection.rtl,
+              child: WelcomeScreen(),
+            ),
     );
   }
 }
