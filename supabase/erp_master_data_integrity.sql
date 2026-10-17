@@ -28,7 +28,7 @@ begin
         raise exception 'المجموعة الأب يجب أن تتبع الشركة نفسها';
       end if;
       with recursive descendants(id, path) as (
-        select g.id, array[g.id]::uuid[] from public.erp_item_groups g where g.id = new.id
+        select new.id, array[new.id]::uuid[]
         union all
         select child.id, d.path || child.id
         from descendants d join public.erp_item_groups child on child.parent_id = d.id
