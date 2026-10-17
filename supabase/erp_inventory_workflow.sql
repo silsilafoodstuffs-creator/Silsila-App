@@ -13,7 +13,13 @@ select
   coalesce(sum(m.quantity_in - m.quantity_out), 0)::numeric(18,3) as quantity_on_hand,
   coalesce(sum(case when m.movement_date::date = current_date then m.quantity_in else 0 end), 0)::numeric(18,3) as today_quantity_in,
   coalesce(sum(case when m.movement_date::date = current_date then m.quantity_out else 0 end), 0)::numeric(18,3) as today_quantity_out,
-  max(m.movement_date) as last_movement_at
+  max(m.movement_date) as last_movement_at,
+  coalesce(sum((m.quantity_in - m.quantity_out) * m.unit_cost),0)::numeric(18,2) as inventory_value,
+  case
+    when coalesce(sum(m.quantity_in - m.quantity_out),0) <= 0 then 0::numeric
+    else round(coalesce(sum((m.quantity_in - m.quantity_out) * m.unit_cost),0)
+      / sum(m.quantity_in - m.quantity_out), 4)
+  end as average_unit_cost
 from public.erp_inventory_movements m
 where m.movement_date <= now()
 group by m.company_id, m.branch_id, m.warehouse_id, m.item_id;
