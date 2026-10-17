@@ -34,6 +34,8 @@ create index if not exists erp_cash_vouchers_company_date_idx
   on public.erp_cash_vouchers(company_id, voucher_date);
 create index if not exists erp_cash_vouchers_source_idx
   on public.erp_cash_vouchers(source_cashbox_id, status);
+create unique index if not exists erp_cash_vouchers_journal_unique
+  on public.erp_cash_vouchers(journal_entry_id) where journal_entry_id is not null;
 
 alter table public.erp_cash_vouchers enable row level security;
 drop trigger if exists erp_cash_vouchers_updated_at on public.erp_cash_vouchers;
