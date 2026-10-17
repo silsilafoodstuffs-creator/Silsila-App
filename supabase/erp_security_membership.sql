@@ -256,64 +256,80 @@ drop policy if exists erp_item_units_select_member on public.erp_item_units;
 create policy erp_item_units_select_member on public.erp_item_units
 for select to authenticated using (public.erp_user_can_access_company(company_id));
 drop policy if exists erp_item_units_write_operator on public.erp_item_units;
-create policy erp_item_units_write_operator on public.erp_item_units
-for all to authenticated
+create policy erp_item_units_insert_operator on public.erp_item_units for insert to authenticated
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
+  and exists (select 1 from public.erp_items i where i.id = erp_item_units.item_id and i.company_id = erp_item_units.company_id));
+create policy erp_item_units_update_operator on public.erp_item_units for update to authenticated
 using (public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[]))
-with check (
-  public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
-  and exists (select 1 from public.erp_items i where i.id = erp_item_units.item_id and i.company_id = erp_item_units.company_id)
-);
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
+  and exists (select 1 from public.erp_items i where i.id = erp_item_units.item_id and i.company_id = erp_item_units.company_id));
+drop policy if exists erp_item_units_delete_admin on public.erp_item_units;
+create policy erp_item_units_delete_admin on public.erp_item_units for delete to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
 
 drop policy if exists erp_party_contacts_select_member on public.erp_party_contacts;
 create policy erp_party_contacts_select_member on public.erp_party_contacts
 for select to authenticated using (public.erp_user_can_access_company(company_id));
 drop policy if exists erp_party_contacts_write_operator on public.erp_party_contacts;
-create policy erp_party_contacts_write_operator on public.erp_party_contacts
-for all to authenticated
+create policy erp_party_contacts_insert_operator on public.erp_party_contacts for insert to authenticated
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
+  and exists (select 1 from public.erp_parties p where p.id = erp_party_contacts.party_id and p.company_id = erp_party_contacts.company_id));
+create policy erp_party_contacts_update_operator on public.erp_party_contacts for update to authenticated
 using (public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[]))
-with check (
-  public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
-  and exists (select 1 from public.erp_parties p where p.id = erp_party_contacts.party_id and p.company_id = erp_party_contacts.company_id)
-);
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[])
+  and exists (select 1 from public.erp_parties p where p.id = erp_party_contacts.party_id and p.company_id = erp_party_contacts.company_id));
+drop policy if exists erp_party_contacts_delete_admin on public.erp_party_contacts;
+create policy erp_party_contacts_delete_admin on public.erp_party_contacts for delete to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
 
 drop policy if exists erp_price_lists_select_member on public.erp_price_lists;
 create policy erp_price_lists_select_member on public.erp_price_lists
 for select to authenticated using (public.erp_user_can_access_company(company_id));
 drop policy if exists erp_price_lists_write_manager on public.erp_price_lists;
-create policy erp_price_lists_write_manager on public.erp_price_lists
-for all to authenticated
+create policy erp_price_lists_insert_manager on public.erp_price_lists for insert to authenticated
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[]));
+create policy erp_price_lists_update_manager on public.erp_price_lists for update to authenticated
 using (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[]))
 with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[]));
+drop policy if exists erp_price_lists_delete_admin on public.erp_price_lists;
+create policy erp_price_lists_delete_admin on public.erp_price_lists for delete to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
 
 drop policy if exists erp_price_list_lines_select_member on public.erp_price_list_lines;
 create policy erp_price_list_lines_select_member on public.erp_price_list_lines
 for select to authenticated using (public.erp_user_can_access_company(company_id));
 drop policy if exists erp_price_list_lines_write_manager on public.erp_price_list_lines;
-create policy erp_price_list_lines_write_manager on public.erp_price_list_lines
-for all to authenticated
-using (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[]))
-with check (
-  public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[])
+create policy erp_price_list_lines_insert_manager on public.erp_price_list_lines for insert to authenticated
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[])
   and exists (select 1 from public.erp_price_lists p where p.id = erp_price_list_lines.price_list_id and p.company_id = erp_price_list_lines.company_id)
   and exists (select 1 from public.erp_items i where i.id = erp_price_list_lines.item_id and i.company_id = erp_price_list_lines.company_id)
-  and (erp_price_list_lines.item_unit_id is null or exists (
-    select 1 from public.erp_item_units u where u.id = erp_price_list_lines.item_unit_id
-      and u.item_id = erp_price_list_lines.item_id and u.company_id = erp_price_list_lines.company_id
-  ))
-);
+  and (erp_price_list_lines.item_unit_id is null or exists (select 1 from public.erp_item_units u where u.id = erp_price_list_lines.item_unit_id and u.item_id = erp_price_list_lines.item_id and u.company_id = erp_price_list_lines.company_id)));
+create policy erp_price_list_lines_update_manager on public.erp_price_list_lines for update to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[]))
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[])
+  and exists (select 1 from public.erp_price_lists p where p.id = erp_price_list_lines.price_list_id and p.company_id = erp_price_list_lines.company_id)
+  and exists (select 1 from public.erp_items i where i.id = erp_price_list_lines.item_id and i.company_id = erp_price_list_lines.company_id)
+  and (erp_price_list_lines.item_unit_id is null or exists (select 1 from public.erp_item_units u where u.id = erp_price_list_lines.item_unit_id and u.item_id = erp_price_list_lines.item_id and u.company_id = erp_price_list_lines.company_id)));
+drop policy if exists erp_price_list_lines_delete_admin on public.erp_price_list_lines;
+create policy erp_price_list_lines_delete_admin on public.erp_price_list_lines for delete to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
 
 drop policy if exists erp_party_price_lists_select_member on public.erp_party_price_lists;
 create policy erp_party_price_lists_select_member on public.erp_party_price_lists
 for select to authenticated using (public.erp_user_can_access_company(company_id));
 drop policy if exists erp_party_price_lists_write_manager on public.erp_party_price_lists;
-create policy erp_party_price_lists_write_manager on public.erp_party_price_lists
-for all to authenticated
-using (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[]))
-with check (
-  public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[])
+create policy erp_party_price_lists_insert_manager on public.erp_party_price_lists for insert to authenticated
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[])
   and exists (select 1 from public.erp_parties p where p.id = erp_party_price_lists.party_id and p.company_id = erp_party_price_lists.company_id)
-  and exists (select 1 from public.erp_price_lists p where p.id = erp_party_price_lists.price_list_id and p.company_id = erp_party_price_lists.company_id)
-);
+  and exists (select 1 from public.erp_price_lists p where p.id = erp_party_price_lists.price_list_id and p.company_id = erp_party_price_lists.company_id));
+create policy erp_party_price_lists_update_manager on public.erp_party_price_lists for update to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[]))
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','manager','accountant']::text[])
+  and exists (select 1 from public.erp_parties p where p.id = erp_party_price_lists.party_id and p.company_id = erp_party_price_lists.company_id)
+  and exists (select 1 from public.erp_price_lists p where p.id = erp_party_price_lists.price_list_id and p.company_id = erp_party_price_lists.company_id));
+drop policy if exists erp_party_price_lists_delete_admin on public.erp_party_price_lists;
+create policy erp_party_price_lists_delete_admin on public.erp_party_price_lists for delete to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
 
 -- Journal headers are visible to company members. Only accounting/admin roles may
 -- create or edit drafts; posting/reversal RPCs still perform their own validations.
