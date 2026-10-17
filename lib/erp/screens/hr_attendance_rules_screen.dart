@@ -94,11 +94,23 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       if(canEdit) Align(alignment:Alignment.centerRight,child:OutlinedButton.icon(onPressed:()=>setState(()=>s.addLateRule()),icon:const Icon(Icons.add_circle_outline,color:_orange),label:const Text('إضافة قاعدة حضور متأخر'))),
       Text(_validateRanges(s),style:TextStyle(color:_validateRanges(s).startsWith('سليم')?_green:_red,fontWeight:FontWeight.w700,fontSize:12)),
       _heading('قواعد نسيان البصمة'),
-      _numberFields([_num(s.missIn,'نسيان بصمة الحضور — قيمة الحالة',readOnly:!canEdit),_num(s.missOut,'نسيان بصمة الانصراف — قيمة الحالة',readOnly:!canEdit),_num(s.missDay,'نسيان بصمة اليوم — قيمة الحالة',readOnly:!canEdit)]),
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+        _num(s.missIn,'نسيان بصمة حضور',readOnly:!canEdit,width:260),
+        const SizedBox(width:6),
+        _num(s.missOut,'نسيان بصمة انصراف',readOnly:!canEdit,width:260),
+        const SizedBox(width:6),
+        _num(s.missDay,'نسيان بصمة اليوم',readOnly:!canEdit,width:260),
+      ])),
       _heading('قواعد الغياب'),
       _numberFields([_num(s.excused1,'غياب بإذن: مرة',readOnly:!canEdit),_num(s.excused2,'غياب بإذن: مرتان',readOnly:!canEdit),_num(s.excused3,'غياب بإذن: 3 فأكثر',readOnly:!canEdit),_num(s.absent1,'غياب دون إذن: مرة',readOnly:!canEdit),_num(s.absent2,'غياب دون إذن: مرتان',readOnly:!canEdit),_num(s.absent3,'غياب دون إذن: 3 فأكثر',readOnly:!canEdit),_num(s.sick,'غياب مرضي: قيمة اليوم',readOnly:!canEdit),_num(s.injury,'إصابة عمل: قيمة اليوم',readOnly:!canEdit)]),
       _heading('قواعد الإجازات — قيمة اليوم الإضافي'),
-      _numberFields([_num(s.weeklyLeave,'إجازة أسبوعية',readOnly:!canEdit),_num(s.publicLeave,'إجازة رسمية',readOnly:!canEdit),_num(s.annualLeave,'إجازة سنوية',readOnly:!canEdit)]),
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+        _num(s.weeklyLeave,'الأسبوعية',readOnly:!canEdit,width:245),
+        const SizedBox(width:6),
+        _num(s.publicLeave,'الرسمية',readOnly:!canEdit,width:245),
+        const SizedBox(width:6),
+        _num(s.annualLeave,'السنوية',readOnly:!canEdit,width:245),
+      ])),
       Text('الإدارات: '+s.depts.join('، ')+' | الفروع: '+s.branches.join('، ')+' | عدد الموظفين المحددين: '+s.employees.length.toString(),style:const TextStyle(color:Colors.black54,fontSize:12)),
     ])));
   }
@@ -108,9 +120,10 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
     SizedBox(width:58,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w600))),
     Expanded(child:TextField(controller:c,readOnly:readOnly,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:10)),onChanged:readOnly?null:(_)=>setState((){}))),
   ]));
-  Widget _num(TextEditingController c,String label,{bool readOnly=false})=>SizedBox(width:340,child:Row(children:[
-    SizedBox(width:190,child:Text(label,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600))),
-    Expanded(child:TextField(controller:c,readOnly:readOnly,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:10)))),
+  Widget _num(TextEditingController c,String label,{bool readOnly=false,double width=260})=>SizedBox(width:width,child:Row(children:[
+    SizedBox(width:width*0.58,child:Text(label,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600),maxLines:2,overflow:TextOverflow.ellipsis)),
+    const SizedBox(width:4),
+    Expanded(child:TextField(controller:c,readOnly:readOnly,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:8)))),
   ]));
   Widget _numberFields(List<Widget> children)=>Wrap(spacing:9,runSpacing:9,children:children);
 
