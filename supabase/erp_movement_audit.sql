@@ -791,6 +791,31 @@ begin
       or d.tax_total <> s.tax_total or d.grand_total <> s.grand_total
       or d.grand_total <> s.subtotal - s.discount_total + s.tax_total)
 
+
+  union all
+
+  select
+    'cash-voucher:' || v.id::text || ':destination',
+    'سندات الخزائن',
+    v.id,
+    v.voucher_number,
+    v.voucher_date,
+    v.description,
+    'خطأ',
+    'CASH_TRANSFER_DESTINATION_INVALID',
+    'سند التحويل مرتبط بخزينة استلام غير صالحة أو بحساب أستاذ غير نشط.',
+    'cash_vouchers'
+  from public.erp_cash_vouchers v
+  left join public.erp_cashboxes c on c.id = v.destination_cashbox_id
+  left join public.erp_accounts a on a.id = c.account_id
+  where v.company_id = p_company_id
+    and (p_start_date is null or v.voucher_date >= p_start_date)
+    and (p_end_date is null or v.voucher_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'سندات الخزائن')
+    and v.voucher_type = 'transfer'
+    and (c.id is null or c.company_id <> v.company_id or not c.is_active
+      or a.id is null or a.company_id <> v.company_id or not a.is_active or not a.is_postable)
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
