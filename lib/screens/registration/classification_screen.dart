@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 const Color silsilaPurple = Color(0xFF3E007D);
@@ -28,8 +27,7 @@ class SilsilaClassificationScreen extends StatefulWidget {
 
 class _SilsilaClassificationScreenState
     extends State<SilsilaClassificationScreen> {
-  final TextEditingController _searchController =
-      TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
 
   String _searchText = '';
   String? _selected;
@@ -38,9 +36,9 @@ class _SilsilaClassificationScreenState
   void initState() {
     super.initState();
 
-    if (widget.initialSelection != null &&
-        widget.choices.contains(widget.initialSelection)) {
-      _selected = widget.initialSelection;
+    final initial = widget.initialSelection;
+    if (initial != null && widget.choices.contains(initial)) {
+      _selected = initial;
     }
   }
 
@@ -54,6 +52,18 @@ class _SilsilaClassificationScreenState
         .toList();
   }
 
+  void _clearSearch() {
+    _searchController.clear();
+    setState(() => _searchText = '');
+  }
+
+  void _confirmSelection() {
+    final selected = _selected;
+    if (selected == null || !widget.choices.contains(selected)) return;
+
+    Navigator.of(context).pop<String>(selected);
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -62,6 +72,8 @@ class _SilsilaClassificationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final filteredChoices = _filteredChoices;
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
@@ -74,7 +86,6 @@ class _SilsilaClassificationScreenState
             widget.title,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
-              fontFamily: 'Tajawal',
             ),
           ),
         ),
@@ -83,7 +94,7 @@ class _SilsilaClassificationScreenState
             children: [
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
                 decoration: const BoxDecoration(
                   color: silsilaPurple,
                   borderRadius: BorderRadius.only(
@@ -94,22 +105,30 @@ class _SilsilaClassificationScreenState
                 child: Column(
                   children: [
                     CircleAvatar(
-                      radius: 29,
+                      radius: 30,
                       backgroundColor: Colors.white,
                       child: Icon(
                         widget.icon,
                         color: silsilaPurple,
-                        size: 31,
+                        size: 32,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     Text(
                       widget.description,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 15,
-                        fontFamily: 'Tajawal',
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'عدد الخيارات: ${widget.choices.length}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -119,6 +138,7 @@ class _SilsilaClassificationScreenState
                 padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
                 child: TextField(
                   controller: _searchController,
+                  textInputAction: TextInputAction.search,
                   onChanged: (value) {
                     setState(() => _searchText = value);
                   },
@@ -131,10 +151,8 @@ class _SilsilaClassificationScreenState
                     suffixIcon: _searchText.isEmpty
                         ? null
                         : IconButton(
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchText = '');
-                            },
+                            tooltip: 'مسح البحث',
+                            onPressed: _clearSearch,
                             icon: const Icon(Icons.close_rounded),
                           ),
                     filled: true,
@@ -143,21 +161,63 @@ class _SilsilaClassificationScreenState
                       borderRadius: BorderRadius.circular(15),
                       borderSide: BorderSide.none,
                     ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE8E2EF),
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      borderSide: const BorderSide(
+                        color: silsilaPurple,
+                        width: 1.5,
+                      ),
+                    ),
                   ),
                 ),
               ),
               Expanded(
-                child: _filteredChoices.isEmpty
-                    ? const Center(
-                        child: Text('لا توجد تصنيفات مطابقة للبحث'),
+                child: filteredChoices.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.search_off_rounded,
+                                size: 48,
+                                color: silsilaPurple,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'لا توجد تصنيفات مطابقة للبحث',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (_searchText.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                TextButton(
+                                  onPressed: _clearSearch,
+                                  child: const Text('مسح البحث'),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       )
                     : ListView.separated(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                        itemCount: _filteredChoices.length,
+                        itemCount: filteredChoices.length,
                         separatorBuilder: (_, __) =>
                             const SizedBox(height: 8),
                         itemBuilder: (context, index) {
-                          final choice = _filteredChoices[index];
+                          final choice = filteredChoices[index];
                           final isSelected = choice == _selected;
 
                           return Material(
@@ -171,7 +231,7 @@ class _SilsilaClassificationScreenState
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 14,
-                                  vertical: 13,
+                                  vertical: 7,
                                 ),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(14),
@@ -179,11 +239,21 @@ class _SilsilaClassificationScreenState
                                     color: isSelected
                                         ? silsilaOrange
                                         : const Color(0xFFE8E2EF),
-                                    width: isSelected ? 2 : 1,
+                                    width: isSelected ? 1.8 : 1,
                                   ),
                                 ),
                                 child: Row(
                                   children: [
+                                    Icon(
+                                      isSelected
+                                          ? Icons.check_circle_rounded
+                                          : Icons.circle_outlined,
+                                      color: isSelected
+                                          ? silsilaOrange
+                                          : Colors.grey.shade400,
+                                      size: 22,
+                                    ),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: Text(
                                         choice,
@@ -193,7 +263,6 @@ class _SilsilaClassificationScreenState
                                               ? FontWeight.bold
                                               : FontWeight.normal,
                                           color: silsilaPurple,
-                                          fontFamily: 'Tajawal',
                                         ),
                                       ),
                                     ),
@@ -202,6 +271,7 @@ class _SilsilaClassificationScreenState
                                       groupValue: _selected,
                                       activeColor: silsilaPurple,
                                       onChanged: (value) {
+                                        if (value == null) return;
                                         setState(() => _selected = value);
                                       },
                                     ),
@@ -219,22 +289,20 @@ class _SilsilaClassificationScreenState
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton.icon(
-                    onPressed: _selected == null
-                        ? null
-                        : () => Navigator.pop(context, _selected),
+                    onPressed: _selected == null ? null : _confirmSelection,
                     icon: const Icon(Icons.check_circle_outline_rounded),
                     label: const Text(
                       'اعتماد التصنيف',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        fontFamily: 'Tajawal',
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: silsilaPurple,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: Colors.grey.shade300,
+                      disabledForegroundColor: Colors.grey.shade600,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
