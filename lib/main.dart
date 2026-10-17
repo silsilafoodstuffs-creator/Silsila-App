@@ -151,6 +151,8 @@ class Product {
   final int? id;
   final String? supplierId;
   final int minQuantity;
+
+  String get cartKey => id == null ? 'demo:$name' : 'product:$id';
 }
 
 const products = [
@@ -469,6 +471,7 @@ class _MainShellState extends State<MainShell> {
   String accountName = 'تاجر سلسلة';
   final favorites = <String>{};
   final cart = <String, int>{};
+  final cartProducts = <String, Product>{};
   final searchController = TextEditingController();
   final productService = ProductService();
   List<Product> liveProducts = [];
@@ -560,20 +563,29 @@ class _MainShellState extends State<MainShell> {
     super.dispose();
   }
 
+  Product? productForCartKey(String key) {
+    final stored = cartProducts[key];
+    if (stored != null) return stored;
+    for (final product in allProducts) {
+      if (product.cartKey == key) return product;
+    }
+    return null;
+  }
+
   double get total {
     double value = 0;
     for (final entry in cart.entries) {
-      final matches = allProducts.where((p) => p.name == entry.key);
-      if (matches.isNotEmpty) {
-        value += matches.first.price * entry.value;
-      }
+      final product = productForCartKey(entry.key);
+      if (product != null) value += product.price * entry.value;
     }
     return value;
   }
 
   void addToCart(Product product) {
+    final key = product.cartKey;
     setState(() {
-      cart[product.name] = (cart[product.name] ?? 0) + (cart.containsKey(product.name) ? 1 : product.minQuantity);
+      cartProducts[key] = product;
+      cart[key] = (cart[key] ?? 0) + (cart.containsKey(key) ? 1 : product.minQuantity);
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -974,8 +986,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ),
         ...entries.map((entry) {
-          final product =
-              allProducts.firstWhere((p) => p.name == entry.key, orElse: () => Product(entry.key, '', 0, 'وحدة', Icons.shopping_basket));
+          final product = productForCartKey(entry.key) ?? Product(entry.key, '', 0, 'وحدة', Icons.shopping_basket);
           return Card(
             color: Colors.white,
             child: ListTile(
@@ -1047,10 +1058,10 @@ class _MainShellState extends State<MainShell> {
                           total: total,
                           itemCount: cart.values.fold<int>(0, (a, b) => a + b),
                           items: entries.map((entry) => <String, dynamic>{
-                            'product': allProducts.firstWhere((p) => p.name == entry.key),
+                            'product': productForCartKey(entry.key) ?? Product(entry.key, '', 0, 'وحدة', Icons.shopping_basket),
                             'quantity': entry.value,
                           }).toList(),
-                          onSuccess: () { if (mounted) setState(() => cart.clear()); },
+                          onSuccess: () { if (mounted) setState(() { cart.clear(); cartProducts.clear(); }); },
                         ),
                       ),
                       child: const Text('متابعة إتمام الطلب'),
