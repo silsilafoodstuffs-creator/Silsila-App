@@ -263,7 +263,8 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
           ..._balances.map((r) => Card(child: ListTile(
             leading: const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
             title: Text(_itemName(_s(r['item_id']))),
-            subtitle: Text(_warehouseName(_s(r['warehouse_id']))),
+            subtitle: Text(_warehouseName(_s(r['warehouse_id'])) + '\nالكمية: ' + _qty(r['quantity_on_hand']) + ' • قيمة المخزون: ' + _n(r['inventory_value']).toStringAsFixed(2) + ' ج.م • متوسط التكلفة: ' + _n(r['average_unit_cost']).toStringAsFixed(4)),
+            isThreeLine: true,
             trailing: Text(_qty(r['quantity_on_hand']), style: TextStyle(
               fontWeight: FontWeight.w900,
               color: _n(r['quantity_on_hand']) < 0 ? Colors.red : const Color(0xFF18794E))),
