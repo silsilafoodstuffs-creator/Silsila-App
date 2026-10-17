@@ -313,7 +313,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Expanded(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Expanded(child: Column(children: [
               _header(compact),
-              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _workspace())),
+              Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'شجرة الحسابات' ? _accountTree() : _workspace())),
             ])),
             if (!compact) SizedBox(width: 286, child: _rightPanel()),
           ])),
@@ -760,6 +760,143 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ])),
   ]);
 
+  final Set<String> _expandedAccounts = {'1', '11', '12', '2', '3', '4', '5'};
+
+  static const List<_AccountNode> _chartOfAccounts = [
+    _AccountNode('1', 'الأصول', 'مدين', children: [
+      _AccountNode('11', 'الأصول المتداولة', 'مدين', children: [
+        _AccountNode('111', 'النقدية وما في حكمها', 'مدين', children: [
+          _AccountNode('11101', 'الخزائن الرئيسية', 'مدين', analytical: true, balance: 125450, movements: 42, change: 8.4),
+          _AccountNode('11102', 'الخزائن الفرعية', 'مدين', analytical: true, balance: 24800, movements: 18, change: -2.1),
+          _AccountNode('11103', 'البنوك والحسابات الجارية', 'مدين', analytical: true, balance: 310000, movements: 27, change: 5.6),
+          _AccountNode('11104', 'شيكات تحت التحصيل', 'مدين', analytical: true, balance: 18000, movements: 4, change: 12),
+        ]),
+        _AccountNode('112', 'العملاء وأوراق القبض', 'مدين', children: [
+          _AccountNode('11201', 'عملاء محليون', 'مدين', analytical: true, balance: 425000, movements: 86, change: 6.3),
+          _AccountNode('11202', 'أوراق قبض', 'مدين', analytical: true, balance: 35000, movements: 5, change: -1.2),
+          _AccountNode('11203', 'مخصص ديون مشكوك فيها', 'دائن', analytical: true, balance: -12000, movements: 2, change: .8),
+        ]),
+        _AccountNode('113', 'المخزون', 'مدين', children: [
+          _AccountNode('11301', 'مخزون المواد الغذائية', 'مدين', analytical: true, balance: 680000, movements: 142, change: 9.7),
+          _AccountNode('11302', 'بضاعة بالطريق', 'مدين', analytical: true, balance: 45000, movements: 7, change: 3.1),
+          _AccountNode('11303', 'مخزون لدى الغير', 'مدين', analytical: true, balance: 12000, movements: 3, change: -4),
+        ]),
+        _AccountNode('114', 'مدفوعات ومصروفات مقدمة', 'مدين', children: [
+          _AccountNode('11401', 'إيجارات مقدمة', 'مدين', analytical: true, balance: 24000, movements: 2, change: -8),
+          _AccountNode('11402', 'تأمينات لدى الغير', 'مدين', analytical: true, balance: 15000, movements: 1),
+        ]),
+      ]),
+      _AccountNode('12', 'الأصول غير المتداولة', 'مدين', children: [
+        _AccountNode('121', 'الأصول الثابتة بالتكلفة', 'مدين', children: [
+          _AccountNode('12101', 'الأراضي والمباني', 'مدين', analytical: true, balance: 900000, movements: 1),
+          _AccountNode('12102', 'السيارات ووسائل النقل', 'مدين', analytical: true, balance: 320000, movements: 6, change: 2),
+          _AccountNode('12103', 'الأثاث والتجهيزات', 'مدين', analytical: true, balance: 85000, movements: 3),
+          _AccountNode('12104', 'أجهزة الحاسب والبرامج', 'مدين', analytical: true, balance: 65000, movements: 4, change: 15),
+        ]),
+        _AccountNode('12201', 'مجمع إهلاك الأصول الثابتة', 'دائن', analytical: true, balance: -76000, movements: 12, change: 6),
+      ]),
+    ]),
+    _AccountNode('2', 'الالتزامات', 'دائن', children: [
+      _AccountNode('21', 'الالتزامات المتداولة', 'دائن', children: [
+        _AccountNode('21101', 'موردو مواد غذائية محليون', 'دائن', analytical: true, balance: -390000, movements: 74, change: 4.8),
+        _AccountNode('21102', 'أوراق دفع', 'دائن', analytical: true, balance: -28000, movements: 6, change: -3),
+        _AccountNode('21201', 'رواتب وأجور مستحقة', 'دائن', analytical: true, balance: -42000, movements: 3, change: 2.5),
+        _AccountNode('21301', 'ضريبة قيمة مضافة مستحقة', 'دائن', analytical: true, balance: -36000, movements: 8, change: 2.2),
+      ]),
+      _AccountNode('22', 'التزامات طويلة الأجل', 'دائن', children: [
+        _AccountNode('22101', 'قروض وتسهيلات طويلة الأجل', 'دائن', analytical: true, balance: -150000, movements: 2, change: -5),
+      ]),
+    ]),
+    _AccountNode('3', 'حقوق الملكية', 'دائن', children: [
+      _AccountNode('3101', 'رأس المال المدفوع', 'دائن', analytical: true, balance: -1000000, movements: 1),
+      _AccountNode('3102', 'جاري الشركاء', 'دائن', analytical: true, balance: -65000, movements: 9, change: 1),
+      _AccountNode('3201', 'أرباح مرحلة', 'دائن', analytical: true, balance: -210000, movements: 1),
+    ]),
+    _AccountNode('4', 'الإيرادات', 'دائن', children: [
+      _AccountNode('4101', 'مبيعات جملة', 'دائن', analytical: true, balance: -1450000, movements: 215, change: 11.5),
+      _AccountNode('4102', 'مردودات ومسموحات المبيعات', 'مدين', analytical: true, balance: 32000, movements: 14, change: -2.4),
+      _AccountNode('4103', 'خصم مسموح به', 'مدين', analytical: true, balance: 14000, movements: 11, change: 1.8),
+      _AccountNode('4201', 'إيرادات خدمات وتوصيل', 'دائن', analytical: true, balance: -12000, movements: 7, change: 7),
+    ]),
+    _AccountNode('5', 'المصروفات والتكاليف', 'مدين', children: [
+      _AccountNode('5101', 'تكلفة البضاعة المباعة', 'مدين', analytical: true, balance: 990000, movements: 187, change: 8.2),
+      _AccountNode('5102', 'مشتريات', 'مدين', analytical: true, balance: 780000, movements: 102, change: 10.4),
+      _AccountNode('5103', 'مردودات ومسموحات المشتريات', 'دائن', analytical: true, balance: -18000, movements: 8, change: -1.7),
+      _AccountNode('5201', 'رواتب وأجور', 'مدين', analytical: true, balance: 95000, movements: 12, change: 4),
+      _AccountNode('5202', 'إيجارات', 'مدين', analytical: true, balance: 48000, movements: 12),
+      _AccountNode('5203', 'مرافق واتصالات', 'مدين', analytical: true, balance: 14500, movements: 12, change: 2.7),
+      _AccountNode('5301', 'وقود وصيانة سيارات', 'مدين', analytical: true, balance: 37000, movements: 22, change: 6.8),
+      _AccountNode('5302', 'عمولات مندوبي المبيعات', 'مدين', analytical: true, balance: 28000, movements: 10, change: 5.1),
+    ]),
+    _AccountNode('6', 'حسابات رقابية وإقفال', 'مدين', children: [
+      _AccountNode('6101', 'بضاعة بالطريق - وسيط', 'مدين', analytical: true),
+      _AccountNode('6102', 'حساب تسوية فروق المخزون', 'مدين', analytical: true),
+      _AccountNode('6201', 'ملخص الدخل', 'مدين', analytical: true),
+    ]),
+  ];
+
+  Widget _accountTree() {
+    final query = _search.trim().toLowerCase();
+    bool matches(_AccountNode n) => query.isEmpty || n.code.toLowerCase().contains(query) || n.name.toLowerCase().contains(query) || n.nature.toLowerCase().contains(query) || n.children.any(matches);
+    final roots = _chartOfAccounts.where(matches).toList();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        const Expanded(child: Text('دليل الحسابات الهرمي', style: TextStyle(color: _purple, fontSize: 22, fontWeight: FontWeight.w900))),
+        TextButton.icon(onPressed: () => setState(() => _expandedAccounts.addAll(_allAccountCodes(_chartOfAccounts))), icon: const Icon(Icons.unfold_more), label: const Text('فرد الكل')),
+        TextButton.icon(onPressed: () => setState(() => _expandedAccounts.clear()), icon: const Icon(Icons.unfold_less), label: const Text('طي الكل')),
+      ]),
+      const Text('هيكل حسابات مبدئي وفق التصنيف المحاسبي الشائع. الأرصدة وعدد الحركات ومعدلات التغير المعروضة بيانات توضيحية وليست أرصدة دفتر أستاذ فعلية.', style: TextStyle(height: 1.6, color: Colors.black54)),
+      const SizedBox(height: 12),
+      TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: 'ابحث بكود الحساب أو اسمه أو طبيعته', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)))),
+      const SizedBox(height: 12),
+      SingleChildScrollView(scrollDirection: Axis.horizontal, child: Container(constraints: const BoxConstraints(minWidth: 1000), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Container(color: _purple, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12), child: const Row(children: [
+          SizedBox(width: 340, child: Text('الحساب / الكود / الحسابات التابعة', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+          SizedBox(width: 145, child: Text('الرصيد (ج.م)', textAlign: TextAlign.end, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+          SizedBox(width: 110, child: Text('عدد الحركات', textAlign: TextAlign.end, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+          SizedBox(width: 130, child: Text('مؤشر تحليلي', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+          SizedBox(width: 115, child: Text('معدل التغير', textAlign: TextAlign.end, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+        ])),
+        ...roots.expand((n) => _accountNodeRows(n, 0, query)),
+      ]))),
+      const SizedBox(height: 10),
+      const Text('ربط الحسابات بالقيود والفواتير والخزائن والمخازن واعتماد القيود وترحيلها يحتاج استكمال طبقة الحفظ والصلاحيات وقاعدة البيانات؛ هذه الشاشة لا ترحّل أي حركة.', style: TextStyle(color: Colors.black54, height: 1.6)),
+    ]);
+  }
+
+  Set<String> _allAccountCodes(List<_AccountNode> nodes) {
+    final result = <String>{};
+    for (final n in nodes) { result.add(n.code); result.addAll(_allAccountCodes(n.children)); }
+    return result;
+  }
+
+  List<Widget> _accountNodeRows(_AccountNode node, int depth, String query) {
+    final hasChildren = node.children.isNotEmpty;
+    final expanded = _expandedAccounts.contains(node.code) || query.isNotEmpty;
+    final children = node.children.where((n) => query.isEmpty || n.code.toLowerCase().contains(query) || n.name.toLowerCase().contains(query) || n.children.any((c) => c.code.toLowerCase().contains(query) || c.name.toLowerCase().contains(query))).toList();
+    final color = node.change > 0 ? const Color(0xFF18865A) : node.change < 0 ? const Color(0xFFD32F2F) : Colors.grey;
+    final row = Container(decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFF0ECF4)))), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), child: Row(children: [
+      SizedBox(width: 340, child: Row(children: [
+        SizedBox(width: depth * 20.0),
+        if (hasChildren) IconButton(visualDensity: VisualDensity.compact, tooltip: expanded ? 'طي الحسابات التابعة' : 'فرد الحسابات التابعة', onPressed: () => setState(() { if (_expandedAccounts.contains(node.code)) { _expandedAccounts.remove(node.code); } else { _expandedAccounts.add(node.code); } }), icon: Icon(expanded ? Icons.remove_circle_outline : Icons.add_circle_outline, color: _purple, size: 20)) else const SizedBox(width: 36),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(node.name, style: TextStyle(fontWeight: hasChildren ? FontWeight.w900 : FontWeight.w600, color: hasChildren ? _purple : Colors.black87)),
+          Text(node.code + ' • ' + node.nature + ' • ' + node.children.length.toString() + ' حساب تابع', style: const TextStyle(fontSize: 11, color: Colors.black54)),
+        ])),
+      ])),
+      SizedBox(width: 145, child: Text(_money(node.balance), textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w700))),
+      SizedBox(width: 110, child: Text(node.movements.toString(), textAlign: TextAlign.end)),
+      SizedBox(width: 130, child: Center(child: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: node.analytical ? const Color(0xFFE8F5E9) : const Color(0xFFF1E9FA), borderRadius: BorderRadius.circular(20)), child: Text(node.analytical ? 'تحليلي' : 'تجميعي', style: TextStyle(color: node.analytical ? const Color(0xFF18865A) : _purple, fontWeight: FontWeight.w800, fontSize: 11))))),
+      SizedBox(width: 115, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [Icon(node.change > 0 ? Icons.trending_up : node.change < 0 ? Icons.trending_down : Icons.trending_flat, color: color, size: 17), const SizedBox(width: 3), Text((node.change > 0 ? '+' : '') + node.change.toStringAsFixed(1) + '%', style: TextStyle(color: color, fontWeight: FontWeight.w800))])),
+    ]));
+    return [row, if (hasChildren && expanded) ...children.expand((child) => _accountNodeRows(child, depth + 1, query))];
+  }
+
+  String _money(double value) {
+    final parts = value.abs().toStringAsFixed(2).split('.');
+    final whole = parts[0].replaceAllMapped(RegExp(r'\\B(?=(\\d{3})+(?!\\d))'), (m) => ',');
+    return (value < 0 ? '-' : '') + whole + '.' + parts[1];
+  }
   Widget _about() => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Text('عن البرنامج', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
     SizedBox(height: 12),
@@ -774,6 +911,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
 }
 
+class _AccountNode {
+  const _AccountNode(this.code, this.name, this.nature, {this.children = const [], this.analytical = false, this.balance = 0, this.movements = 0, this.change = 0});
+  final String code, name, nature;
+  final List<_AccountNode> children;
+  final bool analytical;
+  final double balance, change;
+  final int movements;
+}
 class _Metric extends StatelessWidget {
   const _Metric({required this.title, required this.value, required this.note, required this.icon, required this.color});
   final String title, value, note;
