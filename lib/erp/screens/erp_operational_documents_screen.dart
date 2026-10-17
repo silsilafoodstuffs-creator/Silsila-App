@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/erp_operational_documents_repository.dart';
 import '../services/erp_operational_accounting_repository.dart';
+import 'erp_operational_account_mappings_screen.dart';
 
 class ErpOperationalDocumentsScreen extends StatefulWidget {
   const ErpOperationalDocumentsScreen({
@@ -276,7 +277,17 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         const SizedBox(height: 12),
         TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
         const SizedBox(height: 8),
-        FilledButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh), label: const Text('تحميل المستندات')),
+        Row(children: [
+          Expanded(child: FilledButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh), label: const Text('تحميل المستندات'))),
+          const SizedBox(width: 8),
+          Expanded(child: OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+              builder: (_) => ErpOperationalAccountMappingsScreen(initialCompanyId: _company.text.trim()),
+            )),
+            icon: const Icon(Icons.account_tree_outlined),
+            label: const Text('خريطة الحسابات'),
+          )),
+        ]),
         if (_loading) const LinearProgressIndicator(),
         if (_error != null) _notice(_error!, Colors.red),
         if (_message != null) _notice(_message!, Colors.green),
