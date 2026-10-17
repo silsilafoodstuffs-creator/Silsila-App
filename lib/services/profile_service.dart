@@ -91,10 +91,21 @@ class ProfileService {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
 
-    await client
-        .from('profiles')
-        .update({'account_status': status})
-        .eq('id', user.id);
+    final allowedStatuses = {
+      'pending', 'approved', 'active', 'rejected', 'suspended',
+      'مفعل', 'معتمد', 'مرفوض', 'موقوف',
+    };
+    if (!allowedStatuses.contains(status)) {
+      throw ArgumentError('حالة الحساب غير مدعومة.');
+    }
+
+    await client.rpc(
+      'admin_update_account_status',
+      params: {
+        'p_user_id': user.id,
+        'p_status': status,
+      },
+    );
   }
 
   /// حذف المسافات وتحويل النص الفارغ إلى null.
