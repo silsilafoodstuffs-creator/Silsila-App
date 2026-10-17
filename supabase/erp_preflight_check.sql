@@ -19,6 +19,14 @@ from (values
   ('erp_journal_entries','table'),
   ('erp_journal_lines','table'),
   ('erp_fiscal_periods','table'),
+  ('erp_warehouses','table'),
+  ('erp_items','table'),
+  ('erp_inventory_movements','table'),
+  ('erp_purchase_documents','table'),
+  ('erp_purchase_lines','table'),
+  ('erp_sales_documents','table'),
+  ('erp_sales_lines','table'),
+  ('erp_stock_balances','view'),
   ('erp_account_ledger_totals','view'),
   ('erp_account_tree_metrics','view'),
   ('erp_general_ledger','view'),
@@ -26,7 +34,9 @@ from (values
   ('erp_post_journal_entry','function'),
   ('erp_get_trial_balance','function'),
   ('erp_reverse_journal_entry','function'),
-  ('erp_run_movement_audit','function')
+  ('erp_run_movement_audit','function'),
+  ('erp_record_inventory_movement','function'),
+  ('erp_transfer_inventory_between_warehouses','function')
 ) as x(object_name, object_type)
 order by x.object_type, x.object_name;
 
@@ -56,6 +66,8 @@ where n.nspname = 'public'
     'erp_post_journal_entry',
     'erp_get_trial_balance',
     'erp_reverse_journal_entry',
-    'erp_run_movement_audit'
+    'erp_run_movement_audit',
+    'erp_record_inventory_movement',
+    'erp_transfer_inventory_between_warehouses'
   )
 order by p.proname;
