@@ -908,6 +908,7 @@ begin
     select count(*)::bigint as movement_count
     from public.erp_inventory_movements m
     where m.company_id = d.company_id and m.reference_type = 'purchase_document' and m.reference_id = d.id
+      and m.movement_type = case when d.document_type = 'return' then 'supplier_return' else 'purchase_receipt' end
   ) moves on true
   where d.company_id = p_company_id and d.status = 'posted'
     and (p_start_date is null or d.document_date >= p_start_date)
@@ -936,6 +937,7 @@ begin
     select count(*)::bigint as movement_count
     from public.erp_inventory_movements m
     where m.company_id = d.company_id and m.reference_type = 'sales_document' and m.reference_id = d.id
+      and m.movement_type = case when d.document_type = 'return' then 'customer_return' else 'sales_issue' end
   ) moves on true
   where d.company_id = p_company_id and d.status = 'posted'
     and (p_start_date is null or d.document_date >= p_start_date)
