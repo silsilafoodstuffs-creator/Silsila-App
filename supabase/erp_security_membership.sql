@@ -226,6 +226,24 @@ begin
 end;
 $$;
 
+
+-- Fiscal periods are controlled by administrators/accounting only.
+drop policy if exists erp_fiscal_periods_insert_operator on public.erp_fiscal_periods;
+create policy erp_fiscal_periods_insert_operator on public.erp_fiscal_periods
+for insert to authenticated with check (
+  status = 'open' and public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[])
+);
+drop policy if exists erp_fiscal_periods_update_operator on public.erp_fiscal_periods;
+create policy erp_fiscal_periods_update_operator on public.erp_fiscal_periods
+for update to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]))
+with check (public.erp_user_has_company_role(company_id, array['owner','admin','accountant']::text[]));
+drop policy if exists erp_fiscal_periods_delete_admin on public.erp_fiscal_periods;
+create policy erp_fiscal_periods_delete_admin on public.erp_fiscal_periods
+for delete to authenticated using (
+  status = 'open' and public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
+);
+
 -- Journal headers are visible to company members. Only accounting/admin roles may
 -- create or edit drafts; posting/reversal RPCs still perform their own validations.
 drop policy if exists erp_journal_entries_select_member on public.erp_journal_entries;
