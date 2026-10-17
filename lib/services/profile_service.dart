@@ -63,20 +63,34 @@ class ProfileService {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
 
+    final cleanName = fullName.trim();
+    final cleanActivity = activityType.trim();
+    if (cleanName.isEmpty || cleanName.length > 120) {
+      throw ArgumentError('الاسم مطلوب ويجب ألا يتجاوز 120 حرفًا.');
+    }
+    if (cleanActivity.isEmpty || cleanActivity.length > 120) {
+      throw ArgumentError('يرجى تحديد نوع النشاط بصورة صحيحة.');
+    }
+    if (address != null && address.trim().length > 2000) {
+      throw ArgumentError('العنوان طويل أكثر من اللازم.');
+    }
+    if (whatsappPhone != null && whatsappPhone.trim().length > 30) {
+      throw ArgumentError('رقم واتساب طويل أكثر من اللازم.');
+    }
+
     final data = <String, dynamic>{
-      'full_name': fullName.trim(),
-      'activity_type': activityType,
-      'customer_type': customerType,
-      'supplier_type': supplierType,
-      'delegate_type': delegateType,
+      'full_name': cleanName,
+      'activity_type': cleanActivity,
+      'customer_type': _clean(customerType),
+      'supplier_type': _clean(supplierType),
+      'delegate_type': _clean(delegateType),
       'whatsapp_phone': _clean(whatsappPhone),
       'governorate': _clean(governorate),
       'district': _clean(district),
       'area': _clean(area),
       'address': _clean(address),
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
     };
-
-    data['updated_at'] = DateTime.now().toUtc().toIso8601String();
     await client.from('profiles').update(data).eq('id', user.id);
   }
 
@@ -97,6 +111,9 @@ class ProfileService {
     };
     if (!allowedStatuses.contains(status)) {
       throw ArgumentError('حالة الحساب غير مدعومة.');
+    }
+    if (userId.trim().isEmpty) {
+      throw ArgumentError('معرّف المستخدم مطلوب.');
     }
 
     await client.rpc(
