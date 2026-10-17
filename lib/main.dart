@@ -7,6 +7,7 @@ import 'services/profile_service.dart';
 import 'services/notification_service.dart';
 import 'services/product_service.dart';
 import 'services/supplier_service.dart';
+import 'services/category_service.dart';
 import 'services/offer_service.dart';
 import 'services/story_service.dart';
 import 'services/user_service.dart';
@@ -479,6 +480,8 @@ class _MainShellState extends State<MainShell> {
   final searchController = TextEditingController();
   final productService = ProductService();
   final supplierService = SupplierService();
+  final categoryService = CategoryService();
+  List<String> liveCategoryNames = [];
   List<Product> liveProducts = [];
   List<Map<String, dynamic>> liveSuppliers = [];
   bool loadingLiveSuppliers = false;
@@ -489,12 +492,38 @@ class _MainShellState extends State<MainShell> {
   List<Product> get allProducts =>
       liveProducts.isNotEmpty ? liveProducts : products;
 
+  List<String> get visibleCategoryNames => liveCategoryNames.isNotEmpty
+      ? ['الكل', ...liveCategoryNames]
+      : foodCategories;
+
   @override
   void initState() {
     super.initState();
     loadLiveProducts();
     loadLiveSuppliers();
+    loadLiveCategories();
     loadCurrentRole();
+  }
+
+  Future<void> loadLiveCategories() async {
+    if (database == null) return;
+    try {
+      final rows = await categoryService.getCategories(activityType: activity);
+      if (!mounted) return;
+      setState(() {
+        liveCategoryNames = rows
+            .where((row) => row['parent_id'] == null)
+            .map((row) => (row['name'] ?? '').toString())
+            .where((name) => name.trim().isNotEmpty)
+            .toSet()
+            .toList();
+        if (!visibleCategoryNames.contains(selectedCategory)) {
+          selectedCategory = 'الكل';
+        }
+      });
+    } catch (_) {
+      if (mounted) setState(() => liveCategoryNames = []);
+    }
   }
 
   Future<void> loadCurrentRole() async {
@@ -789,9 +818,11 @@ class _MainShellState extends State<MainShell> {
               activity = v ?? 'مواد غذائية';
               selectedCategory = 'الكل';
               liveProducts = [];
+              liveCategoryNames = [];
             });
             loadLiveProducts();
             loadLiveSuppliers();
+            loadLiveCategories();
           },
         ),
         const SizedBox(height: 12),
