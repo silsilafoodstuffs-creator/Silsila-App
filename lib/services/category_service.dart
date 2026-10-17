@@ -136,8 +136,26 @@ class CategoryService {
       }
       updates['parent_id'] = parentId;
     }
-    if (icon != null) updates['icon'] = icon;
-    if (imageUrl != null) updates['image_url'] = imageUrl;
+    if (icon != null) {
+      final cleanIcon = icon.trim();
+      if (cleanIcon.length > 80) {
+        throw ArgumentError('اسم أيقونة القسم طويل أكثر من اللازم.');
+      }
+      updates['icon'] = cleanIcon.isEmpty ? null : cleanIcon;
+    }
+    if (imageUrl != null) {
+      final cleanImageUrl = imageUrl.trim();
+      if (cleanImageUrl.isNotEmpty) {
+        final uri = Uri.tryParse(cleanImageUrl);
+        if (uri == null ||
+            !uri.hasScheme ||
+            (uri.scheme != 'https' && uri.scheme != 'http') ||
+            uri.host.isEmpty) {
+          throw ArgumentError('رابط صورة القسم غير صالح.');
+        }
+      }
+      updates['image_url'] = cleanImageUrl.isEmpty ? null : cleanImageUrl;
+    }
     if (activityType != null) {
       final cleanedActivity = activityType.trim();
       updates['activity_type'] = cleanedActivity.isEmpty ? null : cleanedActivity;
