@@ -1,16 +1,31 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class OrderStatusService {
-  OrderStatusService({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+  OrderStatusService({SupabaseClient? client}) : _client = client;
 
-  final SupabaseClient _client;
+  final SupabaseClient? _client;
+
+  SupabaseClient get _requireClient {
+    final client = _client;
+
+    if (client != null) {
+      return client;
+    }
+
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      throw StateError('خدمة الاتصال غير جاهزة. يرجى المحاولة لاحقًا.');
+    }
+  }
 
   String get _userId {
-    final user = _client.auth.currentUser;
+    final user = _requireClient.auth.currentUser;
+
     if (user == null) {
       throw StateError('يجب تسجيل الدخول أولاً.');
     }
+
     return user.id;
   }
 
@@ -24,16 +39,16 @@ class OrderStatusService {
     'مُلغي',
   ];
 
-  /// جلب سجل حركة الطلب.
+  /// جلب سجل حركة طلب يخص المستخدم الحالي.
   Future<List<Map<String, dynamic>>> getOrderHistory(
     int orderId,
   ) async {
-    if (orderId <= 0) {
-      throw ArgumentError('رقم الطلب غير صالح.');
-    }
+    _validateOrderId(orderId);
+
+    final client = _requireClient;
     final userId = _userId;
 
-    final order = await _client
+    final order = await client
         .from('orders')
         .select('id')
         .eq('id', orderId)
@@ -41,19 +56,21 @@ class OrderStatusService {
         .maybeSingle();
 
     if (order == null) {
-      throw StateError('الطلب غير موجود أو لا تملك صلاحية الوصول إليه.');
+      throw StateError(
+        'الطلب غير موجود أو لا تملك صلاحية الوصول إليه.',
+      );
     }
 
-    final rows = await _client
+    final rows = await client
         .from('order_status_history')
         .select()
         .eq('order_id', orderId)
-        .order('created_at');
+        .order('created_at', ascending: true);
 
-    return List<Map<String, dynamic>>.from(rows);
+    return _mapRows(rows);
   }
 
-  /// طلبات المستخدم الحالية، من الأحدث إلى الأقدم.
+  /// جلب طلبات المستخدم الحالي من الأحدث إلى الأقدم.
   Future<List<Map<String, dynamic>>> getMyOrders({
     int limit = 100,
   }) async {
@@ -61,38 +78,45 @@ class OrderStatusService {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
 
+    final client = _requireClient;
     final userId = _userId;
 
-    final rows = await _client
+    final rows = await client
         .from('orders')
         .select()
         .or('customer_id.eq.$userId,supplier_id.eq.$userId')
         .order('created_at', ascending: false)
         .limit(limit);
 
-    return List<Map<String, dynamic>>.from(rows);
+    return _mapRows(rows);
   }
 
   /// جلب أصناف طلب يملكه المستخدم الحالي.
-  Future<List<Map<String, dynamic>>> getOrderItems(int orderId) async {
-    if (orderId <= 0) {
-      throw ArgumentError('رقم الطلب غير صالح.');
-    }
+  Future<List<Map<String, dynamic>>> getOrderItems(
+    int orderId,
+  ) async {
+    _validateOrderId(orderId);
+
+    // التحقق من ملكية الطلب قبل قراءة أصنافه.
     await getOrderHistory(orderId);
-    final rows = await _client
+
+    final rows = await _requireClient
         .from('order_items')
-        .select('product_name, unit, quantity, unit_price, line_total, total_price')
+        .select(
+          'product_name, unit, quantity, unit_price, '
+          'line_total, total_price',
+        )
         .eq('order_id', orderId)
         .order('id');
-    return List<Map<String, dynamic>>.from(rows);
+
+    return _mapRows(rows);
   }
 
-  /// إلغاء طلب العميل قبل بدء التنفيذ.
+  /// إلغاء طلب العميل باستخدام إجراء قاعدة البيانات الحالي.
   Future<void> cancelOrder(int orderId) async {
-    if (orderId <= 0) {
-      throw ArgumentError('رقم الطلب غير صالح.');
-    }
-    await _client.rpc(
+    _validateOrderId(orderId);
+
+    await _requireClient.rpc(
       'cancel_customer_order',
       params: {'p_order_id': orderId},
     );
@@ -104,21 +128,26 @@ class OrderStatusService {
     required String status,
     String? note,
   }) async {
+    _validateOrderId(orderId);
+
     final cleanStatus = status.trim();
 
-    if (orderId <= 0) {
-      throw ArgumentError('رقم الطلب غير صالح.');
-    }
     if (!allowedStatuses.contains(cleanStatus)) {
       throw ArgumentError('حالة الطلب غير صحيحة.');
     }
-    if (note != null && note.trim().length > 1000) {
-      throw ArgumentError('ملاحظة حالة الطلب يجب ألا تتجاوز 1000 حرف.');
+
+    final cleanNote = _clean(note);
+
+    if (cleanNote != null && cleanNote.length > 1000) {
+      throw ArgumentError(
+        'ملاحظة حالة الطلب يجب ألا تتجاوز 1000 حرف.',
+      );
     }
 
+    final client = _requireClient;
     final userId = _userId;
 
-    final current = await _client
+    final current = await client
         .from('orders')
         .select('status')
         .eq('id', orderId)
@@ -126,10 +155,12 @@ class OrderStatusService {
         .maybeSingle();
 
     if (current == null) {
-      throw StateError('الطلب غير موجود أو لا تملك صلاحية تحديثه.');
+      throw StateError(
+        'الطلب غير موجود أو لا تملك صلاحية تحديثه.',
+      );
     }
 
-    final currentStatus = current['status']?.toString() ?? '';
+    final currentStatus = current['status']?.toString().trim() ?? '';
 
     if (!_canMove(currentStatus, cleanStatus)) {
       throw StateError(
@@ -137,20 +168,32 @@ class OrderStatusService {
       );
     }
 
-    final updated = await _client.rpc(
+    final result = await client.rpc(
       'transition_supplier_order_status',
       params: {
         'p_order_id': orderId,
         'p_new_status': cleanStatus,
-        'p_note': _clean(note),
+        'p_note': cleanNote,
       },
     );
 
-    return Map<String, dynamic>.from(updated as Map);
+    if (result is Map) {
+      return Map<String, dynamic>.from(result);
+    }
+
+    if (result is List && result.isNotEmpty && result.first is Map) {
+      return Map<String, dynamic>.from(result.first as Map);
+    }
+
+    throw StateError(
+      'تم إرسال تحديث الحالة، لكن استجابة قاعدة البيانات '
+      'لم تُرجع بيانات الطلب بالشكل المتوقع.',
+    );
   }
 
+  /// التحقق من انتقال حالة الطلب.
   bool _canMove(String current, String next) {
-    const transitions = {
+    const transitions = <String, List<String>>{
       'انتظار قبول': ['تنفيذ', 'مُلغي'],
       'تنفيذ': ['تحميل', 'مُلغي'],
       'تحميل': ['توصيل'],
@@ -162,9 +205,30 @@ class OrderStatusService {
     return transitions[current]?.contains(next) ?? false;
   }
 
+  void _validateOrderId(int orderId) {
+    if (orderId <= 0) {
+      throw ArgumentError('رقم الطلب غير صالح.');
+    }
+  }
+
+  List<Map<String, dynamic>> _mapRows(dynamic rows) {
+    if (rows is! List) {
+      throw StateError('تعذر قراءة البيانات بالشكل المتوقع.');
+    }
+
+    return rows
+        .whereType<Map>()
+        .map((row) => Map<String, dynamic>.from(row))
+        .toList(growable: false);
+  }
+
   String? _clean(String? value) {
     final result = value?.trim();
-    if (result == null || result.isEmpty) return null;
+
+    if (result == null || result.isEmpty) {
+      return null;
+    }
+
     return result;
   }
 }
