@@ -197,11 +197,11 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
         title: const Text('تأكيد الحذف'),
         content: Text('هل ترغب في حذف $item؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('لأ')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('لا')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _red),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('أه، احذف'),
+            child: const Text('نعم'),
           ),
         ],
       ),
