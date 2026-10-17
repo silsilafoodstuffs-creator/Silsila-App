@@ -383,6 +383,11 @@ for update to authenticated
 using (status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[]))
 with check (status = 'draft' and public.erp_user_has_company_role(company_id, array['owner','admin','manager','operator','accountant']::text[]));
 
+drop policy if exists erp_cash_vouchers_select_member on public.erp_cash_vouchers;
+create policy erp_cash_vouchers_select_member on public.erp_cash_vouchers
+for select to authenticated
+using (public.erp_user_can_access_company(company_id));
+
 drop policy if exists erp_cash_vouchers_insert_operator on public.erp_cash_vouchers;
 create policy erp_cash_vouchers_insert_operator on public.erp_cash_vouchers
 for insert to authenticated with check (
