@@ -59,28 +59,54 @@ class SupplierProductService {
       throw Exception('يجب تسجيل الدخول أولاً.');
     }
 
-    if (name.trim().isEmpty) {
-      throw ArgumentError('اسم المنتج مطلوب.');
+    final cleanName = name.trim();
+    final cleanCategory = category.trim();
+    final cleanUnit = unit.trim();
+    if (cleanName.isEmpty || cleanName.length > 200) {
+      throw ArgumentError('اسم المنتج مطلوب وألا يتجاوز 200 حرفًا.');
     }
 
-    if (category.trim().isEmpty) {
-      throw ArgumentError('قسم المنتج مطلوب.');
+    if (cleanCategory.isEmpty || cleanCategory.length > 120) {
+      throw ArgumentError('قسم المنتج مطلوب ويجب ألا يتجاوز 120 حرفًا.');
+    }
+    if (cleanUnit.isEmpty || cleanUnit.length > 60) {
+      throw ArgumentError('وحدة المنتج مطلوبة ويجب ألا تتجاوز 60 حرفًا.');
     }
 
-    if (price < 0 || minQuantity <= 0 || stockQuantity < 0) {
-      throw ArgumentError('السعر والكمية يجب أن يكونا صحيحين.');
+    if (!price.isFinite ||
+        price < 0 ||
+        !minQuantity.isFinite ||
+        minQuantity <= 0 ||
+        !stockQuantity.isFinite ||
+        stockQuantity < 0) {
+      throw ArgumentError('السعر والحد الأدنى والمخزون يجب أن تكون قيمًا صحيحة.');
+    }
+    if (categoryId != null && categoryId <= 0) {
+      throw ArgumentError('معرّف قسم المنتج غير صالح.');
+    }
+    if ((description ?? '').trim().length > 5000) {
+      throw ArgumentError('وصف المنتج يجب ألا يتجاوز 5000 حرف.');
+    }
+    if (imageUrl != null && imageUrl.trim().isNotEmpty) {
+      final uri = Uri.tryParse(imageUrl.trim());
+      if (uri == null ||
+          !uri.hasScheme ||
+          (uri.scheme != 'https' && uri.scheme != 'http') ||
+          uri.host.isEmpty) {
+        throw ArgumentError('رابط صورة المنتج غير صالح.');
+      }
     }
 
     final result = await _client
         .from('products')
         .insert({
           'supplier_id': user.id,
-          'name': name.trim(),
-          'category': category.trim(),
+          'name': cleanName,
+          'category': cleanCategory,
           'category_id': categoryId,
           'description': description?.trim(),
           'price': price,
-          'unit': unit.trim(),
+          'unit': cleanUnit,
           'min_quantity': minQuantity,
           'minimum_quantity': minQuantity,
           'image_url': imageUrl,
@@ -125,7 +151,11 @@ class SupplierProductService {
     }
 
     if (category != null) {
-      updates['category'] = category.trim();
+      final cleanedCategory = category.trim();
+      if (cleanedCategory.isEmpty || cleanedCategory.length > 120) {
+        throw ArgumentError('قسم المنتج مطلوب ويجب ألا يتجاوز 120 حرفًا.');
+      }
+      updates['category'] = cleanedCategory;
     }
 
     if (description != null) {
@@ -133,16 +163,22 @@ class SupplierProductService {
     }
 
     if (price != null) {
-      if (price < 0) {
+      if (!price.isFinite || price < 0) {
         throw ArgumentError('السعر لا يمكن أن يكون سالبًا.');
       }
       updates['price'] = price;
     }
 
-    if (unit != null) updates['unit'] = unit.trim();
+    if (unit != null) {
+      final cleanedUnit = unit.trim();
+      if (cleanedUnit.isEmpty || cleanedUnit.length > 60) {
+        throw ArgumentError('وحدة المنتج مطلوبة ويجب ألا تتجاوز 60 حرفًا.');
+      }
+      updates['unit'] = cleanedUnit;
+    }
 
     if (minQuantity != null) {
-      if (minQuantity <= 0) {
+      if (!minQuantity.isFinite || minQuantity <= 0) {
         throw ArgumentError('الحد الأدنى للكمية يجب أن يكون أكبر من صفر.');
       }
       updates['min_quantity'] = minQuantity;
@@ -150,14 +186,31 @@ class SupplierProductService {
     }
 
     if (stockQuantity != null) {
-      if (stockQuantity < 0) {
+      if (!stockQuantity.isFinite || stockQuantity < 0) {
         throw ArgumentError('المخزون لا يمكن أن يكون سالبًا.');
       }
       updates['stock_quantity'] = stockQuantity;
     }
     if (trackInventory != null) updates['track_inventory'] = trackInventory;
-    if (categoryId != null) updates['category_id'] = categoryId;
-    if (imageUrl != null) updates['image_url'] = imageUrl;
+    if (categoryId != null) {
+      if (categoryId <= 0) {
+        throw ArgumentError('معرّف قسم المنتج غير صالح.');
+      }
+      updates['category_id'] = categoryId;
+    }
+    if (imageUrl != null) {
+      final cleanedImageUrl = imageUrl.trim();
+      if (cleanedImageUrl.isNotEmpty) {
+        final uri = Uri.tryParse(cleanedImageUrl);
+        if (uri == null ||
+            !uri.hasScheme ||
+            (uri.scheme != 'https' && uri.scheme != 'http') ||
+            uri.host.isEmpty) {
+          throw ArgumentError('رابط صورة المنتج غير صالح.');
+        }
+      }
+      updates['image_url'] = cleanedImageUrl.isEmpty ? null : cleanedImageUrl;
+    }
     if (isActive != null) {
       updates['is_active'] = isActive;
       updates['is_available'] = isActive;
