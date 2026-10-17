@@ -887,6 +887,64 @@ begin
     and (p_area = 'كل الحركات' or p_area = 'المبيعات')
     and w.branch_id is not null and d.branch_id is distinct from w.branch_id
 
+  union all
+
+  select
+    'purchase:' || d.id::text || ':stock_movements',
+    'المشتريات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'حركات المخزون لا تطابق بنود المستند',
+    'خطأ',
+    'PURCHASE_STOCK_MOVEMENT_MISMATCH',
+    'المستند مرحّل لكن عدد حركات المخزون المرتبطة به لا يساوي عدد البنود.',
+    'purchases'
+  from public.erp_purchase_documents d
+  left join lateral (
+    select count(*)::bigint as line_count from public.erp_purchase_lines l where l.document_id = d.id
+  ) lines on true
+  left join lateral (
+    select count(*)::bigint as movement_count
+    from public.erp_inventory_movements m
+    where m.company_id = d.company_id and m.reference_type = 'purchase_document' and m.reference_id = d.id
+  ) moves on true
+  where d.company_id = p_company_id and d.status = 'posted'
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المشتريات')
+    and lines.line_count <> moves.movement_count
+
+  union all
+
+  select
+    'sale:' || d.id::text || ':stock_movements',
+    'المبيعات',
+    d.id,
+    d.document_number,
+    d.document_date,
+    'حركات المخزون لا تطابق بنود المستند',
+    'خطأ',
+    'SALE_STOCK_MOVEMENT_MISMATCH',
+    'المستند مرحّل لكن عدد حركات المخزون المرتبطة به لا يساوي عدد البنود.',
+    'sales'
+  from public.erp_sales_documents d
+  left join lateral (
+    select count(*)::bigint as line_count from public.erp_sales_lines l where l.document_id = d.id
+  ) lines on true
+  left join lateral (
+    select count(*)::bigint as movement_count
+    from public.erp_inventory_movements m
+    where m.company_id = d.company_id and m.reference_type = 'sales_document' and m.reference_id = d.id
+  ) moves on true
+  where d.company_id = p_company_id and d.status = 'posted'
+    and (p_start_date is null or d.document_date >= p_start_date)
+    and (p_end_date is null or d.document_date <= p_end_date)
+    and (p_area = 'كل الحركات' or p_area = 'المبيعات')
+    and lines.line_count <> moves.movement_count
+
+  union all
+
   order by document_date nulls last, area, document_number;
 end;
 $$;
