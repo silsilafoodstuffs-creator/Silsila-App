@@ -199,6 +199,21 @@ class ErpAppManagementService {
     return row['id'].toString();
   }
 
+  /// Updates editable metadata while keeping the uploaded storage path immutable.
+  Future<void> updateAssetRecord({
+    required String assetId,
+    required ErpAppAssetRecord asset,
+  }) async {
+    _requireId(assetId, 'معرّف الملف مطلوب.');
+    final errors = asset.validate();
+    if (errors.isNotEmpty) throw ArgumentError(errors.join('\\n'));
+    await _db.from('erp_app_assets').update({
+      'display_name': asset.displayName.trim(),
+      'entity_id': _clean(asset.entityId),
+      'alt_text': _clean(asset.altText),
+    }).eq('id', assetId).eq('app_id', asset.appId);
+  }
+
   /// Deletes metadata only. Storage deletion is intentionally separate so
   /// accidental database changes cannot silently remove the underlying file.
   Future<void> deleteAssetRecord({required String assetId}) async {
