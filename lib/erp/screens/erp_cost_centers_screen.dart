@@ -51,7 +51,6 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           .from('erp_branches')
           .select('id, branch_code, branch_name')
           .eq('company_id', companyId)
-          .eq('is_active', true)
           .order('branch_code');
       if (!mounted) return;
       setState(() {
