@@ -1346,18 +1346,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               child: const Icon(Icons.insights_rounded, color: _orange, size: 34),
             ),
             const SizedBox(width: 16),
-            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('الملخص التنفيذي', style: TextStyle(fontSize: 29, height: 1.2, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3)),
-              SizedBox(height: 6),
-              Text('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة', style: TextStyle(color: Color(0xFFECE2F8), fontSize: 15, height: 1.5)),
-              SizedBox(height: 5),
-              Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة من قاعدة البيانات…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'المؤشرات من الفواتير والحركات المرحلة غير التجريبية', style: TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('الملخص التنفيذي', style: TextStyle(fontSize: 29, height: 1.2, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3)),
+              const SizedBox(height: 6),
+              const Text('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة', style: TextStyle(color: Color(0xFFECE2F8), fontSize: 15, height: 1.5)),
+              const SizedBox(height: 5),
+              Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة من قاعدة البيانات…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'المؤشرات من الفواتير والحركات المرحلة غير التجريبية', style: const TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
             ])),
             const SizedBox(width: 12),
             Column(mainAxisSize: MainAxisSize.min, children: [
               IconButton(
                 tooltip: 'تحديث الملخص',
-                onPressed: () => setState(() {}),
+                onPressed: () { final companyId = _appManagementCompanyId; if (companyId != null) _loadExecutiveMetrics(companyId); },
                 style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: .12), foregroundColor: Colors.white),
                 icon: const Icon(Icons.refresh_rounded, size: 24),
               ),
