@@ -83,7 +83,7 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
       (widget.companyId ?? '').trim().isNotEmpty &&
       (widget.appId ?? '').trim().isNotEmpty;
 
-  Future<String> _signedUrlFor(String storagePath) {
+  Future<String> _signedUrlFor(String storagePath) async {
     final now = DateTime.now();
     final createdAt = _signedUrlCreatedAt[storagePath];
     final cached = _signedUrlFutures[storagePath];
@@ -92,12 +92,21 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
         now.difference(createdAt) < const Duration(minutes: 12)) {
       return cached;
     }
+
     final future = _storage.createSignedImageUrl(storagePath: storagePath);
     _signedUrlFutures[storagePath] = future;
     _signedUrlCreatedAt[storagePath] = now;
-    return future;
+    try {
+      return await future;
+    } catch (_) {
+      // A failed request should not poison the cache; a rebuild may retry it.
+      if (identical(_signedUrlFutures[storagePath], future)) {
+        _signedUrlFutures.remove(storagePath);
+        _signedUrlCreatedAt.remove(storagePath);
+      }
+      rethrow;
+    }
   }
-
   Future<void> _load() async {
     final generation = ++_loadGeneration;
     if (!_ready) {
