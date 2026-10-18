@@ -1180,7 +1180,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.point_of_sale_rounded,
         'color': _purple,
         'items': <Map<String, Object>>[
-          {'title': 'صافي المبيعات', 'value': '— ج.م', 'note': 'مقارنة الفترة —%', 'icon': Icons.point_of_sale_rounded, 'color': _purple, 'details': 'إجمالي فواتير البيع بعد خصم المرتجعات والخصومات، مع مقارنة يومية وشهرية وبحسب الفرع والمندوب.'},
+          {'title': 'صافي المبيعات', 'value': _executiveMoney(_executiveSales), 'note': 'الشهر الحالي • فواتير مرحلة', 'icon': Icons.point_of_sale_rounded, 'color': _purple, 'details': 'إجمالي فواتير البيع بعد خصم المرتجعات والخصومات، مع مقارنة يومية وشهرية وبحسب الفرع والمندوب.'},
           {'title': 'نمو المبيعات', 'value': '—%', 'note': 'عن الفترة السابقة', 'icon': Icons.trending_up_rounded, 'color': _green, 'details': 'نسبة نمو صافي المبيعات ومقارنة الأداء بالفترة السابقة والمستهدف.'},
           {'title': 'متوسط الفاتورة', 'value': '— ج.م', 'note': 'لكل فاتورة', 'icon': Icons.receipt_long_rounded, 'color': _orange, 'details': 'متوسط قيمة فاتورة البيع وتحليل التغير حسب العميل والمندوب والفرع.'},
           {'title': 'أفضل العملاء', 'value': '—', 'note': 'حسب قيمة الشراء', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'ترتيب العملاء حسب المبيعات والربحية وانتظام السداد.'},
@@ -1193,9 +1193,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.account_balance_wallet_outlined,
         'color': _green,
         'items': <Map<String, Object>>[
-          {'title': 'صافي الربح', 'value': '— ج.م', 'note': 'هامش —%', 'icon': Icons.account_balance_rounded, 'color': _green, 'details': 'صافي الربح بعد تكلفة المبيعات والمصروفات وفق القيود المحاسبية المرحلة.'},
-          {'title': 'التحصيل', 'value': '— ج.م', 'note': 'معدل —%', 'icon': Icons.payments_outlined, 'color': _green, 'details': 'المبالغ المحصلة والمتبقية ومعدل التحصيل حسب العميل والمندوب والفترة.'},
-          {'title': 'ديون العملاء', 'value': '— ج.م', 'note': 'متأخر — ج.م', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'أرصدة العملاء وأعمار الديون والمتأخرات وحدود الائتمان.'},
+          {'title': 'مجمل الربح التقديري', 'value': _executiveMoney(_executiveGrossProfit), 'note': 'على تكلفة الشراء الحالية', 'icon': Icons.account_balance_rounded, 'color': _green, 'details': 'صافي الربح بعد تكلفة المبيعات والمصروفات وفق القيود المحاسبية المرحلة.'},
+          {'title': 'المدفوع على الفواتير', 'value': _executiveMoney(_executiveCollections), 'note': 'المدفوع المسجل على فواتير البيع', 'icon': Icons.payments_outlined, 'color': _green, 'details': 'المبالغ المحصلة والمتبقية ومعدل التحصيل حسب العميل والمندوب والفترة.'},
+          {'title': 'ديون العملاء', 'value': _executiveMoney(_executiveReceivables), 'note': 'فواتير مرحلة غير مسددة بالكامل', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'أرصدة العملاء وأعمار الديون والمتأخرات وحدود الائتمان.'},
           {'title': 'مستحقات الموردين', 'value': '— ج.م', 'note': 'مواعيد الاستحقاق', 'icon': Icons.local_shipping_outlined, 'color': _orange, 'details': 'أرصدة الموردين ومواعيد الاستحقاق وأعمار الديون وخطة السداد.'},
           {'title': 'السيولة المتاحة', 'value': '— ج.م', 'note': 'الخزائن والبنوك', 'icon': Icons.account_balance_wallet_rounded, 'color': _purple, 'details': 'الأرصدة المتاحة في الخزائن والحسابات البنكية وحركة النقدية.'},
           {'title': 'المصروفات', 'value': '— ج.م', 'note': 'من الإيرادات —%', 'icon': Icons.money_off_csred_outlined, 'color': _pink, 'details': 'تحليل المصروفات حسب النوع والفرع ومركز التكلفة ومقارنتها بالإيرادات.'},
@@ -1206,7 +1206,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.warehouse_outlined,
         'color': const Color(0xFF2475B8),
         'items': <Map<String, Object>>[
-          {'title': 'قيمة المخزون', 'value': '— ج.م', 'note': 'بسعر التكلفة', 'icon': Icons.inventory_2_outlined, 'color': const Color(0xFF2475B8), 'details': 'قيمة المخزون المتاح والمحجوز حسب المخزن والفرع والصنف.'},
+          {'title': 'قيمة المخزون', 'value': _executiveMoney(_executiveInventoryValue), 'note': 'تقدير بتكلفة الشراء الحالية', 'icon': Icons.inventory_2_outlined, 'color': const Color(0xFF2475B8), 'details': 'قيمة المخزون المتاح والمحجوز حسب المخزن والفرع والصنف.'},
           {'title': 'تحت حد الطلب', 'value': '— صنف', 'note': 'بحاجة للشراء', 'icon': Icons.warning_amber_rounded, 'color': _orange, 'details': 'الأصناف التي وصلت إلى حد إعادة الطلب والكميات المقترحة للشراء.'},
           {'title': 'قرب انتهاء الصلاحية', 'value': '— صنف', 'note': 'خلال 30 / 60 / 90 يومًا', 'icon': Icons.event_busy_outlined, 'color': _pink, 'details': 'الأصناف القريبة من انتهاء الصلاحية مع الكميات والقيمة والمخزن.'},
           {'title': 'الأصناف الراكدة', 'value': '— صنف', 'note': 'بلا حركة', 'icon': Icons.inventory_outlined, 'color': _orange, 'details': 'الأصناف التي لم تتحرك خلال فترة محددة وقيمة رأس المال المجمد بها.'},
@@ -1280,7 +1280,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               const SizedBox(height: 6),
               const Text('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة', style: TextStyle(color: Color(0xFFECE2F8), fontSize: 15, height: 1.5)),
               const SizedBox(height: 5),
-              Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة من قاعدة البيانات…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'المؤشرات من الفواتير والحركات المرحلة غير التجريبية', style: const TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة من قاعدة البيانات…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'المؤشرات الرئيسية من الحركات المرحلة؛ بقية المؤشرات حسب اكتمال الربط', style: const TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
             ])),
             const SizedBox(width: 12),
             Column(mainAxisSize: MainAxisSize.min, children: [
