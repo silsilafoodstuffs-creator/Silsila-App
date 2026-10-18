@@ -7,6 +7,7 @@
 2. `erp_security_membership.sql`
 3. `erp_app_management_schema.sql`
 4. `erp_app_asset_storage_policies.sql`
+5. `erp_app_assets_edit_policy.sql`
 
 لا يكفي حفظ ملفات SQL في GitHub؛ يجب تنفيذها في قاعدة Supabase الفعلية حتى تُنشأ الجداول وسياسات التخزين.
 
