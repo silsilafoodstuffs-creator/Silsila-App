@@ -78,7 +78,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
     const SizedBox(height:6),const Text('بيانات أساسية في الحسابات المالية',style:TextStyle(color:Colors.black54)),const SizedBox(height:16),
     Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[
       Row(children:[Expanded(flex:2,child:_input(_code,'كود')),const SizedBox(width:10),Expanded(flex:3,child:_input(_name,'اسم العملة عربي')),const SizedBox(width:10),Expanded(flex:2,child:_input(_symbol,'مختصر العملة إنجليزي'))]),
-      const SizedBox(height:12),Row(children:[FilledButton.icon(onPressed:_saving?null:_save,icon:Icon(_editingId==null?Icons.add_rounded:Icons.save_rounded),label:Text(_saving?'جارٍ الحفظ...':_editingId==null?'إضافة عملة':'حفظ التعديل')),const SizedBox(width:8),OutlinedButton.icon(onPressed:()=>setState(()=>{_clear();_error=null;}),icon:const Icon(Icons.clear_rounded),label:const Text('تفريغ'))]),
+      const SizedBox(height:12),Row(children:[FilledButton.icon(onPressed:_saving?null:_save,icon:Icon(_editingId==null?Icons.add_rounded:Icons.save_rounded),label:Text(_saving?'جارٍ الحفظ...':_editingId==null?'إضافة عملة':'حفظ التعديل')),const SizedBox(width:8),OutlinedButton.icon(onPressed: () { setState(() { _clear(); _error = null; }); },icon:const Icon(Icons.clear_rounded),label:const Text('تفريغ'))]),
       if(_error!=null) ...[const SizedBox(height:10),Align(alignment:Alignment.centerRight,child:Text(_error!,style:const TextStyle(color:Colors.red)))],
     ]))),
     const SizedBox(height:12),
