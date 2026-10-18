@@ -80,6 +80,39 @@ void main() {
       expect(() => cart.addProduct(product(id: '  ')), throwsArgumentError);
     });
 
+
+    test('merges repeated additions of the same UUID product', () {
+      const id = 'a8f6e4b2-2b2a-4e67-8e11-1f03e3b6b4c9';
+      cart.addProduct(product(id: id), quantity: 2);
+      cart.addProduct(product(id: id), quantity: 3);
+
+      expect(cart.uniqueProductCount, 1);
+      expect(cart.getItem(id)?.quantity, 5);
+      expect(cart.subtotal, 62.5);
+    });
+
+    test('quantity changes respect the minimum order quantity', () {
+      const id = 'a8f6e4b2-2b2a-4e67-8e11-1f03e3b6b4c9';
+      cart.addProduct(product(id: id, minQuantity: 3));
+
+      expect(cart.getItem(id)?.quantity, 3);
+      expect(() => cart.setQuantity(id, 2), throwsArgumentError);
+      cart.setQuantity(id, 7);
+      expect(cart.getItem(id)?.quantity, 7);
+      cart.decreaseQuantity(id);
+      expect(cart.getItem(id)?.quantity, 6);
+    });
+
+    test('rejects a price change for an existing cart product', () {
+      const id = 'a8f6e4b2-2b2a-4e67-8e11-1f03e3b6b4c9';
+      cart.addProduct(product(id: id));
+      expect(
+        () => cart.addProduct(product(id: id, price: 13)),
+        throwsStateError,
+      );
+      expect(cart.getItem(id)?.price, 12.5);
+    });
+
     test('rejects quantities outside supported bounds', () {
       expect(
         () => cart.addProduct(product(), quantity: 0),
