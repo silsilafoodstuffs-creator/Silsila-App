@@ -588,7 +588,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ]))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dctx), child: const Text('إلغاء')),
-          FilledButton(onPressed: () {
+          FilledButton(onPressed: () async {
             if (name.text.trim().isEmpty) return;
             final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
             rows.insert(0, {'الكود': code.text.trim().isEmpty ? 'NEW-${rows.length + 1}' : code.text.trim(), 'الاسم': name.text.trim(), 'الوصف': details.text.trim(), 'الحالة': 'مسودة'});
