@@ -1162,6 +1162,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       }
 
       double purchases = 0;
+      var purchasesAvailable = false;
       try {
         final purchaseRows = await db.from('erp_purchase_documents')
             .select('grand_total,document_type,is_demo_data')
@@ -1171,9 +1172,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           final amount = double.tryParse(row['grand_total']?.toString() ?? '') ?? 0;
           purchases += row['document_type']?.toString() == 'return' ? -amount : amount;
         }
+        purchasesAvailable = true;
       } catch (_) {}
 
       double grossProfit = 0;
+      var grossProfitAvailable = false;
       try {
         final docIds = salesRows.map((r) => r['id']?.toString()).whereType<String>().toList();
         if (docIds.isNotEmpty) {
@@ -1199,9 +1202,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             grossProfit += docTypes[line['document_id']?.toString()] == 'return' ? -margin : margin;
           }
         }
+        grossProfitAvailable = true;
       } catch (_) {}
 
       double inventoryValue = 0;
+      var inventoryValueAvailable = false;
       try {
         final itemRows = await db.from('erp_items').select('id,purchase_price')
             .eq('company_id', companyId).eq('is_active', true);
@@ -1222,6 +1227,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         for (final entry in balances.entries) {
           inventoryValue += entry.value * (costs[entry.key] ?? 0);
         }
+        inventoryValueAvailable = true;
       } catch (_) {}
 
       if (!mounted) return;
@@ -1229,9 +1235,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveSales = sales;
         _executiveCollections = collections;
         _executiveReceivables = receivables;
-        _executivePurchases = purchases;
-        _executiveGrossProfit = grossProfit;
-        _executiveInventoryValue = inventoryValue;
+        _executivePurchases = purchasesAvailable ? purchases : null;
+        _executiveGrossProfit = grossProfitAvailable ? grossProfit : null;
+        _executiveInventoryValue = inventoryValueAvailable ? inventoryValue : null;
         _executiveDailySales = daily;
         _executiveMetricsLoading = false;
       });
