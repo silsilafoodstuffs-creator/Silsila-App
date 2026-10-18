@@ -58,8 +58,6 @@ class FavoriteService {
     }
 
     for (final item in results[1]) {
-      if (item is! Map) continue;
-
       final supplierId = item['supplier_id'];
       if (supplierId == null) continue;
 
