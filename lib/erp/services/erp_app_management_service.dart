@@ -25,6 +25,9 @@ class ErpAppManagementService {
     if (client == null) {
       throw StateError('Supabase غير مهيأ. قم بتهيئته قبل استخدام إدارة التطبيقات.');
     }
+    if (client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول قبل استخدام إدارة التطبيقات.');
+    }
     return client;
   }
 
