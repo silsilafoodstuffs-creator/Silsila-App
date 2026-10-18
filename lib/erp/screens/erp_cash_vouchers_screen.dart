@@ -34,6 +34,9 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
     _type = widget.initialType;
+    if (_company.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
   }
   @override
   void dispose() {
