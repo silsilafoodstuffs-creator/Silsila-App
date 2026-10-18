@@ -342,8 +342,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     }));
   }
 
-  final Set<String> _expandedModules = {'إدارة البرنامج'};
-  final Set<String> _expandedGroups = {'إدارة البرنامج::بيانات أساسية'};
+  final Set<String> _expandedModules = <String>{};
+  final Set<String> _expandedGroups = <String>{};
 
   Widget _sidebar() => Container(
     color: _purple,
@@ -386,7 +386,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                     visualDensity: const VisualDensity(vertical: -2),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     selected: selectedModule,
-                    selectedTileColor: Colors.white.withValues(alpha: .14),
+                    selectedTileColor: const Color(0xFF7040A0),
                     leading: Icon(_iconFor(name), color: _orange, size: 20),
                     title: Text(name, style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: selectedModule ? FontWeight.w800 : FontWeight.w500)),
                     onTap: () => setState(() {
@@ -394,7 +394,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _group = moduleEntry.value.keys.first;
                       _page = moduleEntry.value[_group]!.first;
                       _search = '';
-                      if (!moduleOpen) _expandedModules.add(name);
                     }),
                   )),
                   IconButton(
@@ -408,7 +407,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                         _expandedModules.add(name);
                       }
                     }),
-                    icon: Text(moduleOpen ? '−' : '+', style: const TextStyle(color: _orange, fontSize: 25, fontWeight: FontWeight.w700)),
+                    icon: Text(moduleOpen ? '−' : '+', style: TextStyle(color: moduleOpen ? Colors.white : _orange, fontSize: 25, fontWeight: FontWeight.w700)),
                   ),
                 ]),
               ),
@@ -426,14 +425,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                           visualDensity: const VisualDensity(vertical: -3),
                           contentPadding: const EdgeInsetsDirectional.only(start: 10, end: 2),
                           selected: selectedGroup,
-                          selectedTileColor: Colors.white.withValues(alpha: .08),
+                          selectedTileColor: const Color(0xFF7040A0),
                           title: Text(groupEntry.key, style: TextStyle(color: selectedGroup ? _orange : Colors.white70, fontSize: 11, fontWeight: FontWeight.w800)),
                           onTap: () => setState(() {
                             _module = name;
                             _group = groupEntry.key;
                             _page = groupEntry.value.first;
                             _search = '';
-                            _expandedGroups.add(groupKey);
                           }),
                         )),
                         IconButton(
@@ -447,7 +445,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                               _expandedGroups.add(groupKey);
                             }
                           }),
-                          icon: Text(groupOpen ? '−' : '+', style: const TextStyle(color: _orange, fontSize: 21, fontWeight: FontWeight.w700)),
+                          icon: Text(groupOpen ? '−' : '+', style: TextStyle(color: groupOpen ? Colors.white : _orange, fontSize: 21, fontWeight: FontWeight.w700)),
                         ),
                       ]),
                       if (groupOpen)
