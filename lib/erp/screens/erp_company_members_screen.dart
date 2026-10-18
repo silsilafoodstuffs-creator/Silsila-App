@@ -38,6 +38,12 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant ErpCompanyMembersScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId) _load();
+  }
+
+  @override
   void dispose() {
     _userId.dispose();
     super.dispose();
