@@ -163,7 +163,10 @@ class _ErpDelegateAllocationScreenState extends State<ErpDelegateAllocationScree
 
   @override
   Widget build(BuildContext context) {
-    final employee = _employees.where((e) => _s(e['id']) == _employeeId).firstOrNull;
+    Map<String, dynamic>? employee;
+    for (final row in _employees) {
+      if (_s(row['id']) == _employeeId) { employee = row; break; }
+    }
     final query = _search.text.trim().toLowerCase();
     final visibleItems = _items.where((item) =>
       _s(item['item_name']).toLowerCase().contains(query) ||
