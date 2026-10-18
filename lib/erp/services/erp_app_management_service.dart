@@ -330,6 +330,13 @@ class ErpAppManagementService {
     }
   }
 
+  /// Normalizes optional text fields before sending them to Supabase.
+  /// Blank values are stored as null instead of empty strings.
+  static String? _clean(String? value) {
+    final cleaned = value?.trim();
+    return cleaned == null || cleaned.isEmpty ? null : cleaned;
+  }
+
   static void _requireId(String value, String message) {
     if (value.trim().isEmpty) throw ArgumentError(message);
   }
