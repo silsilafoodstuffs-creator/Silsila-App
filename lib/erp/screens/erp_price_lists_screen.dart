@@ -36,7 +36,14 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   String? _message;
 
   @override
-  void initState() { super.initState(); _company.text = widget.initialCompanyId ?? ''; _kind = widget.initialKind; }
+  void initState() {
+    super.initState();
+    _company.text = widget.initialCompanyId ?? '';
+    _kind = widget.initialKind;
+    if (_company.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
+  }
   @override
   void dispose() {
     _company.dispose(); _code.dispose(); _name.dispose(); _notes.dispose();
