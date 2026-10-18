@@ -44,6 +44,20 @@ begin
     raise exception 'لا يمكن جعل مركز التكلفة أبًا لنفسه.';
   end if;
 
+  if new.parent_id is not null and exists (
+    with recursive descendants(id) as (
+      select new.id
+      union all
+      select child.id
+      from public.erp_cost_centers child
+      join descendants d on child.parent_id = d.id
+      where child.id <> new.id
+    )
+    select 1 from descendants where id = new.parent_id
+  ) then
+    raise exception 'لا يمكن إنشاء حلقة في التسلسل الهرمي لمراكز التكلفة.';
+  end if;
+
   return new;
 end;
 $$;
