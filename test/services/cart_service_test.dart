@@ -113,6 +113,55 @@ void main() {
       expect(cart.getItem(id)?.price, 12.5);
     });
 
+
+    test('rejects negative and non-finite prices', () {
+      expect(() => cart.addProduct(product(price: -1)), throwsArgumentError);
+      expect(() => cart.addProduct(product(price: double.infinity)), throwsArgumentError);
+      expect(() => cart.addProduct(product(price: double.nan)), throwsArgumentError);
+    });
+
+    test('rejects invalid minimum quantity', () {
+      expect(() => cart.addProduct(product(minQuantity: 0)), throwsArgumentError);
+      expect(
+        () => cart.addProduct(
+          product(minQuantity: CartService.maxQuantityPerProduct + 1),
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('does not merge the same product when its supplier changes', () {
+      const id = 'a8f6e4b2-2b2a-4e67-8e11-1f03e3b6b4c9';
+      cart.addProduct(product(id: id, supplierId: 'supplier-1'));
+      expect(
+        () => cart.addProduct(product(id: id, supplierId: 'supplier-2')),
+        throwsStateError,
+      );
+      expect(cart.items.single.supplierId, 'supplier-1');
+      expect(cart.items.single.quantity, 1);
+    });
+
+    test('groups cart totals by supplier', () {
+      cart.addProduct(product(id: 'uuid-product-1', supplierId: 'supplier-1'), quantity: 2);
+      cart.addProduct(product(id: 'uuid-product-2', supplierId: 'supplier-2'), quantity: 3);
+
+      expect(cart.itemsBySupplier.keys.toSet(), {'supplier-1', 'supplier-2'});
+      expect(cart.supplierProductCount('supplier-1'), 1);
+      expect(cart.supplierItemCount('supplier-2'), 3);
+      expect(cart.supplierSubtotal('supplier-1'), 25);
+      expect(cart.supplierSubtotal('supplier-2'), 37.5);
+    });
+
+    test('clearing the cart removes every UUID item', () {
+      cart.addProduct(product(id: 'uuid-product-1'));
+      cart.addProduct(product(id: 'uuid-product-2'));
+      cart.clear();
+
+      expect(cart.isEmpty, isTrue);
+      expect(cart.uniqueProductCount, 0);
+      expect(cart.subtotal, 0);
+    });
+
     test('rejects quantities outside supported bounds', () {
       expect(
         () => cart.addProduct(product(), quantity: 0),
