@@ -538,15 +538,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       Container(
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0E7FA),
+          color: _purple,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFD8C3EF)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Row(children: [
-            Icon(Icons.star_rounded, color: _purple),
+            Icon(Icons.star_rounded, color: Colors.white),
             SizedBox(width: 8),
-            Expanded(child: Text('الوصول السريع', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 15))),
+            Expanded(child: Text('الوصول السريع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
           ]),
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 8, children: [
