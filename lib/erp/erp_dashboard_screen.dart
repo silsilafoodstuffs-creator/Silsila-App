@@ -782,134 +782,219 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     const CircleAvatar(radius: 18, backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple, size: 20)),
   ]));
 
-  Widget _home() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    Row(children: [
-      const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('الملخص التنفيذي', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _purple)),
-        SizedBox(height: 4),
-        Text('نظرة شاملة على أداء العمل في لمحة واحدة', style: TextStyle(color: Colors.black54, fontSize: 12)),
-      ])),
-      Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.query_stats_rounded, color: _purple, size: 24)),
-    ]),
-    const SizedBox(height: 16),
-    LayoutBuilder(builder: (context, constraints) {
-      final columns = constraints.maxWidth >= 760 ? 4 : constraints.maxWidth >= 430 ? 2 : 1;
-      return GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: columns,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: columns == 4 ? 1.55 : columns == 2 ? 1.9 : 3.3,
-        children: [
-          _dashboardMetric('إجمالي المبيعات', '—', Icons.point_of_sale_rounded, _purple),
-          _dashboardMetric('صافي الربح', '—', Icons.account_balance_rounded, const Color(0xFF18865A)),
-          _dashboardMetric('عدد العملاء', '—', Icons.groups_rounded, _purple),
-          _dashboardMetric('عدد الفواتير', '—', Icons.receipt_long_rounded, _purple),
-        ],
+  Widget _home() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Row(children: [
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('الملخص التنفيذي', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _purple)),
+          SizedBox(height: 3),
+          Text('مؤشرات الأداء • نظرة سريعة على النشاط بالكامل', style: TextStyle(color: Colors.black54, fontSize: 11)),
+        ])),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(10)),
+          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.insights_rounded, color: _purple, size: 17),
+            SizedBox(width: 6),
+            Text('نظرة عامة', style: TextStyle(color: _purple, fontSize: 11, fontWeight: FontWeight.w800)),
+          ]),
+        ),
+      ]),
+      const SizedBox(height: 11),
+      LayoutBuilder(builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 760 ? 4 : constraints.maxWidth >= 420 ? 2 : 1;
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: columns,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: columns == 4 ? 2.45 : columns == 2 ? 2.15 : 4.0,
+          children: [
+            _executiveKpi('صافي المبيعات', '—', 'مقارنة بالفترة السابقة: —%', Icons.point_of_sale_rounded, _purple),
+            _executiveKpi('صافي الربح', '—', 'هامش الربح: —%', Icons.trending_up_rounded, const Color(0xFF18865A)),
+            _executiveKpi('رصيد العملاء', '—', 'المتأخر من الديون: —%', Icons.groups_rounded, _orange),
+            _executiveKpi('قيمة المخزون', '—', 'قريب الانتهاء: —%', Icons.inventory_2_rounded, _pink),
+          ],
+        );
+      }),
+      const SizedBox(height: 9),
+      LayoutBuilder(builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 760;
+        final chartHeight = wide ? 190.0 : 175.0;
+        Widget salesChart() => _executivePanel(
+          title: 'اتجاه المبيعات',
+          subtitle: 'يومي • آخر 7 أيام',
+          icon: Icons.show_chart_rounded,
+          child: SizedBox(
+            height: chartHeight,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                const Expanded(child: Text('المبيعات الفعلية', style: TextStyle(fontSize: 10, color: Colors.black54))),
+                Text('التغير: —%', style: TextStyle(fontSize: 10, color: _purple, fontWeight: FontWeight.w800)),
+              ]),
+              const SizedBox(height: 8),
+              Expanded(child: CustomPaint(painter: _ExecutiveChartPainter(color: _purple))),
+              const SizedBox(height: 5),
+              const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('منذ 7 أيام', style: TextStyle(fontSize: 9, color: Colors.black45)),
+                Text('منذ 5 أيام', style: TextStyle(fontSize: 9, color: Colors.black45)),
+                Text('منذ 3 أيام', style: TextStyle(fontSize: 9, color: Colors.black45)),
+                Text('اليوم', style: TextStyle(fontSize: 9, color: Colors.black45)),
+              ]),
+              const SizedBox(height: 5),
+              const Text('الرسم توضيحي لحين ربط بيانات المبيعات الفعلية', style: TextStyle(fontSize: 9, color: Colors.black45)),
+            ]),
+          ),
+        );
+        Widget collectionPanel() => _executivePanel(
+          title: 'التحصيل والديون',
+          subtitle: 'مؤشرات السيولة والمتابعة',
+          icon: Icons.account_balance_wallet_outlined,
+          child: Column(children: [
+            _executiveProgress('نسبة تحصيل المستحقات', '—%', null, _green),
+            const SizedBox(height: 13),
+            _executiveProgress('الديون المتأخرة', '—%', null, _orange),
+            const SizedBox(height: 13),
+            _executiveProgress('الفواتير المستحقة', '—', null, _pink),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(9),
+              decoration: BoxDecoration(color: const Color(0xFFFAF8FC), borderRadius: BorderRadius.circular(10)),
+              child: const Row(children: [
+                Icon(Icons.info_outline_rounded, color: _purple, size: 16),
+                SizedBox(width: 7),
+                Expanded(child: Text('النسب تُحتسب تلقائيًا بعد ربط الحسابات والحركات.', style: TextStyle(fontSize: 10, color: Colors.black54))),
+              ]),
+            ),
+          ]),
+        );
+        Widget inventoryPanel() => _executivePanel(
+          title: 'حالة المخزون',
+          subtitle: 'متابعة سريعة للأصناف',
+          icon: Icons.warehouse_outlined,
+          child: Column(children: [
+            _executiveProgress('أصناف متاحة', '—%', null, _green),
+            const SizedBox(height: 12),
+            _executiveProgress('قريبة انتهاء الصلاحية', '—%', null, _orange),
+            const SizedBox(height: 12),
+            _executiveProgress('منتهية الصلاحية', '—%', null, _pink),
+            const SizedBox(height: 9),
+            const Text('توزيع الأصناف حسب الحالة — بانتظار بيانات المخازن', style: TextStyle(fontSize: 9, color: Colors.black45)),
+          ]),
+        );
+        Widget operationsPanel() => _executivePanel(
+          title: 'حالة التشغيل',
+          subtitle: 'الفواتير والموظفون والتسليم',
+          icon: Icons.local_shipping_outlined,
+          child: Column(children: [
+            _executiveMiniStat('طلبات قيد التنفيذ', '—', Icons.sync_rounded, _purple),
+            const Divider(height: 12),
+            _executiveMiniStat('طلبات تنتظر التسليم', '—', Icons.delivery_dining_rounded, _orange),
+            const Divider(height: 12),
+            _executiveMiniStat('نسبة حضور الموظفين', '—%', Icons.groups_rounded, _green),
+          ]),
+        );
+        return Column(children: [
+          if (wide)
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: salesChart()),
+              const SizedBox(width: 9),
+              Expanded(child: collectionPanel()),
+              const SizedBox(width: 9),
+              Expanded(child: inventoryPanel()),
+            ])
+          else ...[
+            salesChart(),
+            const SizedBox(height: 9),
+            collectionPanel(),
+            const SizedBox(height: 9),
+            inventoryPanel(),
+          ],
+          const SizedBox(height: 9),
+          operationsPanel(),
+        ]);
+      }),
+      const SizedBox(height: 8),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(color: const Color(0xFFFFF7EB), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFE1B0))),
+        child: const Row(children: [
+          Icon(Icons.info_outline_rounded, color: _orange, size: 16),
+          SizedBox(width: 7),
+          Expanded(child: Text('الأرقام والنسب ستظهر من واقع حركات النظام بعد ربط مصادر البيانات؛ لا تُعرض قيم تجريبية على أنها نتائج فعلية.', style: TextStyle(fontSize: 10, color: Colors.black87, height: 1.4))),
+        ]),
+      ),
+    ],
+  );
+
+  static const Color _green = Color(0xFF18865A);
+
+  Widget _executiveKpi(String title, String value, String note, IconData icon, Color color) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: const Color(0xFFE8E0F0)),
+          boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 7, offset: Offset(0, 2))],
+        ),
+        child: Row(children: [
+          Container(width: 35, height: 35, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: color, size: 19)),
+          const SizedBox(width: 9),
+          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 10, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 2),
+            Text(value, style: TextStyle(color: color, fontSize: 19, fontWeight: FontWeight.w900)),
+            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 9)),
+          ])),
+        ]),
       );
-    }),
-    const SizedBox(height: 12),
-    LayoutBuilder(builder: (context, constraints) {
-      final wide = constraints.maxWidth >= 760;
-      Widget panelPair(Widget first, Widget second) => wide
-          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: first), const SizedBox(width: 12), Expanded(child: second)])
-          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [first, const SizedBox(height: 12), second]);
-      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        panelPair(
-          _dashboardPanel('أداء المبيعات والمشتريات', Icons.show_chart_rounded, [
-            _dashboardMetric('مبيعات اليوم', '—', Icons.trending_up_rounded, _purple),
-            _dashboardMetric('المشتريات', '—', Icons.shopping_cart_rounded, _orange),
-            _dashboardMetric('تحصيلات اليوم', '—', Icons.payments_outlined, const Color(0xFF18865A)),
-            _dashboardMetric('المصروفات', '—', Icons.money_off_rounded, _pink),
+
+  Widget _executivePanel({required String title, required String subtitle, required IconData icon, required Widget child}) =>
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE8E0F0))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Container(width: 31, height: 31, decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(9)), child: Icon(icon, color: _purple, size: 17)),
+            const SizedBox(width: 8),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(color: _purple, fontSize: 12, fontWeight: FontWeight.w900)),
+              Text(subtitle, style: const TextStyle(color: Colors.black45, fontSize: 9)),
+            ])),
           ]),
-          _dashboardPanel('توزيع المبيعات حسب الفئات الرئيسية', Icons.donut_large_rounded, [
-            _dashboardMetric('الأغذية والمشروبات', '—', Icons.category_rounded, _purple),
-            _dashboardMetric('المنظفات', '—', Icons.cleaning_services_rounded, _orange),
-            _dashboardMetric('المنتجات الصحية', '—', Icons.health_and_safety_outlined, _pink),
-            _dashboardMetric('فئات أخرى', '—', Icons.grid_view_rounded, const Color(0xFF18865A)),
-          ]),
-        ),
-        const SizedBox(height: 12),
-        panelPair(
-          _dashboardPanel('أعمار ديون العملاء', Icons.stacked_bar_chart_rounded, [
-            _dashboardMetric('0 إلى 3 أيام', '—', Icons.schedule_rounded, const Color(0xFF18865A)),
-            _dashboardMetric('3 إلى 7 أيام', '—', Icons.schedule_rounded, _orange),
-            _dashboardMetric('7 إلى 30 يومًا', '—', Icons.calendar_month_rounded, _orange),
-            _dashboardMetric('30 إلى 90 يومًا', '—', Icons.warning_amber_rounded, _pink),
-            _dashboardMetric('أكثر من 90 يومًا', '—', Icons.error_outline_rounded, _pink),
-          ]),
-          _dashboardPanel('صلاحية الأصناف', Icons.inventory_2_rounded, [
-            _dashboardMetric('صلاحية جيدة', '—', Icons.check_circle_outline_rounded, const Color(0xFF18865A)),
-            _dashboardMetric('قريبة الانتهاء', '—', Icons.warning_amber_rounded, _orange),
-            _dashboardMetric('منتهية الصلاحية', '—', Icons.error_outline_rounded, _pink),
-            _dashboardMetric('إجمالي الأصناف', '—', Icons.category_rounded, _purple),
-            _dashboardMetric('قيمة المخزون', '—', Icons.price_check_rounded, _purple),
-          ]),
-        ),
-        const SizedBox(height: 12),
-        _dashboardPanel('مؤشرات تشغيلية سريعة', Icons.insights_rounded, [
-          _dashboardMetric('عدد الموردين', '—', Icons.factory_rounded, _purple),
-          _dashboardMetric('أرصدة الموردين', '—', Icons.receipt_long_rounded, _orange),
-          _dashboardMetric('عدد الخزائن', '—', Icons.account_balance_wallet_rounded, _purple),
-          _dashboardMetric('أرصدة الخزائن', '—', Icons.payments_rounded, const Color(0xFF18865A)),
-          _dashboardMetric('السلف الكبيرة', '—', Icons.money_rounded, _pink),
-          _dashboardMetric('معدل دوران المخزون', '—', Icons.autorenew_rounded, _orange),
-          _dashboardMetric('الأقساط المستحقة', '—', Icons.event_repeat_rounded, _orange),
-          _dashboardMetric('نسبة التحصيل', '—', Icons.price_check_rounded, const Color(0xFF18865A)),
+          const SizedBox(height: 11),
+          child,
         ]),
-        const SizedBox(height: 12),
-        panelPair(
-          _dashboardPanel('قائمة الدخل', Icons.receipt_long_rounded, [
-            _dashboardMetric('صافي المبيعات', '—', Icons.point_of_sale_rounded, _purple),
-            _dashboardMetric('تكلفة البضاعة', '—', Icons.inventory_2_outlined, _orange),
-            _dashboardMetric('مجمل الربح', '—', Icons.trending_up_rounded, const Color(0xFF18865A)),
-            _dashboardMetric('صافي الربح / الخسارة', '—', Icons.calculate_outlined, _purple),
-          ]),
-          _dashboardPanel('المركز المالي', Icons.account_balance_rounded, [
-            _dashboardMetric('إجمالي الأصول', '—', Icons.business_rounded, _purple),
-            _dashboardMetric('إجمالي الالتزامات', '—', Icons.request_quote_outlined, _pink),
-            _dashboardMetric('حقوق الملكية', '—', Icons.pie_chart_outline_rounded, const Color(0xFF18865A)),
-            _dashboardMetric('رأس المال العامل', '—', Icons.sync_alt_rounded, _orange),
-          ]),
-        ),
-        const SizedBox(height: 12),
-        _dashboardPanel('الفواتير والتجهيز والتسليم', Icons.local_shipping_rounded, [
-          _dashboardMetric('غير محملة / غير مجهزة', '—', Icons.inventory_2_outlined, _orange),
-          _dashboardMetric('غير مسلمة', '—', Icons.delivery_dining_rounded, _pink),
-          _dashboardMetric('غير مغلقة', '—', Icons.pending_actions_rounded, _orange),
-          _dashboardMetric('قيد التنفيذ', '—', Icons.sync_rounded, _purple),
+      );
+
+  Widget _executiveProgress(String label, String value, double? progress, Color color) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w700))),
+          Text(value, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w900)),
         ]),
-        const SizedBox(height: 12),
-        _dashboardPanel('الموظفون والحضور حسب الإدارة', Icons.groups_rounded, [
-          _dashboardMetric('الموظفون النشطون', '—', Icons.badge_rounded, _purple),
-          _dashboardMetric('الحضور اليوم', '—', Icons.how_to_reg_rounded, const Color(0xFF18865A)),
-          _dashboardMetric('نسبة الحضور', '—', Icons.percent_rounded, _purple),
-          _dashboardMetric('الغياب والتأخير', '—', Icons.event_busy_rounded, _pink),
-        ]),
-        const SizedBox(height: 12),
-        panelPair(
-          _dashboardRankingPanel('أعلى 5 موردين', Icons.factory_rounded, () => _open('المشتريات والموردون', 'بيانات أساسية', 'دليل الموردين')),
-          _dashboardRankingPanel('أعلى 5 عملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 7,
+            backgroundColor: const Color(0xFFEFEAF4),
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
         ),
-        const SizedBox(height: 12),
-        panelPair(
-          _dashboardRankingPanel('أعلى 5 مناديب حسب تحقيق الهدف', Icons.emoji_events_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل المندوبين')),
-          _dashboardPanel('أهداف مبيعات الفروع', Icons.flag_rounded, [
-            _dashboardMetric('إجمالي الهدف', '—', Icons.flag_rounded, _purple),
-            _dashboardMetric('المبيعات المحققة', '—', Icons.trending_up_rounded, const Color(0xFF18865A)),
-            _dashboardMetric('نسبة التحقيق', '—', Icons.percent_rounded, _orange),
-            _dashboardMetric('فروع تجاوزت الهدف', '—', Icons.emoji_events_rounded, const Color(0xFF18865A)),
-          ]),
-        ),
-        const SizedBox(height: 12),
-        _dashboardBreakdown('مقارنة المبيعات الفعلية بأهداف الفروع', Icons.show_chart_rounded, ['إجمالي الفروع', 'الفرع الأعلى تحقيقًا', 'الفرع الأقل تحقيقًا']),
-        const SizedBox(height: 10),
-        const Text('تنبيه: الأرقام والمخططات تعرض قوالب جاهزة لحين ربط مؤشرات الملخص بمصادر البيانات الفعلية في قاعدة البيانات.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
       ]);
-    }),
-    const SizedBox(height: 22),
-  ]);
+
+  Widget _executiveMiniStat(String title, String value, IconData icon, Color color) =>
+      Row(children: [
+        Icon(icon, color: color, size: 17),
+        const SizedBox(width: 8),
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w700))),
+        Text(value, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900)),
+      ]);
 
   Widget _dashboardPanel(String title, IconData icon, List<Widget> metrics, {String? footer, List<Widget> actions = const []}) =>
       Container(
