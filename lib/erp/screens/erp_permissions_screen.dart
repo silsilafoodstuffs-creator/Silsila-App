@@ -106,7 +106,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
     final company=(widget.companyId??'').trim();
     if(!mounted)return;
     setState(()=>_loading=true);
-    if(_db==null||company.isEmpty){setState(()=>{_loading=false,_error='اختر الشركة وسجّل الدخول أولًا.'});return;}
+    if(_db==null||company.isEmpty){setState((){_loading=false;_error='اختر الشركة وسجّل الدخول أولًا.';});return;}
     try{
       final rows=await _db!.from('erp_company_members').select('id,user_id,member_role,is_active,created_at').eq('company_id',company).eq('is_active',true).order('created_at');
       final users=(rows as List).whereType<Map<String,dynamic>>().toList();
@@ -117,8 +117,8 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
         final uid=_s(r['user_id']),key=_s(r['menu_key']);if(!_draft.containsKey(uid))continue;
         for(final a in fields.entries){_draft[uid]![key+'::'+a.key]=r[a.value]==true;}
       }
-      if(!mounted)return;setState(()=>{_users=users,_loading=false,_error=null,_message=null});
-    }catch(e){if(!mounted)return;setState(()=>{_loading=false,_error='تعذر تحميل الصلاحيات. تأكد من تطبيق ملف SQL. '+e.toString()});}
+      if(!mounted)return;setState((){_users=users;_loading=false;_error=null;_message=null;});
+    }catch(e){if(!mounted)return;setState((){_loading=false;_error='تعذر تحميل الصلاحيات. تأكد من تطبيق ملف SQL. '+e.toString();});}
   }
   List<String> get _targets=>_scope=='__all__'?_users.map((u)=>_s(u['user_id'])).toList():[_scope];
   void _applyTemplate(String role){
@@ -157,7 +157,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   Future<void> _save() async{
     final company=(widget.companyId??'').trim();if(_db==null||company.isEmpty){setState(()=>_error='لا توجد شركة محددة.');return;}
     final targets=_targets;if(targets.isEmpty){setState(()=>_error='لا يوجد مستخدم نشط.');return;}
-    setState(()=>{_saving=true,_error=null,_message=null});
+    setState((){_saving=true;_error=null;_message=null;});
     try{
       for(final uid in targets){
         final values=_draft[uid]??_blank('مخصص بلا صلاحيات');
@@ -167,8 +167,8 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
         }
         await _db!.from('erp_user_permissions').upsert(rows,onConflict:'company_id,user_id,menu_key');
       }
-      if(!mounted)return;setState(()=>{_saving=false,_message=_scope=='__all__'?'تم حفظ الصلاحيات لجميع المستخدمين النشطين.':'تم حفظ صلاحيات المستخدم المحدد فقط.'});
-    }catch(e){if(!mounted)return;setState(()=>{_saving=false,_error='تعذر حفظ الصلاحيات: '+e.toString()});}
+      if(!mounted)return;setState((){_saving=false;_message=_scope=='__all__'?'تم حفظ الصلاحيات لجميع المستخدمين النشطين.':'تم حفظ صلاحيات المستخدم المحدد فقط.';});
+    }catch(e){if(!mounted)return;setState((){_saving=false;_error='تعذر حفظ الصلاحيات: '+e.toString();});}
   }
   Widget _quick(String text,IconData icon,VoidCallback? action)=>OutlinedButton.icon(onPressed:action,icon:Icon(icon,size:17),label:Text(text),style:OutlinedButton.styleFrom(foregroundColor:_permPurple,padding:const EdgeInsets.symmetric(horizontal:10,vertical:12)));
   Widget _row(String key,String label,{bool nested=false})=>Container(margin:EdgeInsetsDirectional.only(start:nested?12:0,bottom:5),padding:const EdgeInsets.symmetric(horizontal:6,vertical:5),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:Colors.black12),borderRadius:BorderRadius.circular(8)),child:Row(children:[
@@ -193,7 +193,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
     Row(children:[Container(width:44,height:44,decoration:BoxDecoration(color:_permPurple.withValues(alpha:.1),borderRadius:BorderRadius.circular(12)),child:const Icon(Icons.admin_panel_settings_outlined,color:_permPurple)),const SizedBox(width:10),const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('إدارة الصلاحيات',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:_permPurple)),Text('قوالب أو تحديد يدوي حسب المستخدم والقائمة',style:TextStyle(fontSize:12,color:Colors.black54))])),_quick('تحديث',Icons.refresh,_loading||_saving?null:_load)]),
     const SizedBox(height:8),Wrap(spacing:8,runSpacing:8,children:[
       _quick('حفظ',Icons.save,_saving?null:_save),
-      _quick(_expandAll?'طي الكل':'فتح الكل',_expandAll?Icons.unfold_less:Icons.unfold_more,()=>setState(()=>{_expandAll=!_expandAll;for(final m in _tree.keys){_expanded[m]=_expandAll;for(final s in _tree[m]!.keys){_expanded[m+'::'+s]=_expandAll;}}})),
+      _quick(_expandAll?'طي الكل':'فتح الكل',_expandAll?Icons.unfold_less:Icons.unfold_more,()=>setState((){_expandAll=!_expandAll;for(final m in _tree.keys){_expanded[m]=_expandAll;for(final s in _tree[m]!.keys){_expanded[m+'::'+s]=_expandAll;}}})),
     ]),
     if(_error!=null)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
     if(_message!=null)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_message!,style:const TextStyle(color:Colors.green))),
