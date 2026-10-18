@@ -1630,3 +1630,62 @@ class _Metric extends StatelessWidget {
     ])),
   ]));
 }
+
+
+class _ExecutiveChartPainter extends CustomPainter {
+  const _ExecutiveChartPainter({required this.color});
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..color = const Color(0xFFEDE7F4)
+      ..strokeWidth = 1;
+    for (var i = 0; i < 4; i++) {
+      final y = size.height * i / 3;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+    final points = <Offset>[
+      Offset(0, size.height * .72),
+      Offset(size.width * .15, size.height * .58),
+      Offset(size.width * .31, size.height * .66),
+      Offset(size.width * .48, size.height * .34),
+      Offset(size.width * .64, size.height * .43),
+      Offset(size.width * .81, size.height * .22),
+      Offset(size.width, size.height * .29),
+    ];
+    final linePaint = Paint()
+      ..color = color
+      ..strokeWidth = 2.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+    final fillPath = Path.from(path)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [color.withValues(alpha: .18), color.withValues(alpha: .01)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(path, linePaint);
+    final dotPaint = Paint()..color = color;
+    for (final point in points) {
+      canvas.drawCircle(point, 3, dotPaint);
+      canvas.drawCircle(point, 5, Paint()..color = color.withValues(alpha: .13));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ExecutiveChartPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
