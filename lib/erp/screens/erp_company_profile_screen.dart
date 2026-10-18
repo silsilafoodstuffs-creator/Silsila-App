@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _companyPurple = Color(0xFF3E007D);
-const _companyOrange = Color(0xFFFFA015);
 
 class ErpCompanyProfileScreen extends StatefulWidget {
   const ErpCompanyProfileScreen({super.key, required this.companyId, this.onCompanyCreated});
