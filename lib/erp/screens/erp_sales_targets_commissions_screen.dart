@@ -17,12 +17,12 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
   SupabaseClient? _db;
   bool _loading = true;
   String? _error;
-  final List<Map<String,dynamic>> _customers = [], _reps = [], _goals = [], _plans = [], _tiers = [], _salesDocs = [];
+  final List<Map<String,dynamic>> _customers = [], _reps = [], _goals = [], _plans = [], _tiers = [], _salesDocs = [], _runs = [];
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
     try { _db = Supabase.instance.client; } catch (_) {}
     _load();
   }
@@ -65,6 +65,13 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
         });
       } catch (_) {
         if(mounted) setState(()=>_salesDocs.clear());
+      }
+      try {
+        final runs=await _db!.from('erp_commission_runs').select()
+            .eq('company_id',c).order('created_at',ascending:false);
+        if(mounted) setState(()=>_runs..clear()..addAll((runs as List).cast<Map<String,dynamic>>()));
+      } catch (_) {
+        if(mounted) setState(()=>_runs.clear());
       }
     } catch(e) { if(mounted) setState(() { _error='تعذر تحميل البيانات. تحقق من ملف SQL وصلاحيات الشركة.\n'+e.toString(); _loading=false; }); }
   }
@@ -167,6 +174,84 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
     }catch(e){_toast('تعذر الحفظ: '+e.toString());}
   }
 
+  Future<void> _createCommissionRun(Map<String,dynamic> rep) async {
+    if(_db==null || (widget.companyId??'').isEmpty) {
+      _toast('اربط الشركة بقاعدة البيانات لتسجيل مسودة العمولة.');
+      return;
+    }
+    final repId=rep['id']?.toString() ?? '';
+    final docs=_docsForRep(repId);
+    if(docs.isEmpty) {
+      _toast('لا توجد فواتير مبيعات مرحلة وغير تجريبية لهذا المندوب خلال الشهر الحالي.');
+      return;
+    }
+    final method=rep['commission_plan']?.toString() ?? 'percentage';
+    final basis=method=='fixed_per_invoice'?'invoice_count':'sales_value';
+    Map<String,dynamic>? plan;
+    for(final candidate in _plans) {
+      if(candidate['commission_method']==method && candidate['calculation_basis']==basis) {
+        plan=candidate; break;
+      }
+    }
+    if(plan==null) {
+      _toast('لا توجد خطة عمولة فعالة مطابقة للطريقة المحددة لهذا المندوب.');
+      return;
+    }
+    final sales=_actualSalesForRep(repId);
+    final collections=docs.fold<double>(0,(sum,d)=>sum+(d['document_type']?.toString()=='return'?-_num(d['paid_total']):_num(d['paid_total'])));
+    final count=docs.where((d)=>d['document_type']?.toString()!='return').length;
+    final estimate=_commissionEstimate(rep);
+    final from=_month.toIso8601String().substring(0,10);
+    final to=_nextMonth.subtract(const Duration(days:1)).toIso8601String().substring(0,10);
+    final confirmed=await showDialog<bool>(context:context,builder:(ctx)=>Directionality(
+      textDirection:TextDirection.rtl,
+      child:AlertDialog(
+        title:const Text('إنشاء مسودة عمولة'),
+        content:Text('المندوب: '+(rep['rep_name']??'').toString()+
+          '\nالفترة: '+from+' إلى '+to+
+          '\nالمبيعات الصافية المرحلة: '+money(sales)+
+          '\nالتحصيل المسجل على الفواتير: '+money(collections)+
+          '\nالفواتير: '+count.toString()+
+          '\nالعمولة التقديرية: '+money(estimate)+
+          '\n\nسيتم حفظها كمسودة غير معتمدة للمراجعة قبل الصرف.'),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('إنشاء المسودة')),
+        ],
+      ),
+    ));
+    if(confirmed!=true)return;
+    try {
+      final existing=await _db!.from('erp_commission_runs').select('id')
+        .eq('company_id',widget.companyId!).eq('representative_id',repId)
+        .eq('period_start',from).eq('period_end',to)
+        .neq('status','cancelled').limit(1);
+      if((existing as List).isNotEmpty) {
+        _toast('توجد بالفعل مسودة أو عمولة مسجلة لهذا المندوب والفترة؛ راجع سجل العمولات.');
+        return;
+      }
+      await _db!.from('erp_commission_runs').insert({
+        'company_id':widget.companyId,
+        'representative_id':repId,
+        'plan_id':plan['id'],
+        'period_start':from,
+        'period_end':to,
+        'eligible_sales':sales,
+        'eligible_collections':collections,
+        'eligible_gross_profit':0,
+        'eligible_invoice_count':count,
+        'calculated_commission':estimate,
+        'status':'draft',
+        'is_demo_data':false,
+        'notes':'مسودة آلية من الفواتير المرحلة وغير التجريبية؛ يلزم تدقيق المرتجعات والتحصيلات ومراجعة الخطة قبل الاعتماد.',
+      });
+      await _load();
+      _toast('تم حفظ مسودة العمولة بنجاح، ولم يتم اعتمادها أو صرفها.');
+    } catch(e) {
+      _toast('تعذر حفظ المسودة. تحقق من صلاحيات المحاسبة وملف SQL.\n'+e.toString());
+    }
+  }
+
   Widget _field(TextEditingController c,String label,{bool integer=false})=>Padding(padding:const EdgeInsets.only(bottom:10),child:TextField(controller:c,keyboardType:integer?TextInputType.number:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:label,border:OutlineInputBorder(borderRadius:BorderRadius.circular(12)))));
   void _toast(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
 
@@ -193,12 +278,12 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
         _stat('أهداف الشهر',demo?'4':_goals.where((g)=>g['goal_month']?.toString().startsWith(_monthKey)==true).length.toString(),Icons.flag,_pink),
       ]);}),
       const SizedBox(height:12),
-      Container(decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14)),child:TabBar(controller:_tabs,labelColor:_p,unselectedLabelColor:Colors.black54,indicatorColor:_o,tabs:const[
-        Tab(icon:Icon(Icons.flag),text:'أهداف العملاء'),Tab(icon:Icon(Icons.badge),text:'المندوبون والعمولات'),Tab(icon:Icon(Icons.stacked_bar_chart),text:'خطط العمولة'),
+      Container(decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14)),child:TabBar(isScrollable:true,controller:_tabs,labelColor:_p,unselectedLabelColor:Colors.black54,indicatorColor:_o,tabs:const[
+        Tab(icon:Icon(Icons.flag),text:'أهداف العملاء'),Tab(icon:Icon(Icons.badge),text:'المندوبون والعمولات'),Tab(icon:Icon(Icons.stacked_bar_chart),text:'خطط العمولة'),Tab(icon:Icon(Icons.fact_check),text:'مسودات العمولات'),
       ])),
       const SizedBox(height:10),
       if(_loading)const Padding(padding:EdgeInsets.all(28),child:Center(child:CircularProgressIndicator()))
-      else SizedBox(height:590,child:TabBarView(controller:_tabs,children:[_customersView(demo),_repsView(demo),_plansView(demo)])),
+      else SizedBox(height:590,child:TabBarView(controller:_tabs,children:[_customersView(demo),_repsView(demo),_plansView(demo),_runsView(demo)])),
     ]));
   }
 
@@ -243,8 +328,48 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
         Row(children:[const Icon(Icons.badge,color:_p,size:28),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(r['rep_name']?.toString()??'',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),Text((r['rep_code']?.toString()??'')+' • '+(m=='tiered'?'عمولة متدرجة':m=='fixed_per_invoice'?'قيمة لكل فاتورة':'نسبة ثابتة'),style:const TextStyle(color:Colors.black54,fontSize:12))])),IconButton(onPressed:demo?()=>_toast('مثال للعرض فقط.'):()=>_editRep(r),icon:const Icon(Icons.tune,color:_o))]),
         Wrap(spacing:14,runSpacing:6,children:[Text('مستهدف المبيعات: '+money(r['monthly_sales_target'])),Text('المبيعات المرحلة فعليًا: '+money(demo?0:_actualSalesForRep(r['id'].toString()))),Text(m=='fixed_per_invoice'?'عمولة: '+rate.toStringAsFixed(2)+' ج.م/فاتورة':'العمولة: '+rate.toStringAsFixed(2)+'%',style:const TextStyle(color:_p,fontWeight:FontWeight.w900))]),
         if(!demo) Padding(padding:const EdgeInsets.only(top:8),child:Text('تقدير العمولة قبل الاعتماد: '+money(_commissionEstimate(r)),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w800))),
+        if(!demo) Align(alignment:Alignment.centerLeft,child:OutlinedButton.icon(onPressed:()=>_createCommissionRun(r),icon:const Icon(Icons.request_quote_rounded),label:const Text('إنشاء مسودة عمولة'))),
       ]));
     });
+  }
+
+  Widget _runsView(bool demo) {
+    final rows=demo?<Map<String,dynamic>>[
+      {'representative_name':'أحمد سامح - تجريبي','period_start':_month.toIso8601String().substring(0,10),'period_end':_nextMonth.subtract(const Duration(days:1)).toIso8601String().substring(0,10),'eligible_sales':0,'eligible_invoice_count':0,'calculated_commission':0,'status':'draft','notes':'مثال عرض فقط؛ لا توجد عمولة فعلية.'},
+    ]:_runs;
+    if(rows.isEmpty)return const Center(child:Text('لا توجد مسودات عمولات. أنشئ مسودة من بطاقة المندوب بعد وجود فواتير مرحلة.'));
+    return ListView.separated(
+      itemCount:rows.length,
+      separatorBuilder:(_,__)=>const SizedBox(height:9),
+      itemBuilder:(ctx,i){
+        final x=rows[i];
+        final status=x['status']?.toString()??'draft';
+        final label=status=='approved'?'معتمدة':status=='paid'?'مصروفة':status=='reviewed'?'تمت المراجعة':status=='cancelled'?'ملغاة':'مسودة';
+        return Container(
+          padding:const EdgeInsets.all(16),
+          decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),
+          child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Row(children:[
+              const Icon(Icons.request_quote_rounded,color:_p,size:28),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Text((x['representative_name']??x['representative_id']??'عمولة مندوب').toString(),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
+                Text((x['period_start']??'').toString()+' — '+(x['period_end']??'').toString(),style:const TextStyle(color:Colors.black54,fontSize:12)),
+              ])),
+              Chip(label:Text(label),backgroundColor:status=='approved'||status=='paid'?const Color(0xFFE2F6EA):const Color(0xFFFFF0D9)),
+            ]),
+            const SizedBox(height:8),
+            Wrap(spacing:14,runSpacing:6,children:[
+              Text('المبيعات: '+money(x['eligible_sales'])),
+              Text('عدد الفواتير: '+(x['eligible_invoice_count']??0).toString()),
+              Text('العمولة: '+money(x['calculated_commission']),style:const TextStyle(color:_p,fontWeight:FontWeight.w900)),
+            ]),
+            if((x['notes']??'').toString().isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text(x['notes'].toString(),style:const TextStyle(color:Colors.black54,fontSize:12))),
+            const Text('هذه المسودة لا تعني اعتماد الاستحقاق أو صرفه. تتم المراجعة المحاسبية قبل أي اعتماد.',style:TextStyle(color:Color(0xFF795000),fontSize:12,fontWeight:FontWeight.w700)),
+          ]),
+        );
+      },
+    );
   }
 
   Widget _plansView(bool demo){
