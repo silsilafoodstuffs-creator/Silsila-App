@@ -220,13 +220,11 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                   ),
                 _field(_legalName, 'الاسم القانوني *', Icons.business),
                 _field(_tradeName, 'الاسم التجاري', Icons.storefront_outlined),
-                Wrap(spacing: 12, runSpacing: 12, children: [
-                  _sizedField(_taxNumber, 'الرقم الضريبي', Icons.receipt_long_outlined),
-                  _sizedField(_commercialRegister, 'السجل التجاري', Icons.assignment_outlined),
-                  _sizedField(_phone, 'رقم الهاتف', Icons.phone_outlined, keyboard: TextInputType.phone),
-                  _sizedField(_email, 'البريد الإلكتروني', Icons.email_outlined, keyboard: TextInputType.emailAddress),
-                  _sizedField(_currency, 'العملة الأساسية (3 أحرف)', Icons.currency_exchange),
-                ]),
+                _field(_taxNumber, 'الرقم الضريبي', Icons.receipt_long_outlined),
+                _field(_commercialRegister, 'السجل التجاري', Icons.assignment_outlined),
+                _field(_phone, 'رقم الهاتف', Icons.phone_outlined, keyboard: TextInputType.phone),
+                _field(_email, 'البريد الإلكتروني', Icons.email_outlined, keyboard: TextInputType.emailAddress),
+                _field(_currency, 'العملة الأساسية (3 أحرف)', Icons.currency_exchange),
                 _field(_address, 'العنوان', Icons.location_on_outlined, maxLines: 2),
                 const SizedBox(height: 16),
                 FilledButton.icon(
@@ -242,23 +240,49 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     );
   }
 
-  Widget _field(TextEditingController controller, String label, IconData icon, {int maxLines = 1}) =>
+  Widget _field(TextEditingController controller, String label, IconData icon,
+          {int maxLines = 1, TextInputType? keyboard}) =>
       Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: TextField(
-          controller: controller,
-          maxLines: maxLines,
-          decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon), border: const OutlineInputBorder()),
-        ),
-      );
-
-  Widget _sizedField(TextEditingController controller, String label, IconData icon, {TextInputType? keyboard}) =>
-      SizedBox(
-        width: 280,
-        child: TextField(
-          controller: controller,
-          keyboardType: keyboard,
-          decoration: InputDecoration(labelText: label, prefixIcon: Icon(icon), border: const OutlineInputBorder()),
+        padding: const EdgeInsets.only(bottom: 10),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final labelWidth = (constraints.maxWidth * .30).clamp(125.0, 190.0);
+            return Row(
+              crossAxisAlignment: maxLines > 1 ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: labelWidth,
+                  child: Padding(
+                    padding: EdgeInsetsDirectional.only(end: 12, top: maxLines > 1 ? 15 : 0),
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.start,
+                      style: const TextStyle(
+                        color: _companyPurple,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: keyboard,
+                    maxLines: maxLines,
+                    minLines: maxLines > 1 ? maxLines : 1,
+                    style: const TextStyle(fontSize: 14),
+                    decoration: InputDecoration(
+                      prefixIcon: Icon(icon, size: 20),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       );
 
