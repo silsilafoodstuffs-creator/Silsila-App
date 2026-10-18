@@ -31,6 +31,9 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
   void initState() {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
+    if (_company.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
   }
 
   bool get _trial => widget.kind == ErpLedgerReportKind.trialBalance;
