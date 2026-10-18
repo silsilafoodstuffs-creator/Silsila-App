@@ -1613,7 +1613,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w800)),
             const SizedBox(height: 3),
-            Text(value, maxLines: 1, style: TextStyle(color: color, fontSize: 25, fontWeight: FontWeight.w900)),
+            FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: Text(value, maxLines: 1, style: TextStyle(color: color, fontSize: 25, fontWeight: FontWeight.w900))),
             Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 13)),
           ])),
         ]),
