@@ -17,7 +17,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
   SupabaseClient? _db;
   bool _loading = true;
   String? _error;
-  final List<Map<String,dynamic>> _customers = [], _reps = [], _goals = [], _plans = [], _tiers = [];
+  final List<Map<String,dynamic>> _customers = [], _reps = [], _goals = [], _plans = [], _tiers = [], _salesDocs = [];
 
   @override
   void initState() {
@@ -53,10 +53,61 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
         final rows = await _db!.from('erp_commission_tiers').select().inFilter('plan_id',ids).order('min_value');
         if (mounted) setState(() { _tiers..clear()..addAll((rows as List).cast<Map<String,dynamic>>()); });
       }
+      try {
+        final from=_month.toIso8601String().substring(0,10);
+        final to=_nextMonth.toIso8601String().substring(0,10);
+        final docs=await _db!.from('erp_sales_documents')
+            .select('id,customer_id,sales_rep_id,document_type,status,document_date,grand_total,paid_total,is_demo_data')
+            .eq('company_id',c).eq('status','posted').eq('is_demo_data',false)
+            .gte('document_date',from).lt('document_date',to);
+        if(mounted) setState(() {
+          _salesDocs..clear()..addAll((docs as List).cast<Map<String,dynamic>>());
+        });
+      } catch (_) {
+        if(mounted) setState(()=>_salesDocs.clear());
+      }
     } catch(e) { if(mounted) setState(() { _error='تعذر تحميل البيانات. تحقق من ملف SQL وصلاحيات الشركة.\n'+e.toString(); _loading=false; }); }
   }
 
   DateTime get _month => DateTime(DateTime.now().year,DateTime.now().month);
+  DateTime get _nextMonth => DateTime(_month.year,_month.month+1);
+  double _num(Object? value) => double.tryParse(value?.toString() ?? '') ?? 0;
+  double _netDocumentValue(Map<String,dynamic> row) {
+    final value=_num(row['grand_total']);
+    return row['document_type']?.toString()=='return' ? -value : value;
+  }
+  double _actualSalesForCustomer(String id) => _salesDocs
+      .where((d)=>d['customer_id']?.toString()==id)
+      .fold<double>(0,(sum,d)=>sum+_netDocumentValue(d));
+  List<Map<String,dynamic>> _docsForRep(String id) => _salesDocs
+      .where((d)=>d['sales_rep_id']?.toString()==id)
+      .toList();
+  double _actualSalesForRep(String id) => _docsForRep(id)
+      .fold<double>(0,(sum,d)=>sum+_netDocumentValue(d));
+  double _commissionEstimate(Map<String,dynamic> rep) {
+    final method=rep['commission_plan']?.toString() ?? 'percentage';
+    final sales=_actualSalesForRep(rep['id']?.toString() ?? '');
+    final docs=_docsForRep(rep['id']?.toString() ?? '');
+    final rate=_num(rep['default_commission_rate']);
+    if(method=='fixed_per_invoice') {
+      return docs.where((d)=>d['document_type']?.toString()!='return').length*rate;
+    }
+    if(method=='percentage') return sales>0 ? sales*rate/100 : 0;
+    final tierPlan=_plans.where((p)=>p['commission_method']=='tiered').toList();
+    if(tierPlan.isEmpty || sales<=0) return 0;
+    final planId=tierPlan.first['id']?.toString();
+    final tiers=_tiers.where((t)=>t['plan_id']?.toString()==planId).toList()
+      ..sort((a,b)=>_num(a['min_value']).compareTo(_num(b['min_value'])));
+    var total=0.0;
+    for(final tier in tiers) {
+      final lower=_num(tier['min_value']);
+      final rawUpper=tier['max_value'];
+      final upper=rawUpper==null ? sales : _num(rawUpper)+0.01;
+      final slab=(sales<upper?sales:upper)-lower;
+      if(slab>0) total+=slab*_num(tier['rate'])/100;
+    }
+    return total;
+  }
   String get _monthKey => _month.toIso8601String().substring(0,7);
   String money(Object? v) => ((double.tryParse(v?.toString() ?? '') ?? 0).toStringAsFixed(2))+' ج.م';
   Map<String,dynamic>? _goal(String id) {
@@ -167,10 +218,12 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
           Text(c['party_name']?.toString()??'',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
           Text((c['business_classification']?.toString()??'تصنيف غير محدد')+' • '+(c['district']?.toString()??'منطقة غير محددة'),style:const TextStyle(fontSize:12,color:Colors.black54)),
           const SizedBox(height:5),Wrap(spacing:12,runSpacing:4,children:[
-            Text('مبيعات: '+money(g['sales_target']),style:const TextStyle(color:_p,fontWeight:FontWeight.w700)),
+            Text('المستهدف: '+money(g['sales_target']),style:const TextStyle(color:_p,fontWeight:FontWeight.w700)),
+            Text('المحقق: '+money(demo?0:_actualSalesForCustomer(c['id'].toString())),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w700)),
             Text('تحصيل: '+money(g['collection_target']),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w700)),
             Text('فواتير: '+(g['target_orders']?.toString()??'0')),
           ]),
+          if(!demo && _num(g['sales_target'])>0) Padding(padding:const EdgeInsets.only(top:8),child:ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:(_actualSalesForCustomer(c['id'].toString())/_num(g['sales_target'])).clamp(0.0,1.0),minHeight:7,backgroundColor:const Color(0xFFEDE7F4),color:_o))),
         ])),
         IconButton(onPressed:demo?()=>_toast('مثال للعرض فقط.'):()=>_editGoal(c),icon:const Icon(Icons.edit,color:_o),tooltip:'تعديل الهدف'),
       ]));
@@ -188,7 +241,8 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
       final r=rows[i];final m=r['commission_plan']?.toString()??'percentage';final rate=double.tryParse(r['default_commission_rate']?.toString()??'')??0;
       return Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Row(children:[const Icon(Icons.badge,color:_p,size:28),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(r['rep_name']?.toString()??'',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),Text((r['rep_code']?.toString()??'')+' • '+(m=='tiered'?'عمولة متدرجة':m=='fixed_per_invoice'?'قيمة لكل فاتورة':'نسبة ثابتة'),style:const TextStyle(color:Colors.black54,fontSize:12))])),IconButton(onPressed:demo?()=>_toast('مثال للعرض فقط.'):()=>_editRep(r),icon:const Icon(Icons.tune,color:_o))]),
-        Wrap(spacing:14,runSpacing:6,children:[Text('مبيعات: '+money(r['monthly_sales_target'])),Text('تحصيل: '+money(r['monthly_collection_target'])),Text(m=='fixed_per_invoice'?'عمولة: '+rate.toStringAsFixed(2)+' ج.م/فاتورة':'العمولة: '+rate.toStringAsFixed(2)+'%',style:const TextStyle(color:_p,fontWeight:FontWeight.w900))]),
+        Wrap(spacing:14,runSpacing:6,children:[Text('مستهدف المبيعات: '+money(r['monthly_sales_target'])),Text('المبيعات المرحلة فعليًا: '+money(demo?0:_actualSalesForRep(r['id'].toString()))),Text(m=='fixed_per_invoice'?'عمولة: '+rate.toStringAsFixed(2)+' ج.م/فاتورة':'العمولة: '+rate.toStringAsFixed(2)+'%',style:const TextStyle(color:_p,fontWeight:FontWeight.w900))]),
+        if(!demo) Padding(padding:const EdgeInsets.only(top:8),child:Text('تقدير العمولة قبل الاعتماد: '+money(_commissionEstimate(r)),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w800))),
       ]));
     });
   }
