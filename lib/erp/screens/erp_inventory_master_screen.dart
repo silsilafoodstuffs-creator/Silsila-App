@@ -43,6 +43,9 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
     _view = widget.initialView;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _company.text.trim().isNotEmpty) _load();
+    });
   }
   @override
   void dispose() {
