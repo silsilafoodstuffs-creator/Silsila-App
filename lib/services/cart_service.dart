@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 class CartItem {
-  final int productId;
+  final String productId;
   final String name;
   final String supplierId;
   final String category;
@@ -49,7 +49,7 @@ class CartItem {
     int quantity = 1,
   }) {
     return CartItem(
-      productId: _toInt(product['id']),
+      productId: (product['id'] ?? '').toString().trim(),
       name: (product['name'] ?? '').toString().trim(),
       supplierId: (product['supplier_id'] ?? '').toString().trim(),
       category: (product['category'] ?? '').toString().trim(),
@@ -61,16 +61,6 @@ class CartItem {
       ),
       quantity: quantity,
     );
-  }
-
-  static int _toInt(dynamic value, {int fallback = 0}) {
-    if (value is int) return value;
-    if (value is num) {
-      if (!value.isFinite || value % 1 != 0) return fallback;
-      return value.toInt();
-    }
-
-    return int.tryParse(value?.toString() ?? '') ?? fallback;
   }
 
   static double _toDouble(dynamic value) {
@@ -87,7 +77,7 @@ class CartItem {
 class CartService extends ChangeNotifier {
   static const int maxQuantityPerProduct = 1000000;
 
-  final Map<int, CartItem> _items = {};
+  final Map<String, CartItem> _items = {};
 
   List<CartItem> get items =>
       List<CartItem>.unmodifiable(_items.values);
@@ -114,7 +104,7 @@ class CartService extends ChangeNotifier {
       quantity: quantity,
     );
 
-    if (newItem.productId <= 0) {
+    if (newItem.productId.isEmpty || newItem.productId == '0') {
       throw ArgumentError('معرّف المنتج غير صالح.');
     }
 
@@ -194,8 +184,9 @@ class CartService extends ChangeNotifier {
   }
 
   /// تعيين كمية المنتج مع احترام الحد الأدنى للطلب.
-  void setQuantity(int productId, int quantity) {
-    final existing = _items[productId];
+  void setQuantity(Object productId, int quantity) {
+    final key = productId.toString();
+    final existing = _items[key];
 
     if (existing == null) return;
 
@@ -215,7 +206,7 @@ class CartService extends ChangeNotifier {
 
     _validateLineTotal(existing.price, quantity);
 
-    _items[productId] = existing.copyWith(
+    _items[key] = existing.copyWith(
       quantity: quantity,
     );
 
@@ -223,8 +214,9 @@ class CartService extends ChangeNotifier {
   }
 
   /// زيادة كمية منتج موجود.
-  void increaseQuantity(int productId) {
-    final existing = _items[productId];
+  void increaseQuantity(Object productId) {
+    final key = productId.toString();
+    final existing = _items[key];
 
     if (existing == null) return;
 
@@ -237,7 +229,7 @@ class CartService extends ChangeNotifier {
     final nextQuantity = existing.quantity + 1;
     _validateLineTotal(existing.price, nextQuantity);
 
-    _items[productId] = existing.copyWith(
+    _items[key] = existing.copyWith(
       quantity: nextQuantity,
     );
 
@@ -245,14 +237,15 @@ class CartService extends ChangeNotifier {
   }
 
   /// تقليل الكمية دون النزول عن الحد الأدنى.
-  void decreaseQuantity(int productId) {
-    final existing = _items[productId];
+  void decreaseQuantity(Object productId) {
+    final key = productId.toString();
+    final existing = _items[key];
 
     if (existing == null) return;
 
     if (existing.quantity <= existing.minQuantity) return;
 
-    _items[productId] = existing.copyWith(
+    _items[key] = existing.copyWith(
       quantity: existing.quantity - 1,
     );
 
@@ -260,8 +253,8 @@ class CartService extends ChangeNotifier {
   }
 
   /// حذف منتج من السلة.
-  void removeProduct(int productId) {
-    if (_items.remove(productId) != null) {
+  void removeProduct(Object productId) {
+    if (_items.remove(productId.toString()) != null) {
       notifyListeners();
     }
   }
@@ -286,13 +279,13 @@ class CartService extends ChangeNotifier {
   }
 
   /// التحقق من وجود منتج في السلة.
-  bool containsProduct(int productId) {
-    return _items.containsKey(productId);
+  bool containsProduct(Object productId) {
+    return _items.containsKey(productId.toString());
   }
 
   /// الحصول على منتج محدد من السلة.
-  CartItem? getItem(int productId) {
-    return _items[productId];
+  CartItem? getItem(Object productId) {
+    return _items[productId.toString()];
   }
 
   /// تقسيم عناصر السلة حسب المورد.
