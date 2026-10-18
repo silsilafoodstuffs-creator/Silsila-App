@@ -85,8 +85,17 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
       final lists = values[0];
       final selected = lists.any((x) => _s(x['id']) == _selectedListId) ? _selectedListId : (lists.isEmpty ? null : _s(lists.first['id']));
       setState(() {
-        _lists = lists; _items = values[1]; _parties = values[2];
-        if ((values[3] as List<Map<String, dynamic>>).isNotEmpty) _currencies = values[3];
+        _lists = lists; _items = values[1]; _currencies = [..._currencies];
+        _parties = values[3];
+        final dbCurrencies = values[2] as List<Map<String, dynamic>>;
+        for (final currency in dbCurrencies) {
+          if (!_currencies.any((item) => _s(item['currency_code']) == _s(currency['currency_code']))) {
+            _currencies.add(currency);
+          }
+        }
+        if (!_currencies.any((item) => _s(item['currency_code']) == _currencyCode)) {
+          _currencyCode = _currencies.isEmpty ? 'EGP' : _s(_currencies.first['currency_code']);
+        }
         _selectedListId = selected;
         if (!_items.any((x) => _s(x['id']) == _selectedItemId)) _selectedItemId = _items.isEmpty ? null : _s(_items.first['id']);
         if (!_parties.any((x) => _s(x['id']) == _selectedPartyId)) _selectedPartyId = _parties.isEmpty ? null : _s(_parties.first['id']);
