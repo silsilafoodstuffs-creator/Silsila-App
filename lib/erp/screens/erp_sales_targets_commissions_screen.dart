@@ -1,0 +1,217 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+const _p = Color(0xFF3E007D);
+const _o = Color(0xFFFFA015);
+const _pink = Color(0xFFFF27C3);
+
+class ErpSalesTargetsCommissionsScreen extends StatefulWidget {
+  const ErpSalesTargetsCommissionsScreen({super.key, this.companyId});
+  final String? companyId;
+  @override
+  State<ErpSalesTargetsCommissionsScreen> createState() => _ErpSalesTargetsCommissionsScreenState();
+}
+
+class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommissionsScreen> with SingleTickerProviderStateMixin {
+  late final TabController _tabs;
+  SupabaseClient? _db;
+  bool _loading = true;
+  String? _error;
+  final List<Map<String,dynamic>> _customers = [], _reps = [], _goals = [], _plans = [], _tiers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = TabController(length: 3, vsync: this);
+    try { _db = Supabase.instance.client; } catch (_) {}
+    _load();
+  }
+  @override
+  void dispose() { _tabs.dispose(); super.dispose(); }
+
+  Future<void> _load() async {
+    if (_db == null || (widget.companyId ?? '').isEmpty) { if (mounted) setState(() => _loading = false); return; }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final c = widget.companyId!;
+      final r = await Future.wait([
+        _db!.from('erp_parties').select('id,party_code,party_name,business_classification,district,governorate,is_demo_data').eq('company_id',c).eq('party_kind','customer').order('party_name'),
+        _db!.from('erp_sales_representatives').select().eq('company_id',c).order('rep_name'),
+        _db!.from('erp_customer_monthly_goals').select().eq('company_id',c).order('goal_month',ascending:false),
+        _db!.from('erp_commission_plans').select().eq('company_id',c).order('plan_name'),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _customers..clear()..addAll((r[0] as List).cast<Map<String,dynamic>>());
+        _reps..clear()..addAll((r[1] as List).cast<Map<String,dynamic>>());
+        _goals..clear()..addAll((r[2] as List).cast<Map<String,dynamic>>());
+        _plans..clear()..addAll((r[3] as List).cast<Map<String,dynamic>>());
+        _loading = false;
+      });
+      final ids = _plans.map((x)=>x['id']?.toString()).whereType<String>().toList();
+      if (ids.isNotEmpty) {
+        final rows = await _db!.from('erp_commission_tiers').select().inFilter('plan_id',ids).order('min_value');
+        if (mounted) setState(() { _tiers..clear()..addAll((rows as List).cast<Map<String,dynamic>>()); });
+      }
+    } catch(e) { if(mounted) setState(() { _error='تعذر تحميل البيانات. تحقق من ملف SQL وصلاحيات الشركة.\n'+e.toString(); _loading=false; }); }
+  }
+
+  DateTime get _month => DateTime(DateTime.now().year,DateTime.now().month);
+  String get _monthKey => _month.toIso8601String().substring(0,7);
+  String money(Object? v) => ((double.tryParse(v?.toString() ?? '') ?? 0).toStringAsFixed(2))+' ج.م';
+  Map<String,dynamic>? _goal(String id) {
+    for(final g in _goals) { if(g['customer_id']?.toString()==id && g['goal_month']?.toString().startsWith(_monthKey)==true) return g; }
+    return null;
+  }
+
+  Future<void> _editGoal(Map<String,dynamic> customer) async {
+    final old=_goal(customer['id'].toString());
+    final sales=TextEditingController(text:old?['sales_target']?.toString() ?? '25000');
+    final collection=TextEditingController(text:old?['collection_target']?.toString() ?? '20000');
+    final orders=TextEditingController(text:old?['target_orders']?.toString() ?? '12');
+    final bonus=TextEditingController(text:old?['bonus_rate']?.toString() ?? '0.5');
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
+      title:Text('هدف شهري: '+(customer['party_name']?.toString() ?? 'عميل')),
+      content:SizedBox(width:420,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        _field(sales,'مستهدف المبيعات (ج.م)'),_field(collection,'مستهدف التحصيل (ج.م)'),_field(orders,'عدد الفواتير',integer:true),_field(bonus,'حافز تحقيق الهدف (%)'),
+      ]))),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ الهدف'))],
+    )));
+    if(ok!=true)return;
+    if(_db==null || (widget.companyId ?? '').isEmpty){_toast('بيانات العرض فقط؛ اختر الشركة لتمكين الحفظ.');return;}
+    try {
+      await _db!.from('erp_customer_monthly_goals').upsert({
+        'company_id':widget.companyId,'customer_id':customer['id'],'goal_month':_month.toIso8601String().substring(0,10),
+        'sales_target':double.parse(sales.text),'collection_target':double.parse(collection.text),'target_orders':int.parse(orders.text),
+        'bonus_rate':double.parse(bonus.text),'is_demo_data':false,
+      },onConflict:'company_id,customer_id,goal_month');
+      await _load(); _toast('تم حفظ الهدف الشهري.');
+    } catch(e){_toast('تعذر الحفظ: '+e.toString());}
+  }
+
+  Future<void> _editRep(Map<String,dynamic> rep) async {
+    final sales=TextEditingController(text:rep['monthly_sales_target']?.toString() ?? '0');
+    final collection=TextEditingController(text:rep['monthly_collection_target']?.toString() ?? '0');
+    final rate=TextEditingController(text:rep['default_commission_rate']?.toString() ?? '1.25');
+    String method=rep['commission_plan']?.toString() ?? 'percentage';
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setLocal)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
+      title:Text('أهداف وعمولة '+(rep['rep_name']?.toString() ?? 'المندوب')),
+      content:SizedBox(width:420,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        _field(sales,'مستهدف المبيعات الشهري'),_field(collection,'مستهدف التحصيل الشهري'),
+        DropdownButtonFormField<String>(value:method,decoration:const InputDecoration(labelText:'طريقة العمولة'),items:const [
+          DropdownMenuItem(value:'percentage',child:Text('نسبة من المبيعات')),
+          DropdownMenuItem(value:'fixed_per_invoice',child:Text('قيمة لكل فاتورة')),
+          DropdownMenuItem(value:'tiered',child:Text('نسب متدرجة')),
+        ],onChanged:(v)=>setLocal(()=>method=v ?? 'percentage')),
+        _field(rate,method=='fixed_per_invoice'?'قيمة العمولة لكل فاتورة':'نسبة العمولة (%)'),
+        const Text('تتطلب العمولة مراجعة واعتمادًا قبل الصرف.',style:TextStyle(fontSize:12,color:Colors.black54)),
+      ]))),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ'))],
+    ))));
+    if(ok!=true)return;
+    if(_db==null || (widget.companyId ?? '').isEmpty){_toast('بيانات العرض فقط.');return;}
+    try{
+      await _db!.from('erp_sales_representatives').update({'monthly_sales_target':double.parse(sales.text),'monthly_collection_target':double.parse(collection.text),'commission_plan':method,'default_commission_rate':double.parse(rate.text),'is_demo_data':false}).eq('id',rep['id']).eq('company_id',widget.companyId!);
+      await _load();_toast('تم حفظ إعدادات المندوب.');
+    }catch(e){_toast('تعذر الحفظ: '+e.toString());}
+  }
+
+  Widget _field(TextEditingController c,String label,{bool integer=false})=>Padding(padding:const EdgeInsets.only(bottom:10),child:TextField(controller:c,keyboardType:integer?TextInputType.number:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:label,border:OutlineInputBorder(borderRadius:BorderRadius.circular(12)))));
+  void _toast(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
+
+  Widget _stat(String title,String value,IconData icon,Color color)=>Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),child:Row(children:[Icon(icon,color:color,size:28),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.black54,fontSize:13)),Text(value,style:TextStyle(color:color,fontSize:22,fontWeight:FontWeight.w900))]))]));
+
+  @override
+  Widget build(BuildContext context){
+    final demo=_db==null || (widget.companyId ?? '').isEmpty;
+    return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_p,Color(0xFF7443A6)]),borderRadius:BorderRadius.circular(20)),child:Row(children:[
+        const Icon(Icons.track_changes_rounded,color:_o,size:42),const SizedBox(width:14),
+        const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text('أهداف العملاء وعمولات المبيعات',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),
+          SizedBox(height:5),Text('أهداف شهرية • نسب ثابتة ومتدرجة • اعتماد قبل الصرف',style:TextStyle(color:Color(0xFFEFE5F8),fontSize:14)),
+        ])),IconButton(onPressed:_load,icon:const Icon(Icons.refresh,color:Colors.white)),
+      ])),
+      const SizedBox(height:12),
+      if(demo) Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFFFF4DE),borderRadius:BorderRadius.circular(12)),child:const Text('وضع تجريبي: الأسماء والأهداف والعمولات افتراضية وليست بيانات حقيقية. طبّق ملف SQL واربط الشركة لتمكين الحفظ.',style:TextStyle(color:Color(0xFF795000),fontWeight:FontWeight.w700))),
+      if(_error!=null) Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
+      const SizedBox(height:12),
+      LayoutBuilder(builder:(ctx,c){final n=c.maxWidth>1000?3:c.maxWidth>620?2:1;return GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:n,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:n==1?4:2.4,children:[
+        _stat('عملاء الدليل',demo?'4':_customers.length.toString(),Icons.storefront,_p),
+        _stat('المندوبون',demo?'3':_reps.length.toString(),Icons.badge,_o),
+        _stat('أهداف الشهر',demo?'4':_goals.where((g)=>g['goal_month']?.toString().startsWith(_monthKey)==true).length.toString(),Icons.flag,_pink),
+      ]);}),
+      const SizedBox(height:12),
+      Container(decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14)),child:TabBar(controller:_tabs,labelColor:_p,unselectedLabelColor:Colors.black54,indicatorColor:_o,tabs:const[
+        Tab(icon:Icon(Icons.flag),text:'أهداف العملاء'),Tab(icon:Icon(Icons.badge),text:'المندوبون والعمولات'),Tab(icon:Icon(Icons.stacked_bar_chart),text:'خطط العمولة'),
+      ])),
+      const SizedBox(height:10),
+      if(_loading)const Padding(padding:EdgeInsets.all(28),child:Center(child:CircularProgressIndicator()))
+      else SizedBox(height:590,child:TabBarView(controller:_tabs,children:[_customersView(demo),_repsView(demo),_plansView(demo)])),
+    ]));
+  }
+
+  Widget _customersView(bool demo){
+    final rows=demo?<Map<String,dynamic>>[
+      {'id':'d1','party_name':'ماركت النور - تجريبي','business_classification':'سوبر ماركت','district':'مدينة نصر','sales_target':45000,'collection_target':40000,'target_orders':24},
+      {'id':'d2','party_name':'بقالة البركة - تجريبي','business_classification':'كشك / بقالة','district':'المرج','sales_target':18000,'collection_target':16000,'target_orders':18},
+      {'id':'d3','party_name':'تاجر جملة المستقبل - تجريبي','business_classification':'جملة','district':'العتبة','sales_target':125000,'collection_target':100000,'target_orders':12},
+      {'id':'d4','party_name':'مؤسسة توريدات غذائية - تجريبي','business_classification':'مدارس / مؤسسات','district':'الدقي','sales_target':70000,'collection_target':60000,'target_orders':8},
+    ]:_customers;
+    if(rows.isEmpty)return const Center(child:Text('لا يوجد عملاء. أضفهم من دليل العملاء أولًا.'));
+    return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(ctx,i){
+      final c=rows[i];final g=demo?c:(_goal(c['id'].toString())??<String,dynamic>{});
+      return Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFE9E2F0))),child:Row(children:[
+        const Icon(Icons.storefront,color:_p,size:28),const SizedBox(width:10),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          Text(c['party_name']?.toString()??'',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
+          Text((c['business_classification']?.toString()??'تصنيف غير محدد')+' • '+(c['district']?.toString()??'منطقة غير محددة'),style:const TextStyle(fontSize:12,color:Colors.black54)),
+          const SizedBox(height:5),Wrap(spacing:12,runSpacing:4,children:[
+            Text('مبيعات: '+money(g['sales_target']),style:const TextStyle(color:_p,fontWeight:FontWeight.w700)),
+            Text('تحصيل: '+money(g['collection_target']),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w700)),
+            Text('فواتير: '+(g['target_orders']?.toString()??'0')),
+          ]),
+        ])),
+        IconButton(onPressed:demo?()=>_toast('مثال للعرض فقط.'):()=>_editGoal(c),icon:const Icon(Icons.edit,color:_o),tooltip:'تعديل الهدف'),
+      ]));
+    });
+  }
+
+  Widget _repsView(bool demo){
+    final rows=demo?<Map<String,dynamic>>[
+      {'id':'r1','rep_name':'أحمد سامح - مندوب تجريبي','rep_code':'DEMO-REP-01','monthly_sales_target':350000,'monthly_collection_target':280000,'commission_plan':'tiered','default_commission_rate':1.5},
+      {'id':'r2','rep_name':'محمود عادل - مندوب تجريبي','rep_code':'DEMO-REP-02','monthly_sales_target':275000,'monthly_collection_target':220000,'commission_plan':'percentage','default_commission_rate':1.25},
+      {'id':'r3','rep_name':'كريم أشرف - مندوب تجريبي','rep_code':'DEMO-REP-03','monthly_sales_target':220000,'monthly_collection_target':180000,'commission_plan':'fixed_per_invoice','default_commission_rate':35},
+    ]:_reps;
+    if(rows.isEmpty)return const Center(child:Text('لا يوجد مندوبون في دليل المندوبين.'));
+    return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(ctx,i){
+      final r=rows[i];final m=r['commission_plan']?.toString()??'percentage';final rate=double.tryParse(r['default_commission_rate']?.toString()??'')??0;
+      return Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(children:[const Icon(Icons.badge,color:_p,size:28),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(r['rep_name']?.toString()??'',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),Text((r['rep_code']?.toString()??'')+' • '+(m=='tiered'?'عمولة متدرجة':m=='fixed_per_invoice'?'قيمة لكل فاتورة':'نسبة ثابتة'),style:const TextStyle(color:Colors.black54,fontSize:12))])),IconButton(onPressed:demo?()=>_toast('مثال للعرض فقط.'):()=>_editRep(r),icon:const Icon(Icons.tune,color:_o))]),
+        Wrap(spacing:14,runSpacing:6,children:[Text('مبيعات: '+money(r['monthly_sales_target'])),Text('تحصيل: '+money(r['monthly_collection_target'])),Text(m=='fixed_per_invoice'?'عمولة: '+rate.toStringAsFixed(2)+' ج.م/فاتورة':'العمولة: '+rate.toStringAsFixed(2)+'%',style:const TextStyle(color:_p,fontWeight:FontWeight.w900))]),
+      ]));
+    });
+  }
+
+  Widget _plansView(bool demo){
+    final rows=demo?<Map<String,dynamic>>[
+      {'plan_name':'عمولة نسبة ثابتة','plan_code':'DEMO-COM-PCT','calculation_basis':'sales_value','commission_method':'percentage','flat_rate':1.25,'fixed_amount':0},
+      {'plan_name':'عمولة ثابتة لكل فاتورة','plan_code':'DEMO-COM-FIX','calculation_basis':'invoice_count','commission_method':'fixed_per_invoice','flat_rate':0,'fixed_amount':35},
+      {'plan_name':'شرائح عمولة متدرجة','plan_code':'DEMO-COM-TIER','calculation_basis':'sales_value','commission_method':'tiered','flat_rate':0,'fixed_amount':0},
+    ]:_plans;
+    if(rows.isEmpty)return const Center(child:Text('لا توجد خطط عمولة. طبّق ملف SQL لإنشاء الخطط التجريبية.'));
+    return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:10),itemBuilder:(ctx,i){
+      final x=rows[i];final m=x['commission_method']?.toString()??'percentage';final id=x['id']?.toString();
+      final tiers=_tiers.where((t)=>t['plan_id']?.toString()==id).toList();
+      return Container(padding:const EdgeInsets.all(17),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text(x['plan_name']?.toString()??'',style:const TextStyle(fontSize:17,fontWeight:FontWeight.w900,color:_p)),
+        Text((x['plan_code']?.toString()??'')+' • أساس الحساب: '+(x['calculation_basis']=='collected_value'?'المحصل':x['calculation_basis']=='gross_profit'?'مجمل الربح':x['calculation_basis']=='invoice_count'?'عدد الفواتير':'المبيعات'),style:const TextStyle(color:Colors.black54,fontSize:12)),
+        const SizedBox(height:9),
+        if(m=='percentage')Text('النسبة: '+(x['flat_rate']?.toString()??'0')+'%',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
+        if(m=='fixed_per_invoice')Text('لكل فاتورة: '+money(x['fixed_amount']),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
+        if(m=='tiered')...(tiers.isEmpty?<Widget>[const Text('0–99,999 ج.م: 0.75% • 100,000–249,999 ج.م: 1% • 250,000 ج.م فأكثر: 1.5%',style:TextStyle(fontSize:13))]:tiers.map<Widget>((t)=>Text('من '+money(t['min_value'])+' إلى '+(t['max_value']==null?'غير محدود':money(t['max_value']))+' — '+(t['rate']?.toString()??'0')+'%'))),
+        const SizedBox(height:8),const Text('يجب مراجعة المرتجعات والتحصيلات والاستحقاق واعتماد العمولة قبل الصرف.',style:TextStyle(color:Colors.black54,fontSize:12)),
+      ]));
+    });
+  }
+}
