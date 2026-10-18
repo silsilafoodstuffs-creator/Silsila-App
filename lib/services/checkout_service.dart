@@ -63,7 +63,7 @@ class CheckoutService {
     }
 
     for (final item in items) {
-      if (item.productId <= 0 ||
+      if (item.productId.trim().isEmpty || item.productId == '0' ||
           item.supplierId.trim().isEmpty ||
           item.name.trim().isEmpty ||
           item.unit.trim().isEmpty ||
