@@ -90,6 +90,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   double? _executivePurchases;
   double? _executiveInventoryValue;
   List<double> _executiveDailySales = <double>[];
+  List<double> _executiveDailyCollections = <double>[];
+  List<double> _executiveInventoryGroupValues = <double>[];
+  List<String> _executiveInventoryGroupLabels = <String>[];
   final Map<String, String> _managedAppIds = <String, String>{};
   bool _appManagementLoading = false;
   bool _appManagementSaving = false;
@@ -1146,11 +1149,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       }
 
       final dailyRowsRaw = await db.from('erp_sales_documents')
-          .select('document_type,document_date,grand_total,is_demo_data,status')
+          .select('document_type,document_date,grand_total,paid_total,is_demo_data,status')
           .eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false)
           .gte('document_date', sevenDaysKey).lt('document_date', tomorrowKey);
       final dailyRows = (dailyRowsRaw as List).cast<Map<String, dynamic>>();
       final daily = List<double>.filled(7, 0);
+      final dailyCollections = List<double>.filled(7, 0);
       for (final row in dailyRows) {
         final key = row['document_date']?.toString() ?? '';
         final date = DateTime.tryParse(key);
@@ -1158,7 +1162,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         final index = DateTime(date.year, date.month, date.day).difference(DateTime(sevenDaysFrom.year, sevenDaysFrom.month, sevenDaysFrom.day)).inDays;
         if (index < 0 || index >= 7) continue;
         final amount = double.tryParse(row['grand_total']?.toString() ?? '') ?? 0;
-        daily[index] += row['document_type']?.toString() == 'return' ? -amount : amount;
+        final isReturn = row['document_type']?.toString() == 'return';
+        daily[index] += isReturn ? -amount : amount;
+        final paid = double.tryParse(row['paid_total']?.toString() ?? '') ?? 0;
+        dailyCollections[index] += isReturn ? -paid : paid;
       }
 
       double purchases = 0;
@@ -1187,7 +1194,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           final itemIds = lineRows.map((r) => r['item_id']?.toString()).whereType<String>().toSet().toList();
           final costs = <String, double>{};
           if (itemIds.isNotEmpty) {
-            final itemRows = await db.from('erp_items').select('id,purchase_price')
+            final itemRows = await db.from('erp_items').select('id,purchase_price,group_id')
                 .eq('company_id', companyId).inFilter('id', itemIds);
             for (final item in (itemRows as List).cast<Map<String, dynamic>>()) {
               costs[item['id'].toString()] = double.tryParse(item['purchase_price']?.toString() ?? '') ?? 0;
@@ -1207,6 +1214,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
       double inventoryValue = 0;
       var inventoryValueAvailable = false;
+      final inventoryGroupValues = <double>[];
+      final inventoryGroupLabels = <String>[];
       try {
         final itemRows = await db.from('erp_items').select('id,purchase_price')
             .eq('company_id', companyId).eq('is_active', true);
@@ -1217,6 +1226,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         final movementRows = await db.from('erp_inventory_movements')
             .select('item_id,quantity_in,quantity_out')
             .eq('company_id', companyId).limit(5000);
+        final itemGroups = <String, String>{};
+        final groupRows = await db.from('erp_item_groups').select('id,group_name').eq('company_id', companyId);
+        for (final group in (groupRows as List).cast<Map<String, dynamic>>()) {
+          itemGroups[group['id'].toString()] = (group['group_name'] ?? 'غير مصنف').toString();
+        }
+        final itemGroupIds = <String, String>{};
+        for (final item in (itemRows as List).cast<Map<String, dynamic>>()) {
+          itemGroupIds[item['id'].toString()] = (item['group_id'] ?? '').toString();
+        }
         final balances = <String, double>{};
         for (final row in (movementRows as List).cast<Map<String, dynamic>>()) {
           final id = row['item_id']?.toString() ?? '';
@@ -1224,8 +1242,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           final outgoing = double.tryParse(row['quantity_out']?.toString() ?? '') ?? 0;
           balances[id] = (balances[id] ?? 0) + incoming - outgoing;
         }
+        final groupTotals = <String, double>{};
         for (final entry in balances.entries) {
-          inventoryValue += entry.value * (costs[entry.key] ?? 0);
+          final value = entry.value * (costs[entry.key] ?? 0);
+          inventoryValue += value;
+          final groupId = itemGroupIds[entry.key] ?? '';
+          final groupName = itemGroups[groupId] ?? 'غير مصنف';
+          groupTotals[groupName] = (groupTotals[groupName] ?? 0) + value;
+        }
+        final sortedGroups = groupTotals.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+        for (final group in sortedGroups.take(7)) {
+          inventoryGroupLabels.add(group.key);
+          inventoryGroupValues.add(group.value);
         }
         inventoryValueAvailable = true;
       } catch (_) {}
@@ -1239,6 +1267,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveGrossProfit = grossProfitAvailable ? grossProfit : null;
         _executiveInventoryValue = inventoryValueAvailable ? inventoryValue : null;
         _executiveDailySales = daily;
+        _executiveDailyCollections = dailyCollections;
+        _executiveInventoryGroupValues = inventoryGroupValues;
+        _executiveInventoryGroupLabels = inventoryGroupLabels;
         _executiveMetricsLoading = false;
       });
     } catch (error) {
@@ -1475,6 +1506,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   );
 
   Widget _executiveChartPanel({
+    List<String> footerLabels = const <String>['بداية الفترة','منتصف الفترة','اليوم'],
     required String title,
     required String caption,
     required Color color,
@@ -1498,29 +1530,31 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       Text(caption, style: const TextStyle(fontSize: 14, color: Colors.black54)),
       const SizedBox(height: 8),
       Expanded(child: CustomPaint(painter: chart, child: const SizedBox.expand())),
-      const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('بداية الفترة', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
-        Text('منتصف الفترة', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
-        Text('اليوم', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
-      ]),
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: footerLabels.take(3).map((label) => Expanded(
+        child: Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w600)),
+      )).toList()),
     ]),
   );
 
   Widget _executiveAdditionalCharts({required bool sideBySide}) {
     final charts = <Widget>[
       _executiveChartPanel(
-        title: 'اتجاه التحصيلات',
-        caption: 'قراءة توضيحية لحركة التحصيل عبر الفترة',
+        title: 'المدفوع المسجل على الفواتير',
+        caption: 'آخر 7 أيام • بيانات الفواتير المرحلة',
         color: const Color(0xFF168A70),
-        value: '— ج.م',
-        chart: const _ExecutiveChartPainter(color: Color(0xFF168A70)),
+        value: _executiveMoney(_executiveCollections),
+        chart: _ExecutiveChartPainter(color: const Color(0xFF168A70), values: _executiveDailyCollections),
       ),
       _executiveChartPanel(
-        title: 'توزيع المصروفات',
-        caption: 'مقارنة توضيحية لبنود المصروفات',
+        title: 'قيمة المخزون حسب المجموعة',
+        caption: 'تقدير على تكلفة الشراء الحالية',
         color: _pink,
-        value: '—%',
-        chart: const _ExecutiveBarsPainter(),
+        value: _executiveMoney(_executiveInventoryValue),
+        chart: _ExecutiveBarsPainter(values: _executiveInventoryGroupValues),
+        footerLabels: _executiveInventoryGroupLabels.isEmpty
+            ? const <String>['مجموعة 1','مجموعة 2','مجموعة 3']
+            : _executiveInventoryGroupLabels.take(3).toList(),
       ),
     ];
     if (sideBySide) {
