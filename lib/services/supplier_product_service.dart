@@ -68,7 +68,7 @@ class SupplierProductService {
 
   /// جلب منتج بواسطة المعرّف.
   Future<Map<String, dynamic>?> getProductById(
-    int productId,
+    String productId,
   ) async {
     _validateProductId(productId);
 
@@ -162,7 +162,7 @@ class SupplierProductService {
 
   /// تحديث بيانات منتج يملكه المورد الحالي.
   Future<void> updateProduct({
-    required int productId,
+    required String productId,
     String? name,
     String? category,
     String? description,
@@ -285,7 +285,7 @@ class SupplierProductService {
   }
 
   Future<void> _setProductAvailability({
-    required int productId,
+    required String productId,
     required bool isActive,
   }) async {
     _validateProductId(productId);
@@ -300,8 +300,8 @@ class SupplierProductService {
         .eq('supplier_id', _userId);
   }
 
-  void _validateProductId(int productId) {
-    if (productId <= 0) {
+  void _validateProductId(String productId) {
+    if (productId.trim().isEmpty || productId.trim() == '0') {
       throw ArgumentError('معرّف المنتج غير صالح.');
     }
   }
