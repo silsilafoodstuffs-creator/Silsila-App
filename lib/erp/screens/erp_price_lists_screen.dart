@@ -20,6 +20,15 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   final _discount = TextEditingController(text: '0');
   final _testQuantity = TextEditingController(text: '1');
   List<Map<String, dynamic>> _lists = [];
+  List<Map<String, dynamic>> _currencies = [
+    {'currency_code':'EGP','currency_name_ar':'جنيه مصري','currency_symbol':'EGP'},
+    {'currency_code':'USD','currency_name_ar':'دولار أمريكي','currency_symbol':'USD'},
+    {'currency_code':'SAR','currency_name_ar':'ريال سعودي','currency_symbol':'SAR'},
+    {'currency_code':'AED','currency_name_ar':'درهم إماراتي','currency_symbol':'AED'},
+    {'currency_code':'KWD','currency_name_ar':'دينار كويتي','currency_symbol':'KWD'},
+    {'currency_code':'EUR','currency_name_ar':'يورو','currency_symbol':'EUR'},
+    {'currency_code':'GBP','currency_name_ar':'جنيه إسترليني','currency_symbol':'GBP'},
+  ];
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _parties = [];
   List<Map<String, dynamic>> _lines = [];
@@ -69,6 +78,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
       final values = await Future.wait([
         _repo.fetchLists(_company.text, kind: _kind),
         _repo.fetchItems(_company.text),
+        _repo.fetchCurrencies(_company.text),
         _repo.fetchParties(_company.text, _kind == 'sale' ? 'customer' : 'supplier'),
       ]);
       if (!mounted) return;
@@ -76,6 +86,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
       final selected = lists.any((x) => _s(x['id']) == _selectedListId) ? _selectedListId : (lists.isEmpty ? null : _s(lists.first['id']));
       setState(() {
         _lists = lists; _items = values[1]; _parties = values[2];
+        if ((values[3] as List<Map<String, dynamic>>).isNotEmpty) _currencies = values[3];
         _selectedListId = selected;
         if (!_items.any((x) => _s(x['id']) == _selectedItemId)) _selectedItemId = _items.isEmpty ? null : _s(_items.first['id']);
         if (!_parties.any((x) => _s(x['id']) == _selectedPartyId)) _selectedPartyId = _parties.isEmpty ? null : _s(_parties.first['id']);
@@ -189,15 +200,10 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
           value: _currencyCode,
           isExpanded: true,
           decoration: const InputDecoration(labelText: 'عملة قائمة الأسعار', isDense: true, constraints: BoxConstraints(minHeight: 52)),
-          items: const [
-            DropdownMenuItem(value: 'EGP', child: Text('جنيه مصري (EGP)')),
-            DropdownMenuItem(value: 'USD', child: Text('دولار أمريكي (USD)')),
-            DropdownMenuItem(value: 'SAR', child: Text('ريال سعودي (SAR)')),
-            DropdownMenuItem(value: 'AED', child: Text('درهم إماراتي (AED)')),
-            DropdownMenuItem(value: 'KWD', child: Text('دينار كويتي (KWD)')),
-            DropdownMenuItem(value: 'EUR', child: Text('يورو (EUR)')),
-            DropdownMenuItem(value: 'GBP', child: Text('جنيه إسترليني (GBP)')),
-          ],
+          items: _currencies.map((currency) => DropdownMenuItem<String>(
+            value: _s(currency['currency_code']),
+            child: Text(_s(currency['currency_name_ar']) + ' (' + (_s(currency['currency_symbol']).isEmpty ? _s(currency['currency_code']) : _s(currency['currency_symbol'])) + ')'),
+          )).toList(),
           onChanged: (value) { if (value != null) setState(() => _currencyCode = value); },
         ),
         CheckboxListTile(value: _default, onChanged: (v) => setState(() => _default = v ?? false), title: const Text('القائمة الافتراضية لهذا النوع'), contentPadding: EdgeInsets.zero),
