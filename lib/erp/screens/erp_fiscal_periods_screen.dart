@@ -21,7 +21,13 @@ class _ErpFiscalPeriodsScreenState extends State<ErpFiscalPeriodsScreen> {
   String? _message;
 
   @override
-  void initState() { super.initState(); _company.text = widget.initialCompanyId ?? ''; }
+  void initState() {
+    super.initState();
+    _company.text = widget.initialCompanyId ?? '';
+    if (_company.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
+  }
   @override
   void dispose() { _company.dispose(); _name.dispose(); super.dispose(); }
   String _s(dynamic v) => (v ?? '').toString();
