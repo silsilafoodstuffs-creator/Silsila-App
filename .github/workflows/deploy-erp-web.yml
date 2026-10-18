@@ -38,8 +38,14 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Generate Flutter web platform files
-        run: flutter create --project-name=silsila_app --platforms=web .
+      - name: Generate Flutter web files only when missing
+        shell: bash
+        run: |
+          if [ ! -f web/index.html ]; then
+            flutter create --project-name=silsila_app --platforms=web .
+          else
+            echo "Existing web files preserved; no Flutter web template regeneration."
+          fi
 
       - name: Get dependencies
         run: flutter pub get
