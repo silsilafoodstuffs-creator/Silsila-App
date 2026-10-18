@@ -27,6 +27,7 @@ import 'screens/erp_sales_targets_commissions_screen.dart';
 import 'screens/erp_public_leads_screen.dart';
 import 'screens/erp_operational_account_mappings_screen.dart';
 import 'services/erp_operational_documents_repository.dart';
+import 'services/erp_workspace_records_service.dart';
 import 'services/erp_app_management_service.dart';
 import 'services/erp_app_settings.dart';
 import 'services/erp_app_permission_catalog.dart';
@@ -88,6 +89,7 @@ class ErpDashboardScreen extends StatefulWidget {
 
 class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final ErpAppManagementService _appManagementService = ErpAppManagementService();
+  final ErpWorkspaceRecordsService _workspaceRecordsService = ErpWorkspaceRecordsService();
   final ErpCompanySettingsRepository _workspaceSettingsRepository = ErpCompanySettingsRepository();
   String? _appManagementCompanyId;
   bool _executiveMetricsLoading = false;
@@ -590,15 +592,24 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             if (name.text.trim().isEmpty) return;
             final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
             rows.insert(0, {'الكود': code.text.trim().isEmpty ? 'NEW-${rows.length + 1}' : code.text.trim(), 'الاسم': name.text.trim(), 'الوصف': details.text.trim(), 'الحالة': 'مسودة'});
+            final newRecord = Map<String, String>.from(rows.first);
             setState(() {
               _saved[_page] = rows;
-              _selectedRecord = Map<String, String>.from(rows.first);
-              _activityLog.insert(0, 'تمت إضافة سجل جديد في شاشة $_page داخل الجلسة الحالية');
+              _selectedRecord = newRecord;
+              _activityLog.insert(0, 'تمت إضافة سجل جديد في شاشة $_page');
             });
             Navigator.pop(dctx);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('تمت إضافة السجل محليًا. لم يُحفظ في قاعدة البيانات.')),
-            );
+            final companyId = _appManagementCompanyId;
+            if (companyId == null || companyId.trim().isEmpty) {
+              _showActionMessage('تمت الإضافة محليًا فقط. سجّل الدخول واربط المستخدم بشركة نشطة لتفعيل الحفظ الدائم.');
+            } else {
+              try {
+                await _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: newRecord);
+                _showActionMessage('تم حفظ السجل الجديد في قاعدة البيانات.');
+              } catch (error) {
+                _showActionMessage('تعذر الحفظ الدائم: $error');
+              }
+            }
           }, child: const Text('حفظ السجل')),
         ],
       ),
@@ -610,9 +621,29 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _saveCurrentPage() {
-    setState(() => _activityLog.insert(0, 'تم حفظ حالة شاشة $_page داخل الجلسة الحالية'));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ التغييرات المحلية لهذه الشاشة. الحفظ الدائم يتطلب ربط قاعدة البيانات.')));
+  Future<void> _saveCurrentPage() async {
+    final companyId = _appManagementCompanyId;
+    final rows = _saved[_page] ?? const <Map<String, String>>[];
+    if (rows.isEmpty) {
+      _showActionMessage('لا توجد سجلات أدخلتها يدويًا لحفظها في هذه الشاشة.');
+      return;
+    }
+    if (companyId == null || companyId.trim().isEmpty) {
+      _showActionMessage('الحفظ الدائم غير متاح: سجّل الدخول واربط المستخدم بشركة نشطة.');
+      return;
+    }
+    try {
+      for (final row in rows) {
+        final code = row['الكود'] ?? row['الاسم'] ?? row['اسم الحساب'] ?? row.values.firstOrNull ?? '';
+        if (code.startsWith('DEMO-') || code.contains('تجريبي') || code.contains('توضيحي')) continue;
+        await _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: row);
+      }
+      if (!mounted) return;
+      _showActionMessage('اكتمل إرسال السجلات غير التجريبية إلى قاعدة البيانات.');
+    } catch (error) {
+      if (!mounted) return;
+      _showActionMessage('تعذر حفظ سجلات الشاشة: $error');
+    }
   }
 
   void _editCurrentRecord() {
@@ -634,7 +665,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           rows[targetIndex] = updated;
           setState(() { _saved[_page] = rows; _selectedRecord = updated; });
           Navigator.pop(dialogContext);
-          _showActionMessage('تم تعديل سجل محلي في شاشة $_page');
+          final companyId = _appManagementCompanyId;
+          final originalCode = rows[targetIndex]['الكود'] ?? rows[targetIndex]['الاسم'] ?? '';
+          if (companyId != null && companyId.trim().isNotEmpty &&
+              !originalCode.startsWith('DEMO-') &&
+              !originalCode.contains('تجريبي') &&
+              !originalCode.contains('توضيحي')) {
+            _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: updated)
+              .then((_) { if (mounted) _showActionMessage('تم حفظ تعديل السجل في قاعدة البيانات.'); })
+              .catchError((Object error) { if (mounted) _showActionMessage('تم التعديل محليًا لكن فشل الحفظ الدائم: $error'); });
+          } else {
+            _showActionMessage('تم تعديل السجل محليًا؛ لا يُحفظ السجل التوضيحي في قاعدة البيانات.');
+          }
         }, child: const Text('حفظ التعديل')),
       ],
     )).then((_) { for (final controller in controllers.values) { controller.dispose(); } });
@@ -1966,7 +2008,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (_rows.isEmpty) const Padding(padding: EdgeInsets.all(28), child: Text('لا توجد نتائج مطابقة.', textAlign: TextAlign.center))
       else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _rows.first.keys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _rows.first.keys.map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
       const SizedBox(height: 12),
-      Text('عدد السجلات المعروضة: ${_rows.length} • بيانات توضيحية', style: const TextStyle(color: Colors.black45, fontSize: 11)),
+      Text('عدد السجلات المعروضة: ${_rows.length} • تحقق من حالة الحفظ بجوار كل عملية', style: const TextStyle(color: Colors.black45, fontSize: 11)),
     ])),
   ]);
 
