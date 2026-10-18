@@ -46,5 +46,27 @@ with check (
   and public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
 );
 
+drop policy if exists erp_company_settings_hr_manager_insert on public.erp_company_settings;
+create policy erp_company_settings_hr_manager_insert on public.erp_company_settings
+for insert to authenticated
+with check (
+  setting_key in ('hr_shift_rules', 'hr_fingerprint_devices')
+  and (updated_by is null or updated_by = auth.uid())
+  and public.erp_user_has_company_role(company_id, array['manager']::text[])
+);
+
+drop policy if exists erp_company_settings_hr_manager_update on public.erp_company_settings;
+create policy erp_company_settings_hr_manager_update on public.erp_company_settings
+for update to authenticated
+using (
+  setting_key in ('hr_shift_rules', 'hr_fingerprint_devices')
+  and public.erp_user_has_company_role(company_id, array['manager']::text[])
+)
+with check (
+  setting_key in ('hr_shift_rules', 'hr_fingerprint_devices')
+  and (updated_by is null or updated_by = auth.uid())
+  and public.erp_user_has_company_role(company_id, array['manager']::text[])
+);
+
 grant select, insert, update on public.erp_company_settings to authenticated;
 commit;
