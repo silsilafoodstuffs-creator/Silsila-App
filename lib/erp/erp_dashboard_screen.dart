@@ -1175,32 +1175,53 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final wide = outerConstraints.maxWidth >= 900;
       final mid = outerConstraints.maxWidth >= 600;
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('الملخص التنفيذي', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _purple)),
-            Text('لوحة أداء مختصرة • مؤشرات مالية وتشغيلية لحظية بعد ربط البيانات', style: TextStyle(color: Colors.black54, fontSize: 14)),
-          ])),
-          _summaryAction('عرض كل التحليلات', () => _showExecutiveCategoryDetails('جميع التحليلات', allItems)),
-          const SizedBox(width: 4),
-          IconButton(
-            tooltip: 'تحديث الملخص',
-            visualDensity: VisualDensity.compact,
-            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-            padding: EdgeInsets.zero,
-            onPressed: () => setState(() {}),
-            icon: const Icon(Icons.refresh_rounded, color: _purple, size: 17),
+        Container(
+          padding: const EdgeInsets.fromLTRB(22, 20, 18, 20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: AlignmentDirectional.centerStart,
+              end: AlignmentDirectional.centerEnd,
+              colors: [Color(0xFF3E007D), Color(0xFF6330A0), Color(0xFF8A50B7)],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [BoxShadow(color: Color(0x183E007D), blurRadius: 18, offset: Offset(0, 7))],
           ),
-        ]),
-        const SizedBox(height: 3),
+          child: Row(children: [
+            Container(
+              width: 58, height: 58,
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: .13), borderRadius: BorderRadius.circular(17), border: Border.all(color: Colors.white.withValues(alpha: .22))),
+              child: const Icon(Icons.insights_rounded, color: _orange, size: 34),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('الملخص التنفيذي', style: TextStyle(fontSize: 29, height: 1.2, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3)),
+              SizedBox(height: 6),
+              Text('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة', style: TextStyle(color: Color(0xFFECE2F8), fontSize: 15, height: 1.5)),
+              SizedBox(height: 5),
+              Text('الأرقام والرسوم توضيحية لحين ربط مصادر البيانات الفعلية', style: TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
+            ])),
+            const SizedBox(width: 12),
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              IconButton(
+                tooltip: 'تحديث الملخص',
+                onPressed: () => setState(() {}),
+                style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: .12), foregroundColor: Colors.white),
+                icon: const Icon(Icons.refresh_rounded, size: 24),
+              ),
+              _summaryAction('كل التحليلات', () => _showExecutiveCategoryDetails('جميع التحليلات', allItems)),
+            ]),
+          ]),
+        ),
+        const SizedBox(height: 16),
         LayoutBuilder(builder: (context, constraints) {
           final columns = constraints.maxWidth >= 1000 ? 6 : constraints.maxWidth >= 650 ? 3 : 2;
           return GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: columns,
-            crossAxisSpacing: 6,
-            mainAxisSpacing: 6,
-            childAspectRatio: columns == 6 ? 2.15 : columns == 3 ? 2.15 : 2.05,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: columns == 6 ? 1.72 : columns == 3 ? 1.85 : 1.72,
             children: [
               _executiveKpi('صافي المبيعات', '—', 'التغير —%', Icons.point_of_sale_rounded, _purple),
               _executiveKpi('صافي الربح', '—', 'الهامش —%', Icons.trending_up_rounded, _green),
@@ -1211,7 +1232,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ],
           );
         }),
-        const SizedBox(height: 3),
+        const SizedBox(height: 16),
         if (wide || mid)
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1231,7 +1252,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 chart: const _ExecutiveBarsPainter(),
               )),
             ]),
-            const SizedBox(height: 3),
+            const SizedBox(height: 12),
             _executiveHighlights(),
           ])
         else ...[
@@ -1250,10 +1271,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             value: '—',
             chart: const _ExecutiveBarsPainter(),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 12),
           _executiveHighlights(),
         ],
-        const SizedBox(height: 3),
+        const SizedBox(height: 16),
         LayoutBuilder(builder: (context, constraints) {
           final columns = constraints.maxWidth >= 1150 ? 3 : constraints.maxWidth >= 680 ? 2 : 1;
           return GridView.count(
@@ -1299,36 +1320,38 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required String value,
     required CustomPainter chart,
   }) => Container(
-    height: 126,
-    padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
+    height: 228,
+    padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(18),
       border: Border.all(color: const Color(0xFFE7E0EF)),
+      boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 5))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 16, color: _purple, fontWeight: FontWeight.w900))),
-        Text(value, style: TextStyle(fontSize: 16, color: color, fontWeight: FontWeight.w900)),
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 20, color: _purple, fontWeight: FontWeight.w900))),
+        Text(value, style: TextStyle(fontSize: 21, color: color, fontWeight: FontWeight.w900)),
       ]),
-      Text(caption, style: const TextStyle(fontSize: 13, color: Colors.black45)),
-      const SizedBox(height: 1),
+      const SizedBox(height: 4),
+      Text(caption, style: const TextStyle(fontSize: 14, color: Colors.black54)),
+      const SizedBox(height: 8),
       Expanded(child: CustomPaint(painter: chart, child: const SizedBox.expand())),
       const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('بداية الفترة', style: TextStyle(fontSize: 11, color: Colors.black45)),
-        Text('منتصفها', style: TextStyle(fontSize: 9, color: Colors.black45)),
-        Text('اليوم', style: TextStyle(fontSize: 9, color: Colors.black45)),
+        Text('بداية الفترة', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
+        Text('منتصف الفترة', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
+        Text('اليوم', style: TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w600)),
       ]),
     ]),
   );
 
   Widget _executiveHighlights() => Container(
-    height: 104,
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE7E0EF))),
+    height: 164,
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7E0EF)), boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 5))]),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const Text('مؤشرات تحتاج متابعة', style: TextStyle(fontSize: 13, color: _purple, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 2),
+      const Text('مؤشرات تحتاج متابعة', style: TextStyle(fontSize: 19, color: _purple, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 8),
       _executiveHighlightRow('ديون متأخرة', '— ج.م', _pink, .72),
       _executiveHighlightRow('أصناف تحت الطلب', '— صنف', _orange, .48),
       _executiveHighlightRow('طلبات متأخرة', '— طلب', _pink, .58),
@@ -1340,14 +1363,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 0),
       child: Row(children: [
-        Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Colors.black87))),
+        Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.w600))),
         Expanded(flex: 4, child: ClipRRect(
           borderRadius: BorderRadius.circular(3),
           child: Container(height: 4, color: const Color(0xFFEFEAF4), alignment: AlignmentDirectional.centerStart,
             child: FractionallySizedBox(widthFactor: fill, child: ColoredBox(color: color))),
         )),
         const SizedBox(width: 5),
-        SizedBox(width: 43, child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900))),
+        SizedBox(width: 43, child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900))),
       ]),
     ),
   );
@@ -1459,22 +1482,23 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _executiveKpi(String title, String value, String note, IconData icon, Color color) =>
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFE6DDED)),
           boxShadow: const [
             BoxShadow(color: Color(0x08000000), blurRadius: 5, offset: Offset(0, 2)),
           ],
         ),
         child: Row(children: [
-          Container(width: 30, height: 30, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(7)), child: Icon(icon, color: color, size: 17)),
-          const SizedBox(width: 4),
+          Container(width: 46, height: 46, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: color, size: 25)),
+          const SizedBox(width: 11),
           Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 11, fontWeight: FontWeight.w700)),
-            Text(value, maxLines: 1, style: TextStyle(color: color, fontSize: 19, fontWeight: FontWeight.w900)),
-            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 11)),
+            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 3),
+            Text(value, maxLines: 1, style: TextStyle(color: color, fontSize: 25, fontWeight: FontWeight.w900)),
+            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 13)),
           ])),
         ]),
       );
