@@ -21,6 +21,9 @@ class ErpAccountsRepository {
     if (client == null) {
       throw StateError('Supabase غير مهيأ؛ لا يمكن تحميل شجرة الحسابات.');
     }
+    if (client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول قبل الوصول إلى شجرة الحسابات.');
+    }
     return client;
   }
 
