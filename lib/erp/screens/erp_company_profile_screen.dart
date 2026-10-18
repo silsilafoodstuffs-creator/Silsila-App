@@ -5,8 +5,9 @@ const _companyPurple = Color(0xFF3E007D);
 const _companyOrange = Color(0xFFFFA015);
 
 class ErpCompanyProfileScreen extends StatefulWidget {
-  const ErpCompanyProfileScreen({super.key, required this.companyId});
+  const ErpCompanyProfileScreen({super.key, required this.companyId, this.onCompanyCreated});
   final String? companyId;
+  final Future<void> Function(String companyId)? onCompanyCreated;
 
   @override
   State<ErpCompanyProfileScreen> createState() => _ErpCompanyProfileScreenState();
@@ -27,18 +28,23 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   String? _error;
   String? _message;
   Map<String, dynamic>? _company;
+  String? _activeCompanyId;
 
   @override
   void initState() {
     super.initState();
     try { _db = Supabase.instance.client; } catch (_) {}
+    _activeCompanyId = widget.companyId;
     _load();
   }
 
   @override
   void didUpdateWidget(covariant ErpCompanyProfileScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.companyId != widget.companyId) _load();
+    if (oldWidget.companyId != widget.companyId) {
+      _activeCompanyId = widget.companyId;
+      _load();
+    }
   }
 
   @override
@@ -57,7 +63,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   String? _nullable(String value) => value.trim().isEmpty ? null : value.trim();
 
   Future<void> _load() async {
-    final id = (widget.companyId ?? '').trim();
+    final id = (_activeCompanyId ?? widget.companyId ?? '').trim();
     if (_db == null || id.isEmpty) {
       setState(() {
         _loading = false;
@@ -102,11 +108,11 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   }
 
   Future<void> _save() async {
-    final id = (widget.companyId ?? '').trim();
+    var id = (_activeCompanyId ?? widget.companyId ?? '').trim();
     final legalName = _legalName.text.trim();
     final currency = _currency.text.trim().toUpperCase();
-    if (id.isEmpty || _db == null) {
-      setState(() => _error = 'لا توجد شركة أو اتصال بقاعدة البيانات.');
+    if (_db == null) {
+      setState(() => _error = 'Supabase غير مهيأ؛ تعذر الاتصال بقاعدة البيانات.');
       return;
     }
     if (legalName.isEmpty) {
@@ -124,20 +130,41 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      await _db!.from('erp_companies').update({
-        'legal_name': legalName,
-        'trade_name': _nullable(_tradeName.text),
-        'tax_number': _nullable(_taxNumber.text),
-        'commercial_register': _nullable(_commercialRegister.text),
-        'phone': _nullable(_phone.text),
-        'email': _nullable(_email.text),
-        'address': _nullable(_address.text),
-        'base_currency': currency,
-      }).eq('id', id);
+      if (id.isEmpty) {
+        final createdId = await _db!.rpc('erp_create_company', params: {
+          'p_legal_name': legalName,
+          'p_trade_name': _nullable(_tradeName.text),
+          'p_tax_number': _nullable(_taxNumber.text),
+          'p_commercial_register': _nullable(_commercialRegister.text),
+          'p_phone': _nullable(_phone.text),
+          'p_email': _nullable(_email.text),
+          'p_address': _nullable(_address.text),
+          'p_base_currency': currency,
+        });
+        id = createdId.toString();
+        if (id.isEmpty || id == 'null') {
+          throw StateError('لم تُرجع قاعدة البيانات معرّف الشركة الجديدة.');
+        }
+        _activeCompanyId = id;
+        await widget.onCompanyCreated?.call(id);
+      } else {
+        await _db!.from('erp_companies').update({
+          'legal_name': legalName,
+          'trade_name': _nullable(_tradeName.text),
+          'tax_number': _nullable(_taxNumber.text),
+          'commercial_register': _nullable(_commercialRegister.text),
+          'phone': _nullable(_phone.text),
+          'email': _nullable(_email.text),
+          'address': _nullable(_address.text),
+          'base_currency': currency,
+        }).eq('id', id);
+      }
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _message = 'تم حفظ بيانات الشركة في قاعدة البيانات.';
+        _message = widget.companyId == null && _company == null
+            ? 'تم إنشاء الشركة وحفظ بياناتها وربط حسابك بها كمالك.'
+            : 'تم حفظ بيانات الشركة في قاعدة البيانات.';
       });
       await _load();
     } catch (error) {
@@ -164,7 +191,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('بيانات الشركة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _companyPurple)),
             SizedBox(height: 4),
-            Text('تعديل البيانات القانونية والتجارية للشركة المرتبطة بحسابك.', style: TextStyle(color: Colors.black54)),
+            Text((_activeCompanyId ?? widget.companyId) == null ? 'سجّل بيانات شركتك لإنشاء ملفها وربط حسابك بها كمالك.' : 'تعديل البيانات القانونية والتجارية للشركة المرتبطة بحسابك.', style: TextStyle(color: Colors.black54)),
           ])),
           IconButton(tooltip: 'إعادة تحميل', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
         ]),
@@ -205,7 +232,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                 FilledButton.icon(
                   onPressed: _saving || _loading ? null : _save,
                   icon: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_outlined),
-                  label: Text(_saving ? 'جارٍ الحفظ...' : 'حفظ بيانات الشركة'),
+                  label: Text(_saving ? 'جارٍ الحفظ...' : ((_activeCompanyId ?? widget.companyId) == null ? 'إنشاء الشركة وحفظ البيانات' : 'حفظ بيانات الشركة')),
                   style: FilledButton.styleFrom(backgroundColor: _companyPurple, padding: const EdgeInsets.symmetric(vertical: 14)),
                 ),
               ]),
