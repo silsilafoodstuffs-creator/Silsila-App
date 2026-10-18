@@ -1433,7 +1433,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 value: _executiveMoney(_executiveSales),
                 chart: _ExecutiveChartPainter(color: _purple, values: _executiveDailySales),
               )),
-              const SizedBox(width: 4),
+              const SizedBox(width: 12),
               Expanded(child: _executiveChartPanel(
                 title: 'مزيج الأداء',
                 caption: 'مبيعات • مشتريات • المحصّل',
@@ -1513,8 +1513,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required String value,
     required CustomPainter chart,
   }) => Container(
-    height: 228,
-    padding: const EdgeInsets.fromLTRB(20, 16, 20, 14),
+    height: 264,
+    padding: const EdgeInsets.fromLTRB(22, 18, 22, 16),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
