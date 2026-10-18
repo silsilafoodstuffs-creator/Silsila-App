@@ -548,7 +548,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Expanded(child: Text('الوصول السريع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
           ]),
           const SizedBox(height: 10),
-          Wrap(spacing: 8, runSpacing: 8, children: [
+          Wrap(spacing: 5, runSpacing: 5, children: [
             _quick('قواعد الحضور والانصراف', Icons.access_time_filled_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
             _quick('شجرة الحسابات', Icons.account_tree_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'شجرة الحسابات')),
             _quick('الخزائن', Icons.account_balance_wallet_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'الخزائن الرئيسية والفرعية')),
@@ -954,8 +954,22 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   });
 
   Widget _quick(String title, IconData icon, VoidCallback action) => OutlinedButton.icon(
-    onPressed: action, icon: Icon(icon, size: 19, color: _orange), label: Text(title),
-    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, iconColor: _orange, backgroundColor: _purple, overlayColor: Colors.white24, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 16), side: const BorderSide(color: _purple), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)), textStyle: const TextStyle(fontWeight: FontWeight.w800)),
+    onPressed: action,
+    icon: Icon(icon, size: 15, color: _orange),
+    label: Text(title, softWrap: true, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, height: 1.1)),
+    style: OutlinedButton.styleFrom(
+      foregroundColor: Colors.white,
+      iconColor: _orange,
+      backgroundColor: _purple,
+      overlayColor: Colors.white24,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      minimumSize: const Size(0, 30),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+      side: const BorderSide(color: _purple),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 10),
+    ),
   );
 
   Widget _workspace() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
