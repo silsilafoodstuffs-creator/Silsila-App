@@ -36,6 +36,9 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     _company.text = widget.initialCompanyId ?? '';
     _filter = widget.initialKind;
     _kind = widget.initialKind == 'supplier' ? 'supplier' : 'customer';
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _company.text.trim().isNotEmpty) _load();
+    });
   }
   @override
   void dispose() {
