@@ -90,7 +90,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
         _field(s.start,'من',105,readOnly:!canEdit),
         _field(s.end,'إلى',105,readOnly:!canEdit),
         Container(width:125,padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),decoration:BoxDecoration(color:const Color(0xFFF1E9FA),borderRadius:BorderRadius.circular(8)),child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('الساعات',style:TextStyle(fontSize:12)),Flexible(child:Text(_hours(s.start.text,s.end.text),textAlign:TextAlign.end,style:const TextStyle(color:_purple,fontSize:13,fontWeight:FontWeight.w900)))])),
-      ]),
+      ])),
       _heading('العطلة الأسبوعية — اختيار متعدد'),
       Wrap(spacing:4,runSpacing:2,children:weekdays.map((d)=>FilterChip(label:Text(d,style:const TextStyle(fontSize:11)),selected:s.days.contains(d),selectedColor:const Color(0xFFFFE4BB),visualDensity:VisualDensity.compact,materialTapTargetSize:MaterialTapTargetSize.shrinkWrap,onSelected:canEdit?(v)=>setState(()=>v?s.days.add(d):s.days.remove(d)):null)).toList()),
       _heading('قواعد السماح'),
