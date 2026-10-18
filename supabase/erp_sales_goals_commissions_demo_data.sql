@@ -161,6 +161,10 @@ drop policy if exists erp_commission_plans_select_company on public.erp_commissi
 create policy erp_commission_plans_select_company on public.erp_commission_plans for select to authenticated using (public.erp_user_can_access_company(company_id));
 drop policy if exists erp_commission_plans_write_manager on public.erp_commission_plans;
 create policy erp_commission_plans_write_manager on public.erp_commission_plans for all to authenticated using (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager','accountant']::text[])) with check (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager','accountant']::text[]));
+drop policy if exists erp_commission_tiers_select_company on public.erp_commission_tiers;
+create policy erp_commission_tiers_select_company on public.erp_commission_tiers for select to authenticated using (exists (select 1 from public.erp_commission_plans p where p.id=plan_id and public.erp_user_can_access_company(p.company_id)));
+drop policy if exists erp_commission_tiers_write_manager on public.erp_commission_tiers;
+create policy erp_commission_tiers_write_manager on public.erp_commission_tiers for all to authenticated using (exists (select 1 from public.erp_commission_plans p where p.id=plan_id and public.erp_user_has_company_role(p.company_id,array['owner','admin','manager','sales_manager','accountant']::text[]))) with check (exists (select 1 from public.erp_commission_plans p where p.id=plan_id and public.erp_user_has_company_role(p.company_id,array['owner','admin','manager','sales_manager','accountant']::text[])));
 drop policy if exists erp_commission_runs_select_company on public.erp_commission_runs;
 create policy erp_commission_runs_select_company on public.erp_commission_runs for select to authenticated using (public.erp_user_can_access_company(company_id));
 drop policy if exists erp_commission_runs_write_manager on public.erp_commission_runs;
