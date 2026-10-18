@@ -980,7 +980,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: LinearProgressIndicator(
-            value: progress,
+            value: progress ?? 0.0,
             minHeight: 7,
             backgroundColor: const Color(0xFFEFEAF4),
             valueColor: AlwaysStoppedAnimation<Color>(color),
