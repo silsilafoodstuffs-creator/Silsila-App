@@ -61,7 +61,7 @@ class _ErpPublicLeadsScreenState extends State<ErpPublicLeadsScreen> {
     final areaMatches = _governorate == 'الكل' ||
         (lead['governorate'] ?? '').toString() == _governorate;
     final query = _search.trim().toLowerCase();
-    final searchable = <String>[
+    final searchable = <Object?>[
       lead['business_name'], lead['business_classification'], lead['governorate'],
       lead['district'], lead['public_address'], lead['source_name'],
     ].map((value) => (value ?? '').toString().toLowerCase()).join(' ');
