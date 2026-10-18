@@ -2269,7 +2269,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
 
   Product toProduct(Map<String, dynamic> row) {
     final rawId = row['id'];
-    final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+    final id = rawId?.toString().trim();
     final rawPrice = row['price'];
     final price = rawPrice is num ? rawPrice.toDouble() : double.tryParse(rawPrice?.toString() ?? '') ?? 0;
     final rawMinimum = row['min_quantity'] ?? row['minimum_quantity'];
@@ -2281,7 +2281,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
       price,
       (row['unit'] ?? 'وحدة').toString(),
       Icons.shopping_basket,
-      id: id,
+      id: (id == null || id.isEmpty) ? null : id,
       supplierId: row['supplier_id']?.toString(),
       minQuantity: minimum < 1 ? 1 : minimum,
     );
@@ -2464,7 +2464,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
 
   Future<void> deactivateProduct(Map<String, dynamic> product) async {
     final rawId = product['id'];
-    final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+    final id = rawId?.toString().trim();
     if (id == null || busyIds.contains(id)) return;
     setState(() => busyIds.add(id));
     try {
@@ -2493,7 +2493,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
           if (products.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text('لم تنشر منتجات بعد.', textAlign: TextAlign.center)),
           ...products.map((product) {
             final rawId = product['id'];
-            final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+            final id = rawId?.toString().trim();
             final active = product['is_active'] == true || product['is_available'] == true;
             return Card(
               color: Colors.white,
@@ -2966,7 +2966,7 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
 
   Future<void> toggleCategory(Map<String, dynamic> category) async {
     final rawId = category['id'];
-    final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+    final id = rawId?.toString().trim();
     if (id == null) return;
     try {
       await service.updateCategory(categoryId: id, isActive: category['is_active'] != true);
