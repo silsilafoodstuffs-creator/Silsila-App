@@ -87,7 +87,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
       setState(() {
         _lists = lists; _items = values[1]; _currencies = [..._currencies];
         _parties = values[3];
-        final dbCurrencies = values[2] as List<Map<String, dynamic>>;
+        final dbCurrencies = values[2];
         for (final currency in dbCurrencies) {
           if (!_currencies.any((item) => _s(item['currency_code']) == _s(currency['currency_code']))) {
             _currencies.add(currency);
