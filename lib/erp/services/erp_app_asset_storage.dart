@@ -31,6 +31,9 @@ class ErpAppAssetStorage {
     if (client == null) {
       throw StateError('Supabase غير مهيأ. قم بتهيئته قبل رفع الصور.');
     }
+    if (client.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول بحساب مخوّل لإدارة صور التطبيق.');
+    }
     return client;
   }
 
