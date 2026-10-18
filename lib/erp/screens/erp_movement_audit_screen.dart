@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/erp_movement_audit_repository.dart';
 import 'erp_accounts_screen.dart';
 import 'erp_journal_entries_screen.dart';
@@ -131,6 +132,44 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
         _error = 'تعذر تنفيذ الفحص: $e';
       });
     }
+  }
+
+  String _csvCell(Object? value) {
+    final text = (value ?? '').toString().replaceAll('"', '""');
+    return '"$text"';
+  }
+
+  Future<void> _copyReport() async {
+    final rows = <List<Object?>>[
+      ['تقرير اختبار ومراجعة الحركات - سلسلة'],
+      ['معرّف الشركة', _company.text.trim()],
+      ['مجال الفحص', _area],
+      ['من تاريخ', _dateText(_startDate)],
+      ['إلى تاريخ', _dateText(_endDate)],
+      ['عدد الملاحظات', _issues.length],
+      ['أخطاء', _issues.where((r) => r['severity'] == 'خطأ').length],
+      ['تحذيرات', _issues.where((r) => r['severity'] == 'تحذير').length],
+      [],
+      ['المجال', 'رقم المستند', 'عنوان المستند', 'التاريخ', 'الخطورة', 'كود المشكلة', 'التفاصيل', 'مسار المعالجة'],
+      ..._issues.map((issue) => <Object?>[
+        issue['area'],
+        issue['document_number'],
+        issue['document_title'],
+        issue['document_date'],
+        issue['severity'],
+        issue['issue_code'],
+        issue['issue_message'],
+        issue['repair_route'],
+      ]),
+    ];
+    final csv = '\\uFEFF' + rows
+        .map((row) => row.map(_csvCell).join(','))
+        .join('\\r\\n');
+    await Clipboard.setData(ClipboardData(text: csv));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم نسخ تقرير المراجعة. يمكنك لصقه في Excel أو حفظه كملف CSV.')),
+    );
   }
 
   Future<void> _openFix(Map<String, dynamic> issue) async {
@@ -346,6 +385,11 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
               _metric('الملاحظات', _issues.length.toString(), const Color(0xFF3E007D)),
               _metric('أخطاء', errors.toString(), Colors.red),
               _metric('تحذيرات', warnings.toString(), const Color(0xFFFFA015)),
+              OutlinedButton.icon(
+                onPressed: _copyReport,
+                icon: const Icon(Icons.copy_all_outlined),
+                label: const Text('نسخ التقرير إلى Excel/CSV'),
+              ),
             ]),
             const SizedBox(height: 8),
             ..._issues.map((issue) {
