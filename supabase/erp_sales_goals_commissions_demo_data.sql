@@ -607,6 +607,31 @@ begin
     group_id=excluded.group_id,item_name=excluded.item_name,purchase_price=excluded.purchase_price,
     sale_price=excluded.sale_price,image_url=excluded.image_url,is_demo_data=true;
 
+  -- Recognizable Egyptian FMCG brand examples; prices are deliberately zero until a verified supplier quote is entered.
+  insert into public.erp_items(company_id,group_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,source_name,is_demo_data)
+  select v_company,g.id,x.code,x.name,x.unit,0,0,x.reorder,x.brand,x.pack,'Brand example only; price/source not verified',true
+  from (values
+    ('DEMO-OIL','DEMO-BRAND-OIL-001','زيت عافية 1 لتر - السعر غير محدد','زجاجة',24,'عافية','12 زجاجة / كرتونة'),
+    ('DEMO-OIL','DEMO-BRAND-OIL-002','زيت صني 1 لتر - السعر غير محدد','زجاجة',24,'صني','12 زجاجة / كرتونة'),
+    ('DEMO-OIL','DEMO-BRAND-OIL-003','سمن جنة 1.5 كجم - السعر غير محدد','عبوة',12,'جنة','6 عبوات / كرتونة'),
+    ('DEMO-DRY','DEMO-BRAND-DRY-001','مكرونة حواء 400 جم - السعر غير محدد','كيس',48,'حواء','20 كيس / كرتونة'),
+    ('DEMO-DRY','DEMO-BRAND-DRY-002','مكرونة الملكة 400 جم - السعر غير محدد','كيس',48,'الملكة','20 كيس / كرتونة'),
+    ('DEMO-DAIRY','DEMO-BRAND-DAIRY-001','لبن جهينة 1 لتر - السعر غير محدد','عبوة',24,'جهينة','12 عبوة / كرتونة'),
+    ('DEMO-DAIRY','DEMO-BRAND-DAIRY-002','لبن المراعي 1 لتر - السعر غير محدد','عبوة',24,'المراعي','12 عبوة / كرتونة'),
+    ('DEMO-DAIRY','DEMO-BRAND-DAIRY-003','جبنة دومتي 500 جم - السعر غير محدد','علبة',24,'دومتي','12 علبة / كرتونة'),
+    ('DEMO-DAIRY','DEMO-BRAND-DAIRY-004','جبنة رودس 500 جم - السعر غير محدد','علبة',24,'رودس','12 علبة / كرتونة'),
+    ('DEMO-DRINK','DEMO-BRAND-DRINK-001','عصير سن توب 1 لتر - السعر غير محدد','عبوة',24,'سن توب','12 عبوة / كرتونة'),
+    ('DEMO-DRINK','DEMO-BRAND-DRINK-002','عصير لمار 1 لتر - السعر غير محدد','عبوة',24,'لمار','12 عبوة / كرتونة'),
+    ('DEMO-SNACK','DEMO-BRAND-SNACK-001','مولتو إيديتا - السعر غير محدد','قطعة',48,'إيديتا','كرتونة؛ العدد يحدد من المورد'),
+    ('DEMO-SNACK','DEMO-BRAND-SNACK-002','شيبسي 40 جم - السعر غير محدد','كيس',48,'شيبسي','كرتونة؛ العدد يحدد من المورد'),
+    ('DEMO-SNACK','DEMO-BRAND-SNACK-003','بسكويت الشمعدان - السعر غير محدد','عبوة',24,'الشمعدان','كرتونة؛ العدد يحدد من المورد')
+  ) as x(group_code,code,name,unit,reorder,brand,pack)
+  join public.erp_item_groups g on g.company_id=v_company and g.group_code=x.group_code
+  on conflict(company_id,item_code) do update set
+    group_id=excluded.group_id,item_name=excluded.item_name,purchase_price=0,sale_price=0,
+    brand_name=excluded.brand_name,package_description=excluded.package_description,
+    source_name=excluded.source_name,is_demo_data=true;
+
   select id into v_area from public.erp_geo_areas where name_ar in ('مدينة نصر','الدقي','مدينة العبور') order by case name_ar when 'مدينة نصر' then 1 when 'الدقي' then 2 else 3 end limit 1;
 
   insert into public.erp_sales_representatives(company_id,rep_code,rep_name,home_area_id,monthly_sales_target,monthly_collection_target,commission_plan,default_commission_rate,is_demo_data)
