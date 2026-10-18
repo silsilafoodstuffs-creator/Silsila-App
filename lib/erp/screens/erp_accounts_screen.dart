@@ -240,7 +240,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
 
   Future<void> _confirmDeactivate(Map<String, dynamic> account) async {
     final id = _value(account, 'account_id');
-    final name = '\${_value(account, 'account_code')} — \${_value(account, 'account_name')}';
+    final name = '${_value(account, 'account_code')} — ${_value(account, 'account_name')}';
     final children = _rows.any((row) => _value(row, 'parent_id') == id);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -248,7 +248,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
         title: const Text('تأكيد تعطيل الحساب'),
         content: Text(
           'هل تريد تعطيل الحساب «$name»؟\n'
-          '\${children ? 'تنبيه: لهذا الحساب حسابات فرعية. لن تُحذف، وسيظل الحساب محفوظًا في قاعدة البيانات.' : 'لن يُحذف الحساب نهائيًا؛ سيتم تعطيله للحفاظ على السجلات المحاسبية.'}',
+          '${children ? 'تنبيه: لهذا الحساب حسابات فرعية. لن تُحذف، وسيظل الحساب محفوظًا في قاعدة البيانات.' : 'لن يُحذف الحساب نهائيًا؛ سيتم تعطيله للحفاظ على السجلات المحاسبية.'}',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
@@ -315,11 +315,11 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('\${_value(row, 'account_code')} — \${_value(row, 'account_name')}',
+                        Text('${_value(row, 'account_code')} — ${_value(row, 'account_name')}',
                           style: const TextStyle(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 3),
                         Text(
-                          '\${_value(row, 'account_type')} • \${_value(row, 'normal_balance') == 'debit' ? 'مدين' : 'دائن'} • \${isPostable ? 'تحليلي' : 'تجميعي'} • \${row['is_active'] == true ? 'نشط' : 'معطل'}',
+                          '${_value(row, 'account_type')} • ${_value(row, 'normal_balance') == 'debit' ? 'مدين' : 'دائن'} • ${isPostable ? 'تحليلي' : 'تجميعي'} • ${row['is_active'] == true ? 'نشط' : 'معطل'}',
                           style: const TextStyle(fontSize: 11, color: Colors.black54),
                         ),
                       ],
