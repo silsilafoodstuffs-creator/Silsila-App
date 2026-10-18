@@ -752,12 +752,31 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ])),
     if (!compact) SizedBox(width: 240, child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'بحث سريع', prefixIcon: const Icon(Icons.search_rounded), isDense: true, filled: true, fillColor: _canvas, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
     const SizedBox(width: 8),
-    if (!compact)
+    if (!compact) ...[
       IconButton(
-        tooltip: _rightPanelVisible ? 'إخفاء لوحات المهام: التنبيهات والنشاطات والوصول السريع' : 'إظهار لوحات المهام: التنبيهات والنشاطات والوصول السريع',
+        tooltip: _rightPanelVisible ? 'إخفاء لوحات المهام الثلاث' : 'إظهار لوحات المهام الثلاث',
         onPressed: () => setState(() => _rightPanelVisible = !_rightPanelVisible),
         icon: Icon(_rightPanelVisible ? Icons.view_sidebar_rounded : Icons.view_sidebar_outlined, color: _purple),
       ),
+      IconButton(
+        tooltip: _notificationsPanelVisible ? 'إخفاء لوحة التنبيهات' : 'إظهار لوحة التنبيهات',
+        visualDensity: VisualDensity.compact,
+        onPressed: () => setState(() => _notificationsPanelVisible = !_notificationsPanelVisible),
+        icon: Icon(_notificationsPanelVisible ? Icons.notifications_active_outlined : Icons.notifications_off_outlined, color: _purple, size: 20),
+      ),
+      IconButton(
+        tooltip: _activityPanelVisible ? 'إخفاء سجل النشاطات' : 'إظهار سجل النشاطات',
+        visualDensity: VisualDensity.compact,
+        onPressed: () => setState(() => _activityPanelVisible = !_activityPanelVisible),
+        icon: Icon(_activityPanelVisible ? Icons.history_rounded : Icons.history_toggle_off_rounded, color: _purple, size: 20),
+      ),
+      IconButton(
+        tooltip: _quickAccessPanelVisible ? 'إخفاء الوصول السريع' : 'إظهار الوصول السريع',
+        visualDensity: VisualDensity.compact,
+        onPressed: () => setState(() => _quickAccessPanelVisible = !_quickAccessPanelVisible),
+        icon: Icon(_quickAccessPanelVisible ? Icons.star_rounded : Icons.star_border_rounded, color: _purple, size: 20),
+      ),
+    ],
     IconButton(tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مركز الإشعارات التجريبي'))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
     const CircleAvatar(backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple)),
   ]));
