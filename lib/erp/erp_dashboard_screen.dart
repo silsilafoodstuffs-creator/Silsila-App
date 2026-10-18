@@ -1275,6 +1275,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           _executiveHighlights(),
         ],
         const SizedBox(height: 16),
+        _executiveAdditionalCharts(sideBySide: wide || mid),
+        const SizedBox(height: 18),
         LayoutBuilder(builder: (context, constraints) {
           final columns = constraints.maxWidth >= 1150 ? 3 : constraints.maxWidth >= 680 ? 2 : 1;
           return GridView.count(
@@ -1345,6 +1347,37 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ]),
   );
 
+  Widget _executiveAdditionalCharts({required bool sideBySide}) {
+    final charts = <Widget>[
+      _executiveChartPanel(
+        title: 'اتجاه التحصيلات',
+        caption: 'قراءة توضيحية لحركة التحصيل عبر الفترة',
+        color: const Color(0xFF168A70),
+        value: '— ج.م',
+        chart: const _ExecutiveChartPainter(color: Color(0xFF168A70)),
+      ),
+      _executiveChartPanel(
+        title: 'توزيع المصروفات',
+        caption: 'مقارنة توضيحية لبنود المصروفات',
+        color: _pink,
+        value: '—%',
+        chart: const _ExecutiveBarsPainter(),
+      ),
+    ];
+    if (sideBySide) {
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(child: charts[0]),
+        const SizedBox(width: 12),
+        Expanded(child: charts[1]),
+      ]);
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      charts[0],
+      const SizedBox(height: 12),
+      charts[1],
+    ]);
+  }
+
   Widget _executiveHighlights() => Container(
     height: 164,
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -1381,16 +1414,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required Color color,
     required List<Map<String, Object>> items,
   }) => Container(
-    padding: const EdgeInsets.all(9),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE7E0EF))),
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE7E0EF)), boxShadow: const [BoxShadow(color: Color(0x07000000), blurRadius: 14, offset: Offset(0, 4))]),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        Icon(icon, size: 16, color: color),
-        const SizedBox(width: 4),
-        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900))),
+        Icon(icon, size: 22, color: color),
+        const SizedBox(width: 8),
+        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18, color: color, fontWeight: FontWeight.w900))),
         _summaryAction('عرض الكل', () => _showExecutiveCategoryDetails(title, items)),
       ]),
-      const Divider(height: 4, thickness: .5, color: Color(0xFFEFEAF4)),
+      const Divider(height: 14, thickness: 1, color: Color(0xFFEFEAF4)),
       ...items.map((item) => _executiveCompactMetric(
         title: item['title'] as String,
         value: item['value'] as String,
@@ -1412,18 +1445,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }) => InkWell(
     onTap: () => _showExecutiveAnalysisDetails(title, value, note, details, color),
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 8),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF342B3C), fontWeight: FontWeight.w700, height: 1.1)),
-          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black45, height: 1.1)),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, color: Color(0xFF342B3C), fontWeight: FontWeight.w800, height: 1.2)),
+          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Colors.black45, height: 1.2)),
         ])),
         const SizedBox(width: 3),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w900)),
-        const SizedBox(width: 2),
-        const Icon(Icons.chevron_left_rounded, size: 11, color: Colors.black38),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900)),
+        const SizedBox(width: 4),
+        const Icon(Icons.chevron_left_rounded, size: 16, color: Colors.black38),
       ]),
     ),
   );
