@@ -146,6 +146,26 @@ alter table public.erp_commission_plans enable row level security;
 alter table public.erp_commission_tiers enable row level security;
 alter table public.erp_commission_runs enable row level security;
 
+-- Apply erp_security_membership.sql before this migration for company-scoped role checks.
+drop policy if exists erp_geo_areas_read_authenticated on public.erp_geo_areas;
+create policy erp_geo_areas_read_authenticated on public.erp_geo_areas for select to authenticated using (true);
+drop policy if exists erp_sales_reps_select_company on public.erp_sales_representatives;
+create policy erp_sales_reps_select_company on public.erp_sales_representatives for select to authenticated using (public.erp_user_can_access_company(company_id));
+drop policy if exists erp_sales_reps_write_manager on public.erp_sales_representatives;
+create policy erp_sales_reps_write_manager on public.erp_sales_representatives for all to authenticated using (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager']::text[])) with check (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager']::text[]));
+drop policy if exists erp_customer_goals_select_company on public.erp_customer_monthly_goals;
+create policy erp_customer_goals_select_company on public.erp_customer_monthly_goals for select to authenticated using (public.erp_user_can_access_company(company_id));
+drop policy if exists erp_customer_goals_write_sales on public.erp_customer_monthly_goals;
+create policy erp_customer_goals_write_sales on public.erp_customer_monthly_goals for all to authenticated using (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager','sales_rep']::text[])) with check (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager','sales_rep']::text[]));
+drop policy if exists erp_commission_plans_select_company on public.erp_commission_plans;
+create policy erp_commission_plans_select_company on public.erp_commission_plans for select to authenticated using (public.erp_user_can_access_company(company_id));
+drop policy if exists erp_commission_plans_write_manager on public.erp_commission_plans;
+create policy erp_commission_plans_write_manager on public.erp_commission_plans for all to authenticated using (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager','accountant']::text[])) with check (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager','accountant']::text[]));
+drop policy if exists erp_commission_runs_select_company on public.erp_commission_runs;
+create policy erp_commission_runs_select_company on public.erp_commission_runs for select to authenticated using (public.erp_user_can_access_company(company_id));
+drop policy if exists erp_commission_runs_write_manager on public.erp_commission_runs;
+create policy erp_commission_runs_write_manager on public.erp_commission_runs for all to authenticated using (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager','accountant']::text[])) with check (public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager','accountant']::text[]));
+
 -- Publicly documented geography seeds: top-level Greater Cairo and a useful starter
 -- hierarchy. These are reference areas, not an exhaustive official administrative gazetteer.
 insert into public.erp_geo_areas(parent_id,governorate,area_name,area_kind,name_ar,name_en,source_name,source_url,is_verified)
