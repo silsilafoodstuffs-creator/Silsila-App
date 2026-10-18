@@ -33,6 +33,7 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
   final Map<String, DateTime> _signedUrlCreatedAt = {};
   String _assetType = 'app_logo';
   bool _loading = false;
+  int _loadGeneration = 0;
   bool _uploading = false;
   String? _error;
   String? _message;
@@ -98,7 +99,9 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
   }
 
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     if (!_ready) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = 'احفظ سجل التطبيق واربطه بشركة نشطة أولًا، ثم افتح إدارة الصور.';
@@ -114,13 +117,13 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
         appId: widget.appId!,
         assetType: _assetType,
       );
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _assets = result;
         _loading = false;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _loading = false;
         _error = 'تعذر تحميل الصور من قاعدة البيانات: $error';
