@@ -14,6 +14,7 @@ select
   end as installation_status
 from (values
   ('erp_companies','table'),
+  ('erp_cost_centers','table'),
   ('erp_company_settings','table'),
   ('erp_delegate_item_assignments','table'),
   ('erp_managed_apps','table'),
