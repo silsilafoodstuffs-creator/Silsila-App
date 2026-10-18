@@ -62,8 +62,27 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
         if(canEdit) const Chip(label:Text('وضع التعديل'),backgroundColor:Color(0xFFFFE4BB)),
         TextButton.icon(onPressed:canEdit?()=>_assign(s):null,icon:const Icon(Icons.groups_2_outlined,color:_orange),label:const Text('استدعاء موظفين')),
       ]),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: TextField(
+            controller: s.name,
+            readOnly: !canEdit,
+            minLines: 1,
+            maxLines: 2,
+            decoration: const InputDecoration(
+              labelText: 'اسم الوردية',
+              hintText: 'اكتب اسمًا واضحًا للوردية',
+              isDense: false,
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+            ),
+            onChanged: canEdit ? (_) => setState(() {}) : null,
+          ),
+        ),
+      ),
       Wrap(spacing:9,runSpacing:9,crossAxisAlignment:WrapCrossAlignment.center,children:[
-        _field(s.name,'اسم الوردية',190,readOnly:!canEdit),
         Row(mainAxisSize:MainAxisSize.min,children:[
           Checkbox(value:s.nightShift,onChanged:canEdit?(v)=>setState(()=>s.nightShift=v??false):null),
           const Text('وردية ليل / سهر'),
