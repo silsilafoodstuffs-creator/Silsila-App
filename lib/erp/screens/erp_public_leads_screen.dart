@@ -18,6 +18,7 @@ class _ErpPublicLeadsScreenState extends State<ErpPublicLeadsScreen> {
   String? _error;
   String _status = 'all';
   String _governorate = 'الكل';
+  String _search = '';
   final List<Map<String, dynamic>> _leads = [];
 
   @override
@@ -59,7 +60,12 @@ class _ErpPublicLeadsScreenState extends State<ErpPublicLeadsScreen> {
         (lead['verification_status'] ?? 'needs_review') == _status;
     final areaMatches = _governorate == 'الكل' ||
         (lead['governorate'] ?? '').toString() == _governorate;
-    return statusMatches && areaMatches;
+    final query = _search.trim().toLowerCase();
+    final searchable = <String>[
+      lead['business_name'], lead['business_classification'], lead['governorate'],
+      lead['district'], lead['public_address'], lead['source_name'],
+    ].map((value) => (value ?? '').toString().toLowerCase()).join(' ');
+    return statusMatches && areaMatches && (query.isEmpty || searchable.contains(query));
   }).toList();
 
   Future<void> _importLead(Map<String, dynamic> lead) async {
@@ -174,6 +180,10 @@ class _ErpPublicLeadsScreenState extends State<ErpPublicLeadsScreen> {
             _statusChip('all', 'الكل'),
             _statusChip('needs_review', 'بحاجة للمراجعة'),
             _statusChip('imported', 'تم الاستيراد'),
+            SizedBox(width: 280, child: TextField(
+              onChanged: (value) => setState(() => _search = value),
+              decoration: const InputDecoration(labelText: 'بحث بالاسم أو العنوان أو النشاط', prefixIcon: Icon(Icons.search_rounded), border: OutlineInputBorder(), isDense: true),
+            )),
             SizedBox(width: 190, child: DropdownButtonFormField<String>(
               value: areas.contains(_governorate) ? _governorate : 'الكل',
               isExpanded: true,
