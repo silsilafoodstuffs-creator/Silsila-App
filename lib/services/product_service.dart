@@ -62,31 +62,33 @@ class ProductService {
       throw ArgumentError('عبارة البحث طويلة أكثر من اللازم.');
     }
 
-    final response = await _requireClient
+    var query = _requireClient
         .from('products')
         .select(_productColumns)
-        .eq('is_active', true)
-        .order('name', ascending: true)
-        .limit(limit);
+        .eq('is_active', true);
 
-    var rows = _mapRows(response);
+    // Apply filters before ordering and limiting so matching products are not
+    // accidentally omitted when earlier rows do not match the selected filters.
     if (cleanActivityType != null) {
-      rows = rows.where((row) => row['activity_type']?.toString() == cleanActivityType).toList();
+      query = query.eq('activity_type', cleanActivityType);
     }
     if (cleanCategory != null) {
-      rows = rows.where((row) => row['category']?.toString() == cleanCategory).toList();
+      query = query.eq('category', cleanCategory);
     }
     if (categoryId != null) {
-      rows = rows.where((row) => row['category_id'] == categoryId).toList();
+      query = query.eq('category_id', categoryId);
     }
     if (cleanSupplierId != null) {
-      rows = rows.where((row) => row['supplier_id']?.toString() == cleanSupplierId).toList();
+      query = query.eq('supplier_id', cleanSupplierId);
     }
     if (cleanSearch != null) {
-      final term = cleanSearch.toLowerCase();
-      rows = rows.where((row) => (row['name'] ?? '').toString().toLowerCase().contains(term)).toList();
+      query = query.ilike('name', '%${_escapeLike(cleanSearch)}%');
     }
-    return rows;
+
+    final response = await query
+        .order('name', ascending: true)
+        .limit(limit);
+    return _mapRows(response);
   }
 
   /// جلب تفاصيل منتج نشط باستخدام رقمه.
@@ -138,6 +140,13 @@ class ProductService {
     if (limit < 1 || limit > 200) {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
+  }
+
+  String _escapeLike(String value) {
+    return value
+        .replaceAll(r'\\', r'\\\\')
+        .replaceAll('%', r'\\%')
+        .replaceAll('_', r'\\_');
   }
 
   String? _clean(String? value) {
