@@ -65,7 +65,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   @override void didUpdateWidget(covariant ErpPermissionsScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
   String _s(dynamic v)=>(v??'').toString();
   String _key(String m,String s,String p)=>m+'::'+s+'::'+p;
-  List<String> get _allKeys=>[for(final m in _tree.entries)for(final s in m.value.entries)for(final p in s.value)_key(m.key,s.key,p)];
+  List<String> get _allKeys=>[for(final m in _tree.entries)_key(m.key,'*','*'),for(final m in _tree.entries)for(final s in m.value.entries)_key(m.key,s.key,'*'),for(final m in _tree.entries)for(final s in m.value.entries)for(final p in s.value)_key(m.key,s.key,p)];
   Map<String,bool> _blank(String role){
     final out=<String,bool>{};
     for(final k in _allKeys){
@@ -102,7 +102,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   }
   List<String> get _targets=>_scope=='__all__'?_users.map((u)=>_s(u['user_id'])).toList():[_scope];
   void _applyTemplate(String role){
-    final fresh=_blank(role);setState(()=>{_template=role,...{}});
+    final fresh=_blank(role);setState(()=>_template=role);
     setState((){
       for(final uid in _targets){_draft[uid]??={};_draft[uid]!.addAll(fresh);}
       _message='تم تطبيق القالب. اضغط حفظ لتثبيته.';_error=null;
@@ -176,7 +176,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         const Text('مصفوفة الصلاحيات',style:TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:_permPurple)),const SizedBox(height:8),
         SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:900,child:Column(children:[
-          Row(children:[const Expanded(flex:3,child:Text('القائمة / الشاشة',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900))),for(final a in _actions)Expanded(flex:1,child(Center(child:Text(a,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),textAlign:TextAlign.center))))]),
+          Row(children:[const Expanded(flex:3,child:Text('القائمة / الشاشة',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900))),for(final a in _actions)Expanded(flex:1,child:Center(child:Text(a,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),textAlign:TextAlign.center)))]),
           const Divider(),
           Align(alignment:AlignmentDirectional.centerStart,child:Wrap(spacing:8,children:[FilledButton.tonal(onPressed:_saving?null:()=>_bulk(true),child:const Text('تحديد الكل')),OutlinedButton(onPressed:_saving?null:()=>_bulk(false),child:const Text('إزالة الكل'))])),
           const SizedBox(height:8),
