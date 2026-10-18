@@ -47,7 +47,7 @@ begin
   if new.parent_id is not null and exists (
     with recursive descendants(id) as (
       select new.id
-      union all
+      union
       select child.id
       from public.erp_cost_centers child
       join descendants d on child.parent_id = d.id
