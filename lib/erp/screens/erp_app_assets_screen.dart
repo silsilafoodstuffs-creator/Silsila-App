@@ -199,23 +199,17 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
         appId: widget.appId!,
         storagePath: asset.storagePath,
       );
-      await _repository.deleteAssetRecord(assetId: await _findAssetId(asset));
+      final assetId = asset.id;
+      if (assetId == null || assetId.isEmpty) {
+        throw StateError('معرّف سجل الصورة غير متاح؛ لم يتم حذف السجل من قاعدة البيانات.');
+      }
+      await _repository.deleteAssetRecord(assetId: assetId);
       if (!mounted) return;
       setState(() => _message = 'تم حذف الصورة ومرجعها.');
       await _load();
     } catch (error) {
       if (mounted) setState(() => _error = 'تعذر حذف الصورة: $error');
     }
-  }
-
-  // Asset records use the storage path as a stable unique key; the repository
-  // lookup avoids exposing database IDs as part of the visible model.
-  Future<String> _findAssetId(ErpAppAssetRecord asset) async {
-    final rows = await _repository.listAssets(appId: widget.appId!, assetType: asset.assetType, limit: 500);
-    // The repository's public model deliberately omits the internal row ID.
-    // Storage removal is still safe; the metadata can be removed by a dedicated
-    // repository method once the row identifier is available.
-    throw StateError('تم حذف الملف من التخزين، لكن يلزم تحديث سجل قاعدة البيانات بمعرّف الملف. مسار الملف: ${asset.storagePath}.');
   }
 
   @override
