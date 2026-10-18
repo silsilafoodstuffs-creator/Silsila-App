@@ -168,6 +168,7 @@ class ErpAppManagementService {
     return (rows as List)
         .whereType<Map<String, dynamic>>()
         .map((row) => ErpAppAssetRecord(
+              id: row['id']?.toString(),
               appId: row['app_id']?.toString() ?? '',
               assetType: row['asset_type']?.toString() ?? 'other',
               storagePath: row['storage_path']?.toString() ?? '',
