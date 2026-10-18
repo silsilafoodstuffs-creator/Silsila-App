@@ -18,6 +18,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
   List<Map<String, dynamic>> _rows = [];
   bool _loading = false;
   bool _activeOnly = true;
+  final Set<String> _expandedAccounts = <String>{};
   String? _error;
 
   @override
@@ -60,6 +61,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
       if (!mounted) return;
       setState(() {
         _rows = result;
+        _expandedAccounts.addAll(result.where((row) => _value(row, 'parent_id').isEmpty).map((row) => _value(row, 'account_id')));
         _loading = false;
       });
     } catch (e) {
@@ -99,14 +101,14 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     return descendants;
   }
 
-  Future<void> _openAccountEditor({Map<String, dynamic>? account}) async {
+  Future<void> _openAccountEditor({Map<String, dynamic>? account, String? initialParentId}) async {
     final editing = account != null;
     final id = editing ? _value(account, 'account_id') : '';
     final code = TextEditingController(text: editing ? _value(account, 'account_code') : '');
     final name = TextEditingController(text: editing ? _value(account, 'account_name') : '');
     String type = editing ? _value(account, 'account_type') : 'asset';
     String nature = editing ? _value(account, 'normal_balance') : 'debit';
-    String parent = editing ? _value(account, 'parent_id') : '';
+    String parent = editing ? _value(account, 'parent_id') : (initialParentId ?? '');
     bool postable = editing ? account['is_postable'] == true : false;
     bool active = editing ? account['is_active'] == true : true;
     final descendants = editing ? _descendantsOf(id) : <String>{};
@@ -229,6 +231,128 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     name.dispose();
   }
 
+
+  List<Map<String, dynamic>> _childrenOf(String parentId) {
+    final rows = _filtered;
+    return rows.where((row) => _value(row, 'parent_id') == parentId).toList()
+      ..sort((a, b) => _value(a, 'account_code').compareTo(_value(b, 'account_code')));
+  }
+
+  Future<void> _confirmDeactivate(Map<String, dynamic> account) async {
+    final id = _value(account, 'account_id');
+    final name = '\${_value(account, 'account_code')} — \${_value(account, 'account_name')}';
+    final children = _rows.any((row) => _value(row, 'parent_id') == id);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تأكيد تعطيل الحساب'),
+        content: Text(
+          'هل تريد تعطيل الحساب «$name»؟\n'
+          '\${children ? 'تنبيه: لهذا الحساب حسابات فرعية. لن تُحذف، وسيظل الحساب محفوظًا في قاعدة البيانات.' : 'لن يُحذف الحساب نهائيًا؛ سيتم تعطيله للحفاظ على السجلات المحاسبية.'}',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('تعطيل الحساب'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _repo.deactivateAccount(companyId: _company.text.trim(), accountId: id);
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تعطيل الحساب: $e');
+    }
+  }
+
+  Widget _buildTreeNode(Map<String, dynamic> row, int depth) {
+    final id = _value(row, 'account_id');
+    final children = _childrenOf(id);
+    final hasChildren = children.isNotEmpty;
+    final expanded = _expandedAccounts.contains(id);
+    final isPostable = row['is_postable'] == true;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Card(
+          margin: EdgeInsets.only(left: depth * 20.0, bottom: 5),
+          child: InkWell(
+            onDoubleTap: () {
+              if (!hasChildren) return;
+              setState(() {
+                if (expanded) { _expandedAccounts.remove(id); }
+                else { _expandedAccounts.add(id); }
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 34,
+                    child: IconButton(
+                      tooltip: hasChildren ? (expanded ? 'طي الحسابات الفرعية' : 'عرض الحسابات الفرعية') : 'لا توجد حسابات فرعية',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: hasChildren ? () => setState(() {
+                        if (expanded) { _expandedAccounts.remove(id); }
+                        else { _expandedAccounts.add(id); }
+                      }) : null,
+                      icon: Icon(
+                        hasChildren ? (expanded ? Icons.remove_circle_outline : Icons.add_circle_outline) : Icons.circle,
+                        size: hasChildren ? 21 : 8,
+                        color: hasChildren ? const Color(0xFF3E007D) : Colors.black26,
+                      ),
+                    ),
+                  ),
+                  Icon(isPostable ? Icons.account_balance_wallet_outlined : Icons.account_tree_outlined,
+                    color: const Color(0xFF3E007D), size: 21),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('\${_value(row, 'account_code')} — \${_value(row, 'account_name')}',
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 3),
+                        Text(
+                          '\${_value(row, 'account_type')} • \${_value(row, 'normal_balance') == 'debit' ? 'مدين' : 'دائن'} • \${isPostable ? 'تحليلي' : 'تجميعي'} • \${row['is_active'] == true ? 'نشط' : 'معطل'}',
+                          style: const TextStyle(fontSize: 11, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'إضافة حساب فرعي تحت هذا الحساب',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _loading || isPostable ? null : () => _openAccountEditor(initialParentId: id),
+                    icon: const Icon(Icons.add_box_outlined, color: Color(0xFF2E7D32)),
+                  ),
+                  IconButton(
+                    tooltip: 'تعطيل الحساب',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _loading || row['is_active'] != true ? null : () => _confirmDeactivate(row),
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  ),
+                  IconButton(
+                    tooltip: 'تعديل الحساب',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _loading ? null : () => _openAccountEditor(account: row),
+                    icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (hasChildren && expanded) ...children.map((child) => _buildTreeNode(child, depth + 1)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final rows = _filtered;
@@ -289,25 +413,8 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
         const SizedBox(height: 10),
         if (!_loading && rows.isEmpty)
           const Padding(padding: EdgeInsets.all(24), child: Text('أدخل معرّف الشركة واضغط تحديث لعرض الحسابات.')),
-        ...rows.map((r) => Card(
-          child: ListTile(
-            leading: Icon(
-              r['is_postable'] == true ? Icons.account_balance_wallet : Icons.account_tree,
-              color: const Color(0xFF3E007D),
-            ),
-            title: Text('${_value(r, 'account_code')} — ${_value(r, 'account_name')}'),
-            subtitle: Text(
-              '${_value(r, 'account_type')} • ${_value(r, 'normal_balance') == 'debit' ? 'مدين' : 'دائن'} • ${r['is_postable'] == true ? 'تحليلي' : 'تجميعي'} • ${r['is_active'] == true ? 'نشط' : 'معطل'}\n'
-              'الرصيد: ${_amount(r).toStringAsFixed(2)} ج.م • الحركات: ${_value(r, 'subtree_movement_count')}',
-            ),
-            isThreeLine: true,
-            trailing: IconButton(
-              tooltip: 'تعديل الحساب',
-              icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015)),
-              onPressed: _loading ? null : () => _openAccountEditor(account: r),
-            ),
-          ),
-        )),
+        if (rows.isNotEmpty) ..._childrenOf('').map((row) => _buildTreeNode(row, 0)),
+
       ],
     );
   }
