@@ -67,6 +67,9 @@ class ErpAppAssetStorage {
     if (extension == null) {
       throw ArgumentError('نوع الصورة غير مدعوم. استخدم JPG أو PNG أو WEBP أو GIF.');
     }
+    if (!_matchesImageSignature(bytes, contentType.toLowerCase().trim())) {
+      throw ArgumentError('محتوى الملف لا يطابق نوع الصورة المحدد.');
+    }
     const supportedAssetTypes = {
       'app_logo', 'splash', 'app_icon', 'category', 'item',
       'supplier', 'customer', 'shipping_company', 'other',
@@ -119,6 +122,34 @@ class ErpAppAssetStorage {
     return _db.storage
         .from(bucket)
         .createSignedUrl(storagePath, expiresIn.inSeconds);
+  }
+
+  static bool _matchesImageSignature(Uint8List bytes, String contentType) {
+    bool startsWith(List<int> signature) {
+      if (bytes.length < signature.length) return false;
+      for (var i = 0; i < signature.length; i++) {
+        if (bytes[i] != signature[i]) return false;
+      }
+      return true;
+    }
+
+    switch (contentType) {
+      case 'image/jpeg':
+        return startsWith([0xFF, 0xD8, 0xFF]);
+      case 'image/png':
+        return startsWith([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+      case 'image/gif':
+        return startsWith([0x47, 0x49, 0x46, 0x38]) &&
+            bytes.length >= 6 &&
+            (String.fromCharCodes(bytes.sublist(0, 6)) == 'GIF87a' ||
+                String.fromCharCodes(bytes.sublist(0, 6)) == 'GIF89a');
+      case 'image/webp':
+        return bytes.length >= 12 &&
+            String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF' &&
+            String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP';
+      default:
+        return false;
+    }
   }
 
   static String _safeSegment(String value) {
