@@ -36,7 +36,9 @@ class ErpWorkspaceRecordsService {
           if (key.toString() != '_record_key') result[key.toString()] = value?.toString() ?? '';
         });
       }
-      if (result.isNotEmpty) result['_مرجع داخلي'] = row['record_key']?.toString() ?? '';
+      // Keep the stable database key even when a record has no visible fields;
+      // otherwise the UI cannot reliably edit or delete an otherwise valid empty record.
+      result['_مرجع داخلي'] = row['record_key']?.toString() ?? '';
       return result;
     }).toList(growable: true);
   }
