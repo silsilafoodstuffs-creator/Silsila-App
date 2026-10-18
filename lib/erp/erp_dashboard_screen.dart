@@ -1114,6 +1114,21 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
     subtitle: Text(detail, style: const TextStyle(fontSize: 11, height: 1.5)),
     trailing: const Icon(Icons.chevron_left_rounded, color: _purple),
+    onTap: () {
+      final target = switch (title) {
+        'شعار التطبيق وصورة البداية' => 'إدارة الشعار والصور',
+        'صور الأصناف والفئات' => 'إدارة صور الأصناف والفئات',
+        'صور الموردين والعملاء' => 'إدارة صور الموردين والعملاء',
+        'شركات الشحن' => 'إدارة شركات الشحن',
+        _ => 'إعدادات هوية التطبيق',
+      };
+      setState(() {
+        _module = 'إدارة التطبيقات';
+        _group = 'بيانات أساسية';
+        _page = target;
+        _selectedRecord = null;
+      });
+    },
   );
 
   Widget _header(bool compact) => Container(height: 76, padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 14), decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFECE7F2)))), child: Row(children: [
