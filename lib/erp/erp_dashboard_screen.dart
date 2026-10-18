@@ -1462,31 +1462,33 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   Widget _executiveHighlights() => Container(
-    height: 164,
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7E0EF)), boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 5))]),
+    height: 226,
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFFE7E0EF)),
+      boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 5))],
+    ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const Text('مؤشرات تحتاج متابعة', style: TextStyle(fontSize: 19, color: _purple, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 8),
-      _executiveHighlightRow('ديون متأخرة', '— ج.م', _pink, .72),
-      _executiveHighlightRow('أصناف تحت الطلب', '— صنف', _orange, .48),
-      _executiveHighlightRow('طلبات متأخرة', '— طلب', _pink, .58),
-      _executiveHighlightRow('تحصيل المستحقات', '—%', _green, .34),
+      const Text('مؤشرات تحتاج متابعة', style: TextStyle(fontSize: 20, color: _purple, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 7),
+      _executiveHighlightRow('مديونية العملاء', _executiveMoney(_executiveReceivables), _pink),
+      _executiveHighlightRow('مبيعات آخر 7 أيام', _executiveMoney(_executiveDailySales.fold<double>(0,(sum,value)=>sum+value)), _purple),
+      _executiveHighlightRow('مشتريات الشهر', _executiveMoney(_executivePurchases), _orange),
+      _executiveHighlightRow('قيمة المخزون التقديرية', _executiveMoney(_executiveInventoryValue), const Color(0xFF2475B8)),
     ]),
   );
 
-  Widget _executiveHighlightRow(String label, String value, Color color, double fill) => Expanded(
+  Widget _executiveHighlightRow(String label, String value, Color color) => Expanded(
     child: Padding(
-      padding: const EdgeInsets.symmetric(vertical: 0),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(children: [
-        Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.w600))),
-        Expanded(flex: 4, child: ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: Container(height: 4, color: const Color(0xFFEFEAF4), alignment: AlignmentDirectional.centerStart,
-            child: FractionallySizedBox(widthFactor: fill, child: ColoredBox(color: color))),
-        )),
-        const SizedBox(width: 5),
-        SizedBox(width: 43, child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900))),
+        Container(width: 9, height: 9, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 9),
+        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.w700))),
+        const SizedBox(width: 8),
+        Flexible(child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900))),
       ]),
     ),
   );
