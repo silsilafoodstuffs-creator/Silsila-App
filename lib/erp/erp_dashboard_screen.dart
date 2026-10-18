@@ -639,13 +639,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       return;
     }
     try {
+      var savedCount = 0;
       for (final row in rows) {
-        final code = row['الكود'] ?? row['الاسم'] ?? row['اسم الحساب'] ?? row.values.firstOrNull ?? '';
-        if (code.startsWith('DEMO-') || code.contains('تجريبي') || code.contains('توضيحي')) continue;
+        // Only rows loaded from the database or explicitly created in this session
+        // carry this internal key. Never upload static sample rows as business data.
+        if (!row.containsKey('_مرجع داخلي')) continue;
         await _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: row);
+        savedCount++;
       }
       if (!mounted) return;
-      _showActionMessage('اكتمل إرسال السجلات غير التجريبية إلى قاعدة البيانات.');
+      _showActionMessage(savedCount == 0
+          ? 'لم توجد سجلات فعلية للحفظ؛ أمثلة الواجهة لم تُرفع إلى قاعدة البيانات.'
+          : 'تم حفظ $savedCount سجلًا في قاعدة البيانات.');
     } catch (error) {
       if (!mounted) return;
       _showActionMessage('تعذر حفظ سجلات الشاشة: $error');
@@ -658,6 +663,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final selected = _selectedRecord;
     final selectedIndex = selected == null ? 0 : rows.indexWhere((row) => _sameRecord(row, selected));
     final targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
+    final canPersistSelectedRecord = rows[targetIndex].containsKey('_مرجع داخلي');
     final controllers = <String, TextEditingController>{for (final entry in rows[targetIndex].entries) if (entry.key != '_مرجع داخلي') entry.key: TextEditingController(text: entry.value)};
     showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
       title: Text('تعديل سجل — $_page'),
@@ -675,7 +681,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Navigator.pop(dialogContext);
           final companyId = _appManagementCompanyId;
           final originalCode = rows[targetIndex]['الكود'] ?? rows[targetIndex]['الاسم'] ?? '';
-          if (companyId != null && companyId.trim().isNotEmpty &&
+          if (canPersistSelectedRecord && companyId != null && companyId.trim().isNotEmpty &&
               !originalCode.startsWith('DEMO-') &&
               !originalCode.contains('تجريبي') &&
               !originalCode.contains('توضيحي')) {
@@ -697,7 +703,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       return;
     }
     final visibleCode = selected['الكود'] ?? selected['الاسم'] ?? selected['اسم الحساب'] ?? '';
-    if (visibleCode.startsWith('DEMO-') || visibleCode.contains('تجريبي') || visibleCode.contains('توضيحي')) {
+    if (!selected.containsKey('_مرجع داخلي') || visibleCode.startsWith('DEMO-') || visibleCode.contains('تجريبي') || visibleCode.contains('توضيحي')) {
       _showActionMessage('هذا سجل توضيحي وليس بيانات فعلية؛ لن يتم حذفه من قاعدة البيانات.');
       return;
     }
