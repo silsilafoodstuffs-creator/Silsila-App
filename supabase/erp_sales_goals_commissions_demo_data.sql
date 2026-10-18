@@ -451,13 +451,13 @@ begin
 
   insert into public.erp_parties(company_id,party_code,party_name,party_kind,phone,whatsapp,address,governorate,district,credit_limit,opening_balance,business_classification,sales_rep_id,geo_area_id,source_name,is_demo_data)
   values
-  (v_company,'DEMO-CUS-001','ماركت النور - عميل تجريبي','customer',null,null,'عنوان تجريبي - مدينة نصر','القاهرة','مدينة نصر',50000,0,'سوبر ماركت',v_rep,v_area,'Silsila demo',true),
-  (v_company,'DEMO-CUS-002','بقالة البركة - عميل تجريبي','customer',null,null,'عنوان تجريبي - المرج','القاهرة','المرج',15000,0,'بقالة / كشك',v_rep,v_area,'Silsila demo',true),
-  (v_company,'DEMO-CUS-003','تاجر جملة المستقبل - عميل تجريبي','customer',null,null,'عنوان تجريبي - العتبة','القاهرة','العتبة',150000,0,'جملة',v_rep,v_area,'Silsila demo',true),
-  (v_company,'DEMO-CUS-004','مؤسسة توريد غذائي - عميل تجريبي','customer',null,null,'عنوان تجريبي - الدقي','الجيزة','الدقي',100000,0,'توريدات مؤسسية / مدارس',v_rep,v_area,'Silsila demo',true),
-  (v_company,'DEMO-SUP-001','مورد مواد غذائية تجريبي - أ','supplier',null,null,'عنوان تجريبي - سوق العبور','القليوبية','العبور',0,0,'مورد جملة',null,v_area,'Silsila demo',true),
-  (v_company,'DEMO-SUP-002','مورد مشروبات تجريبي - ب','supplier',null,null,'عنوان تجريبي - القاهرة','القاهرة','القاهرة',0,0,'موزع / وكيل',null,v_area,'Silsila demo',true)
-  on conflict(company_id,party_code) do update set party_name=excluded.party_name,business_classification=excluded.business_classification,sales_rep_id=excluded.sales_rep_id,is_demo_data=true;
+  (v_company,'DEMO-CUS-001','ماركت النور - عميل تجريبي','customer',null,null,'عنوان تجريبي - مدينة نصر','القاهرة','مدينة نصر',50000,0,'سوبر ماركت',v_rep,(select id from public.erp_geo_areas where governorate='القاهرة' and name_ar='مدينة نصر' order by created_at limit 1),'Silsila demo',true),
+  (v_company,'DEMO-CUS-002','بقالة البركة - عميل تجريبي','customer',null,null,'عنوان تجريبي - المرج','القاهرة','المرج',15000,0,'بقالة / كشك',v_rep,(select id from public.erp_geo_areas where governorate='القاهرة' and name_ar='المرج' order by created_at limit 1),'Silsila demo',true),
+  (v_company,'DEMO-CUS-003','تاجر جملة المستقبل - عميل تجريبي','customer',null,null,'عنوان تجريبي - العتبة','القاهرة','العتبة',150000,0,'جملة',v_rep,(select id from public.erp_geo_areas where governorate='القاهرة' and name_ar='العتبة' order by created_at limit 1),'Silsila demo',true),
+  (v_company,'DEMO-CUS-004','مؤسسة توريد غذائي - عميل تجريبي','customer',null,null,'عنوان تجريبي - الدقي','الجيزة','الدقي',100000,0,'توريدات مؤسسية / مدارس',v_rep,(select id from public.erp_geo_areas where governorate='الجيزة' and name_ar='الدقي' order by created_at limit 1),'Silsila demo',true),
+  (v_company,'DEMO-SUP-001','مورد مواد غذائية تجريبي - أ','supplier',null,null,'عنوان تجريبي - سوق العبور','القليوبية','العبور',0,0,'مورد جملة',null,(select id from public.erp_geo_areas where governorate='القليوبية' and name_ar='مدينة العبور' order by created_at limit 1),'Silsila demo',true),
+  (v_company,'DEMO-SUP-002','مورد مشروبات تجريبي - ب','supplier',null,null,'عنوان تجريبي - القاهرة','القاهرة','القاهرة',0,0,'موزع / وكيل',null,(select id from public.erp_geo_areas where governorate='القاهرة' and name_ar='مصر الجديدة' order by created_at limit 1),'Silsila demo',true)
+  on conflict(company_id,party_code) do update set party_name=excluded.party_name,business_classification=excluded.business_classification,sales_rep_id=excluded.sales_rep_id,geo_area_id=excluded.geo_area_id,governorate=excluded.governorate,district=excluded.district,address=excluded.address,is_demo_data=true;
 
   select id into v_customer from public.erp_parties where company_id=v_company and party_code='DEMO-CUS-001';
   select id into v_supplier from public.erp_parties where company_id=v_company and party_code='DEMO-SUP-001';
