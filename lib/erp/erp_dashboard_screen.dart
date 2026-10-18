@@ -562,9 +562,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       };
     });
   }
-  bool _allowImageManagement = true;
-  bool _allowThemeManagement = true;
-  bool _allowPermissionManagement = true;
   final List<String> _activityLog = ['تم فتح لوحة ERP', 'تم تجهيز أقسام المخازن والفروع', 'تمت إضافة نماذج إدارة المستندات'];
   String _group = 'تقارير';
   String _page = 'ملخص تنفيذي';
