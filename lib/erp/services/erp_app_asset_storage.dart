@@ -91,6 +91,21 @@ class ErpAppAssetStorage {
     return path;
   }
 
+  /// Deletes a private object only when its path belongs to the supplied company and app.
+  Future<void> deleteImage({
+    required String companyId,
+    required String appId,
+    required String storagePath,
+  }) async {
+    final company = _safeSegment(companyId);
+    final app = _safeSegment(appId);
+    final expectedPrefix = '$company/$app/';
+    if (!storagePath.startsWith(expectedPrefix) || storagePath.contains('..')) {
+      throw ArgumentError('مسار الصورة لا يتبع الشركة والتطبيق المحددين.');
+    }
+    await _db.storage.from(bucket).remove([storagePath]);
+  }
+
   /// Creates a short-lived URL for a private object; do not store this URL as
   /// the asset's canonical identifier. Store the returned path instead.
   Future<String> createSignedImageUrl({
