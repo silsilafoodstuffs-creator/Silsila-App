@@ -1107,6 +1107,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     const CircleAvatar(radius: 18, backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple, size: 20)),
   ]));
 
+  double? get _executiveLast7Sales => _executiveDailySales.isEmpty ? null : _executiveDailySales.fold<double>(0,(sum,value)=>sum+value);
+
   String _executiveMoney(double? value) {
     if (value == null) return '—';
     return value.toStringAsFixed(0).replaceAllMapped(
@@ -1474,7 +1476,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       const Text('مؤشرات تحتاج متابعة', style: TextStyle(fontSize: 20, color: _purple, fontWeight: FontWeight.w900)),
       const SizedBox(height: 7),
       _executiveHighlightRow('مديونية العملاء', _executiveMoney(_executiveReceivables), _pink),
-      _executiveHighlightRow('مبيعات آخر 7 أيام', _executiveMoney(_executiveDailySales.fold<double>(0,(sum,value)=>sum+value)), _purple),
+      _executiveHighlightRow('مبيعات آخر 7 أيام', _executiveMoney(_executiveLast7Sales), _purple),
       _executiveHighlightRow('مشتريات الشهر', _executiveMoney(_executivePurchases), _orange),
       _executiveHighlightRow('قيمة المخزون التقديرية', _executiveMoney(_executiveInventoryValue), const Color(0xFF2475B8)),
     ]),
