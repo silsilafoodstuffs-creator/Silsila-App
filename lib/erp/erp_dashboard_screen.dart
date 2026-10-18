@@ -2380,7 +2380,8 @@ class _Metric extends StatelessWidget {
 
 
 class _ExecutiveBarsPainter extends CustomPainter {
-  const _ExecutiveBarsPainter();
+  const _ExecutiveBarsPainter({this.values = const <double>[]});
+  final List<double> values;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -2389,26 +2390,86 @@ class _ExecutiveBarsPainter extends CustomPainter {
       final y = size.height * i / 4;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
     }
-    const values = [.48, .72, .56, .88, .64, .79, .42];
+    final source = values.isEmpty ? const <double>[.48, .72, .56, .88, .64, .79, .42] : values;
+    final maxValue = source.fold<double>(0, (max, value) => value > max ? value : max);
     const colors = [_purple, _orange, _pink, _purple, _orange, _pink, _purple];
-    final slot = size.width / values.length;
-    for (var i = 0; i < values.length; i++) {
+    final slot = size.width / source.length;
+    for (var i = 0; i < source.length; i++) {
       final barWidth = slot * .48;
-      final h = size.height * values[i];
+      final normalized = maxValue <= 0 ? .025 : (source[i] / maxValue).clamp(0.0, 1.0);
+      final h = size.height * normalized;
       final rect = RRect.fromRectAndRadius(
         Rect.fromLTWH(slot * i + (slot - barWidth) / 2, size.height - h, barWidth, h),
-        const Radius.circular(3),
+        const Radius.circular(4),
       );
-      canvas.drawRRect(rect, Paint()..color = colors[i].withValues(alpha: .78));
+      canvas.drawRRect(rect, Paint()..color = colors[i % colors.length].withValues(alpha: .82));
     }
   }
 
   @override
-  bool shouldRepaint(covariant _ExecutiveBarsPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ExecutiveBarsPainter oldDelegate) => oldDelegate.values != values;
 }
 
 class _ExecutiveChartPainter extends CustomPainter {
-  const _ExecutiveChartPainter({required this.color});
+  const _ExecutiveChartPainter({required this.color, this.values = const <double>[]});
+  final Color color;
+  final List<double> values;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..color = const Color(0xFFEDE7F4)
+      ..strokeWidth = 1;
+    for (var i = 0; i < 4; i++) {
+      final y = size.height * i / 3;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+    final source = values.length >= 2
+        ? values
+        : const <double>[.28, .42, .34, .66, .58, .82, .73];
+    final maxValue = source.fold<double>(0, (max, value) => value > max ? value : max);
+    final points = List<Offset>.generate(source.length, (i) {
+      final x = source.length == 1 ? 0.0 : size.width * i / (source.length - 1);
+      final normalized = maxValue <= 0 ? .04 : (source[i] / maxValue).clamp(0.0, 1.0);
+      final y = size.height * (.88 - normalized * .70);
+      return Offset(x, y);
+    });
+    final linePaint = Paint()
+      ..color = color
+      ..strokeWidth = 3.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (final point in points.skip(1)) {
+      path.lineTo(point.dx, point.dy);
+    }
+    final fillPath = Path.from(path)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(
+      fillPath,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [color.withValues(alpha: .18), color.withValues(alpha: .01)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(Offset.zero & size),
+    );
+    canvas.drawPath(path, linePaint);
+    final dotPaint = Paint()..color = color;
+    for (final point in points) {
+      canvas.drawCircle(point, 4, dotPaint);
+      canvas.drawCircle(point, 8, Paint()..color = color.withValues(alpha: .13));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ExecutiveChartPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.values != values;
+}
+
   final Color color;
 
   @override
