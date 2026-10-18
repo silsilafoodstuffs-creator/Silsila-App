@@ -36,7 +36,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
       final data = await _db!.from('erp_currencies').select('id,currency_code,currency_name_ar,currency_symbol,is_active').eq('company_id', company).order('currency_code');
       if (!mounted) return;
       setState(() { _rows = List<Map<String,dynamic>>.from(data); _loading = false; });
-    } catch (e) { if (!mounted) return; setState(() { _loading = false; _error = 'تعذر تحميل العملات. تأكد من تطبيق ملف SQL الخاص بالعملات. $dollar e'; }); }
+    } catch (e) { if (!mounted) return; setState(() { _loading = false; _error = 'تعذر تحميل العملات. تأكد من تطبيق ملف SQL الخاص بالعملات. $e'; }); }
   }
 
   void _clear() { _editingId = null; _code.clear(); _name.clear(); _symbol.clear(); }
@@ -56,7 +56,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
       if (!mounted) return;
       setState(() { _saving = false; _clear(); });
       await _load();
-    } catch (e) { if (!mounted) return; setState(() { _saving = false; _error = 'تعذر حفظ العملة. قد يكون الكود مستخدمًا بالفعل. $dollar e'; }); }
+    } catch (e) { if (!mounted) return; setState(() { _saving = false; _error = 'تعذر حفظ العملة. قد يكون الكود مستخدمًا بالفعل. $e'; }); }
   }
 
   Future<void> _toggleActive(Map<String,dynamic> row) async {
@@ -68,7 +68,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
     ));
     if (yes != true || _db == null) return;
     try { await _db!.from('erp_currencies').update({'is_active':next}).eq('id',row['id'].toString()).eq('company_id',company); await _load(); }
-    catch(e) { if(mounted) setState(()=>_error='تعذر تحديث حالة العملة: $dollar e'); }
+    catch(e) { if(mounted) setState(()=>_error='تعذر تحديث حالة العملة: $e'); }
   }
 
   Widget _input(TextEditingController c, String label) => TextField(controller:c, style:const TextStyle(fontSize:14), decoration:InputDecoration(labelText:label,isDense:true,constraints:const BoxConstraints(minHeight:52),contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12),border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))));
