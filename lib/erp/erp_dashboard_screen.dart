@@ -74,7 +74,6 @@ class ErpDashboardScreen extends StatefulWidget {
 
 class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _sidebarVisible = true;
-  bool _rightPanelVisible = true;
   bool _notificationsPanelVisible = true;
   bool _activityPanelVisible = true;
   bool _quickAccessPanelVisible = true;
@@ -339,7 +338,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               _header(compact),
               Expanded(child: SingleChildScrollView(padding: EdgeInsets.all(compact ? 14 : 26), child: _page == 'عن البرنامج' ? _about() : _page == 'العملاء' || _page == 'الموردون' || _page == 'دليل العملاء' || _page == 'دليل الموردين' ? ErpPartiesScreen(initialKind: _page == 'الموردون' || _page == 'دليل الموردين' ? 'supplier' : 'customer') : _page == 'شجرة الحسابات' ? const ErpAccountsScreen() : _page == 'الفترات المالية' || _page == 'إقفال الفترة' ? const ErpFiscalPeriodsScreen() : _page == 'قيود اليومية' ? const ErpJournalEntriesScreen() : _page == 'ميزان المراجعة' ? const ErpLedgerReportsScreen(kind: ErpLedgerReportKind.trialBalance) : _page == 'الأستاذ العام' ? const ErpLedgerReportsScreen(kind: ErpLedgerReportKind.generalLedger) : _page == 'حركة حساب' ? const ErpLedgerReportsScreen(kind: ErpLedgerReportKind.accountMovement) : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? _home() : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'اختبار ومراجعة الحركات' ? const ErpMovementAuditScreen() : _page == 'دليل المخازن' ? const ErpInventoryMasterScreen(initialView: 'warehouses') : _page == 'مجموعات الأصناف' ? const ErpInventoryMasterScreen(initialView: 'groups') : _page == 'دليل الأصناف' ? const ErpInventoryMasterScreen(initialView: 'items') : _page == 'أرصدة الأصناف' || _page == 'كارت الصنف' || _page == 'الجرد والفروق' || _page == 'إذن إضافة' || _page == 'إذن صرف' || _page == 'تحويل مخزني' || _page == 'تسوية جرد' || _page == 'جرد فعلي' ? const ErpInventoryScreen() : _page == 'ملف الموظف' || _page == 'الحضور والانصراف' || _page == 'الإجازات والأذونات' ? const ErpHrOperationsScreen() : _page == 'مسير الرواتب' || _page == 'صرف الرواتب' ? const ErpPayrollScreen() : _page == 'قوائم أسعار البيع' ? const ErpPriceListsScreen(initialKind: 'sale') : _page == 'قوائم أسعار الموردين' || _page == 'قوائم أسعار الشراء' ? const ErpPriceListsScreen(initialKind: 'purchase') : _page == 'خريطة الحسابات التشغيلية' ? const ErpOperationalAccountMappingsScreen() : _page == 'الخزائن الرئيسية والفرعية' ? const ErpCashboxesScreen() : _page == 'الحسابات البنكية' ? const ErpCashboxesScreen(initialBankOnly: true) : _page == 'سندات القبض' ? const ErpCashVouchersScreen(initialType: 'receipt') : _page == 'سندات الصرف' ? const ErpCashVouchersScreen(initialType: 'payment') : _page == 'تحويل بين الخزائن' ? const ErpCashVouchersScreen(initialType: 'transfer') : _page == 'طلب شراء' || _page == 'أمر شراء' || _page == 'استلام مشتريات' || _page == 'فاتورة مشتريات' || _page == 'مرتجع مشتريات' ? ErpOperationalDocumentsScreen(kind: ErpOperationalKind.purchase, initialDocumentType: _page == 'طلب شراء' || _page == 'أمر شراء' ? 'order' : _page == 'استلام مشتريات' ? 'receipt' : _page == 'مرتجع مشتريات' ? 'return' : 'invoice') : _page == 'عرض سعر' || _page == 'أمر بيع' || _page == 'فاتورة مبيعات' || _page == 'إذن تحميل' || _page == 'تسليم طلب' || _page == 'مرتجع مبيعات' ? ErpOperationalDocumentsScreen(kind: ErpOperationalKind.sales, initialDocumentType: _page == 'عرض سعر' ? 'quotation' : _page == 'أمر بيع' ? 'order' : _page == 'إذن تحميل' || _page == 'تسليم طلب' ? 'delivery' : _page == 'مرتجع مبيعات' ? 'return' : 'invoice') : _page == 'المستخدمون والصلاحيات' ? _permissionsScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? _delegateAllocationScreen() : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _page == 'قواعد الورديات والحضور والانصراف' ? const HrShiftRulesScreen() : _page == 'أجهزة البصمة وربط الحضور' ? const HrFingerprintDevicesScreen() : _workspace())),
             ])),
-            if (!compact && _rightPanelVisible) SizedBox(width: 286, child: _rightPanel()),
+            if (!compact && (_notificationsPanelVisible || _activityPanelVisible || _quickAccessPanelVisible)) SizedBox(width: 286, child: _rightPanel()),
           ])),
         ]),
       );
@@ -522,12 +521,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               const SizedBox(width: 8),
               const Expanded(child: Text('لوحة التنبيهات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
               Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: _orange, borderRadius: BorderRadius.circular(20)), child: const Text('3', style: TextStyle(color: _purple, fontWeight: FontWeight.w900))),
-              IconButton(
-                tooltip: 'إخفاء لوحة التنبيهات',
-                visualDensity: VisualDensity.compact,
-                onPressed: () => setState(() => _notificationsPanelVisible = false),
-                icon: const Icon(Icons.visibility_off_outlined, color: Colors.white, size: 19),
-              ),
             ]),
             const SizedBox(height: 12),
             _notice(Icons.inventory_2_outlined, 'مراجعة المخزون', 'راجع حدود إعادة الطلب والصلاحية', _orange),
@@ -546,12 +539,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               const Icon(Icons.history_rounded, color: Colors.white),
               const SizedBox(width: 8),
               const Expanded(child: Text('سجل النشاطات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
-              IconButton(
-                tooltip: 'إخفاء سجل النشاطات',
-                visualDensity: VisualDensity.compact,
-                onPressed: () => setState(() => _activityPanelVisible = false),
-                icon: const Icon(Icons.visibility_off_outlined, color: Colors.white, size: 19),
-              ),
             ]),
             const SizedBox(height: 12),
             ..._activityLog.map((entry) => Padding(
@@ -575,12 +562,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               const Icon(Icons.star_rounded, color: Colors.white),
               const SizedBox(width: 8),
               const Expanded(child: Text('الوصول السريع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
-              IconButton(
-                tooltip: 'إخفاء الوصول السريع',
-                visualDensity: VisualDensity.compact,
-                onPressed: () => setState(() => _quickAccessPanelVisible = false),
-                icon: const Icon(Icons.visibility_off_outlined, color: Colors.white, size: 19),
-              ),
             ]),
             const SizedBox(height: 10),
             Wrap(spacing: 5, runSpacing: 5, children: [
@@ -755,27 +736,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     if (!compact) ...[
       IconButton(
         visualDensity: VisualDensity.compact,
-        tooltip: _rightPanelVisible ? 'إخفاء لوحات المهام الثلاث' : 'إظهار لوحات المهام الثلاث',
-        onPressed: () => setState(() => _rightPanelVisible = !_rightPanelVisible),
-        icon: Icon(_rightPanelVisible ? Icons.view_sidebar_rounded : Icons.view_sidebar_outlined, color: _purple),
-      ),
-      IconButton(
-        tooltip: _notificationsPanelVisible ? 'إخفاء لوحة التنبيهات' : 'إظهار لوحة التنبيهات',
-        visualDensity: VisualDensity.compact,
-        onPressed: () => setState(() => _notificationsPanelVisible = !_notificationsPanelVisible),
-        icon: Icon(_notificationsPanelVisible ? Icons.notifications_active_outlined : Icons.notifications_off_outlined, color: _purple, size: 20),
-      ),
-      IconButton(
-        tooltip: _activityPanelVisible ? 'إخفاء سجل النشاطات' : 'إظهار سجل النشاطات',
-        visualDensity: VisualDensity.compact,
-        onPressed: () => setState(() => _activityPanelVisible = !_activityPanelVisible),
-        icon: Icon(_activityPanelVisible ? Icons.history_rounded : Icons.history_toggle_off_rounded, color: _purple, size: 20),
-      ),
-      IconButton(
-        tooltip: _quickAccessPanelVisible ? 'إخفاء الوصول السريع' : 'إظهار الوصول السريع',
-        visualDensity: VisualDensity.compact,
-        onPressed: () => setState(() => _quickAccessPanelVisible = !_quickAccessPanelVisible),
-        icon: Icon(_quickAccessPanelVisible ? Icons.star_rounded : Icons.star_border_rounded, color: _purple, size: 20),
+        tooltip: (_notificationsPanelVisible || _activityPanelVisible || _quickAccessPanelVisible)
+            ? 'إخفاء لوحات المهام الثلاث'
+            : 'إظهار لوحات المهام الثلاث',
+        onPressed: () => setState(() {
+          final showPanels = !(_notificationsPanelVisible || _activityPanelVisible || _quickAccessPanelVisible);
+          _notificationsPanelVisible = showPanels;
+          _activityPanelVisible = showPanels;
+          _quickAccessPanelVisible = showPanels;
+        }),
+        icon: const Icon(Icons.menu_rounded, color: _purple),
       ),
     ],
     IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مركز الإشعارات التجريبي'))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
