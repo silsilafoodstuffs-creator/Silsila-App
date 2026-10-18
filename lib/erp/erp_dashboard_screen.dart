@@ -1256,7 +1256,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _executiveKpi(String title, String value, String note, IconData icon, Color color) =>
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7), border: Border.all(color: const Color(0xFFE8E0F0))),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE6DDED)),
+          boxShadow: const [
+            BoxShadow(color: Color(0x08000000), blurRadius: 5, offset: Offset(0, 2)),
+          ],
+        ),
         child: Row(children: [
           Container(width: 22, height: 22, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(5)), child: Icon(icon, color: color, size: 12)),
           const SizedBox(width: 4),
@@ -1271,7 +1278,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _executivePanel({required String title, required String subtitle, required IconData icon, required Widget child}) =>
       Container(
         padding: const EdgeInsets.all(7),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE8E0F0))),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0xFFE6DDED)),
+          boxShadow: const [
+            BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 1)),
+          ],
+        ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
             Container(width: 22, height: 22, decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(5)), child: Icon(icon, color: _purple, size: 13)),
@@ -1295,11 +1309,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         const SizedBox(height: 2),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 4,
-            backgroundColor: const Color(0xFFEFEAF4),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
+          child: Container(
+            height: 4,
+            color: const Color(0xFFEFEAF4),
+            alignment: AlignmentDirectional.centerStart,
+            child: FractionallySizedBox(
+              widthFactor: (progress ?? 0.0).clamp(0.0, 1.0).toDouble(),
+              child: ColoredBox(color: color),
+            ),
           ),
         ),
       ]);
