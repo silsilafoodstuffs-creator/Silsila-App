@@ -130,7 +130,19 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _notificationsPanelVisible = true;
   bool _activityPanelVisible = true;
   bool _quickAccessPanelVisible = true;
-  String _module = 'إدارة البرنامج';
+  bool _executiveAccessChecked = false;
+  bool _executiveSummaryAllowed = true;
+  bool _executivePartialConfigured = false;
+  final Set<String> _executiveAllowedSections = <String>{};
+  static const Map<String, String> _executivePermissionSectionKeys = {
+    'المبيعات والعملاء': 'مؤشرات المبيعات والعملاء',
+    'المالية والسيولة': 'مؤشرات المالية والسيولة',
+    'المخزون والمشتريات': 'مؤشرات المخزون والمشتريات',
+    'الطلبات والتوزيع': 'مؤشرات الطلبات والتوزيع',
+    'الموظفون والفروع': 'مؤشرات الموظفين والفروع',
+    'الرقابة والتنبيهات': 'مؤشرات الرقابة والتنبيهات',
+  };
+  String _module = 'الحسابات المالية';
   String _selectedAppKey = 'silsila';
   String _appName = 'سلسلة';
   Color _appPrimary = const Color(0xFF3E007D);
@@ -215,6 +227,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       await _loadPermissionsForSelectedApp();
       await _loadSavedAppActivity();
       await _loadWorkspaceSettings(companyId);
+      await _loadExecutivePermissions(companyId);
       await _loadExecutiveMetrics(companyId);
     } catch (error) {
       if (!mounted) return;
@@ -223,6 +236,53 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       });
     } finally {
       if (mounted) setState(() => _appManagementLoading = false);
+    }
+  }
+
+  Future<void> _loadExecutivePermissions(String companyId) async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) {
+      if (mounted) setState(() { _executiveAccessChecked = true; _executiveSummaryAllowed = true; _executivePartialConfigured = false; _executiveAllowedSections.clear(); });
+      return;
+    }
+    try {
+      final rows = await Supabase.instance.client
+          .from('erp_user_permissions')
+          .select('menu_key,allow_access')
+          .eq('company_id', companyId)
+          .eq('user_id', userId);
+      final permissions = <String, bool>{
+        for (final row in (rows as List).whereType<Map<String, dynamic>>())
+          (row['menu_key'] ?? '').toString(): row['allow_access'] == true,
+      };
+      const parentKey = 'التقارير والتحليلات::تقارير::الملخص التنفيذي';
+      final childKeys = _executivePermissionSectionKeys.values
+          .map((label) => 'التقارير والتحليلات::تقارير::$label')
+          .toList();
+      final hasParent = permissions.containsKey(parentKey);
+      final configuredChildren = childKeys.where(permissions.containsKey).toList();
+      if (!mounted) return;
+      setState(() {
+        _executiveAccessChecked = true;
+        _executiveSummaryAllowed = hasParent ? permissions[parentKey] == true : true;
+        _executivePartialConfigured = configuredChildren.isNotEmpty;
+        _executiveAllowedSections
+          ..clear()
+          ..addAll(_executivePermissionSectionKeys.entries
+              .where((entry) => permissions['التقارير والتحليلات::تقارير::${entry.value}'] == true)
+              .map((entry) => entry.key));
+        if (!_executivePartialConfigured) {
+          _executiveAllowedSections.addAll(_executivePermissionSectionKeys.keys);
+        }
+      });
+    } catch (_) {
+      // Keep the summary usable until the permissions schema is installed.
+      if (mounted) setState(() {
+        _executiveAccessChecked = true;
+        _executiveSummaryAllowed = true;
+        _executivePartialConfigured = false;
+        _executiveAllowedSections..clear()..addAll(_executivePermissionSectionKeys.keys);
+      });
     }
   }
 
@@ -506,8 +566,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _allowThemeManagement = true;
   bool _allowPermissionManagement = true;
   final List<String> _activityLog = ['تم فتح لوحة ERP', 'تم تجهيز أقسام المخازن والفروع', 'تمت إضافة نماذج إدارة المستندات'];
-  String _group = 'بيانات أساسية';
-  String _page = 'بيانات الشركة';
+  String _group = 'تقارير';
+  String _page = 'ملخص تنفيذي';
   String _search = '';
   String _accountSearch = '';
   final TextEditingController _accountSearchController = TextEditingController();
@@ -1450,6 +1510,20 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   Widget _home() {
+    if (_executiveAccessChecked && !_executiveSummaryAllowed) {
+      return Center(child: Container(
+        constraints: const BoxConstraints(maxWidth: 560),
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE7E0EF))),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.lock_outline_rounded, color: _purple, size: 52),
+          const SizedBox(height: 12),
+          const Text('الملخص التنفيذي غير متاح لحسابك', style: TextStyle(color: _purple, fontSize: 20, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          const Text('لا توجد صلاحية لعرض هذه الشاشة. اطلب من مسؤول النظام تعديل صلاحياتك.', textAlign: TextAlign.center, style: TextStyle(height: 1.6)),
+        ]),
+      ));
+    }
     final sections = <Map<String, Object>>[
       {
         'title': 'المبيعات والعملاء',
@@ -1527,7 +1601,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       },
     ];
 
-    final allItems = sections.expand((section) => section['items'] as List<Map<String, Object>>).toList();
+    final visibleSections = _executivePartialConfigured
+        ? sections.where((section) => _executiveAllowedSections.contains(section['title'])).toList()
+        : sections;
+    final allItems = visibleSections.expand((section) => section['items'] as List<Map<String, Object>>).toList();
+    final canSales = !_executivePartialConfigured || _executiveAllowedSections.contains('المبيعات والعملاء');
+    final canFinance = !_executivePartialConfigured || _executiveAllowedSections.contains('المالية والسيولة');
+    final canInventory = !_executivePartialConfigured || _executiveAllowedSections.contains('المخزون والمشتريات');
+    final canDistribution = !_executivePartialConfigured || _executiveAllowedSections.contains('الطلبات والتوزيع');
+    final canPeople = !_executivePartialConfigured || _executiveAllowedSections.contains('الموظفون والفروع');
+    final canControls = !_executivePartialConfigured || _executiveAllowedSections.contains('الرقابة والتنبيهات');
+
 
     return LayoutBuilder(builder: (context, outerConstraints) {
       final wide = outerConstraints.maxWidth >= 900;
@@ -1581,20 +1665,20 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             mainAxisSpacing: 12,
             childAspectRatio: columns == 6 ? 1.25 : columns == 3 ? 1.35 : 1.2,
             children: [
-              _executiveKpi('صافي المبيعات', _executiveMoney(_executiveSales), 'الشهر الحالي • فواتير مرحلة', Icons.point_of_sale_rounded, _purple),
-              _executiveKpi('مجمل الربح التقديري', _executiveMoney(_executiveGrossProfit), 'على تكلفة الشراء الحالية', Icons.trending_up_rounded, _green),
-              _executiveKpi('المحصّل على الفواتير', _executiveMoney(_executiveCollections), 'المدفوع المسجل بالفواتير', Icons.payments_outlined, _orange),
-              _executiveKpi('مديونية العملاء', _executiveMoney(_executiveReceivables), 'فواتير غير مسددة بالكامل', Icons.groups_rounded, _pink),
-              _executiveKpi('قيمة المخزون', _executiveMoney(_executiveInventoryValue), 'من حركات المخزون والتكلفة الحالية', Icons.inventory_2_rounded, const Color(0xFF2475B8)),
-              _executiveKpi('مشتريات الشهر', _executiveMoney(_executivePurchases), 'فواتير شراء مرحلة وغير تجريبية', Icons.local_shipping_outlined, const Color(0xFF168A70)),
+              if (canSales) _executiveKpi('صافي المبيعات', _executiveMoney(_executiveSales), 'الشهر الحالي • فواتير مرحلة', Icons.point_of_sale_rounded, _purple),
+              if (canFinance) _executiveKpi('مجمل الربح التقديري', _executiveMoney(_executiveGrossProfit), 'على تكلفة الشراء الحالية', Icons.trending_up_rounded, _green),
+              if (canFinance) _executiveKpi('المحصّل على الفواتير', _executiveMoney(_executiveCollections), 'المدفوع المسجل بالفواتير', Icons.payments_outlined, _orange),
+              if (canFinance) _executiveKpi('مديونية العملاء', _executiveMoney(_executiveReceivables), 'فواتير غير مسددة بالكامل', Icons.groups_rounded, _pink),
+              if (canInventory) _executiveKpi('قيمة المخزون', _executiveMoney(_executiveInventoryValue), 'من حركات المخزون والتكلفة الحالية', Icons.inventory_2_rounded, const Color(0xFF2475B8)),
+              if (canInventory) _executiveKpi('مشتريات الشهر', _executiveMoney(_executivePurchases), 'فواتير شراء مرحلة وغير تجريبية', Icons.local_shipping_outlined, const Color(0xFF168A70)),
             ],
           );
         }),
         const SizedBox(height: 16),
-        if (wide || mid)
+        if ((wide || mid) && (canSales || canFinance || canInventory))
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: _executiveChartPanel(
+              if (canSales) Expanded(child: _executiveChartPanel(
                 title: 'اتجاه المبيعات',
                 caption: 'آخر 7 أيام • فواتير مرحلة وغير تجريبية',
                 color: _purple,
@@ -1602,7 +1686,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 chart: _ExecutiveChartPainter(color: _purple, values: _executiveDailySales),
               )),
               const SizedBox(width: 12),
-              Expanded(child: _executiveChartPanel(
+              if (canSales || canFinance) Expanded(child: _executiveChartPanel(
                 title: 'مزيج الأداء',
                 caption: 'مبيعات • مشتريات • المحصّل',
                 color: _orange,
@@ -1611,10 +1695,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               )),
             ]),
             const SizedBox(height: 12),
-            _executiveHighlights(),
+            if (canControls || canDistribution || canPeople) _executiveHighlights(),
           ])
         else ...[
-          _executiveChartPanel(
+          if (canSales) _executiveChartPanel(
             title: 'اتجاه المبيعات',
             caption: 'آخر 7 أيام • فواتير مرحلة وغير تجريبية',
             color: _purple,
@@ -1622,7 +1706,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             chart: const _ExecutiveChartPainter(color: _purple),
           ),
           const SizedBox(height: 3),
-          _executiveChartPanel(
+          if (canSales || canFinance) _executiveChartPanel(
             title: 'مزيج الأداء',
             caption: 'مبيعات • مشتريات • المحصّل',
             color: _orange,
@@ -1633,7 +1717,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           _executiveHighlights(),
         ],
         const SizedBox(height: 16),
-        _executiveAdditionalCharts(sideBySide: wide || mid),
+        if (canFinance || canInventory) _executiveAdditionalCharts(sideBySide: wide || mid),
         const SizedBox(height: 18),
         LayoutBuilder(builder: (context, constraints) {
           final columns = constraints.maxWidth >= 1150 ? 3 : constraints.maxWidth >= 680 ? 2 : 1;
@@ -1644,7 +1728,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             crossAxisSpacing: 7,
             mainAxisSpacing: 7,
             childAspectRatio: columns == 3 ? 1.0 : columns == 2 ? 1.05 : 1.0,
-            children: sections.map((section) => _executiveSectionCompact(
+            children: visibleSections.map((section) => _executiveSectionCompact(
               title: section['title'] as String,
               icon: section['icon'] as IconData,
               color: section['color'] as Color,
