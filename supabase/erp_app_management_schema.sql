@@ -105,6 +105,134 @@ alter table public.erp_app_assets enable row level security;
 alter table public.erp_app_role_permissions enable row level security;
 alter table public.erp_app_activity_log enable row level security;
 
+-- Company-scoped policies. Requires erp_security_membership.sql to be applied first.
+-- Registry writes and identity changes are limited to company owners/admins.
+drop policy if exists erp_managed_apps_select_member on public.erp_managed_apps;
+create policy erp_managed_apps_select_member on public.erp_managed_apps
+for select to authenticated
+using (public.erp_user_can_access_company(company_id));
+
+drop policy if exists erp_managed_apps_insert_admin on public.erp_managed_apps;
+create policy erp_managed_apps_insert_admin on public.erp_managed_apps
+for insert to authenticated
+with check (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
+
+drop policy if exists erp_managed_apps_update_admin on public.erp_managed_apps;
+create policy erp_managed_apps_update_admin on public.erp_managed_apps
+for update to authenticated
+using (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]))
+with check (public.erp_user_has_company_role(company_id, array['owner','admin']::text[]));
+
+drop policy if exists erp_app_theme_select_member on public.erp_app_theme_settings;
+create policy erp_app_theme_select_member on public.erp_app_theme_settings
+for select to authenticated
+using (exists (
+  select 1 from public.erp_managed_apps a
+  where a.id = app_id and public.erp_user_can_access_company(a.company_id)
+));
+
+drop policy if exists erp_app_theme_insert_admin on public.erp_app_theme_settings;
+create policy erp_app_theme_insert_admin on public.erp_app_theme_settings
+for insert to authenticated
+with check (exists (
+  select 1 from public.erp_managed_apps a
+  where a.id = app_id and public.erp_user_has_company_role(a.company_id, array['owner','admin']::text[])
+));
+
+drop policy if exists erp_app_theme_update_admin on public.erp_app_theme_settings;
+create policy erp_app_theme_update_admin on public.erp_app_theme_settings
+for update to authenticated
+using (exists (
+  select 1 from public.erp_managed_apps a
+  where a.id = app_id and public.erp_user_has_company_role(a.company_id, array['owner','admin']::text[])
+))
+with check (exists (
+  select 1 from public.erp_managed_apps a
+  where a.id = app_id and public.erp_user_has_company_role(a.company_id, array['owner','admin']::text[])
+));
+
+drop policy if exists erp_app_assets_select_member on public.erp_app_assets;
+create policy erp_app_assets_select_member on public.erp_app_assets
+for select to authenticated
+using (exists (
+  select 1 from public.erp_managed_apps a
+  where a.id = app_id and public.erp_user_can_access_company(a.company_id)
+));
+
+drop policy if exists erp_app_assets_insert_admin on public.erp_app_assets;
+create policy erp_app_assets_insert_admin on public.erp_app_assets
+for insert to authenticated
+with check (
+  (uploaded_by is null or uploaded_by = auth.uid())
+  and exists (
+    select 1 from public.erp_managed_apps a
+    where a.id = app_id and public.erp_user_has_company_role(a.company_id, array['owner','admin']::text[])
+  )
+);
+
+drop policy if exists erp_app_assets_delete_admin on public.erp_app_assets;
+create policy erp_app_assets_delete_admin on public.erp_app_assets
+for delete to authenticated
+using (exists (
+  select 1 from public.erp_managed_apps a
+  where a.id = app_id and public.erp_user_has_company_role(a.company_id, array['owner','admin']::text[])
+));
+
+drop policy if exists erp_app_permissions_select_member on public.erp_app_role_permissions;
+create policy erp_app_permissions_select_member on public.erp_app_role_permissions
+for select to authenticated
+using (exists (
+  select 1 from public.erp_managed_apps a
+  where a.id = app_id and public.erp_user_can_access_company(a.company_id)
+));
+
+drop policy if exists erp_app_permissions_insert_admin on public.erp_app_role_permissions;
+create policy erp_app_permissions_insert_admin on public.erp_app_role_permissions
+for insert to authenticated
+with check (
+  (updated_by is null or updated_by = auth.uid())
+  and exists (
+    select 1 from public.erp_managed_apps a
+    where a.id = app_id and public.erp_user_has_company_role(a.company_id, array['owner','admin']::text[])
+  )
+);
+
+drop policy if exists erp_app_permissions_update_admin on public.erp_app_role_permissions;
+create policy erp_app_permissions_update_admin on public.erp_app_role_permissions
+for update to authenticated
+using (exists (
+  select 1 from public.erp_managed_apps a
+  where a.id = app_id and public.erp_user_has_company_role(a.company_id, array['owner','admin']::text[])
+))
+with check (
+  (updated_by is null or updated_by = auth.uid())
+  and exists (
+    select 1 from public.erp_managed_apps a
+    where a.id = app_id and public.erp_user_has_company_role(a.company_id, array['owner','admin']::text[])
+  )
+);
+
+drop policy if exists erp_app_permissions_delete_admin on public.erp_app_role_permissions;
+create policy erp_app_permissions_delete_admin on public.erp_app_role_permissions
+for delete to authenticated
+using (exists (
+  select 1 from public.erp_managed_apps a
+  where a.id = app_id and public.erp_user_has_company_role(a.company_id, array['owner','admin']::text[])
+));
+
+-- Activity history is readable by company members. Client-side inserts/updates/deletes
+-- intentionally remain blocked; a trusted backend should append audit events.
+drop policy if exists erp_app_activity_select_member on public.erp_app_activity_log;
+create policy erp_app_activity_select_member on public.erp_app_activity_log
+for select to authenticated
+using (public.erp_user_can_access_company(company_id));
+
+grant select, insert, update on public.erp_managed_apps to authenticated;
+grant select, insert, update on public.erp_app_theme_settings to authenticated;
+grant select, insert, delete on public.erp_app_assets to authenticated;
+grant select, insert, update, delete on public.erp_app_role_permissions to authenticated;
+grant select on public.erp_app_activity_log to authenticated;
+
 -- Deployment checklist:
 -- 1. Confirm erp_companies and erp_set_updated_at() exist.
 -- 2. Add restrictive company-scoped RLS policies for each table.
