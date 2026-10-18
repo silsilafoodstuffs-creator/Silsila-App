@@ -851,20 +851,31 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
                 child: Row(children: [
-                  Expanded(child: ListTile(
-                    dense: true,
-                    visualDensity: const VisualDensity(vertical: -2),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    selected: selectedModule,
-                    selectedTileColor: const Color(0xFF7040A0),
-                    leading: Icon(_iconFor(name), color: _orange, size: 20),
-                    title: Text(name, style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: selectedModule ? FontWeight.w800 : FontWeight.w500)),
-                    onTap: () => setState(() {
-                      _module = name;
-                      _group = moduleEntry.value.keys.first;
-                      _page = moduleEntry.value[_group]!.first;
-                      _search = '';
+                  Expanded(child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onDoubleTap: () => setState(() {
+                      if (moduleOpen) {
+                        _expandedModules.remove(name);
+                        _expandedGroups.removeWhere((key) => key.startsWith('$name::'));
+                      } else {
+                        _expandedModules.add(name);
+                      }
                     }),
+                    child: ListTile(
+                      dense: true,
+                      visualDensity: const VisualDensity(vertical: -2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      selected: selectedModule,
+                      selectedTileColor: const Color(0xFF7040A0),
+                      leading: Icon(_iconFor(name), color: _orange, size: 20),
+                      title: Text(name, style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: selectedModule ? FontWeight.w800 : FontWeight.w500)),
+                      onTap: () => setState(() {
+                        _module = name;
+                        _group = moduleEntry.value.keys.first;
+                        _page = moduleEntry.value[_group]!.first;
+                        _search = '';
+                      }),
+                    ),
                   )),
                   IconButton(
                     tooltip: moduleOpen ? 'طي القائمة' : 'توسيع القائمة',
@@ -890,19 +901,30 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                     padding: const EdgeInsetsDirectional.only(start: 13, end: 8),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       Row(children: [
-                        Expanded(child: ListTile(
-                          dense: true,
-                          visualDensity: const VisualDensity(vertical: -3),
-                          contentPadding: const EdgeInsetsDirectional.only(start: 10, end: 2),
-                          selected: selectedGroup,
-                          selectedTileColor: const Color(0xFF7040A0),
-                          title: Text(groupEntry.key, style: TextStyle(color: selectedGroup ? _orange : Colors.white70, fontSize: 11, fontWeight: FontWeight.w800)),
-                          onTap: () => setState(() {
-                            _module = name;
-                            _group = groupEntry.key;
-                            _page = groupEntry.value.first;
-                            _search = '';
+                        Expanded(child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onDoubleTap: () => setState(() {
+                            if (groupOpen) {
+                              _expandedGroups.remove(groupKey);
+                            } else {
+                              _expandedModules.add(name);
+                              _expandedGroups.add(groupKey);
+                            }
                           }),
+                          child: ListTile(
+                            dense: true,
+                            visualDensity: const VisualDensity(vertical: -3),
+                            contentPadding: const EdgeInsetsDirectional.only(start: 10, end: 2),
+                            selected: selectedGroup,
+                            selectedTileColor: const Color(0xFF7040A0),
+                            title: Text(groupEntry.key, style: TextStyle(color: selectedGroup ? _orange : Colors.white70, fontSize: 11, fontWeight: FontWeight.w800)),
+                            onTap: () => setState(() {
+                              _module = name;
+                              _group = groupEntry.key;
+                              _page = groupEntry.value.first;
+                              _search = '';
+                            }),
+                          ),
                         )),
                         IconButton(
                           tooltip: groupOpen ? 'طي الشاشات' : 'عرض الشاشات',
