@@ -499,10 +499,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final TextEditingController _accountSearchController = TextEditingController();
   Map<String, String>? _selectedRecord;
   final Map<String, List<Map<String, String>>> _saved = {};
+  final Set<String> _cloudLoadedWorkspacePages = <String>{};
+  final Set<String> _workspacePageLoadsInProgress = <String>{};
 
   List<String> get _pages => _modules[_module]![_group]!;
   List<Map<String, String>> get _rows {
-    final rows = _saved[_page] ?? _sampleRows(_page);
+    final rows = _cloudLoadedWorkspacePages.contains(_page)
+        ? (_saved[_page] ?? <Map<String, String>>[])
+        : (_saved[_page] ?? _sampleRows(_page));
     if (_search.trim().isEmpty) return rows;
     return rows.where((r) => r.values.any((v) => v.toLowerCase().contains(_search.toLowerCase()))).toList();
   }
@@ -1936,15 +1940,37 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     _selectedRecord = null;
   });
 
-  void _open(String module, String group, String page) => setState(() {
-    _module = module;
-    _group = group;
-    _page = page;
-    _search = '';
-    _selectedRecord = null;
-    _expandedModules.add(module);
-    _expandedGroups.add('$module::$group');
-  });
+  void _open(String module, String group, String page) {
+    setState(() {
+      _module = module;
+      _group = group;
+      _page = page;
+      _search = '';
+      _selectedRecord = null;
+      _expandedModules.add(module);
+      _expandedGroups.add('$module::$group');
+    });
+    _loadWorkspacePage(page);
+  }
+
+  Future<void> _loadWorkspacePage(String page) async {
+    final companyId = _appManagementCompanyId;
+    if (companyId == null || companyId.trim().isEmpty ||
+        _cloudLoadedWorkspacePages.contains(page) ||
+        !_workspacePageLoadsInProgress.add(page)) return;
+    try {
+      final records = await _workspaceRecordsService.listPage(companyId: companyId, pageKey: page);
+      if (!mounted || companyId != _appManagementCompanyId) return;
+      setState(() {
+        _saved[page] = records;
+        _cloudLoadedWorkspacePages.add(page);
+      });
+    } catch (error) {
+      if (mounted) _showActionMessage('تعذر تحميل بيانات "$page" من قاعدة البيانات. تأكد من تطبيق supabase/erp_workspace_records.sql وصلاحيات العضوية. $error');
+    } finally {
+      _workspacePageLoadsInProgress.remove(page);
+    }
+  }
 
   Widget _quick(String title, IconData icon, VoidCallback action) => OutlinedButton.icon(
     onPressed: action,
@@ -1968,7 +1994,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _workspace() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     Wrap(spacing: 8, runSpacing: 8, children: _modules[_module]!.keys.map((g) {
       final selected = g == _group;
-      return ChoiceChip(label: Text(g), selected: selected, selectedColor: _purple, labelStyle: TextStyle(color: selected ? Colors.white : _purple, fontWeight: FontWeight.w700), onSelected: (_) => setState(() { _group = g; _page = _modules[_module]![g]!.first; _search = ''; }));
+      return ChoiceChip(label: Text(g), selected: selected, selectedColor: _purple, labelStyle: TextStyle(color: selected ? Colors.white : _purple, fontWeight: FontWeight.w700), onSelected: (_) { final targetPage = _modules[_module]![g]!.first; setState(() { _group = g; _page = targetPage; _search = ''; }); _loadWorkspacePage(targetPage); });
     }).toList()),
     const SizedBox(height: 18),
     Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -2001,12 +2027,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         label: Text(p, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
         backgroundColor: p == _page ? const Color(0xFF6E2BA6) : _purple,
         side: BorderSide(color: p == _page ? _orange : const Color(0xFF6E2BA6), width: p == _page ? 2 : 1),
-        onPressed: () => setState(() { _page = p; _selectedRecord = null; }),
+        onPressed: () { setState(() { _page = p; _selectedRecord = null; }); _loadWorkspacePage(p); },
       )).toList()),
       const SizedBox(height: 16),
       if (_group == 'تقارير') const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('نموذج تقارير تجريبي؛ ستظهر المؤشرات الفعلية بعد ربط مصادر البيانات واعتماد المعادلات المحاسبية.', style: TextStyle(color: Colors.black54, height: 1.6))),
       if (_rows.isEmpty) const Padding(padding: EdgeInsets.all(28), child: Text('لا توجد نتائج مطابقة.', textAlign: TextAlign.center))
-      else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _rows.first.keys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _rows.first.keys.map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
+      else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _rows.first.keys.where((k) => k != '_مرجع داخلي').map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _rows.first.keys.where((k) => k != '_مرجع داخلي').map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
       const SizedBox(height: 12),
       Text('عدد السجلات المعروضة: ${_rows.length} • تحقق من حالة الحفظ بجوار كل عملية', style: const TextStyle(color: Colors.black45, fontSize: 11)),
     ])),
