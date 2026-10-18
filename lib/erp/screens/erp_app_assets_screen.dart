@@ -296,6 +296,20 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
     );
     if (confirmed != true) return;
     try {
+      if (const {'app_logo', 'splash', 'app_icon'}.contains(asset.assetType)) {
+        final current = await _repository.getThemeSettings(appId: widget.appId!);
+        if (current != null) {
+          await _repository.saveThemeSettings(ErpAppThemeSettings(
+            appId: current.appId,
+            displayName: current.displayName,
+            primaryColor: current.primaryColor,
+            accentColor: current.accentColor,
+            logoPath: current.logoPath == asset.storagePath ? null : current.logoPath,
+            splashImagePath: current.splashImagePath == asset.storagePath ? null : current.splashImagePath,
+            iconPath: current.iconPath == asset.storagePath ? null : current.iconPath,
+          ));
+        }
+      }
       await _storage.deleteImage(
         companyId: widget.companyId!,
         appId: widget.appId!,
