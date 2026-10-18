@@ -194,15 +194,15 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
     );
     if (confirmed != true) return;
     try {
+      final assetId = asset.id;
+      if (assetId == null || assetId.isEmpty) {
+        throw StateError('معرّف سجل الصورة غير متاح؛ لم يتم حذف أي شيء.');
+      }
       await _storage.deleteImage(
         companyId: widget.companyId!,
         appId: widget.appId!,
         storagePath: asset.storagePath,
       );
-      final assetId = asset.id;
-      if (assetId == null || assetId.isEmpty) {
-        throw StateError('معرّف سجل الصورة غير متاح؛ لم يتم حذف السجل من قاعدة البيانات.');
-      }
       await _repository.deleteAssetRecord(assetId: assetId);
       if (!mounted) return;
       setState(() => _message = 'تم حذف الصورة ومرجعها.');
