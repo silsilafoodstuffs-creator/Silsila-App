@@ -27,7 +27,6 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
   final _taxNo = TextEditingController();
   final _branch = TextEditingController(text: '0');
   final _clientId = TextEditingController();
-  final _clientSecret = TextEditingController();
   final _activity = TextEditingController();
   final _search = TextEditingController();
   String _view = '';
@@ -47,7 +46,7 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
   }
   @override
   void dispose() {
-    _taxNo.dispose(); _branch.dispose(); _clientId.dispose(); _clientSecret.dispose(); _activity.dispose(); _search.dispose();
+    _taxNo.dispose(); _branch.dispose(); _clientId.dispose(); _activity.dispose(); _search.dispose();
     super.dispose();
   }
 
@@ -60,7 +59,6 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
         _taxNo.text = (r['taxpayer_number'] ?? '').toString();
         _branch.text = (r['branch_code'] ?? '0').toString();
         _clientId.text = (r['client_id'] ?? '').toString();
-        _clientSecret.text = (r['client_secret'] ?? '').toString();
         _activity.text = (r['activity_code'] ?? '').toString();
         _production = r['environment'] == 'production';
         _status = (r['connection_status'] ?? 'الإعدادات محفوظة ولم يتم اختبار الاتصال').toString();
@@ -86,7 +84,7 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
       await _db!.from('erp_einvoice_settings').upsert({
         'company_id': widget.companyId, 'taxpayer_number': _taxNo.text.trim(),
         'branch_code': _branch.text.trim(), 'client_id': _clientId.text.trim(),
-        'client_secret': _clientSecret.text, 'activity_code': _activity.text.trim(),
+        'activity_code': _activity.text.trim(),
         'environment': _production ? 'production' : 'preproduction',
         'connection_status': 'الإعدادات محفوظة؛ لم يتم التحقق من اتصال الهيئة',
         'updated_at': DateTime.now().toUtc().toIso8601String(),
@@ -165,7 +163,7 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
             const SizedBox(height: 10), _field('كود الفرع', _branch, validator: (v) => v == null || v.trim().isEmpty ? 'أدخل كود الفرع' : null),
             const SizedBox(height: 10), _field('كود النشاط', _activity),
             const SizedBox(height: 10), _field('معرّف نظام التكامل Client ID', _clientId),
-            const SizedBox(height: 10), _field('سر نظام التكامل Client Secret', _clientSecret, secret: true),
+            const SizedBox(height: 10), const Align(alignment: AlignmentDirectional.centerStart, child: Text('يُضبط Client Secret ومفتاح الشهادة داخل مخزن أسرار آمن لخدمة التكامل، ولا يُحفظان في قاعدة بيانات الواجهة.', style: TextStyle(color: Colors.deepOrange, fontSize: 12, height: 1.6))),
             SwitchListTile(value: _production, onChanged: (v) => setState(() => _production = v), title: const Text('استخدام البيئة الفعلية'), subtitle: const Text('اتركه مغلقاً أثناء الإعداد والاختبار'), activeColor: _taxPurple),
             Align(alignment: AlignmentDirectional.centerStart, child: _btn(_busy ? 'جارٍ الحفظ...' : 'حفظ الإعدادات', Icons.save, _saveSettings, primary: true))
           ]))),
