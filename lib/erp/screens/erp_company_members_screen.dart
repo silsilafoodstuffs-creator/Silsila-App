@@ -233,7 +233,7 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
                     ])),
                     Switch(
                       value: member['is_active'] == true,
-                      onChanged: isCurrent ? null : (value) => _updateMember(member, active: value),
+                      onChanged: isCurrent || isOwner ? null : (value) => _updateMember(member, active: value),
                     ),
                   ]),
                   const SizedBox(height: 8),
