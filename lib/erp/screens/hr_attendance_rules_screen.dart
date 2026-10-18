@@ -82,7 +82,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
           ),
         ),
       ),
-      Wrap(spacing:5,runSpacing:4,crossAxisAlignment:WrapCrossAlignment.center,children:[
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
         Row(mainAxisSize:MainAxisSize.min,children:[
           Checkbox(value:s.nightShift,onChanged:canEdit?(v)=>setState(()=>s.nightShift=v??false):null,visualDensity:VisualDensity.compact),
           const Text('وردية ليل / سهر',style:TextStyle(fontSize:12)),
@@ -172,7 +172,16 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       Text(unit??_unitFor(label),style:const TextStyle(fontSize:10,color:Colors.black54)),
     ]),
   ]));
-  Widget _numberFields(List<Widget> children)=>Wrap(spacing:6,runSpacing:5,children:children);
+  Widget _numberFields(List<Widget> children)=>SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children.map((child)=>Padding(
+        padding: const EdgeInsetsDirectional.only(end: 8),
+        child: child,
+      )).toList(),
+    ),
+  );
 
   Widget _absenceRules({
     required String title,
