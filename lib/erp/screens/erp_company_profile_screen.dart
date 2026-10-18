@@ -36,6 +36,12 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant ErpCompanyProfileScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId) _load();
+  }
+
+  @override
   void dispose() {
     _legalName.dispose();
     _tradeName.dispose();
