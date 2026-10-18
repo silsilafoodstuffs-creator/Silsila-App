@@ -75,6 +75,9 @@ class ErpDashboardScreen extends StatefulWidget {
 class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _sidebarVisible = true;
   bool _rightPanelVisible = true;
+  bool _notificationsPanelVisible = true;
+  bool _activityPanelVisible = true;
+  bool _quickAccessPanelVisible = true;
   String _module = 'إدارة البرنامج';
   String _selectedAppKey = 'silsila';
   String _appName = 'سلسلة';
@@ -509,60 +512,100 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _rightPanel() => Container(
     decoration: const BoxDecoration(border: Border(left: BorderSide(color: Color(0xFFECE7F2)))),
     child: SafeArea(child: ListView(padding: const EdgeInsets.all(12), children: [
-      Container(
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(color: _purple, borderRadius: BorderRadius.circular(16)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            const Icon(Icons.notifications_active_outlined, color: Colors.white),
-            const SizedBox(width: 8),
-            const Expanded(child: Text('لوحة التنبيهات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
-            Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: _orange, borderRadius: BorderRadius.circular(20)), child: const Text('3', style: TextStyle(color: _purple, fontWeight: FontWeight.w900))),
+      if (_notificationsPanelVisible) ...[
+        Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(color: _purple, borderRadius: BorderRadius.circular(16)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              const Icon(Icons.notifications_active_outlined, color: Colors.white),
+              const SizedBox(width: 8),
+              const Expanded(child: Text('لوحة التنبيهات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: _orange, borderRadius: BorderRadius.circular(20)), child: const Text('3', style: TextStyle(color: _purple, fontWeight: FontWeight.w900))),
+              IconButton(
+                tooltip: 'إخفاء لوحة التنبيهات',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => setState(() => _notificationsPanelVisible = false),
+                icon: const Icon(Icons.visibility_off_outlined, color: Colors.white, size: 19),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            _notice(Icons.inventory_2_outlined, 'مراجعة المخزون', 'راجع حدود إعادة الطلب والصلاحية', _orange),
+            _notice(Icons.security_outlined, 'صلاحيات المستخدمين', 'إعداد سياسات الوصول قبل التشغيل', _pink),
+            _notice(Icons.cloud_off_outlined, 'الربط بقاعدة البيانات', 'بعض الشاشات ما زالت تجريبية', Colors.white),
           ]),
-          const SizedBox(height: 12),
-          _notice(Icons.inventory_2_outlined, 'مراجعة المخزون', 'راجع حدود إعادة الطلب والصلاحية', _orange),
-          _notice(Icons.security_outlined, 'صلاحيات المستخدمين', 'إعداد سياسات الوصول قبل التشغيل', _pink),
-          _notice(Icons.cloud_off_outlined, 'الربط بقاعدة البيانات', 'بعض الشاشات ما زالت تجريبية', Colors.white),
-        ]),
-      ),
-      const SizedBox(height: 16),
-      Container(
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(color: _purple, borderRadius: BorderRadius.circular(16)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Row(children: [Icon(Icons.history_rounded, color: Colors.white), SizedBox(width: 8), Expanded(child: Text('سجل النشاطات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)))]),
-          const SizedBox(height: 12),
-          ..._activityLog.map((entry) => Padding(padding: const EdgeInsets.only(bottom: 12), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Icon(Icons.circle, size: 7, color: _orange), const SizedBox(width: 9), Expanded(child: Text(entry, style: const TextStyle(fontSize: 11, height: 1.5, color: Colors.white, fontWeight: FontWeight.w800)))]))),
-        ]),
-      ),
-      const SizedBox(height: 12),
-      Container(
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: _purple,
-          borderRadius: BorderRadius.circular(16),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Row(children: [
-            Icon(Icons.star_rounded, color: Colors.white),
-            SizedBox(width: 8),
-            Expanded(child: Text('الوصول السريع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+        const SizedBox(height: 16),
+      ],
+      if (_activityPanelVisible) ...[
+        Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(color: _purple, borderRadius: BorderRadius.circular(16)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              const Icon(Icons.history_rounded, color: Colors.white),
+              const SizedBox(width: 8),
+              const Expanded(child: Text('سجل النشاطات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+              IconButton(
+                tooltip: 'إخفاء سجل النشاطات',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => setState(() => _activityPanelVisible = false),
+                icon: const Icon(Icons.visibility_off_outlined, color: Colors.white, size: 19),
+              ),
+            ]),
+            const SizedBox(height: 12),
+            ..._activityLog.map((entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Icon(Icons.circle, size: 7, color: _orange),
+                const SizedBox(width: 9),
+                Expanded(child: Text(entry, style: const TextStyle(fontSize: 11, height: 1.5, color: Colors.white, fontWeight: FontWeight.w800))),
+              ]),
+            )),
           ]),
-          const SizedBox(height: 10),
-          Wrap(spacing: 5, runSpacing: 5, children: [
-            _quick('قواعد الحضور والانصراف', Icons.access_time_filled_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
-            _quick('شجرة الحسابات', Icons.account_tree_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'شجرة الحسابات')),
-            _quick('الخزائن', Icons.account_balance_wallet_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'الخزائن الرئيسية والفرعية')),
-            _quick('دليل الأصناف', Icons.inventory_2_rounded, () => _open('المخازن والفروع', 'بيانات أساسية', 'دليل الأصناف')),
-            _quick('دليل العملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
-            _quick('ملف الموظف', Icons.badge_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'ملف الموظف')),
-            _quick('قواعد الورديات', Icons.schedule_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
-            _quick('أجهزة البصمة', Icons.fingerprint_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'أجهزة البصمة وربط الحضور')),
+        ),
+        const SizedBox(height: 12),
+      ],
+      if (_quickAccessPanelVisible) ...[
+        Container(
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(color: _purple, borderRadius: BorderRadius.circular(16)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              const Icon(Icons.star_rounded, color: Colors.white),
+              const SizedBox(width: 8),
+              const Expanded(child: Text('الوصول السريع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+              IconButton(
+                tooltip: 'إخفاء الوصول السريع',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => setState(() => _quickAccessPanelVisible = false),
+                icon: const Icon(Icons.visibility_off_outlined, color: Colors.white, size: 19),
+              ),
+            ]),
+            const SizedBox(height: 10),
+            Wrap(spacing: 5, runSpacing: 5, children: [
+              _quick('قواعد الحضور والانصراف', Icons.access_time_filled_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
+              _quick('شجرة الحسابات', Icons.account_tree_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'شجرة الحسابات')),
+              _quick('الخزائن', Icons.account_balance_wallet_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'الخزائن الرئيسية والفرعية')),
+              _quick('دليل الأصناف', Icons.inventory_2_rounded, () => _open('المخازن والفروع', 'بيانات أساسية', 'دليل الأصناف')),
+              _quick('دليل العملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
+              _quick('ملف الموظف', Icons.badge_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'ملف الموظف')),
+              _quick('قواعد الورديات', Icons.schedule_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
+              _quick('أجهزة البصمة', Icons.fingerprint_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'أجهزة البصمة وربط الحضور')),
+            ]),
           ]),
-        ]),
-      ),
-      const SizedBox(height: 12),
-      const Text('ملاحظة: التنبيهات وسجل النشاطات حاليًا أمثلة محلية، وليسا متصلين بعد بأحداث النظام الفعلية.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
+        ),
+      ],
+      if (_notificationsPanelVisible || _activityPanelVisible)
+        const Padding(
+          padding: EdgeInsets.only(top: 12),
+          child: Text('ملاحظة: التنبيهات وسجل النشاطات حاليًا أمثلة محلية، وليسا متصلين بعد بأحداث النظام الفعلية.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
+        ),
+      if (!_notificationsPanelVisible && !_activityPanelVisible && !_quickAccessPanelVisible)
+        const Padding(
+          padding: EdgeInsets.all(12),
+          child: Text('تم إخفاء لوحات المهام. استخدم زر إظهار اللوحات في الشريط العلوي لإعادتها.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54, fontSize: 12, height: 1.6)),
+        ),
     ])),
   );
 
