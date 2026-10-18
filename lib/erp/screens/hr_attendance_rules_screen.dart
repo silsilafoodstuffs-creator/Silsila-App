@@ -472,12 +472,86 @@ class _Shift {
 }
 
 class HrFingerprintDevicesScreen extends StatefulWidget {
-  const HrFingerprintDevicesScreen({super.key});
+  const HrFingerprintDevicesScreen({super.key, this.companyId});
+  final String? companyId;
   @override
   State<HrFingerprintDevicesScreen> createState()=>_HrFingerprintDevicesScreenState();
 }
 class _HrFingerprintDevicesScreenState extends State<HrFingerprintDevicesScreen>{
   final devices=<_Device>[];
+  final _settingsRepository = ErpCompanySettingsRepository();
+  bool _savingDevices = false;
+  String? _devicesMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    if ((widget.companyId ?? '').trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadSavedDevices());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant HrFingerprintDevicesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId && (widget.companyId ?? '').trim().isNotEmpty) {
+      _loadSavedDevices();
+    }
+  }
+
+  Future<void> _loadSavedDevices() async {
+    final companyId = (widget.companyId ?? '').trim();
+    if (companyId.isEmpty) return;
+    try {
+      final saved = await _settingsRepository.getSetting(companyId: companyId, key: 'hr_fingerprint_devices');
+      final raw = saved?['devices'];
+      if (raw is! List || !mounted) return;
+      final restored = raw.whereType<Map>().map((item) => _Device.fromJson(Map<String, dynamic>.from(item))).toList();
+      setState(() {
+        for (final device in devices) { device.dispose(); }
+        devices
+          ..clear()
+          ..addAll(restored);
+        _devicesMessage = 'تم تحميل إعدادات أجهزة البصمة المحفوظة.';
+      });
+    } catch (error) {
+      if (mounted) setState(() => _devicesMessage = 'تعذر تحميل إعدادات الأجهزة: $error');
+    }
+  }
+
+  Future<void> _saveDevices() async {
+    final companyId = (widget.companyId ?? '').trim();
+    if (companyId.isEmpty) {
+      _msg('لا توجد شركة نشطة؛ لم يتم حفظ الأجهزة.');
+      return;
+    }
+    setState(() => _savingDevices = true);
+    try {
+      await _settingsRepository.saveSetting(
+        companyId: companyId,
+        key: 'hr_fingerprint_devices',
+        value: <String, Object?>{
+          'devices': devices.map((device) => device.toJson()).toList(),
+          'saved_at': DateTime.now().toIso8601String(),
+        },
+      );
+      if (mounted) {
+        setState(() {
+          _savingDevices = false;
+          _devicesMessage = 'تم حفظ إعدادات أجهزة البصمة في قاعدة البيانات.';
+        });
+        _msg('تم حفظ إعدادات أجهزة البصمة في قاعدة البيانات.');
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _savingDevices = false;
+          _devicesMessage = 'فشل حفظ إعدادات الأجهزة: $error';
+        });
+        _msg('فشل حفظ إعدادات الأجهزة: $error');
+      }
+    }
+  }
   @override
   void dispose(){for(final d in devices){d.dispose();}super.dispose();}
   @override
@@ -486,8 +560,10 @@ class _HrFingerprintDevicesScreenState extends State<HrFingerprintDevicesScreen>
     const SizedBox(height:6),const Text('تعريف عدة أجهزة مع حالة اتصال مميزة بالألوان، وتجهيز السحب عبر IP أو USB.',style:TextStyle(color:Colors.black54,height:1.6)),
     const SizedBox(height:12),Wrap(spacing:8,children:[
       FilledButton.icon(onPressed:()=>_edit(),icon:const Icon(Icons.add),label:const Text('إضافة جهاز'),style:FilledButton.styleFrom(backgroundColor:_purple)),
+      OutlinedButton.icon(onPressed:_savingDevices?null:_saveDevices,icon:_savingDevices?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.save_outlined,color:_orange),label:Text(_savingDevices?'جارٍ الحفظ...':'حفظ الأجهزة')),
       OutlinedButton.icon(onPressed:()=>_msg('لم يتم إجراء اختبار فعلي. يلزم موصل متوافق مع موديل البصمة والبروتوكول.'),icon:const Icon(Icons.sync,color:_orange),label:const Text('فحص الاتصالات')),
     ]),
+    if(_devicesMessage!=null) Padding(padding:const EdgeInsets.only(bottom:8),child:Text(_devicesMessage!,style:const TextStyle(color:_purple,fontWeight:FontWeight.w700))),
     const SizedBox(height:12),const Text('مهم: حالة الاتصال لا تصبح «متصل» إلا بعد دمج واختبار موصل فعلي. USB يحتاج دعمًا أصليًا على الجهاز أو خدمة وسيطة؛ هذه الواجهة لا تدّعي سحب سجلات حقيقية.',style:TextStyle(color:_red,height:1.5)),
     const SizedBox(height:10),
     if(devices.isEmpty) const Card(child:Padding(padding:EdgeInsets.all(22),child:Text('لا توجد أجهزة معرفة بعد.',textAlign:TextAlign.center))),
@@ -553,5 +629,25 @@ class _HrFingerprintDevicesScreenState extends State<HrFingerprintDevicesScreen>
 class _Device{
   final name=TextEditingController(text:'جهاز بصمة جديد'),model=TextEditingController(),ip=TextEditingController(),port=TextEditingController(text:'4370'),usb=TextEditingController();
   String method='IP',note='';bool connected=false;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'name': name.text, 'model': model.text, 'ip': ip.text, 'port': port.text,
+    'usb': usb.text, 'method': method, 'note': note, 'connected': connected,
+  };
+
+  factory _Device.fromJson(Map<String, dynamic> json) {
+    final device = _Device();
+    device.name.text = (json['name'] ?? 'جهاز بصمة جديد').toString();
+    device.model.text = (json['model'] ?? '').toString();
+    device.ip.text = (json['ip'] ?? '').toString();
+    device.port.text = (json['port'] ?? '4370').toString();
+    device.usb.text = (json['usb'] ?? '').toString();
+    device.method = (json['method'] ?? 'IP').toString() == 'USB' ? 'USB' : 'IP';
+    device.note = (json['note'] ?? '').toString();
+    // Connection state is deliberately reset: a stored flag is not proof of a live device.
+    device.connected = false;
+    return device;
+  }
+
   void dispose(){name.dispose();model.dispose();ip.dispose();port.dispose();usb.dispose();}
 }
