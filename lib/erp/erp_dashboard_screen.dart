@@ -897,7 +897,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                         _expandedModules.add(name);
                       }
                     }),
-                    icon: Text(moduleOpen ? '−' : '+', style: TextStyle(color: moduleOpen ? Colors.white : _orange, fontSize: 25, fontWeight: FontWeight.w700)),
+                    icon: Icon(moduleOpen ? Icons.expand_more_rounded : Icons.chevron_left_rounded, color: moduleOpen ? Colors.white : _orange, size: 24),
                   ),
                 ]),
               ),
@@ -946,7 +946,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                               _expandedGroups.add(groupKey);
                             }
                           }),
-                          icon: Text(groupOpen ? '−' : '+', style: TextStyle(color: groupOpen ? Colors.white : _orange, fontSize: 21, fontWeight: FontWeight.w700)),
+                          icon: Icon(groupOpen ? Icons.expand_more_rounded : Icons.chevron_left_rounded, color: groupOpen ? Colors.white : _orange, size: 22),
                         ),
                       ]),
                       if (groupOpen)
