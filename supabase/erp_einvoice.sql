@@ -7,7 +7,6 @@ create table if not exists public.erp_einvoice_settings (
   branch_code text not null default '0',
   activity_code text,
   client_id text,
-  client_secret text,
   environment text not null default 'preproduction' check (environment in ('preproduction','production')),
   connection_status text not null default 'not_tested',
   updated_by uuid,
