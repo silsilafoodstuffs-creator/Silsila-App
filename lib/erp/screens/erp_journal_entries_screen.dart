@@ -22,9 +22,10 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
   void initState() {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
-    if ((widget.initialEntryId ?? '').trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _openInitialEntry());
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_company.text.trim().isNotEmpty) _load();
+      if ((widget.initialEntryId ?? '').trim().isNotEmpty) _openInitialEntry();
+    });
   }
 
   @override
