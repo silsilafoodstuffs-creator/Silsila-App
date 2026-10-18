@@ -318,7 +318,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
             Text('تحصيل: '+money(g['collection_target']),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w700)),
             Text('فواتير: '+(g['target_orders']?.toString()??'0')),
           ]),
-          if(!demo && _num(g['sales_target'])>0) Padding(padding:const EdgeInsets.only(top:8),child:ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:(_actualSalesForCustomer(c['id'].toString())/_num(g['sales_target'])).clamp(0.0,1.0),minHeight:7,backgroundColor:const Color(0xFFEDE7F4),color:_o))),
+          if(!demo && _num(g['sales_target'])>0) Padding(padding:const EdgeInsets.only(top:8),child:ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:(_actualSalesForCustomer(c['id'].toString())/_num(g['sales_target'])).clamp(0.0,1.0).toDouble(),minHeight:7,backgroundColor:const Color(0xFFEDE7F4),color:_o))),
         ])),
         IconButton(onPressed:demo?()=>_toast('مثال للعرض فقط.'):()=>_editGoal(c),icon:const Icon(Icons.edit,color:_o),tooltip:'تعديل الهدف'),
       ]));
