@@ -194,7 +194,7 @@ class Product {
   final double price;
   final String unit;
   final IconData icon;
-  final int? id;
+  final String? id;
   final String? supplierId;
   final int minQuantity;
 
@@ -819,9 +819,7 @@ class _MainShellState extends State<MainShell> {
                 row['category_name'] ??
                 '').toString();
         final rawId = row['id'];
-        final id = rawId is int
-            ? rawId
-            : int.tryParse(rawId?.toString() ?? '');
+        final id = rawId?.toString().trim();
         final rawPrice = row['price'];
         final price = rawPrice is num
             ? rawPrice.toDouble()
@@ -836,7 +834,7 @@ class _MainShellState extends State<MainShell> {
           price,
           (row['unit'] ?? 'وحدة').toString(),
           _iconForCategory(category),
-          id: id,
+          id: (id == null || id.isEmpty) ? null : id,
           supplierId: row['supplier_id']?.toString(),
           minQuantity: minQuantity < 1 ? 1 : minQuantity,
         );
