@@ -74,10 +74,10 @@ class FavoriteService {
 
   /// إضافة منتج إلى المفضلة أو إزالته منها.
   Future<void> setProductFavorite({
-    required int productId,
+    required String productId,
     required bool favorite,
   }) async {
-    if (productId <= 0) {
+    if (productId.trim().isEmpty || productId.trim() == '0') {
       throw ArgumentError('معرّف المنتج غير صالح.');
     }
 
@@ -88,7 +88,7 @@ class FavoriteService {
       await client.from('favorites').upsert(
         {
           'user_id': userId,
-          'product_id': productId,
+          'product_id': productId.trim(),
         },
         onConflict: 'user_id,product_id',
         ignoreDuplicates: true,
@@ -98,7 +98,7 @@ class FavoriteService {
           .from('favorites')
           .delete()
           .eq('user_id', userId)
-          .eq('product_id', productId);
+          .eq('product_id', productId.trim());
     }
   }
 
