@@ -93,16 +93,17 @@ class ProductService {
 
   /// جلب تفاصيل منتج نشط باستخدام رقمه.
   Future<Map<String, dynamic>?> getProductById(
-    int productId,
+    String productId,
   ) async {
-    if (productId <= 0) {
-      throw ArgumentError('رقم المنتج غير صالح.');
+    final cleanProductId = productId.trim();
+    if (cleanProductId.isEmpty) {
+      throw ArgumentError('معرّف المنتج غير صالح.');
     }
 
     final response = await _requireClient
         .from('products')
         .select(_productColumns)
-        .eq('id', productId)
+        .eq('id', cleanProductId)
         .eq('is_active', true)
         .maybeSingle();
 
