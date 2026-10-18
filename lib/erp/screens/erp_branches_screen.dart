@@ -1,0 +1,192 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+const _branchPurple = Color(0xFF3E007D);
+
+class ErpBranchesScreen extends StatefulWidget {
+  const ErpBranchesScreen({super.key, required this.companyId});
+  final String? companyId;
+
+  @override
+  State<ErpBranchesScreen> createState() => _ErpBranchesScreenState();
+}
+
+class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
+  SupabaseClient? _db;
+  List<Map<String, dynamic>> _rows = [];
+  bool _loading = false;
+  String? _error;
+  String? _message;
+
+  @override
+  void initState() {
+    super.initState();
+    try { _db = Supabase.instance.client; } catch (_) {}
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant ErpBranchesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId) _load();
+  }
+
+  String _s(dynamic value) => (value ?? '').toString();
+
+  Future<void> _load() async {
+    final companyId = (widget.companyId ?? '').trim();
+    if (_db == null || companyId.isEmpty) {
+      setState(() {
+        _loading = false;
+        _error = _db == null ? 'سجّل الدخول إلى Supabase أولًا.' : 'لا توجد شركة نشطة مرتبطة بالمستخدم.';
+      });
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final result = await _db!
+          .from('erp_branches')
+          .select('id, branch_code, branch_name, phone, address, is_main, is_active')
+          .eq('company_id', companyId)
+          .order('branch_code');
+      if (!mounted) return;
+      setState(() {
+        _rows = (result as List).whereType<Map<String, dynamic>>().toList(growable: false);
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() { _loading = false; _error = 'تعذر تحميل الفروع: $error'; });
+    }
+  }
+
+  Future<void> _edit([Map<String, dynamic>? row]) async {
+    final code = TextEditingController(text: _s(row?['branch_code']));
+    final name = TextEditingController(text: _s(row?['branch_name']));
+    final phone = TextEditingController(text: _s(row?['phone']));
+    final address = TextEditingController(text: _s(row?['address']));
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(row == null ? 'إضافة فرع' : 'تعديل بيانات الفرع'),
+        content: SizedBox(
+          width: 430,
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(controller: code, decoration: const InputDecoration(labelText: 'كود الفرع *', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الفرع *', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'الهاتف', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'العنوان', border: OutlineInputBorder())),
+            ]),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ')),
+        ],
+      ),
+    );
+    if (result != true) {
+      code.dispose(); name.dispose(); phone.dispose(); address.dispose();
+      return;
+    }
+    try {
+      final companyId = (widget.companyId ?? '').trim();
+      if (companyId.isEmpty) throw StateError('لا توجد شركة نشطة.');
+      if (code.text.trim().isEmpty || name.text.trim().isEmpty) {
+        throw ArgumentError('كود الفرع واسم الفرع مطلوبان.');
+      }
+      final payload = <String, Object?>{
+        'company_id': companyId,
+        'branch_code': code.text.trim(),
+        'branch_name': name.text.trim(),
+        'phone': phone.text.trim().isEmpty ? null : phone.text.trim(),
+        'address': address.text.trim().isEmpty ? null : address.text.trim(),
+        'is_main': row?['is_main'] == true,
+        'is_active': row?['is_active'] != false,
+      };
+      if (row == null) {
+        payload['is_main'] = false;
+        payload['is_active'] = true;
+        await _db!.from('erp_branches').insert(payload);
+      } else {
+        await _db!.from('erp_branches').update(payload).eq('id', row['id']).eq('company_id', companyId);
+      }
+      if (!mounted) return;
+      setState(() => _message = 'تم حفظ بيانات الفرع في قاعدة البيانات.');
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر حفظ الفرع: $error');
+    } finally {
+      code.dispose(); name.dispose(); phone.dispose(); address.dispose();
+    }
+  }
+
+  Future<void> _toggle(Map<String, dynamic> row) async {
+    final companyId = (widget.companyId ?? '').trim();
+    final id = _s(row['id']);
+    final next = row['is_active'] != true;
+    try {
+      await _db!.from('erp_branches').update({'is_active': next}).eq('id', id).eq('company_id', companyId);
+      if (mounted) setState(() => _message = next ? 'تم تفعيل الفرع.' : 'تم إيقاف الفرع.');
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر تغيير حالة الفرع: $error');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.rtl,
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Container(width: 46, height: 46, decoration: BoxDecoration(color: _branchPurple.withValues(alpha: .09), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.account_tree_outlined, color: _branchPurple)),
+        const SizedBox(width: 12),
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('الفروع ومراكز التشغيل', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _branchPurple)),
+          SizedBox(height: 4),
+          Text('إدارة دليل الفروع الفعلي المرتبط بالشركة.', style: TextStyle(color: Colors.black54)),
+        ])),
+        IconButton(tooltip: 'تحديث', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
+        FilledButton.icon(onPressed: () => _edit(), icon: const Icon(Icons.add), label: const Text('إضافة فرع')),
+      ]),
+      const SizedBox(height: 12),
+      if (_error != null) _notice(_error!, Colors.red),
+      if (_message != null) _notice(_message!, Colors.green),
+      if (_loading)
+        const Center(child: Padding(padding: EdgeInsets.all(28), child: CircularProgressIndicator()))
+      else if (_rows.isEmpty)
+        const Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد.')))
+      else
+        ..._rows.map((row) {
+          final active = row['is_active'] == true;
+          final main = row['is_main'] == true;
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: BorderSide(color: main ? _branchPurple : Colors.grey.shade300)),
+            child: ListTile(
+              leading: CircleAvatar(backgroundColor: _branchPurple.withValues(alpha: .09), child: Icon(main ? Icons.star : Icons.account_tree_outlined, color: _branchPurple)),
+              title: Text('${_s(row['branch_code'])} — ${_s(row['branch_name'])}', style: const TextStyle(fontWeight: FontWeight.w800)),
+              subtitle: Text('${main ? 'الفرع الرئيسي • ' : ''}${active ? 'نشط' : 'موقوف'} • ${_s(row['phone']).isEmpty ? 'لا يوجد هاتف' : _s(row['phone'])}\n${_s(row['address'])}', maxLines: 2, overflow: TextOverflow.ellipsis),
+              isThreeLine: true,
+              trailing: Wrap(spacing: 0, children: [
+                IconButton(tooltip: 'تعديل', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _branchPurple)),
+                IconButton(tooltip: active ? 'إيقاف' : 'تفعيل', onPressed: () => _toggle(row), icon: Icon(active ? Icons.pause_circle_outline : Icons.play_circle_outline, color: active ? Colors.orange : Colors.green)),
+              ]),
+            ),
+          );
+        }),
+    ]),
+  );
+
+  Widget _notice(String message, Color color) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(color: color.withValues(alpha: .08), borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withValues(alpha: .3))),
+    child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+  );
+}
