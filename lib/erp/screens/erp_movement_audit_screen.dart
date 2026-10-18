@@ -138,7 +138,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     var text = (value ?? '').toString();
     // Prevent spreadsheet formula execution when report text is opened in Excel.
     // Only string values are prefixed; numeric counts remain numeric cells.
-    if (value is String && RegExp(r'^\\s*[=+@-]').hasMatch(text)) {
+    if (value is String && RegExp(r'^\s*[=+@-]').hasMatch(text)) {
       text = "'$text";
     }
     text = text.replaceAll('"', '""');
