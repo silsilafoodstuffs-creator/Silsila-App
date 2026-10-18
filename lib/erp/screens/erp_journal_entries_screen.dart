@@ -51,7 +51,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       final allEntries = await _repo.fetchEntries(companyId: _company.text.trim());
       final entries = widget.initialStatus == null
           ? allEntries
-          : allEntries.where((entry) => _str(entry['status']) == widget.initialStatus).toList();
+          : allEntries.where((entry) => (entry['status'] ?? '').toString() == widget.initialStatus).toList();
       if (!mounted) return;
       setState(() {
         _entries = entries;
