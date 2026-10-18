@@ -30,6 +30,13 @@ create index if not exists erp_public_lead_staging_area_idx on public.erp_public
 create index if not exists erp_public_lead_staging_status_idx on public.erp_public_lead_staging(verification_status,lead_kind);
 alter table public.erp_public_lead_staging enable row level security;
 
+-- Requires erp_security_membership.sql. Public source records are readable by signed-in users;
+-- only company managers can attach/import a lead into their own company.
+drop policy if exists erp_public_leads_read_authenticated on public.erp_public_lead_staging;
+create policy erp_public_leads_read_authenticated on public.erp_public_lead_staging for select to authenticated using (company_id is null or public.erp_user_can_access_company(company_id));
+drop policy if exists erp_public_leads_update_manager on public.erp_public_lead_staging;
+create policy erp_public_leads_update_manager on public.erp_public_lead_staging for update to authenticated using (company_id is null or public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager']::text[])) with check (company_id is not null and public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager']::text[]));
+
 insert into public.erp_public_lead_staging
 (business_name,lead_kind,business_classification,governorate,district,public_address,source_name,source_url,verification_status,verification_notes)
 values
