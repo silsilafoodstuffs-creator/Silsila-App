@@ -57,6 +57,15 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
   }
 
   @override
+  void didUpdateWidget(covariant ErpAppAssetsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId || oldWidget.appId != widget.appId || oldWidget.initialAssetType != widget.initialAssetType) {
+      if (_types.containsKey(widget.initialAssetType)) _assetType = widget.initialAssetType!;
+      _load();
+    }
+  }
+
+  @override
   void dispose() {
     _altText.dispose();
     _entityId.dispose();
