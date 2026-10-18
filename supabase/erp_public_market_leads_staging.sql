@@ -34,9 +34,7 @@ alter table public.erp_public_lead_staging enable row level security;
 -- only company managers can attach/import a lead into their own company.
 drop policy if exists erp_public_leads_read_authenticated on public.erp_public_lead_staging;
 create policy erp_public_leads_read_authenticated on public.erp_public_lead_staging for select to authenticated using (company_id is null or public.erp_user_can_access_company(company_id));
-drop policy if exists erp_public_leads_update_manager on public.erp_public_lead_staging;
-create policy erp_public_leads_update_manager on public.erp_public_lead_staging for update to authenticated using (company_id is null or public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager']::text[])) with check (company_id is not null and public.erp_user_has_company_role(company_id,array['owner','admin','manager','sales_manager']::text[]));
-
+-- Direct updates are intentionally disabled; use erp_import_public_lead RPC to claim a lead safely.
 -- Remove earlier illustrative entries that did not have a sufficiently specific public listing.
 delete from public.erp_public_lead_staging
 where company_id is null
