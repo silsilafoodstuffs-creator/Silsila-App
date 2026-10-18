@@ -28,6 +28,14 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
     _load();
   }
   @override
+  void didUpdateWidget(covariant ErpSalesTargetsCommissionsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialTabIndex != widget.initialTabIndex) {
+      _tabs.index = widget.initialTabIndex.clamp(0, 3).toInt();
+    }
+    if (oldWidget.companyId != widget.companyId) _load();
+  }
+  @override
   void dispose() { _tabs.dispose(); super.dispose(); }
 
   Future<void> _load() async {
