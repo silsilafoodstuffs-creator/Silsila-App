@@ -135,7 +135,13 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
   }
 
   String _csvCell(Object? value) {
-    final text = (value ?? '').toString().replaceAll('"', '""');
+    var text = (value ?? '').toString();
+    // Prevent spreadsheet formula execution when report text is opened in Excel.
+    // Only string values are prefixed; numeric counts remain numeric cells.
+    if (value is String && RegExp(r'^\\s*[=+@-]').hasMatch(text)) {
+      text = "'$text";
+    }
+    text = text.replaceAll('"', '""');
     return '"$text"';
   }
 
