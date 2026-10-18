@@ -129,6 +129,10 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     final companyId = (widget.companyId ?? '').trim();
     final id = _s(row['id']);
     final next = row['is_active'] != true;
+    if (row['is_main'] == true && !next) {
+      setState(() => _error = 'لا يمكن إيقاف الفرع الرئيسي قبل تعيين فرع رئيسي بديل.');
+      return;
+    }
     try {
       await _db!.from('erp_branches').update({'is_active': next}).eq('id', id).eq('company_id', companyId);
       if (mounted) setState(() => _message = next ? 'تم تفعيل الفرع.' : 'تم إيقاف الفرع.');
