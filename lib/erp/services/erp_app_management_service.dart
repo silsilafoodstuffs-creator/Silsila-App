@@ -189,6 +189,21 @@ class ErpAppManagementService {
     if (!_validAssetTypes.contains(asset.assetType)) {
       throw ArgumentError('نوع الملف غير مدعوم.');
     }
+
+    // Bind metadata to the actual app/company path, not merely to a user-provided path.
+    final app = await _db
+        .from('erp_managed_apps')
+        .select('id, company_id')
+        .eq('id', asset.appId)
+        .single();
+    final companyId = app['company_id']?.toString() ?? '';
+    final expectedPrefix = companyId + '/' + asset.appId + '/';
+    if (companyId.isEmpty ||
+        !asset.storagePath.startsWith(expectedPrefix) ||
+        asset.storagePath.contains('..')) {
+      throw ArgumentError('مسار الصورة لا يتبع الشركة والتطبيق المحددين.');
+    }
+
     final payload = asset.toJson()
       ..['uploaded_by'] = currentUserId;
     final row = await _db
@@ -198,7 +213,6 @@ class ErpAppManagementService {
         .single();
     return row['id'].toString();
   }
-
   /// Updates editable metadata while keeping the uploaded storage path immutable.
   Future<void> updateAssetRecord({
     required String assetId,
