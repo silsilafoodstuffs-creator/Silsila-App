@@ -18,6 +18,9 @@ class ErpAuditService {
   SupabaseClient get _db {
     final value = _client;
     if (value == null) throw StateError('Supabase غير مهيأ.');
+    if (value.auth.currentUser == null) {
+      throw StateError('يجب تسجيل الدخول قبل الوصول إلى سجل الحركات.');
+    }
     return value;
   }
 
