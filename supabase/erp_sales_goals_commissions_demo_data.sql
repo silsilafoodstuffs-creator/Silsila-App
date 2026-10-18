@@ -277,6 +277,26 @@ from (values
 join public.erp_geo_areas p on p.governorate=x.gov and p.name_ar=x.parent_name
 on conflict do nothing;
 
+-- Add additional locality parents before attaching center and village rows.
+insert into public.erp_geo_areas(parent_id,governorate,area_name,area_kind,name_ar,name_en,source_name,source_url,is_verified)
+select g.id,x.gov,x.name_ar,'city',x.name_ar,x.name_en,'Silsila starter geography',null,false
+from (values
+('القليوبية','الخانكة','El Khanka'),
+('القليوبية','طوخ','Toukh'),
+('القليوبية','القناطر الخيرية','El Qanater El Khayreya'),
+('القليوبية','شبين القناطر','Shibin El Qanater'),
+('القليوبية','كفر شكر','Kafr Shukr'),
+('الجيزة','أبو النمرس','Abu El Nomros'),
+('الجيزة','البدرشين','El Badrashein'),
+('الجيزة','العياط','El Ayat'),
+('الجيزة','أوسيم','Ausim'),
+('الجيزة','منشأة القناطر','Manshaat El Qanater'),
+('الجيزة','الصف','El Saff'),
+('الجيزة','أطفيح','Atfih')
+) as x(gov,name_ar,name_en)
+join public.erp_geo_areas g on g.parent_id is null and g.governorate=x.gov and g.area_kind='governorate'
+on conflict do nothing;
+
 insert into public.erp_geo_areas(parent_id,governorate,area_name,area_kind,name_ar,name_en,source_name,source_url,is_verified)
 select g.id,x.gov,x.center,'center',x.name_ar,x.name_en,'Silsila starter geography',null,false
 from (values
