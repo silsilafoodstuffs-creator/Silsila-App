@@ -136,9 +136,10 @@ class SilsilaTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
+        constraints: const BoxConstraints(minHeight: 52),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 15,
+          vertical: 12,
         ),
         hintStyle: const TextStyle(
           fontFamily: 'Tajawal',
