@@ -72,9 +72,6 @@ class _ErpPublicLeadsScreenState extends State<ErpPublicLeadsScreen> {
       _toast('هذا السجل مستورد بالفعل.');
       return;
     }
-    final kind = (lead['lead_kind'] ?? '').toString();
-    final partyKind = kind == 'potential_supplier' || kind == 'wholesaler' || kind == 'manufacturer'
-        ? 'supplier' : 'customer';
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => Directionality(
@@ -82,8 +79,7 @@ class _ErpPublicLeadsScreenState extends State<ErpPublicLeadsScreen> {
         child: AlertDialog(
           title: const Text('إضافة كمسودة غير نشطة'),
           content: Text('سيضاف "' + (lead['business_name'] ?? '').toString() +
-              '" إلى دليل ' + (partyKind == 'supplier' ? 'الموردين' : 'العملاء') +
-              ' داخل الشركة الحالية. المعلومات من مصدر عام وغير مؤكدة؛ لن يتم تفعيل السجل تلقائيًا.'),
+              '" إلى دليل الشركة الحالية. المعلومات من مصدر عام وغير مؤكدة؛ لن يتم تفعيل السجل تلقائيًا.'),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('رجوع')),
             FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('إضافة كمسودة')),
@@ -93,33 +89,14 @@ class _ErpPublicLeadsScreenState extends State<ErpPublicLeadsScreen> {
     );
     if (confirmed != true) return;
     try {
-      final leadId = lead['id'].toString();
-      final code = 'LEAD-' + leadId.replaceAll('-', '').substring(0, 10).toUpperCase();
-      final inserted = await _db!.from('erp_parties').insert({
-        'company_id': companyId,
-        'party_code': code,
-        'party_name': lead['business_name'],
-        'party_kind': partyKind,
-        'phone': lead['public_phone'],
-        'address': lead['public_address'],
-        'governorate': lead['governorate'],
-        'district': lead['district'],
-        'business_classification': lead['business_classification'],
-        'source_name': lead['source_name'],
-        'source_url': lead['source_url'],
-        'is_demo_data': false,
-        'is_active': false,
-      }).select('id').single();
-      await _db!.from('erp_public_lead_staging').update({
-        'company_id': companyId,
-        'imported_party_id': inserted['id'],
-        'verification_status': 'imported',
-        'verification_notes': 'أضيف كمسودة غير نشطة؛ يجب التحقق من الاسم والعنوان ووسائل الاتصال قبل التفعيل.',
-      }).eq('id', leadId);
+      await _db!.rpc('erp_import_public_lead', params: {
+        'p_lead_id': lead['id'].toString(),
+        'p_company_id': companyId,
+      });
       await _load();
       _toast('تمت الإضافة كمسودة غير نشطة. راجعها قبل التفعيل.');
     } catch (e) {
-      _toast('تعذرت الإضافة. تحقق من صلاحيات الشركة وملف حقول المصدر.\n' + e.toString());
+      _toast('تعذرت الإضافة. تأكد من تطبيق ملف erp_public_leads_import_rpc.sql ومن صلاحية مدير الشركة.\n' + e.toString());
     }
   }
 
