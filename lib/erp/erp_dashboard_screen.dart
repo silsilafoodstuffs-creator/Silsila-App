@@ -546,37 +546,19 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           const Row(children: [
             Icon(Icons.star_rounded, color: _purple),
             SizedBox(width: 8),
-            Expanded(child: Text('مهام الشاشات المفضلة', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 15))),
+            Expanded(child: Text('الوصول السريع', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 15))),
           ]),
-          const SizedBox(height: 8),
-          Material(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            child: ListTile(
-              dense: true,
-              visualDensity: VisualDensity.compact,
-              leading: const Icon(Icons.access_time_filled_rounded, color: _purple),
-              title: const Text('قواعد الحضور والانصراف', style: TextStyle(color: _purple, fontWeight: FontWeight.w800, fontSize: 12)),
-              subtitle: const Text('فتح شاشة قواعد الورديات والحضور والانصراف', style: TextStyle(fontSize: 10)),
-              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: _purple),
-              onTap: () {
-                const targetPage = 'قواعد الورديات والحضور والانصراف';
-                for (final moduleEntry in _modules.entries) {
-                  for (final groupEntry in moduleEntry.value.entries) {
-                    if (groupEntry.value.contains(targetPage)) {
-                      setState(() {
-                        _module = moduleEntry.key;
-                        _group = groupEntry.key;
-                        _page = targetPage;
-                        _search = '';
-                      });
-                      return;
-                    }
-                  }
-                }
-              },
-            ),
-          ),
+          const SizedBox(height: 10),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            _quick('قواعد الحضور والانصراف', Icons.access_time_filled_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
+            _quick('شجرة الحسابات', Icons.account_tree_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'شجرة الحسابات')),
+            _quick('الخزائن', Icons.account_balance_wallet_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'الخزائن الرئيسية والفرعية')),
+            _quick('دليل الأصناف', Icons.inventory_2_rounded, () => _open('المخازن والفروع', 'بيانات أساسية', 'دليل الأصناف')),
+            _quick('دليل العملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
+            _quick('ملف الموظف', Icons.badge_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'ملف الموظف')),
+            _quick('قواعد الورديات', Icons.schedule_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
+            _quick('أجهزة البصمة', Icons.fingerprint_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'أجهزة البصمة وربط الحضور')),
+          ]),
         ]),
       ),
       const SizedBox(height: 12),
@@ -845,18 +827,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ], footer: 'مخطط مقارنة هدف كل فرع بالمبيعات المحققة سيظهر بعد ربط أهداف الفروع والفواتير.'),
     _dashboardBreakdown('مقارنة المبيعات الفعلية بأهداف الفروع', Icons.show_chart_rounded, [
       'إجمالي الفروع', 'الفرع الأعلى تحقيقًا', 'الفرع الأقل تحقيقًا',
-    ]),
-    const SizedBox(height: 22),
-    const Text('الوصول السريع', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: _purple)),
-    const SizedBox(height: 12),
-    Wrap(spacing: 9, runSpacing: 9, children: [
-      _quick('شجرة الحسابات', Icons.account_tree_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'شجرة الحسابات')),
-      _quick('الخزائن', Icons.account_balance_wallet_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'الخزائن الرئيسية والفرعية')),
-      _quick('دليل الأصناف', Icons.inventory_2_rounded, () => _open('المخازن والفروع', 'بيانات أساسية', 'دليل الأصناف')),
-      _quick('دليل العملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
-      _quick('ملف الموظف', Icons.badge_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'ملف الموظف')),
-      _quick('قواعد الورديات', Icons.schedule_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'قواعد الورديات والحضور والانصراف')),
-      _quick('أجهزة البصمة', Icons.fingerprint_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'أجهزة البصمة وربط الحضور')),
     ]),
     const SizedBox(height: 22),
   ]);
