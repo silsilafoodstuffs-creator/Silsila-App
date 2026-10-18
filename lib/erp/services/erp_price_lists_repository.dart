@@ -19,6 +19,12 @@ class ErpPriceListsRepository {
       .order('price_list_code');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
+  Future<List<Map<String, dynamic>>> fetchCurrencies(String companyId) async {
+    final rows = await _db.from('erp_currencies')
+      .select('currency_code,currency_name_ar,currency_symbol')
+      .eq('company_id', companyId.trim()).eq('is_active', true).order('currency_code');
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
     final rows = await _db.from('erp_items')
       .select('id, item_code, item_name, base_unit, sale_price, purchase_price, is_active')
