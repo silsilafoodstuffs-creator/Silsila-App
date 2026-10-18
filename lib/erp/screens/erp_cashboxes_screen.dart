@@ -28,7 +28,14 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   String? _message;
 
   @override
-  void initState() { super.initState(); _company.text = widget.initialCompanyId ?? ''; _isBank = widget.initialBankOnly; }
+  void initState() {
+    super.initState();
+    _company.text = widget.initialCompanyId ?? '';
+    _isBank = widget.initialBankOnly;
+    if (_company.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
+  }
   @override
   void dispose() {
     _company.dispose(); _code.dispose(); _name.dispose(); _bankName.dispose(); _maskedNumber.dispose(); super.dispose();
