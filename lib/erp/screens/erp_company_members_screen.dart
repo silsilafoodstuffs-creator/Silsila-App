@@ -246,7 +246,7 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
                   DropdownButtonFormField<String>(
                     value: _roles.containsKey(role) ? role : 'viewer',
                     decoration: const InputDecoration(labelText: 'الدور الوظيفي', border: OutlineInputBorder()),
-                    items: _roles.entries.where((entry) => entry.key != 'owner').map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),
+                    items: _roles.entries.map((entry) => DropdownMenuItem(value: entry.key, enabled: entry.key != 'owner', child: Text(entry.value))).toList(),
                     onChanged: isCurrent || isOwner ? null : (value) { if (value != null && value != role) _updateMember(member, role: value); },
                   ),
                 ]),
