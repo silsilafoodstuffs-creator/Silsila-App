@@ -757,159 +757,154 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     children: [
       Row(children: [
         const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('الملخص التنفيذي', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _purple)),
-          SizedBox(height: 2),
-          Text('لوحة قيادة مختصرة • أداء المبيعات والمالية والمخزون والتشغيل', style: TextStyle(color: Colors.black54, fontSize: 10)),
+          Text('الملخص التنفيذي', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
+          SizedBox(height: 1),
+          Text('مؤشرات النشاط • نظرة إدارية ومالية مركزة', style: TextStyle(color: Colors.black54, fontSize: 9)),
         ])),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-          decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(8)),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(6)),
           child: const Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.insights_rounded, color: _purple, size: 15),
-            SizedBox(width: 5),
-            Text('مؤشرات الأداء', style: TextStyle(color: _purple, fontSize: 10, fontWeight: FontWeight.w800)),
+            Icon(Icons.insights_rounded, color: _purple, size: 13),
+            SizedBox(width: 4),
+            Text('نظرة عامة', style: TextStyle(color: _purple, fontSize: 9, fontWeight: FontWeight.w800)),
           ]),
         ),
       ]),
-      const SizedBox(height: 8),
+      const SizedBox(height: 5),
       LayoutBuilder(builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 1120 ? 6 : constraints.maxWidth >= 760 ? 3 : constraints.maxWidth >= 440 ? 2 : 1;
+        final columns = constraints.maxWidth >= 1000 ? 6 : constraints.maxWidth >= 650 ? 3 : constraints.maxWidth >= 390 ? 2 : 1;
         return GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: columns,
-          crossAxisSpacing: 6,
-          mainAxisSpacing: 6,
-          childAspectRatio: columns >= 6 ? 1.85 : columns == 3 ? 2.3 : columns == 2 ? 2.5 : 4.0,
+          crossAxisSpacing: 4,
+          mainAxisSpacing: 4,
+          childAspectRatio: columns >= 6 ? 2.5 : columns == 3 ? 2.8 : columns == 2 ? 2.9 : 4.4,
           children: [
             _executiveKpi('صافي المبيعات', '—', 'التغير —%', Icons.point_of_sale_rounded, _purple),
-            _executiveKpi('صافي الربح', '—', 'هامش الربح —%', Icons.trending_up_rounded, _green),
-            _executiveKpi('التحصيل', '—', 'معدل التحصيل —%', Icons.payments_outlined, _orange),
-            _executiveKpi('مديونية العملاء', '—', 'المتأخر —%', Icons.groups_rounded, _pink),
-            _executiveKpi('قيمة المخزون', '—', 'دوران المخزون —', Icons.inventory_2_rounded, const Color(0xFF2475B8)),
-            _executiveKpi('معدل تنفيذ الطلبات', '—%', 'في الموعد —%', Icons.local_shipping_outlined, const Color(0xFF168A70)),
+            _executiveKpi('صافي الربح', '—', 'هامش —%', Icons.trending_up_rounded, _green),
+            _executiveKpi('التحصيل', '—', 'المعدل —%', Icons.payments_outlined, _orange),
+            _executiveKpi('ديون العملاء', '—', 'متأخر —%', Icons.groups_rounded, _pink),
+            _executiveKpi('المخزون', '—', 'الدوران —', Icons.inventory_2_rounded, const Color(0xFF2475B8)),
+            _executiveKpi('تنفيذ الطلبات', '—%', 'في الموعد —%', Icons.local_shipping_outlined, const Color(0xFF168A70)),
           ],
         );
       }),
-      const SizedBox(height: 7),
+      const SizedBox(height: 5),
       LayoutBuilder(builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 850;
-        Widget trendPanel() => _executivePanel(
-          title: 'اتجاه المبيعات والأداء',
-          subtitle: 'مقارنة يومية • آخر 7 أيام',
+        final wide = constraints.maxWidth >= 900;
+        Widget salesTrend() => _executivePanel(
+          title: 'المبيعات والأداء',
+          subtitle: 'اتجاه 7 أيام • مقارنة بالمستهدف',
           icon: Icons.show_chart_rounded,
-          child: SizedBox(height: 142, child: Column(children: [
+          child: SizedBox(height: 104, child: Column(children: [
             Row(children: [
               _legendDot(_purple, 'المبيعات'),
-              const SizedBox(width: 12),
+              const SizedBox(width: 9),
               _legendDot(_orange, 'المستهدف'),
               const Spacer(),
-              const Text('التغير الأسبوعي: —%', style: TextStyle(fontSize: 9, color: _purple, fontWeight: FontWeight.w800)),
+              const Text('تغير الفترة —%', style: TextStyle(fontSize: 8, color: _purple, fontWeight: FontWeight.w800)),
             ]),
-            const SizedBox(height: 8),
+            const SizedBox(height: 3),
             Expanded(child: CustomPaint(painter: _ExecutiveChartPainter(color: _purple), child: const SizedBox.expand())),
-            const SizedBox(height: 5),
             const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('منذ 7 أيام', style: TextStyle(fontSize: 8, color: Colors.black45)),
-              Text('منذ 5 أيام', style: TextStyle(fontSize: 8, color: Colors.black45)),
-              Text('منذ 3 أيام', style: TextStyle(fontSize: 8, color: Colors.black45)),
-              Text('اليوم', style: TextStyle(fontSize: 8, color: Colors.black45)),
+              Text('7 أيام', style: TextStyle(fontSize: 7, color: Colors.black45)),
+              Text('5 أيام', style: TextStyle(fontSize: 7, color: Colors.black45)),
+              Text('3 أيام', style: TextStyle(fontSize: 7, color: Colors.black45)),
+              Text('اليوم', style: TextStyle(fontSize: 7, color: Colors.black45)),
             ]),
           ])),
         );
-        Widget financePanel() => _executivePanel(
-          title: 'الموقف المالي',
-          subtitle: 'السيولة والتحصيل والالتزامات',
+        Widget financialAnalysis() => _executivePanel(
+          title: 'المالية والسيولة',
+          subtitle: 'التحصيل والربحية والالتزامات',
           icon: Icons.account_balance_wallet_outlined,
           child: Column(children: [
             _executiveProgress('تحصيل المستحقات', '—%', null, _green),
-            const SizedBox(height: 9),
+            const SizedBox(height: 6),
             _executiveProgress('الديون المتأخرة', '—%', null, _orange),
-            const SizedBox(height: 9),
+            const SizedBox(height: 6),
             _executiveProgress('هامش صافي الربح', '—%', null, _purple),
-            const SizedBox(height: 9),
+            const SizedBox(height: 6),
             _executiveProgress('الالتزامات المستحقة', '—%', null, _pink),
-            const SizedBox(height: 5),
-            const Align(alignment: Alignment.centerRight, child: Text('تُحسب النسب من الأرصدة والحركات الفعلية', style: TextStyle(fontSize: 8, color: Colors.black45))),
           ]),
         );
-        Widget inventoryPanel() => _executivePanel(
-          title: 'تحليل المخزون',
-          subtitle: 'التوافر والصلاحية وإعادة الطلب',
+        Widget inventoryAnalysis() => _executivePanel(
+          title: 'المخزون',
+          subtitle: 'التوافر والمخاطر والركود',
           icon: Icons.warehouse_outlined,
           child: Column(children: [
             _executiveProgress('أصناف متاحة', '—%', null, _green),
-            const SizedBox(height: 9),
-            _executiveProgress('أصناف أقل من الحد', '—%', null, _orange),
-            const SizedBox(height: 9),
-            _executiveProgress('قريبة انتهاء الصلاحية', '—%', null, _pink),
-            const SizedBox(height: 9),
+            const SizedBox(height: 6),
+            _executiveProgress('أقل من حد الطلب', '—%', null, _orange),
+            const SizedBox(height: 6),
+            _executiveProgress('قرب انتهاء الصلاحية', '—%', null, _pink),
+            const SizedBox(height: 6),
             _executiveProgress('أصناف راكدة', '—%', null, const Color(0xFF2475B8)),
-            const SizedBox(height: 5),
-            const Align(alignment: Alignment.centerRight, child: Text('مؤشرات المخزون حسب الصنف والمخزن', style: TextStyle(fontSize: 8, color: Colors.black45))),
           ]),
         );
-        Widget operationsPanel() => _executivePanel(
-          title: 'كفاءة التشغيل',
-          subtitle: 'الطلبات والموظفون وسرعة الإنجاز',
+        Widget operationalAnalysis() => _executivePanel(
+          title: 'التشغيل والموارد',
+          subtitle: 'الطلبات والتسليم والموظفون',
           icon: Icons.speed_rounded,
           child: Column(children: [
             _executiveMiniStat('طلبات قيد التنفيذ', '—', Icons.sync_rounded, _purple),
-            const Divider(height: 10),
-            _executiveMiniStat('طلبات متأخرة عن الموعد', '—%', Icons.warning_amber_rounded, _orange),
-            const Divider(height: 10),
-            _executiveMiniStat('نسبة حضور الموظفين', '—%', Icons.groups_rounded, _green),
-            const Divider(height: 10),
+            const Divider(height: 7, thickness: .5),
+            _executiveMiniStat('طلبات متأخرة', '—%', Icons.warning_amber_rounded, _orange),
+            const Divider(height: 7, thickness: .5),
+            _executiveMiniStat('حضور الموظفين', '—%', Icons.groups_rounded, _green),
+            const Divider(height: 7, thickness: .5),
             _executiveMiniStat('معدل إتمام الطلبات', '—%', Icons.task_alt_rounded, _pink),
           ]),
         );
-        Widget analysisPanel() => _executivePanel(
-          title: 'مؤشرات وتحليلات إضافية',
-          subtitle: 'مقارنة الأداء ومناطق المتابعة',
+        Widget efficiencyAnalysis() => _executivePanel(
+          title: 'تحليلات الكفاءة',
+          subtitle: 'النمو والمرتجعات والمصروفات',
           icon: Icons.query_stats_rounded,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            SizedBox(height: 88, child: CustomPaint(painter: const _ExecutiveBarsPainter(), child: const SizedBox.expand())),
-            const SizedBox(height: 8),
-            _executiveMiniStat('نمو المبيعات مقارنة بالفترة السابقة', '—%', Icons.trending_up_rounded, _purple),
-            const Divider(height: 9),
-            _executiveMiniStat('نسبة المرتجعات إلى المبيعات', '—%', Icons.assignment_return_outlined, _orange),
-            const Divider(height: 9),
-            _executiveMiniStat('نسبة المصروفات إلى الإيرادات', '—%', Icons.pie_chart_outline_rounded, _pink),
+            SizedBox(height: 57, child: CustomPaint(painter: const _ExecutiveBarsPainter(), child: const SizedBox.expand())),
+            const SizedBox(height: 3),
+            _executiveMiniStat('نمو المبيعات', '—%', Icons.trending_up_rounded, _purple),
+            const Divider(height: 7, thickness: .5),
+            _executiveMiniStat('المرتجعات / المبيعات', '—%', Icons.assignment_return_outlined, _orange),
+            const Divider(height: 7, thickness: .5),
+            _executiveMiniStat('المصروفات / الإيرادات', '—%', Icons.pie_chart_outline_rounded, _pink),
           ]),
         );
         if (wide) {
           return Column(children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(flex: 2, child: trendPanel()),
-              const SizedBox(width: 7),
-              Expanded(child: financePanel()),
+              Expanded(flex: 2, child: salesTrend()),
+              const SizedBox(width: 5),
+              Expanded(child: financialAnalysis()),
+              const SizedBox(width: 5),
+              Expanded(child: inventoryAnalysis()),
             ]),
-            const SizedBox(height: 7),
+            const SizedBox(height: 5),
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: inventoryPanel()),
-              const SizedBox(width: 7),
-              Expanded(child: operationsPanel()),
-              const SizedBox(width: 7),
-              Expanded(child: analysisPanel()),
+              Expanded(child: operationalAnalysis()),
+              const SizedBox(width: 5),
+              Expanded(child: efficiencyAnalysis()),
             ]),
           ]);
         }
         return Column(children: [
-          trendPanel(), const SizedBox(height: 7),
-          financePanel(), const SizedBox(height: 7),
-          inventoryPanel(), const SizedBox(height: 7),
-          operationsPanel(), const SizedBox(height: 7),
-          analysisPanel(),
+          salesTrend(), const SizedBox(height: 5),
+          financialAnalysis(), const SizedBox(height: 5),
+          inventoryAnalysis(), const SizedBox(height: 5),
+          operationalAnalysis(), const SizedBox(height: 5),
+          efficiencyAnalysis(),
         ]);
       }),
-      const SizedBox(height: 7),
+      const SizedBox(height: 5),
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-        decoration: BoxDecoration(color: const Color(0xFFFFF7EB), borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFFFE1B0))),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+        decoration: BoxDecoration(color: const Color(0xFFFFF7EB), borderRadius: BorderRadius.circular(6), border: Border.all(color: const Color(0xFFFFE1B0))),
         child: const Row(children: [
-          Icon(Icons.info_outline_rounded, color: _orange, size: 14),
-          SizedBox(width: 6),
-          Expanded(child: Text('تم تجهيز مساحات المؤشرات والمخططات؛ ستظهر القيم والنسب الفعلية عند ربطها ببيانات النظام. الرسوم الحالية توضيحية وليست نتائج مالية فعلية.', style: TextStyle(fontSize: 9, color: Colors.black87, height: 1.35))),
+          Icon(Icons.info_outline_rounded, color: _orange, size: 12),
+          SizedBox(width: 4),
+          Expanded(child: Text('القيم والنسب الفعلية تتطلب ربط مصادر بيانات النظام؛ المخططات الحالية توضيحية.', style: TextStyle(fontSize: 8, color: Colors.black87, height: 1.15))),
         ]),
       ),
     ],
@@ -918,45 +913,40 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   static const Color _green = Color(0xFF18865A);
 
   Widget _legendDot(Color color, String label) => Row(mainAxisSize: MainAxisSize.min, children: [
-    Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-    const SizedBox(width: 4),
-    Text(label, style: const TextStyle(fontSize: 9, color: Colors.black54)),
+    Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+    const SizedBox(width: 3),
+    Text(label, style: const TextStyle(fontSize: 8, color: Colors.black54)),
   ]);
 
   Widget _executiveKpi(String title, String value, String note, IconData icon, Color color) =>
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE8E0F0)),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(7), border: Border.all(color: const Color(0xFFE8E0F0))),
         child: Row(children: [
-          Container(width: 27, height: 27, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: color, size: 15)),
-          const SizedBox(width: 6),
+          Container(width: 22, height: 22, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(5)), child: Icon(icon, color: color, size: 12)),
+          const SizedBox(width: 4),
           Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 9, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 1),
-            Text(value, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w900)),
-            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 8)),
+            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 8, fontWeight: FontWeight.w700)),
+            Text(value, maxLines: 1, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w900)),
+            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 7)),
           ])),
         ]),
       );
 
   Widget _executivePanel({required String title, required String subtitle, required IconData icon, required Widget child}) =>
       Container(
-        padding: const EdgeInsets.all(9),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(11), border: Border.all(color: const Color(0xFFE8E0F0))),
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE8E0F0))),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            Container(width: 27, height: 27, decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(7)), child: Icon(icon, color: _purple, size: 15)),
-            const SizedBox(width: 6),
+            Container(width: 22, height: 22, decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(5)), child: Icon(icon, color: _purple, size: 13)),
+            const SizedBox(width: 5),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(color: _purple, fontSize: 11, fontWeight: FontWeight.w900)),
-              Text(subtitle, style: const TextStyle(color: Colors.black45, fontSize: 8)),
+              Text(title, style: const TextStyle(color: _purple, fontSize: 10, fontWeight: FontWeight.w900)),
+              Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 7)),
             ])),
           ]),
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
           child,
         ]),
       );
@@ -964,15 +954,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _executiveProgress(String label, String value, double? progress, Color color) =>
       Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 9, color: Colors.black87, fontWeight: FontWeight.w700))),
-          Text(value, style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w900)),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 8, color: Colors.black87, fontWeight: FontWeight.w700))),
+          Text(value, style: TextStyle(fontSize: 8, color: color, fontWeight: FontWeight.w900)),
         ]),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         ClipRRect(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progress,
-            minHeight: 5,
+            minHeight: 4,
             backgroundColor: const Color(0xFFEFEAF4),
             valueColor: AlwaysStoppedAnimation<Color>(color),
           ),
@@ -981,10 +971,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _executiveMiniStat(String title, String value, IconData icon, Color color) =>
       Row(children: [
-        Icon(icon, color: color, size: 14),
-        const SizedBox(width: 6),
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 9, color: Colors.black87, fontWeight: FontWeight.w700))),
-        Text(value, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w900)),
+        Icon(icon, color: color, size: 12),
+        const SizedBox(width: 4),
+        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 8, color: Colors.black87, fontWeight: FontWeight.w700))),
+        Text(value, style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.w900)),
       ]);
 
   Widget _dashboardPanel(String title, IconData icon, List<Widget> metrics, {String? footer, List<Widget> actions = const []}) =>
