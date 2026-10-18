@@ -32,6 +32,12 @@ class _ErpDelegateAllocationScreenState extends State<ErpDelegateAllocationScree
   }
 
   @override
+  void didUpdateWidget(covariant ErpDelegateAllocationScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId) _load();
+  }
+
+  @override
   void dispose() {
     _search.dispose();
     super.dispose();
