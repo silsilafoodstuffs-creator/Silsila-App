@@ -671,7 +671,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       ))
     else
       IconButton(
-        tooltip: _sidebarVisible ? 'إخفاء القوائم الرئيسية' : 'إظهار القوائم الرئيسية',
+        tooltip: _sidebarVisible ? 'إخفاء جميع القوائم الرئيسية' : 'إظهار جميع القوائم الرئيسية',
         onPressed: () => setState(() => _sidebarVisible = !_sidebarVisible),
         icon: Icon(Icons.menu_rounded, color: _purple),
       ),
@@ -711,7 +711,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     const SizedBox(width: 8),
     if (!compact)
       IconButton(
-        tooltip: _rightPanelVisible ? 'إخفاء التنبيهات والنشاطات والوصول السريع' : 'إظهار التنبيهات والنشاطات والوصول السريع',
+        tooltip: _rightPanelVisible ? 'إخفاء لوحات المهام: التنبيهات والنشاطات والوصول السريع' : 'إظهار لوحات المهام: التنبيهات والنشاطات والوصول السريع',
         onPressed: () => setState(() => _rightPanelVisible = !_rightPanelVisible),
         icon: Icon(_rightPanelVisible ? Icons.view_sidebar_rounded : Icons.view_sidebar_outlined, color: _purple),
       ),
