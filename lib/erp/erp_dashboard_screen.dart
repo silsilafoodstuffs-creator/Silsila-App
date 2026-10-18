@@ -17,6 +17,8 @@ import 'screens/erp_cashboxes_screen.dart';
 import 'screens/erp_price_lists_screen.dart';
 import 'screens/erp_operational_account_mappings_screen.dart';
 import 'services/erp_operational_documents_repository.dart';
+import 'services/erp_app_management_service.dart';
+import 'services/erp_app_settings.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -73,6 +75,12 @@ class ErpDashboardScreen extends StatefulWidget {
 }
 
 class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
+  final ErpAppManagementService _appManagementService = ErpAppManagementService();
+  String? _appManagementCompanyId;
+  final Map<String, String> _managedAppIds = <String, String>{};
+  bool _appManagementLoading = false;
+  bool _appManagementSaving = false;
+  String? _appManagementMessage;
   bool _sidebarVisible = true;
   bool _notificationsPanelVisible = true;
   bool _activityPanelVisible = true;
@@ -97,6 +105,150 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _appPrimary = draft['primary'] as Color;
       _appAccent = draft['accent'] as Color;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadManagedAppsFromCloud();
+  }
+
+  Future<void> _loadManagedAppsFromCloud() async {
+    if (!mounted) return;
+    setState(() {
+      _appManagementLoading = true;
+      _appManagementMessage = null;
+    });
+    try {
+      final companyIds = await _appManagementService.listCurrentUserCompanyIds();
+      if (companyIds.isEmpty) {
+        if (!mounted) return;
+        setState(() {
+          _appManagementCompanyId = null;
+          _appManagementMessage = _appManagementService.currentUserId == null
+              ? 'سجّل الدخول إلى Supabase لربط إعدادات التطبيقات.'
+              : 'لا توجد عضوية شركة نشطة لهذا المستخدم؛ لم يتم تحميل أو حفظ إعدادات.';
+        });
+        return;
+      }
+      final companyId = companyIds.first;
+      final apps = await _appManagementService.listApps(companyId: companyId);
+      final registryRows = await _appManagementService.listAppRegistry(companyId: companyId);
+      if (!mounted) return;
+      setState(() {
+        _appManagementCompanyId = companyId;
+        _managedAppIds
+          ..clear()
+          ..addAll(registryRows);
+        for (final app in apps) {
+          String? key;
+          for (final entry in registryRows.entries) {
+            if (entry.value == app.id) {
+              key = entry.key;
+              break;
+            }
+          }
+          if (key == null) continue;
+          _managedAppDrafts[key] = {
+            'name': app.name,
+            'primary': _managedAppDrafts[key]?['primary'] ?? const Color(0xFF3E007D),
+            'accent': _managedAppDrafts[key]?['accent'] ?? const Color(0xFFFFA015),
+          };
+        }
+        _appManagementMessage = 'تم تحميل سجل التطبيقات من قاعدة البيانات.';
+      });
+      await _loadSelectedManagedAppTheme();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _appManagementMessage = 'تعذر تحميل إعدادات التطبيقات: $error';
+      });
+    } finally {
+      if (mounted) setState(() => _appManagementLoading = false);
+    }
+  }
+
+  Future<void> _loadSelectedManagedAppTheme() async {
+    final appId = _managedAppIds[_selectedAppKey];
+    if (appId == null || appId.isEmpty) return;
+    try {
+      final settings = await _appManagementService.getThemeSettings(appId: appId);
+      if (settings == null || !mounted) return;
+      final primary = _parseManagedColor(settings.primaryColor);
+      final accent = _parseManagedColor(settings.accentColor);
+      setState(() {
+        _appName = settings.displayName;
+        _appPrimary = primary;
+        _appAccent = accent;
+        _managedAppDrafts[_selectedAppKey] = {
+          'name': _appName,
+          'primary': _appPrimary,
+          'accent': _appAccent,
+        };
+      });
+    } catch (error) {
+      if (mounted) setState(() => _appManagementMessage = 'تعذر تحميل هوية التطبيق: $error');
+    }
+  }
+
+  Color _parseManagedColor(String value) {
+    final hex = value.trim().replaceFirst('#', '');
+    final normalized = hex.length == 6 ? 'FF$hex' : hex;
+    final parsed = int.tryParse(normalized, radix: 16);
+    return parsed == null ? const Color(0xFF3E007D) : Color(parsed);
+  }
+
+  Future<void> _saveManagedAppToCloud() async {
+    final companyId = _appManagementCompanyId;
+    if (companyId == null || companyId.isEmpty) {
+      _showAppManagementMessage('لا يمكن الحفظ قبل وجود عضوية شركة نشطة في Supabase.');
+      return;
+    }
+    if (_appName.trim().isEmpty) {
+      _showAppManagementMessage('اكتب اسم التطبيق قبل الحفظ.');
+      return;
+    }
+    setState(() {
+      _appManagementSaving = true;
+      _appManagementMessage = null;
+    });
+    try {
+      final appId = await _appManagementService.saveManagedApp(
+        companyId: companyId,
+        appKey: _selectedAppKey,
+        displayName: _appName.trim(),
+        status: _selectedAppKey == 'silsila'
+            ? ErpManagedAppStatus.active
+            : ErpManagedAppStatus.inDevelopment,
+      );
+      await _appManagementService.saveThemeSettings(
+        ErpAppThemeSettings(
+          appId: appId,
+          displayName: _appName.trim(),
+          primaryColor: '#${_appPrimary.value.toRadixString(16).substring(2).toUpperCase()}',
+          accentColor: '#${_appAccent.value.toRadixString(16).substring(2).toUpperCase()}',
+        ),
+      );
+      if (!mounted) return;
+      setState(() {
+        _managedAppIds[_selectedAppKey] = appId;
+        _appManagementMessage = 'تم حفظ اسم التطبيق وألوانه في قاعدة البيانات.';
+        _activityLog.insert(0, 'تم حفظ إعدادات هوية التطبيق $_appName في Supabase');
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _appManagementMessage = 'لم يتم الحفظ في قاعدة البيانات: $error';
+      });
+    } finally {
+      if (mounted) setState(() => _appManagementSaving = false);
+    }
+  }
+
+  void _showAppManagementMessage(String message) {
+    if (!mounted) return;
+    setState(() => _appManagementMessage = message);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _updateManagedAppDraft({String? name, Color? primary, Color? accent}) {
@@ -649,9 +801,33 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowImageManagement, onChanged: (v) => setState(() => _allowImageManagement = v), title: const Text('السماح بإدارة الصور'), subtitle: const Text('يتطلب لاحقًا ربط التخزين والصلاحيات بالخادم')),
       SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowPermissionManagement, onChanged: (v) => setState(() => _allowPermissionManagement = v), title: const Text('السماح بإدارة صلاحيات المستخدمين'), subtitle: const Text('ليس بديلًا عن صلاحيات قاعدة البيانات')),
       const SizedBox(height: 12),
-      FilledButton.icon(onPressed: () => setState(() => _activityLog.insert(0, 'تم حفظ مسودة إعدادات التطبيق داخل الجلسة الحالية')), icon: const Icon(Icons.save_outlined), label: const Text('حفظ المسودة الحالية')),
+      if (_appManagementMessage != null)
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: _appManagementMessage!.startsWith('تم حفظ') || _appManagementMessage!.startsWith('تم تحميل')
+                ? const Color(0xFFEAF7EF)
+                : const Color(0xFFFFF4E5),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(_appManagementMessage!, style: const TextStyle(fontSize: 12, height: 1.5)),
+        ),
+      FilledButton.icon(
+        onPressed: _appManagementSaving ? null : _saveManagedAppToCloud,
+        icon: _appManagementSaving
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : const Icon(Icons.cloud_upload_outlined),
+        label: Text(_appManagementSaving ? 'جارٍ الحفظ...' : 'حفظ الاسم والألوان في قاعدة البيانات'),
+      ),
       const SizedBox(height: 8),
-      const Text('تُحفظ مسودات الاسم والألوان لكل تطبيق داخل حالة الواجهة الحالية فقط، وتُفقد عند إغلاقها. الحفظ الدائم ورفع الصور وتطبيق الصلاحيات يتطلب ربطًا آمنًا بقاعدة البيانات.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.7)),
+      OutlinedButton.icon(
+        onPressed: _appManagementLoading ? null : _loadManagedAppsFromCloud,
+        icon: const Icon(Icons.cloud_download_outlined),
+        label: Text(_appManagementLoading ? 'جارٍ تحميل الإعدادات...' : 'إعادة تحميل الإعدادات المحفوظة'),
+      ),
+      const SizedBox(height: 8),
+      const Text('الحفظ الدائم يعمل بعد تهيئة Supabase وتطبيق جداول إدارة التطبيقات وسياسات RLS المقيدة بالشركة. لم يتم ربط رفع الصور أو فرض الصلاحيات من هذه الأزرار.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.7)),
     ])),
   ]);
 
