@@ -2372,7 +2372,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
   List<Map<String, dynamic>> products = [];
   bool loading = true;
   String? error;
-  final busyIds = <int>{};
+  final busyIds = <String>{};
 
   @override
   void initState() {
@@ -2966,8 +2966,8 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
 
   Future<void> toggleCategory(Map<String, dynamic> category) async {
     final rawId = category['id'];
-    final id = rawId?.toString().trim();
-    if (id == null) return;
+    final id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+    if (id == null || id <= 0) return;
     try {
       await service.updateCategory(categoryId: id, isActive: category['is_active'] != true);
       await loadCategories();
