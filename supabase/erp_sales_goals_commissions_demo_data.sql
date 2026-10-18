@@ -173,11 +173,40 @@ create policy erp_commission_runs_write_manager on public.erp_commission_runs fo
 -- Publicly documented geography seeds: top-level Greater Cairo and a useful starter
 -- hierarchy. These are reference areas, not an exhaustive official administrative gazetteer.
 insert into public.erp_geo_areas(parent_id,governorate,area_name,area_kind,name_ar,name_en,source_name,source_url,is_verified)
-values
-(null,'القاهرة','القاهرة','governorate','محافظة القاهرة','Cairo Governorate','CAPMAS / public reference','https://www.capmas.gov.eg/',false),
-(null,'الجيزة','الجيزة','governorate','محافظة الجيزة','Giza Governorate','CAPMAS / public reference','https://www.capmas.gov.eg/',false),
-(null,'القليوبية','القليوبية','governorate','محافظة القليوبية','Qalyubia Governorate','CAPMAS / public reference','https://www.capmas.gov.eg/',false)
-on conflict do nothing;
+select null,x.gov,x.gov,'governorate','محافظة ' || x.gov,x.name_en,'CAPMAS / public reference','https://www.capmas.gov.eg/',false
+from (values
+('القاهرة','Cairo'),
+('الجيزة','Giza'),
+('القليوبية','Qalyubia'),
+('الإسكندرية','Alexandria'),
+('البحيرة','Beheira'),
+('مطروح','Matrouh'),
+('كفر الشيخ','Kafr El Sheikh'),
+('الغربية','Gharbia'),
+('المنوفية','Menoufia'),
+('الدقهلية','Dakahlia'),
+('دمياط','Damietta'),
+('بورسعيد','Port Said'),
+('الإسماعيلية','Ismailia'),
+('السويس','Suez'),
+('شمال سيناء','North Sinai'),
+('جنوب سيناء','South Sinai'),
+('الشرقية','Sharqia'),
+('الفيوم','Fayoum'),
+('بني سويف','Beni Suef'),
+('المنيا','Minya'),
+('أسيوط','Assiut'),
+('سوهاج','Sohag'),
+('قنا','Qena'),
+('الأقصر','Luxor'),
+('أسوان','Aswan'),
+('البحر الأحمر','Red Sea'),
+('الوادي الجديد','New Valley')
+) as x(gov,name_en)
+where not exists (
+  select 1 from public.erp_geo_areas existing
+  where existing.parent_id is null and existing.governorate=x.gov and existing.area_kind='governorate'
+);
 
 insert into public.erp_geo_areas(parent_id,governorate,area_name,area_kind,name_ar,name_en,source_name,source_url,is_verified)
 select g.id, x.gov, x.area, x.kind, x.name_ar, x.name_en, 'Silsila starter geography', null, false
