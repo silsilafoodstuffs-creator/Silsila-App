@@ -152,6 +152,36 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     }
   }
 
+  Future<void> _delete(Map<String, dynamic> row) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('حذف مركز التكلفة'),
+        content: Text('هل تريد حذف «${_s(row['center_name'])}»؟ لا يمكن حذفه إذا كان له مراكز فرعية مرتبطة.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _db!
+          .from('erp_cost_centers')
+          .delete()
+          .eq('id', row['id'])
+          .eq('company_id', (widget.companyId ?? '').trim());
+      if (mounted) setState(() => _message = 'تم حذف مركز التكلفة.');
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر حذف المركز؛ قد يكون مرتبطًا بمراكز فرعية أو بحركات مالية: $error');
+    }
+  }
+
   String _branchLabel(String? id) {
     if (id == null || id.isEmpty) return 'بدون فرع';
     for (final row in _branches) {
@@ -199,6 +229,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
               trailing: Wrap(spacing: 0, children: [
                 IconButton(tooltip: 'تعديل', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _costPurple)),
                 IconButton(tooltip: active ? 'إيقاف' : 'تفعيل', onPressed: () => _toggle(row), icon: Icon(active ? Icons.pause_circle_outline : Icons.play_circle_outline, color: active ? Colors.orange : Colors.green)),
+                IconButton(tooltip: 'حذف', onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
               ]),
             ),
           );
