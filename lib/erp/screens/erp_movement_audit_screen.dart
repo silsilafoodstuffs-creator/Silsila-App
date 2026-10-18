@@ -417,7 +417,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: (isError ? Colors.red : const Color(0xFFFFA015)).withOpacity(.09),
+                          color: (isError ? Colors.red : const Color(0xFFFFA015)).withValues(alpha: .09),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
@@ -452,7 +452,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
 
   Widget _metric(String label, String value, Color color) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-    decoration: BoxDecoration(color: color.withOpacity(.09), borderRadius: BorderRadius.circular(10)),
+    decoration: BoxDecoration(color: color.withValues(alpha: .09), borderRadius: BorderRadius.circular(10)),
     child: Text('$label: $value', style: TextStyle(color: color, fontWeight: FontWeight.w900)),
   );
 }
