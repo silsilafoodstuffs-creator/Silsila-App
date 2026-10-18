@@ -735,22 +735,101 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     Container(padding: const EdgeInsets.all(26), decoration: BoxDecoration(gradient: const LinearGradient(colors: [_purple, Color(0xFF6E2BA6)], begin: Alignment.topRight, end: Alignment.bottomLeft), borderRadius: BorderRadius.circular(22)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('مرحبًا بك في نظام سلسلة ERP', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900)),
       SizedBox(height: 10),
-      Text('منظومة موحدة لإدارة الحسابات والمخازن والمبيعات والمشتريات والفروع والموارد البشرية.', style: TextStyle(color: Colors.white70, height: 1.8)),
+      Text('لوحة تنفيذية موحدة لمتابعة الأداء المالي والتشغيلي والمخزون والمبيعات والموارد البشرية.', style: TextStyle(color: Colors.white70, height: 1.8)),
       SizedBox(height: 15),
-      Text('تنبيه: هذه واجهة تأسيسية ببيانات تجريبية، ولم يتم ربطها بعد بقاعدة بيانات تشغيلية.', style: TextStyle(color: Colors.white, fontSize: 12)),
+      Text('المؤشرات معروضة كقوالب لحين ربط مصادر البيانات الفعلية واعتماد الاستعلامات المحاسبية والتشغيلية.', style: TextStyle(color: Colors.white, fontSize: 12)),
     ])),
     const SizedBox(height: 22),
-    const Text('الملخص التنفيذي', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: _purple)),
+    const Text('الملخص التنفيذي', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _purple)),
+    const SizedBox(height: 5),
+    const Text('المقارنة اليومية: الارتفاع باللون الأخضر والانخفاض باللون الأحمر بعد توافر بيانات اليوم وأمس.', style: TextStyle(color: Colors.black54, fontSize: 11)),
     const SizedBox(height: 12),
-    LayoutBuilder(builder: (context, c) {
-      final n = c.maxWidth > 1000 ? 4 : c.maxWidth > 600 ? 2 : 1;
-      return GridView.count(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), crossAxisCount: n, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: n == 1 ? 3.1 : 1.7, children: const [
-        _Metric(title: 'مبيعات اليوم', value: '—', note: 'بانتظار ربط البيانات', icon: Icons.trending_up_rounded, color: _purple),
-        _Metric(title: 'تحصيلات اليوم', value: '—', note: 'بانتظار ربط البيانات', icon: Icons.payments_outlined, color: Color(0xFF18865A)),
-        _Metric(title: 'طلبات قيد التنفيذ', value: '—', note: 'بانتظار ربط البيانات', icon: Icons.local_shipping_outlined, color: _orange),
-        _Metric(title: 'تنبيهات المخزون', value: '—', note: 'بانتظار ربط البيانات', icon: Icons.inventory_2_outlined, color: _pink),
-      ]);
-    }),
+    _dashboardPanel('مؤشرات الأداء الرئيسية', Icons.insights_rounded, [
+      _dashboardMetric('مبيعات اليوم', '—', Icons.trending_up_rounded, _purple),
+      _dashboardMetric('صافي الربح', '—', Icons.account_balance_rounded, const Color(0xFF18865A)),
+      _dashboardMetric('تحصيلات اليوم', '—', Icons.payments_outlined, const Color(0xFF18865A)),
+      _dashboardMetric('إجمالي المصروفات', '—', Icons.money_off_csred_rounded, _orange),
+      _dashboardMetric('هامش صافي الربح', '—', Icons.percent_rounded, _purple),
+      _dashboardMetric('نسبة التداول', '—', Icons.swap_horiz_rounded, _purple),
+      _dashboardMetric('نسبة السيولة السريعة', '—', Icons.waterfall_chart_rounded, _purple),
+      _dashboardMetric('نسبة المديونية', '—', Icons.account_balance_wallet_outlined, _pink),
+      _dashboardMetric('معدل دوران المخزون', '—', Icons.autorenew_rounded, _orange),
+      _dashboardMetric('نسبة التحصيل', '—', Icons.price_check_rounded, const Color(0xFF18865A)),
+      _dashboardMetric('قيمة الأقساط المستحقة', '—', Icons.event_repeat_rounded, _orange),
+      _dashboardMetric('عدد الأقساط ونسبتها من الإجمالي', '—', Icons.pie_chart_outline_rounded, _pink),
+    ]),
+    const SizedBox(height: 14),
+    _dashboardPanel('ملخص قائمة الدخل', Icons.receipt_long_rounded, [
+      _dashboardMetric('صافي المبيعات', '—', Icons.point_of_sale_rounded, _purple),
+      _dashboardMetric('تكلفة البضاعة المباعة', '—', Icons.inventory_2_outlined, _orange),
+      _dashboardMetric('مجمل الربح', '—', Icons.trending_up_rounded, const Color(0xFF18865A)),
+      _dashboardMetric('المصروفات التشغيلية', '—', Icons.money_off_rounded, _pink),
+      _dashboardMetric('صافي الربح / الخسارة', '—', Icons.calculate_outlined, _purple),
+    ]),
+    const SizedBox(height: 14),
+    _dashboardPanel('ملخص المركز المالي', Icons.account_balance_rounded, [
+      _dashboardMetric('إجمالي الأصول', '—', Icons.business_rounded, _purple),
+      _dashboardMetric('الأصول المتداولة', '—', Icons.account_balance_wallet_outlined, _purple),
+      _dashboardMetric('إجمالي الالتزامات', '—', Icons.request_quote_outlined, _pink),
+      _dashboardMetric('حقوق الملكية', '—', Icons.pie_chart_outline_rounded, const Color(0xFF18865A)),
+      _dashboardMetric('رأس المال العامل', '—', Icons.sync_alt_rounded, _orange),
+    ]),
+    const SizedBox(height: 14),
+    _dashboardPanel('مخطط أعمار ديون العملاء', Icons.stacked_bar_chart_rounded, [
+      _dashboardMetric('عدد العملاء', '—', Icons.groups_rounded, _purple),
+      _dashboardMetric('إجمالي أرصدة العملاء المدينة', '—', Icons.account_balance_wallet_outlined, _orange),
+      _dashboardMetric('0 إلى 3 أيام', '—', Icons.schedule_rounded, _purple),
+      _dashboardMetric('أكثر من 3 أيام إلى 7 أيام', '—', Icons.schedule_rounded, _purple),
+      _dashboardMetric('أكثر من 7 أيام إلى 30 يومًا', '—', Icons.calendar_month_rounded, _orange),
+      _dashboardMetric('أكثر من 30 إلى 90 يومًا', '—', Icons.warning_amber_rounded, _pink),
+      _dashboardMetric('أكثر من 90 يومًا', '—', Icons.error_outline_rounded, _pink),
+    ], footer: 'يعرض المخطط عدد الحسابات وقيمة المديونية في كل شريحة بعد ربط تواريخ الاستحقاق والتحصيل.'),
+    const SizedBox(height: 14),
+    _dashboardPanel('الموردون والخزائن والسلف', Icons.account_balance_wallet_rounded, [
+      _dashboardMetric('عدد الموردين', '—', Icons.factory_rounded, _purple),
+      _dashboardMetric('إجمالي أرصدة الموردين', '—', Icons.receipt_long_rounded, _orange),
+      _dashboardMetric('عدد الخزائن', '—', Icons.inventory_2_outlined, _purple),
+      _dashboardMetric('إجمالي أرصدة الخزائن', '—', Icons.payments_rounded, const Color(0xFF18865A)),
+      _dashboardMetric('قيمة السلف الكبيرة', '—', Icons.money_rounded, _pink),
+    ]),
+    const SizedBox(height: 14),
+    _dashboardPanel('حالة الفواتير والتجهيز والتسليم', Icons.local_shipping_rounded, [
+      _dashboardMetric('فواتير غير محملة / غير مجهزة', '—', Icons.inventory_2_outlined, _orange),
+      _dashboardMetric('فواتير غير مسلمة', '—', Icons.delivery_dining_rounded, _pink),
+      _dashboardMetric('فواتير غير مغلقة', '—', Icons.pending_actions_rounded, _orange),
+      _dashboardMetric('طلبات قيد التنفيذ', '—', Icons.sync_rounded, _purple),
+    ], footer: 'تُحتسب الحالات من حالة الفاتورة الفعلية لمنع تكرار الفاتورة بين المؤشرات.'),
+    const SizedBox(height: 14),
+    _dashboardPanel('ملخص الموارد البشرية والحضور حسب الإدارة', Icons.groups_rounded, [
+      _dashboardMetric('الموظفون النشطون بكل إدارة', '—', Icons.badge_rounded, _purple),
+      _dashboardMetric('الحضور اليوم بكل إدارة', '—', Icons.how_to_reg_rounded, const Color(0xFF18865A)),
+      _dashboardMetric('نسبة الحضور اليومية', '—', Icons.percent_rounded, _purple),
+      _dashboardMetric('الغياب والتأخير', '—', Icons.event_busy_rounded, _pink),
+    ], footer: 'يعرض الجدول التفصيلي اسم كل إدارة وعدد الموظفين النشطين وعدد الحاضرين ومقارنة أمس عند ربط بيانات الموارد البشرية.'),
+    const SizedBox(height: 14),
+    _dashboardPanel('صلاحية المخزون وقيمته', Icons.inventory_2_rounded, [
+      _dashboardMetric('عدد الأصناف', '—', Icons.category_rounded, _purple),
+      _dashboardMetric('إجمالي قيمة المخزون', '—', Icons.price_check_rounded, _purple),
+      _dashboardMetric('صلاحية جيدة', '—', Icons.check_circle_outline_rounded, const Color(0xFF18865A)),
+      _dashboardMetric('صلاحية قريبة', '—', Icons.warning_amber_rounded, _orange),
+      _dashboardMetric('منتهية الصلاحية', '—', Icons.error_outline_rounded, _pink),
+    ], footer: 'يعتمد التصنيف على تاريخ الصلاحية وحدود التنبيه المعرفة في إعدادات النظام.'),
+    const SizedBox(height: 14),
+    _dashboardPanel('تحليلات ومخططات الأداء', Icons.bar_chart_rounded, [
+      _dashboardMetric('أكثر فئات الأصناف الرئيسية', '—', Icons.category_rounded, _purple),
+      _dashboardMetric('أعلى 5 موردين', '—', Icons.factory_rounded, _orange),
+      _dashboardMetric('أعلى 5 عملاء', '—', Icons.groups_rounded, _purple),
+      _dashboardMetric('أعلى 5 مناديب حسب نسبة تحقيق الهدف', '—', Icons.emoji_events_rounded, const Color(0xFF18865A)),
+      _dashboardMetric('إجمالي هدف مبيعات الفروع', '—', Icons.flag_rounded, _pink),
+      _dashboardMetric('مبيعات الفروع مقارنة بالأهداف', '—', Icons.show_chart_rounded, _purple),
+    ],
+    footer: 'ستظهر المخططات المرتبة بالقيم الفعلية عند اكتمال ربط البيانات، مع زر عرض الكل لقوائم الموردين والعملاء والمناديب.',
+    actions: [
+      _dashboardAction('عرض كل الموردين', () => _open('المشتريات والموردون', 'بيانات أساسية', 'دليل الموردين')),
+      _dashboardAction('عرض كل العملاء', () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
+      _dashboardAction('عرض كل المناديب', () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل المندوبين')),
+      _dashboardAction('عرض المبيعات والفواتير', () => _open('المبيعات والعملاء', 'حركات', 'فاتورة مبيعات')),
+    ]),
     const SizedBox(height: 22),
     const Text('الوصول السريع', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: _purple)),
     const SizedBox(height: 12),
@@ -760,11 +839,66 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _quick('دليل الأصناف', Icons.inventory_2_rounded, () => _open('المخازن والفروع', 'بيانات أساسية', 'دليل الأصناف')),
       _quick('دليل العملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
       _quick('ملف الموظف', Icons.badge_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'ملف الموظف')),
-      _quick('قواعد الورديات', Icons.schedule_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
-      _quick('أجهزة البصمة', Icons.fingerprint_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'أجهزة البصمة وربط الحضور')),
+      _quick('قواعد الورديات', Icons.schedule_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'قواعد الورديات والحضور والانصراف')),
+      _quick('أجهزة البصمة', Icons.fingerprint_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'أجهزة البصمة وربط الحضور')),
     ]),
     const SizedBox(height: 22),
   ]);
+
+  Widget _dashboardPanel(String title, IconData icon, List<Widget> metrics, {String? footer, List<Widget> actions = const []}) =>
+      Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFFE8E0F0))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: _purple, size: 20)),
+            const SizedBox(width: 9),
+            Expanded(child: Text(title, style: const TextStyle(color: _purple, fontSize: 15, fontWeight: FontWeight.w900))),
+          ]),
+          const SizedBox(height: 13),
+          LayoutBuilder(builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 1050 ? 4 : constraints.maxWidth >= 650 ? 3 : constraints.maxWidth >= 400 ? 2 : 1;
+            return GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: columns,
+              crossAxisSpacing: 9,
+              mainAxisSpacing: 9,
+              childAspectRatio: columns == 1 ? 4.3 : columns == 2 ? 2.7 : 2.15,
+              children: metrics,
+            );
+          }),
+          if (footer != null) ...[
+            const SizedBox(height: 10),
+            Text(footer, style: const TextStyle(color: Colors.black54, fontSize: 11, height: 1.6)),
+          ],
+          if (actions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: actions),
+          ],
+        ]),
+      );
+
+  Widget _dashboardMetric(String title, String value, IconData icon, Color color) =>
+      Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(color: const Color(0xFFFAF8FC), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFECE7F2))),
+        child: Row(children: [
+          Container(width: 33, height: 33, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(9)), child: Icon(icon, color: color, size: 18)),
+          const SizedBox(width: 8),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+            Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 10, height: 1.3, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(value, style: TextStyle(color: color, fontSize: 17, fontWeight: FontWeight.w900)),
+          ])),
+        ]),
+      );
+
+  Widget _dashboardAction(String title, VoidCallback onPressed) => OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(foregroundColor: _purple, side: const BorderSide(color: Color(0xFFD8C3EF)), visualDensity: VisualDensity.compact),
+        child: Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+      );
 
   void _goHome() => setState(() {
     _module = 'إدارة البرنامج';
