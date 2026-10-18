@@ -7,9 +7,11 @@ class ErpLedgerReportsScreen extends StatefulWidget {
   const ErpLedgerReportsScreen({
     super.key,
     this.kind = ErpLedgerReportKind.trialBalance,
+    this.initialCompanyId,
   });
 
   final ErpLedgerReportKind kind;
+  final String? initialCompanyId;
 
   @override
   State<ErpLedgerReportsScreen> createState() => _ErpLedgerReportsScreenState();
@@ -24,6 +26,12 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>> _rows = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _company.text = widget.initialCompanyId ?? '';
+  }
 
   bool get _trial => widget.kind == ErpLedgerReportKind.trialBalance;
   String get _title => _trial
