@@ -1212,25 +1212,27 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           );
         }),
         const SizedBox(height: 3),
-        if (wide)
-          Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Expanded(flex: 5, child: _executiveChartPanel(
-              title: 'اتجاه المبيعات',
-              caption: 'آخر 7 أيام مقابل المستهدف',
-              color: _purple,
-              value: '—%',
-              chart: const _ExecutiveChartPainter(color: _purple),
-            )),
-            const SizedBox(width: 3),
-            Expanded(flex: 3, child: _executiveChartPanel(
-              title: 'مزيج الأداء',
-              caption: 'مبيعات • تحصيل • مصروفات',
-              color: _orange,
-              value: '—',
-              chart: const _ExecutiveBarsPainter(),
-            )),
-            const SizedBox(width: 3),
-            Expanded(flex: 3, child: _executiveHighlights()),
+        if (wide || mid)
+          Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: _executiveChartPanel(
+                title: 'اتجاه المبيعات',
+                caption: 'آخر 7 أيام مقابل المستهدف',
+                color: _purple,
+                value: '—%',
+                chart: const _ExecutiveChartPainter(color: _purple),
+              )),
+              const SizedBox(width: 4),
+              Expanded(child: _executiveChartPanel(
+                title: 'مزيج الأداء',
+                caption: 'مبيعات • تحصيل • مصروفات',
+                color: _orange,
+                value: '—',
+                chart: const _ExecutiveBarsPainter(),
+              )),
+            ]),
+            const SizedBox(height: 3),
+            _executiveHighlights(),
           ])
         else ...[
           _executiveChartPanel(
@@ -1239,6 +1241,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             color: _purple,
             value: '—%',
             chart: const _ExecutiveChartPainter(color: _purple),
+          ),
+          const SizedBox(height: 3),
+          _executiveChartPanel(
+            title: 'مزيج الأداء',
+            caption: 'مبيعات • تحصيل • مصروفات',
+            color: _orange,
+            value: '—',
+            chart: const _ExecutiveBarsPainter(),
           ),
           const SizedBox(height: 3),
           _executiveHighlights(),
@@ -1289,7 +1299,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required String value,
     required CustomPainter chart,
   }) => Container(
-    height: 120,
+    height: 88,
     padding: const EdgeInsets.fromLTRB(7, 5, 7, 4),
     decoration: BoxDecoration(
       color: Colors.white,
@@ -1313,8 +1323,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   );
 
   Widget _executiveHighlights() => Container(
-    height: 120,
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+    height: 78,
+    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE7E0EF))),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const Text('مؤشرات تحتاج متابعة', style: TextStyle(fontSize: 13, color: _purple, fontWeight: FontWeight.w900)),
