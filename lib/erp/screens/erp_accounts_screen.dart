@@ -25,6 +25,9 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
     _search.text = widget.initialSearch ?? '';
+    if (_company.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
   }
 
   @override
