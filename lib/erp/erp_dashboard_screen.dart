@@ -1510,7 +1510,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   Widget _home() {
-    if (_executiveAccessChecked && !_executiveSummaryAllowed) {
+    if (!_executiveAccessChecked && _appManagementCompanyId != null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if ((_executiveAccessChecked && !_executiveSummaryAllowed) || (_executivePartialConfigured && _executiveAllowedSections.isEmpty)) {
       return Center(child: Container(
         constraints: const BoxConstraints(maxWidth: 560),
         padding: const EdgeInsets.all(28),
@@ -1518,9 +1521,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.lock_outline_rounded, color: _purple, size: 52),
           const SizedBox(height: 12),
-          const Text('الملخص التنفيذي غير متاح لحسابك', style: TextStyle(color: _purple, fontSize: 20, fontWeight: FontWeight.w900)),
+          Text(_executiveSummaryAllowed ? 'لا توجد أقسام متاحة في الملخص التنفيذي' : 'الملخص التنفيذي غير متاح لحسابك', style: const TextStyle(color: _purple, fontSize: 20, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          const Text('لا توجد صلاحية لعرض هذه الشاشة. اطلب من مسؤول النظام تعديل صلاحياتك.', textAlign: TextAlign.center, style: TextStyle(height: 1.6)),
+          const Text('اطلب من مسؤول النظام منح صلاحية الملخص التنفيذي أو تفعيل قسم واحد على الأقل من أقسامه.', textAlign: TextAlign.center, style: TextStyle(height: 1.6)),
         ]),
       ));
     }
@@ -1695,7 +1698,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               )),
             ]),
             const SizedBox(height: 12),
-            if (canControls || canDistribution || canPeople) _executiveHighlights(),
+            if (canSales && canFinance && canInventory) _executiveHighlights(),
           ])
         else ...[
           if (canSales) _executiveChartPanel(
@@ -1717,7 +1720,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           _executiveHighlights(),
         ],
         const SizedBox(height: 16),
-        if (canFinance || canInventory) _executiveAdditionalCharts(sideBySide: wide || mid),
+        if (canFinance || canInventory) _executiveAdditionalCharts(sideBySide: wide || mid, showCollections: canFinance, showInventory: canInventory),
         const SizedBox(height: 18),
         LayoutBuilder(builder: (context, constraints) {
           final columns = constraints.maxWidth >= 1150 ? 3 : constraints.maxWidth >= 680 ? 2 : 1;
@@ -1789,16 +1792,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ]),
   );
 
-  Widget _executiveAdditionalCharts({required bool sideBySide}) {
+  Widget _executiveAdditionalCharts({required bool sideBySide, required bool showCollections, required bool showInventory}) {
     final charts = <Widget>[
-      _executiveChartPanel(
+      if (showCollections) _executiveChartPanel(
         title: 'المدفوع المسجل على الفواتير',
         caption: 'آخر 7 أيام • بيانات الفواتير المرحلة',
         color: const Color(0xFF168A70),
         value: _executiveMoney(_executiveCollections),
         chart: _ExecutiveChartPainter(color: const Color(0xFF168A70), values: _executiveDailyCollections),
       ),
-      _executiveChartPanel(
+      if (showInventory) _executiveChartPanel(
         title: 'قيمة المخزون حسب المجموعة',
         caption: 'تقدير على تكلفة الشراء الحالية',
         color: _pink,
@@ -1809,6 +1812,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             : _executiveInventoryGroupLabels.take(3).toList(),
       ),
     ];
+    if (charts.isEmpty) return const SizedBox.shrink();
+    if (charts.length == 1) return charts.first;
     if (sideBySide) {
       return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(child: charts[0]),
