@@ -212,6 +212,186 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
     }
   }
 
+  Future<void> _edit(ErpAppAssetRecord asset) async {
+    final id = asset.id;
+    if (id == null || id.isEmpty) {
+      setState(() => _error = 'معرّف الصورة غير متاح للتعديل.');
+      return;
+    }
+    final name = TextEditingController(text: asset.displayName);
+    final entity = TextEditingController(text: asset.entityId ?? '');
+    final alt = TextEditingController(text: asset.altText ?? '');
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تعديل بيانات الصورة'),
+        content: SizedBox(
+          width: 440,
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الصورة *')),
+              const SizedBox(height: 10),
+              TextField(controller: entity, decoration: const InputDecoration(labelText: 'معرّف الصنف أو الطرف (UUID اختياري)')),
+              const SizedBox(height: 10),
+              TextField(controller: alt, decoration: const InputDecoration(labelText: 'وصف الصورة')),
+            ]),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ التعديلات')),
+        ],
+      ),
+    );
+    if (saved != true) {
+      name.dispose();
+      entity.dispose();
+      alt.dispose();
+      return;
+    }
+    try {
+      final entityId = entity.text.trim();
+      if (entityId.isNotEmpty && !RegExp(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(color: _assetPurple.withValues(alpha: .09), borderRadius: BorderRadius.circular(14)),
+            child: const Icon(Icons.photo_library_outlined, color: _assetPurple),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('إدارة الصور والملفات', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _assetPurple)),
+              SizedBox(height: 4),
+              Text('رفع الصور وتسجيلها في التخزين الخاص وقاعدة بيانات الشركة.', style: TextStyle(color: Colors.black54)),
+            ]),
+          ),
+          IconButton(tooltip: 'تحديث القائمة', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
+        ]),
+        const SizedBox(height: 18),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade300)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              DropdownButtonFormField<String>(
+                value: _assetType,
+                decoration: const InputDecoration(labelText: 'نوع الصورة', border: OutlineInputBorder()),
+                items: _types.entries.map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),
+                onChanged: _uploading ? null : (value) {
+                  if (value == null) return;
+                  setState(() => _assetType = value);
+                  _load();
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(controller: _entityId, decoration: const InputDecoration(labelText: 'معرّف الصنف أو الطرف (اختياري)', border: OutlineInputBorder())),
+              const SizedBox(height: 12),
+              TextField(controller: _altText, decoration: const InputDecoration(labelText: 'وصف الصورة (اختياري)', border: OutlineInputBorder())),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: !_ready || _uploading ? null : _pickAndUpload,
+                icon: _uploading
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.cloud_upload_outlined),
+                label: Text(_uploading ? 'جارٍ رفع الصورة...' : 'اختيار صورة ورفعها'),
+                style: FilledButton.styleFrom(backgroundColor: _assetPurple, padding: const EdgeInsets.symmetric(vertical: 14)),
+              ),
+              const SizedBox(height: 6),
+              const Text('الحد الأقصى 8 ميجابايت. الصيغ المدعومة JPG وPNG وWEBP وGIF.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+            ]),
+          ),
+        ),
+        if (_message != null) _notice(_message!, Colors.green),
+        if (_error != null) _notice(_error!, Colors.red),
+        const SizedBox(height: 12),
+        Row(children: [
+          const Expanded(child: Text('الصور المسجلة', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
+          Text('${_assets.length} صورة', style: const TextStyle(color: _assetPurple, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 10),
+        if (_loading) const Center(child: Padding(padding: EdgeInsets.all(28), child: CircularProgressIndicator()))
+        else if (_assets.isEmpty)
+          const Card(child: Padding(padding: EdgeInsets.all(28), child: Center(child: Text('لا توجد صور مسجلة لهذا النوع حتى الآن.'))))
+        else
+          ..._assets.map((asset) => Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 10),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: Colors.grey.shade300)),
+            child: ListTile(
+              leading: FutureBuilder<String>(
+                future: _storage.createSignedImageUrl(storagePath: asset.storagePath),
+                builder: (context, snapshot) => Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
+                  clipBehavior: Clip.antiAlias,
+                  child: snapshot.hasData
+                      ? Image.network(snapshot.data!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined))
+                      : const Icon(Icons.image_outlined, color: _assetPurple),
+                ),
+              ),
+              title: Text(asset.displayName, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text('${_types[asset.assetType] ?? asset.assetType} • ${asset.fileSizeBytes ?? 0} بايت\n${asset.altText ?? asset.storagePath}', maxLines: 2, overflow: TextOverflow.ellipsis),
+              isThreeLine: true,
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                IconButton(
+                  tooltip: 'تعديل بيانات الصورة',
+                  onPressed: () => _edit(asset),
+                  icon: const Icon(Icons.edit_outlined, color: _assetPurple),
+                ),
+                IconButton(
+                  tooltip: 'حذف الصورة',
+                  onPressed: () => _delete(asset),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                ),
+              ]),
+            ),
+          )),
+      ],
+    );
+  }
+
+  Widget _notice(String message, Color color) => Container(
+    margin: const EdgeInsets.only(top: 10),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(color: color.withValues(alpha: .08), borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withValues(alpha: .35))),
+    child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+  );
+}
+).hasMatch(entityId)) {
+        throw ArgumentError('معرّف الصنف أو الطرف يجب أن يكون UUID صحيحًا.');
+      }
+      await _repository.updateAssetRecord(
+        assetId: id,
+        asset: ErpAppAssetRecord(
+          id: id,
+          appId: asset.appId,
+          assetType: asset.assetType,
+          storagePath: asset.storagePath,
+          displayName: name.text.trim(),
+          entityId: entityId.isEmpty ? null : entityId,
+          mimeType: asset.mimeType,
+          fileSizeBytes: asset.fileSizeBytes,
+          altText: alt.text.trim().isEmpty ? null : alt.text.trim(),
+        ),
+      );
+      if (mounted) setState(() => _message = 'تم حفظ تعديلات بيانات الصورة.');
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر تعديل بيانات الصورة: $error');
+    } finally {
+      name.dispose();
+      entity.dispose();
+      alt.dispose();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
