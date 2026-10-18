@@ -142,6 +142,36 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     }
   }
 
+  Future<void> _delete(Map<String, dynamic> row) async {
+    if (row['is_main'] == true) {
+      setState(() => _error = 'لا يمكن حذف الفرع الرئيسي.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('حذف الفرع'),
+        content: Text('هل تريد حذف «${_s(row['branch_name'])}»؟ لن يسمح النظام بحذف فرع مرتبط بمخازن أو حركات.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _db!
+          .from('erp_branches')
+          .delete()
+          .eq('id', row['id'])
+          .eq('company_id', (widget.companyId ?? '').trim());
+      if (mounted) setState(() => _message = 'تم حذف الفرع.');
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر حذف الفرع؛ قد يكون مرتبطًا بمخازن أو مراكز تكلفة أو حركات: $error');
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
@@ -180,6 +210,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
               trailing: Wrap(spacing: 0, children: [
                 IconButton(tooltip: 'تعديل', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _branchPurple)),
                 IconButton(tooltip: active ? 'إيقاف' : 'تفعيل', onPressed: () => _toggle(row), icon: Icon(active ? Icons.pause_circle_outline : Icons.play_circle_outline, color: active ? Colors.orange : Colors.green)),
+                IconButton(tooltip: 'حذف', onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
               ]),
             ),
           );
