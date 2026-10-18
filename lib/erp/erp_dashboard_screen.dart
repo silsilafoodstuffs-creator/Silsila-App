@@ -1611,9 +1611,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final canSales = !_executivePartialConfigured || _executiveAllowedSections.contains('المبيعات والعملاء');
     final canFinance = !_executivePartialConfigured || _executiveAllowedSections.contains('المالية والسيولة');
     final canInventory = !_executivePartialConfigured || _executiveAllowedSections.contains('المخزون والمشتريات');
-    final canDistribution = !_executivePartialConfigured || _executiveAllowedSections.contains('الطلبات والتوزيع');
-    final canPeople = !_executivePartialConfigured || _executiveAllowedSections.contains('الموظفون والفروع');
-    final canControls = !_executivePartialConfigured || _executiveAllowedSections.contains('الرقابة والتنبيهات');
 
 
     return LayoutBuilder(builder: (context, outerConstraints) {
