@@ -206,7 +206,7 @@ class ErpAppManagementService {
   }) async {
     _requireId(assetId, 'معرّف الملف مطلوب.');
     final errors = asset.validate();
-    if (errors.isNotEmpty) throw ArgumentError(errors.join('\\n'));
+    if (errors.isNotEmpty) throw ArgumentError(errors.join('\n'));
     await _db.from('erp_app_assets').update({
       'display_name': asset.displayName.trim(),
       'entity_id': _clean(asset.entityId),
