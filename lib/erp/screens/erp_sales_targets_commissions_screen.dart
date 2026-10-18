@@ -6,8 +6,9 @@ const _o = Color(0xFFFFA015);
 const _pink = Color(0xFFFF27C3);
 
 class ErpSalesTargetsCommissionsScreen extends StatefulWidget {
-  const ErpSalesTargetsCommissionsScreen({super.key, this.companyId});
+  const ErpSalesTargetsCommissionsScreen({super.key, this.companyId, this.initialTabIndex = 0});
   final String? companyId;
+  final int initialTabIndex;
   @override
   State<ErpSalesTargetsCommissionsScreen> createState() => _ErpSalesTargetsCommissionsScreenState();
 }
@@ -22,7 +23,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this);
+    _tabs = TabController(length: 4, initialIndex: widget.initialTabIndex.clamp(0, 3).toInt(), vsync: this);
     try { _db = Supabase.instance.client; } catch (_) {}
     _load();
   }
