@@ -26,19 +26,26 @@ as $$
 begin
   if not exists (
     select 1 from public.erp_employees e
-    where e.id = new.employee_id and e.company_id = new.company_id and e.is_active = true
-      and (coalesce(e.job_title, '') ilike '%مندوب%'
-        or coalesce(e.job_title, '') ilike '%مبيعات%'
-        or coalesce(e.job_title, '') ilike '%sales%')
+    where e.id = new.employee_id and e.company_id = new.company_id
+      and (
+        new.is_active = false
+        or (
+          e.is_active = true
+          and (coalesce(e.job_title, '') ilike '%مندوب%'
+            or coalesce(e.job_title, '') ilike '%مبيعات%'
+            or coalesce(e.job_title, '') ilike '%sales%')
+        )
+      )
   ) then
-    raise exception 'يجب اختيار موظف مبيعات/مندوب نشط تابع للشركة نفسها.';
+    raise exception 'يجب اختيار موظف مبيعات/مندوب نشط تابع للشركة نفسها عند تفعيل التوزيع.';
   end if;
 
   if not exists (
     select 1 from public.erp_items i
-    where i.id = new.item_id and i.company_id = new.company_id and i.is_active = true
+    where i.id = new.item_id and i.company_id = new.company_id
+      and (new.is_active = false or i.is_active = true)
   ) then
-    raise exception 'يجب اختيار صنف نشط تابع للشركة نفسها.';
+    raise exception 'يجب اختيار صنف نشط تابع للشركة نفسها عند تفعيل التوزيع.';
   end if;
   return new;
 end;
