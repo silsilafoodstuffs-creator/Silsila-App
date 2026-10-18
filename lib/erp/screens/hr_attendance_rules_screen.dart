@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_company_settings_repository.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -6,7 +7,8 @@ const _green = Color(0xFF16834A);
 const _red = Color(0xFFD32F2F);
 
 class HrShiftRulesScreen extends StatefulWidget {
-  const HrShiftRulesScreen({super.key});
+  const HrShiftRulesScreen({super.key, this.companyId});
+  final String? companyId;
   @override
   State<HrShiftRulesScreen> createState() => _HrShiftRulesScreenState();
 }
@@ -18,6 +20,90 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
   final weekdays = const ['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
   final departments = const ['كل الإدارات','الإدارة العامة','المبيعات','المخازن','الحسابات','الموارد البشرية'];
   final branches = const ['كل الفروع','الإدارة الرئيسية','فرع القاهرة','فرع الجيزة','فرع الإسكندرية'];
+
+  final _settingsRepository = ErpCompanySettingsRepository();
+  bool _savingSettings = false;
+  String? _savedSettingsMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    if ((widget.companyId ?? '').trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadSavedRules());
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant HrShiftRulesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId && (widget.companyId ?? '').trim().isNotEmpty) {
+      _loadSavedRules();
+    }
+  }
+
+  Future<void> _loadSavedRules() async {
+    final companyId = (widget.companyId ?? '').trim();
+    if (companyId.isEmpty) return;
+    try {
+      final saved = await _settingsRepository.getSetting(companyId: companyId, key: 'hr_shift_rules');
+      final raw = saved?['shifts'];
+      if (raw is! List || raw.isEmpty || !mounted) return;
+      final restored = raw.whereType<Map>().map((item) => _Shift.fromJson(Map<String, dynamic>.from(item))).toList();
+      if (restored.isEmpty) return;
+      setState(() {
+        for (final shift in shifts) { shift.dispose(); }
+        shifts
+          ..clear()
+          ..addAll(restored);
+        _selectedShiftIndex = (saved?['selected_shift_index'] is num
+            ? (saved!['selected_shift_index'] as num).toInt()
+            : 0).clamp(0, shifts.length - 1).toInt();
+        _editingShiftIndex = null;
+        _savedSettingsMessage = 'تم تحميل قواعد الورديات المحفوظة.';
+      });
+    } catch (error) {
+      if (mounted) setState(() => _savedSettingsMessage = 'تعذر تحميل القواعد المحفوظة: $error');
+    }
+  }
+
+  Future<void> _saveRules() async {
+    final companyId = (widget.companyId ?? '').trim();
+    if (companyId.isEmpty) {
+      _message('لا توجد شركة نشطة مرتبطة بالمستخدم؛ لم يتم حفظ القواعد.');
+      return;
+    }
+    if (shifts.any((shift) => shift.name.text.trim().isEmpty || shift.start.text.trim().isEmpty || shift.end.text.trim().isEmpty)) {
+      _message('يجب إدخال اسم ووقت بداية ونهاية لكل وردية.');
+      return;
+    }
+    setState(() { _savingSettings = true; _savedSettingsMessage = null; });
+    try {
+      await _settingsRepository.saveSetting(
+        companyId: companyId,
+        key: 'hr_shift_rules',
+        value: <String, Object?>{
+          'shifts': shifts.map((shift) => shift.toJson()).toList(),
+          'selected_shift_index': _selectedShiftIndex,
+          'saved_at': DateTime.now().toIso8601String(),
+        },
+      );
+      if (mounted) {
+        setState(() {
+          _savingSettings = false;
+          _savedSettingsMessage = 'تم حفظ قواعد الورديات في قاعدة البيانات.';
+        });
+        _message('تم حفظ قواعد الورديات في قاعدة البيانات.');
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _savingSettings = false;
+          _savedSettingsMessage = 'فشل حفظ قواعد الورديات: $error';
+        });
+        _message('فشل حفظ قواعد الورديات: $error');
+      }
+    }
+  }
 
   @override
   void dispose() { for (final s in shifts) { s.dispose(); } super.dispose(); }
@@ -34,12 +120,13 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
         setState((){shifts.add(s);_selectedShiftIndex=shifts.length-1;_editingShiftIndex=_selectedShiftIndex;});
       },icon:const Icon(Icons.add),label:const Text('إضافة وردية'),style:FilledButton.styleFrom(backgroundColor:_purple)),
       OutlinedButton.icon(onPressed:()=>setState(()=>_editingShiftIndex=_selectedShiftIndex),icon:const Icon(Icons.edit_outlined,color:_orange),label:const Text('تعديل الوردية المحددة')),
-      OutlinedButton.icon(onPressed:()=>_message('هذه مسودة واجهة. الحفظ الدائم يحتاج ربطها بقاعدة البيانات.'),icon:const Icon(Icons.save_outlined,color:_orange),label:const Text('حفظ القواعد')),
+      OutlinedButton.icon(onPressed:_savingSettings?null:_saveRules,icon:_savingSettings?const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)):const Icon(Icons.save_outlined,color:_orange),label:Text(_savingSettings?'جارٍ الحفظ...':'حفظ القواعد')),
       if(shifts.length>1) OutlinedButton.icon(onPressed:()=>_confirmDelete('الوردية المحددة',(){
         final removed=shifts.removeAt(_selectedShiftIndex);removed.dispose();
         setState((){_selectedShiftIndex=(_selectedShiftIndex-1).clamp(0,shifts.length-1).toInt();_editingShiftIndex=null;});
       }),icon:const Icon(Icons.delete_outline,color:_red),label:const Text('حذف الوردية المحددة')),
     ]),
+    if(_savedSettingsMessage!=null) Padding(padding:const EdgeInsets.only(bottom:8),child:Text(_savedSettingsMessage!,style:const TextStyle(color:_purple,fontWeight:FontWeight.w700))),
     const SizedBox(height:12),
     const Text('فترات التأخير الخمس يجب أن تكون متتابعة: نهاية كل شريحة تليها بداية الشريحة التالية مباشرة. القيم لا تُطبق على الرواتب فعليًا قبل الربط والاعتماد.',style:TextStyle(color:_red,height:1.5)),
     const SizedBox(height:10),
@@ -323,6 +410,64 @@ class _Shift {
   final weeklyLeave=TextEditingController(text:'1'),publicLeave=TextEditingController(text:'1'),annualLeave=TextEditingController(text:'1');
   final days=<String>{'الجمعة'},depts=<String>{'كل الإدارات'},branches=<String>{'كل الفروع'},employees=<String>{};
   final employeeText=TextEditingController();
+  Map<String, Object?> toJson() => <String, Object?>{
+    'name': name.text, 'start': start.text, 'end': end.text, 'nightShift': nightShift,
+    'graceIn': graceIn.text, 'graceOut': graceOut.text, 'monthGrace': monthGrace.text,
+    'multiplier': multiplier.text, 'earlyIn': earlyIn.text, 'earlyOut': earlyOut.text, 'lateOut': lateOut.text,
+    'from': from.map((c) => c.text).toList(), 'to': to.map((c) => c.text).toList(),
+    'value': value.map((c) => c.text).toList(), 'action': List<String>.from(action),
+    'missIn': missIn.text, 'missOut': missOut.text, 'missDay': missDay.text,
+    'excusedRules': excusedRules.map((c) => c.text).toList(),
+    'absentRules': absentRules.map((c) => c.text).toList(),
+    'sick': sick.text, 'injury': injury.text, 'weeklyLeave': weeklyLeave.text,
+    'publicLeave': publicLeave.text, 'annualLeave': annualLeave.text,
+    'days': days.toList(), 'depts': depts.toList(), 'branches': branches.toList(),
+    'employees': employees.toList(), 'employeeText': employeeText.text,
+  };
+
+  factory _Shift.fromJson(Map<String, dynamic> json) {
+    final shift = _Shift();
+    void setText(TextEditingController controller, String key) {
+      if (json[key] != null) controller.text = json[key].toString();
+    }
+    setText(shift.name, 'name'); setText(shift.start, 'start'); setText(shift.end, 'end');
+    shift.nightShift = json['nightShift'] == true;
+    setText(shift.graceIn, 'graceIn'); setText(shift.graceOut, 'graceOut');
+    setText(shift.monthGrace, 'monthGrace'); setText(shift.multiplier, 'multiplier');
+    setText(shift.earlyIn, 'earlyIn'); setText(shift.earlyOut, 'earlyOut'); setText(shift.lateOut, 'lateOut');
+    setText(shift.missIn, 'missIn'); setText(shift.missOut, 'missOut'); setText(shift.missDay, 'missDay');
+    setText(shift.sick, 'sick'); setText(shift.injury, 'injury');
+    setText(shift.weeklyLeave, 'weeklyLeave'); setText(shift.publicLeave, 'publicLeave'); setText(shift.annualLeave, 'annualLeave');
+    setText(shift.employeeText, 'employeeText');
+    void setControllerList(List<TextEditingController> target, String key, String fallback) {
+      final raw = json[key];
+      if (raw is! List || raw.isEmpty) return;
+      for (final controller in target) { controller.dispose(); }
+      target.clear();
+      target.addAll(raw.map((value) => TextEditingController(text: value.toString())));
+    }
+    setControllerList(shift.from, 'from', '1');
+    setControllerList(shift.to, 'to', '10');
+    setControllerList(shift.value, 'value', '1');
+    setControllerList(shift.excusedRules, 'excusedRules', '0');
+    setControllerList(shift.absentRules, 'absentRules', '1');
+    final actions = json['action'];
+    if (actions is List && actions.isNotEmpty) {
+      shift.action
+        ..clear()
+        ..addAll(actions.map((value) => value.toString()));
+      while (shift.action.length < shift.from.length) { shift.action.add('خصم'); }
+      if (shift.action.length > shift.from.length) shift.action.removeRange(shift.from.length, shift.action.length);
+    }
+    void setStringSet(Set<String> target, String key) {
+      final raw = json[key];
+      if (raw is List) { target..clear()..addAll(raw.map((value) => value.toString())); }
+    }
+    setStringSet(shift.days, 'days'); setStringSet(shift.depts, 'depts');
+    setStringSet(shift.branches, 'branches'); setStringSet(shift.employees, 'employees');
+    return shift;
+  }
+
   void dispose(){for(final c in [name,start,end,graceIn,graceOut,monthGrace,multiplier,earlyIn,earlyOut,lateOut,missIn,missOut,missDay,sick,injury,weeklyLeave,publicLeave,annualLeave,employeeText,...excusedRules,...absentRules,...from,...to,...value]){c.dispose();}}
 }
 
