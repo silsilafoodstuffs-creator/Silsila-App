@@ -26,6 +26,7 @@
 22. `22_atomic_default_address.sql`
 23. `23_atomic_default_address_save.sql`
 24. `24_foreign_key_indexes.sql`
+25. `25_trigger_function_rpc_hardening.sql`
 
 تجنب تشغيل النسخ القديمة `03_secure_checkout.sql` و`04_service_compatibility.sql`؛ استخدم النسخ ذات اللاحقة `fixed` المذكورة أعلاه.
 
