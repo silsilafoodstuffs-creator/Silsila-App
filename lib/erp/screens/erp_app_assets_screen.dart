@@ -154,9 +154,26 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
           altText: _altText.text.trim().isEmpty ? null : _altText.text.trim(),
         ),
       );
+      String? themeWarning;
+      if (const {'app_logo', 'splash', 'app_icon'}.contains(_assetType)) {
+        try {
+          final current = await _repository.getThemeSettings(appId: widget.appId!);
+          await _repository.saveThemeSettings(ErpAppThemeSettings(
+            appId: widget.appId!,
+            displayName: current?.displayName.isNotEmpty == true ? current!.displayName : 'سلسلة',
+            primaryColor: current?.primaryColor ?? '#3E007D',
+            accentColor: current?.accentColor ?? '#FFA015',
+            logoPath: _assetType == 'app_logo' ? uploadedPath : current?.logoPath,
+            splashImagePath: _assetType == 'splash' ? uploadedPath : current?.splashImagePath,
+            iconPath: _assetType == 'app_icon' ? uploadedPath : current?.iconPath,
+          ));
+        } catch (error) {
+          themeWarning = 'تم رفع الصورة، لكن تعذر ربطها بهوية التطبيق: $error';
+        }
+      }
       if (!mounted) return;
       setState(() {
-        _message = 'تم رفع الصورة وحفظ بياناتها في قاعدة البيانات.';
+        _message = themeWarning ?? 'تم رفع الصورة وحفظ بياناتها في قاعدة البيانات.';
         _altText.clear();
         _entityId.clear();
       });
