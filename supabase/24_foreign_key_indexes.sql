@@ -1,0 +1,26 @@
+-- Silsila: indexes for foreign-key lookup and delete/update performance.
+-- Safe and repeatable: no data is changed or deleted.
+CREATE INDEX IF NOT EXISTS idx_fk_addresses_user_id ON public.addresses (user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_cart_items_product_id ON public.cart_items (product_id);
+CREATE INDEX IF NOT EXISTS idx_fk_categories_parent_id ON public.categories (parent_id);
+CREATE INDEX IF NOT EXISTS idx_fk_deliveries_order_id ON public.deliveries (order_id);
+CREATE INDEX IF NOT EXISTS idx_fk_deliveries_requested_by ON public.deliveries (requested_by);
+CREATE INDEX IF NOT EXISTS idx_fk_deliveries_shipping_company_id ON public.deliveries (shipping_company_id);
+CREATE INDEX IF NOT EXISTS idx_fk_loyalty_transactions_user_id ON public.loyalty_transactions (user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_notifications_order_id ON public.notifications (order_id);
+CREATE INDEX IF NOT EXISTS idx_fk_offers_supplier_id ON public.offers (supplier_id);
+CREATE INDEX IF NOT EXISTS idx_fk_order_status_history_changed_by ON public.order_status_history (changed_by);
+CREATE INDEX IF NOT EXISTS idx_fk_reviews_order_id ON public.reviews (order_id);
+CREATE INDEX IF NOT EXISTS idx_fk_reviews_reviewed_user_id ON public.reviews (reviewed_user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_shipping_companies_profile_id ON public.shipping_companies (profile_id);
+CREATE INDEX IF NOT EXISTS idx_fk_stories_user_id ON public.stories (user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_supplier_favorites_supplier_id ON public.supplier_favorites (supplier_id);
+CREATE INDEX IF NOT EXISTS idx_fk_support_tickets_assigned_to ON public.support_tickets (assigned_to);
+CREATE INDEX IF NOT EXISTS idx_fk_support_tickets_order_id ON public.support_tickets (order_id);
+CREATE INDEX IF NOT EXISTS idx_fk_support_tickets_user_id ON public.support_tickets (user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_trader_market_posts_category_id ON public.trader_market_posts (category_id);
+CREATE INDEX IF NOT EXISTS idx_fk_trader_market_posts_user_id ON public.trader_market_posts (user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_user_goals_user_id ON public.user_goals (user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_wallet_topup_requests_reviewed_by ON public.wallet_topup_requests (reviewed_by);
+CREATE INDEX IF NOT EXISTS idx_fk_wallet_topup_requests_user_id ON public.wallet_topup_requests (user_id);
+CREATE INDEX IF NOT EXISTS idx_fk_wallet_transactions_wallet_id ON public.wallet_transactions (wallet_id);
