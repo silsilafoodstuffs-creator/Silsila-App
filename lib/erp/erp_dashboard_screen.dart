@@ -1428,7 +1428,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             caption: 'مبيعات • مشتريات • المحصّل',
             color: _orange,
             value: _executiveMoney(_executivePurchases),
-            chart: const _ExecutiveBarsPainter(),
+            chart: _ExecutiveBarsPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
           ),
           const SizedBox(height: 12),
           _executiveHighlights(),
