@@ -24,6 +24,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   List<Map<String, dynamic>> _parties = [];
   List<Map<String, dynamic>> _lines = [];
   String _kind = 'sale';
+  String _currencyCode = 'EGP';
   String? _selectedListId;
   String? _selectedItemId;
   String? _selectedPartyId;
@@ -100,7 +101,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       await _repo.createList(companyId: _company.text, code: _code.text, name: _name.text,
-        kind: _kind, isDefault: _default, notes: _notes.text);
+        kind: _kind, isDefault: _default, currency: _currencyCode, notes: _notes.text);
       if (!mounted) return;
       _code.clear(); _name.clear(); _notes.clear(); setState(() { _saving = false; _message = 'تم إنشاء قائمة الأسعار.'; });
       await _load();
@@ -184,6 +185,21 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود القائمة *')),
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم القائمة *')),
         TextField(controller: _notes, decoration: const InputDecoration(labelText: 'ملاحظات')),
+        DropdownButtonFormField<String>(
+          value: _currencyCode,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'عملة قائمة الأسعار', isDense: true, constraints: BoxConstraints(minHeight: 52)),
+          items: const [
+            DropdownMenuItem(value: 'EGP', child: Text('جنيه مصري (EGP)')),
+            DropdownMenuItem(value: 'USD', child: Text('دولار أمريكي (USD)')),
+            DropdownMenuItem(value: 'SAR', child: Text('ريال سعودي (SAR)')),
+            DropdownMenuItem(value: 'AED', child: Text('درهم إماراتي (AED)')),
+            DropdownMenuItem(value: 'KWD', child: Text('دينار كويتي (KWD)')),
+            DropdownMenuItem(value: 'EUR', child: Text('يورو (EUR)')),
+            DropdownMenuItem(value: 'GBP', child: Text('جنيه إسترليني (GBP)')),
+          ],
+          onChanged: (value) { if (value != null) setState(() => _currencyCode = value); },
+        ),
         CheckboxListTile(value: _default, onChanged: (v) => setState(() => _default = v ?? false), title: const Text('القائمة الافتراضية لهذا النوع'), contentPadding: EdgeInsets.zero),
         FilledButton.icon(onPressed: _saving ? null : _createList, icon: const Icon(Icons.playlist_add), label: const Text('حفظ القائمة')),
       ]))),
