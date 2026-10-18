@@ -206,7 +206,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
                         Row(children:[
                           Expanded(child:TextField(controller:rules[index],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:6)),style:const TextStyle(fontSize:12))),
                           const SizedBox(width:3),
-                          const Text('جزاء',style:TextStyle(fontSize:10,color:Colors.black54)),
+                          const Text('قيمة الجزاء',style:TextStyle(fontSize:9,color:Colors.black54)),
                         ]),
                       ],
                     ),
