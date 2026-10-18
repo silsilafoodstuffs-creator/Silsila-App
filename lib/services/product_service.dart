@@ -143,10 +143,12 @@ class ProductService {
   }
 
   String _escapeLike(String value) {
+    // Escape PostgreSQL LIKE metacharacters as single-character escapes.
+    // Backslash must be escaped first so later replacements remain literal.
     return value
-        .replaceAll(r'\\', r'\\\\')
-        .replaceAll('%', r'\\%')
-        .replaceAll('_', r'\\_');
+        .replaceAll('\\', '\\\\')
+        .replaceAll('%', '\\%')
+        .replaceAll('_', '\\_');
   }
 
   String? _clean(String? value) {
