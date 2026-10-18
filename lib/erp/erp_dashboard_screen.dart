@@ -105,6 +105,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _appPrimary = draft['primary'] as Color;
       _appAccent = draft['accent'] as Color;
     });
+    _loadSelectedManagedAppTheme();
   }
 
   @override
@@ -169,25 +170,28 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   Future<void> _loadSelectedManagedAppTheme() async {
-    final appId = _managedAppIds[_selectedAppKey];
+    final selectedKey = _selectedAppKey;
+    final appId = _managedAppIds[selectedKey];
     if (appId == null || appId.isEmpty) return;
     try {
       final settings = await _appManagementService.getThemeSettings(appId: appId);
-      if (settings == null || !mounted) return;
+      if (settings == null || !mounted || selectedKey != _selectedAppKey) return;
       final primary = _parseManagedColor(settings.primaryColor);
       final accent = _parseManagedColor(settings.accentColor);
       setState(() {
         _appName = settings.displayName;
         _appPrimary = primary;
         _appAccent = accent;
-        _managedAppDrafts[_selectedAppKey] = {
+        _managedAppDrafts[selectedKey] = {
           'name': _appName,
           'primary': _appPrimary,
           'accent': _appAccent,
         };
       });
     } catch (error) {
-      if (mounted) setState(() => _appManagementMessage = 'تعذر تحميل هوية التطبيق: $error');
+      if (mounted && selectedKey == _selectedAppKey) {
+        setState(() => _appManagementMessage = 'تعذر تحميل هوية التطبيق: $error');
+      }
     }
   }
 
