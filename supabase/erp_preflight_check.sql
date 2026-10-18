@@ -14,6 +14,12 @@ select
   end as installation_status
 from (values
   ('erp_companies','table'),
+  ('erp_company_settings','table'),
+  ('erp_delegate_item_assignments','table'),
+  ('erp_managed_apps','table'),
+  ('erp_app_theme_settings','table'),
+  ('erp_app_assets','table'),
+  ('erp_app_role_permissions','table'),
   ('erp_company_members','table'),
   ('erp_accounts','table'),
   ('erp_parties','table'),
@@ -70,7 +76,8 @@ from (values
   ('erp_require_cash_voucher_draft','function'),
   ('erp_guard_cash_voucher_update','function'),
   ('erp_record_inventory_movement','function'),
-  ('erp_transfer_inventory_between_warehouses','function')
+  ('erp_transfer_inventory_between_warehouses','function'),
+  ('erp_validate_delegate_item_assignment','function')
 ) as x(object_name, object_type)
 order by x.object_type, x.object_name;
 
