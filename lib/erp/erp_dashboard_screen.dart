@@ -535,6 +535,51 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ]),
       ),
       const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0E7FA),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFD8C3EF)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Row(children: [
+            Icon(Icons.star_rounded, color: _purple),
+            SizedBox(width: 8),
+            Expanded(child: Text('مهام الشاشات المفضلة', style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 15))),
+          ]),
+          const SizedBox(height: 8),
+          Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            child: ListTile(
+              dense: true,
+              visualDensity: VisualDensity.compact,
+              leading: const Icon(Icons.access_time_filled_rounded, color: _purple),
+              title: const Text('قواعد الحضور والانصراف', style: TextStyle(color: _purple, fontWeight: FontWeight.w800, fontSize: 12)),
+              subtitle: const Text('فتح شاشة قواعد الورديات والحضور والانصراف', style: TextStyle(fontSize: 10)),
+              trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: _purple),
+              onTap: () {
+                const targetPage = 'قواعد الورديات والحضور والانصراف';
+                for (final moduleEntry in _modules.entries) {
+                  for (final groupEntry in moduleEntry.value.entries) {
+                    if (groupEntry.value.contains(targetPage)) {
+                      setState(() {
+                        _module = moduleEntry.key;
+                        _group = groupEntry.key;
+                        _page = targetPage;
+                        _search = '';
+                      });
+                      return;
+                    }
+                  }
+                }
+              },
+            ),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 12),
       const Text('ملاحظة: التنبيهات وسجل النشاطات حاليًا أمثلة محلية، وليسا متصلين بعد بأحداث النظام الفعلية.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
     ])),
   );
