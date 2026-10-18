@@ -1094,12 +1094,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.point_of_sale_rounded,
         'color': _purple,
         'items': <Map<String, Object>>[
-          {'title': 'صافي المبيعات', 'value': '— ج.م', 'note': 'مقارنة بالفترة السابقة —%', 'icon': Icons.point_of_sale_rounded, 'color': _purple, 'details': 'إجمالي فواتير البيع بعد خصم المرتجعات والخصومات، مع مقارنة يومية وشهرية وبحسب الفرع والمندوب.'},
-          {'title': 'نمو المبيعات', 'value': '—%', 'note': 'مقارنة بالفترة السابقة', 'icon': Icons.trending_up_rounded, 'color': _green, 'details': 'نسبة نمو صافي المبيعات ومقارنة الأداء بالفترة السابقة والمستهدف.'},
-          {'title': 'متوسط الفاتورة', 'value': '— ج.م', 'note': 'لكل فاتورة بيع', 'icon': Icons.receipt_long_rounded, 'color': _orange, 'details': 'متوسط قيمة فاتورة البيع مع تحليل التغير حسب العميل والمندوب والفرع.'},
-          {'title': 'أفضل العملاء', 'value': '— عميل', 'note': 'حسب قيمة الشراء', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'ترتيب العملاء حسب المبيعات والربحية وانتظام السداد.'},
-          {'title': 'العملاء المتوقفون', 'value': '—', 'note': 'بحسب فترة عدم الشراء', 'icon': Icons.person_off_outlined, 'color': _orange, 'details': 'قائمة العملاء الذين لم يشتروا خلال الفترة المحددة مع قيمة مشترياتهم السابقة.'},
-          {'title': 'مرتجعات المبيعات', 'value': '—%', 'note': 'من صافي المبيعات', 'icon': Icons.assignment_return_outlined, 'color': _pink, 'details': 'قيمة ونسبة المرتجعات وأسبابها والأصناف والعملاء الأعلى في المرتجعات.'},
+          {'title': 'صافي المبيعات', 'value': '— ج.م', 'note': 'مقارنة الفترة —%', 'icon': Icons.point_of_sale_rounded, 'color': _purple, 'details': 'إجمالي فواتير البيع بعد خصم المرتجعات والخصومات، مع مقارنة يومية وشهرية وبحسب الفرع والمندوب.'},
+          {'title': 'نمو المبيعات', 'value': '—%', 'note': 'عن الفترة السابقة', 'icon': Icons.trending_up_rounded, 'color': _green, 'details': 'نسبة نمو صافي المبيعات ومقارنة الأداء بالفترة السابقة والمستهدف.'},
+          {'title': 'متوسط الفاتورة', 'value': '— ج.م', 'note': 'لكل فاتورة', 'icon': Icons.receipt_long_rounded, 'color': _orange, 'details': 'متوسط قيمة فاتورة البيع وتحليل التغير حسب العميل والمندوب والفرع.'},
+          {'title': 'أفضل العملاء', 'value': '—', 'note': 'حسب قيمة الشراء', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'ترتيب العملاء حسب المبيعات والربحية وانتظام السداد.'},
+          {'title': 'العملاء المتوقفون', 'value': '—', 'note': 'دون شراء حديث', 'icon': Icons.person_off_outlined, 'color': _orange, 'details': 'العملاء الذين لم يشتروا خلال الفترة المحددة مع قيمة مشترياتهم السابقة.'},
+          {'title': 'مرتجعات المبيعات', 'value': '—%', 'note': 'من المبيعات', 'icon': Icons.assignment_return_outlined, 'color': _pink, 'details': 'قيمة ونسبة المرتجعات وأسبابها والأصناف والعملاء الأعلى في المرتجعات.'},
         ],
       },
       {
@@ -1107,12 +1107,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.account_balance_wallet_outlined,
         'color': _green,
         'items': <Map<String, Object>>[
-          {'title': 'صافي الربح', 'value': '— ج.م', 'note': 'هامش الربح —%', 'icon': Icons.account_balance_rounded, 'color': _green, 'details': 'صافي الربح بعد تكلفة المبيعات والمصروفات، وفق القيود المحاسبية المرحلة.'},
-          {'title': 'تحصيل المستحقات', 'value': '— ج.م', 'note': 'معدل التحصيل —%', 'icon': Icons.payments_outlined, 'color': _green, 'details': 'المبالغ المحصلة والمتبقية ومعدل التحصيل حسب العميل والمندوب والفترة.'},
-          {'title': 'ديون العملاء', 'value': '— ج.م', 'note': 'متأخر منها — ج.م', 'icon': Icons.person_search_outlined, 'color': _pink, 'details': 'أرصدة العملاء وأعمار الديون والمتأخرات وحدود الائتمان والتنبيهات.'},
-          {'title': 'مستحقات الموردين', 'value': '— ج.م', 'note': 'المستحق خلال 30 يومًا —', 'icon': Icons.local_shipping_outlined, 'color': _orange, 'details': 'أرصدة الموردين ومواعيد الاستحقاق وأعمار الديون وخطة السداد.'},
-          {'title': 'السيولة المتاحة', 'value': '— ج.م', 'note': 'الخزائن والبنوك', 'icon': Icons.account_balance_wallet_rounded, 'color': _purple, 'details': 'الأرصدة المتاحة في الخزائن والحسابات البنكية وحركة النقدية الداخلة والخارجة.'},
-          {'title': 'المصروفات', 'value': '— ج.م', 'note': 'نسبة المصروفات —%', 'icon': Icons.money_off_csred_outlined, 'color': _pink, 'details': 'تحليل المصروفات حسب النوع والفرع ومركز التكلفة ومقارنتها بالإيرادات.'},
+          {'title': 'صافي الربح', 'value': '— ج.م', 'note': 'هامش —%', 'icon': Icons.account_balance_rounded, 'color': _green, 'details': 'صافي الربح بعد تكلفة المبيعات والمصروفات وفق القيود المحاسبية المرحلة.'},
+          {'title': 'التحصيل', 'value': '— ج.م', 'note': 'معدل —%', 'icon': Icons.payments_outlined, 'color': _green, 'details': 'المبالغ المحصلة والمتبقية ومعدل التحصيل حسب العميل والمندوب والفترة.'},
+          {'title': 'ديون العملاء', 'value': '— ج.م', 'note': 'متأخر — ج.م', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'أرصدة العملاء وأعمار الديون والمتأخرات وحدود الائتمان.'},
+          {'title': 'مستحقات الموردين', 'value': '— ج.م', 'note': 'مواعيد الاستحقاق', 'icon': Icons.local_shipping_outlined, 'color': _orange, 'details': 'أرصدة الموردين ومواعيد الاستحقاق وأعمار الديون وخطة السداد.'},
+          {'title': 'السيولة المتاحة', 'value': '— ج.م', 'note': 'الخزائن والبنوك', 'icon': Icons.account_balance_wallet_rounded, 'color': _purple, 'details': 'الأرصدة المتاحة في الخزائن والحسابات البنكية وحركة النقدية.'},
+          {'title': 'المصروفات', 'value': '— ج.م', 'note': 'من الإيرادات —%', 'icon': Icons.money_off_csred_outlined, 'color': _pink, 'details': 'تحليل المصروفات حسب النوع والفرع ومركز التكلفة ومقارنتها بالإيرادات.'},
         ],
       },
       {
@@ -1120,12 +1120,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.warehouse_outlined,
         'color': const Color(0xFF2475B8),
         'items': <Map<String, Object>>[
-          {'title': 'قيمة المخزون', 'value': '— ج.م', 'note': 'حسب التكلفة', 'icon': Icons.inventory_2_outlined, 'color': const Color(0xFF2475B8), 'details': 'قيمة المخزون المتاح والمحجوز وتوزيعه حسب المخزن والفرع والصنف.'},
-          {'title': 'أصناف قاربت على النفاد', 'value': '— صنف', 'note': 'تحت حد الطلب', 'icon': Icons.warning_amber_rounded, 'color': _orange, 'details': 'الأصناف التي وصلت إلى حد إعادة الطلب مع الكميات المقترح شراؤها.'},
-          {'title': 'قرب انتهاء الصلاحية', 'value': '— صنف', 'note': 'خلال 30 / 60 / 90 يومًا', 'icon': Icons.event_busy_outlined, 'color': _pink, 'details': 'الأصناف والتشغيلات القريبة من انتهاء الصلاحية مع الكميات والقيمة والمخزن.'},
-          {'title': 'الأصناف الراكدة', 'value': '— صنف', 'note': 'دون حركة خلال الفترة', 'icon': Icons.inventory_outlined, 'color': _orange, 'details': 'الأصناف التي لم تتحرك خلال فترة محددة وقيمة رأس المال المجمد بها.'},
+          {'title': 'قيمة المخزون', 'value': '— ج.م', 'note': 'بسعر التكلفة', 'icon': Icons.inventory_2_outlined, 'color': const Color(0xFF2475B8), 'details': 'قيمة المخزون المتاح والمحجوز حسب المخزن والفرع والصنف.'},
+          {'title': 'تحت حد الطلب', 'value': '— صنف', 'note': 'بحاجة للشراء', 'icon': Icons.warning_amber_rounded, 'color': _orange, 'details': 'الأصناف التي وصلت إلى حد إعادة الطلب والكميات المقترحة للشراء.'},
+          {'title': 'قرب انتهاء الصلاحية', 'value': '— صنف', 'note': 'خلال 30 / 60 / 90 يومًا', 'icon': Icons.event_busy_outlined, 'color': _pink, 'details': 'الأصناف القريبة من انتهاء الصلاحية مع الكميات والقيمة والمخزن.'},
+          {'title': 'الأصناف الراكدة', 'value': '— صنف', 'note': 'بلا حركة', 'icon': Icons.inventory_outlined, 'color': _orange, 'details': 'الأصناف التي لم تتحرك خلال فترة محددة وقيمة رأس المال المجمد بها.'},
           {'title': 'دوران المخزون', 'value': '— مرة', 'note': 'خلال الفترة', 'icon': Icons.sync_alt_rounded, 'color': _purple, 'details': 'معدل دوران المخزون ومتوسط أيام التخزين حسب المجموعة والصنف.'},
-          {'title': 'مقارنة أسعار الشراء', 'value': '—%', 'note': 'فرق السعر بين الموردين', 'icon': Icons.price_change_outlined, 'color': const Color(0xFF2475B8), 'details': 'مقارنة أسعار الصنف بين الموردين وتغير تكلفة الشراء وأفضل سعر مسجل.'},
+          {'title': 'تغير تكلفة الشراء', 'value': '—%', 'note': 'مقارنة بآخر شراء', 'icon': Icons.price_change_outlined, 'color': const Color(0xFF2475B8), 'details': 'تغير تكلفة الشراء ومقارنة أسعار الصنف بين الموردين.'},
         ],
       },
       {
@@ -1134,11 +1134,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'color': _orange,
         'items': <Map<String, Object>>[
           {'title': 'طلبات قيد التنفيذ', 'value': '— طلب', 'note': 'في مراحل التشغيل', 'icon': Icons.sync_rounded, 'color': _purple, 'details': 'الطلبات حسب حالة القبول والتجهيز والتحميل والتسليم.'},
-          {'title': 'طلبات متأخرة', 'value': '— طلب', 'note': 'تجاوزت موعد التسليم', 'icon': Icons.pending_actions_rounded, 'color': _pink, 'details': 'الطلبات المتأخرة وأسباب التأخير والمسؤول الحالي وموعد التسليم المتوقع.'},
+          {'title': 'طلبات متأخرة', 'value': '— طلب', 'note': 'تجاوزت الموعد', 'icon': Icons.pending_actions_rounded, 'color': _pink, 'details': 'الطلبات المتأخرة وأسباب التأخير والمسؤول وموعد التسليم المتوقع.'},
           {'title': 'التسليم في الموعد', 'value': '—%', 'note': 'من إجمالي الطلبات', 'icon': Icons.task_alt_rounded, 'color': _green, 'details': 'نسبة التسليم في الموعد ومقارنة أداء الفروع والمندوبين وشركات الشحن.'},
-          {'title': 'أداء المندوبين', 'value': '—%', 'note': 'تنفيذ وتحصيل', 'icon': Icons.badge_outlined, 'color': _orange, 'details': 'مبيعات المندوب وتحصيلاته والطلبات المسلمة والمرتجعات ومصروفات الرحلات.'},
-          {'title': 'تكلفة التوزيع', 'value': '— ج.م', 'note': 'لكل طلب / رحلة', 'icon': Icons.route_outlined, 'color': const Color(0xFF2475B8), 'details': 'تكلفة الرحلات والتوصيل مقارنة بقيمة المبيعات وعدد الطلبات المسلمة.'},
-          {'title': 'طلبات ملغاة', 'value': '— طلب', 'note': 'نسبة الإلغاء —%', 'icon': Icons.cancel_outlined, 'color': _pink, 'details': 'عدد وقيمة الطلبات الملغاة مع تحليل أسباب الإلغاء وتكرارها.'},
+          {'title': 'أداء المندوبين', 'value': '—%', 'note': 'تنفيذ وتحصيل', 'icon': Icons.badge_outlined, 'color': _orange, 'details': 'مبيعات المندوب وتحصيلاته والطلبات المسلمة والمرتجعات.'},
+          {'title': 'تكلفة التوزيع', 'value': '— ج.م', 'note': 'لكل طلب / رحلة', 'icon': Icons.route_outlined, 'color': const Color(0xFF2475B8), 'details': 'تكلفة الرحلات والتوصيل مقارنة بقيمة المبيعات وعدد الطلبات.'},
+          {'title': 'طلبات ملغاة', 'value': '— طلب', 'note': 'نسبة الإلغاء —%', 'icon': Icons.cancel_outlined, 'color': _pink, 'details': 'عدد وقيمة الطلبات الملغاة مع تحليل أسباب الإلغاء.'},
         ],
       },
       {
@@ -1147,7 +1147,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'color': _pink,
         'items': <Map<String, Object>>[
           {'title': 'حضور الموظفين', 'value': '—%', 'note': 'اليوم / الشهر', 'icon': Icons.groups_outlined, 'color': _green, 'details': 'الحضور والغياب والتأخير والإجازات بحسب الفرع والإدارة.'},
-          {'title': 'تكلفة الرواتب', 'value': '— ج.م', 'note': 'ومستحقات الموظفين', 'icon': Icons.payments_rounded, 'color': _purple, 'details': 'إجمالي الرواتب والعمولات والاستقطاعات والسلف والمستحقات.'},
+          {'title': 'تكلفة الرواتب', 'value': '— ج.م', 'note': 'والعمولات', 'icon': Icons.payments_rounded, 'color': _purple, 'details': 'الرواتب والعمولات والاستقطاعات والسلف والمستحقات.'},
           {'title': 'أداء الفروع', 'value': '—%', 'note': 'مقارنة بالمستهدف', 'icon': Icons.domain_outlined, 'color': _orange, 'details': 'مقارنة الفروع في المبيعات والربحية والتحصيل والمخزون والمصروفات.'},
           {'title': 'عهد المندوبين', 'value': '— ج.م', 'note': 'قيد التسوية', 'icon': Icons.assignment_ind_outlined, 'color': _pink, 'details': 'العهد النقدية والبضائع المسلمة للمندوبين وما تم تحصيله أو تسويته.'},
         ],
@@ -1157,132 +1157,260 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.fact_check_outlined,
         'color': _purple,
         'items': <Map<String, Object>>[
-          {'title': 'حركات بانتظار الاعتماد', 'value': '— حركة', 'note': 'قيود ومستندات', 'icon': Icons.approval_rounded, 'color': _orange, 'details': 'المستندات والقيود التي تنتظر الاعتماد مع تاريخ الإنشاء والمسؤول.'},
-          {'title': 'أخطاء وملاحظات الحركات', 'value': '— ملاحظة', 'note': 'تحتاج مراجعة', 'icon': Icons.rule_folder_outlined, 'color': _pink, 'details': 'الحركات التي تحتاج إلى مراجعة أو استكمال بيانات أو تصحيح ربط المستندات.'},
-          {'title': 'تجاوز حدود الائتمان', 'value': '— عميل', 'note': 'تجاوز الحد المعتمد', 'icon': Icons.credit_score_outlined, 'color': _orange, 'details': 'العملاء الذين تجاوزوا حدود الائتمان مع الرصيد والحد المعتمد.'},
-          {'title': 'اكتمال البيانات الأساسية', 'value': '—%', 'note': 'أصناف وعملاء وموردون', 'icon': Icons.checklist_rounded, 'color': _green, 'details': 'مؤشر اكتمال البيانات الأساسية واكتشاف الحقول الناقصة والمكررة.'},
+          {'title': 'بانتظار الاعتماد', 'value': '— حركة', 'note': 'مستندات وقيود', 'icon': Icons.approval_rounded, 'color': _orange, 'details': 'المستندات والقيود التي تنتظر الاعتماد مع تاريخ الإنشاء والمسؤول.'},
+          {'title': 'ملاحظات الحركات', 'value': '— ملاحظة', 'note': 'تحتاج مراجعة', 'icon': Icons.rule_folder_outlined, 'color': _pink, 'details': 'الحركات التي تحتاج إلى مراجعة أو استكمال بيانات أو تصحيح الربط.'},
+          {'title': 'تجاوز الائتمان', 'value': '— عميل', 'note': 'تجاوز الحد المعتمد', 'icon': Icons.credit_score_outlined, 'color': _orange, 'details': 'العملاء الذين تجاوزوا حدود الائتمان مع الرصيد والحد المعتمد.'},
+          {'title': 'اكتمال البيانات', 'value': '—%', 'note': 'البيانات الأساسية', 'icon': Icons.checklist_rounded, 'color': _green, 'details': 'مؤشر اكتمال البيانات الأساسية واكتشاف الحقول الناقصة والمكررة.'},
         ],
       },
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    final allItems = sections.expand((section) => section['items'] as List<Map<String, Object>>).toList();
+
+    return LayoutBuilder(builder: (context, outerConstraints) {
+      final wide = outerConstraints.maxWidth >= 900;
+      final mid = outerConstraints.maxWidth >= 600;
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('الملخص التنفيذي', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: _purple)),
-            SizedBox(height: 2),
-            Text('مؤشرات كثيرة في مساحة صغيرة • اختر «المزيد» لفتح التحليل', style: TextStyle(color: Colors.black54, fontSize: 10)),
+            Text('الملخص التنفيذي', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
+            Text('لوحة أداء مختصرة • مؤشرات مالية وتشغيلية لحظية بعد ربط البيانات', style: TextStyle(color: Colors.black54, fontSize: 9)),
           ])),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(7)),
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.dashboard_customize_outlined, color: _purple, size: 14),
-              SizedBox(width: 4),
-              Text('لوحة التحليلات', style: TextStyle(color: _purple, fontSize: 10, fontWeight: FontWeight.w800)),
-            ]),
+          _summaryAction('عرض كل التحليلات', () => _showExecutiveCategoryDetails('جميع التحليلات', allItems)),
+          const SizedBox(width: 4),
+          IconButton(
+            tooltip: 'تحديث الملخص',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+            padding: EdgeInsets.zero,
+            onPressed: () => setState(() {}),
+            icon: const Icon(Icons.refresh_rounded, color: _purple, size: 17),
           ),
         ]),
-        const SizedBox(height: 7),
+        const SizedBox(height: 5),
         LayoutBuilder(builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 1100 ? 6 : constraints.maxWidth >= 780 ? 4 : constraints.maxWidth >= 480 ? 3 : 2;
+          final columns = constraints.maxWidth >= 1000 ? 6 : constraints.maxWidth >= 650 ? 3 : 2;
+          return GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: columns,
+            crossAxisSpacing: 4,
+            mainAxisSpacing: 4,
+            childAspectRatio: columns == 6 ? 3.15 : columns == 3 ? 3.0 : 2.8,
+            children: [
+              _executiveKpi('صافي المبيعات', '—', 'التغير —%', Icons.point_of_sale_rounded, _purple),
+              _executiveKpi('صافي الربح', '—', 'الهامش —%', Icons.trending_up_rounded, _green),
+              _executiveKpi('التحصيل', '—', 'المعدل —%', Icons.payments_outlined, _orange),
+              _executiveKpi('ديون العملاء', '—', 'المتأخر —%', Icons.groups_rounded, _pink),
+              _executiveKpi('قيمة المخزون', '—', 'الدوران —', Icons.inventory_2_rounded, const Color(0xFF2475B8)),
+              _executiveKpi('تنفيذ الطلبات', '—%', 'في الموعد —%', Icons.local_shipping_outlined, const Color(0xFF168A70)),
+            ],
+          );
+        }),
+        const SizedBox(height: 5),
+        if (wide)
+          Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Expanded(flex: 5, child: _executiveChartPanel(
+              title: 'اتجاه المبيعات',
+              caption: 'آخر 7 أيام مقابل المستهدف',
+              color: _purple,
+              value: '—%',
+              chart: const _ExecutiveChartPainter(color: _purple),
+            )),
+            const SizedBox(width: 5),
+            Expanded(flex: 3, child: _executiveChartPanel(
+              title: 'مزيج الأداء',
+              caption: 'مبيعات • تحصيل • مصروفات',
+              color: _orange,
+              value: '—',
+              chart: const _ExecutiveBarsPainter(),
+            )),
+            const SizedBox(width: 5),
+            Expanded(flex: 3, child: _executiveHighlights()),
+          ])
+        else ...[
+          _executiveChartPanel(
+            title: 'اتجاه المبيعات',
+            caption: 'آخر 7 أيام مقابل المستهدف',
+            color: _purple,
+            value: '—%',
+            chart: const _ExecutiveChartPainter(color: _purple),
+          ),
+          const SizedBox(height: 4),
+          _executiveHighlights(),
+        ],
+        const SizedBox(height: 5),
+        LayoutBuilder(builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 1150 ? 3 : constraints.maxWidth >= 680 ? 2 : 1;
           return GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: columns,
             crossAxisSpacing: 5,
             mainAxisSpacing: 5,
-            childAspectRatio: columns >= 6 ? 2.55 : columns == 4 ? 2.35 : columns == 3 ? 2.1 : 1.9,
-            children: [
-              _executiveKpi('صافي المبيعات', '—', 'التغير —%', Icons.point_of_sale_rounded, _purple),
-              _executiveKpi('صافي الربح', '—', 'هامش —%', Icons.trending_up_rounded, _green),
-              _executiveKpi('التحصيل', '—', 'المعدل —%', Icons.payments_outlined, _orange),
-              _executiveKpi('ديون العملاء', '—', 'متأخر —%', Icons.groups_rounded, _pink),
-              _executiveKpi('قيمة المخزون', '—', 'الدوران —', Icons.inventory_2_rounded, const Color(0xFF2475B8)),
-              _executiveKpi('تنفيذ الطلبات', '—%', 'في الموعد —%', Icons.local_shipping_outlined, const Color(0xFF168A70)),
-            ],
+            childAspectRatio: columns == 3 ? 1.72 : columns == 2 ? 1.65 : 2.5,
+            children: sections.map((section) => _executiveSectionCompact(
+              title: section['title'] as String,
+              icon: section['icon'] as IconData,
+              color: section['color'] as Color,
+              items: section['items'] as List<Map<String, Object>>,
+            )).toList(),
           );
         }),
-        const SizedBox(height: 8),
-        ...sections.map((section) {
-          final title = section['title'] as String;
-          final icon = section['icon'] as IconData;
-          final color = section['color'] as Color;
-          final items = section['items'] as List<Map<String, Object>>;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              Row(children: [
-                Icon(icon, size: 15, color: color),
-                const SizedBox(width: 5),
-                Expanded(child: Text(title, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w900))),
-                TextButton(
-                  style: TextButton.styleFrom(minimumSize: const Size(0, 25), padding: const EdgeInsets.symmetric(horizontal: 7), visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                  onPressed: () => _showExecutiveCategoryDetails(title, items),
-                  child: const Text('عرض الكل', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800)),
-                ),
-              ]),
-              const SizedBox(height: 3),
-              LayoutBuilder(builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 1100 ? 6 : constraints.maxWidth >= 800 ? 5 : constraints.maxWidth >= 560 ? 4 : constraints.maxWidth >= 360 ? 3 : 2;
-                return GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: columns,
-                  crossAxisSpacing: 5,
-                  mainAxisSpacing: 5,
-                  childAspectRatio: columns >= 5 ? 1.8 : columns == 4 ? 1.65 : columns == 3 ? 1.45 : 1.35,
-                  children: items.map((item) => _executiveAnalysisTile(
-                    title: item['title'] as String,
-                    value: item['value'] as String,
-                    note: item['note'] as String,
-                    icon: item['icon'] as IconData,
-                    color: item['color'] as Color,
-                    details: item['details'] as String,
-                  )).toList(),
-                );
-              }),
-            ]),
-          );
-        }),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(color: const Color(0xFFFFF7EB), borderRadius: BorderRadius.circular(7), border: Border.all(color: const Color(0xFFFFE1B0))),
-          child: const Row(children: [
-            Icon(Icons.info_outline_rounded, color: _orange, size: 13),
-            SizedBox(width: 5),
-            Expanded(child: Text('القيم الفعلية والنسب تحتاج ربط كل تحليل بمصادر بيانات النظام؛ لا تعرض هذه اللوحة أرقامًا تجريبية على أنها نتائج فعلية.', style: TextStyle(fontSize: 9, color: Colors.black87, height: 1.3))),
-          ]),
-        ),
-      ],
-    );
+        const SizedBox(height: 4),
+        const Row(children: [
+          Icon(Icons.info_outline_rounded, color: _orange, size: 11),
+          SizedBox(width: 4),
+          Expanded(child: Text('المؤشرات الرقمية والمخططات توضيحية حتى ربطها بالحركات الفعلية المعتمدة.', style: TextStyle(fontSize: 8, color: Colors.black54))),
+        ]),
+      ]);
+    });
   }
+
+  Widget _summaryAction(String label, VoidCallback onPressed) => TextButton(
+    onPressed: onPressed,
+    style: TextButton.styleFrom(
+      minimumSize: const Size(0, 25),
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      visualDensity: VisualDensity.compact,
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    ),
+    child: Text(label, style: const TextStyle(color: _purple, fontSize: 9, fontWeight: FontWeight.w800)),
+  );
+
+  Widget _executiveChartPanel({
+    required String title,
+    required String caption,
+    required Color color,
+    required String value,
+    required CustomPainter chart,
+  }) => Container(
+    height: 112,
+    padding: const EdgeInsets.fromLTRB(8, 6, 8, 5),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: const Color(0xFFE7E0EF)),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 10, color: _purple, fontWeight: FontWeight.w900))),
+        Text(value, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w900)),
+      ]),
+      Text(caption, style: const TextStyle(fontSize: 8, color: Colors.black45)),
+      const SizedBox(height: 1),
+      Expanded(child: CustomPaint(painter: chart, child: const SizedBox.expand())),
+      const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text('بداية الفترة', style: TextStyle(fontSize: 7, color: Colors.black45)),
+        Text('منتصفها', style: TextStyle(fontSize: 7, color: Colors.black45)),
+        Text('اليوم', style: TextStyle(fontSize: 7, color: Colors.black45)),
+      ]),
+    ]),
+  );
+
+  Widget _executiveHighlights() => Container(
+    height: 112,
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE7E0EF))),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Text('مؤشرات تحتاج متابعة', style: TextStyle(fontSize: 10, color: _purple, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 4),
+      _executiveHighlightRow('ديون متأخرة', '— ج.م', _pink, .72),
+      _executiveHighlightRow('أصناف تحت الطلب', '— صنف', _orange, .48),
+      _executiveHighlightRow('طلبات متأخرة', '— طلب', _pink, .58),
+      _executiveHighlightRow('تحصيل المستحقات', '—%', _green, .34),
+    ]),
+  );
+
+  Widget _executiveHighlightRow(String label, String value, Color color, double fill) => Expanded(
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Row(children: [
+        Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 8, color: Colors.black87))),
+        Expanded(flex: 4, child: ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: Container(height: 4, color: const Color(0xFFEFEAF4), alignment: AlignmentDirectional.centerStart,
+            child: FractionallySizedBox(widthFactor: fill, child: ColoredBox(color: color))),
+        )),
+        const SizedBox(width: 5),
+        SizedBox(width: 43, child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 8, color: color, fontWeight: FontWeight.w900))),
+      ]),
+    ),
+  );
+
+  Widget _executiveSectionCompact({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Map<String, Object>> items,
+  }) => Container(
+    padding: const EdgeInsets.all(6),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE7E0EF))),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 4),
+        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w900))),
+        _summaryAction('عرض الكل', () => _showExecutiveCategoryDetails(title, items)),
+      ]),
+      const Divider(height: 5, thickness: .5, color: Color(0xFFEFEAF4)),
+      ...items.map((item) => _executiveCompactMetric(
+        title: item['title'] as String,
+        value: item['value'] as String,
+        note: item['note'] as String,
+        icon: item['icon'] as IconData,
+        color: item['color'] as Color,
+        details: item['details'] as String,
+      )),
+    ]),
+  );
+
+  Widget _executiveCompactMetric({
+    required String title,
+    required String value,
+    required String note,
+    required IconData icon,
+    required Color color,
+    required String details,
+  }) => InkWell(
+    onTap: () => _showExecutiveAnalysisDetails(title, value, note, details, color),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(children: [
+        Icon(icon, size: 11, color: color),
+        const SizedBox(width: 4),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 8, color: Color(0xFF342B3C), fontWeight: FontWeight.w700, height: 1.05)),
+          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 7, color: Colors.black45, height: 1.05)),
+        ])),
+        const SizedBox(width: 3),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 8, color: color, fontWeight: FontWeight.w900)),
+        const SizedBox(width: 2),
+        const Icon(Icons.chevron_left_rounded, size: 11, color: Colors.black38),
+      ]),
+    ),
+  );
 
   void _showExecutiveCategoryDetails(String title, List<Map<String, Object>> items) {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('كل التحليلات • $title', style: const TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 17)),
+        title: Text('التحليلات • $title', style: const TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 16)),
         content: SizedBox(
           width: 560,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: items.map((item) => ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(item['icon'] as IconData, color: item['color'] as Color, size: 20),
-                title: Text(item['title'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
-                subtitle: Text(item['note'] as String, style: const TextStyle(fontSize: 10)),
-                trailing: Text(item['value'] as String, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: item['color'] as Color)),
-                onTap: () {
-                  Navigator.pop(dialogContext);
-                  _showExecutiveAnalysisDetails(item['title'] as String, item['value'] as String, item['note'] as String, item['details'] as String, item['color'] as Color);
-                },
-              )).toList(),
-            ),
-          ),
+          child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: items.map((item) => ListTile(
+            dense: true,
+            visualDensity: VisualDensity.compact,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(item['icon'] as IconData, color: item['color'] as Color, size: 18),
+            title: Text(item['title'] as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+            subtitle: Text(item['note'] as String, style: const TextStyle(fontSize: 9)),
+            trailing: Text(item['value'] as String, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: item['color'] as Color)),
+            onTap: () {
+              Navigator.pop(dialogContext);
+              _showExecutiveAnalysisDetails(item['title'] as String, item['value'] as String, item['note'] as String, item['details'] as String, item['color'] as Color);
+            },
+          )).toList())),
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
       ),
@@ -1293,56 +1421,19 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 17)),
+        title: Text(title, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 16)),
         content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(value, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.w900)),
-          Text(note, style: const TextStyle(color: Colors.black54, fontSize: 11)),
-          const SizedBox(height: 12),
-          Text(details, style: const TextStyle(fontSize: 12, height: 1.7)),
-          const SizedBox(height: 8),
-          const Text('سيظهر التفصيل الرقمي بعد ربط هذا التحليل ببيانات الحركات المعتمدة.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.5)),
+          Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w900)),
+          Text(note, style: const TextStyle(color: Colors.black54, fontSize: 10)),
+          const SizedBox(height: 10),
+          Text(details, style: const TextStyle(fontSize: 11, height: 1.6)),
+          const SizedBox(height: 7),
+          const Text('تظهر النتائج الرقمية التفصيلية بعد ربط المؤشر بالحركات الفعلية المعتمدة.', style: TextStyle(color: Colors.black54, fontSize: 9, height: 1.4)),
         ])),
         actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
       ),
     );
   }
-
-  Widget _executiveAnalysisTile({
-    required String title,
-    required String value,
-    required String note,
-    required IconData icon,
-    required Color color,
-    required String details,
-  }) => Material(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(8),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => _showExecutiveAnalysisDetails(title, value, note, details, color),
-      child: Container(
-        padding: const EdgeInsets.all(7),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFEAE4F0)),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Row(children: [
-            Icon(icon, color: color, size: 14),
-            const Spacer(),
-            Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w900)),
-          ]),
-          const SizedBox(height: 4),
-          Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xFF342B3C), fontWeight: FontWeight.w800, height: 1.2))),
-          Row(children: [
-            Expanded(child: Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 8, color: Colors.black45))),
-            const Text('المزيد', style: TextStyle(fontSize: 8, color: _purple, fontWeight: FontWeight.w900)),
-            const Icon(Icons.chevron_left_rounded, color: _purple, size: 12),
-          ]),
-        ]),
-      ),
-    ),
-  );
 
   static const Color _green = Color(0xFF18865A);
 
