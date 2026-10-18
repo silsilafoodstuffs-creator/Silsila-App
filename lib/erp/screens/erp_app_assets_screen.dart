@@ -29,6 +29,8 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
   final _altText = TextEditingController();
   final _entityId = TextEditingController();
   List<ErpAppAssetRecord> _assets = const [];
+  final Map<String, Future<String>> _signedUrlFutures = {};
+  final Map<String, DateTime> _signedUrlCreatedAt = {};
   String _assetType = 'app_logo';
   bool _loading = false;
   bool _uploading = false;
@@ -75,6 +77,21 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
   bool get _ready =>
       (widget.companyId ?? '').trim().isNotEmpty &&
       (widget.appId ?? '').trim().isNotEmpty;
+
+  Future<String> _signedUrlFor(String storagePath) {
+    final now = DateTime.now();
+    final createdAt = _signedUrlCreatedAt[storagePath];
+    final cached = _signedUrlFutures[storagePath];
+    if (cached != null &&
+        createdAt != null &&
+        now.difference(createdAt) < const Duration(minutes: 12)) {
+      return cached;
+    }
+    final future = _storage.createSignedImageUrl(storagePath: storagePath);
+    _signedUrlFutures[storagePath] = future;
+    _signedUrlCreatedAt[storagePath] = now;
+    return future;
+  }
 
   Future<void> _load() async {
     if (!_ready) {
@@ -436,7 +453,7 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
             ),
             child: ListTile(
               leading: FutureBuilder<String>(
-                future: _storage.createSignedImageUrl(storagePath: asset.storagePath),
+                future: _signedUrlFor(asset.storagePath),
                 builder: (context, snapshot) => Container(
                   width: 64,
                   height: 64,
