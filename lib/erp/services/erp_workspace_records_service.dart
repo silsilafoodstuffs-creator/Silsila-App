@@ -72,7 +72,7 @@ class ErpWorkspaceRecordsService {
 
   static String _recordKey(Map<String, String> row) {
     final preferred = row['الكود'] ?? row['الرقم'] ?? row['رقم المستند'] ?? row['رقم الحساب'] ?? row['الاسم'] ?? row['اسم الحساب'];
-    final value = (preferred ?? row.values.firstOrNull ?? '').trim();
+    final value = (preferred ?? (row.values.isEmpty ? '' : row.values.first)).trim();
     if (value.isEmpty) throw ArgumentError('يجب إدخال كود أو اسم للسجل قبل الحفظ.');
     return value;
   }
