@@ -210,6 +210,123 @@ from (values
 join public.erp_geo_areas g on g.parent_id is null and g.governorate=x.gov and g.area_kind='governorate'
 on conflict do nothing;
 
+-- Additional Greater Cairo sales zones and a starter set of rural centers/villages.
+-- These are operational territory labels, not a certified complete administrative gazetteer.
+insert into public.erp_geo_areas(parent_id,governorate,area_name,area_kind,name_ar,name_en,source_name,source_url,is_verified)
+select p.id,x.gov,x.area,x.kind,x.name_ar,x.name_en,'Silsila starter geography',null,false
+from (values
+('القاهرة','مدينة نصر','neighborhood','الحي الأول - مدينة نصر','Nasr City District 1'),
+('القاهرة','مدينة نصر','neighborhood','الحي السادس - مدينة نصر','Nasr City District 6'),
+('القاهرة','مدينة نصر','neighborhood','الحي السابع - مدينة نصر','Nasr City District 7'),
+('القاهرة','مدينة نصر','neighborhood','الحي الثامن - مدينة نصر','Nasr City District 8'),
+('القاهرة','مدينة نصر','neighborhood','الحي العاشر - مدينة نصر','Nasr City District 10'),
+('القاهرة','مدينة نصر','neighborhood','زهراء مدينة نصر','Zahraa Nasr City'),
+('القاهرة','مدينة نصر','neighborhood','منطقة عباس العقاد','Abbas El Akkad Zone'),
+('القاهرة','مدينة نصر','neighborhood','منطقة مصطفى النحاس','Mostafa El Nahas Zone'),
+('القاهرة','مصر الجديدة','neighborhood','الكوربة','Korba'),
+('القاهرة','مصر الجديدة','neighborhood','روكسي','Roxy'),
+('القاهرة','مصر الجديدة','neighborhood','أرض الجولف','Ard El Golf'),
+('القاهرة','مصر الجديدة','neighborhood','شيراتون','Sheraton'),
+('القاهرة','مصر الجديدة','neighborhood','منطقة الميرغني','El Merghany Zone'),
+('القاهرة','المعادي','neighborhood','المعادي الجديدة','New Maadi'),
+('القاهرة','المعادي','neighborhood','زهراء المعادي','Zahraa Maadi'),
+('القاهرة','المعادي','neighborhood','دجلة المعادي','Degla Maadi'),
+('القاهرة','المعادي','neighborhood','حدائق المعادي','Hadayek Maadi'),
+('القاهرة','المرج','neighborhood','المرج الجديدة','New Marg'),
+('القاهرة','المرج','neighborhood','عزبة النخل','Ezbet El Nakhl'),
+('القاهرة','المرج','neighborhood','المرج القديمة','Old Marg'),
+('القاهرة','عين شمس','neighborhood','عين شمس الغربية','West Ain Shams'),
+('القاهرة','عين شمس','neighborhood','عين شمس الشرقية','East Ain Shams'),
+('القاهرة','شبرا','neighborhood','روض الفرج','Rod El Farag'),
+('القاهرة','شبرا','neighborhood','الساحل','El Sahel'),
+('القاهرة','شبرا','neighborhood','مسرة','Masarra'),
+('القاهرة','العتبة','neighborhood','الموسكي','Mousky'),
+('القاهرة','العتبة','neighborhood','درب البرابرة','Darb El Barabra'),
+('القاهرة','سوق العبور','neighborhood','منطقة تجار الجملة - سوق العبور','Obour Wholesale Zone'),
+('القاهرة','سوق العبور','neighborhood','منطقة الخضار والفاكهة - سوق العبور','Obour Produce Zone'),
+('الجيزة','الدقي','neighborhood','بين السرايات','Bein El Sarayat'),
+('الجيزة','الدقي','neighborhood','ميدان الدقي','Dokki Square'),
+('الجيزة','الدقي','neighborhood','منطقة المساحة','El Mesaha Zone'),
+('الجيزة','فيصل','neighborhood','الطوابق - فيصل','El Tawaabeq Faisal'),
+('الجيزة','فيصل','neighborhood','التعاون - فيصل','El Taawun Faisal'),
+('الجيزة','فيصل','neighborhood','كعبيش - فيصل','Kaabish Faisal'),
+('الجيزة','الهرم','neighborhood','الطالبية','El Talbia'),
+('الجيزة','الهرم','neighborhood','المريوطية','El Mariouteya'),
+('الجيزة','الهرم','neighborhood','اللبيني','El Lebeny'),
+('الجيزة','الهرم','neighborhood','الرماية','El Remaya'),
+('الجيزة','إمبابة','neighborhood','المنيرة الغربية','El Mounira El Gharbeya'),
+('الجيزة','إمبابة','neighborhood','أرض الجمعية','Ard El Gameya'),
+('الجيزة','أكتوبر','neighborhood','الحي المتميز - أكتوبر','Distinguished District October'),
+('الجيزة','أكتوبر','neighborhood','ميدان الحصري','El Hosary Square'),
+('الجيزة','أكتوبر','neighborhood','المنطقة الصناعية الأولى - أكتوبر','6 October Industrial Zone 1'),
+('الجيزة','أكتوبر','neighborhood','المنطقة الصناعية الرابعة - أكتوبر','6 October Industrial Zone 4'),
+('الجيزة','الشيخ زايد','neighborhood','الحي الأول - الشيخ زايد','Sheikh Zayed District 1'),
+('الجيزة','الشيخ زايد','neighborhood','الحي الثالث - الشيخ زايد','Sheikh Zayed District 3'),
+('الجيزة','الشيخ زايد','neighborhood','الحي السادس - الشيخ زايد','Sheikh Zayed District 6'),
+('القليوبية','شبرا الخيمة','neighborhood','بهتيم','Bahtim'),
+('القليوبية','شبرا الخيمة','neighborhood','مسطرد','Mostorod'),
+('القليوبية','شبرا الخيمة','neighborhood','بيجام','Beegam'),
+('القليوبية','شبرا الخيمة','neighborhood','شبرا البلد','Shubra El Balad'),
+('القليوبية','العبور','neighborhood','المنطقة الصناعية الأولى - العبور','Obour Industrial Zone 1'),
+('القليوبية','العبور','neighborhood','المنطقة الصناعية الثانية - العبور','Obour Industrial Zone 2'),
+('القليوبية','العبور','neighborhood','المنطقة الصناعية السادسة - العبور','Obour Industrial Zone 6'),
+('القليوبية','العبور','neighborhood','الحي الأول - العبور','Obour District 1'),
+('القليوبية','العبور','neighborhood','الحي الثاني - العبور','Obour District 2'),
+('القليوبية','العبور','neighborhood','الحي الثالث - العبور','Obour District 3')
+) as x(gov,parent_name,kind,name_ar,name_en)
+join public.erp_geo_areas p on p.governorate=x.gov and p.name_ar=x.parent_name
+on conflict do nothing;
+
+insert into public.erp_geo_areas(parent_id,governorate,area_name,area_kind,name_ar,name_en,source_name,source_url,is_verified)
+select g.id,x.gov,x.center,'center',x.name_ar,x.name_en,'Silsila starter geography',null,false
+from (values
+('القليوبية','بنها','مركز بنها','Markaz Banha'),
+('القليوبية','قليوب','مركز قليوب','Markaz Qalyub'),
+('القليوبية','شبرا الخيمة','مركز/منطقة شبرا الخيمة','Shubra El-Kheima'),
+('القليوبية','الخانكة','مركز الخانكة','Markaz El Khanka'),
+('القليوبية','طوخ','مركز طوخ','Markaz Toukh'),
+('القليوبية','القناطر الخيرية','مركز القناطر الخيرية','Markaz El Qanater'),
+('القليوبية','شبين القناطر','مركز شبين القناطر','Markaz Shibin El Qanater'),
+('القليوبية','كفر شكر','مركز كفر شكر','Markaz Kafr Shukr'),
+('الجيزة','أبو النمرس','مركز أبو النمرس','Markaz Abu El Nomros'),
+('الجيزة','البدرشين','مركز البدرشين','Markaz El Badrashein'),
+('الجيزة','العياط','مركز العياط','Markaz El Ayat'),
+('الجيزة','أوسيم','مركز أوسيم','Markaz Ausim'),
+('الجيزة','منشأة القناطر','مركز منشأة القناطر','Markaz Manshaat El Qanater'),
+('الجيزة','الصف','مركز الصف','Markaz El Saff'),
+('الجيزة','أطفيح','مركز أطفيح','Markaz Atfih')
+) as x(gov,area,center,name_en)
+join public.erp_geo_areas g on g.governorate=x.gov and g.name_ar=x.area
+on conflict do nothing;
+
+insert into public.erp_geo_areas(parent_id,governorate,area_name,area_kind,name_ar,name_en,source_name,source_url,is_verified)
+select c.id,x.gov,x.village,'village',x.name_ar,x.name_en,'Silsila starter geography',null,false
+from (values
+('القليوبية','مركز بنها','كفر الجزار','Kafr El Gazar'),
+('القليوبية','مركز بنها','كفر مناقر','Kafr Monaqer'),
+('القليوبية','مركز بنها','بطا','Bata'),
+('القليوبية','مركز بنها','دجوي','Degwy'),
+('القليوبية','مركز بنها','شبلنجة','Shiblinja'),
+('القليوبية','مركز قليوب','سنديون','Sendion'),
+('القليوبية','مركز قليوب','ميت حلفا','Meet Halfaa'),
+('القليوبية','مركز طوخ','نامول','Namoul'),
+('القليوبية','مركز طوخ','ترسا - طوخ','Tersa Toukh'),
+('القليوبية','مركز شبين القناطر','نوب طحا','Noub Taha'),
+('القليوبية','مركز شبين القناطر','طحانوب','Tahanoub'),
+('القليوبية','مركز كفر شكر','أسنيت','Asneit'),
+('القليوبية','مركز كفر شكر','المنشأة الكبرى','El Manshaa El Kobra'),
+('الجيزة','مركز أبو النمرس','شبرامنت','Shabramant'),
+('الجيزة','مركز أبو النمرس','منيل شيحة','Manil Shiha'),
+('الجيزة','مركز البدرشين','سقارة','Saqqara'),
+('الجيزة','مركز البدرشين','دهشور','Dahshur'),
+('الجيزة','مركز العياط','كفر شحاته','Kafr Shehata'),
+('الجيزة','مركز أوسيم','برطس','Bartus'),
+('الجيزة','مركز منشأة القناطر','وردان','Wardan'),
+('الجيزة','مركز منشأة القناطر','أبو غالب','Abu Ghaleb')
+) as x(gov,center_name,village,name_en)
+join public.erp_geo_areas c on c.governorate=x.gov and c.name_ar=x.center_name and c.area_kind='center'
+on conflict do nothing;
+
 -- The sample master data is inserted only for the company named below.
 -- Change this match to the intended company if the legal/trade name differs.
 do $$
