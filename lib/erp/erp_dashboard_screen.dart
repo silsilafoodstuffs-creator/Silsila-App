@@ -522,8 +522,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ErpAppThemeSettings(
           appId: appId,
           displayName: _appName.trim(),
-          primaryColor: '#${_appPrimary.value.toRadixString(16).substring(2).toUpperCase()}',
-          accentColor: '#${_appAccent.value.toRadixString(16).substring(2).toUpperCase()}',
+          primaryColor: '#${_appPrimary.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
+          accentColor: '#${_appAccent.toARGB32().toRadixString(16).substring(2).toUpperCase()}',
         ),
       );
       if (!mounted) return;
@@ -2556,7 +2556,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 const SizedBox(height:7),
                 Container(
                   padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(color:(isOkay?const Color(0xFF18865A):const Color(0xFFD32F2F)).withOpacity(.08),borderRadius:BorderRadius.circular(9)),
+                  decoration: BoxDecoration(color:(isOkay?const Color(0xFF18865A):const Color(0xFFD32F2F)).withValues(alpha: .08),borderRadius:BorderRadius.circular(9)),
                   child: Text('نتيجة الفحص: ${r['issue']}',style:TextStyle(color:isOkay?const Color(0xFF18865A):const Color(0xFFD32F2F),fontWeight:FontWeight.w800)),
                 ),
                 const SizedBox(height:8),
@@ -2653,7 +2653,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   Widget _screenHeading(String title,String subtitle)=>Padding(padding:const EdgeInsets.only(bottom:14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:_purple,fontSize:22,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(subtitle,style:const TextStyle(color:Colors.black54,height:1.5))]));
-  Widget _summaryChip(String label,String value,Color color)=>Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),decoration:BoxDecoration(color:color.withOpacity(.09),borderRadius:BorderRadius.circular(10)),child:Text('$label: $value',style:TextStyle(color:color,fontWeight:FontWeight.w800)));
+  Widget _summaryChip(String label,String value,Color color)=>Container(padding:const EdgeInsets.symmetric(horizontal:12,vertical:9),decoration:BoxDecoration(color:color.withValues(alpha: .09),borderRadius:BorderRadius.circular(10)),child:Text('$label: $value',style:TextStyle(color:color,fontWeight:FontWeight.w800)));
   Widget _fieldBox(String label,TextEditingController controller)=>SizedBox(width:220,child:TextField(controller:controller,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:label,border:const OutlineInputBorder())));
 
   Widget _about() => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
