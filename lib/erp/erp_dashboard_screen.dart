@@ -163,6 +163,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             'accent': _managedAppDrafts[key]?['accent'] ?? const Color(0xFFFFA015),
           };
         }
+        final selectedDraft = _managedAppDrafts[_selectedAppKey];
+        if (selectedDraft != null) {
+          _appName = selectedDraft['name'] as String;
+          _appPrimary = selectedDraft['primary'] as Color;
+          _appAccent = selectedDraft['accent'] as Color;
+        }
         _appManagementMessage = 'تم تحميل سجل التطبيقات من قاعدة البيانات.';
       });
       await _loadSelectedManagedAppTheme();
@@ -345,6 +351,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _appManagementMessage = 'تم حفظ اسم التطبيق وألوانه في قاعدة البيانات.';
         _activityLog.insert(0, 'تم حفظ إعدادات هوية التطبيق $_appName في Supabase');
       });
+      await _loadPermissionsForSelectedApp();
+      await _loadSavedAppActivity();
     } catch (error) {
       if (!mounted) return;
       setState(() {
