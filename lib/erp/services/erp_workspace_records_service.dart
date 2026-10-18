@@ -73,10 +73,23 @@ class ErpWorkspaceRecordsService {
   }
 
   static String _recordKey(Map<String, String> row) {
-    final preferred = row['الكود'] ?? row['الرقم'] ?? row['رقم المستند'] ?? row['رقم الحساب'] ?? row['الاسم'] ?? row['اسم الحساب'];
-    final value = (preferred ?? (row.values.isEmpty ? '' : row.values.first)).trim();
-    if (value.isEmpty) throw ArgumentError('يجب إدخال كود أو اسم للسجل قبل الحفظ.');
-    return value;
+    const preferredKeys = [
+      'الكود',
+      'الرقم',
+      'رقم المستند',
+      'رقم الحساب',
+      'الاسم',
+      'اسم الحساب',
+    ];
+    for (final key in preferredKeys) {
+      final value = row[key]?.trim() ?? '';
+      if (value.isNotEmpty) return value;
+    }
+    for (final value in row.values) {
+      final candidate = value.trim();
+      if (candidate.isNotEmpty) return candidate;
+    }
+    throw ArgumentError('يجب إدخال كود أو اسم للسجل قبل الحفظ.');
   }
 
   static void _validate(String companyId, String pageKey) {
