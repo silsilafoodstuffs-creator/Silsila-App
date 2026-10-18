@@ -41,9 +41,6 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
   String _value(Map<String, dynamic> row, String key) =>
       (row[key] ?? '').toString();
 
-  double _amount(Map<String, dynamic> row) =>
-      double.tryParse(_value(row, 'subtree_net_balance')) ?? 0;
-
   Future<void> _load() async {
     if (_company.text.trim().isEmpty) {
       setState(() => _error = 'أدخل معرّف الشركة أولاً.');
