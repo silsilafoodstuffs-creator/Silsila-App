@@ -52,6 +52,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     _company.text = widget.initialCompanyId ?? '';
     _documentType = widget.initialDocumentType ?? 'invoice';
     _selectedDocumentId = widget.initialDocumentId;
+    if (_company.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    }
     if (widget.initialDocumentId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await _load(clearMessage: false);
