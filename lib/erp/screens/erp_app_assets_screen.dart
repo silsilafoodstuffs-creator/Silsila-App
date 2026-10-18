@@ -62,6 +62,10 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
   void didUpdateWidget(covariant ErpAppAssetsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.companyId != widget.companyId || oldWidget.appId != widget.appId || oldWidget.initialAssetType != widget.initialAssetType) {
+      if (oldWidget.companyId != widget.companyId || oldWidget.appId != widget.appId) {
+        _signedUrlFutures.clear();
+        _signedUrlCreatedAt.clear();
+      }
       if (_types.containsKey(widget.initialAssetType)) _assetType = widget.initialAssetType!;
       _load();
     }
