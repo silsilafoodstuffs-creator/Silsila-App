@@ -739,7 +739,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ]);
           }).toList(),
           const SizedBox(height: 8),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: ListTile(dense: true, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), selected: _page == 'عن البرنامج', selectedTileColor: Colors.white.withValues(alpha: .14), leading: const Icon(Icons.info_outline_rounded, color: _orange, size: 20), title: const Text('عن البرنامج', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)), onTap: () => setState(() { _page = 'عن البرنامج'; _search = ''; }))),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: ListTile(dense: true, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), selected: _page == 'عن البرنامج', selectedTileColor: Colors.white.withValues(alpha: .14), leading: const Icon(Icons.info_outline_rounded, color: _orange, size: 20), title: const Text('عن البرنامج', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)), onTap: () => setState(() { _page = 'عن البرنامج'; _search = ''; }))),
           ],
         )),
         const Divider(color: Colors.white24, height: 1),
@@ -1062,7 +1062,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             borderRadius: BorderRadius.circular(5),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 3),
-              child: Text(_module, style: const TextStyle(color: _purple, fontSize: 11, fontWeight: FontWeight.w700, decoration: TextDecoration.underline)),
+              child: Text(_module, style: const TextStyle(color: _purple, fontSize: 13, fontWeight: FontWeight.w700, decoration: TextDecoration.underline)),
             ),
           ),
           const Text('/', style: TextStyle(color: Colors.black45, fontSize: 11)),
@@ -1198,9 +1198,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: columns,
-            crossAxisSpacing: 3,
-            mainAxisSpacing: 3,
-            childAspectRatio: columns == 6 ? 2.8 : columns == 3 ? 2.7 : 2.6,
+            crossAxisSpacing: 6,
+            mainAxisSpacing: 6,
+            childAspectRatio: columns == 6 ? 2.15 : columns == 3 ? 2.15 : 2.05,
             children: [
               _executiveKpi('صافي المبيعات', '—', 'التغير —%', Icons.point_of_sale_rounded, _purple),
               _executiveKpi('صافي الربح', '—', 'الهامش —%', Icons.trending_up_rounded, _green),
@@ -1260,9 +1260,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: columns,
-            crossAxisSpacing: 3,
-            mainAxisSpacing: 3,
-            childAspectRatio: columns == 3 ? 1.62 : columns == 2 ? 1.55 : 2.35,
+            crossAxisSpacing: 7,
+            mainAxisSpacing: 7,
+            childAspectRatio: columns == 3 ? 1.32 : columns == 2 ? 1.35 : 1.95,
             children: sections.map((section) => _executiveSectionCompact(
               title: section['title'] as String,
               icon: section['icon'] as IconData,
@@ -1308,14 +1308,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 13, color: _purple, fontWeight: FontWeight.w900))),
-        Text(value, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w900)),
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 16, color: _purple, fontWeight: FontWeight.w900))),
+        Text(value, style: TextStyle(fontSize: 16, color: color, fontWeight: FontWeight.w900)),
       ]),
-      Text(caption, style: const TextStyle(fontSize: 11, color: Colors.black45)),
+      Text(caption, style: const TextStyle(fontSize: 13, color: Colors.black45)),
       const SizedBox(height: 1),
       Expanded(child: CustomPaint(painter: chart, child: const SizedBox.expand())),
       const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('بداية الفترة', style: TextStyle(fontSize: 9, color: Colors.black45)),
+        Text('بداية الفترة', style: TextStyle(fontSize: 11, color: Colors.black45)),
         Text('منتصفها', style: TextStyle(fontSize: 9, color: Colors.black45)),
         Text('اليوم', style: TextStyle(fontSize: 9, color: Colors.black45)),
       ]),
@@ -1340,14 +1340,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 0),
       child: Row(children: [
-        Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black87))),
+        Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Colors.black87))),
         Expanded(flex: 4, child: ClipRRect(
           borderRadius: BorderRadius.circular(3),
           child: Container(height: 4, color: const Color(0xFFEFEAF4), alignment: AlignmentDirectional.centerStart,
             child: FractionallySizedBox(widthFactor: fill, child: ColoredBox(color: color))),
         )),
         const SizedBox(width: 5),
-        SizedBox(width: 43, child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w900))),
+        SizedBox(width: 43, child: Text(value, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900))),
       ]),
     ),
   );
@@ -1358,13 +1358,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required Color color,
     required List<Map<String, Object>> items,
   }) => Container(
-    padding: const EdgeInsets.all(5),
-    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE7E0EF))),
+    padding: const EdgeInsets.all(9),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE7E0EF))),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 4),
-        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900))),
+        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900))),
         _summaryAction('عرض الكل', () => _showExecutiveCategoryDetails(title, items)),
       ]),
       const Divider(height: 4, thickness: .5, color: Color(0xFFEFEAF4)),
@@ -1394,8 +1394,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Color(0xFF342B3C), fontWeight: FontWeight.w700, height: 1.0)),
-          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9, color: Colors.black45, height: 1.0)),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF342B3C), fontWeight: FontWeight.w700, height: 1.1)),
+          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black45, height: 1.1)),
         ])),
         const SizedBox(width: 3),
         Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w900)),
@@ -1459,7 +1459,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _executiveKpi(String title, String value, String note, IconData icon, Color color) =>
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
@@ -1469,12 +1469,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           ],
         ),
         child: Row(children: [
-          Container(width: 22, height: 22, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(5)), child: Icon(icon, color: color, size: 12)),
+          Container(width: 30, height: 30, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(7)), child: Icon(icon, color: color, size: 17)),
           const SizedBox(width: 4),
           Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 11, fontWeight: FontWeight.w700)),
-            Text(value, maxLines: 1, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w900)),
-            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 9)),
+            Text(value, maxLines: 1, style: TextStyle(color: color, fontSize: 19, fontWeight: FontWeight.w900)),
+            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 11)),
           ])),
         ]),
       );
