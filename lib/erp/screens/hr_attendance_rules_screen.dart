@@ -366,6 +366,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
 }
 
 class _Shift {
+  _Shift();
   final name=TextEditingController(text:'وردية صباحية'),start=TextEditingController(text:'08:00'),end=TextEditingController(text:'16:00');
   bool nightShift=false;
   final graceIn=TextEditingController(text:'10'),graceOut=TextEditingController(text:'10'),monthGrace=TextEditingController(text:'60'),multiplier=TextEditingController(text:'1');
@@ -627,6 +628,7 @@ class _HrFingerprintDevicesScreenState extends State<HrFingerprintDevicesScreen>
   void _msg(String s)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));
 }
 class _Device{
+  _Device();
   final name=TextEditingController(text:'جهاز بصمة جديد'),model=TextEditingController(),ip=TextEditingController(),port=TextEditingController(text:'4370'),usb=TextEditingController();
   String method='IP',note='';bool connected=false;
 
