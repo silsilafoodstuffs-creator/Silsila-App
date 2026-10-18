@@ -785,6 +785,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _dashboardMetric('أكثر من 90 يومًا', '—', Icons.error_outline_rounded, _pink),
     ], footer: 'يعرض المخطط عدد الحسابات وقيمة المديونية في كل شريحة بعد ربط تواريخ الاستحقاق والتحصيل.'),
     const SizedBox(height: 14),
+    _dashboardBreakdown('مخطط توزيع أعمار الديون بالقيمة', Icons.stacked_bar_chart_rounded, [
+      '0 إلى 3 أيام', 'أكثر من 3 إلى 7 أيام', 'أكثر من 7 إلى 30 يومًا', 'أكثر من 30 إلى 90 يومًا', 'أكثر من 90 يومًا',
+    ]),
+
+    const SizedBox(height: 14),
     _dashboardPanel('الموردون والخزائن والسلف', Icons.account_balance_wallet_rounded, [
       _dashboardMetric('عدد الموردين', '—', Icons.factory_rounded, _purple),
       _dashboardMetric('إجمالي أرصدة الموردين', '—', Icons.receipt_long_rounded, _orange),
@@ -815,20 +820,31 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _dashboardMetric('منتهية الصلاحية', '—', Icons.error_outline_rounded, _pink),
     ], footer: 'يعتمد التصنيف على تاريخ الصلاحية وحدود التنبيه المعرفة في إعدادات النظام.'),
     const SizedBox(height: 14),
-    _dashboardPanel('تحليلات ومخططات الأداء', Icons.bar_chart_rounded, [
-      _dashboardMetric('أكثر فئات الأصناف الرئيسية', '—', Icons.category_rounded, _purple),
-      _dashboardMetric('أعلى 5 موردين', '—', Icons.factory_rounded, _orange),
-      _dashboardMetric('أعلى 5 عملاء', '—', Icons.groups_rounded, _purple),
-      _dashboardMetric('أعلى 5 مناديب حسب نسبة تحقيق الهدف', '—', Icons.emoji_events_rounded, const Color(0xFF18865A)),
-      _dashboardMetric('إجمالي هدف مبيعات الفروع', '—', Icons.flag_rounded, _pink),
-      _dashboardMetric('مبيعات الفروع مقارنة بالأهداف', '—', Icons.show_chart_rounded, _purple),
-    ],
-    footer: 'ستظهر المخططات المرتبة بالقيم الفعلية عند اكتمال ربط البيانات، مع زر عرض الكل لقوائم الموردين والعملاء والمناديب.',
-    actions: [
-      _dashboardAction('عرض كل الموردين', () => _open('المشتريات والموردون', 'بيانات أساسية', 'دليل الموردين')),
-      _dashboardAction('عرض كل العملاء', () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
-      _dashboardAction('عرض كل المناديب', () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل المندوبين')),
-      _dashboardAction('عرض المبيعات والفواتير', () => _open('المبيعات والعملاء', 'حركات', 'فاتورة مبيعات')),
+    _dashboardBreakdown('مخطط حالة صلاحية الأصناف', Icons.donut_large_rounded, [
+      'صلاحية جيدة', 'صلاحية قريبة', 'منتهية الصلاحية',
+    ]),
+
+    const SizedBox(height: 14),
+    _dashboardPanel('أكثر فئات الأصناف الرئيسية', Icons.bar_chart_rounded, [
+      _dashboardMetric('الفئة الأعلى قيمة', '—', Icons.category_rounded, _purple),
+      _dashboardMetric('الفئة الأعلى حركة', '—', Icons.trending_up_rounded, _orange),
+      _dashboardMetric('عدد الفئات النشطة', '—', Icons.grid_view_rounded, _purple),
+    ], footer: 'مخطط ترتيب الفئات حسب قيمة المبيعات أو قيمة المخزون بعد ربط البيانات.'),
+    const SizedBox(height: 14),
+    _dashboardRankingPanel('أعلى 5 موردين', Icons.factory_rounded, () => _open('المشتريات والموردون', 'بيانات أساسية', 'دليل الموردين')),
+    const SizedBox(height: 14),
+    _dashboardRankingPanel('أعلى 5 عملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
+    const SizedBox(height: 14),
+    _dashboardRankingPanel('أعلى 5 مناديب حسب نسبة تحقيق أهداف المبيعات', Icons.emoji_events_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل المندوبين')),
+    const SizedBox(height: 14),
+    _dashboardPanel('أهداف مبيعات الفروع', Icons.flag_rounded, [
+      _dashboardMetric('إجمالي هدف المبيعات', '—', Icons.flag_rounded, _purple),
+      _dashboardMetric('إجمالي المبيعات المحققة', '—', Icons.trending_up_rounded, const Color(0xFF18865A)),
+      _dashboardMetric('نسبة تحقيق الهدف', '—', Icons.percent_rounded, _orange),
+      _dashboardMetric('الفروع المتجاوزة للهدف', '—', Icons.emoji_events_rounded, const Color(0xFF18865A)),
+    ], footer: 'مخطط مقارنة هدف كل فرع بالمبيعات المحققة سيظهر بعد ربط أهداف الفروع والفواتير.'),
+    _dashboardBreakdown('مقارنة المبيعات الفعلية بأهداف الفروع', Icons.show_chart_rounded, [
+      'إجمالي الفروع', 'الفرع الأعلى تحقيقًا', 'الفرع الأقل تحقيقًا',
     ]),
     const SizedBox(height: 22),
     const Text('الوصول السريع', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: _purple)),
@@ -891,6 +907,56 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             const SizedBox(height: 4),
             Text(value, style: TextStyle(color: color, fontSize: 17, fontWeight: FontWeight.w900)),
           ])),
+        ]),
+      );
+
+  Widget _dashboardBreakdown(String title, IconData icon, List<String> labels) =>
+      Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFFE8E0F0))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Icon(icon, color: _purple, size: 21),
+            const SizedBox(width: 9),
+            Expanded(child: Text(title, style: const TextStyle(color: _purple, fontSize: 14, fontWeight: FontWeight.w900))),
+          ]),
+          const SizedBox(height: 12),
+          ...labels.map((label) => Padding(
+            padding: const EdgeInsets.only(bottom: 11),
+            child: Row(children: [
+              SizedBox(width: 150, child: Text(label, style: const TextStyle(fontSize: 11, color: Colors.black87, fontWeight: FontWeight.w700))),
+              const SizedBox(width: 10),
+              Expanded(child: Container(height: 12, decoration: BoxDecoration(color: const Color(0xFFECE7F2), borderRadius: BorderRadius.circular(8)))),
+              const SizedBox(width: 10),
+              const Text('—', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w900)),
+            ]),
+          )),
+          const Text('لا توجد قيم مرسومة بعد؛ أطوال الأعمدة والقيم ستُحسب من بيانات النظام الفعلية.', style: TextStyle(fontSize: 10, color: Colors.black54)),
+        ]),
+      );
+
+  Widget _dashboardRankingPanel(String title, IconData icon, VoidCallback onViewAll) =>
+      Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFFE8E0F0))),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Icon(icon, color: _purple, size: 21),
+            const SizedBox(width: 9),
+            Expanded(child: Text(title, style: const TextStyle(color: _purple, fontSize: 14, fontWeight: FontWeight.w900))),
+            TextButton(onPressed: onViewAll, child: const Text('عرض الكل', style: TextStyle(fontWeight: FontWeight.w800))),
+          ]),
+          const Divider(height: 14),
+          ...List.generate(5, (index) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(children: [
+              Container(width: 25, height: 25, alignment: Alignment.center, decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(8)), child: Text('\${index + 1}', style: const TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: 11))),
+              const SizedBox(width: 9),
+              Expanded(child: Text('بانتظار بيانات \${index + 1}', style: const TextStyle(color: Colors.black54, fontSize: 11))),
+              const Text('—', style: TextStyle(color: _purple, fontWeight: FontWeight.w900)),
+            ]),
+          )),
+          const Text('سيتم ترتيب القائمة بالقيمة أو نسبة تحقيق الهدف وفق نوع التحليل بعد ربط البيانات.', style: TextStyle(fontSize: 10, color: Colors.black54)),
         ]),
       );
 
