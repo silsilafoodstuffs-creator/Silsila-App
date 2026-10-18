@@ -29,6 +29,12 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   String? _message;
   Map<String, dynamic>? _company;
   String? _activeCompanyId;
+  List<Map<String, String>> _currencyOptions = [
+    {'code': 'EGP', 'name': 'جنيه مصري'}, {'code': 'USD', 'name': 'دولار أمريكي'},
+    {'code': 'SAR', 'name': 'ريال سعودي'}, {'code': 'AED', 'name': 'درهم إماراتي'},
+    {'code': 'KWD', 'name': 'دينار كويتي'}, {'code': 'EUR', 'name': 'يورو'},
+    {'code': 'GBP', 'name': 'جنيه إسترليني'},
+  ];
 
   @override
   void initState() {
@@ -86,6 +92,18 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         });
         return;
       }
+      _currency.text = (row['base_currency'] ?? 'EGP').toString().trim();
+      try {
+        final currencies = await _db!.from('erp_currencies').select('currency_code,currency_name_ar')
+            .eq('company_id', id).eq('is_active', true).order('currency_code');
+        for (final item in currencies) {
+          final code = (item['currency_code'] ?? '').toString().trim();
+          if (code.isNotEmpty && !_currencyOptions.any((option) => option['code'] == code)) {
+            _currencyOptions.add({'code': code, 'name': (item['currency_name_ar'] ?? code).toString()});
+          }
+        }
+      } catch (_) {}
+      if (!mounted) return;
       setState(() {
         _company = Map<String, dynamic>.from(row);
         _legalName.text = (row['legal_name'] ?? '').toString();
@@ -95,7 +113,6 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         _phone.text = (row['phone'] ?? '').toString();
         _email.text = (row['email'] ?? '').toString();
         _address.text = (row['address'] ?? '').toString();
-        _currency.text = (row['base_currency'] ?? 'EGP').toString().trim();
         _loading = false;
       });
     } catch (error) {
@@ -224,7 +241,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                 _field(_commercialRegister, 'السجل التجاري', Icons.assignment_outlined),
                 _field(_phone, 'رقم الهاتف', Icons.phone_outlined, keyboard: TextInputType.phone),
                 _field(_email, 'البريد الإلكتروني', Icons.email_outlined, keyboard: TextInputType.emailAddress),
-                _field(_currency, 'العملة الأساسية (3 أحرف)', Icons.currency_exchange),
+                _currencyField(),
                 _field(_address, 'العنوان', Icons.location_on_outlined, maxLines: 2),
                 const SizedBox(height: 16),
                 FilledButton.icon(
@@ -239,6 +256,29 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       ]),
     );
   }
+
+  Widget _currencyField() => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: LayoutBuilder(builder: (context, constraints) {
+          final labelWidth = (constraints.maxWidth * .30).clamp(125.0, 190.0);
+          final current = _currencyOptions.any((item) => item['code'] == _currency.text) ? _currency.text : 'EGP';
+          return Row(children: [
+            SizedBox(width: labelWidth, child: const Padding(
+              padding: EdgeInsetsDirectional.only(end: 12),
+              child: Text('العملة الأساسية', style: TextStyle(color: _companyPurple, fontWeight: FontWeight.w700, fontSize: 13)),
+            )),
+            Expanded(child: DropdownButtonFormField<String>(
+              value: current, isExpanded: true,
+              decoration: InputDecoration(prefixIcon: const Icon(Icons.currency_exchange, size: 20), isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              items: _currencyOptions.map((item) => DropdownMenuItem<String>(
+                value: item['code'], child: Text('${item['name']} (${item['code']})', overflow: TextOverflow.ellipsis))).toList(),
+              onChanged: (value) { if (value != null) setState(() => _currency.text = value); },
+            )),
+          ]);
+        }),
+      );
 
   Widget _field(TextEditingController controller, String label, IconData icon,
           {int maxLines = 1, TextInputType? keyboard}) =>
