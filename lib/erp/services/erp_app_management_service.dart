@@ -30,6 +30,24 @@ class ErpAppManagementService {
 
   String? get currentUserId => _client?.auth.currentUser?.id;
 
+  /// Returns company IDs for the signed-in user from active memberships.
+  /// Membership RLS must allow users to read their own membership rows.
+  Future<List<String>> listCurrentUserCompanyIds() async {
+    final userId = currentUserId;
+    if (userId == null || userId.trim().isEmpty) return const <String>[];
+    final rows = await _db
+        .from('erp_company_members')
+        .select('company_id')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('created_at');
+    return (rows as List)
+        .whereType<Map<String, dynamic>>()
+        .map((row) => row['company_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toList(growable: false);
+  }
+
   /// Lists applications for one company. RLS must independently enforce access.
   Future<List<ErpManagedApp>> listApps({required String companyId}) async {
     _requireId(companyId, 'معرّف الشركة مطلوب.');
@@ -49,6 +67,24 @@ class ErpAppManagementService {
               webUrl: row['web_url']?.toString(),
             ))
         .toList(growable: false);
+  }
+
+  /// Returns a mapping of app_key to database app UUID for one company.
+  Future<Map<String, String>> listAppRegistry({required String companyId}) async {
+    _requireId(companyId, 'معرّف الشركة مطلوب.');
+    final rows = await _db
+        .from('erp_managed_apps')
+        .select('id, app_key')
+        .eq('company_id', companyId);
+    final result = <String, String>{};
+    for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
+      final key = row['app_key']?.toString() ?? '';
+      final id = row['id']?.toString() ?? '';
+      if (const {'silsila', 'app_2', 'app_3'}.contains(key) && id.isNotEmpty) {
+        result[key] = id;
+      }
+    }
+    return result;
   }
 
   /// Creates or updates an app's company-scoped registry record.
