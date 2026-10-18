@@ -104,13 +104,13 @@ class OrderService {
     }
 
     final preparedItems = <Map<String, dynamic>>[];
-    final seenProducts = <int>{};
+    final seenProducts = <String>{};
 
     for (final item in items) {
-      final productId = _toInt(item['product_id']);
+      final productId = (item['product_id'] ?? '').toString().trim();
       final quantity = _toInt(item['quantity']);
 
-      if (productId <= 0 || quantity <= 0) {
+      if (productId.isEmpty || productId == '0' || quantity <= 0) {
         throw ArgumentError('بيانات أحد المنتجات غير صحيحة.');
       }
 
