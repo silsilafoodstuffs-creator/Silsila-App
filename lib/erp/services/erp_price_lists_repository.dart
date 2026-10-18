@@ -20,10 +20,15 @@ class ErpPriceListsRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
   Future<List<Map<String, dynamic>>> fetchCurrencies(String companyId) async {
-    final rows = await _db.from('erp_currencies')
-      .select('currency_code,currency_name_ar,currency_symbol')
-      .eq('company_id', companyId.trim()).eq('is_active', true).order('currency_code');
-    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    try {
+      final rows = await _db.from('erp_currencies')
+        .select('currency_code,currency_name_ar,currency_symbol')
+        .eq('company_id', companyId.trim()).eq('is_active', true).order('currency_code');
+      return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    } catch (_) {
+      // Keep price-list entry usable with built-in currency choices until the master table is installed.
+      return <Map<String, dynamic>>[];
+    }
   }
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
     final rows = await _db.from('erp_items')
