@@ -24,6 +24,7 @@ import 'services/erp_operational_documents_repository.dart';
 import 'services/erp_app_management_service.dart';
 import 'services/erp_app_settings.dart';
 import 'services/erp_app_permission_catalog.dart';
+import 'services/erp_company_settings_repository.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -81,6 +82,7 @@ class ErpDashboardScreen extends StatefulWidget {
 
 class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final ErpAppManagementService _appManagementService = ErpAppManagementService();
+  final ErpCompanySettingsRepository _workspaceSettingsRepository = ErpCompanySettingsRepository();
   String? _appManagementCompanyId;
   bool _executiveMetricsLoading = false;
   String? _executiveMetricsError;
@@ -190,6 +192,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       await _loadSelectedManagedAppTheme();
       await _loadPermissionsForSelectedApp();
       await _loadSavedAppActivity();
+      await _loadWorkspaceSettings(companyId);
       await _loadExecutiveMetrics(companyId);
     } catch (error) {
       if (!mounted) return;
@@ -198,6 +201,85 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       });
     } finally {
       if (mounted) setState(() => _appManagementLoading = false);
+    }
+  }
+
+  Future<void> _loadWorkspaceSettings(String companyId) async {
+    try {
+      final pricing = await _workspaceSettingsRepository.getSetting(
+        companyId: companyId,
+        key: 'pricing_policy',
+      );
+      final permissions = await _workspaceSettingsRepository.getSetting(
+        companyId: companyId,
+        key: 'program_permissions',
+      );
+      final restrictions = await _workspaceSettingsRepository.getSetting(
+        companyId: companyId,
+        key: 'transaction_restrictions',
+      );
+      if (!mounted) return;
+      setState(() {
+        if (pricing != null) {
+          _basePriceController.text = pricing['base_price']?.toString() ?? '';
+          _priceLimitController.text = pricing['price_limit']?.toString() ?? '';
+          _priceValueController.text = pricing['price_value']?.toString() ?? '';
+          _invoiceDiscountController.text = pricing['invoice_discount']?.toString() ?? '';
+          _itemDiscountController.text = pricing['item_discount']?.toString() ?? '';
+          _pricingMode = pricing['mode']?.toString() == 'قيمة' ? 'قيمة' : 'نسبة';
+          _pricingDirection = pricing['direction']?.toString() == 'نقصان' ? 'نقصان' : 'زيادة';
+        }
+        if (permissions?['values'] is Map) {
+          _permissionDraft
+            ..clear()
+            ..addEntries((permissions!['values'] as Map).entries.map(
+              (entry) => MapEntry(entry.key.toString(), entry.value == true),
+            ));
+        }
+        if (restrictions != null) {
+          _restrictionAction = restrictions['action']?.toString() ?? _restrictionAction;
+          _restrictionTarget = restrictions['target']?.toString() ?? _restrictionTarget;
+          _restrictionItem.text = restrictions['item']?.toString() ?? '';
+          _restrictionCustomer.text = restrictions['customer']?.toString() ?? '';
+          _restrictionDelegate.text = restrictions['delegate']?.toString() ?? '';
+        }
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() => _appManagementMessage = 'تعذر تحميل إعدادات العمل المحفوظة: $error');
+      }
+    }
+  }
+
+  Future<bool> _saveWorkspaceSetting(
+    String key,
+    Map<String, Object?> value, {
+    String successMessage = 'تم حفظ الإعدادات في قاعدة البيانات.',
+  }) async {
+    final companyId = _appManagementCompanyId;
+    if (companyId == null || companyId.trim().isEmpty) {
+      _showAppManagementMessage('لا توجد شركة نشطة مرتبطة بالمستخدم؛ لم يتم الحفظ.');
+      return false;
+    }
+    try {
+      await _workspaceSettingsRepository.saveSetting(
+        companyId: companyId,
+        key: key,
+        value: value,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(successMessage), backgroundColor: const Color(0xFF16834A)),
+        );
+      }
+      return true;
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('فشل حفظ الإعدادات: $error'), backgroundColor: Colors.red),
+        );
+      }
+      return false;
     }
   }
 
@@ -2223,7 +2305,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     const rights=['عرض','إضافة','تعديل','حذف','اعتماد','عكس الحركة','ترحيل','تصدير','طباعة','تخطي ربط المستند الأصلي','تخطي التحضير'];
     const scopes=['بيانات أساسية','الحسابات المالية','المخازن والفروع','المبيعات والعملاء','المشتريات والموردون','الموارد البشرية','إدارة البرنامج','سياسات التسعير','توزيع الأصناف','قيود البيع والشراء'];
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('المستخدمون والصلاحيات','تحديد الصلاحيات حسب نوع المستخدم والدور الوظيفي'),
-      Wrap(spacing:10,children:[SizedBox(width:260,child:DropdownButtonFormField<String>(value:_permissionRole,decoration:const InputDecoration(labelText:'تصنيف المستخدم / الدور',border:OutlineInputBorder()),items:roles.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_permissionRole=v??_permissionRole)),),FilledButton.icon(onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('مسودة الصلاحيات محلية فقط؛ يلزم حفظها بالخادم مع تطبيق RLS.'))),icon:const Icon(Icons.save),label:const Text('حفظ المسودة'))]),
+      Wrap(spacing:10,children:[SizedBox(width:260,child:DropdownButtonFormField<String>(value:_permissionRole,decoration:const InputDecoration(labelText:'تصنيف المستخدم / الدور',border:OutlineInputBorder()),items:roles.map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_permissionRole=v??_permissionRole)),),FilledButton.icon(onPressed:()=>_saveWorkspaceSetting('program_permissions', {'role':_permissionRole,'values':Map<String, bool>.from(_permissionDraft)}, successMessage:'تم حفظ إعدادات الصلاحيات في قاعدة البيانات.').then((_) {}),icon:const Icon(Icons.save),label:const Text('حفظ الصلاحيات'))]),
       const SizedBox(height:12),
       const Text('ضع علامة صح لمنح الصلاحية وأزلها لمنعها. لا تطبق هذه الاختيارات حماية فعلية قبل ربطها بهوية المستخدم والخادم وسياسات قاعدة البيانات.',style:TextStyle(color:Colors.black54,height:1.6)),
       const SizedBox(height:8),
@@ -2235,7 +2317,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('سياسات التسعير والخصومات','حد تسعير الصنف والزيادة أو النقصان وحدود خصم الصنف والفاتورة'),
       Wrap(spacing:12,runSpacing:12,children:[_fieldBox('سعر الصنف الأساسي',_basePriceController),_fieldBox('حد التسعير المعتمد',_priceLimitController),SizedBox(width:220,child:DropdownButtonFormField<String>(value:_pricingMode,decoration:const InputDecoration(labelText:'طريقة التعديل',border:OutlineInputBorder()),items:const ['نسبة','قيمة'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_pricingMode=v??_pricingMode))),SizedBox(width:220,child:DropdownButtonFormField<String>(value:_pricingDirection,decoration:const InputDecoration(labelText:'الاتجاه من حد التسعير',border:OutlineInputBorder()),items:const ['زيادة','نقصان'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_pricingDirection=v??_pricingDirection)),),_fieldBox(_pricingMode=='نسبة'?'نسبة الزيادة / النقصان %':'قيمة الزيادة / النقصان',_priceValueController),_fieldBox('أقصى خصم على إجمالي الفاتورة %',_invoiceDiscountController),_fieldBox('أقصى خصم على مستوى الصنف %',_itemDiscountController)]),
       const SizedBox(height:12),
-      FilledButton.icon(onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم إعداد حقول السياسة في الواجهة فقط؛ لم تُحفظ السياسة على الخادم بعد.'))),icon:const Icon(Icons.save),label:const Text('حفظ مسودة السياسة')),
+      FilledButton.icon(onPressed:()=>_saveWorkspaceSetting('pricing_policy', {'base_price':_basePriceController.text.trim(),'price_limit':_priceLimitController.text.trim(),'mode':_pricingMode,'direction':_pricingDirection,'price_value':_priceValueController.text.trim(),'invoice_discount':_invoiceDiscountController.text.trim(),'item_discount':_itemDiscountController.text.trim()}, successMessage:'تم حفظ سياسة التسعير في قاعدة البيانات.').then((_) {}),icon:const Icon(Icons.save),label:const Text('حفظ سياسة التسعير')),
       const SizedBox(height:8),
       const Text('يجب أن يُحسب السعر النهائي من حد التسعير المسجل للصنف، مع منع تجاوز صلاحية المستخدم وحدود الخصم. يلزم ربط الحقول ببيانات الأصناف وقاعدة البيانات قبل تطبيقها على الفواتير.',style:TextStyle(color:Colors.black54,height:1.6))]);
   }
