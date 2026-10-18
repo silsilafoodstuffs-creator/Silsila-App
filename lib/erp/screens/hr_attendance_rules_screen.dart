@@ -82,32 +82,37 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
           ),
         ),
       ),
-      Wrap(spacing:9,runSpacing:9,crossAxisAlignment:WrapCrossAlignment.center,children:[
+      Wrap(spacing:5,runSpacing:4,crossAxisAlignment:WrapCrossAlignment.center,children:[
         Row(mainAxisSize:MainAxisSize.min,children:[
-          Checkbox(value:s.nightShift,onChanged:canEdit?(v)=>setState(()=>s.nightShift=v??false):null),
-          const Text('وردية ليل / سهر'),
+          Checkbox(value:s.nightShift,onChanged:canEdit?(v)=>setState(()=>s.nightShift=v??false):null,visualDensity:VisualDensity.compact),
+          const Text('وردية ليل / سهر',style:TextStyle(fontSize:12)),
         ]),
-        _field(s.start,'من',130,readOnly:!canEdit),
-        _field(s.end,'إلى',130,readOnly:!canEdit),
-        Container(width:135,padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFF1E9FA),borderRadius:BorderRadius.circular(10)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('عدد الساعات'),Text(_hours(s.start.text,s.end.text),style:const TextStyle(color:_purple,fontSize:17,fontWeight:FontWeight.w900))])),
+        _field(s.start,'من',105,readOnly:!canEdit),
+        _field(s.end,'إلى',105,readOnly:!canEdit),
+        Container(width:125,padding:const EdgeInsets.symmetric(horizontal:9,vertical:7),decoration:BoxDecoration(color:const Color(0xFFF1E9FA),borderRadius:BorderRadius.circular(8)),child:Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[const Text('الساعات',style:TextStyle(fontSize:12)),Flexible(child:Text(_hours(s.start.text,s.end.text),textAlign:TextAlign.end,style:const TextStyle(color:_purple,fontSize:13,fontWeight:FontWeight.w900)))])),
       ]),
       _heading('العطلة الأسبوعية — اختيار متعدد'),
-      Wrap(spacing:5,children:weekdays.map((d)=>FilterChip(label:Text(d),selected:s.days.contains(d),selectedColor:const Color(0xFFFFE4BB),onSelected:canEdit?(v)=>setState(()=>v?s.days.add(d):s.days.remove(d)):null)).toList()),
+      Wrap(spacing:4,runSpacing:2,children:weekdays.map((d)=>FilterChip(label:Text(d,style:const TextStyle(fontSize:11)),selected:s.days.contains(d),selectedColor:const Color(0xFFFFE4BB),visualDensity:VisualDensity.compact,materialTapTargetSize:MaterialTapTargetSize.shrinkWrap,onSelected:canEdit?(v)=>setState(()=>v?s.days.add(d):s.days.remove(d)):null)).toList()),
       _heading('قواعد السماح'),
       _numberFields([_num(s.graceIn,'سماح بداية الحضور',readOnly:!canEdit,width:170),_num(s.graceOut,'سماح نهاية الانصراف',readOnly:!canEdit,width:170),_num(s.monthGrace,'السماح الشهري',readOnly:!canEdit,width:170),_num(s.multiplier,'معامل الخصم',readOnly:!canEdit,width:170)]),
       _heading('قواعد الحضور والانصراف'),
       _numberFields([_num(s.earlyIn,'الحضور المبكر: قيمة الدقيقة إضافي',readOnly:!canEdit),_num(s.earlyOut,'الانصراف المبكر: قيمة الدقيقة خصم',readOnly:!canEdit),_num(s.lateOut,'الانصراف المتأخر: قيمة الدقيقة إضافي',readOnly:!canEdit)]),
       _heading('قواعد الحضور المتأخر — شرائح متتابعة'),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
+        horizontalMargin:4,
+        columnSpacing:5,
+        dataRowMinHeight:38,
+        dataRowMaxHeight:42,
+        headingRowHeight:36,
         headingRowColor:WidgetStateProperty.all(const Color(0xFFF1E9FA)),
-        columns:const [DataColumn(label:Text('الحالة')),DataColumn(label:Text('من دقيقة')),DataColumn(label:Text('إلى دقيقة')),DataColumn(label:Text('قيمة الدقيقة')),DataColumn(label:Text('احتساب')),DataColumn(label:Text('حذف'))],
+        columns:const [DataColumn(label:Text('التأخير')),DataColumn(label:Text('من')),DataColumn(label:Text('إلى')),DataColumn(label:Text('جزاء/دقيقة')),DataColumn(label:Text('نوع')),DataColumn(label:Text('حذف'))],
         rows:List.generate(s.from.length,(n)=>DataRow(cells:[
-          DataCell(Text('تأخير '+(n+1).toString())),
-          DataCell(SizedBox(width:72,child:TextField(controller:s.from[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:9)),onChanged:canEdit?(_)=>setState((){}):null))),
-          DataCell(SizedBox(width:72,child:TextField(controller:s.to[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:9)),onChanged:canEdit?(_)=>setState((){}):null))),
-          DataCell(SizedBox(width:78,child:TextField(controller:s.value[n],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:9))))),
-          DataCell(DropdownButton<String>(value:s.action[n],items:const[DropdownMenuItem(value:'خصم',child:Text('خصم')),DropdownMenuItem(value:'إضافي',child:Text('إضافي'))],onChanged:canEdit?(v)=>setState(()=>s.action[n]=v??'خصم'):null)),
-          DataCell(IconButton(tooltip:'حذف قاعدة التأخير',onPressed:canEdit&&s.from.length>1?()=>_confirmDelete('قاعدة التأخير ${n+1}',()=>setState(()=>s.removeLateRule(n))):null,icon:const Icon(Icons.delete_outline,color:_red))),
+          DataCell(Text('${n+1}',style:const TextStyle(fontSize:11))),
+          DataCell(SizedBox(width:42,child:TextField(controller:s.from[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:6)),style:const TextStyle(fontSize:11),onChanged:canEdit?(_)=>setState((){}):null))),
+          DataCell(SizedBox(width:42,child:TextField(controller:s.to[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:6)),style:const TextStyle(fontSize:11),onChanged:canEdit?(_)=>setState((){}):null))),
+          DataCell(SizedBox(width:52,child:TextField(controller:s.value[n],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:6)),style:const TextStyle(fontSize:11)))),
+          DataCell(DropdownButton<String>(isDense:true,style:const TextStyle(fontSize:11,color:_purple),value:s.action[n],items:const[DropdownMenuItem(value:'خصم',child:Text('خصم')),DropdownMenuItem(value:'إضافي',child:Text('إضافي'))],onChanged:canEdit?(v)=>setState(()=>s.action[n]=v??'خصم'):null)),
+          DataCell(IconButton(visualDensity:VisualDensity.compact,constraints:const BoxConstraints(minWidth:28,minHeight:28),padding:EdgeInsets.zero,tooltip:'حذف قاعدة التأخير',onPressed:canEdit&&s.from.length>1?()=>_confirmDelete('قاعدة التأخير ${n+1}',()=>setState(()=>s.removeLateRule(n))):null,icon:const Icon(Icons.delete_outline,color:_red,size:18))),
         ])),
       )),
       if(canEdit) Align(alignment:Alignment.centerRight,child:OutlinedButton.icon(onPressed:()=>setState(()=>s.addLateRule()),icon:const Icon(Icons.add_circle_outline,color:_orange),label:const Text('إضافة قاعدة حضور متأخر'))),
@@ -147,17 +152,27 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
     ])));
   }
 
-  Widget _heading(String t)=>Padding(padding:const EdgeInsets.only(top:14,bottom:8),child:Text(t,style:const TextStyle(color:_purple,fontWeight:FontWeight.w900)));
+  Widget _heading(String t)=>Padding(padding:const EdgeInsets.only(top:8,bottom:4),child:Text(t,style:const TextStyle(color:_purple,fontWeight:FontWeight.w900,fontSize:13)));
   Widget _field(TextEditingController c,String label,double w,{bool readOnly=false})=>SizedBox(width:w,child:Row(children:[
-    SizedBox(width:58,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w600))),
-    Expanded(child:TextField(controller:c,readOnly:readOnly,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:10)),onChanged:readOnly?null:(_)=>setState((){}))),
+    SizedBox(width:35,child:Text(label,style:const TextStyle(fontWeight:FontWeight.w600,fontSize:12))),
+    Expanded(child:TextField(controller:c,readOnly:readOnly,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7)),onChanged:readOnly?null:(_)=>setState((){}))),
   ]));
-  Widget _num(TextEditingController c,String label,{bool readOnly=false,double width=260})=>SizedBox(width:width,child:Row(children:[
-    SizedBox(width:width*0.58,child:Text(label,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600),maxLines:2,overflow:TextOverflow.ellipsis)),
-    const SizedBox(width:4),
-    Expanded(child:TextField(controller:c,readOnly:readOnly,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:8)))),
+  String _unitFor(String label){
+    if(label.contains('ساعة')||label.contains('الحضور')||label.contains('الانصراف')||label.contains('تأخير')||label.contains('الدقيقة')||label.contains('دقيقة')||label.contains('البصمة')||label.contains('السماح الشهري')||label.contains('سماح بداية')||label.contains('سماح نهاية'))return 'دقيقة';
+    if(label.contains('اليوم')||label.contains('مرضي')||label.contains('إصابة')||label.contains('الأسبوعية')||label.contains('الرسمية')||label.contains('السنوية')||label.contains('غياب'))return 'يوم';
+    if(label.contains('معامل'))return 'معامل';
+    return 'ساعة';
+  }
+  Widget _num(TextEditingController c,String label,{bool readOnly=false,double width=205,String? unit})=>SizedBox(width:width,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,mainAxisSize:MainAxisSize.min,children:[
+    Text(label,style:const TextStyle(fontSize:10.5,fontWeight:FontWeight.w700),maxLines:2,overflow:TextOverflow.ellipsis),
+    const SizedBox(height:2),
+    Row(children:[
+      Expanded(child:TextField(controller:c,readOnly:readOnly,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:6)),style:const TextStyle(fontSize:12))),
+      const SizedBox(width:3),
+      Text(unit??_unitFor(label),style:const TextStyle(fontSize:10,color:Colors.black54)),
+    ]),
   ]));
-  Widget _numberFields(List<Widget> children)=>Wrap(spacing:9,runSpacing:9,children:children);
+  Widget _numberFields(List<Widget> children)=>Wrap(spacing:6,runSpacing:5,children:children);
 
   Widget _absenceRules({
     required String title,
@@ -172,28 +187,51 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       children: [
         Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: List.generate(rules.length, (index) => Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _num(rules[index], 'قيمة ${index + 1}', readOnly: !canEdit, width: 175),
-              IconButton(
-                tooltip: 'حذف قاعدة $title',
-                onPressed: canEdit ? () => _confirmDelete('قاعدة $title رقم ${index + 1}', () => onRemove(index)) : null,
-                icon: const Icon(Icons.delete_outline, color: _red),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: List.generate(rules.length, (index) => Padding(
+              padding: const EdgeInsets.only(left: 5),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  SizedBox(
+                    width: 122,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('$title رقم ${index + 1}',style:const TextStyle(fontSize:10.5,fontWeight:FontWeight.w700),maxLines:1,overflow:TextOverflow.ellipsis),
+                        const SizedBox(height:2),
+                        Row(children:[
+                          Expanded(child:TextField(controller:rules[index],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:6)),style:const TextStyle(fontSize:12))),
+                          const SizedBox(width:3),
+                          const Text('جزاء',style:TextStyle(fontSize:10,color:Colors.black54)),
+                        ]),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    visualDensity:VisualDensity.compact,
+                    constraints:const BoxConstraints(minWidth:30,minHeight:32),
+                    padding:EdgeInsets.zero,
+                    tooltip: 'حذف $title رقم ${index + 1}',
+                    onPressed: canEdit ? () => _confirmDelete('$title رقم ${index + 1}', () => onRemove(index)) : null,
+                    icon: const Icon(Icons.delete_outline, color: _red,size:19),
+                  ),
+                ],
               ),
-            ],
-          )),
+            )),
+          ),
         ),
         if (canEdit)
           Align(
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
+              style:OutlinedButton.styleFrom(visualDensity:VisualDensity.compact,padding:const EdgeInsets.symmetric(horizontal:10,vertical:6)),
               onPressed: onAdd,
-              icon: const Icon(Icons.add_circle_outline, color: _orange),
-              label: Text('إضافة قاعدة $title'),
+              icon: const Icon(Icons.add_circle_outline, color: _orange,size:18),
+              label: Text('إضافة $title'),
             ),
           ),
       ],
@@ -255,11 +293,11 @@ class _Shift {
     action.removeAt(index);
   }
   final missIn=TextEditingController(text:'1'),missOut=TextEditingController(text:'1'),missDay=TextEditingController(text:'1');
-  final excusedRules = <TextEditingController>[
-    TextEditingController(text:'0'),
-  ];
+  final excusedRules = List<TextEditingController>.generate(
+    4, (_) => TextEditingController(text:'0'),
+  );
   final absentRules = List<TextEditingController>.generate(
-    5, (_) => TextEditingController(text: '1'),
+    4, (_) => TextEditingController(text: '1'),
   );
   final sick=TextEditingController(text:'0'),injury=TextEditingController(text:'0');
 
