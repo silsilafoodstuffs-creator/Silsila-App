@@ -63,6 +63,23 @@ void main() {
       expect(cart.subtotal, 75);
     });
 
+    test('accepts UUID product IDs and preserves them in the cart', () {
+      const id = 'a8f6e4b2-2b2a-4e67-8e11-1f03e3b6b4c9';
+      cart.addProduct(product(id: id));
+
+      expect(cart.items.single.productId, id);
+      expect(cart.containsProduct(id), isTrue);
+      expect(cart.getItem(id)?.name, 'منتج تجريبي');
+      cart.increaseQuantity(id);
+      expect(cart.getItem(id)?.quantity, 2);
+      cart.removeProduct(id);
+      expect(cart.isEmpty, isTrue);
+    });
+
+    test('rejects an empty product identifier', () {
+      expect(() => cart.addProduct(product(id: '  ')), throwsArgumentError);
+    });
+
     test('rejects quantities outside supported bounds', () {
       expect(
         () => cart.addProduct(product(), quantity: 0),
