@@ -713,120 +713,131 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   ]));
 
   Widget _home() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    Container(padding: const EdgeInsets.all(26), decoration: BoxDecoration(gradient: const LinearGradient(colors: [_purple, Color(0xFF6E2BA6)], begin: Alignment.topRight, end: Alignment.bottomLeft), borderRadius: BorderRadius.circular(22)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('مرحبًا بك في نظام سلسلة ERP', style: TextStyle(color: Colors.white, fontSize: 25, fontWeight: FontWeight.w900)),
-      SizedBox(height: 10),
-      Text('لوحة تنفيذية موحدة لمتابعة الأداء المالي والتشغيلي والمخزون والمبيعات والموارد البشرية.', style: TextStyle(color: Colors.white70, height: 1.8)),
-      SizedBox(height: 15),
-      Text('المؤشرات معروضة كقوالب لحين ربط مصادر البيانات الفعلية واعتماد الاستعلامات المحاسبية والتشغيلية.', style: TextStyle(color: Colors.white, fontSize: 12)),
-    ])),
-    const SizedBox(height: 22),
-    const Text('الملخص التنفيذي', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _purple)),
-    const SizedBox(height: 5),
-    const Text('المقارنة اليومية: الارتفاع باللون الأخضر والانخفاض باللون الأحمر بعد توافر بيانات اليوم وأمس.', style: TextStyle(color: Colors.black54, fontSize: 11)),
+    Row(children: [
+      const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('الملخص التنفيذي', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _purple)),
+        SizedBox(height: 4),
+        Text('نظرة شاملة على أداء العمل في لمحة واحدة', style: TextStyle(color: Colors.black54, fontSize: 12)),
+      ])),
+      Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFFF0E7FA), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.query_stats_rounded, color: _purple, size: 24)),
+    ]),
+    const SizedBox(height: 16),
+    LayoutBuilder(builder: (context, constraints) {
+      final columns = constraints.maxWidth >= 760 ? 4 : constraints.maxWidth >= 430 ? 2 : 1;
+      return GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: columns,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: columns == 4 ? 1.55 : columns == 2 ? 1.9 : 3.3,
+        children: [
+          _dashboardMetric('إجمالي المبيعات', '—', Icons.point_of_sale_rounded, _purple),
+          _dashboardMetric('صافي الربح', '—', Icons.account_balance_rounded, const Color(0xFF18865A)),
+          _dashboardMetric('عدد العملاء', '—', Icons.groups_rounded, _purple),
+          _dashboardMetric('عدد الفواتير', '—', Icons.receipt_long_rounded, _purple),
+        ],
+      );
+    }),
     const SizedBox(height: 12),
-    _dashboardPanel('مؤشرات الأداء الرئيسية', Icons.insights_rounded, [
-      _dashboardMetric('مبيعات اليوم', '—', Icons.trending_up_rounded, _purple),
-      _dashboardMetric('صافي الربح', '—', Icons.account_balance_rounded, const Color(0xFF18865A)),
-      _dashboardMetric('تحصيلات اليوم', '—', Icons.payments_outlined, const Color(0xFF18865A)),
-      _dashboardMetric('إجمالي المصروفات', '—', Icons.money_off_csred_rounded, _orange),
-      _dashboardMetric('هامش صافي الربح', '—', Icons.percent_rounded, _purple),
-      _dashboardMetric('نسبة التداول', '—', Icons.swap_horiz_rounded, _purple),
-      _dashboardMetric('نسبة السيولة السريعة', '—', Icons.waterfall_chart_rounded, _purple),
-      _dashboardMetric('نسبة المديونية', '—', Icons.account_balance_wallet_outlined, _pink),
-      _dashboardMetric('معدل دوران المخزون', '—', Icons.autorenew_rounded, _orange),
-      _dashboardMetric('نسبة التحصيل', '—', Icons.price_check_rounded, const Color(0xFF18865A)),
-      _dashboardMetric('قيمة الأقساط المستحقة', '—', Icons.event_repeat_rounded, _orange),
-      _dashboardMetric('عدد الأقساط ونسبتها من الإجمالي', '—', Icons.pie_chart_outline_rounded, _pink),
-    ]),
-    const SizedBox(height: 14),
-    _dashboardPanel('ملخص قائمة الدخل', Icons.receipt_long_rounded, [
-      _dashboardMetric('صافي المبيعات', '—', Icons.point_of_sale_rounded, _purple),
-      _dashboardMetric('تكلفة البضاعة المباعة', '—', Icons.inventory_2_outlined, _orange),
-      _dashboardMetric('مجمل الربح', '—', Icons.trending_up_rounded, const Color(0xFF18865A)),
-      _dashboardMetric('المصروفات التشغيلية', '—', Icons.money_off_rounded, _pink),
-      _dashboardMetric('صافي الربح / الخسارة', '—', Icons.calculate_outlined, _purple),
-    ]),
-    const SizedBox(height: 14),
-    _dashboardPanel('ملخص المركز المالي', Icons.account_balance_rounded, [
-      _dashboardMetric('إجمالي الأصول', '—', Icons.business_rounded, _purple),
-      _dashboardMetric('الأصول المتداولة', '—', Icons.account_balance_wallet_outlined, _purple),
-      _dashboardMetric('إجمالي الالتزامات', '—', Icons.request_quote_outlined, _pink),
-      _dashboardMetric('حقوق الملكية', '—', Icons.pie_chart_outline_rounded, const Color(0xFF18865A)),
-      _dashboardMetric('رأس المال العامل', '—', Icons.sync_alt_rounded, _orange),
-    ]),
-    const SizedBox(height: 14),
-    _dashboardPanel('مخطط أعمار ديون العملاء', Icons.stacked_bar_chart_rounded, [
-      _dashboardMetric('عدد العملاء', '—', Icons.groups_rounded, _purple),
-      _dashboardMetric('إجمالي أرصدة العملاء المدينة', '—', Icons.account_balance_wallet_outlined, _orange),
-      _dashboardMetric('0 إلى 3 أيام', '—', Icons.schedule_rounded, _purple),
-      _dashboardMetric('أكثر من 3 أيام إلى 7 أيام', '—', Icons.schedule_rounded, _purple),
-      _dashboardMetric('أكثر من 7 أيام إلى 30 يومًا', '—', Icons.calendar_month_rounded, _orange),
-      _dashboardMetric('أكثر من 30 إلى 90 يومًا', '—', Icons.warning_amber_rounded, _pink),
-      _dashboardMetric('أكثر من 90 يومًا', '—', Icons.error_outline_rounded, _pink),
-    ], footer: 'يعرض المخطط عدد الحسابات وقيمة المديونية في كل شريحة بعد ربط تواريخ الاستحقاق والتحصيل.'),
-    const SizedBox(height: 14),
-    _dashboardBreakdown('مخطط توزيع أعمار الديون بالقيمة', Icons.stacked_bar_chart_rounded, [
-      '0 إلى 3 أيام', 'أكثر من 3 إلى 7 أيام', 'أكثر من 7 إلى 30 يومًا', 'أكثر من 30 إلى 90 يومًا', 'أكثر من 90 يومًا',
-    ]),
-
-    const SizedBox(height: 14),
-    _dashboardPanel('الموردون والخزائن والسلف', Icons.account_balance_wallet_rounded, [
-      _dashboardMetric('عدد الموردين', '—', Icons.factory_rounded, _purple),
-      _dashboardMetric('إجمالي أرصدة الموردين', '—', Icons.receipt_long_rounded, _orange),
-      _dashboardMetric('عدد الخزائن', '—', Icons.inventory_2_outlined, _purple),
-      _dashboardMetric('إجمالي أرصدة الخزائن', '—', Icons.payments_rounded, const Color(0xFF18865A)),
-      _dashboardMetric('قيمة السلف الكبيرة', '—', Icons.money_rounded, _pink),
-    ]),
-    const SizedBox(height: 14),
-    _dashboardPanel('حالة الفواتير والتجهيز والتسليم', Icons.local_shipping_rounded, [
-      _dashboardMetric('فواتير غير محملة / غير مجهزة', '—', Icons.inventory_2_outlined, _orange),
-      _dashboardMetric('فواتير غير مسلمة', '—', Icons.delivery_dining_rounded, _pink),
-      _dashboardMetric('فواتير غير مغلقة', '—', Icons.pending_actions_rounded, _orange),
-      _dashboardMetric('طلبات قيد التنفيذ', '—', Icons.sync_rounded, _purple),
-    ], footer: 'تُحتسب الحالات من حالة الفاتورة الفعلية لمنع تكرار الفاتورة بين المؤشرات.'),
-    const SizedBox(height: 14),
-    _dashboardPanel('ملخص الموارد البشرية والحضور حسب الإدارة', Icons.groups_rounded, [
-      _dashboardMetric('الموظفون النشطون بكل إدارة', '—', Icons.badge_rounded, _purple),
-      _dashboardMetric('الحضور اليوم بكل إدارة', '—', Icons.how_to_reg_rounded, const Color(0xFF18865A)),
-      _dashboardMetric('نسبة الحضور اليومية', '—', Icons.percent_rounded, _purple),
-      _dashboardMetric('الغياب والتأخير', '—', Icons.event_busy_rounded, _pink),
-    ], footer: 'يعرض الجدول التفصيلي اسم كل إدارة وعدد الموظفين النشطين وعدد الحاضرين ومقارنة أمس عند ربط بيانات الموارد البشرية.'),
-    const SizedBox(height: 14),
-    _dashboardPanel('صلاحية المخزون وقيمته', Icons.inventory_2_rounded, [
-      _dashboardMetric('عدد الأصناف', '—', Icons.category_rounded, _purple),
-      _dashboardMetric('إجمالي قيمة المخزون', '—', Icons.price_check_rounded, _purple),
-      _dashboardMetric('صلاحية جيدة', '—', Icons.check_circle_outline_rounded, const Color(0xFF18865A)),
-      _dashboardMetric('صلاحية قريبة', '—', Icons.warning_amber_rounded, _orange),
-      _dashboardMetric('منتهية الصلاحية', '—', Icons.error_outline_rounded, _pink),
-    ], footer: 'يعتمد التصنيف على تاريخ الصلاحية وحدود التنبيه المعرفة في إعدادات النظام.'),
-    const SizedBox(height: 14),
-    _dashboardBreakdown('مخطط حالة صلاحية الأصناف', Icons.donut_large_rounded, [
-      'صلاحية جيدة', 'صلاحية قريبة', 'منتهية الصلاحية',
-    ]),
-
-    const SizedBox(height: 14),
-    _dashboardPanel('أكثر فئات الأصناف الرئيسية', Icons.bar_chart_rounded, [
-      _dashboardMetric('الفئة الأعلى قيمة', '—', Icons.category_rounded, _purple),
-      _dashboardMetric('الفئة الأعلى حركة', '—', Icons.trending_up_rounded, _orange),
-      _dashboardMetric('عدد الفئات النشطة', '—', Icons.grid_view_rounded, _purple),
-    ], footer: 'مخطط ترتيب الفئات حسب قيمة المبيعات أو قيمة المخزون بعد ربط البيانات.'),
-    const SizedBox(height: 14),
-    _dashboardRankingPanel('أعلى 5 موردين', Icons.factory_rounded, () => _open('المشتريات والموردون', 'بيانات أساسية', 'دليل الموردين')),
-    const SizedBox(height: 14),
-    _dashboardRankingPanel('أعلى 5 عملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
-    const SizedBox(height: 14),
-    _dashboardRankingPanel('أعلى 5 مناديب حسب نسبة تحقيق أهداف المبيعات', Icons.emoji_events_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل المندوبين')),
-    const SizedBox(height: 14),
-    _dashboardPanel('أهداف مبيعات الفروع', Icons.flag_rounded, [
-      _dashboardMetric('إجمالي هدف المبيعات', '—', Icons.flag_rounded, _purple),
-      _dashboardMetric('إجمالي المبيعات المحققة', '—', Icons.trending_up_rounded, const Color(0xFF18865A)),
-      _dashboardMetric('نسبة تحقيق الهدف', '—', Icons.percent_rounded, _orange),
-      _dashboardMetric('الفروع المتجاوزة للهدف', '—', Icons.emoji_events_rounded, const Color(0xFF18865A)),
-    ], footer: 'مخطط مقارنة هدف كل فرع بالمبيعات المحققة سيظهر بعد ربط أهداف الفروع والفواتير.'),
-    _dashboardBreakdown('مقارنة المبيعات الفعلية بأهداف الفروع', Icons.show_chart_rounded, [
-      'إجمالي الفروع', 'الفرع الأعلى تحقيقًا', 'الفرع الأقل تحقيقًا',
-    ]),
+    LayoutBuilder(builder: (context, constraints) {
+      final wide = constraints.maxWidth >= 760;
+      Widget panelPair(Widget first, Widget second) => wide
+          ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: first), const SizedBox(width: 12), Expanded(child: second)])
+          : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [first, const SizedBox(height: 12), second]);
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        panelPair(
+          _dashboardPanel('أداء المبيعات والمشتريات', Icons.show_chart_rounded, [
+            _dashboardMetric('مبيعات اليوم', '—', Icons.trending_up_rounded, _purple),
+            _dashboardMetric('المشتريات', '—', Icons.shopping_cart_rounded, _orange),
+            _dashboardMetric('تحصيلات اليوم', '—', Icons.payments_outlined, const Color(0xFF18865A)),
+            _dashboardMetric('المصروفات', '—', Icons.money_off_rounded, _pink),
+          ]),
+          _dashboardPanel('توزيع المبيعات حسب الفئات الرئيسية', Icons.donut_large_rounded, [
+            _dashboardMetric('الأغذية والمشروبات', '—', Icons.category_rounded, _purple),
+            _dashboardMetric('المنظفات', '—', Icons.cleaning_services_rounded, _orange),
+            _dashboardMetric('المنتجات الصحية', '—', Icons.health_and_safety_outlined, _pink),
+            _dashboardMetric('فئات أخرى', '—', Icons.grid_view_rounded, const Color(0xFF18865A)),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        panelPair(
+          _dashboardPanel('أعمار ديون العملاء', Icons.stacked_bar_chart_rounded, [
+            _dashboardMetric('0 إلى 3 أيام', '—', Icons.schedule_rounded, const Color(0xFF18865A)),
+            _dashboardMetric('3 إلى 7 أيام', '—', Icons.schedule_rounded, _orange),
+            _dashboardMetric('7 إلى 30 يومًا', '—', Icons.calendar_month_rounded, _orange),
+            _dashboardMetric('30 إلى 90 يومًا', '—', Icons.warning_amber_rounded, _pink),
+            _dashboardMetric('أكثر من 90 يومًا', '—', Icons.error_outline_rounded, _pink),
+          ]),
+          _dashboardPanel('صلاحية الأصناف', Icons.inventory_2_rounded, [
+            _dashboardMetric('صلاحية جيدة', '—', Icons.check_circle_outline_rounded, const Color(0xFF18865A)),
+            _dashboardMetric('قريبة الانتهاء', '—', Icons.warning_amber_rounded, _orange),
+            _dashboardMetric('منتهية الصلاحية', '—', Icons.error_outline_rounded, _pink),
+            _dashboardMetric('إجمالي الأصناف', '—', Icons.category_rounded, _purple),
+            _dashboardMetric('قيمة المخزون', '—', Icons.price_check_rounded, _purple),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        _dashboardPanel('مؤشرات تشغيلية سريعة', Icons.insights_rounded, [
+          _dashboardMetric('عدد الموردين', '—', Icons.factory_rounded, _purple),
+          _dashboardMetric('أرصدة الموردين', '—', Icons.receipt_long_rounded, _orange),
+          _dashboardMetric('عدد الخزائن', '—', Icons.account_balance_wallet_rounded, _purple),
+          _dashboardMetric('أرصدة الخزائن', '—', Icons.payments_rounded, const Color(0xFF18865A)),
+          _dashboardMetric('السلف الكبيرة', '—', Icons.money_rounded, _pink),
+          _dashboardMetric('معدل دوران المخزون', '—', Icons.autorenew_rounded, _orange),
+          _dashboardMetric('الأقساط المستحقة', '—', Icons.event_repeat_rounded, _orange),
+          _dashboardMetric('نسبة التحصيل', '—', Icons.price_check_rounded, const Color(0xFF18865A)),
+        ]),
+        const SizedBox(height: 12),
+        panelPair(
+          _dashboardPanel('قائمة الدخل', Icons.receipt_long_rounded, [
+            _dashboardMetric('صافي المبيعات', '—', Icons.point_of_sale_rounded, _purple),
+            _dashboardMetric('تكلفة البضاعة', '—', Icons.inventory_2_outlined, _orange),
+            _dashboardMetric('مجمل الربح', '—', Icons.trending_up_rounded, const Color(0xFF18865A)),
+            _dashboardMetric('صافي الربح / الخسارة', '—', Icons.calculate_outlined, _purple),
+          ]),
+          _dashboardPanel('المركز المالي', Icons.account_balance_rounded, [
+            _dashboardMetric('إجمالي الأصول', '—', Icons.business_rounded, _purple),
+            _dashboardMetric('إجمالي الالتزامات', '—', Icons.request_quote_outlined, _pink),
+            _dashboardMetric('حقوق الملكية', '—', Icons.pie_chart_outline_rounded, const Color(0xFF18865A)),
+            _dashboardMetric('رأس المال العامل', '—', Icons.sync_alt_rounded, _orange),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        _dashboardPanel('الفواتير والتجهيز والتسليم', Icons.local_shipping_rounded, [
+          _dashboardMetric('غير محملة / غير مجهزة', '—', Icons.inventory_2_outlined, _orange),
+          _dashboardMetric('غير مسلمة', '—', Icons.delivery_dining_rounded, _pink),
+          _dashboardMetric('غير مغلقة', '—', Icons.pending_actions_rounded, _orange),
+          _dashboardMetric('قيد التنفيذ', '—', Icons.sync_rounded, _purple),
+        ]),
+        const SizedBox(height: 12),
+        _dashboardPanel('الموظفون والحضور حسب الإدارة', Icons.groups_rounded, [
+          _dashboardMetric('الموظفون النشطون', '—', Icons.badge_rounded, _purple),
+          _dashboardMetric('الحضور اليوم', '—', Icons.how_to_reg_rounded, const Color(0xFF18865A)),
+          _dashboardMetric('نسبة الحضور', '—', Icons.percent_rounded, _purple),
+          _dashboardMetric('الغياب والتأخير', '—', Icons.event_busy_rounded, _pink),
+        ]),
+        const SizedBox(height: 12),
+        panelPair(
+          _dashboardRankingPanel('أعلى 5 موردين', Icons.factory_rounded, () => _open('المشتريات والموردون', 'بيانات أساسية', 'دليل الموردين')),
+          _dashboardRankingPanel('أعلى 5 عملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
+        ),
+        const SizedBox(height: 12),
+        panelPair(
+          _dashboardRankingPanel('أعلى 5 مناديب حسب تحقيق الهدف', Icons.emoji_events_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل المندوبين')),
+          _dashboardPanel('أهداف مبيعات الفروع', Icons.flag_rounded, [
+            _dashboardMetric('إجمالي الهدف', '—', Icons.flag_rounded, _purple),
+            _dashboardMetric('المبيعات المحققة', '—', Icons.trending_up_rounded, const Color(0xFF18865A)),
+            _dashboardMetric('نسبة التحقيق', '—', Icons.percent_rounded, _orange),
+            _dashboardMetric('فروع تجاوزت الهدف', '—', Icons.emoji_events_rounded, const Color(0xFF18865A)),
+          ]),
+        ),
+        const SizedBox(height: 12),
+        _dashboardBreakdown('مقارنة المبيعات الفعلية بأهداف الفروع', Icons.show_chart_rounded, ['إجمالي الفروع', 'الفرع الأعلى تحقيقًا', 'الفرع الأقل تحقيقًا']),
+        const SizedBox(height: 10),
+        const Text('تنبيه: الأرقام والمخططات تعرض قوالب جاهزة لحين ربط مؤشرات الملخص بمصادر البيانات الفعلية في قاعدة البيانات.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
+      ]);
+    }),
     const SizedBox(height: 22),
   ]);
 
