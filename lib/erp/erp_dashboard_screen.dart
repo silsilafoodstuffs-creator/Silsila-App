@@ -625,14 +625,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Padding(
           padding: const EdgeInsets.all(20),
           child: Row(children: [
-            Container(
-              width: 52,
-              height: 52,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-              child: Image.asset('assets/images/silsila_logo.png', fit: BoxFit.contain),
-            ),
-            const SizedBox(width: 12),
             const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('سلسلة Silsila', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
               SizedBox(height: 4),
@@ -1022,6 +1014,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   );
 
   Widget _header(bool compact) => Container(height: 76, padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 14), decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFECE7F2)))), child: Row(children: [
+    Container(
+      width: 38,
+      height: 38,
+      padding: const EdgeInsets.all(4),
+      margin: const EdgeInsetsDirectional.only(end: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4EFF9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE7DDF1)),
+      ),
+      child: Image.asset('assets/images/silsila_logo.png', fit: BoxFit.contain),
+    ),
     if (compact)
       Builder(builder: (ctx) => IconButton(
         tooltip: 'عرض القوائم الرئيسية',
