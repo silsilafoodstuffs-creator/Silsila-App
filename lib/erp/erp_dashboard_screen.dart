@@ -1221,7 +1221,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             crossAxisCount: columns,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: columns == 6 ? 1.72 : columns == 3 ? 1.85 : 1.72,
+            childAspectRatio: columns == 6 ? 1.25 : columns == 3 ? 1.35 : 1.2,
             children: [
               _executiveKpi('صافي المبيعات', '—', 'التغير —%', Icons.point_of_sale_rounded, _purple),
               _executiveKpi('صافي الربح', '—', 'الهامش —%', Icons.trending_up_rounded, _green),
@@ -1285,7 +1285,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             crossAxisCount: columns,
             crossAxisSpacing: 7,
             mainAxisSpacing: 7,
-            childAspectRatio: columns == 3 ? 1.32 : columns == 2 ? 1.35 : 1.95,
+            childAspectRatio: columns == 3 ? 1.0 : columns == 2 ? 1.05 : 1.0,
             children: sections.map((section) => _executiveSectionCompact(
               title: section['title'] as String,
               icon: section['icon'] as IconData,
@@ -2278,7 +2278,7 @@ class _ExecutiveChartPainter extends CustomPainter {
     ];
     final linePaint = Paint()
       ..color = color
-      ..strokeWidth = 2.5
+      ..strokeWidth = 3.5
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
@@ -2302,8 +2302,8 @@ class _ExecutiveChartPainter extends CustomPainter {
     canvas.drawPath(path, linePaint);
     final dotPaint = Paint()..color = color;
     for (final point in points) {
-      canvas.drawCircle(point, 3, dotPaint);
-      canvas.drawCircle(point, 5, Paint()..color = color.withValues(alpha: .13));
+      canvas.drawCircle(point, 4, dotPaint);
+      canvas.drawCircle(point, 8, Paint()..color = color.withValues(alpha: .13));
     }
   }
 
