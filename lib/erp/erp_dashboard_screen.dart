@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/hr_attendance_rules_screen.dart';
 import 'screens/erp_accounts_screen.dart';
 import 'screens/erp_journal_entries_screen.dart';
@@ -80,6 +81,15 @@ class ErpDashboardScreen extends StatefulWidget {
 class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final ErpAppManagementService _appManagementService = ErpAppManagementService();
   String? _appManagementCompanyId;
+  bool _executiveMetricsLoading = false;
+  String? _executiveMetricsError;
+  double? _executiveSales;
+  double? _executiveGrossProfit;
+  double? _executiveCollections;
+  double? _executiveReceivables;
+  double? _executivePurchases;
+  double? _executiveInventoryValue;
+  List<double> _executiveDailySales = <double>[];
   final Map<String, String> _managedAppIds = <String, String>{};
   bool _appManagementLoading = false;
   bool _appManagementSaving = false;
@@ -176,6 +186,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       await _loadSelectedManagedAppTheme();
       await _loadPermissionsForSelectedApp();
       await _loadSavedAppActivity();
+      await _loadExecutiveMetrics(companyId);
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -1092,6 +1103,146 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مركز الإشعارات التجريبي'))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
     const CircleAvatar(radius: 18, backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple, size: 20)),
   ]));
+
+  String _executiveMoney(double? value) {
+    if (value == null) return '—';
+    return value.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
+      (match) => match[1]! + ',',
+    ) + ' ج.م';
+  }
+
+  Future<void> _loadExecutiveMetrics(String companyId) async {
+    if (!mounted || companyId.isEmpty) return;
+    setState(() {
+      _executiveMetricsLoading = true;
+      _executiveMetricsError = null;
+    });
+    final now = DateTime.now();
+    final monthStart = DateTime(now.year, now.month);
+    final nextMonth = DateTime(now.year, now.month + 1);
+    final monthFrom = monthStart.toIso8601String().substring(0, 10);
+    final monthTo = nextMonth.toIso8601String().substring(0, 10);
+    final sevenDaysFrom = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
+    final sevenDaysKey = sevenDaysFrom.toIso8601String().substring(0, 10);
+    final tomorrowKey = DateTime(now.year, now.month, now.day + 1).toIso8601String().substring(0, 10);
+    try {
+      final db = Supabase.instance.client;
+      final monthlyRows = await db.from('erp_sales_documents')
+          .select('id,document_type,document_date,grand_total,paid_total,is_demo_data,status')
+          .eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false)
+          .gte('document_date', monthFrom).lt('document_date', monthTo);
+      final salesRows = (monthlyRows as List).cast<Map<String, dynamic>>();
+      double sales = 0, collections = 0, receivables = 0;
+      for (final row in salesRows) {
+        final amount = double.tryParse(row['grand_total']?.toString() ?? '') ?? 0;
+        final paid = double.tryParse(row['paid_total']?.toString() ?? '') ?? 0;
+        final isReturn = row['document_type']?.toString() == 'return';
+        sales += isReturn ? -amount : amount;
+        collections += isReturn ? -paid : paid;
+        if (!isReturn && row['document_type']?.toString() == 'invoice') {
+          receivables += amount - paid;
+        }
+      }
+
+      final dailyRowsRaw = await db.from('erp_sales_documents')
+          .select('document_type,document_date,grand_total,is_demo_data,status')
+          .eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false)
+          .gte('document_date', sevenDaysKey).lt('document_date', tomorrowKey);
+      final dailyRows = (dailyRowsRaw as List).cast<Map<String, dynamic>>();
+      final daily = List<double>.filled(7, 0);
+      for (final row in dailyRows) {
+        final key = row['document_date']?.toString() ?? '';
+        final date = DateTime.tryParse(key);
+        if (date == null) continue;
+        final index = DateTime(date.year, date.month, date.day).difference(DateTime(sevenDaysFrom.year, sevenDaysFrom.month, sevenDaysFrom.day)).inDays;
+        if (index < 0 || index >= 7) continue;
+        final amount = double.tryParse(row['grand_total']?.toString() ?? '') ?? 0;
+        daily[index] += row['document_type']?.toString() == 'return' ? -amount : amount;
+      }
+
+      double purchases = 0;
+      try {
+        final purchaseRows = await db.from('erp_purchase_documents')
+            .select('grand_total,document_type,is_demo_data')
+            .eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false)
+            .gte('document_date', monthFrom).lt('document_date', monthTo);
+        for (final row in (purchaseRows as List).cast<Map<String, dynamic>>()) {
+          final amount = double.tryParse(row['grand_total']?.toString() ?? '') ?? 0;
+          purchases += row['document_type']?.toString() == 'return' ? -amount : amount;
+        }
+      } catch (_) {}
+
+      double grossProfit = 0;
+      try {
+        final docIds = salesRows.map((r) => r['id']?.toString()).whereType<String>().toList();
+        if (docIds.isNotEmpty) {
+          final lineRowsRaw = await db.from('erp_sales_lines')
+              .select('document_id,item_id,quantity,line_total')
+              .inFilter('document_id', docIds);
+          final lineRows = (lineRowsRaw as List).cast<Map<String, dynamic>>();
+          final itemIds = lineRows.map((r) => r['item_id']?.toString()).whereType<String>().toSet().toList();
+          final costs = <String, double>{};
+          if (itemIds.isNotEmpty) {
+            final itemRows = await db.from('erp_items').select('id,purchase_price')
+                .eq('company_id', companyId).inFilter('id', itemIds);
+            for (final item in (itemRows as List).cast<Map<String, dynamic>>()) {
+              costs[item['id'].toString()] = double.tryParse(item['purchase_price']?.toString() ?? '') ?? 0;
+            }
+          }
+          final docTypes = <String, String>{for (final row in salesRows) row['id'].toString(): row['document_type']?.toString() ?? 'invoice'};
+          for (final line in lineRows) {
+            final quantity = double.tryParse(line['quantity']?.toString() ?? '') ?? 0;
+            final lineTotal = double.tryParse(line['line_total']?.toString() ?? '') ?? 0;
+            final cost = costs[line['item_id']?.toString()] ?? 0;
+            final margin = lineTotal - quantity * cost;
+            grossProfit += docTypes[line['document_id']?.toString()] == 'return' ? -margin : margin;
+          }
+        }
+      } catch (_) {}
+
+      double inventoryValue = 0;
+      try {
+        final itemRows = await db.from('erp_items').select('id,purchase_price')
+            .eq('company_id', companyId).eq('is_active', true);
+        final costs = <String, double>{};
+        for (final item in (itemRows as List).cast<Map<String, dynamic>>()) {
+          costs[item['id'].toString()] = double.tryParse(item['purchase_price']?.toString() ?? '') ?? 0;
+        }
+        final movementRows = await db.from('erp_inventory_movements')
+            .select('item_id,quantity_in,quantity_out')
+            .eq('company_id', companyId).limit(5000);
+        final balances = <String, double>{};
+        for (final row in (movementRows as List).cast<Map<String, dynamic>>()) {
+          final id = row['item_id']?.toString() ?? '';
+          final incoming = double.tryParse(row['quantity_in']?.toString() ?? '') ?? 0;
+          final outgoing = double.tryParse(row['quantity_out']?.toString() ?? '') ?? 0;
+          balances[id] = (balances[id] ?? 0) + incoming - outgoing;
+        }
+        for (final entry in balances.entries) {
+          inventoryValue += entry.value * (costs[entry.key] ?? 0);
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
+      setState(() {
+        _executiveSales = sales;
+        _executiveCollections = collections;
+        _executiveReceivables = receivables;
+        _executivePurchases = purchases;
+        _executiveGrossProfit = grossProfit;
+        _executiveInventoryValue = inventoryValue;
+        _executiveDailySales = daily;
+        _executiveMetricsLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _executiveMetricsError = error.toString();
+        _executiveMetricsLoading = false;
+      });
+    }
+  }
 
   Widget _home() {
     final sections = <Map<String, Object>>[
