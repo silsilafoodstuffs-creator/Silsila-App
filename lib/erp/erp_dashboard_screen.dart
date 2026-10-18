@@ -1177,8 +1177,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('الملخص التنفيذي', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: _purple)),
-            Text('لوحة أداء مختصرة • مؤشرات مالية وتشغيلية لحظية بعد ربط البيانات', style: TextStyle(color: Colors.black54, fontSize: 12)),
+            Text('الملخص التنفيذي', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _purple)),
+            Text('لوحة أداء مختصرة • مؤشرات مالية وتشغيلية لحظية بعد ربط البيانات', style: TextStyle(color: Colors.black54, fontSize: 14)),
           ])),
           _summaryAction('عرض كل التحليلات', () => _showExecutiveCategoryDetails('جميع التحليلات', allItems)),
           const SizedBox(width: 4),
@@ -1299,8 +1299,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required String value,
     required CustomPainter chart,
   }) => Container(
-    height: 88,
-    padding: const EdgeInsets.fromLTRB(7, 5, 7, 4),
+    height: 126,
+    padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(8),
@@ -1323,8 +1323,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   );
 
   Widget _executiveHighlights() => Container(
-    height: 78,
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+    height: 104,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: const Color(0xFFE7E0EF))),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       const Text('مؤشرات تحتاج متابعة', style: TextStyle(fontSize: 13, color: _purple, fontWeight: FontWeight.w900)),
