@@ -108,8 +108,22 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       _message='تم تطبيق القالب. اضغط حفظ لتثبيته.';_error=null;
     });
   }
+  List<String> _affectedKeys(String key) {
+    final parts=key.split('::');
+    if(parts.length!=3)return [key];
+    if(parts[1]=='*')return _allKeys.where((k)=>k.startsWith(parts[0]+'::')).toList();
+    if(parts[2]=='*')return _allKeys.where((k)=>k.startsWith(parts[0]+'::'+parts[1]+'::')).toList();
+    return [key];
+  }
   void _setCell(String key,String action,bool value){setState((){
-    for(final uid in _targets){final map=_draft.putIfAbsent(uid,()=>_blank('مخصص بلا صلاحيات'));map[key+'::'+action]=value;}
+    final affected=_affectedKeys(key);
+    for(final uid in _targets){
+      final map=_draft.putIfAbsent(uid,()=>_blank('مخصص بلا صلاحيات'));
+      for(final affectedKey in affected){
+        map[affectedKey+'::'+action]=value;
+        if(action=='مسموح'&&!value){for(final other in _actions.where((a)=>a!='مسموح'))map[affectedKey+'::'+other]=false;}
+      }
+    }
     _message=null;_error=null;
   });}
   bool _cell(String key,String action){
