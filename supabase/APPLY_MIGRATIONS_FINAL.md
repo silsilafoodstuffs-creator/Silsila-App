@@ -25,6 +25,7 @@
 21. `21_shipping_delivery_creation_hardening.sql`
 22. `22_atomic_default_address.sql`
 23. `23_atomic_default_address_save.sql`
+24. `24_foreign_key_indexes.sql`
 
 تجنب تشغيل النسخ القديمة `03_secure_checkout.sql` و`04_service_compatibility.sql`؛ استخدم النسخ ذات اللاحقة `fixed` المذكورة أعلاه.
 
