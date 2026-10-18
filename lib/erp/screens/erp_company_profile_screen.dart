@@ -205,10 +205,10 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
             child: const Icon(Icons.business_outlined, color: _companyPurple),
           ),
           const SizedBox(width: 12),
-          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('بيانات الشركة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _companyPurple)),
-            SizedBox(height: 4),
-            Text((_activeCompanyId ?? widget.companyId) == null ? 'سجّل بيانات شركتك لإنشاء ملفها وربط حسابك بها كمالك.' : 'تعديل البيانات القانونية والتجارية للشركة المرتبطة بحسابك.', style: TextStyle(color: Colors.black54)),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('بيانات الشركة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _companyPurple)),
+            const SizedBox(height: 4),
+            Text((_activeCompanyId ?? widget.companyId) == null ? 'سجّل بيانات شركتك لإنشاء ملفها وربط حسابك بها كمالك.' : 'تعديل البيانات القانونية والتجارية للشركة المرتبطة بحسابك.', style: const TextStyle(color: Colors.black54)),
           ])),
           IconButton(tooltip: 'إعادة تحميل', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
         ]),
