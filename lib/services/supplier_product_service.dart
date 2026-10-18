@@ -269,7 +269,7 @@ class SupplierProductService {
   }
 
   /// إخفاء المنتج دون حذفه نهائيًا.
-  Future<void> deactivateProduct(int productId) async {
+  Future<void> deactivateProduct(String productId) async {
     await _setProductAvailability(
       productId: productId,
       isActive: false,
@@ -277,7 +277,7 @@ class SupplierProductService {
   }
 
   /// إعادة تفعيل المنتج.
-  Future<void> activateProduct(int productId) async {
+  Future<void> activateProduct(String productId) async {
     await _setProductAvailability(
       productId: productId,
       isActive: true,
