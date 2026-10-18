@@ -19,6 +19,7 @@ import 'screens/erp_operational_account_mappings_screen.dart';
 import 'services/erp_operational_documents_repository.dart';
 import 'services/erp_app_management_service.dart';
 import 'services/erp_app_settings.dart';
+import 'services/erp_app_permission_catalog.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -81,6 +82,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _appManagementLoading = false;
   bool _appManagementSaving = false;
   String? _appManagementMessage;
+  String _selectedPermissionRole = 'owner';
+  final Map<String, bool> _managedPermissions = <String, bool>{};
+  bool _permissionsLoading = false;
+  List<ErpAppActivityEntry> _savedAppActivity = <ErpAppActivityEntry>[];
   bool _sidebarVisible = true;
   bool _notificationsPanelVisible = true;
   bool _activityPanelVisible = true;
@@ -106,6 +111,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _appAccent = draft['accent'] as Color;
     });
     _loadSelectedManagedAppTheme();
+    _loadPermissionsForSelectedApp();
+    _loadSavedAppActivity();
   }
 
   @override
@@ -159,6 +166,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _appManagementMessage = 'تم تحميل سجل التطبيقات من قاعدة البيانات.';
       });
       await _loadSelectedManagedAppTheme();
+      await _loadPermissionsForSelectedApp();
+      await _loadSavedAppActivity();
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -192,6 +201,103 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (mounted && selectedKey == _selectedAppKey) {
         setState(() => _appManagementMessage = 'تعذر تحميل هوية التطبيق: $error');
       }
+    }
+  }
+
+  Future<void> _loadPermissionsForSelectedApp() async {
+    final appId = _managedAppIds[_selectedAppKey];
+    if (appId == null || appId.isEmpty) {
+      if (!mounted) return;
+      setState(() {
+        _managedPermissions
+          ..clear()
+          ..addAll({
+            for (final key in ErpAppPermissionCatalog.permissions.keys)
+              key: ErpAppPermissionCatalog.defaultAllowList[_selectedPermissionRole]?.contains(key) ?? false,
+          });
+      });
+      return;
+    }
+    setState(() => _permissionsLoading = true);
+    try {
+      final saved = await _appManagementService.listPermissions(appId: appId);
+      final values = <String, bool>{
+        for (final key in ErpAppPermissionCatalog.permissions.keys)
+          key: ErpAppPermissionCatalog.defaultAllowList[_selectedPermissionRole]?.contains(key) ?? false,
+      };
+      for (final permission in saved) {
+        if (permission.roleKey == _selectedPermissionRole &&
+            ErpAppPermissionCatalog.isKnownPermission(permission.permissionKey)) {
+          values[permission.permissionKey] = permission.allowed;
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _managedPermissions
+          ..clear()
+          ..addAll(values);
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() => _appManagementMessage = 'تعذر تحميل صلاحيات التطبيق: $error');
+      }
+    } finally {
+      if (mounted) setState(() => _permissionsLoading = false);
+    }
+  }
+
+  Future<void> _changeManagedPermission(String permissionKey, bool allowed) async {
+    final appId = _managedAppIds[_selectedAppKey];
+    if (appId == null || appId.isEmpty) {
+      _showAppManagementMessage('احفظ سجل التطبيق أولًا قبل حفظ صلاحياته.');
+      return;
+    }
+    final permission = ErpAppPermission(
+      appId: appId,
+      roleKey: _selectedPermissionRole,
+      permissionKey: permissionKey,
+      allowed: allowed,
+    );
+    final errors = ErpAppPermissionCatalog.validate(permission);
+    if (errors.isNotEmpty) {
+      _showAppManagementMessage(errors.join(' '));
+      return;
+    }
+    final previous = _managedPermissions[permissionKey] ?? false;
+    setState(() => _managedPermissions[permissionKey] = allowed);
+    try {
+      await _appManagementService.savePermission(permission);
+      if (mounted) {
+        setState(() {
+          _appManagementMessage = 'تم حفظ صلاحية «${ErpAppPermissionCatalog.permissions[permissionKey]}» لدور ${ErpAppPermissionCatalog.roles[_selectedPermissionRole]}.';
+          _activityLog.insert(0, 'تم تعديل صلاحية ${permissionKey} للدور ${_selectedPermissionRole}');
+        });
+      }
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _managedPermissions[permissionKey] = previous;
+        _appManagementMessage = 'لم يتم حفظ الصلاحية: $error';
+      });
+    }
+  }
+
+  Future<void> _loadSavedAppActivity() async {
+    final companyId = _appManagementCompanyId;
+    final appId = _managedAppIds[_selectedAppKey];
+    if (companyId == null || appId == null || appId.isEmpty) {
+      if (mounted) setState(() => _savedAppActivity = <ErpAppActivityEntry>[]);
+      return;
+    }
+    try {
+      final entries = await _appManagementService.listActivity(
+        companyId: companyId,
+        appId: appId,
+        limit: 10,
+      );
+      if (mounted) setState(() => _savedAppActivity = entries);
+    } catch (error) {
+      if (mounted) setState(() => _appManagementMessage = 'تعذر تحميل سجل النشاطات: $error');
     }
   }
 
@@ -799,11 +905,52 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _managementTile(Icons.factory_outlined, 'صور الموردين والعملاء', 'إدارة الشعارات والصور والبيانات التعريفية'),
       _managementTile(Icons.local_shipping_outlined, 'شركات الشحن', 'صور الشركات وبيانات التواصل وخيارات التوصيل'),
       const SizedBox(height: 18),
-      const Text('صلاحيات الإدارة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
+      const Text('صلاحيات الأدوار', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
       const SizedBox(height: 8),
-      SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowThemeManagement, onChanged: (v) => setState(() => _allowThemeManagement = v), title: const Text('السماح بتعديل الاسم والألوان'), subtitle: const Text('إعداد محلي للواجهة فقط')),
-      SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowImageManagement, onChanged: (v) => setState(() => _allowImageManagement = v), title: const Text('السماح بإدارة الصور'), subtitle: const Text('يتطلب لاحقًا ربط التخزين والصلاحيات بالخادم')),
-      SwitchListTile(contentPadding: EdgeInsets.zero, value: _allowPermissionManagement, onChanged: (v) => setState(() => _allowPermissionManagement = v), title: const Text('السماح بإدارة صلاحيات المستخدمين'), subtitle: const Text('ليس بديلًا عن صلاحيات قاعدة البيانات')),
+      DropdownButtonFormField<String>(
+        value: _selectedPermissionRole,
+        decoration: const InputDecoration(labelText: 'الدور الوظيفي', border: OutlineInputBorder()),
+        items: ErpAppPermissionCatalog.roles.entries
+            .map((entry) => DropdownMenuItem<String>(value: entry.key, child: Text(entry.value)))
+            .toList(),
+        onChanged: _permissionsLoading ? null : (value) {
+          if (value == null) return;
+          setState(() => _selectedPermissionRole = value);
+          _loadPermissionsForSelectedApp();
+        },
+      ),
+      const SizedBox(height: 8),
+      if (_permissionsLoading)
+        const LinearProgressIndicator(minHeight: 2),
+      Wrap(
+        spacing: 6,
+        runSpacing: 2,
+        children: ErpAppPermissionCatalog.permissions.entries.map((entry) {
+          final enabled = _managedPermissions[entry.key] ?? false;
+          return FilterChip(
+            label: Text(entry.value, style: const TextStyle(fontSize: 11)),
+            selected: enabled,
+            onSelected: (value) => _changeManagedPermission(entry.key, value),
+            selectedColor: const Color(0xFFE9DDF8),
+            checkmarkColor: _purple,
+          );
+        }).toList(),
+      ),
+      const SizedBox(height: 6),
+      const Text('تُحفظ كل صلاحية منفردة في Supabase. لا تُعد هذه الواجهة بديلًا عن تحقق الخادم وسياسات RLS.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.6)),
+      const SizedBox(height: 18),
+      const Text('سجل النشاطات المحفوظ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
+      const SizedBox(height: 6),
+      if (_savedAppActivity.isEmpty)
+        const Text('لا توجد أحداث محفوظة للتطبيق أو أن سجل النشاطات غير مهيأ.', style: TextStyle(color: Colors.black54, fontSize: 11))
+      else
+        ..._savedAppActivity.map((entry) => ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.history_rounded, color: _orange, size: 18),
+          title: Text('${entry.action} • ${entry.entityType}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          subtitle: Text('${entry.createdAt.toLocal()} • ${entry.entityId}', style: const TextStyle(fontSize: 10)),
+        )),
       const SizedBox(height: 12),
       if (_appManagementMessage != null)
         Container(
