@@ -165,16 +165,20 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         _activeCompanyId = id;
         await widget.onCompanyCreated?.call(id);
       } else {
-        await _db!.from('erp_companies').update({
-          'legal_name': legalName,
-          'trade_name': _nullable(_tradeName.text),
-          'tax_number': _nullable(_taxNumber.text),
-          'commercial_register': _nullable(_commercialRegister.text),
-          'phone': _nullable(_phone.text),
-          'email': _nullable(_email.text),
-          'address': _nullable(_address.text),
-          'base_currency': currency,
-        }).eq('id', id);
+        final updatedId = await _db!.rpc('erp_update_company_profile', params: {
+          'p_company_id': id,
+          'p_legal_name': legalName,
+          'p_trade_name': _nullable(_tradeName.text),
+          'p_tax_number': _nullable(_taxNumber.text),
+          'p_commercial_register': _nullable(_commercialRegister.text),
+          'p_phone': _nullable(_phone.text),
+          'p_email': _nullable(_email.text),
+          'p_address': _nullable(_address.text),
+          'p_base_currency': currency,
+        });
+        if (updatedId == null || updatedId.toString() != id) {
+          throw StateError('لم تؤكد قاعدة البيانات تحديث سجل الشركة.');
+        }
       }
       if (!mounted) return;
       setState(() {
@@ -188,9 +192,21 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _error = 'تعذر حفظ بيانات الشركة. تأكد من صلاحية مالك/مدير الشركة وتطبيق سياسات قاعدة البيانات: $error';
+        _error = 'تعذر حفظ بيانات الشركة: ${_companySaveError(error)}';
       });
     }
+  }
+
+  String _companySaveError(Object error) {
+    final message = error.toString();
+    final lower = message.toLowerCase();
+    if (lower.contains('erp_update_company_profile') && (lower.contains('function') || lower.contains('schema cache') || lower.contains('could not find'))) {
+      return 'إجراء الحفظ الآمن غير موجود في قاعدة البيانات. طبّق الملف supabase/erp_company_profile_security_fix.sql من Supabase SQL Editor ثم أعد المحاولة.';
+    }
+    if (lower.contains('مالك') || lower.contains('مدير') || lower.contains('owner') || lower.contains('admin') || lower.contains('42501') || lower.contains('permission denied') || lower.contains('row-level security') || lower.contains('rls')) {
+      return 'حسابك ليس مالكًا أو مديرًا نشطًا لهذه الشركة، أو أن عضوية الشركة وسياسات RLS غير مطبقة. راجع erp_company_members ثم طبّق supabase/erp_company_profile_security_fix.sql. التفاصيل: $message';
+    }
+    return '$message. راجع اتصال Supabase ووجود جداول ERP وتطبيق ملف supabase/erp_company_profile_security_fix.sql.';
   }
 
   @override
