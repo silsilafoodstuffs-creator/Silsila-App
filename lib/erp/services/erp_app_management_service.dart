@@ -104,9 +104,13 @@ class ErpAppManagementService {
     _requireId(companyId, 'معرّف الشركة مطلوب.');
     _requireId(appKey, 'مفتاح التطبيق مطلوب.');
     _requireId(displayName, 'اسم التطبيق مطلوب.');
+    final normalizedAppKey = appKey.trim();
+    if (!const {'silsila', 'app_2', 'app_3'}.contains(normalizedAppKey)) {
+      throw ArgumentError('مفتاح التطبيق غير مدعوم. استخدم silsila أو app_2 أو app_3.');
+    }
     final payload = <String, Object?>{
       'company_id': companyId,
-      'app_key': appKey.trim(),
+      'app_key': normalizedAppKey,
       'display_name': displayName.trim(),
       'status': _statusToDb(status),
       'description': _clean(description),
