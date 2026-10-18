@@ -597,6 +597,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
             rows.insert(0, {'الكود': code.text.trim().isEmpty ? 'NEW-${rows.length + 1}' : code.text.trim(), 'الاسم': name.text.trim(), 'الوصف': details.text.trim(), 'الحالة': 'مسودة'});
             final newRecord = Map<String, String>.from(rows.first);
+            newRecord['_مرجع داخلي'] = newRecord['الكود'] ?? newRecord['الاسم'] ?? newRecord.values.first;
+            rows[0] = newRecord;
             setState(() {
               _saved[_page] = rows;
               _selectedRecord = newRecord;
@@ -656,7 +658,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final selected = _selectedRecord;
     final selectedIndex = selected == null ? 0 : rows.indexWhere((row) => _sameRecord(row, selected));
     final targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
-    final controllers = <String, TextEditingController>{for (final entry in rows[targetIndex].entries) entry.key: TextEditingController(text: entry.value)};
+    final controllers = <String, TextEditingController>{for (final entry in rows[targetIndex].entries) if (entry.key != '_مرجع داخلي') entry.key: TextEditingController(text: entry.value)};
     showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
       title: Text('تعديل سجل — $_page'),
       content: SizedBox(width: 460, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: controllers.entries.map((entry) => Padding(
@@ -665,7 +667,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
         FilledButton(onPressed: () {
-          final updated = {for (final entry in controllers.entries) entry.key: entry.value.text.trim()};
+          final updated = <String, String>{for (final entry in controllers.entries) entry.key: entry.value.text.trim()};
+          final internalKey = rows[targetIndex]['_مرجع داخلي'];
+          if (internalKey != null) updated['_مرجع داخلي'] = internalKey;
           rows[targetIndex] = updated;
           setState(() { _saved[_page] = rows; _selectedRecord = updated; });
           Navigator.pop(dialogContext);
@@ -684,6 +688,49 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         }, child: const Text('حفظ التعديل')),
       ],
     )).then((_) { for (final controller in controllers.values) { controller.dispose(); } });
+  }
+
+  Future<void> _deleteCurrentRecord() async {
+    final selected = _selectedRecord;
+    if (selected == null) {
+      _showActionMessage('حدد سجلًا من الجدول أولًا ثم اضغط حذف.');
+      return;
+    }
+    final visibleCode = selected['الكود'] ?? selected['الاسم'] ?? selected['اسم الحساب'] ?? '';
+    if (visibleCode.startsWith('DEMO-') || visibleCode.contains('تجريبي') || visibleCode.contains('توضيحي')) {
+      _showActionMessage('هذا سجل توضيحي وليس بيانات فعلية؛ لن يتم حذفه من قاعدة البيانات.');
+      return;
+    }
+    final approved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تأكيد حذف السجل'),
+        content: Text('هل تريد حذف السجل «$visibleCode» من شاشة «$_page»؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف')),
+        ],
+      ),
+    );
+    if (approved != true || !mounted) return;
+    final companyId = _appManagementCompanyId;
+    final recordKey = selected['_مرجع داخلي'] ?? visibleCode;
+    try {
+      if (companyId != null && companyId.trim().isNotEmpty) {
+        await _workspaceRecordsService.deleteRecord(companyId: companyId, pageKey: _page, recordKey: recordKey);
+      }
+      final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
+      rows.removeWhere((row) => _sameRecord(row, selected));
+      setState(() {
+        _saved[_page] = rows;
+        _selectedRecord = null;
+      });
+      _showActionMessage(companyId == null
+          ? 'تم حذف السجل من الجلسة الحالية فقط؛ لا توجد شركة مرتبطة للحذف الدائم.'
+          : 'تم حذف السجل من قاعدة البيانات.');
+    } catch (error) {
+      _showActionMessage('تعذر حذف السجل من قاعدة البيانات: $error');
+    }
   }
 
   bool _sameRecord(Map<String, String> a, Map<String, String> b) => a.length == b.length && a.entries.every((entry) => b[entry.key] == entry.value);
@@ -739,6 +786,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _recordToolbar({bool includeAdd = true}) => Wrap(spacing: 7, runSpacing: 7, children: [
     if (includeAdd) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
     _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
+    _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _deleteCurrentRecord),
     _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
     _recordAction('طباعة', Icons.print_outlined, _pink, () => _showPrintPreview(pdf: false)),
     _recordAction('تصدير Excel', Icons.table_view_outlined, const Color(0xFF16834A), _exportExcel),
