@@ -119,6 +119,7 @@ class ErpAppAssetRecord {
     required this.assetType,
     required this.storagePath,
     required this.displayName,
+    this.id,
     this.entityId,
     this.mimeType,
     this.fileSizeBytes,
@@ -129,6 +130,7 @@ class ErpAppAssetRecord {
   final String assetType;
   final String storagePath;
   final String displayName;
+  final String? id;
   final String? entityId;
   final String? mimeType;
   final int? fileSizeBytes;
