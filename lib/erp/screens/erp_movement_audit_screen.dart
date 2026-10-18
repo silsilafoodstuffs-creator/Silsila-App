@@ -14,7 +14,9 @@ import 'erp_fiscal_periods_screen.dart';
 import 'erp_inventory_master_screen.dart';
 
 class ErpMovementAuditScreen extends StatefulWidget {
-  const ErpMovementAuditScreen({super.key});
+  const ErpMovementAuditScreen({super.key, this.initialCompanyId});
+
+  final String? initialCompanyId;
 
   @override
   State<ErpMovementAuditScreen> createState() => _ErpMovementAuditScreenState();
@@ -29,6 +31,12 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>> _issues = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _company.text = widget.initialCompanyId ?? '';
+  }
 
   static const _areas = [
     'كل الحركات',
