@@ -240,6 +240,42 @@ begin
   (v_company,v_group,'DEMO-DRY-001','أرز معبأ 1 كجم - عينة','كيس',28,32,30,'علامة تجريبية','10 أكياس / شوال','https://images.unsplash.com/photo-1586201375761-83865001e31c?w=480','Silsila demo',true)
   on conflict(company_id,item_code) do update set item_name=excluded.item_name, purchase_price=excluded.purchase_price, sale_price=excluded.sale_price, image_url=excluded.image_url, is_demo_data=true;
 
+  insert into public.erp_item_groups(company_id,group_code,group_name)
+  values
+  (v_company,'DEMO-PASTA','مكرونات ومخبوزات - تجريبي'),
+  (v_company,'DEMO-DAIRY','ألبان وجبن - تجريبي'),
+  (v_company,'DEMO-DRINK','مشروبات وعصائر - تجريبي'),
+  (v_company,'DEMO-SNACK','مقرمشات وحلويات - تجريبي'),
+  (v_company,'DEMO-CLEAN','منظفات وورقيات - تجريبي'),
+  (v_company,'DEMO-CAN','معلبات وبقوليات - تجريبي')
+  on conflict(company_id,group_code) do update set group_name=excluded.group_name;
+
+  insert into public.erp_items(company_id,group_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,image_url,source_name,is_demo_data)
+  select v_company,g.id,x.code,x.name,x.unit,x.buy,x.sell,x.reorder,x.brand,x.pack,x.image,'Silsila demo catalog',true
+  from (values
+    ('DEMO-PASTA','DEMO-PASTA-001','مكرونة 400 جم - عينة','كيس',11.5,13,48,'علامة تجريبية','20 كيس / كرتونة','https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=480'),
+    ('DEMO-PASTA','DEMO-PASTA-002','دقيق أبيض 1 كجم - عينة','كيس',24,27,24,'علامة تجريبية','10 أكياس / شوال','https://images.unsplash.com/photo-1627485937980-221c88ac04f9?w=480'),
+    ('DEMO-DAIRY','DEMO-DAIRY-001','لبن طويل الأجل 1 لتر - عينة','عبوة',37,41,24,'علامة تجريبية','12 عبوة / كرتونة','https://images.unsplash.com/photo-1563636619-e9143da7973b?w=480'),
+    ('DEMO-DAIRY','DEMO-DAIRY-002','جبنة بيضاء 500 جم - عينة','علبة',42,47,18,'علامة تجريبية','12 علبة / كرتونة','https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=480'),
+    ('DEMO-DRINK','DEMO-DRINK-001','مشروب غازي 330 مل - عينة','علبة',9,11,48,'علامة تجريبية','24 علبة / كرتونة','https://images.unsplash.com/photo-1629203851122-3726ecdf080e?w=480'),
+    ('DEMO-DRINK','DEMO-DRINK-002','عصير 1 لتر - عينة','عبوة',25,29,24,'علامة تجريبية','12 عبوة / كرتونة','https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=480'),
+    ('DEMO-DRINK','DEMO-DRINK-003','مياه معدنية 600 مل - عينة','زجاجة',4,5.5,96,'علامة تجريبية','24 زجاجة / كرتونة','https://images.unsplash.com/photo-1523362628745-0c100150b504?w=480'),
+    ('DEMO-SNACK','DEMO-SNACK-001','شيبسي 40 جم - عينة','كيس',5.5,7,72,'علامة تجريبية','48 كيس / كرتونة','https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=480'),
+    ('DEMO-SNACK','DEMO-SNACK-002','بسكويت سادة - عينة','عبوة',4.5,6,72,'علامة تجريبية','24 عبوة / كرتونة','https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=480'),
+    ('DEMO-SNACK','DEMO-SNACK-003','شوكولاتة صغيرة - عينة','قطعة',7,9,60,'علامة تجريبية','36 قطعة / كرتونة','https://images.unsplash.com/photo-1548907040-4d42bfc8f1d8?w=480'),
+    ('DEMO-CLEAN','DEMO-CLEAN-001','سائل غسيل أطباق 600 مل - عينة','زجاجة',22,27,18,'علامة تجريبية','12 زجاجة / كرتونة','https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?w=480'),
+    ('DEMO-CLEAN','DEMO-CLEAN-002','مناديل ورقية - عينة','عبوة',18,22,24,'علامة تجريبية','12 عبوة / كرتونة','https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=480'),
+    ('DEMO-CLEAN','DEMO-CLEAN-003','مسحوق غسيل 2 كجم - عينة','كيس',76,85,12,'علامة تجريبية','6 أكياس / كرتونة','https://images.unsplash.com/photo-1600857544200-b2f666a9a2ec?w=480'),
+    ('DEMO-CAN','DEMO-CAN-001','فول معلب 400 جم - عينة','علبة',16,19,24,'علامة تجريبية','24 علبة / كرتونة','https://images.unsplash.com/photo-1515543904379-3d757afe72e4?w=480'),
+    ('DEMO-CAN','DEMO-CAN-002','صلصة طماطم 300 جم - عينة','علبة',12,15,24,'علامة تجريبية','24 علبة / كرتونة','https://images.unsplash.com/photo-1547592180-85f173990554?w=480'),
+    ('DEMO-CAN','DEMO-CAN-003','عدس أصفر 1 كجم - عينة','كيس',49,56,12,'علامة تجريبية','10 أكياس / شوال','https://images.unsplash.com/photo-1515543904379-3d757afe72e4?w=480'),
+    ('DEMO-CAN','DEMO-CAN-004','سكر أبيض 1 كجم - عينة','كيس',29,33,30,'علامة تجريبية','10 أكياس / شوال','https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=480')
+  ) as x(group_code,code,name,unit,buy,sell,reorder,brand,pack,image)
+  join public.erp_item_groups g on g.company_id=v_company and g.group_code=x.group_code
+  on conflict(company_id,item_code) do update set
+    group_id=excluded.group_id,item_name=excluded.item_name,purchase_price=excluded.purchase_price,
+    sale_price=excluded.sale_price,image_url=excluded.image_url,is_demo_data=true;
+
   select id into v_area from public.erp_geo_areas where name_ar in ('مدينة نصر','الدقي','مدينة العبور') order by case name_ar when 'مدينة نصر' then 1 when 'الدقي' then 2 else 3 end limit 1;
 
   insert into public.erp_sales_representatives(company_id,rep_code,rep_name,home_area_id,monthly_sales_target,monthly_collection_target,commission_plan,default_commission_rate,is_demo_data)
