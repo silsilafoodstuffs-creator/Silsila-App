@@ -227,6 +227,7 @@ declare
   v_item3 uuid;
   v_area uuid;
   v_doc uuid;
+  v_purchase_doc uuid;
   v_month date := date_trunc('month', current_date)::date;
 begin
   select id into v_company
@@ -366,7 +367,44 @@ begin
       where not exists(select 1 from public.erp_sales_lines where document_id=v_doc and item_id=v_item2);
     end if;
   end if;
-end $$;
+
+  -- Purchase invoice demo remains a draft; it must not post inventory or accounting.
+  if v_supplier is not null and v_warehouse is not null then
+    insert into public.erp_purchase_documents(
+      company_id,branch_id,warehouse_id,supplier_id,document_number,document_date,due_date,
+      document_type,status,subtotal,grand_total,paid_total,notes,is_demo_data
+    )
+    values(
+      v_company,v_branch,v_warehouse,v_supplier,'DEMO-PI-0001',current_date-3,current_date+11,
+      'invoice','draft',2940,2940,1000,
+      'فاتورة شراء تجريبية غير مرحلة؛ لا تمثل عملية شراء حقيقية',true
+    )
+    on conflict(company_id,document_number) do update
+      set status='draft',is_demo_data=true,notes=excluded.notes;
+    select id into v_purchase_doc from public.erp_purchase_documents
+      where company_id=v_company and document_number='DEMO-PI-0001';
+    select id into v_item1 from public.erp_items
+      where company_id=v_company and item_code='DEMO-OIL-001';
+    select id into v_item2 from public.erp_items
+      where company_id=v_company and item_code='DEMO-DRY-001';
+    if v_purchase_doc is not null and v_item1 is not null then
+      insert into public.erp_purchase_lines(document_id,item_id,quantity,unit_price,line_total)
+      select v_purchase_doc,v_item1,40,54,2160
+      where not exists(
+        select 1 from public.erp_purchase_lines
+        where document_id=v_purchase_doc and item_id=v_item1
+      );
+    end if;
+    if v_purchase_doc is not null and v_item2 is not null then
+      insert into public.erp_purchase_lines(document_id,item_id,quantity,unit_price,line_total)
+      select v_purchase_doc,v_item2,24.375,32,780
+      where not exists(
+        select 1 from public.erp_purchase_lines
+        where document_id=v_purchase_doc and item_id=v_item2
+      );
+    end if;
+  end if;
+end $;
 
 comment on table public.erp_geo_areas is 'Hierarchical geographic directory; verify official boundaries and names before production use.';
 comment on table public.erp_sales_representatives is 'Sales representatives and their assigned routes; demo names are fictional.';
