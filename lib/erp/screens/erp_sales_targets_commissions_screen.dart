@@ -197,6 +197,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
       _toast('لا توجد خطة عمولة فعالة مطابقة للطريقة المحددة لهذا المندوب.');
       return;
     }
+    final selectedPlanId=plan['id'];
     final sales=_actualSalesForRep(repId);
     final collections=docs.fold<double>(0,(sum,d)=>sum+(d['document_type']?.toString()=='return'?-_num(d['paid_total']):_num(d['paid_total'])));
     final count=docs.where((d)=>d['document_type']?.toString()!='return').length;
@@ -233,7 +234,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
       await _db!.from('erp_commission_runs').insert({
         'company_id':widget.companyId,
         'representative_id':repId,
-        'plan_id':plan['id'],
+        'plan_id':selectedPlanId,
         'period_start':from,
         'period_end':to,
         'eligible_sales':sales,
@@ -333,6 +334,11 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
     });
   }
 
+  String _repNameForRun(Object? id) {
+    for(final rep in _reps) { if(rep['id']?.toString()==id?.toString()) return (rep['rep_name']??'مندوب').toString(); }
+    return 'مندوب';
+  }
+
   Widget _runsView(bool demo) {
     final rows=demo?<Map<String,dynamic>>[
       {'representative_name':'أحمد سامح - تجريبي','period_start':_month.toIso8601String().substring(0,10),'period_end':_nextMonth.subtract(const Duration(days:1)).toIso8601String().substring(0,10),'eligible_sales':0,'eligible_invoice_count':0,'calculated_commission':0,'status':'draft','notes':'مثال عرض فقط؛ لا توجد عمولة فعلية.'},
@@ -353,7 +359,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
               const Icon(Icons.request_quote_rounded,color:_p,size:28),
               const SizedBox(width:10),
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-                Text((x['representative_name']??x['representative_id']??'عمولة مندوب').toString(),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
+                Text((x['representative_name']??_repNameForRun(x['representative_id'])).toString(),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
                 Text((x['period_start']??'').toString()+' — '+(x['period_end']??'').toString(),style:const TextStyle(color:Colors.black54,fontSize:12)),
               ])),
               Chip(label:Text(label),backgroundColor:status=='approved'||status=='paid'?const Color(0xFFE2F6EA):const Color(0xFFFFF0D9)),
