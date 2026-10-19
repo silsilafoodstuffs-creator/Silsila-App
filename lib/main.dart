@@ -1585,6 +1585,7 @@ class _MainShellState extends State<MainShell> {
               padding: EdgeInsets.all(20),
               child: Text('لا توجد فئات مسجلة حتى الآن.', textAlign: TextAlign.center),
             ),
+          if (listViewMode) ...[
           ...visibleCategoryNames.where((c) => c != 'الكل').map((category) {
             final expanded = expandedCatalogCategories.contains(category);
             final productsInCategory = visible.where((p) => p.category == category).toList();
@@ -1620,6 +1621,57 @@ class _MainShellState extends State<MainShell> {
               ),
             );
           }),
+          ] else ...[
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: visibleCategoryNames.where((c) => c != 'الكل').length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 2.5,
+              ),
+              itemBuilder: (context, index) {
+                final category = visibleCategoryNames.where((c) => c != 'الكل').elementAt(index);
+                final productsInCategory = visible.where((p) => p.category == category).toList();
+                return Card(
+                  margin: EdgeInsets.zero,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => setState(() {
+                      selectedEntity = 'الأصناف';
+                      selectedCategory = category;
+                    }),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      child: Row(
+                        children: [
+                          Icon(_iconForCategory(category), color: purple, size: 22),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(category, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 3),
+                                Text('${productsInCategory.length} صنف',
+                                  style: const TextStyle(fontSize: 10, color: Colors.black54)),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.chevron_left_rounded, color: purple, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+
         ] else if (selectedEntity == 'الأصناف') ...[
           _sectionTitle('الأصناف', visible.length),
           const SizedBox(height: 8),
