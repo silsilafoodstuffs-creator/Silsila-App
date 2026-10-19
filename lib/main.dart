@@ -1161,14 +1161,62 @@ class _MainShellState extends State<MainShell> {
       children: [
         if (loadingLiveProducts)
           const LinearProgressIndicator(minHeight: 2),
-        if (productLoadMessage != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10, top: 4),
-            child: Text(
-              productLoadMessage!,
-              style: const TextStyle(color: Colors.black54, fontSize: 12),
+        // Keep search as the first control on the home screen.
+        SizedBox(
+          height: 42,
+          child: TextField(
+            controller: searchController,
+            onChanged: (value) => setState(() => search = value),
+            textAlignVertical: TextAlignVertical.center,
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: 'ابحث عن فئة أو صنف أو مورد أو عميل...',
+              prefixIcon: const Icon(Icons.search, color: purple, size: 20),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 42,
+                minHeight: 42,
+              ),
+              suffixIcon: search.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'مسح البحث',
+                      visualDensity: VisualDensity.compact,
+                      constraints: const BoxConstraints(
+                        minWidth: 36,
+                        minHeight: 36,
+                      ),
+                      onPressed: () {
+                        searchController.clear();
+                        setState(() => search = '');
+                      },
+                      icon: const Icon(Icons.close, size: 18),
+                    ),
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 36,
+                minHeight: 36,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 7,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: purple.withValues(alpha: .12),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: purple.withValues(alpha: .12),
+                ),
+              ),
             ),
           ),
+        ),
+        const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(17),
           decoration: BoxDecoration(
@@ -1204,60 +1252,65 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          value: activity,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'نوع النشاط',
-            prefixIcon: Icon(Icons.business_center_outlined),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        const Text(
+          'نوع النشاط',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 43,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: activityTypes.map((type) {
+              final selected = activity == type;
+              return Padding(
+                padding: const EdgeInsetsDirectional.only(end: 7),
+                child: ChoiceChip(
+                  avatar: Icon(
+                    Icons.business_center_outlined,
+                    size: 17,
+                    color: selected ? Colors.white : purple,
+                  ),
+                  label: Text(type),
+                  selected: selected,
+                  showCheckmark: false,
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: selected ? Colors.white : purple,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  backgroundColor: Colors.white,
+                  selectedColor: purple,
+                  side: BorderSide(
+                    color: purple.withValues(alpha: .15),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  onSelected: (_) {
+                    if (activity == type) return;
+                    setState(() {
+                      activity = type;
+                      selectedCategory = 'الكل';
+                      liveProducts = [];
+                      liveSuppliers = [];
+                      liveCategoryNames = [];
+                    });
+                    loadLiveProducts();
+                    loadLiveSuppliers();
+                    loadLiveCategories();
+                  },
+                ),
+              );
+            }).toList(),
           ),
-          items: activityTypes
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
-          onChanged: (v) {
-            setState(() {
-              activity = v ?? 'مواد غذائية';
-              selectedCategory = 'الكل';
-              liveProducts = [];
-              liveCategoryNames = [];
-            });
-            loadLiveProducts();
-            loadLiveSuppliers();
-            loadLiveCategories();
-          },
         ),
         const SizedBox(height: 10),
-        TextField(
-          controller: searchController,
-          onChanged: (v) => setState(() => search = v),
-          decoration: InputDecoration(
-            hintText: 'ابحث عن فئة أو صنف أو مورد أو عميل...',
-            prefixIcon: const Icon(Icons.search, color: purple),
-            suffixIcon: search.isEmpty
-                ? null
-                : IconButton(
-                    tooltip: 'مسح البحث',
-                    onPressed: () {
-                      searchController.clear();
-                      setState(() => search = '');
-                    },
-                    icon: const Icon(Icons.close),
-                  ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: purple.withValues(alpha: .12)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(15),
-              borderSide: BorderSide(color: purple.withValues(alpha: .12)),
-            ),
-          ),
+        const Text(
+          'تصفح حسب',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 13),
+        const SizedBox(height: 8),
         const Text(
           'تصفح حسب',
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
@@ -1575,7 +1628,7 @@ class _MainShellState extends State<MainShell> {
     if (visible.isEmpty) {
       final hasQuery = search.trim().isNotEmpty || selectedCategory != 'الكل';
       final message = database != null && liveProducts.isEmpty
-          ? 'لا توجد منتجات منشورة حاليًا من الموردين المعتمدين.'
+          ? (productLoadMessage ?? 'لا توجد منتجات منشورة حاليًا من الموردين المعتمدين.')
           : hasQuery
               ? 'لا توجد أصناف مطابقة للبحث الحالي.'
               : 'لا توجد منتجات لعرضها حاليًا.';
