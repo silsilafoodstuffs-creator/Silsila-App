@@ -86,7 +86,8 @@ class ErpAppAssetStorage {
     final timestamp = DateTime.now().toUtc().microsecondsSinceEpoch;
     final path = '$company/$app/$type/${timestamp}_${stem.isEmpty ? 'image' : stem}.$extension';
 
-    await _db.storage.from(bucket).uploadBinary(
+    final targetBucket = type == 'banner_ad' ? 'silsila-public-ads' : bucket;
+    await _db.storage.from(targetBucket).uploadBinary(
       path,
       bytes,
       fileOptions: FileOptions(
@@ -109,7 +110,7 @@ class ErpAppAssetStorage {
     if (!storagePath.startsWith(expectedPrefix) || storagePath.contains('..')) {
       throw ArgumentError('مسار الصورة لا يتبع الشركة والتطبيق المحددين.');
     }
-    await _db.storage.from(bucket).remove([storagePath]);
+    await _db.storage.from(_bucketForPath(storagePath)).remove([storagePath]);
   }
 
   /// Creates a short-lived URL for a private object; do not store this URL as
@@ -119,9 +120,18 @@ class ErpAppAssetStorage {
     Duration expiresIn = const Duration(minutes: 15),
   }) async {
     if (storagePath.trim().isEmpty) throw ArgumentError('مسار الصورة مطلوب.');
-    return _db.storage
-        .from(bucket)
-        .createSignedUrl(storagePath, expiresIn.inSeconds);
+    final targetBucket = _bucketForPath(storagePath);
+    if (targetBucket == 'silsila-public-ads') {
+      return _db.storage.from(targetBucket).getPublicUrl(storagePath);
+    }
+    return _db.storage.from(targetBucket).createSignedUrl(storagePath, expiresIn.inSeconds);
+  }
+
+  String _bucketForPath(String storagePath) {
+    final segments = storagePath.split('/');
+    return segments.length >= 3 && segments[2] == 'banner_ad'
+        ? 'silsila-public-ads'
+        : bucket;
   }
 
   static bool _matchesImageSignature(Uint8List bytes, String contentType) {
