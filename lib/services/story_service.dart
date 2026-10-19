@@ -88,9 +88,9 @@ class StoryService {
     final cleanCaption = _clean(caption);
     final cleanActivity = _clean(activityType);
 
-    _validateMediaUrl(cleanUrl);
+    if (cleanType != 'text') _validateMediaUrl(cleanUrl);
 
-    if (cleanType != 'image' && cleanType != 'video') {
+    if (cleanType != 'image' && cleanType != 'video' && cleanType != 'text') {
       throw ArgumentError(
         'نوع القصة يجب أن يكون image أو video.',
       );
@@ -118,7 +118,7 @@ class StoryService {
 
     final data = <String, dynamic>{
       'user_id': _userId,
-      'media_url': cleanUrl,
+      'media_url': cleanUrl.isEmpty ? null : cleanUrl,
       'media_type': cleanType,
       'caption': cleanCaption,
       'created_at': now.toIso8601String(),
