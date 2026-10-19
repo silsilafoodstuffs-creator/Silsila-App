@@ -5611,6 +5611,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
               details,
             ].where((part) => part.toString().trim().isNotEmpty).join('\n');
             return MarketCard(
+              postId: (post['id'] ?? '').toString(),
               title: title,
               type: isBuy ? 'طلب شراء' : 'عرض بيع',
               details: subtitle,
@@ -7044,37 +7045,122 @@ class SimpleListPage extends StatelessWidget {
       );
 }
 
-class MarketCard extends StatelessWidget {
+class MarketCard extends StatefulWidget {
   const MarketCard({
     super.key,
+    required this.postId,
     required this.title,
     required this.type,
     required this.details,
     required this.color,
   });
 
+  final String postId;
   final String title;
   final String type;
   final String details;
   final Color color;
 
   @override
+  State<MarketCard> createState() => _MarketCardState();
+}
+
+class _MarketCardState extends State<MarketCard> {
+  final TraderMarketService _service = TraderMarketService();
+  Map<String, int> _counts = const {'view': 0, 'accept': 0, 'reject': 0};
+  bool _busy = false;
+
+  Future<void> _interact(String action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await _service.recordInteraction(
+        postId: widget.postId,
+        interactionType: action,
+      );
+      final counts = await _service.getInteractionCounts(widget.postId);
+      if (mounted) setState(() => _counts = counts);
+      if (mounted && action != 'view') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(action == 'accept' ? 'تم تسجيل قبولك للمنشور.' : 'تم تسجيل رفضك للمنشور.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذر تسجيل التفاعل. تأكد من تسجيل الدخول: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _service.getInteractionCounts(widget.postId).then((value) {
+      if (mounted) setState(() => _counts = value);
+    }).catchError((_) {});
+  }
+
+  @override
   Widget build(BuildContext context) => Card(
         color: Colors.white,
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: color.withValues(alpha: .12),
-            child: Icon(Icons.storefront, color: color),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: widget.color.withValues(alpha: .10),
+                  border: Border.all(color: widget.color.withValues(alpha: .45)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  widget.type == 'طلب شراء' ? 'عايز أشتري' : 'عايز أبيع',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 6),
+              Text(widget.details),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 7,
+                runSpacing: 7,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _busy ? null : () => _interact('view'),
+                    style: OutlinedButton.styleFrom(foregroundColor: orange),
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    label: Text('معاينة ${_counts['view'] ?? 0}'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _busy ? null : () => _interact('accept'),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.green.shade700),
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: Text('قبول ${_counts['accept'] ?? 0}'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _busy ? null : () => _interact('reject'),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+                    icon: const Icon(Icons.cancel_outlined, size: 18),
+                    label: Text('رفض ${_counts['reject'] ?? 0}'),
+                  ),
+                ],
+              ),
+            ],
           ),
-          title: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          subtitle: Text('$type\n$details'),
-          isThreeLine: true,
         ),
       );
 }
+
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key, required this.total, required this.itemCount, required this.items, required this.onSuccess});
   final double total;
