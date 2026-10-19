@@ -148,6 +148,49 @@ class TraderMarketService {
     return Map<String, dynamic>.from(response);
   }
 
+  /// تسجيل مشاهدة أو قبول أو رفض منشور سوق التجار.
+  Future<void> recordInteraction({
+    required String postId,
+    required String interactionType,
+  }) async {
+    final id = int.tryParse(postId.trim());
+    if (id == null || id <= 0) {
+      throw ArgumentError('معرّف المنشور غير صالح.');
+    }
+    if (!const {'view', 'accept', 'reject'}.contains(interactionType)) {
+      throw ArgumentError('نوع التفاعل غير صالح.');
+    }
+    await _requireClient.from('trader_market_post_interactions').upsert(
+      {
+        'post_id': id,
+        'user_id': _userId,
+        'interaction_type': interactionType,
+      },
+      onConflict: 'post_id,user_id,interaction_type',
+      ignoreDuplicates: true,
+    );
+  }
+
+  /// إحصاءات المشاهدة والقبول والرفض لمنشور واحد.
+  Future<Map<String, int>> getInteractionCounts(String postId) async {
+    final id = int.tryParse(postId.trim());
+    if (id == null || id <= 0) {
+      throw ArgumentError('معرّف المنشور غير صالح.');
+    }
+    final rows = await _requireClient
+        .from('trader_market_post_interactions')
+        .select('interaction_type')
+        .eq('post_id', id);
+    final counts = <String, int>{'view': 0, 'accept': 0, 'reject': 0};
+    for (final row in rows.whereType<Map>()) {
+      final type = row['interaction_type']?.toString();
+      if (type != null && counts.containsKey(type)) {
+        counts[type] = counts[type]! + 1;
+      }
+    }
+    return counts;
+  }
+
   /// تعديل منشور يملكه المستخدم الحالي.
   Future<Map<String, dynamic>> updatePost({
     required String postId,
