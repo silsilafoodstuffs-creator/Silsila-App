@@ -3843,7 +3843,7 @@ class _AdminApprovalsScreenState extends State<AdminApprovalsScreen> {
   }
 
   Future<void> loadAccounts() async {
-    setState(() { loading = true; error = null; _offerItemsCache.clear(); });
+    setState(() { loading = true; error = null; });
     try {
       final rows = await service.getPendingAccounts();
       if (!mounted) return;
@@ -4638,7 +4638,7 @@ class _OffersScreenState extends State<OffersScreen> {
   }
 
   Future<void> loadOffers() async {
-    setState(() { loading = true; error = null; });
+    setState(() { loading = true; error = null; _offerItemsCache.clear(); });
     try {
       final result = await service.getOffers(activityType: widget.activityType);
       if (!mounted) return;
