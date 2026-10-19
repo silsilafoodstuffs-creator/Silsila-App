@@ -1025,7 +1025,7 @@ class _MainShellState extends State<MainShell> {
           imageUrl: (row['image_url'] ?? '').toString().trim().isEmpty ? null : row['image_url'].toString(),
           subcategory: (row['subcategory'] ?? '').toString().trim().isEmpty ? null : row['subcategory'].toString(),
           brand: (row['brand'] ?? '').toString().trim().isEmpty ? null : row['brand'].toString(),
-          packageCount: (row['package_count'] is num ? (row['package_count'] as num).toInt() : int.tryParse((row['package_count'] ?? '1').toString()) ?? 1).clamp(1, 100000),
+          packageCount: (row['package_count'] is num ? (row['package_count'] as num).toInt() : int.tryParse((row['package_count'] ?? '1').toString()) ?? 1).clamp(1, 100000).toInt(),
           smallUnit: (row['small_unit'] ?? '').toString().trim().isEmpty ? null : row['small_unit'].toString(),
           offerPrice: row['offer_price'] is num ? (row['offer_price'] as num).toDouble() : double.tryParse((row['offer_price'] ?? '').toString()),
         );
