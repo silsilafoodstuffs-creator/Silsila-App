@@ -648,7 +648,7 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
         if (const ['إعلان 1', 'إعلان 2', 'إعلان 3', 'إعلان 4', 'إعلان 5'].contains(slot) &&
             path.isNotEmpty && !bySlot.containsKey(slot)) {
           try {
-            bySlot[slot] = await client.storage.from('erp-app-assets').createSignedUrl(path, 900);
+            bySlot[slot] = client.storage.from('silsila-public-ads').getPublicUrl(path);
           } catch (_) {
             // Keep the designed fallback slide if storage access is denied.
           }
