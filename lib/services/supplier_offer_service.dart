@@ -115,10 +115,10 @@ class SupplierOfferService {
     return Map<String, dynamic>.from(response);
   }
 
-  /// إنشاء عرض مرتبط بصنف محدد مع السعر الأصلي وسعر العرض.
+  /// إنشاء عرض مرتبط بصنف محدد وحفظ السعرين في offer_items.
   Future<Map<String, dynamic>> createProductOffer({
     required String title,
-    required int? productId,
+    required String? productId,
     required double originalPrice,
     required double offerPrice,
     required DateTime startsAt,
@@ -128,31 +128,47 @@ class SupplierOfferService {
     String? activityType,
     double? discountPercentage,
   }) async {
-    if (originalPrice < 0 || offerPrice < 0) {
-      throw ArgumentError('الأسعار لا يمكن أن تكون سالبة.');
+    if (!originalPrice.isFinite || !offerPrice.isFinite ||
+        originalPrice < 0 || offerPrice < 0) {
+      throw ArgumentError('الأسعار يجب أن تكون أرقامًا صحيحة غير سالبة.');
     }
     final cleanTitle = _requiredText(title, 'عنوان العرض مطلوب.');
     _validateDates(startsAt, endsAt);
     _validateDiscount(discountPercentage);
     final cleanImageUrl = _clean(imageUrl);
-    if (cleanImageUrl != null) _validateWebUrl(cleanImageUrl, 'رابط صورة العرض غير صحيح.');
-    final response = await _requireClient.from('offers').insert({
+    if (cleanImageUrl != null) {
+      _validateWebUrl(cleanImageUrl, 'رابط صورة العرض غير صحيح.');
+    }
+
+    final client = _requireClient;
+    final offer = await client.from('offers').insert({
       'supplier_id': _userId,
-            'title': cleanTitle,
-      'description': [
-        _clean(description),
-        'بيانات الصنف: ${productId == null ? cleanTitle : 'معرّف الصنف $productId'}',
-        'السعر الأصلي: ${originalPrice.toStringAsFixed(2)}',
-        'سعر العرض: ${offerPrice.toStringAsFixed(2)}',
-      ].whereType<String>().join('\n'),
+      'title': cleanTitle,
+      'description': _clean(description),
       'image_url': cleanImageUrl,
-            'start_at': startsAt.toUtc().toIso8601String(),
+      'start_at': startsAt.toUtc().toIso8601String(),
       'ends_at': endsAt.toUtc().toIso8601String(),
       'activity_type': _clean(activityType),
       'discount_percentage': discountPercentage,
       'is_active': true,
     }).select().single();
-    return Map<String, dynamic>.from(response);
+
+    final offerId = offer['id'];
+    if (offerId == null) {
+      throw StateError('تم إنشاء العرض لكن تعذر الحصول على معرّفه.');
+    }
+
+    await client.from('offer_items').insert({
+      'offer_id': offerId,
+      if (productId != null && productId.trim().isNotEmpty)
+        'product_id': productId.trim(),
+      'product_name': cleanTitle,
+      'original_price': originalPrice,
+      'offer_price': offerPrice,
+      'discount_percentage': discountPercentage,
+    });
+
+    return Map<String, dynamic>.from(offer);
   }
 
   /// تعديل عرض يملكه المورد الحالي.
