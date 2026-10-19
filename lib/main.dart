@@ -742,6 +742,7 @@ class _MainShellState extends State<MainShell> {
   String selectedEntity = 'الفئات';
   bool listViewMode = false;
   bool showProductImages = true;
+  final Set<String> expandedCatalogCategories = <String>{};
   String activity = 'مواد غذائية';
   String selectedCategory = 'الكل';
   String search = '';
@@ -1541,37 +1542,50 @@ class _MainShellState extends State<MainShell> {
         ),
         const SizedBox(height: 13),
         if (selectedEntity == 'الفئات') ...[
-          _sectionTitle('الفئات الرئيسية', visibleCategoryNames.length - 1),
+          _sectionTitle('فئات الأصناف', visibleCategoryNames.length - 1),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: visibleCategoryNames.where((c) => c != 'الكل').map((c) {
-              final selected = selectedCategory == c;
-              return ActionChip(
-                avatar: Icon(
-                  _iconForCategory(c),
-                  color: selected ? Colors.white : purple,
-                  size: 18,
-                ),
-                label: Text(c),
-                backgroundColor: selected ? purple : Colors.white,
-                labelStyle: TextStyle(
-                  color: selected ? Colors.white : purple,
-                  fontWeight: FontWeight.w600,
-                ),
-                side: BorderSide(color: purple.withValues(alpha: .15)),
-                onPressed: () => setState(() {
-                  selectedCategory = c;
-                  selectedEntity = 'الأصناف';
-                }),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-          _sectionTitle('أصناف مقترحة', visible.length),
-          const SizedBox(height: 8),
-          _productResults(visible),
+          if (visibleCategoryNames.where((c) => c != 'الكل').isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text('لا توجد فئات مسجلة حتى الآن.', textAlign: TextAlign.center),
+            ),
+          ...visibleCategoryNames.where((c) => c != 'الكل').map((category) {
+            final expanded = expandedCatalogCategories.contains(category);
+            final productsInCategory = visible.where((p) => p.category == category).toList();
+            return Card(
+              margin: const EdgeInsets.only(bottom: 7),
+              child: Column(
+                children: [
+                  ListTile(
+                    dense: true,
+                    leading: Icon(_iconForCategory(category), color: purple),
+                    title: Text(category, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text('${productsInCategory.length} صنف'),
+                    trailing: Icon(expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: purple),
+                    onTap: () => setState(() {
+                      if (expanded) {
+                        expandedCatalogCategories.remove(category);
+                      } else {
+                        expandedCatalogCategories.add(category);
+                      }
+                    }),
+                  ),
+                  if (expanded)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: 12, end: 12, bottom: 10),
+                      child: productsInCategory.isEmpty
+                          ? const Align(
+                              alignment: Alignment.centerRight,
+                              child: Text('لا توجد أصناف منشورة تحت هذه الفئة بعد.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                            )
+                          : Column(
+                              children: productsInCategory.map((product) => _catalogListProduct(product)).toList(),
+                            ),
+                    ),
+                ],
+              ),
+            );
+          }),
         ] else if (selectedEntity == 'الأصناف') ...[
           _sectionTitle('الأصناف', visible.length),
           const SizedBox(height: 8),
@@ -1785,48 +1799,7 @@ class _MainShellState extends State<MainShell> {
     }
     if (listViewMode) {
       return Column(
-        children: visible.map((product) {
-          final key = product.id == null ? product.name : 'product:${product.id}';
-          final favorite = favorites.contains(key);
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: showProductImages
-                  ? Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: purple.withValues(alpha: .08),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(product.icon, color: purple, size: 25),
-                    )
-                  : null,
-              title: Text(product.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-              subtitle: Text('${product.price.toStringAsFixed(0)} ج.م / ${product.unit}'),
-              trailing: Wrap(
-                spacing: 0,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  IconButton(
-                    tooltip: 'المفضلة',
-                    onPressed: () => toggleProductFavorite(product),
-                    icon: Icon(
-                      favorite ? Icons.favorite : Icons.favorite_border,
-                      color: favorite ? pink : purple,
-                      size: 20,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'أضف للسلة',
-                    onPressed: () => addToCart(product),
-                    icon: const Icon(Icons.add_shopping_cart, color: purple),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
+        children: visible.map(_catalogListProduct).toList(),
       );
     }
     return GridView.builder(
@@ -1844,6 +1817,97 @@ class _MainShellState extends State<MainShell> {
           : _compactProductCard(visible[i]),
     );
   }
+
+  Widget _catalogListProduct(Product product) {
+    final key = product.cartKey;
+    final quantity = cart[key] ?? 0;
+    final favoriteKey = product.id == null ? product.name : 'product:${product.id}';
+    final favorite = favorites.contains(favoriteKey);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 7),
+      child: Padding(
+        padding: const EdgeInsets.all(9),
+        child: Row(
+          children: [
+            if (showProductImages)
+              Container(
+                width: 64,
+                height: 64,
+                margin: const EdgeInsetsDirectional.only(end: 9),
+                decoration: BoxDecoration(
+                  color: orange.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(product.icon, size: 31, color: purple),
+              ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 3),
+                  Text('${product.unit} • ${product.price.toStringAsFixed(2)} ج.م',
+                    style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                  const SizedBox(height: 5),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _quantityControl(Icons.remove, () {
+                        if (quantity <= 1) {
+                          setState(() { cart.remove(key); cartProducts.remove(key); });
+                        } else {
+                          setState(() => cart[key] = quantity - 1);
+                        }
+                      }),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('$quantity', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                      _quantityControl(Icons.add, () {
+                        if (quantity == 0) {
+                          addToCart(product);
+                        } else if (quantity < CartService.maxQuantityPerProduct) {
+                          setState(() => cart[key] = quantity + 1);
+                        }
+                      }),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'إضافة للسلة',
+                        onPressed: () => addToCart(product),
+                        icon: const Icon(Icons.add_shopping_cart, color: orange, size: 21),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        tooltip: 'المفضلة',
+                        onPressed: () => toggleProductFavorite(product),
+                        icon: Icon(favorite ? Icons.favorite : Icons.favorite_border,
+                          color: favorite ? pink : purple, size: 19),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _quantityControl(IconData icon, VoidCallback onPressed) => InkWell(
+    onTap: onPressed,
+    borderRadius: BorderRadius.circular(7),
+    child: Container(
+      width: 25,
+      height: 25,
+      decoration: BoxDecoration(
+        border: Border.all(color: purple.withValues(alpha: .25)),
+        borderRadius: BorderRadius.circular(7),
+      ),
+      child: Icon(icon, size: 16, color: purple),
+    ),
+  );
 
   Widget _compactProductCard(Product product) {
     final key = product.id == null ? product.name : 'product:${product.id}';
