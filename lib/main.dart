@@ -1006,6 +1006,12 @@ class _MainShellState extends State<MainShell> {
         activityType: activity,
         limit: 100,
       );
+      Map<String, double> activeOfferPrices = <String, double>{};
+      try {
+        activeOfferPrices = await OfferService().getActiveProductOfferPrices();
+      } catch (_) {
+        // Product browsing should remain available if offer data is unavailable.
+      }
       final mapped = rows.map((row) {
         final category = (row['category'] ??
                 row['category_name'] ??
@@ -1034,7 +1040,10 @@ class _MainShellState extends State<MainShell> {
           brand: (row['brand'] ?? '').toString().trim().isEmpty ? null : row['brand'].toString(),
           packageCount: (row['package_count'] is num ? (row['package_count'] as num).toInt() : int.tryParse((row['package_count'] ?? '1').toString()) ?? 1).clamp(1, 100000).toInt(),
           smallUnit: (row['small_unit'] ?? '').toString().trim().isEmpty ? null : row['small_unit'].toString(),
-          offerPrice: row['offer_price'] is num ? (row['offer_price'] as num).toDouble() : double.tryParse((row['offer_price'] ?? '').toString()),
+          offerPrice: activeOfferPrices[id ?? ''] ??
+              (row['offer_price'] is num
+                  ? (row['offer_price'] as num).toDouble()
+                  : double.tryParse((row['offer_price'] ?? '').toString())),
         );
       }).where((p) => p.id != null && p.name.trim().isNotEmpty).toList();
       if (!mounted) return;
