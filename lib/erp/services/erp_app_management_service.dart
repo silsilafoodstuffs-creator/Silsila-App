@@ -342,6 +342,7 @@ class ErpAppManagementService {
     'supplier',
     'customer',
     'shipping_company',
+    'banner_ad',
     'other',
   };
 
