@@ -4099,9 +4099,11 @@ class RegisterScreen extends StatefulWidget {
   const RegisterScreen({
     super.key,
     this.initialAccountType = 'عميل',
+    this.initialActivity = 'مواد غذائية',
   });
 
   final String initialAccountType;
+  final String initialActivity;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -4131,6 +4133,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     accountType = accountTypes.contains(widget.initialAccountType)
         ? widget.initialAccountType
         : 'عميل';
+    activity = activityTypes.contains(widget.initialActivity)
+        ? widget.initialActivity
+        : activityTypes.first;
   }
   String? customerType;
   String? supplierType;
@@ -5126,7 +5131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: () => _openPage(
-                      RegisterScreen(initialAccountType: accountType),
+                      RegisterScreen(initialAccountType: accountType, initialActivity: activity),
                       'إنشاء مستخدم جديد',
                     ),
                     icon: const Icon(Icons.person_add_alt_1_rounded),
@@ -5135,7 +5140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 8),
                   FilledButton.icon(
                     onPressed: () => _openPage(
-                      const RegisterScreen(initialAccountType: 'إدارة نشاط'),
+                      RegisterScreen(initialAccountType: 'إدارة نشاط', initialActivity: activity),
                       'إنشاء نشاط جديد',
                     ),
                     icon: const Icon(Icons.add_business_rounded),
