@@ -6022,7 +6022,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
           children: posts.map((post) {
             final type = (post['post_type'] ?? '').toString();
             final isBuy = type == 'buy' || type == 'request';
-            final color = isBuy ? purple : orange;
+            final color = isBuy ? Colors.green.shade700 : orange;
             final title = (post['title'] ?? 'إعلان').toString();
             final details = (post['description'] ?? post['details'] ?? '').toString();
             final quantity = post['quantity'];
