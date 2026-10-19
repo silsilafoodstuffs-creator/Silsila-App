@@ -2519,6 +2519,11 @@ class _MainShellState extends State<MainShell> {
             () => openPage('قصص الموردين', StoriesScreen(activityType: activity)),
           ),
           menuItem(
+            Icons.forum_outlined,
+            'رسائل القصص',
+            () => openPage('رسائل القصص', const StoryRepliesScreen()),
+          ),
+          menuItem(
             Icons.receipt_long,
             'سجل طلباتي',
             () => openPage('سجل طلباتي', const MyOrdersScreen()),
@@ -4374,6 +4379,74 @@ class _StoriesScreenState extends State<StoriesScreen> {
                     ),
                   ),
               ]),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class StoryRepliesScreen extends StatefulWidget {
+  const StoryRepliesScreen({super.key});
+
+  @override
+  State<StoryRepliesScreen> createState() => _StoryRepliesScreenState();
+}
+
+class _StoryRepliesScreenState extends State<StoryRepliesScreen> {
+  final StoryService _service = StoryService();
+  List<Map<String, dynamic>> _messages = [];
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final messages = await _service.getMyReplies();
+      if (!mounted) return;
+      setState(() => _messages = messages);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _messages = []; _error = 'تعذر تحميل الرسائل. تأكد من تسجيل الدخول: $e'; });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = database?.auth.currentUser?.id;
+    if (_loading) return const Center(child: CircularProgressIndicator(color: purple));
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('رسائل القصص', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+          if (_error != null) Padding(padding: const EdgeInsets.all(16), child: Text(_error!, textAlign: TextAlign.center)),
+          if (_messages.isEmpty && _error == null)
+            const Padding(padding: EdgeInsets.all(24), child: Text('لا توجد رسائل حتى الآن.', textAlign: TextAlign.center)),
+          ..._messages.map((message) {
+            final incoming = message['recipient_id']?.toString() == userId;
+            final created = DateTime.tryParse((message['created_at'] ?? '').toString());
+            return Card(
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: (incoming ? orange : purple).withValues(alpha: .12),
+                  child: Icon(incoming ? Icons.mark_email_unread_outlined : Icons.send_outlined, color: incoming ? orange : purple),
+                ),
+                title: Text(incoming ? 'رسالة واردة' : 'رسالتك المرسلة', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text((message['body'] ?? '').toString()),
+                isThreeLine: true,
+                trailing: Text(created == null ? '' : created.toLocal().toString().substring(0, 16), style: const TextStyle(fontSize: 10)),
+              ),
             );
           }),
         ],
