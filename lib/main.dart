@@ -4675,7 +4675,17 @@ class _OffersScreenState extends State<OffersScreen> {
                     return CheckboxListTile(
                       dense: true,
                       value: selectedProductIds.contains(p.cartKey),
-                      secondary: Icon(p.icon, color: purple),
+                      secondary: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: p.imageUrl != null
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(7),
+                                child: Image.network(p.imageUrl!, fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Icon(p.icon, color: purple)),
+                              )
+                            : Icon(p.icon, color: purple),
+                      ),
                       title: Text(p.name),
                       subtitle: Row(children: [
                         Expanded(child: Text('السعر الحالي: ${p.price.toStringAsFixed(2)} ج.م')),
@@ -4946,6 +4956,17 @@ class _OffersScreenState extends State<OffersScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if ((offer['image_url'] ?? '').toString().trim().isNotEmpty)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(9),
+                      child: Image.network(
+                        (offer['image_url'] ?? '').toString(),
+                        height: 120,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    ),
                   Row(children: [
                     const Icon(Icons.local_offer, color: orange),
                     const SizedBox(width: 8),
