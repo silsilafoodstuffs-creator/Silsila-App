@@ -139,8 +139,13 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     var id = (_activeCompanyId ?? widget.companyId ?? '').trim();
     final legalName = _legalName.text.trim();
     final currency = _currency.text.trim().toUpperCase();
-    if (_db == null) {
+    final db = _db;
+    if (db == null) {
       setState(() => _error = 'Supabase غير مهيأ؛ تعذر الاتصال بقاعدة البيانات.');
+      return;
+    }
+    if (db.auth.currentUser == null) {
+      setState(() => _error = 'جلسة الدخول غير نشطة. سجّل الدخول إلى حسابك ثم أعد حفظ بيانات الشركة.');
       return;
     }
     if (legalName.isEmpty) {
@@ -158,8 +163,66 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
+      // Resolve the company from this signed-in user's own active memberships.
+      // A stale company ID must never make first-time creation call the update RPC.
+      final userId = db.auth.currentUser!.id;
+      final membershipResult = await db
+          .from('erp_company_members')
+          .select('company_id, member_role')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('created_at');
+      final memberships = (membershipResult as List)
+          .whereType<Map<String, dynamic>>()
+          .toList(growable: false);
+
+      Map<String, dynamic>? membershipFor(String companyId) {
+        for (final membership in memberships) {
+          if ((membership['company_id'] ?? '').toString() == companyId) {
+            return membership;
+          }
+        }
+        return null;
+      }
+
+      if (id.isNotEmpty && membershipFor(id) == null) {
+        if (memberships.isEmpty) {
+          id = '';
+        } else {
+          throw StateError(
+            'الشركة المحددة ليست ضمن عضويات حسابك النشطة. اختر الشركة المرتبطة بحسابك.',
+          );
+        }
+      }
+
+      if (id.isEmpty && memberships.isNotEmpty) {
+        Map<String, dynamic>? ownerMembership;
+        for (final membership in memberships) {
+          final role = (membership['member_role'] ?? '').toString();
+          if (role == 'owner' || role == 'admin') {
+            ownerMembership = membership;
+            break;
+          }
+        }
+        if (ownerMembership == null) {
+          throw StateError(
+            'حسابك عضو في شركة، لكنه لا يملك صلاحية مالك أو مدير لتعديل بياناتها.',
+          );
+        }
+        id = (ownerMembership['company_id'] ?? '').toString();
+      }
+
+      if (id.isNotEmpty) {
+        final role = (membershipFor(id)?['member_role'] ?? '').toString();
+        if (role != 'owner' && role != 'admin') {
+          throw StateError(
+            'تعديل بيانات الشركة متاح لمالك الشركة أو مديرها فقط.',
+          );
+        }
+      }
+
       if (id.isEmpty) {
-        final createdId = await _db!.rpc('erp_create_company', params: {
+        final createdId = await db.rpc('erp_create_company', params: {
           'p_legal_name': legalName,
           'p_trade_name': _nullable(_tradeName.text),
           'p_tax_number': _nullable(_taxNumber.text),
@@ -174,9 +237,19 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           throw StateError('لم تُرجع قاعدة البيانات معرّف الشركة الجديدة.');
         }
         _activeCompanyId = id;
-        await widget.onCompanyCreated?.call(id);
+        try {
+          await widget.onCompanyCreated?.call(id);
+        } catch (refreshError) {
+          // The company creation transaction succeeded; do not report it as a
+          // failed save merely because a dashboard refresh encountered an error.
+          if (mounted) {
+            setState(() {
+              _message = 'تم إنشاء الشركة وحفظها. تعذر تحديث بعض مؤشرات اللوحة: $refreshError';
+            });
+          }
+        }
       } else {
-        final updatedId = await _db!.rpc('erp_update_company_profile', params: {
+        final updatedId = await db.rpc('erp_update_company_profile', params: {
           'p_company_id': id,
           'p_legal_name': legalName,
           'p_trade_name': _nullable(_tradeName.text),
