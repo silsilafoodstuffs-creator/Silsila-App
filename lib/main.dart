@@ -599,12 +599,14 @@ class _MainShellState extends State<MainShell> {
   bool loadingLiveProducts = false;
   String? productLoadMessage;
 
+  // Real catalog data takes precedence whenever Supabase is configured.
+  // Demo catalog entries are shown only in offline/demo mode, never as live inventory.
   List<Product> get allProducts =>
-      liveProducts.isNotEmpty ? liveProducts : products;
+      liveProducts.isNotEmpty ? liveProducts : (database == null ? products : const <Product>[]);
 
   List<String> get visibleCategoryNames => liveCategoryNames.isNotEmpty
       ? ['الكل', ...liveCategoryNames]
-      : categories;
+      : (database == null ? categories : const <String>['الكل']);
 
   @override
   void dispose() {
@@ -1421,10 +1423,20 @@ class _MainShellState extends State<MainShell> {
               final name = (supplier['full_name'] ?? '').toString().toLowerCase();
               return search.isEmpty || name.contains(search.toLowerCase());
             }).map(supplierDirectoryTile)
-          else
+          else if (database == null)
             ...suppliers.where((name) =>
                 search.isEmpty || name.toLowerCase().contains(search.toLowerCase()))
-                .map(supplierTile),
+                .map(supplierTile)
+          else if (!loadingLiveSuppliers)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(
+                child: Text(
+                  'لا توجد حسابات موردين معتمدة منشورة حاليًا.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
         ] else ...[
           _sectionTitle(selectedEntity, 0),
           const SizedBox(height: 8),
@@ -1545,9 +1557,32 @@ class _MainShellState extends State<MainShell> {
 
   Widget _productResults(List<Product> visible) {
     if (visible.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: Center(child: Text('لا توجد أصناف مطابقة للبحث الحالي.')),
+      final hasQuery = search.trim().isNotEmpty || selectedCategory != 'الكل';
+      final message = database != null && liveProducts.isEmpty
+          ? 'لا توجد منتجات منشورة حاليًا من الموردين المعتمدين.'
+          : hasQuery
+              ? 'لا توجد أصناف مطابقة للبحث الحالي.'
+              : 'لا توجد منتجات لعرضها حاليًا.';
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.inventory_2_outlined, size: 42, color: purple),
+              const SizedBox(height: 8),
+              Text(message, textAlign: TextAlign.center),
+              if (database != null && liveProducts.isEmpty) ...[
+                const SizedBox(height: 6),
+                const Text(
+                  'ستظهر المنتجات هنا بعد أن ينشر المورد المعتمد الأصناف ويحدد أسعارها ووحداتها.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+        ),
       );
     }
     if (listViewMode) {
