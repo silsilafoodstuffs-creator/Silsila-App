@@ -2800,6 +2800,8 @@ class SupplierProductsScreen extends StatefulWidget {
 }
 
 class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
+  final ImagePicker _productPicker = ImagePicker();
+  XFile? selectedProductImage;
   final service = SupplierProductService();
   List<Map<String, dynamic>> products = [];
   bool loading = true;
@@ -2827,6 +2829,23 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     }
   }
 
+  Future<String> _uploadProductImage(XFile file) async {
+    final client = database;
+    final user = client?.auth.currentUser;
+    if (client == null || user == null) throw StateError('سجّل الدخول أولًا لرفع صورة المنتج.');
+    final extension = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : 'jpg';
+    final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}.$extension';
+    await client.storage.from('products').uploadBinary(
+      path,
+      await file.readAsBytes(),
+      fileOptions: FileOptions(
+        contentType: 'image/$extension',
+        upsert: false,
+      ),
+    );
+    return client.storage.from('products').getPublicUrl(path);
+  }
+
   Future<void> addProduct() async {
     final name = TextEditingController();
     final category = TextEditingController(text: 'زيوت');
@@ -2840,6 +2859,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     final smallUnit = TextEditingController(text: 'علبة');
     final imageUrl = TextEditingController();
     final offerPrice = TextEditingController();
+    selectedProductImage = null;
     bool trackStock = false;
     final accepted = await showDialog<bool>(
       context: context,
@@ -2857,7 +2877,30 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
               TextField(controller: packageCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد العبوات داخل الوحدة الكبرى')),
               TextField(controller: smallUnit, decoration: const InputDecoration(labelText: 'وحدة البيع الصغرى (مثال: علبة)')),
               TextField(controller: offerPrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'سعر العرض (اختياري)')),
-              TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة المنتج (اختياري)')),
+              Wrap(
+                spacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final file = await _productPicker.pickImage(source: ImageSource.gallery, imageQuality: 88, maxWidth: 1600);
+                      if (file != null) setDialogState(() => selectedProductImage = file);
+                    },
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: const Text('اختيار صورة'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      final file = await _productPicker.pickImage(source: ImageSource.camera, imageQuality: 88, maxWidth: 1600);
+                      if (file != null) setDialogState(() => selectedProductImage = file);
+                    },
+                    icon: const Icon(Icons.camera_alt_outlined),
+                    label: const Text('الكاميرا'),
+                  ),
+                ],
+              ),
+              if (selectedProductImage != null)
+                Text('الصورة المختارة: ${selectedProductImage!.name}', maxLines: 1, overflow: TextOverflow.ellipsis),
+              TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'أو رابط صورة المنتج (اختياري)')),
               TextField(controller: minimum, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الحد الأدنى للكمية')),
               TextField(controller: stock, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الكمية المتاحة')),
               CheckboxListTile(
@@ -2886,6 +2929,9 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
             (offerPrice.text.trim().isNotEmpty && parsedOfferPrice == null)) {
           throw ArgumentError('أدخل سعرًا وحدًا أدنى صحيحين.');
         }
+        final uploadedImageUrl = selectedProductImage != null
+            ? await _uploadProductImage(selectedProductImage!)
+            : (imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim());
         await service.createProduct(
           name: name.text,
           category: category.text,
@@ -2898,7 +2944,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
           brand: brand.text,
           packageCount: parsedPackageCount,
           smallUnit: smallUnit.text,
-          imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
+          imageUrl: uploadedImageUrl,
           offerPrice: parsedOfferPrice,
         );
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نشر المنتج.')));
