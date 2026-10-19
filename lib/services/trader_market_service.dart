@@ -7,7 +7,7 @@ class TraderMarketService {
 
   SupabaseClient get _requireClient {
     if (_client != null) {
-      return _client!;
+      return _client;
     }
 
     try {
