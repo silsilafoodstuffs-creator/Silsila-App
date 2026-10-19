@@ -190,6 +190,12 @@ class Product {
     this.id,
     this.supplierId,
     this.minQuantity = 1,
+    this.imageUrl,
+    this.subcategory,
+    this.brand,
+    this.packageCount = 1,
+    this.smallUnit,
+    this.offerPrice,
   });
 
   final String name;
@@ -200,6 +206,12 @@ class Product {
   final String? id;
   final String? supplierId;
   final int minQuantity;
+  final String? imageUrl;
+  final String? subcategory;
+  final String? brand;
+  final int packageCount;
+  final String? smallUnit;
+  final double? offerPrice;
 
   String get cartKey => id == null ? 'demo:$name' : 'product:$id';
 }
@@ -1008,6 +1020,12 @@ class _MainShellState extends State<MainShell> {
           id: (id == null || id.isEmpty) ? null : id,
           supplierId: row['supplier_id']?.toString(),
           minQuantity: minQuantity < 1 ? 1 : minQuantity,
+          imageUrl: (row['image_url'] ?? '').toString().trim().isEmpty ? null : row['image_url'].toString(),
+          subcategory: (row['subcategory'] ?? '').toString().trim().isEmpty ? null : row['subcategory'].toString(),
+          brand: (row['brand'] ?? '').toString().trim().isEmpty ? null : row['brand'].toString(),
+          packageCount: (row['package_count'] is num ? (row['package_count'] as num).toInt() : int.tryParse((row['package_count'] ?? '1').toString()) ?? 1).clamp(1, 100000),
+          smallUnit: (row['small_unit'] ?? '').toString().trim().isEmpty ? null : row['small_unit'].toString(),
+          offerPrice: row['offer_price'] is num ? (row['offer_price'] as num).toDouble() : double.tryParse((row['offer_price'] ?? '').toString()),
         );
       }).where((p) => p.id != null && p.name.trim().isNotEmpty).toList();
       if (!mounted) return;
@@ -1830,17 +1848,6 @@ class _MainShellState extends State<MainShell> {
         padding: const EdgeInsets.all(9),
         child: Row(
           children: [
-            if (showProductImages)
-              Container(
-                width: 64,
-                height: 64,
-                margin: const EdgeInsetsDirectional.only(end: 9),
-                decoration: BoxDecoration(
-                  color: orange.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(product.icon, size: 31, color: purple),
-              ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1848,8 +1855,26 @@ class _MainShellState extends State<MainShell> {
                   Text(product.name, maxLines: 2, overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   const SizedBox(height: 3),
-                  Text('${product.unit} • ${product.price.toStringAsFixed(2)} ج.م',
-                    style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                  if (product.brand != null)
+                    Text('الماركة: ${product.brand}', style: const TextStyle(fontSize: 11, color: Colors.black54)),
+                  Text(
+                    '${product.unit}${product.packageCount > 1 ? ' • ${product.packageCount} ${product.smallUnit ?? 'وحدة'}' : ''}',
+                    style: const TextStyle(fontSize: 11, color: Colors.black54),
+                  ),
+                  Row(children: [
+                    if (product.offerPrice != null && product.offerPrice! < product.price) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(color: orange, borderRadius: BorderRadius.circular(5)),
+                        child: const Text('عرض', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 5),
+                      Text('${product.price.toStringAsFixed(2)} ج.م', style: const TextStyle(fontSize: 11, color: Colors.black54, decoration: TextDecoration.lineThrough)),
+                      const SizedBox(width: 5),
+                      Text('${product.offerPrice!.toStringAsFixed(2)} ج.م', style: const TextStyle(fontSize: 12, color: orange, fontWeight: FontWeight.bold)),
+                    ] else
+                      Text('${product.price.toStringAsFixed(2)} ج.م', style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600)),
+                  ]),
                   const SizedBox(height: 5),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -1890,6 +1915,24 @@ class _MainShellState extends State<MainShell> {
                 ],
               ),
             ),
+            if (showProductImages)
+              Container(
+                width: 64,
+                height: 64,
+                margin: const EdgeInsetsDirectional.only(start: 9),
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: orange.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: product.imageUrl != null
+                    ? Image.network(
+                        product.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(product.icon, size: 31, color: purple),
+                      )
+                    : Icon(product.icon, size: 31, color: purple),
+              ),
           ],
         ),
       ),
