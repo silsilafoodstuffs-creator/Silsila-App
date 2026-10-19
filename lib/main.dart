@@ -4092,6 +4092,41 @@ class _StoriesScreenState extends State<StoriesScreen> {
     }
   }
 
+  Future<void> _replyToStory(Map<String, dynamic> story) async {
+    final recipientId = (story['user_id'] ?? '').toString();
+    final storyId = (story['id'] ?? '').toString();
+    if (recipientId.isEmpty || storyId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تعذر تحديد صاحب القصة.')));
+      return;
+    }
+    final controller = TextEditingController();
+    final send = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('إرسال رسالة لصاحب القصة'),
+        content: TextField(
+          controller: controller,
+          maxLines: 4,
+          maxLength: 2000,
+          decoration: const InputDecoration(hintText: 'اكتب ردك أو رسالتك...'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton.icon(onPressed: () => Navigator.pop(dialogContext, true), icon: const Icon(Icons.send), label: const Text('إرسال')),
+        ],
+      ),
+    );
+    if (send == true) {
+      try {
+        await storyService.sendReply(storyId: storyId, recipientId: recipientId, body: controller.text);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال الرسالة لصاحب القصة.')));
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الرسالة: $e')));
+      }
+    }
+    controller.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -4226,6 +4261,18 @@ class _StoriesScreenState extends State<StoriesScreen> {
                   const SizedBox(height: 100, child: Center(child: Icon(Icons.image_outlined, size: 42))),
                 if (caption.isNotEmpty && type != 'text') Padding(padding: const EdgeInsets.all(12), child: Text(caption)),
                 if (created != null) Padding(padding: const EdgeInsetsDirectional.only(start: 12, end: 12, bottom: 10), child: Text('نُشرت: ${created.toLocal().toString().substring(0, 16)}', style: const TextStyle(fontSize: 11, color: Colors.black54))),
+                if (database?.auth.currentUser?.id != (story['user_id'] ?? '').toString())
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 10, bottom: 8),
+                      child: OutlinedButton.icon(
+                        onPressed: () => _replyToStory(story),
+                        icon: const Icon(Icons.message_outlined, size: 17),
+                        label: const Text('رد / إرسال رسالة'),
+                      ),
+                    ),
+                  ),
               ]),
             );
           }),
