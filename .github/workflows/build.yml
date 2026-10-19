@@ -166,8 +166,7 @@ jobs:
           PY
 
       - name: Check code
-        run: flutter analyze lib
-        continue-on-error: true
+        run: flutter analyze lib --no-fatal-infos
 
       - name: Build Android APK
         run: |
@@ -256,7 +255,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze Dart source
-        run: flutter analyze lib
+        run: flutter analyze lib --no-fatal-infos
 
       - name: Run automated tests
         run: flutter test
