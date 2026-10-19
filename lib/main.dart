@@ -2123,43 +2123,45 @@ class _MainShellState extends State<MainShell> {
   Widget marketPage() => ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text(
-            'سوق التجار',
-            style: TextStyle(
-              fontSize: 23,
-              fontWeight: FontWeight.bold,
-              color: purple,
-            ),
-          ),
+          const Text('سوق التجار', style: TextStyle(fontSize: 23, fontWeight: FontWeight.bold, color: purple)),
           const SizedBox(height: 8),
           const Text('طلبات شراء وعروض بيع بين التجار.'),
           const SizedBox(height: 14),
-          FilledButton.icon(
-            onPressed: () async {
-              final published = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute<bool>(
-                  builder: (_) => Directionality(
-                    textDirection: TextDirection.rtl,
-                    child: Scaffold(
-                      appBar: AppBar(title: const Text('إضافة إعلان')),
-                      body: const MarketPostScreen(),
-                    ),
-                  ),
-                ),
-              );
-              if (published == true) {
-                await marketPostsKey.currentState?.refresh();
-              }
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('إضافة طلب شراء أو عرض بيع'),
-          ),
-          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(child: FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: Colors.green.shade700),
+              onPressed: () => openMarketPost('buy'),
+              icon: const Icon(Icons.shopping_basket_outlined),
+              label: const Text('إضافة طلب شراء'),
+            )),
+            const SizedBox(width: 8),
+            Expanded(child: FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: orange),
+              onPressed: () => openMarketPost('sell'),
+              icon: const Icon(Icons.sell_outlined),
+              label: const Text('طلب بيع'),
+            )),
+          ]),
           const SizedBox(height: 12),
           MarketPostsSection(key: marketPostsKey),
         ],
       );
+
+  Future<void> openMarketPost(String type) async {
+    final published = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute<bool>(
+        builder: (_) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            appBar: AppBar(title: Text(type == 'buy' ? 'عايز أشتري' : 'عايز أبيع')),
+            body: MarketPostScreen(initialType: type, availableProducts: allProducts),
+          ),
+        ),
+      ),
+    );
+    if (published == true) await marketPostsKey.currentState?.refresh();
+  }
 
   Widget cartPage() {
     final entries = cart.entries.toList();
@@ -5641,25 +5643,55 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   Widget build(BuildContext context) => ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          DropdownButtonFormField<String>(
-            value: type,
-            decoration: const InputDecoration(labelText: 'نوع الإعلان'),
-            items: const [
-              DropdownMenuItem(value: 'buy', child: Text('طلب شراء')),
-              DropdownMenuItem(value: 'sell', child: Text('عرض بيع')),
-            ],
-            onChanged: (v) => setState(() => type = v ?? 'buy'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: titleController,
-            decoration: const InputDecoration(labelText: 'عنوان الإعلان'),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 12),
+            decoration: BoxDecoration(color: type == 'buy' ? Colors.green.shade700 : purple, borderRadius: BorderRadius.circular(14)),
+            child: Text(type == 'buy' ? 'عايز أشتري' : 'عايز أبيع',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 19)),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: detailsController,
             maxLines: 4,
-            decoration: const InputDecoration(labelText: 'التفاصيل'),
+            decoration: const InputDecoration(labelText: 'الملاحظات أو التفاصيل'),
+          ),
+          if (widget.availableProducts.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Row(children: [
+              const Expanded(child: Text('اختيار الأصناف', style: TextStyle(fontWeight: FontWeight.bold))),
+              TextButton(
+                onPressed: () => setState(() {
+                  selectAllProducts = !selectAllProducts;
+                  selectedProducts
+                    ..clear()
+                    ..addAll(selectAllProducts ? widget.availableProducts.map((p) => p.name) : const <String>[]);
+                }),
+                child: Text(selectAllProducts ? 'إلغاء تحديد الكل' : 'تحديد الكل'),
+              ),
+            ]),
+            ...widget.availableProducts.map((product) => CheckboxListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              value: selectedProducts.contains(product.name),
+              title: Text(product.name),
+              subtitle: Text('${product.category} • ${product.price.toStringAsFixed(2)} ج.م / ${product.unit}'),
+              secondary: Icon(product.icon, color: purple),
+              onChanged: (checked) => setState(() {
+                if (checked == true) {
+                  selectedProducts.add(product.name);
+                } else {
+                  selectedProducts.remove(product.name);
+                }
+                selectAllProducts = selectedProducts.length == widget.availableProducts.length;
+              }),
+            )),
+          ],
+          const SizedBox(height: 12),
+          TextField(
+            controller: titleController,
+            decoration: const InputDecoration(labelText: 'عنوان العرض أو الطلب'),
           ),
           const SizedBox(height: 12),
           TextField(
