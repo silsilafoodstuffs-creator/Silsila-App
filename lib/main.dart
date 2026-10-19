@@ -760,7 +760,7 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int tab = 3;
   String selectedEntity = 'الفئات';
-  bool listViewMode = false;
+  bool listViewMode = true;
   bool showProductImages = true;
   final Set<String> expandedCatalogCategories = <String>{};
   final Set<String> expandedCatalogSubcategories = <String>{};
