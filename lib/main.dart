@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:video_player/video_player.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -4331,6 +4332,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
                 ),
                 if (type == 'text')
                   Padding(padding: const EdgeInsets.all(18), child: Text(caption, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)))
+                else if (type == 'video' && url.isNotEmpty)
+                  StoryVideoPlayer(url: url)
                 else if (type == 'video')
                   const SizedBox(height: 170, child: Center(child: Icon(Icons.play_circle_outline, size: 68, color: purple)))
                 else if (url.isNotEmpty)
@@ -4354,6 +4357,67 @@ class _StoriesScreenState extends State<StoriesScreen> {
               ]),
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+class StoryVideoPlayer extends StatefulWidget {
+  const StoryVideoPlayer({super.key, required this.url});
+  final String url;
+
+  @override
+  State<StoryVideoPlayer> createState() => _StoryVideoPlayerState();
+}
+
+class _StoryVideoPlayerState extends State<StoryVideoPlayer> {
+  late final VideoPlayerController _controller;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+      ..initialize().then((_) {
+        if (mounted) setState(() {});
+      }).catchError((_) {
+        if (mounted) setState(() => _failed = true);
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) {
+      return const SizedBox(height: 170, child: Center(child: Icon(Icons.video_file_outlined, size: 48, color: purple)));
+    }
+    if (!_controller.value.isInitialized) {
+      return const SizedBox(height: 170, child: Center(child: CircularProgressIndicator(color: purple)));
+    }
+    return AspectRatio(
+      aspectRatio: _controller.value.aspectRatio > 0 ? _controller.value.aspectRatio : 16 / 9,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          VideoPlayer(_controller),
+          IconButton.filled(
+            style: IconButton.styleFrom(backgroundColor: Colors.black54, foregroundColor: Colors.white),
+            iconSize: 42,
+            onPressed: () => setState(() {
+              if (_controller.value.isPlaying) {
+                _controller.pause();
+              } else {
+                _controller.play();
+              }
+            }),
+            icon: Icon(_controller.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill),
+          ),
         ],
       ),
     );
