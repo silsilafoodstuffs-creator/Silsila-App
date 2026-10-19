@@ -2504,7 +2504,7 @@ class _MainShellState extends State<MainShell> {
           menuItem(
             Icons.local_offer_outlined,
             'العروض',
-            () => openPage('العروض', OffersScreen(activityType: activity, canManage: isApprovedSupplier)),
+            () => openPage('العروض', OffersScreen(activityType: activity, canManage: isApprovedSupplier, availableProducts: allProducts)),
           ),
           menuItem(
             Icons.auto_awesome,
