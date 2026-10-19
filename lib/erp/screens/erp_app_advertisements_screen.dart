@@ -9,7 +9,6 @@ import '../services/erp_app_management_service.dart';
 import '../services/erp_app_settings.dart';
 
 const _adsPurple = Color(0xFF3E007D);
-const _adsOrange = Color(0xFFFFA015);
 const _adSlots = <String>['إعلان 1', 'إعلان 2', 'إعلان 3', 'إعلان 4', 'إعلان 5'];
 
 class ErpAppAdvertisementsScreen extends StatefulWidget {
