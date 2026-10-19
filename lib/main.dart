@@ -3822,7 +3822,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
   Future<void> pickStoryMedia(ImageSource source) async {
     try {
       final file = newStoryMediaType == 'video'
-          ? await picker.pickVideo(source: source, maxDuration: const Duration(minutes: 1))
+          ? await picker.pickVideo(source: source, maxDuration: const Duration(minutes: 60))
           : await picker.pickImage(source: source, imageQuality: 88, maxWidth: 1600);
       if (file != null && mounted) setState(() => selectedMedia = file);
     } catch (e) {
