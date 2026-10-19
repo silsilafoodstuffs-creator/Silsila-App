@@ -148,6 +148,7 @@ class ErpAppAssetRecord {
       'supplier',
       'customer',
       'shipping_company',
+      'banner_ad',
       'other',
     }.contains(assetType)) {
       errors.add('نوع الملف غير مدعوم.');
