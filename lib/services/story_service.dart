@@ -160,6 +160,32 @@ class StoryService {
     );
   }
 
+  /// إرسال رد خاص على قصة إلى صاحبها.
+  Future<void> sendReply({
+    required String storyId,
+    required String recipientId,
+    required String body,
+  }) async {
+    final id = int.tryParse(_requiredText(storyId, 'معرّف القصة مطلوب.'));
+    if (id == null || id <= 0) {
+      throw ArgumentError('معرّف القصة غير صالح.');
+    }
+    final recipient = _requiredText(recipientId, 'صاحب القصة غير معروف.');
+    final message = _requiredText(body, 'اكتب الرسالة أولًا.');
+    if (message.length > 2000) {
+      throw ArgumentError('الرسالة يجب ألا تتجاوز 2000 حرف.');
+    }
+    if (recipient == _userId) {
+      throw ArgumentError('لا يمكنك إرسال رسالة إلى نفسك.');
+    }
+    await _requireClient.from('story_replies').insert({
+      'story_id': id,
+      'sender_id': _userId,
+      'recipient_id': recipient,
+      'body': message,
+    });
+  }
+
   /// حذف قصة يملكها المستخدم الحالي.
   Future<void> deleteStory(String storyId) async {
     final id = _requiredText(
