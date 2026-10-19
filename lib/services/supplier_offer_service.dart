@@ -192,6 +192,81 @@ class SupplierOfferService {
     return Map<String, dynamic>.from(offer);
   }
 
+  /// إنشاء مجلة عرض واحدة تحتوي على عدة أصناف وأسعارها.
+  Future<Map<String, dynamic>> createOfferWithItems({
+    required String title,
+    required List<Map<String, dynamic>> items,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    String? description,
+    String? imageUrl,
+    String? activityType,
+    double? discountPercentage,
+    String magazineColor = '#FFA015',
+    List<String> targetGovernorates = const [],
+    List<String> targetDistricts = const [],
+    List<String> targetAreas = const [],
+    List<String> targetCustomerTypes = const [],
+  }) async {
+    final cleanTitle = _requiredText(title, 'عنوان العرض مطلوب.');
+    if (items.isEmpty) throw ArgumentError('اختر صنفًا واحدًا على الأقل.');
+    _validateDates(startsAt, endsAt);
+    _validateDiscount(discountPercentage);
+    final cleanImageUrl = _clean(imageUrl);
+    if (cleanImageUrl != null) _validateWebUrl(cleanImageUrl, 'رابط صورة العرض غير صحيح.');
+    const allowedColors = {'#FFA015', '#3E007D', '#168A4A', '#E53935', '#1976D2'};
+    if (!allowedColors.contains(magazineColor)) throw ArgumentError('لون المجلة غير صالح.');
+
+    final itemRows = <Map<String, dynamic>>[];
+    for (final item in items) {
+      final name = _requiredText(item['product_name']?.toString() ?? '', 'اسم الصنف مطلوب.');
+      final originalPrice = item['original_price'];
+      final offerPrice = item['offer_price'];
+      if (originalPrice is! num || offerPrice is! num ||
+          !originalPrice.isFinite || !offerPrice.isFinite ||
+          originalPrice < 0 || offerPrice < 0) {
+        throw ArgumentError('تحقق من أسعار جميع الأصناف المحددة.');
+      }
+      itemRows.add({
+        if ((item['product_id'] ?? '').toString().trim().isNotEmpty)
+          'product_id': item['product_id'].toString().trim(),
+        'product_name': name,
+        'original_price': originalPrice,
+        'offer_price': offerPrice,
+        'discount_percentage': discountPercentage,
+      });
+    }
+
+    final client = _requireClient;
+    final offer = await client.from('offers').insert({
+      'supplier_id': _userId,
+      'title': cleanTitle,
+      'description': _clean(description),
+      'image_url': cleanImageUrl,
+      'start_at': startsAt.toUtc().toIso8601String(),
+      'ends_at': endsAt.toUtc().toIso8601String(),
+      'activity_type': _clean(activityType),
+      'discount_percentage': discountPercentage,
+      'magazine_color': magazineColor,
+      'target_governorates': targetGovernorates,
+      'target_districts': targetDistricts,
+      'target_areas': targetAreas,
+      'target_customer_types': targetCustomerTypes,
+      'is_active': true,
+    }).select().single();
+
+    try {
+      await client.from('offer_items').insert(itemRows.map((item) => {
+        ...item,
+        'offer_id': offer['id'],
+      }).toList());
+    } catch (_) {
+      await client.from('offers').delete().eq('id', offer['id']).eq('supplier_id', _userId);
+      rethrow;
+    }
+    return Map<String, dynamic>.from(offer);
+  }
+
   /// تعديل عرض يملكه المورد الحالي.
   Future<void> updateOffer({
     required String offerId,
