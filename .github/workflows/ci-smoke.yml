@@ -32,7 +32,6 @@ jobs:
         run: flutter pub get
       - name: Analyze Dart source
         run: flutter analyze lib
-        continue-on-error: true
       - name: Run automated tests
         run: flutter test
       - name: Build web release
