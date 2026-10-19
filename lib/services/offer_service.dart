@@ -49,7 +49,7 @@ class OfferService {
         .from('offers')
         .select()
         .eq('is_active', true)
-        .or('starts_at.is.null,starts_at.lte.$now')
+        .or('start_at.is.null,start_at.lte.$now')
         .or('ends_at.is.null,ends_at.gte.$now');
 
     final activity = _emptyToNull(activityType);
@@ -87,7 +87,7 @@ class OfferService {
 
       query = query
           .eq('is_active', true)
-          .or('starts_at.is.null,starts_at.lte.$now')
+          .or('start_at.is.null,start_at.lte.$now')
           .or('ends_at.is.null,ends_at.gte.$now');
     }
 
@@ -150,7 +150,7 @@ class OfferService {
       'supplier_id': _userId,
       'title': cleanTitle,
       'description': cleanDescription,
-      'starts_at': startsAt.toUtc().toIso8601String(),
+      'start_at': startsAt.toUtc().toIso8601String(),
       'ends_at': endsAt.toUtc().toIso8601String(),
       'image_url': cleanImageUrl,
       'is_active': true,
