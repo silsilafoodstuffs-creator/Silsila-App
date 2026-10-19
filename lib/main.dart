@@ -557,6 +557,19 @@ class _EntryOptionTile extends StatelessWidget {
   }
 }
 
+class _AdvertisementSlide {
+  const _AdvertisementSlide({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.imageUrl,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String? imageUrl;
+}
+
 class _HomeAdvertisementsCarousel extends StatefulWidget {
   const _HomeAdvertisementsCarousel();
 
@@ -565,21 +578,24 @@ class _HomeAdvertisementsCarousel extends StatefulWidget {
 }
 
 class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel> {
-  static const _ads = <(IconData, String, String)>[
-    (Icons.hub_rounded, 'سلسلة Silsila', 'بنربط السوق ببعضه'),
-    (Icons.local_shipping_rounded, 'توريد أسرع لتجارتك', 'الموردون والتجار في مكان واحد'),
-    (Icons.storefront_rounded, 'اكتشف الموردين', 'وسّع شبكة تعاملاتك التجارية'),
-    (Icons.local_offer_rounded, 'عروض التجار', 'تابع أحدث الفرص والعروض'),
-    (Icons.shopping_basket_rounded, 'كل احتياجات تجارتك', 'ابدأ رحلة الشراء مع سلسلة'),
+  static const _fallbackAds = <_AdvertisementSlide>[
+    _AdvertisementSlide(icon: Icons.hub_rounded, title: 'سلسلة Silsila', subtitle: 'بنربط السوق ببعضه'),
+    _AdvertisementSlide(icon: Icons.local_shipping_rounded, title: 'توريد أسرع لتجارتك', subtitle: 'الموردون والتجار في مكان واحد'),
+    _AdvertisementSlide(icon: Icons.storefront_rounded, title: 'اكتشف الموردين', subtitle: 'وسّع شبكة تعاملاتك التجارية'),
+    _AdvertisementSlide(icon: Icons.local_offer_rounded, title: 'عروض التجار', subtitle: 'تابع أحدث الفرص والعروض'),
+    _AdvertisementSlide(icon: Icons.shopping_basket_rounded, title: 'كل احتياجات تجارتك', subtitle: 'ابدأ رحلة الشراء مع سلسلة'),
   ];
 
   final PageController _controller = PageController();
   Timer? _timer;
   int _index = 0;
+  List<_AdvertisementSlide> _ads = _fallbackAds;
+  bool _loadingAds = false;
 
   @override
   void initState() {
     super.initState();
+    _loadManagedAdvertisements();
     _timer = Timer.periodic(const Duration(seconds: 2), (_) {
       if (!mounted || !_controller.hasClients) return;
       final next = (_index + 1) % _ads.length;
@@ -589,6 +605,71 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
         curve: Curves.easeInOut,
       );
     });
+  }
+
+  Future<void> _loadManagedAdvertisements() async {
+    final client = database;
+    if (client == null || client.auth.currentUser == null || _loadingAds) return;
+    _loadingAds = true;
+    try {
+      final memberships = await client
+          .from('erp_company_members')
+          .select('company_id')
+          .eq('user_id', client.auth.currentUser!.id)
+          .eq('is_active', true)
+          .order('created_at');
+      String? appId;
+      for (final membership in (memberships as List).whereType<Map<String, dynamic>>()) {
+        final companyId = membership['company_id']?.toString();
+        if (companyId == null || companyId.isEmpty) continue;
+        final app = await client
+            .from('erp_managed_apps')
+            .select('id')
+            .eq('company_id', companyId)
+            .eq('app_key', 'silsila')
+            .maybeSingle();
+        if (app != null && (app['id']?.toString() ?? '').isNotEmpty) {
+          appId = app['id'].toString();
+          break;
+        }
+      }
+      if (appId == null) return;
+      final rows = await client
+          .from('erp_app_assets')
+          .select('storage_path, display_name')
+          .eq('app_id', appId)
+          .eq('asset_type', 'banner_ad')
+          .order('created_at', ascending: false)
+          .limit(100);
+      final bySlot = <String, String>{};
+      for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
+        final slot = row['display_name']?.toString() ?? '';
+        final path = row['storage_path']?.toString() ?? '';
+        if (const ['إعلان 1', 'إعلان 2', 'إعلان 3', 'إعلان 4', 'إعلان 5'].contains(slot) &&
+            path.isNotEmpty && !bySlot.containsKey(slot)) {
+          try {
+            bySlot[slot] = await client.storage.from('erp-app-assets').createSignedUrl(path, 900);
+          } catch (_) {
+            // Keep the designed fallback slide if storage access is denied.
+          }
+        }
+      }
+      if (!mounted || bySlot.isEmpty) return;
+      final loaded = List<_AdvertisementSlide>.generate(5, (i) {
+        final fallback = _fallbackAds[i];
+        return _AdvertisementSlide(
+          icon: fallback.icon,
+          title: fallback.title,
+          subtitle: fallback.subtitle,
+          imageUrl: bySlot['إعلان ${i + 1}'],
+        );
+      });
+      setState(() => _ads = loaded);
+    } catch (_) {
+      // The home page remains usable if ad metadata or private Storage is unavailable.
+    } finally {
+      _loadingAds = false;
+    }
   }
 
   @override
@@ -613,38 +694,14 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
               onPageChanged: (value) => setState(() => _index = value),
               itemBuilder: (context, index) {
                 final ad = _ads[index];
-                return Container(
-                  padding: const EdgeInsets.all(17),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [purple, Color(0xFF7026A8), Color(0xFF32105A)],
-                      begin: Alignment.topRight,
-                      end: Alignment.bottomLeft,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(ad.$2, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-                            const SizedBox(height: 7),
-                            Text(ad.$3, style: const TextStyle(color: orange, fontSize: 14, fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        width: 66,
-                        height: 66,
-                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)),
-                        child: Icon(ad.$1, size: 40, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                );
+                if (ad.imageUrl != null) {
+                  return Image.network(
+                    ad.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _fallbackSlide(ad),
+                  );
+                }
+                return _fallbackSlide(ad);
               },
             ),
             Positioned(
@@ -667,6 +724,41 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _fallbackSlide(_AdvertisementSlide ad) {
+    return Container(
+      padding: const EdgeInsets.all(17),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [purple, Color(0xFF7026A8), Color(0xFF32105A)],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(ad.title, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 7),
+                Text(ad.subtitle, style: const TextStyle(color: orange, fontSize: 14, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 66,
+            height: 66,
+            decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)),
+            child: Icon(ad.icon, size: 40, color: Colors.white),
+          ),
+        ],
       ),
     );
   }
