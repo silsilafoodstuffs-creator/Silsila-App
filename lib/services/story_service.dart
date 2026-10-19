@@ -56,7 +56,34 @@ class StoryService {
         .order('created_at', ascending: false)
         .limit(limit);
 
-    return _mapRows(response);
+    final stories = _mapRows(response);
+    final userIds = stories
+        .map((story) => story['user_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    if (userIds.isNotEmpty) {
+      try {
+        final profiles = await _requireClient
+            .from('profiles')
+            .select('id, full_name, avatar_url, role, account_type')
+            .inFilter('id', userIds);
+        final byId = <String, Map<String, dynamic>>{
+          for (final profile in profiles.whereType<Map>())
+            profile['id'].toString(): Map<String, dynamic>.from(profile),
+        };
+        for (final story in stories) {
+          final profile = byId[story['user_id']?.toString()];
+          if (profile == null) continue;
+          story['display_name'] = profile['full_name'];
+          story['avatar_url'] = profile['avatar_url'];
+          story['user_role'] = profile['role'] ?? profile['account_type'];
+        }
+      } catch (_) {
+        // Keep the story feed available even if profile visibility is restricted.
+      }
+    }
+    return stories;
   }
 
   /// جلب قصص المستخدم الحالي.
