@@ -260,7 +260,7 @@ class SupplierOfferService {
     if (startsAt != null || endsAt != null) {
       final current = await _requireClient
           .from('offers')
-          .select('starts_at, ends_at')
+          .select('start_at, ends_at')
           .eq('id', cleanOfferId)
           .eq('supplier_id', userId)
           .maybeSingle();
