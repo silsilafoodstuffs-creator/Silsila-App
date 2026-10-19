@@ -756,6 +756,8 @@ class _MainShellState extends State<MainShell> {
   bool listViewMode = false;
   bool showProductImages = true;
   final Set<String> expandedCatalogCategories = <String>{};
+  final Set<String> expandedCatalogSubcategories = <String>{};
+  final Set<String> expandedCatalogBrands = <String>{};
   String activity = 'مواد غذائية';
   String selectedCategory = 'الكل';
   String search = '';
@@ -1597,9 +1599,7 @@ class _MainShellState extends State<MainShell> {
                               alignment: Alignment.centerRight,
                               child: Text('لا توجد أصناف منشورة تحت هذه الفئة بعد.', style: TextStyle(color: Colors.black54, fontSize: 12)),
                             )
-                          : Column(
-                              children: productsInCategory.map((product) => _catalogListProduct(product)).toList(),
-                            ),
+: _catalogSubcategoryTree(category, productsInCategory),
                     ),
                 ],
               ),
@@ -1834,6 +1834,89 @@ class _MainShellState extends State<MainShell> {
       itemBuilder: (_, i) => showProductImages
           ? productCard(visible[i])
           : _compactProductCard(visible[i]),
+    );
+  }
+
+  Widget _catalogSubcategoryTree(String category, List<Product> items) {
+    final subcategories = <String, List<Product>>{};
+    for (final product in items) {
+      final name = (product.subcategory ?? '').trim().isEmpty
+          ? 'أصناف عامة'
+          : product.subcategory!.trim();
+      subcategories.putIfAbsent(name, () => <Product>[]).add(product);
+    }
+
+    return Column(
+      children: subcategories.entries.map((subcategoryEntry) {
+        final subcategory = subcategoryEntry.key;
+        final subKey = '$category::$subcategory';
+        final subExpanded = expandedCatalogSubcategories.contains(subKey);
+        final brands = <String, List<Product>>{};
+        for (final product in subcategoryEntry.value) {
+          final brand = (product.brand ?? '').trim().isEmpty
+              ? 'بدون ماركة'
+              : product.brand!.trim();
+          brands.putIfAbsent(brand, () => <Product>[]).add(product);
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          decoration: BoxDecoration(
+            color: canvas,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: purple.withValues(alpha: .10)),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                dense: true,
+                leading: const Icon(Icons.account_tree_outlined, color: purple, size: 19),
+                title: Text(subcategory, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                subtitle: Text('فئة فرعية • ${subcategoryEntry.value.length} صنف'),
+                trailing: Icon(subExpanded ? Icons.expand_less : Icons.expand_more, color: purple),
+                onTap: () => setState(() {
+                  if (subExpanded) {
+                    expandedCatalogSubcategories.remove(subKey);
+                  } else {
+                    expandedCatalogSubcategories.add(subKey);
+                  }
+                }),
+              ),
+              if (subExpanded)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 10, end: 10, bottom: 8),
+                  child: Column(
+                    children: brands.entries.map((brandEntry) {
+                      final brandKey = '$subKey::${brandEntry.key}';
+                      final brandExpanded = expandedCatalogBrands.contains(brandKey);
+                      return Column(
+                        children: [
+                          ListTile(
+                            dense: true,
+                            visualDensity: VisualDensity.compact,
+                            leading: const Icon(Icons.sell_outlined, color: orange, size: 18),
+                            title: Text(brandEntry.key, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                            subtitle: Text('${brandEntry.value.length} صنف'),
+                            trailing: Icon(brandExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: orange, size: 19),
+                            onTap: () => setState(() {
+                              if (brandExpanded) {
+                                expandedCatalogBrands.remove(brandKey);
+                              } else {
+                                expandedCatalogBrands.add(brandKey);
+                              }
+                            }),
+                          ),
+                          if (brandExpanded)
+                            ...brandEntry.value.map(_catalogListProduct),
+                        ],
+                      );
+                    }).toList(),
+                  ),
+                ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 
