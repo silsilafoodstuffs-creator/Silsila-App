@@ -1333,6 +1333,8 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
         const SizedBox(height: 8),
+        const _HomeAdvertisementsCarousel(),
+        const SizedBox(height: 12),
         const Text(
           'نوع النشاط',
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
@@ -1429,8 +1431,6 @@ class _MainShellState extends State<MainShell> {
             }).toList(),
           ),
         ),
-        const _HomeAdvertisementsCarousel(),
-        const SizedBox(height: 12),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
