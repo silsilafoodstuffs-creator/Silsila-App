@@ -213,6 +213,19 @@ class StoryService {
     });
   }
 
+  /// جلب الرسائل الواردة والصادرة المرتبطة بالقصص للمستخدم الحالي.
+  Future<List<Map<String, dynamic>>> getMyReplies({int limit = 100}) async {
+    if (limit < 1 || limit > 200) throw ArgumentError('حد الرسائل غير صالح.');
+    final userId = _userId;
+    final rows = await _requireClient
+        .from('story_replies')
+        .select()
+        .or('sender_id.eq.$userId,recipient_id.eq.$userId')
+        .order('created_at', ascending: false)
+        .limit(limit);
+    return _mapRows(rows);
+  }
+
   /// حذف قصة يملكها المستخدم الحالي.
   Future<void> deleteStory(String storyId) async {
     final id = _requiredText(
