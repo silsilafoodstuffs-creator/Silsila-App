@@ -1311,11 +1311,6 @@ class _MainShellState extends State<MainShell> {
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'تصفح حسب',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
         SizedBox(
           height: 43,
           child: ListView(
