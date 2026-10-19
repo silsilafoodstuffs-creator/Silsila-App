@@ -202,6 +202,11 @@ class SupplierOfferService {
     String? imageUrl,
     double? discountPercentage,
     bool? isActive,
+    String? magazineColor,
+    List<String>? targetGovernorates,
+    List<String>? targetDistricts,
+    List<String>? targetAreas,
+    List<String>? targetCustomerTypes,
   }) async {
     final cleanOfferId = _requiredText(
       offerId,
@@ -301,6 +306,15 @@ class SupplierOfferService {
       }
     }
 
+    if (magazineColor != null) {
+      const allowedColors = {'#FFA015', '#3E007D', '#168A4A', '#E53935', '#1976D2'};
+      if (!allowedColors.contains(magazineColor)) throw ArgumentError('لون المجلة غير صالح.');
+      updates['magazine_color'] = magazineColor;
+    }
+    if (targetGovernorates != null) updates['target_governorates'] = targetGovernorates;
+    if (targetDistricts != null) updates['target_districts'] = targetDistricts;
+    if (targetAreas != null) updates['target_areas'] = targetAreas;
+    if (targetCustomerTypes != null) updates['target_customer_types'] = targetCustomerTypes;
     if (isActive != null) {
       updates['is_active'] = isActive;
     }
