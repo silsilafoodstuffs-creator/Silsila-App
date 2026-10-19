@@ -4014,6 +4014,7 @@ class StoriesScreen extends StatefulWidget {
 }
 
 class _StoriesScreenState extends State<StoriesScreen> {
+  Timer? _storyCountdownTimer;
   final mediaUrlController = TextEditingController();
   final captionController = TextEditingController();
   final storyService = StoryService();
@@ -4205,6 +4206,9 @@ class _StoriesScreenState extends State<StoriesScreen> {
   void initState() {
     super.initState();
     loadStories();
+    _storyCountdownTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> loadStories() async {
@@ -4234,6 +4238,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
 
   @override
   void dispose() {
+    _storyCountdownTimer?.cancel();
     mediaUrlController.dispose();
     captionController.dispose();
     super.dispose();
