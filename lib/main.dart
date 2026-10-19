@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'erp/erp_dashboard_screen.dart';
 import 'services/trader_market_service.dart';
@@ -396,7 +397,7 @@ class WelcomeScreen extends StatelessWidget {
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const EntryOptionsScreen(),
+                        builder: (_) => const LoginScreen(),
                       ),
                     ),
                     child: const Text(
@@ -408,19 +409,7 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const LoginScreen(),
-                    ),
-                  ),
-                  child: const Text(
-                    'لديك حساب بالفعل؟ تسجيل الدخول',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
+
               ],
             ),
           ),
