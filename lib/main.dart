@@ -4967,8 +4967,10 @@ class _OffersScreenState extends State<OffersScreen> {
             final description = (offer['description'] ?? '').toString();
             final discount = offer['discount_percentage'];
             final ends = offer['ends_at']?.toString();
+            final magazineHex = (offer['magazine_color'] ?? '#FFA015').toString().replaceFirst('#', '');
+            final magazineValue = int.tryParse(magazineHex, radix: 16) ?? 0xFFFFA015;
             return Card(
-              color: Colors.white,
+              color: Color(magazineValue | 0xFF000000).withValues(alpha: .09),
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
