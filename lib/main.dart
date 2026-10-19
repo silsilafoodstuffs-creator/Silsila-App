@@ -4401,6 +4401,88 @@ class _OffersScreenState extends State<OffersScreen> {
     districts.dispose();
     areas.dispose();
   }
+  Future<void> _deleteOffer(Map<String, dynamic> offer) async {
+    final id = offer['id'];
+    if (id is! num) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('حذف العرض'),
+        content: Text('هل تريد حذف العرض «${offer['title'] ?? ''}»؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await supplierService.deleteOffer(id.toInt());
+      await loadOffers();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حذف العرض.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حذف العرض: $e')));
+    }
+  }
+
+  Future<void> _editOffer(Map<String, dynamic> offer) async {
+    final id = offer['id'];
+    if (id is! num) return;
+    final title = TextEditingController(text: (offer['title'] ?? '').toString());
+    final description = TextEditingController(text: (offer['description'] ?? '').toString());
+    final discount = TextEditingController(text: (offer['discount_percentage'] ?? '').toString());
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تعديل العرض'),
+        content: SizedBox(
+          width: 440,
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض')),
+              TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'التفاصيل')),
+              TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم')),
+            ]),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ التعديلات')),
+        ],
+      ),
+    );
+    if (accepted != true) {
+      title.dispose();
+      description.dispose();
+      discount.dispose();
+      return;
+    }
+    try {
+      final discountValue = discount.text.trim().isEmpty ? null : double.tryParse(discount.text.trim());
+      if (discount.text.trim().isNotEmpty && discountValue == null) {
+        throw ArgumentError('نسبة الخصم غير صحيحة.');
+      }
+      await supplierService.updateOffer(
+        offerId: id.toString(),
+        title: title.text,
+        description: description.text,
+        discountPercentage: discountValue,
+      );
+      await loadOffers();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ تعديلات العرض.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعديل العرض: $e')));
+    } finally {
+      title.dispose();
+      description.dispose();
+      discount.dispose();
+    }
+  }
+
   List<Map<String, dynamic>> offers = [];
   bool loading = true;
   String? error;
@@ -4461,6 +4543,13 @@ class _OffersScreenState extends State<OffersScreen> {
                   ]),
                   if (description.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(description)),
                   if (ends != null && ends.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text('ينتهي: ${ends.split('T').first}', style: const TextStyle(color: Colors.black54, fontSize: 12))),
+                  if (widget.canManage) ...[
+                    const Divider(height: 18),
+                    Wrap(spacing: 7, children: [
+                      OutlinedButton.icon(onPressed: () => _editOffer(offer), icon: const Icon(Icons.edit_outlined, size: 17), label: const Text('تعديل')),
+                      OutlinedButton.icon(onPressed: () => _deleteOffer(offer), style: OutlinedButton.styleFrom(foregroundColor: Colors.red), icon: const Icon(Icons.delete_outline, size: 17), label: const Text('حذف')),
+                    ]),
+                  ],
                 ]),
               ),
             );
