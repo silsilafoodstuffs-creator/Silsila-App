@@ -4157,7 +4157,7 @@ class _OffersScreenState extends State<OffersScreen> {
           for (final p in widget.availableProducts.where((p) => selectedProductIds.contains(p.cartKey))) {
             final price = double.tryParse(offerPrices[p.cartKey]?.text.trim() ?? '');
             if (price == null || !price.isFinite || price < 0) throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
-            await supplierService.createProductOffer(title: title.text.trim().isEmpty ? p.name : title.text.trim(), productId: int.tryParse(p.id ?? ''), originalPrice: p.price, offerPrice: price, description: description.text, startsAt: now, endsAt: now.add(const Duration(days: 7)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue);
+            await supplierService.createProductOffer(title: title.text.trim().isEmpty ? p.name : title.text.trim(), productId: p.id, originalPrice: p.price, offerPrice: price, description: description.text, startsAt: now, endsAt: now.add(const Duration(days: 7)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue);
           }
         }
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم حفظ العرض. عدد الأصناف: ${selectedProductIds.length}')));
