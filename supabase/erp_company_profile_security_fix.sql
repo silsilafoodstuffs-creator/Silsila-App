@@ -1,6 +1,8 @@
--- Company profile save repair: authenticated owner/admin only.
--- Apply this file in Supabase SQL Editor after erp_schema.sql and
--- erp_security_membership.sql. Never expose a service-role key in Flutter.
+-- LEGACY / NARROW REPAIR ONLY.
+-- For a new setup or missing company membership/RPC objects, prefer
+-- supabase/erp_company_profile_membership_repair.sql followed by
+-- supabase/erp_base_master_data_rls_fix.sql after the base ERP schema.
+-- Never expose a service-role key in Flutter.
 
 begin;
 
