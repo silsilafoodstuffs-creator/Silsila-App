@@ -4533,7 +4533,16 @@ class _OffersScreenState extends State<OffersScreen> {
   final Map<String, TextEditingController> offerPrices = <String, TextEditingController>{};
   final Map<int, Future<List<Map<String, dynamic>>>> _offerItemsCache = {};
 
+  @override
+  void dispose() {
+    for (final controller in offerPrices.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
   Future<void> createOffer() async {
+    selectedProductIds.clear();
     final title = TextEditingController();
     final description = TextEditingController();
     final discount = TextEditingController();
