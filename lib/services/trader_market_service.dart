@@ -160,10 +160,20 @@ class TraderMarketService {
     if (!const {'view', 'accept', 'reject'}.contains(interactionType)) {
       throw ArgumentError('نوع التفاعل غير صالح.');
     }
-    await _requireClient.from('trader_market_post_interactions').upsert(
+    final client = _requireClient;
+    final userId = _userId;
+    if (interactionType == 'accept' || interactionType == 'reject') {
+      await client
+          .from('trader_market_post_interactions')
+          .delete()
+          .eq('post_id', id)
+          .eq('user_id', userId)
+          .inFilter('interaction_type', const ['accept', 'reject']);
+    }
+    await client.from('trader_market_post_interactions').upsert(
       {
         'post_id': id,
-        'user_id': _userId,
+        'user_id': userId,
         'interaction_type': interactionType,
       },
       onConflict: 'post_id,user_id,interaction_type',
