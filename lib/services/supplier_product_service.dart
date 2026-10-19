@@ -97,6 +97,11 @@ class SupplierProductService {
     String? imageUrl,
     num stockQuantity = 0,
     bool trackInventory = false,
+    String? subcategory,
+    String? brand,
+    int packageCount = 1,
+    String? smallUnit,
+    num? offerPrice,
   }) async {
     final cleanName = _requiredText(
       name,
@@ -118,6 +123,8 @@ class SupplierProductService {
 
     _validatePrice(price);
     _validateMinimumQuantity(minQuantity);
+    if (packageCount < 1 || packageCount > 100000) throw ArgumentError('عدد العبوات يجب أن يكون بين 1 و100000.');
+    if (offerPrice != null) _validatePrice(offerPrice);
     _validateStock(stockQuantity);
     _validateCategoryId(categoryId);
 
@@ -151,6 +158,11 @@ class SupplierProductService {
           'image_url': cleanImageUrl,
           'stock_quantity': stockQuantity,
           'track_inventory': trackInventory,
+          'subcategory': _clean(subcategory),
+          'brand': _clean(brand),
+          'package_count': packageCount,
+          'small_unit': _clean(smallUnit),
+          'offer_price': offerPrice,
           'is_active': true,
           'is_available': true,
         })
@@ -174,6 +186,11 @@ class SupplierProductService {
     num? stockQuantity,
     bool? trackInventory,
     bool? isActive,
+    String? subcategory,
+    String? brand,
+    int? packageCount,
+    String? smallUnit,
+    num? offerPrice,
   }) async {
     _validateProductId(productId);
 
@@ -250,6 +267,17 @@ class SupplierProductService {
 
     if (trackInventory != null) {
       updates['track_inventory'] = trackInventory;
+    }
+    if (subcategory != null) updates['subcategory'] = _clean(subcategory);
+    if (brand != null) updates['brand'] = _clean(brand);
+    if (packageCount != null) {
+      if (packageCount < 1 || packageCount > 100000) throw ArgumentError('عدد العبوات غير صالح.');
+      updates['package_count'] = packageCount;
+    }
+    if (smallUnit != null) updates['small_unit'] = _clean(smallUnit);
+    if (offerPrice != null) {
+      _validatePrice(offerPrice);
+      updates['offer_price'] = offerPrice;
     }
 
     if (isActive != null) {
