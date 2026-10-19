@@ -41,7 +41,7 @@ create table if not exists public.erp_app_assets (
   app_id uuid not null references public.erp_managed_apps(id) on delete cascade,
   asset_type text not null check (asset_type in (
     'app_logo','splash','app_icon','category','item','supplier',
-    'customer','shipping_company','other'
+    'customer','shipping_company','banner_ad','other'
   )),
   storage_path text not null,
   display_name text not null,
