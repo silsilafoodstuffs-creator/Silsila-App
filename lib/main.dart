@@ -1,6 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -4401,6 +4406,91 @@ class _OffersScreenState extends State<OffersScreen> {
     districts.dispose();
     areas.dispose();
   }
+  String _csvCell(Object? value) =>
+      '"${(value ?? '').toString().replaceAll('"', '""')}"';
+
+  Future<List<Map<String, dynamic>>> _offerItems(Map<String, dynamic> offer) async {
+    final id = offer['id'];
+    if (id is! num || database == null) return <Map<String, dynamic>>[];
+    final rows = await database!.from('offer_items').select().eq('offer_id', id.toInt());
+    return rows.whereType<Map>().map((row) => Map<String, dynamic>.from(row)).toList();
+  }
+
+  Future<void> _exportOfferCsv(Map<String, dynamic> offer) async {
+    try {
+      final items = await _offerItems(offer);
+      final rows = <List<Object?>>[
+        ['عنوان العرض', 'الوصف', 'بداية العرض', 'نهاية العرض', 'الخصم', 'الصنف', 'السعر الأصلي', 'سعر العرض'],
+      ];
+      if (items.isEmpty) {
+        rows.add([offer['title'], offer['description'], offer['start_at'], offer['ends_at'], offer['discount_percentage'], '', '', '']);
+      } else {
+        for (final item in items) {
+          rows.add([offer['title'], offer['description'], offer['start_at'], offer['ends_at'], offer['discount_percentage'], item['product_name'], item['original_price'], item['offer_price']]);
+        }
+      }
+      final csv = rows.map((row) => row.map(_csvCell).join(',')).join('\r\n');
+      final bytes = Uint8List.fromList([0xEF, 0xBB, 0xBF, ...utf8.encode(csv)]);
+      final saved = await FilePicker.platform.saveFile(
+        dialogTitle: 'تصدير بيانات العرض إلى Excel',
+        fileName: 'silsila_offer_${offer['id']}.csv',
+        type: FileType.custom,
+        allowedExtensions: const ['csv'],
+        bytes: bytes,
+      );
+      if (mounted && saved != null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تجهيز ملف CSV المتوافق مع Excel.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تصدير Excel: $e')));
+    }
+  }
+
+  Future<void> _exportOfferPdf(Map<String, dynamic> offer) async {
+    try {
+      final items = await _offerItems(offer);
+      final fontData = await rootBundle.load('assets/fonts/Tajawal.ttf');
+      final font = pw.Font.ttf(fontData);
+      final doc = pw.Document();
+      doc.addPage(pw.MultiPage(
+        theme: pw.ThemeData.withFont(base: font, bold: font),
+        build: (context) => [
+          pw.Directionality(
+            textDirection: pw.TextDirection.rtl,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('سلسلة Silsila - مجلة عروض', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 12),
+                pw.Text('عنوان العرض: ${offer['title'] ?? ''}'),
+                pw.Text('التفاصيل: ${offer['description'] ?? ''}'),
+                pw.Text('بداية العرض: ${offer['start_at'] ?? ''}'),
+                pw.Text('نهاية العرض: ${offer['ends_at'] ?? ''}'),
+                pw.Text('الخصم: ${offer['discount_percentage'] ?? 0}%'),
+                pw.SizedBox(height: 14),
+                if (items.isNotEmpty)
+                  pw.TableHelper.fromTextArray(
+                    headers: ['الصنف', 'السعر الأصلي', 'سعر العرض', 'الخصم %'],
+                    data: items.map((item) => [
+                      item['product_name'] ?? '',
+                      item['original_price'] ?? '',
+                      item['offer_price'] ?? '',
+                      item['discount_percentage'] ?? '',
+                    ]).toList(),
+                    headerStyle: pw.TextStyle(font: font, fontWeight: pw.FontWeight.bold),
+                    cellStyle: pw.TextStyle(font: font),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ));
+      await Printing.layoutPdf(onLayout: (_) async => doc.save());
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إنشاء PDF: $e')));
+    }
+  }
+
   Future<void> _deleteOffer(Map<String, dynamic> offer) async {
     final id = offer['id'];
     if (id is! num) return;
@@ -4548,6 +4638,8 @@ class _OffersScreenState extends State<OffersScreen> {
                     Wrap(spacing: 7, children: [
                       OutlinedButton.icon(onPressed: () => _editOffer(offer), icon: const Icon(Icons.edit_outlined, size: 17), label: const Text('تعديل')),
                       OutlinedButton.icon(onPressed: () => _deleteOffer(offer), style: OutlinedButton.styleFrom(foregroundColor: Colors.red), icon: const Icon(Icons.delete_outline, size: 17), label: const Text('حذف')),
+                      OutlinedButton.icon(onPressed: () => _exportOfferCsv(offer), icon: const Icon(Icons.table_view_outlined, size: 17), label: const Text('Excel')),
+                      OutlinedButton.icon(onPressed: () => _exportOfferPdf(offer), icon: const Icon(Icons.picture_as_pdf_outlined, size: 17), label: const Text('PDF')),
                     ]),
                   ],
                 ]),
