@@ -69,10 +69,22 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
 
   Future<void> _load() async {
     final id = (_activeCompanyId ?? widget.companyId ?? '').trim();
-    if (_db == null || id.isEmpty) {
+    if (_db == null) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = _db == null ? 'سجّل الدخول إلى Supabase أولًا.' : 'لا توجد شركة نشطة مرتبطة بالمستخدم.';
+        _error = 'سجّل الدخول إلى Supabase أولًا.';
+        _message = null;
+      });
+      return;
+    }
+    if (id.isEmpty) {
+      // A first-time user should see the creation form, not a red authorization error.
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = null;
+        _message = null;
       });
       return;
     }
@@ -199,13 +211,22 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   String _companySaveError(Object error) {
     final message = error.toString();
     final lower = message.toLowerCase();
-    if (lower.contains('erp_update_company_profile') && (lower.contains('function') || lower.contains('schema cache') || lower.contains('could not find'))) {
-      return 'إجراء الحفظ الآمن غير موجود في قاعدة البيانات. طبّق الملف supabase/erp_company_profile_security_fix.sql من Supabase SQL Editor ثم أعد المحاولة.';
+    final mentionsCompanyRpc = lower.contains('erp_create_company') ||
+        lower.contains('erp_update_company_profile');
+    final functionMissing = lower.contains('function') ||
+        lower.contains('schema cache') ||
+        lower.contains('could not find') ||
+        lower.contains('pgrst202');
+    if (mentionsCompanyRpc && functionMissing) {
+      return 'إجراء حفظ الشركة غير ظاهر في واجهة قاعدة البيانات. تحقق من تحديث مخطط Supabase ثم أعد المحاولة. التفاصيل: $message';
     }
-    if (lower.contains('مالك') || lower.contains('مدير') || lower.contains('owner') || lower.contains('admin') || lower.contains('42501') || lower.contains('permission denied') || lower.contains('row-level security') || lower.contains('rls')) {
-      return 'حسابك ليس مالكًا أو مديرًا نشطًا لهذه الشركة، أو أن عضوية الشركة وسياسات RLS غير مطبقة. راجع erp_company_members ثم طبّق supabase/erp_company_profile_security_fix.sql. التفاصيل: $message';
+    if (lower.contains('مالك') || lower.contains('مدير') ||
+        lower.contains('owner') || lower.contains('admin') ||
+        lower.contains('42501') || lower.contains('permission denied') ||
+        lower.contains('row-level security') || lower.contains('rls')) {
+      return 'لا توجد عضوية نشطة بصلاحية مالك أو مدير لهذه الشركة، أو أن سياسة الوصول رفضت العملية. تأكد من اختيار الشركة الصحيحة ومن عضوية حسابك. التفاصيل: $message';
     }
-    return '$message. راجع اتصال Supabase ووجود جداول ERP وتطبيق ملف supabase/erp_company_profile_security_fix.sql.';
+    return 'تعذر حفظ بيانات الشركة من قاعدة البيانات. التفاصيل: $message';
   }
 
   @override
@@ -247,7 +268,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                       const SizedBox(width: 8),
                       Expanded(child: Text('حالة الشركة: ${_company!['is_active'] == true ? 'نشطة' : 'موقوفة'}', style: const TextStyle(fontWeight: FontWeight.w700))),
                       const SizedBox(width: 8),
-                      Flexible(child: Text('ID: ${widget.companyId ?? '—'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 11))),
+                      Flexible(child: Text('ID: ${_activeCompanyId ?? widget.companyId ?? '—'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 11))),
                     ]),
                   ),
                 _field(_legalName, 'الاسم القانوني *', Icons.business),
