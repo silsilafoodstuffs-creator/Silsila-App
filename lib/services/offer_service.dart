@@ -173,6 +173,46 @@ class OfferService {
     return _toMap(response);
   }
 
+  /// خريطة أسعار العروض النشطة حسب معرّف المنتج.
+  Future<Map<String, double>> getActiveProductOfferPrices() async {
+    final now = DateTime.now().toUtc().toIso8601String();
+    final activeOffers = await _requireClient
+        .from('offers')
+        .select('id')
+        .eq('is_active', true)
+        .or('start_at.is.null,start_at.lte.$now')
+        .or('ends_at.is.null,ends_at.gte.$now')
+        .limit(100);
+    final prices = <String, double>{};
+    for (final offer in activeOffers.whereType<Map>()) {
+      final rawId = offer['id'];
+      if (rawId is! num) continue;
+      final items = await _requireClient
+          .from('offer_items')
+          .select('product_id, offer_price')
+          .eq('offer_id', rawId.toInt());
+      for (final item in items.whereType<Map>()) {
+        final productId = item['product_id']?.toString();
+        final rawPrice = item['offer_price'];
+        if (productId != null && rawPrice is num) {
+          prices[productId] = rawPrice.toDouble();
+        }
+      }
+    }
+    return prices;
+  }
+
+  /// جلب الأصناف وأسعارها المرتبطة بعرض.
+  Future<List<Map<String, dynamic>>> getOfferItems(int offerId) async {
+    if (offerId <= 0) throw ArgumentError('رقم العرض غير صالح.');
+    final rows = await _requireClient
+        .from('offer_items')
+        .select()
+        .eq('offer_id', offerId)
+        .order('created_at', ascending: true);
+    return _toMapList(rows);
+  }
+
   /// إيقاف عرض يملكه المورد الحالي.
   Future<void> deactivateOffer(String offerId) async {
     final id = offerId.trim();
