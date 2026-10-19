@@ -4315,12 +4315,25 @@ class _OffersScreenState extends State<OffersScreen> {
     final selectedCustomerTypes = <String>{};
     String magazineColor = '#FFA015';
     int durationDays = 7;
+    String selectedMainCategory = 'الكل';
+    String selectedSubcategory = 'الكل';
+    String selectedBrand = 'الكل';
+    List<Product> filterOfferProducts() => widget.availableProducts.where((product) =>
+      (selectedMainCategory == 'الكل' || product.category == selectedMainCategory) &&
+      (selectedSubcategory == 'الكل' || (product.subcategory ?? 'أصناف عامة') == selectedSubcategory) &&
+      (selectedBrand == 'الكل' || (product.brand ?? 'بدون ماركة') == selectedBrand)
+    ).toList();
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('إنشاء عرض جديد'),
         content: StatefulBuilder(
-          builder: (context, setDialogState) => SizedBox(
+          builder: (context, setDialogState) {
+            final visibleOfferProducts = filterOfferProducts();
+            final mainCategories = <String>{'الكل', ...widget.availableProducts.map((p) => p.category)}.toList();
+            final subcategories = <String>{'الكل', ...widget.availableProducts.where((p) => selectedMainCategory == 'الكل' || p.category == selectedMainCategory).map((p) => p.subcategory ?? 'أصناف عامة')}.toList();
+            final brands = <String>{'الكل', ...widget.availableProducts.where((p) => (selectedMainCategory == 'الكل' || p.category == selectedMainCategory) && (selectedSubcategory == 'الكل' || (p.subcategory ?? 'أصناف عامة') == selectedSubcategory)).map((p) => p.brand ?? 'بدون ماركة')}.toList();
+            return SizedBox(
             width: 520,
             child: SingleChildScrollView(
               child: Column(
@@ -4329,6 +4342,31 @@ class _OffersScreenState extends State<OffersScreen> {
                   TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض / المجلة')),
                   TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'تفاصيل العرض')),
                   TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم (اختياري)')),
+                  DropdownButtonFormField<String>(
+                    value: selectedMainCategory,
+                    decoration: const InputDecoration(labelText: 'تصفية الفئة الرئيسية'),
+                    items: mainCategories.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                    onChanged: (v) => setDialogState(() {
+                      selectedMainCategory = v ?? 'الكل';
+                      selectedSubcategory = 'الكل';
+                      selectedBrand = 'الكل';
+                    }),
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: selectedSubcategory,
+                    decoration: const InputDecoration(labelText: 'تصفية الفئة الفرعية'),
+                    items: subcategories.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                    onChanged: (v) => setDialogState(() {
+                      selectedSubcategory = v ?? 'الكل';
+                      selectedBrand = 'الكل';
+                    }),
+                  ),
+                  DropdownButtonFormField<String>(
+                    value: selectedBrand,
+                    decoration: const InputDecoration(labelText: 'تصفية الماركة'),
+                    items: brands.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                    onChanged: (v) => setDialogState(() => selectedBrand = v ?? 'الكل'),
+                  ),
                   TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة العرض (اختياري)')),
                   DropdownButtonFormField<String>(
                     value: magazineColor,
@@ -4394,16 +4432,16 @@ class _OffersScreenState extends State<OffersScreen> {
                     const Expanded(child: Text('الأصناف الداخلة في العرض', style: TextStyle(fontWeight: FontWeight.bold))),
                     TextButton(
                       onPressed: () => setDialogState(() {
-                        if (selectedProductIds.length == widget.availableProducts.length) {
+                        if (selectedProductIds.length == visibleOfferProducts.length) {
                           selectedProductIds.clear();
                         } else {
-                          selectedProductIds.addAll(widget.availableProducts.map((p) => p.cartKey));
+                          selectedProductIds.addAll(visibleOfferProducts.map((p) => p.cartKey));
                         }
                       }),
-                      child: Text(selectedProductIds.length == widget.availableProducts.length ? 'إلغاء الكل' : 'تحديد الكل'),
+                      child: Text(selectedProductIds.length == visibleOfferProducts.length ? 'إلغاء الكل' : 'تحديد الكل'),
                     ),
                   ]),
-                  ...widget.availableProducts.map((p) {
+                  ...visibleOfferProducts.map((p) {
                     offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2)));
                     return CheckboxListTile(
                       dense: true,
@@ -4419,11 +4457,12 @@ class _OffersScreenState extends State<OffersScreen> {
                       }),
                     );
                   }),
-                  if (widget.availableProducts.isEmpty) const Text('لا توجد أصناف محملة لهذا النشاط.'),
+                  if (visibleOfferProducts.isEmpty) const Text('لا توجد أصناف محملة لهذا النشاط.'),
                 ],
               ),
             ),
-          ),
+          );
+          },
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
