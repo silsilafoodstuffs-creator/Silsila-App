@@ -64,8 +64,8 @@ grant execute on function public.erp_user_can_access_company(uuid) to authentica
 grant execute on function public.erp_user_has_company_role(uuid, text[]) to authenticated;
 
 drop policy if exists erp_company_members_select_self_or_admin on public.erp_company_members;
-create policy erp_company_members_select_self_or_admin
-on public.erp_company_members
+drop policy if exists erp_members_select_self_or_admin on public.erp_company_members;
+create policy erp_members_select_self_or_admin on public.erp_company_members
 for select to authenticated
 using (
   user_id = (select auth.uid())
@@ -73,8 +73,8 @@ using (
 );
 
 drop policy if exists erp_company_members_insert_admin on public.erp_company_members;
-create policy erp_company_members_insert_admin
-on public.erp_company_members
+drop policy if exists erp_members_insert_admin on public.erp_company_members;
+create policy erp_members_insert_admin on public.erp_company_members
 for insert to authenticated
 with check (
   public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
@@ -82,8 +82,8 @@ with check (
 );
 
 drop policy if exists erp_company_members_update_admin on public.erp_company_members;
-create policy erp_company_members_update_admin
-on public.erp_company_members
+drop policy if exists erp_members_update_admin on public.erp_company_members;
+create policy erp_members_update_admin on public.erp_company_members
 for update to authenticated
 using (
   public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
@@ -95,8 +95,8 @@ with check (
 );
 
 drop policy if exists erp_company_members_delete_admin on public.erp_company_members;
-create policy erp_company_members_delete_admin
-on public.erp_company_members
+drop policy if exists erp_members_delete_admin on public.erp_company_members;
+create policy erp_members_delete_admin on public.erp_company_members
 for delete to authenticated
 using (
   public.erp_user_has_company_role(company_id, array['owner','admin']::text[])
