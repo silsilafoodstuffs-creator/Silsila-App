@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'erp/erp_dashboard_screen.dart';
 import 'services/trader_market_service.dart';
@@ -3805,45 +3806,118 @@ class StoriesScreen extends StatefulWidget {
 class _StoriesScreenState extends State<StoriesScreen> {
   final mediaUrlController = TextEditingController();
   final captionController = TextEditingController();
+  final storyService = StoryService();
+  final picker = ImagePicker();
   String newStoryMediaType = 'image';
+  String storyFilter = 'الكل';
+  int durationMinutes = 60;
+  XFile? selectedMedia;
+  List<Map<String, dynamic>> stories = [];
+  bool loading = true;
+  String? error;
+
+  Future<void> pickStoryMedia(ImageSource source) async {
+    try {
+      final file = newStoryMediaType == 'video'
+          ? await picker.pickVideo(source: source, maxDuration: const Duration(minutes: 1))
+          : await picker.pickImage(source: source, imageQuality: 88, maxWidth: 1600);
+      if (file != null && mounted) setState(() => selectedMedia = file);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر فتح الكاميرا أو المعرض: $e')),
+      );
+    }
+  }
+
+  Future<String> uploadStoryMedia(XFile file) async {
+    final client = database;
+    final user = client?.auth.currentUser;
+    if (client == null || user == null) throw StateError('سجّل الدخول أولًا لنشر قصة.');
+    final extension = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : (newStoryMediaType == 'video' ? 'mp4' : 'jpg');
+    final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}.$extension';
+    await client.storage.from('stories').uploadBinary(
+      path,
+      await file.readAsBytes(),
+      fileOptions: FileOptions(
+        contentType: newStoryMediaType == 'video' ? 'video/$extension' : 'image/$extension',
+        upsert: false,
+      ),
+    );
+    return client.storage.from('stories').getPublicUrl(path);
+  }
 
   Future<void> createStory() async {
     if (database?.auth.currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('سجّل الدخول أولًا لنشر قصة.')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('سجّل الدخول أولًا لنشر قصة.')));
       return;
     }
     mediaUrlController.clear();
     captionController.clear();
+    selectedMedia = null;
     newStoryMediaType = 'image';
+    durationMinutes = 60;
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('نشر قصة جديدة'),
+          title: const Text('إضافة قصة'),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(
-                controller: mediaUrlController,
-                keyboardType: TextInputType.url,
-                decoration: const InputDecoration(labelText: 'رابط الصورة أو الفيديو'),
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: newStoryMediaType,
-                decoration: const InputDecoration(labelText: 'نوع الوسائط'),
-                items: const [
-                  DropdownMenuItem(value: 'image', child: Text('صورة')),
-                  DropdownMenuItem(value: 'video', child: Text('فيديو')),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'image', label: Text('صورة'), icon: Icon(Icons.image_outlined)),
+                  ButtonSegment(value: 'video', label: Text('فيديو'), icon: Icon(Icons.video_library_outlined)),
+                  ButtonSegment(value: 'text', label: Text('نص'), icon: Icon(Icons.text_fields)),
                 ],
-                onChanged: (value) => setDialogState(() => newStoryMediaType = value ?? 'image'),
+                selected: {newStoryMediaType},
+                onSelectionChanged: (values) => setDialogState(() {
+                  newStoryMediaType = values.first;
+                  selectedMedia = null;
+                }),
               ),
+              if (newStoryMediaType != 'text') ...[
+                const SizedBox(height: 10),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await pickStoryMedia(ImageSource.gallery);
+                      setDialogState(() {});
+                    },
+                    icon: const Icon(Icons.photo_library_outlined),
+                    label: const Text('من المعرض'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await pickStoryMedia(ImageSource.camera);
+                      setDialogState(() {});
+                    },
+                    icon: const Icon(Icons.camera_alt_outlined),
+                    label: const Text('الكاميرا'),
+                  ),
+                ]),
+                if (selectedMedia != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text('تم اختيار: ${selectedMedia!.name}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ),
+                TextField(
+                  controller: mediaUrlController,
+                  keyboardType: TextInputType.url,
+                  decoration: const InputDecoration(labelText: 'أو رابط صورة/فيديو (اختياري)'),
+                ),
+              ],
               const SizedBox(height: 10),
               TextField(
                 controller: captionController,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'وصف مختصر (اختياري)'),
+                decoration: InputDecoration(labelText: newStoryMediaType == 'text' ? 'نص القصة' : 'وصف مختصر (اختياري)'),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<int>(
+                value: durationMinutes,
+                decoration: const InputDecoration(labelText: 'مدة ظهور القصة'),
+                items: [5, 10, 15, 30, 45, 60].map((m) => DropdownMenuItem(value: m, child: Text('$m دقيقة'))).toList(),
+                onChanged: (value) => setDialogState(() => durationMinutes = value ?? 60),
               ),
             ]),
           ),
@@ -3856,25 +3930,30 @@ class _StoriesScreenState extends State<StoriesScreen> {
     );
     if (accepted != true) return;
     try {
-      await service.createStory(
-        mediaUrl: mediaUrlController.text,
+      String? url;
+      if (newStoryMediaType == 'text') {
+        if (captionController.text.trim().isEmpty) throw ArgumentError('اكتب نص القصة أولًا.');
+      } else if (selectedMedia != null) {
+        url = await uploadStoryMedia(selectedMedia!);
+      } else if (mediaUrlController.text.trim().isNotEmpty) {
+        url = mediaUrlController.text.trim();
+      } else {
+        throw ArgumentError('اختر ملفًا من المعرض أو الكاميرا أو أدخل رابطًا.');
+      }
+      await storyService.createStory(
+        mediaUrl: url ?? '',
         mediaType: newStoryMediaType,
         caption: captionController.text,
         activityType: widget.activityType,
+        duration: Duration(minutes: durationMinutes),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نشر القصة.')));
       await loadStories();
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر القصة: $error')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر القصة: $e')));
     }
   }
-
-  final service = StoryService();
-  List<Map<String, dynamic>> stories = [];
-  bool loading = true;
-  String? error;
 
   @override
   void initState() {
@@ -3885,7 +3964,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
   Future<void> loadStories() async {
     setState(() { loading = true; error = null; });
     try {
-      final rows = await service.getActiveStories(activityType: widget.activityType);
+      final rows = await storyService.getActiveStories(activityType: widget.activityType);
       if (!mounted) return;
       setState(() => stories = rows);
     } catch (_) {
@@ -3906,35 +3985,76 @@ class _StoriesScreenState extends State<StoriesScreen> {
   @override
   Widget build(BuildContext context) {
     if (loading) return const Center(child: CircularProgressIndicator(color: purple));
+    final filtered = stories.where((story) {
+      final role = (story['user_role'] ?? story['role'] ?? '').toString().toLowerCase();
+      if (storyFilter == 'الموردين') return role == 'supplier' || role == 'مورد';
+      if (storyFilter == 'العملاء') return role == 'customer' || role == 'client' || role == 'عميل';
+      if (storyFilter == 'شركات الشحن') return role == 'shipping_company' || role == 'شركة شحن';
+      return true;
+    }).toList()
+      ..sort((a, b) {
+        final aSeen = a['is_seen'] == true || a['seen'] == true;
+        final bSeen = b['is_seen'] == true || b['seen'] == true;
+        if (aSeen != bSeen) return aSeen ? 1 : -1;
+        return (b['created_at'] ?? '').toString().compareTo((a['created_at'] ?? '').toString());
+      });
     return RefreshIndicator(
       onRefresh: loadStories,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Align(alignment: Alignment.centerLeft, child: FilledButton.icon(onPressed: createStory, icon: const Icon(Icons.add), label: const Text('إضافة قصة'))),
+          Row(children: [
+            const Expanded(child: Text('القصص', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+            FilledButton.icon(onPressed: createStory, icon: const Icon(Icons.add), label: const Text('إضافة قصة')),
+          ]),
           const SizedBox(height: 10),
-          const Text('قصص الموردين', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: ['الكل', 'الموردين', 'العملاء', 'شركات الشحن'].map((filter) =>
+              Padding(
+                padding: const EdgeInsetsDirectional.only(end: 7),
+                child: ChoiceChip(
+                  label: Text(filter),
+                  selected: storyFilter == filter,
+                  selectedColor: purple,
+                  labelStyle: TextStyle(color: storyFilter == filter ? Colors.white : purple),
+                  onSelected: (_) => setState(() => storyFilter = filter),
+                ),
+              )).toList()),
+          ),
           const SizedBox(height: 8),
-          const Text('تختفي القصة تلقائيًا عند انتهاء مدتها.'),
+          const Text('تختفي القصة تلقائيًا عند انتهاء مدتها، بحد أقصى 60 دقيقة.'),
           if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center)),
-          if (stories.isEmpty && error == null)
+          if (filtered.isEmpty && error == null)
             const Padding(padding: EdgeInsets.all(28), child: Text('لا توجد قصص نشطة حاليًا.', textAlign: TextAlign.center)),
-          ...stories.map((story) {
+          ...filtered.map((story) {
             final url = (story['media_url'] ?? '').toString();
-            final isVideo = (story['media_type'] ?? 'image').toString() == 'video';
+            final type = (story['media_type'] ?? 'image').toString();
             final caption = (story['caption'] ?? '').toString();
+            final created = DateTime.tryParse((story['created_at'] ?? '').toString());
+            final expires = DateTime.tryParse((story['expires_at'] ?? '').toString());
+            final remaining = expires == null ? null : expires.difference(DateTime.now());
+            final remainingText = remaining == null ? '' : remaining.isNegative ? 'انتهت' : 'متبقي ${remaining.inMinutes} دقيقة';
             return Card(
               clipBehavior: Clip.antiAlias,
-              color: Colors.white,
+              margin: const EdgeInsets.only(bottom: 10),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                if (isVideo)
-                  const SizedBox(height: 190, child: Center(child: Icon(Icons.play_circle_outline, size: 70, color: purple)))
+                ListTile(
+                  leading: CircleAvatar(backgroundColor: orange.withValues(alpha: .18), child: const Icon(Icons.person_outline, color: purple)),
+                  title: Text((story['display_name'] ?? story['full_name'] ?? 'مستخدم سلسلة').toString()),
+                  subtitle: Text(remainingText.isEmpty ? 'قصة نشطة' : remainingText),
+                  trailing: const Icon(Icons.circle, color: orange, size: 14),
+                ),
+                if (type == 'text')
+                  Padding(padding: const EdgeInsets.all(18), child: Text(caption, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)))
+                else if (type == 'video')
+                  const SizedBox(height: 170, child: Center(child: Icon(Icons.play_circle_outline, size: 68, color: purple)))
                 else if (url.isNotEmpty)
-                  Image.network(url, height: 190, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const SizedBox(height: 190, child: Center(child: Icon(Icons.broken_image_outlined, size: 48))))
+                  Image.network(url, height: 180, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox(height: 150, child: Center(child: Icon(Icons.broken_image_outlined, size: 44))))
                 else
-                  const SizedBox(height: 190, child: Center(child: Icon(Icons.image_outlined, size: 48))),
-                if (caption.isNotEmpty) Padding(padding: const EdgeInsets.all(12), child: Text(caption)),
+                  const SizedBox(height: 100, child: Center(child: Icon(Icons.image_outlined, size: 42))),
+                if (caption.isNotEmpty && type != 'text') Padding(padding: const EdgeInsets.all(12), child: Text(caption)),
+                if (created != null) Padding(padding: const EdgeInsetsDirectional.only(start: 12, end: 12, bottom: 10), child: Text('نُشرت: ${created.toLocal().toString().substring(0, 16)}', style: const TextStyle(fontSize: 11, color: Colors.black54))),
               ]),
             );
           }),
