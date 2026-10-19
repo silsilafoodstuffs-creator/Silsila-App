@@ -1163,7 +1163,7 @@ class _MainShellState extends State<MainShell> {
           const LinearProgressIndicator(minHeight: 2),
         // Keep search as the first control on the home screen.
         SizedBox(
-          height: 42,
+          height: 36,
           child: TextField(
             controller: searchController,
             onChanged: (value) => setState(() => search = value),
@@ -1174,7 +1174,7 @@ class _MainShellState extends State<MainShell> {
               prefixIcon: const Icon(Icons.search, color: purple, size: 20),
               prefixIconConstraints: const BoxConstraints(
                 minWidth: 42,
-                minHeight: 42,
+                minHeight: 36,
               ),
               suffixIcon: search.isEmpty
                   ? null
@@ -1216,42 +1216,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(17),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [purple, Color(0xFF7026A8)],
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'أهلاً بك في سلسلة',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 5),
-              Text(
-                'سلسلة .. بنربط السوق ببعضه',
-                style: TextStyle(color: orange, fontSize: 15),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'تجارة الجملة والتوريدات في مكان واحد.',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         const Text(
           'نوع النشاط',
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
@@ -1348,6 +1313,41 @@ class _MainShellState extends State<MainShell> {
             }).toList(),
           ),
         ),
+        Container(
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [purple, Color(0xFF7026A8)],
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'أهلاً بك في سلسلة',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 5),
+              Text(
+                'سلسلة .. بنربط السوق ببعضه',
+                style: TextStyle(color: orange, fontSize: 15),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'تجارة الجملة والتوريدات في مكان واحد.',
+                style: TextStyle(color: Colors.white70, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
