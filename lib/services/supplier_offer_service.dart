@@ -61,6 +61,11 @@ class SupplierOfferService {
     String? imageUrl,
     String? activityType,
     double? discountPercentage,
+    String magazineColor = '#FFA015',
+    List<String> targetGovernorates = const [],
+    List<String> targetDistricts = const [],
+    List<String> targetAreas = const [],
+    List<String> targetCustomerTypes = const [],
   }) async {
     final cleanTitle = _requiredText(
       title,
@@ -107,6 +112,11 @@ class SupplierOfferService {
           'image_url': cleanImageUrl,
           'activity_type': cleanActivityType,
           'discount_percentage': discountPercentage,
+          'magazine_color': magazineColor,
+          'target_governorates': targetGovernorates,
+          'target_districts': targetDistricts,
+          'target_areas': targetAreas,
+          'target_customer_types': targetCustomerTypes,
           'is_active': true,
         })
         .select()
@@ -118,6 +128,7 @@ class SupplierOfferService {
   /// إنشاء عرض مرتبط بصنف محدد وحفظ السعرين في offer_items.
   Future<Map<String, dynamic>> createProductOffer({
     required String title,
+    required String productName,
     required String? productId,
     required double originalPrice,
     required double offerPrice,
@@ -127,6 +138,11 @@ class SupplierOfferService {
     String? imageUrl,
     String? activityType,
     double? discountPercentage,
+    String magazineColor = '#FFA015',
+    List<String> targetGovernorates = const [],
+    List<String> targetDistricts = const [],
+    List<String> targetAreas = const [],
+    List<String> targetCustomerTypes = const [],
   }) async {
     if (!originalPrice.isFinite || !offerPrice.isFinite ||
         originalPrice < 0 || offerPrice < 0) {
@@ -150,6 +166,11 @@ class SupplierOfferService {
       'ends_at': endsAt.toUtc().toIso8601String(),
       'activity_type': _clean(activityType),
       'discount_percentage': discountPercentage,
+      'magazine_color': magazineColor,
+      'target_governorates': targetGovernorates,
+      'target_districts': targetDistricts,
+      'target_areas': targetAreas,
+      'target_customer_types': targetCustomerTypes,
       'is_active': true,
     }).select().single();
 
@@ -162,7 +183,7 @@ class SupplierOfferService {
       'offer_id': offerId,
       if (productId != null && productId.trim().isNotEmpty)
         'product_id': productId.trim(),
-      'product_name': cleanTitle,
+      'product_name': _requiredText(productName, 'اسم الصنف مطلوب.'),
       'original_price': originalPrice,
       'offer_price': offerPrice,
       'discount_percentage': discountPercentage,
