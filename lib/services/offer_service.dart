@@ -183,20 +183,24 @@ class OfferService {
         .or('start_at.is.null,start_at.lte.$now')
         .or('ends_at.is.null,ends_at.gte.$now')
         .limit(100);
+    final offerIds = activeOffers
+        .whereType<Map>()
+        .map((offer) => offer['id'])
+        .whereType<num>()
+        .map((id) => id.toInt())
+        .toList();
+    if (offerIds.isEmpty) return <String, double>{};
+
+    final items = await _requireClient
+        .from('offer_items')
+        .select('product_id, offer_price, offer_id')
+        .inFilter('offer_id', offerIds);
     final prices = <String, double>{};
-    for (final offer in activeOffers.whereType<Map>()) {
-      final rawId = offer['id'];
-      if (rawId is! num) continue;
-      final items = await _requireClient
-          .from('offer_items')
-          .select('product_id, offer_price')
-          .eq('offer_id', rawId.toInt());
-      for (final item in items.whereType<Map>()) {
-        final productId = item['product_id']?.toString();
-        final rawPrice = item['offer_price'];
-        if (productId != null && rawPrice is num) {
-          prices[productId] = rawPrice.toDouble();
-        }
+    for (final item in items.whereType<Map>()) {
+      final productId = item['product_id']?.toString();
+      final rawPrice = item['offer_price'];
+      if (productId != null && rawPrice is num) {
+        prices[productId] = rawPrice.toDouble();
       }
     }
     return prices;
