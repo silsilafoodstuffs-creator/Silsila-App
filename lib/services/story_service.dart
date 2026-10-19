@@ -138,6 +138,28 @@ class StoryService {
     return Map<String, dynamic>.from(response);
   }
 
+  /// معرّفات القصص التي شاهدها المستخدم الحالي.
+  Future<Set<String>> getViewedStoryIds() async {
+    final rows = await _requireClient
+        .from('story_views')
+        .select('story_id')
+        .eq('viewer_id', _userId);
+    return rows
+        .whereType<Map>()
+        .map((row) => row['story_id'].toString())
+        .toSet();
+  }
+
+  /// تسجيل مشاهدة واحدة للقصة للمستخدم الحالي.
+  Future<void> markStoryViewed(String storyId) async {
+    final id = _requiredText(storyId, 'معرّف القصة مطلوب.');
+    await _requireClient.from('story_views').upsert(
+      {'story_id': int.tryParse(id) ?? id, 'viewer_id': _userId},
+      onConflict: 'story_id,viewer_id',
+      ignoreDuplicates: true,
+    );
+  }
+
   /// حذف قصة يملكها المستخدم الحالي.
   Future<void> deleteStory(String storyId) async {
     final id = _requiredText(
