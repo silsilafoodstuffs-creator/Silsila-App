@@ -4316,14 +4316,28 @@ class _StoriesScreenState extends State<StoriesScreen> {
                       }
                     }
                   },
-                  leading: CircleAvatar(
-                    backgroundColor: orange.withValues(alpha: .18),
-                    backgroundImage: (story['avatar_url'] ?? '').toString().trim().isNotEmpty
-                        ? NetworkImage((story['avatar_url'] ?? '').toString())
-                        : null,
-                    child: (story['avatar_url'] ?? '').toString().trim().isEmpty
-                        ? const Icon(Icons.person_outline, color: purple)
-                        : null,
+                  leading: Container(
+                    width: 46,
+                    height: 46,
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: viewedStoryIds.contains((story['id'] ?? '').toString())
+                            ? Colors.grey
+                            : orange,
+                        width: 2.5,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      backgroundColor: orange.withValues(alpha: .18),
+                      backgroundImage: (story['avatar_url'] ?? '').toString().trim().isNotEmpty
+                          ? NetworkImage((story['avatar_url'] ?? '').toString())
+                          : null,
+                      child: (story['avatar_url'] ?? '').toString().trim().isEmpty
+                          ? const Icon(Icons.person_outline, color: purple)
+                          : null,
+                    ),
                   ),
                   title: Text((story['display_name'] ?? story['full_name'] ?? 'مستخدم سلسلة').toString()),
                   subtitle: Text(remainingText.isEmpty ? 'قصة نشطة' : remainingText),
