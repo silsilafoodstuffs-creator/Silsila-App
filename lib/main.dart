@@ -846,14 +846,14 @@ class _MainShellState extends State<MainShell> {
         liveProducts = mapped;
         loadingLiveProducts = false;
         productLoadMessage = mapped.isEmpty
-            ? 'لا توجد منتجات منشورة حاليًا؛ تعرض أمثلة توضيحية مؤقتة.'
+            ? 'لا توجد منتجات منشورة من الموردين المعتمدين حتى الآن.'
             : null;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         loadingLiveProducts = false;
-        productLoadMessage = 'تعذر تحميل الكتالوج الآن؛ تُعرض أمثلة توضيحية مؤقتة.';
+        productLoadMessage = 'تعذر تحميل الكتالوج الفعلي الآن؛ حدّث البيانات أو حاول لاحقًا.';
       });
     }
   }
@@ -1414,7 +1414,23 @@ class _MainShellState extends State<MainShell> {
           const SizedBox(height: 10),
           _productResults(visible),
         ] else if (selectedEntity == 'الموردين') ...[
-          _sectionTitle('الموردون', liveSuppliers.length),
+          _sectionTitle(
+            'الموردون',
+            database == null
+                ? suppliers.where((name) => search.isEmpty || name.toLowerCase().contains(search.toLowerCase())).length
+                : liveSuppliers.where((supplier) {
+                    final name = (supplier['full_name'] ?? '').toString().toLowerCase();
+                    return search.isEmpty || name.contains(search.toLowerCase());
+                  }).length,
+          ),
+          if (database == null)
+            const Padding(
+              padding: EdgeInsets.only(top: 4, bottom: 8),
+              child: Text(
+                'وضع عرض تجريبي: الأسماء التالية أمثلة للواجهة وليست حسابات موردين مسجلة.',
+                style: TextStyle(color: Colors.black54, fontSize: 12),
+              ),
+            ),
           if (loadingLiveSuppliers)
             const LinearProgressIndicator(minHeight: 2),
           const SizedBox(height: 6),
