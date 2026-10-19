@@ -609,49 +609,19 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
 
   Future<void> _loadManagedAdvertisements() async {
     final client = database;
-    if (client == null || client.auth.currentUser == null || _loadingAds) return;
+    if (client == null || _loadingAds) return;
     _loadingAds = true;
     try {
-      final memberships = await client
-          .from('erp_company_members')
-          .select('company_id')
-          .eq('user_id', client.auth.currentUser!.id)
-          .eq('is_active', true)
-          .order('created_at');
-      String? appId;
-      for (final membership in (memberships as List).whereType<Map<String, dynamic>>()) {
-        final companyId = membership['company_id']?.toString();
-        if (companyId == null || companyId.isEmpty) continue;
-        final app = await client
-            .from('erp_managed_apps')
-            .select('id')
-            .eq('company_id', companyId)
-            .eq('app_key', 'silsila')
-            .maybeSingle();
-        if (app != null && (app['id']?.toString() ?? '').isNotEmpty) {
-          appId = app['id'].toString();
-          break;
-        }
-      }
-      if (appId == null) return;
-      final rows = await client
-          .from('erp_app_assets')
-          .select('storage_path, display_name')
-          .eq('app_id', appId)
-          .eq('asset_type', 'banner_ad')
-          .order('created_at', ascending: false)
-          .limit(100);
+      // This read-only RPC exposes only the five public Silsila banner slots,
+      // so customers do not need to belong to the ERP-owning company.
+      final rows = await client.rpc('get_silsila_public_ads');
       final bySlot = <String, String>{};
       for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
         final slot = row['display_name']?.toString() ?? '';
         final path = row['storage_path']?.toString() ?? '';
         if (const ['إعلان 1', 'إعلان 2', 'إعلان 3', 'إعلان 4', 'إعلان 5'].contains(slot) &&
             path.isNotEmpty && !bySlot.containsKey(slot)) {
-          try {
-            bySlot[slot] = client.storage.from('silsila-public-ads').getPublicUrl(path);
-          } catch (_) {
-            // Keep the designed fallback slide if storage access is denied.
-          }
+          bySlot[slot] = client.storage.from('silsila-public-ads').getPublicUrl(path);
         }
       }
       if (!mounted || bySlot.isEmpty) return;
@@ -666,7 +636,7 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
       });
       setState(() => _ads = loaded);
     } catch (_) {
-      // The home page remains usable if ad metadata or private Storage is unavailable.
+      // The home page remains usable until the Supabase migration is applied.
     } finally {
       _loadingAds = false;
     }
