@@ -115,6 +115,44 @@ class SupplierOfferService {
     return Map<String, dynamic>.from(response);
   }
 
+  /// إنشاء عرض مرتبط بصنف محدد مع السعر الأصلي وسعر العرض.
+  Future<Map<String, dynamic>> createProductOffer({
+    required String title,
+    required int? productId,
+    required double originalPrice,
+    required double offerPrice,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    String? description,
+    String? imageUrl,
+    String? activityType,
+    double? discountPercentage,
+  }) async {
+    if (originalPrice < 0 || offerPrice < 0) {
+      throw ArgumentError('الأسعار لا يمكن أن تكون سالبة.');
+    }
+    final cleanTitle = _requiredText(title, 'عنوان العرض مطلوب.');
+    _validateDates(startsAt, endsAt);
+    _validateDiscount(discountPercentage);
+    final cleanImageUrl = _clean(imageUrl);
+    if (cleanImageUrl != null) _validateWebUrl(cleanImageUrl, 'رابط صورة العرض غير صحيح.');
+    final response = await _requireClient.from('offers').insert({
+      'supplier_id': _userId,
+      'product_id': productId,
+      'title': cleanTitle,
+      'description': _clean(description),
+      'image_url': cleanImageUrl,
+      'original_price': originalPrice,
+      'offer_price': offerPrice,
+      'starts_at': startsAt.toUtc().toIso8601String(),
+      'ends_at': endsAt.toUtc().toIso8601String(),
+      'activity_type': _clean(activityType),
+      'discount_percentage': discountPercentage,
+      'is_active': true,
+    }).select().single();
+    return Map<String, dynamic>.from(response);
+  }
+
   /// تعديل عرض يملكه المورد الحالي.
   Future<void> updateOffer({
     required String offerId,
