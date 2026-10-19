@@ -4091,16 +4091,53 @@ class _OffersScreenState extends State<OffersScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('إنشاء عرض جديد'),
-        content: StatefulBuilder(builder: (context, setDialogState) => SizedBox(width: 520, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض / المجلة')),
-          TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'تفاصيل العرض')),
-          TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم (اختياري)')),
-          TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة العرض (اختياري)')),
-          const SizedBox(height: 10),
-          Row(children: [const Expanded(child: Text('الأصناف الداخلة في العرض', style: TextStyle(fontWeight: FontWeight.bold))), TextButton(onPressed: () => setDialogState(() { if (selectedProductIds.length == widget.availableProducts.length) { selectedProductIds.clear(); } else { selectedProductIds.addAll(widget.availableProducts.map((p) => p.cartKey)); } }), child: Text(selectedProductIds.length == widget.availableProducts.length ? 'إلغاء الكل' : 'تحديد الكل'))]),
-          ...widget.availableProducts.map((p) { offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2))); return CheckboxListTile(dense: true, value: selectedProductIds.contains(p.cartKey), secondary: Icon(p.icon, color: purple), title: Text(p.name), subtitle: Row(children: [Expanded(child: Text('السعر الحالي: ${p.price.toStringAsFixed(2)} ج.م')), SizedBox(width: 100, child: TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض')))]), onChanged: (v) => setDialogState(() { if (v == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); } })); }),
-          if (widget.availableProducts.isEmpty) const Text('لا توجد أصناف محملة لهذا النشاط.'),
-        ]))),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) => SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض / المجلة')),
+                  TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'تفاصيل العرض')),
+                  TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم (اختياري)')),
+                  TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة العرض (اختياري)')),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    const Expanded(child: Text('الأصناف الداخلة في العرض', style: TextStyle(fontWeight: FontWeight.bold))),
+                    TextButton(
+                      onPressed: () => setDialogState(() {
+                        if (selectedProductIds.length == widget.availableProducts.length) {
+                          selectedProductIds.clear();
+                        } else {
+                          selectedProductIds.addAll(widget.availableProducts.map((p) => p.cartKey));
+                        }
+                      }),
+                      child: Text(selectedProductIds.length == widget.availableProducts.length ? 'إلغاء الكل' : 'تحديد الكل'),
+                    ),
+                  ]),
+                  ...widget.availableProducts.map((p) {
+                    offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2)));
+                    return CheckboxListTile(
+                      dense: true,
+                      value: selectedProductIds.contains(p.cartKey),
+                      secondary: Icon(p.icon, color: purple),
+                      title: Text(p.name),
+                      subtitle: Row(children: [
+                        Expanded(child: Text('السعر الحالي: ${p.price.toStringAsFixed(2)} ج.م')),
+                        SizedBox(width: 100, child: TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض'))),
+                      ]),
+                      onChanged: (v) => setDialogState(() {
+                        if (v == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); }
+                      }),
+                    );
+                  }),
+                  if (widget.availableProducts.isEmpty) const Text('لا توجد أصناف محملة لهذا النشاط.'),
+                ],
+              ),
+            ),
+          ),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
           FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('نشر العرض')),
@@ -5552,13 +5589,28 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
 }
 
 class MarketPostScreen extends StatefulWidget {
-  const MarketPostScreen({super.key});
+  const MarketPostScreen({
+    super.key,
+    this.initialType = 'buy',
+    this.availableProducts = const <Product>[],
+  });
+
+  final String initialType;
+  final List<Product> availableProducts;
 
   @override
   State<MarketPostScreen> createState() => _MarketPostScreenState();
 }
 
 class _MarketPostScreenState extends State<MarketPostScreen> {
+  final Set<String> selectedProducts = <String>{};
+  bool selectAllProducts = false;
+
+  @override
+  void initState() {
+    super.initState();
+    type = widget.initialType;
+  }
   final titleController = TextEditingController();
   final detailsController = TextEditingController();
   final quantityController = TextEditingController();
@@ -5567,7 +5619,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final governorateController = TextEditingController();
   final categoryController = TextEditingController();
   final contactPhoneController = TextEditingController();
-  String type = 'buy';
+  late String type;
   bool busy = false;
 
   @override
@@ -5617,7 +5669,11 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     try {
       await TraderMarketService().createPost(
         title: titleController.text.trim(),
-        description: detailsController.text.trim(),
+        description: [
+          detailsController.text.trim(),
+          if (selectedProducts.isNotEmpty)
+            'الأصناف: ${widget.availableProducts.where((p) => selectedProducts.contains(p.name)).map((p) => p.name).join('، ')}',
+        ].join('\n'),
         postType: type,
         activityType: 'مواد غذائية',
         quantity: quantity,
