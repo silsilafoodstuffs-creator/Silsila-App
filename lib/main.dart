@@ -3843,7 +3843,7 @@ class _AdminApprovalsScreenState extends State<AdminApprovalsScreen> {
   }
 
   Future<void> loadAccounts() async {
-    setState(() { loading = true; error = null; });
+    setState(() { loading = true; error = null; _offerItemsCache.clear(); });
     try {
       final rows = await service.getPendingAccounts();
       if (!mounted) return;
@@ -4302,6 +4302,7 @@ class _OffersScreenState extends State<OffersScreen> {
   final supplierService = SupplierOfferService();
   final Set<String> selectedProductIds = <String>{};
   final Map<String, TextEditingController> offerPrices = <String, TextEditingController>{};
+  final Map<int, Future<List<Map<String, dynamic>>>> _offerItemsCache = {};
 
   Future<void> createOffer() async {
     final title = TextEditingController();
@@ -4685,6 +4686,43 @@ class _OffersScreenState extends State<OffersScreen> {
                       Chip(label: Text('خصم ${discount.toStringAsFixed(0)}%')),
                   ]),
                   if (description.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(description)),
+                  if (offer['id'] is num)
+                    FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _offerItemsCache.putIfAbsent(
+                        (offer['id'] as num).toInt(),
+                        () => service.getOfferItems((offer['id'] as num).toInt()),
+                      ),
+                      builder: (context, snapshot) {
+                        final items = snapshot.data ?? const <Map<String, dynamic>>[];
+                        if (items.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('أصناف العرض', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ...items.map((item) {
+                                final oldPrice = item['original_price'];
+                                final newPrice = item['offer_price'];
+                                return ListTile(
+                                  dense: true,
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.inventory_2_outlined, color: purple),
+                                  title: Text((item['product_name'] ?? '').toString()),
+                                  subtitle: Row(children: [
+                                    if (oldPrice != null)
+                                      Text('${oldPrice} ج.م', style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 11, color: Colors.black54)),
+                                    const SizedBox(width: 8),
+                                    if (newPrice != null)
+                                      Text('${newPrice} ج.م', style: const TextStyle(fontWeight: FontWeight.bold, color: orange)),
+                                  ]),
+                                );
+                              }),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   if (ends != null && ends.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text('ينتهي: ${ends.split('T').first}', style: const TextStyle(color: Colors.black54, fontSize: 12))),
                   if (widget.canManage) ...[
                     const Divider(height: 18),
