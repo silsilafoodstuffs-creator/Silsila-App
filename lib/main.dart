@@ -3874,10 +3874,8 @@ class _AdminTopUpReviewScreenState extends State<AdminTopUpReviewScreen> {
             final method = (request['payment_method'] ?? '').toString();
             final reference = (request['reference'] ?? '').toString();
             final date = request['created_at']?.toString() ?? '';
-            final magazineHex = (offer['magazine_color'] ?? '#FFA015').toString().replaceFirst('#', '');
-            final magazineValue = int.tryParse(magazineHex, radix: 16) ?? 0xFFFFA015;
             return Card(
-              color: Color(magazineValue | 0xFF000000).withValues(alpha: .09),
+              color: Colors.white,
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
