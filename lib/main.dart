@@ -4732,13 +4732,49 @@ class _OffersScreenState extends State<OffersScreen> {
         }
         final now = DateTime.now();
         if (selectedProductIds.isEmpty) {
-          await supplierService.createOffer(title: title.text, description: description.text, startsAt: now, endsAt: now.add(Duration(days: durationDays)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue, magazineColor: magazineColor, targetGovernorates: selectedGovernorates.toList(), targetDistricts: districts.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(), targetAreas: areas.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(), targetCustomerTypes: selectedCustomerTypes.toList());
+          await supplierService.createOffer(
+            title: title.text,
+            description: description.text,
+            startsAt: now,
+            endsAt: now.add(Duration(days: durationDays)),
+            imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
+            activityType: widget.activityType,
+            discountPercentage: discountValue,
+            magazineColor: magazineColor,
+            targetGovernorates: selectedGovernorates.toList(),
+            targetDistricts: districts.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(),
+            targetAreas: areas.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(),
+            targetCustomerTypes: selectedCustomerTypes.toList(),
+          );
         } else {
+          final selectedItems = <Map<String, dynamic>>[];
           for (final p in widget.availableProducts.where((p) => selectedProductIds.contains(p.cartKey))) {
             final price = double.tryParse(offerPrices[p.cartKey]?.text.trim() ?? '');
-            if (price == null || !price.isFinite || price < 0) throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
-            await supplierService.createProductOffer(title: title.text.trim().isEmpty ? p.name : title.text.trim(), productName: p.name, productId: p.id, originalPrice: p.price, offerPrice: price, description: description.text, startsAt: now, endsAt: now.add(Duration(days: durationDays)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue, magazineColor: magazineColor, targetGovernorates: selectedGovernorates.toList(), targetDistricts: districts.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(), targetAreas: areas.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(), targetCustomerTypes: selectedCustomerTypes.toList());
+            if (price == null || !price.isFinite || price < 0) {
+              throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
+            }
+            selectedItems.add({
+              'product_id': p.id,
+              'product_name': p.name,
+              'original_price': p.price,
+              'offer_price': price,
+            });
           }
+          await supplierService.createOfferWithItems(
+            title: title.text.trim().isEmpty ? 'مجلة عروض سلسلة' : title.text.trim(),
+            items: selectedItems,
+            description: description.text,
+            startsAt: now,
+            endsAt: now.add(Duration(days: durationDays)),
+            imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
+            activityType: widget.activityType,
+            discountPercentage: discountValue,
+            magazineColor: magazineColor,
+            targetGovernorates: selectedGovernorates.toList(),
+            targetDistricts: districts.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(),
+            targetAreas: areas.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(),
+            targetCustomerTypes: selectedCustomerTypes.toList(),
+          );
         }
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم حفظ العرض. عدد الأصناف: ${selectedProductIds.length}')));
         await loadOffers();
