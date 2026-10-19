@@ -162,6 +162,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       return;
     }
     setState(() { _saving = true; _error = null; _message = null; });
+    String? dashboardRefreshError;
     try {
       // Resolve the company from this signed-in user's own active memberships.
       // A stale company ID must never make first-time creation call the update RPC.
@@ -240,13 +241,9 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         try {
           await widget.onCompanyCreated?.call(id);
         } catch (refreshError) {
-          // The company creation transaction succeeded; do not report it as a
-          // failed save merely because a dashboard refresh encountered an error.
-          if (mounted) {
-            setState(() {
-              _message = 'تم إنشاء الشركة وحفظها. تعذر تحديث بعض مؤشرات اللوحة: $refreshError';
-            });
-          }
+          // The company creation transaction succeeded; preserve that success
+          // while still reporting a separate dashboard refresh issue.
+          dashboardRefreshError = refreshError.toString();
         }
       } else {
         final updatedId = await db.rpc('erp_update_company_profile', params: {
@@ -267,9 +264,12 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       if (!mounted) return;
       setState(() {
         _saving = false;
-        _message = widget.companyId == null && _company == null
+        final savedMessage = widget.companyId == null && _company == null
             ? 'تم إنشاء الشركة وحفظ بياناتها وربط حسابك بها كمالك.'
             : 'تم حفظ بيانات الشركة في قاعدة البيانات.';
+        _message = dashboardRefreshError == null
+            ? savedMessage
+            : '$savedMessage تعذر تحديث بعض مؤشرات اللوحة: $dashboardRefreshError';
       });
       await _load();
     } catch (error) {
