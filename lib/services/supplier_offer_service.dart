@@ -102,7 +102,7 @@ class SupplierOfferService {
           'supplier_id': _userId,
           'title': cleanTitle,
           'description': cleanDescription,
-          'starts_at': startsAt.toUtc().toIso8601String(),
+          'start_at': startsAt.toUtc().toIso8601String(),
           'ends_at': endsAt.toUtc().toIso8601String(),
           'image_url': cleanImageUrl,
           'activity_type': cleanActivityType,
@@ -138,13 +138,15 @@ class SupplierOfferService {
     if (cleanImageUrl != null) _validateWebUrl(cleanImageUrl, 'رابط صورة العرض غير صحيح.');
     final response = await _requireClient.from('offers').insert({
       'supplier_id': _userId,
-      'product_id': productId,
-      'title': cleanTitle,
-      'description': _clean(description),
+            'title': cleanTitle,
+      'description': [
+        _clean(description),
+        'بيانات الصنف: ${productId == null ? cleanTitle : 'معرّف الصنف $productId'}',
+        'السعر الأصلي: ${originalPrice.toStringAsFixed(2)}',
+        'سعر العرض: ${offerPrice.toStringAsFixed(2)}',
+      ].whereType<String>().join('\n'),
       'image_url': cleanImageUrl,
-      'original_price': originalPrice,
-      'offer_price': offerPrice,
-      'starts_at': startsAt.toUtc().toIso8601String(),
+            'start_at': startsAt.toUtc().toIso8601String(),
       'ends_at': endsAt.toUtc().toIso8601String(),
       'activity_type': _clean(activityType),
       'discount_percentage': discountPercentage,
@@ -233,7 +235,7 @@ class SupplierOfferService {
       }
 
       final currentStart = DateTime.tryParse(
-        current['starts_at']?.toString() ?? '',
+        current['start_at']?.toString() ?? '',
       );
 
       final currentEnd = DateTime.tryParse(
@@ -252,7 +254,7 @@ class SupplierOfferService {
       _validateDates(effectiveStart, effectiveEnd);
 
       if (startsAt != null) {
-        updates['starts_at'] =
+        updates['start_at'] =
             startsAt.toUtc().toIso8601String();
       }
 
