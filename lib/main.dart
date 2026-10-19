@@ -4867,56 +4867,109 @@ class _OffersScreenState extends State<OffersScreen> {
   }
 
   Future<void> _editOffer(Map<String, dynamic> offer) async {
-    final id = offer['id'];
-    if (id is! num) return;
+    final rawId = offer['id'];
+    if (rawId is! num) return;
     final title = TextEditingController(text: (offer['title'] ?? '').toString());
     final description = TextEditingController(text: (offer['description'] ?? '').toString());
-    final discount = TextEditingController(text: (offer['discount_percentage'] ?? '').toString());
+    final discount = TextEditingController(text: (offer['discount_percentage'] ?? offer['discount_percent'] ?? '').toString());
+    final imageUrl = TextEditingController(text: (offer['image_url'] ?? '').toString());
+    String listText(Object? value) => value is List ? value.map((e) => e.toString()).join(', ') : (value ?? '').toString();
+    final governorates = TextEditingController(text: listText(offer['target_governorates']));
+    final districts = TextEditingController(text: listText(offer['target_districts']));
+    final areas = TextEditingController(text: listText(offer['target_areas']));
+    final customerTypesController = TextEditingController(text: listText(offer['target_customer_types']));
+    DateTime startsAt = DateTime.tryParse((offer['start_at'] ?? '').toString())?.toLocal() ?? DateTime.now();
+    DateTime endsAt = DateTime.tryParse((offer['ends_at'] ?? offer['end_at'] ?? '').toString())?.toLocal() ?? DateTime.now().add(const Duration(days: 7));
+    String magazineColor = (offer['magazine_color'] ?? '#FFA015').toString();
     final accepted = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تعديل العرض'),
-        content: SizedBox(
-          width: 440,
-          child: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض')),
-              TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'التفاصيل')),
-              TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم')),
-            ]),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('تعديل العرض'),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض')),
+                TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'التفاصيل')),
+                TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم')),
+                TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة العرض')),
+                DropdownButtonFormField<String>(
+                  value: magazineColor,
+                  decoration: const InputDecoration(labelText: 'لون مجلة العرض'),
+                  items: const [
+                    DropdownMenuItem(value: '#FFA015', child: Text('برتقالي')),
+                    DropdownMenuItem(value: '#3E007D', child: Text('بنفسجي')),
+                    DropdownMenuItem(value: '#168A4A', child: Text('أخضر')),
+                    DropdownMenuItem(value: '#E53935', child: Text('أحمر')),
+                    DropdownMenuItem(value: '#1976D2', child: Text('أزرق')),
+                  ],
+                  onChanged: (value) => setDialogState(() => magazineColor = value ?? '#FFA015'),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('بداية العرض'),
+                  subtitle: Text('${startsAt.year}/${startsAt.month.toString().padLeft(2, '0')}/${startsAt.day.toString().padLeft(2, '0')}'),
+                  trailing: const Icon(Icons.calendar_month, color: purple),
+                  onTap: () async {
+                    final value = await showDatePicker(context: context, initialDate: startsAt, firstDate: DateTime(2020), lastDate: DateTime(2100));
+                    if (value != null) setDialogState(() => startsAt = DateTime(value.year, value.month, value.day, startsAt.hour, startsAt.minute));
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('نهاية العرض'),
+                  subtitle: Text('${endsAt.year}/${endsAt.month.toString().padLeft(2, '0')}/${endsAt.day.toString().padLeft(2, '0')}'),
+                  trailing: const Icon(Icons.event_available, color: orange),
+                  onTap: () async {
+                    final value = await showDatePicker(context: context, initialDate: endsAt, firstDate: DateTime(2020), lastDate: DateTime(2100));
+                    if (value != null) setDialogState(() => endsAt = DateTime(value.year, value.month, value.day, 23, 59));
+                  },
+                ),
+                TextField(controller: governorates, decoration: const InputDecoration(labelText: 'المحافظات المستهدفة (افصل بينها بفاصلة)')),
+                TextField(controller: districts, decoration: const InputDecoration(labelText: 'المراكز / الأحياء المستهدفة')),
+                TextField(controller: areas, decoration: const InputDecoration(labelText: 'المناطق المستهدفة')),
+                TextField(controller: customerTypesController, decoration: const InputDecoration(labelText: 'أنواع العملاء المستهدفة')),
+              ]),
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ التعديلات')),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ التعديلات')),
-        ],
       ),
     );
     if (accepted != true) {
-      title.dispose();
-      description.dispose();
-      discount.dispose();
+      title.dispose(); description.dispose(); discount.dispose(); imageUrl.dispose();
+      governorates.dispose(); districts.dispose(); areas.dispose(); customerTypesController.dispose();
       return;
     }
     try {
       final discountValue = discount.text.trim().isEmpty ? null : double.tryParse(discount.text.trim());
-      if (discount.text.trim().isNotEmpty && discountValue == null) {
-        throw ArgumentError('نسبة الخصم غير صحيحة.');
-      }
+      if (discount.text.trim().isNotEmpty && discountValue == null) throw ArgumentError('نسبة الخصم غير صحيحة.');
+      List<String> parseList(String value) => value.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toSet().toList();
       await supplierService.updateOffer(
-        offerId: id.toString(),
+        offerId: rawId.toInt().toString(),
         title: title.text,
         description: description.text,
+        imageUrl: imageUrl.text.trim(),
+        startsAt: startsAt,
+        endsAt: endsAt,
         discountPercentage: discountValue,
+        magazineColor: magazineColor,
+        targetGovernorates: parseList(governorates.text),
+        targetDistricts: parseList(districts.text),
+        targetAreas: parseList(areas.text),
+        targetCustomerTypes: parseList(customerTypesController.text),
       );
       await loadOffers();
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ تعديلات العرض.')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعديل العرض: $e')));
     } finally {
-      title.dispose();
-      description.dispose();
-      discount.dispose();
+      title.dispose(); description.dispose(); discount.dispose(); imageUrl.dispose();
+      governorates.dispose(); districts.dispose(); areas.dispose(); customerTypesController.dispose();
     }
   }
 
