@@ -92,7 +92,7 @@ class StoryService {
 
     if (cleanType != 'image' && cleanType != 'video' && cleanType != 'text') {
       throw ArgumentError(
-        'نوع القصة يجب أن يكون image أو video.',
+        'نوع القصة يجب أن يكون image أو video أو text.',
       );
     }
 
