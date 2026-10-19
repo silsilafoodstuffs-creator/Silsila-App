@@ -4239,7 +4239,12 @@ class _StoriesScreenState extends State<StoriesScreen> {
                   },
                   leading: CircleAvatar(
                     backgroundColor: orange.withValues(alpha: .18),
-                    child: const Icon(Icons.person_outline, color: purple),
+                    backgroundImage: (story['avatar_url'] ?? '').toString().trim().isNotEmpty
+                        ? NetworkImage((story['avatar_url'] ?? '').toString())
+                        : null,
+                    child: (story['avatar_url'] ?? '').toString().trim().isEmpty
+                        ? const Icon(Icons.person_outline, color: purple)
+                        : null,
                   ),
                   title: Text((story['display_name'] ?? story['full_name'] ?? 'مستخدم سلسلة').toString()),
                   subtitle: Text(remainingText.isEmpty ? 'قصة نشطة' : remainingText),
