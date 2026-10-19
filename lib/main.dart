@@ -2834,6 +2834,12 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     final unit = TextEditingController(text: 'كرتونة');
     final minimum = TextEditingController(text: '1');
     final stock = TextEditingController(text: '0');
+    final subcategory = TextEditingController();
+    final brand = TextEditingController();
+    final packageCount = TextEditingController(text: '1');
+    final smallUnit = TextEditingController(text: 'علبة');
+    final imageUrl = TextEditingController();
+    final offerPrice = TextEditingController();
     bool trackStock = false;
     final accepted = await showDialog<bool>(
       context: context,
@@ -2843,9 +2849,15 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم المنتج')),
-              TextField(controller: category, decoration: const InputDecoration(labelText: 'القسم')),
+              TextField(controller: category, decoration: const InputDecoration(labelText: 'الفئة الرئيسية')),
+              TextField(controller: subcategory, decoration: const InputDecoration(labelText: 'الفئة الفرعية')),
+              TextField(controller: brand, decoration: const InputDecoration(labelText: 'الماركة / البراند')),
               TextField(controller: price, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'سعر الجملة')),
-              TextField(controller: unit, decoration: const InputDecoration(labelText: 'وحدة البيع')),
+              TextField(controller: unit, decoration: const InputDecoration(labelText: 'وحدة البيع الكبرى (مثال: كرتونة)')),
+              TextField(controller: packageCount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'عدد العبوات داخل الوحدة الكبرى')),
+              TextField(controller: smallUnit, decoration: const InputDecoration(labelText: 'وحدة البيع الصغرى (مثال: علبة)')),
+              TextField(controller: offerPrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'سعر العرض (اختياري)')),
+              TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة المنتج (اختياري)')),
               TextField(controller: minimum, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الحد الأدنى للكمية')),
               TextField(controller: stock, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الكمية المتاحة')),
               CheckboxListTile(
@@ -2868,7 +2880,10 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
         final parsedPrice = num.tryParse(price.text.trim());
         final parsedMinimum = num.tryParse(minimum.text.trim());
         final parsedStock = num.tryParse(stock.text.trim()) ?? 0;
-        if (parsedPrice == null || parsedMinimum == null) {
+        final parsedPackageCount = int.tryParse(packageCount.text.trim()) ?? 1;
+        final parsedOfferPrice = offerPrice.text.trim().isEmpty ? null : num.tryParse(offerPrice.text.trim());
+        if (parsedPrice == null || parsedMinimum == null ||
+            (offerPrice.text.trim().isNotEmpty && parsedOfferPrice == null)) {
           throw ArgumentError('أدخل سعرًا وحدًا أدنى صحيحين.');
         }
         await service.createProduct(
@@ -2879,6 +2894,12 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
           minQuantity: parsedMinimum,
           stockQuantity: parsedStock,
           trackInventory: trackStock,
+          subcategory: subcategory.text,
+          brand: brand.text,
+          packageCount: parsedPackageCount,
+          smallUnit: smallUnit.text,
+          imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
+          offerPrice: parsedOfferPrice,
         );
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نشر المنتج.')));
         await loadProducts();
@@ -2892,6 +2913,12 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     unit.dispose();
     minimum.dispose();
     stock.dispose();
+    subcategory.dispose();
+    brand.dispose();
+    packageCount.dispose();
+    smallUnit.dispose();
+    imageUrl.dispose();
+    offerPrice.dispose();
   }
 
   Future<void> deactivateProduct(Map<String, dynamic> product) async {
