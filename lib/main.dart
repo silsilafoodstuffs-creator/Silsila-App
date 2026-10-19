@@ -3780,8 +3780,10 @@ class _AdminTopUpReviewScreenState extends State<AdminTopUpReviewScreen> {
             final method = (request['payment_method'] ?? '').toString();
             final reference = (request['reference'] ?? '').toString();
             final date = request['created_at']?.toString() ?? '';
+            final magazineHex = (offer['magazine_color'] ?? '#FFA015').toString().replaceFirst('#', '');
+            final magazineValue = int.tryParse(magazineHex, radix: 16) ?? 0xFFFFA015;
             return Card(
-              color: Colors.white,
+              color: Color(magazineValue | 0xFF000000).withValues(alpha: .09),
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -4248,6 +4250,12 @@ class _OffersScreenState extends State<OffersScreen> {
     final description = TextEditingController();
     final discount = TextEditingController();
     final imageUrl = TextEditingController();
+    final districts = TextEditingController();
+    final areas = TextEditingController();
+    final selectedGovernorates = <String>{};
+    final selectedCustomerTypes = <String>{};
+    String magazineColor = '#FFA015';
+    int durationDays = 7;
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -4263,6 +4271,65 @@ class _OffersScreenState extends State<OffersScreen> {
                   TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'تفاصيل العرض')),
                   TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم (اختياري)')),
                   TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة العرض (اختياري)')),
+                  DropdownButtonFormField<String>(
+                    value: magazineColor,
+                    decoration: const InputDecoration(labelText: 'لون مجلة العرض'),
+                    items: const [
+                      DropdownMenuItem(value: '#FFA015', child: Text('برتقالي')),
+                      DropdownMenuItem(value: '#3E007D', child: Text('بنفسجي')),
+                      DropdownMenuItem(value: '#168A4A', child: Text('أخضر')),
+                      DropdownMenuItem(value: '#E53935', child: Text('أحمر')),
+                      DropdownMenuItem(value: '#1976D2', child: Text('أزرق')),
+                    ],
+                    onChanged: (value) => setDialogState(() => magazineColor = value ?? '#FFA015'),
+                  ),
+                  DropdownButtonFormField<int>(
+                    value: durationDays,
+                    decoration: const InputDecoration(labelText: 'مدة العرض'),
+                    items: const [
+                      DropdownMenuItem(value: 1, child: Text('يوم واحد')),
+                      DropdownMenuItem(value: 7, child: Text('أسبوع')),
+                      DropdownMenuItem(value: 14, child: Text('أسبوعان')),
+                      DropdownMenuItem(value: 30, child: Text('شهر')),
+                    ],
+                    onChanged: (value) => setDialogState(() => durationDays = value ?? 7),
+                  ),
+                  TextField(controller: districts, decoration: const InputDecoration(labelText: 'المراكز / الأحياء (افصل بينها بفاصلة)')),
+                  TextField(controller: areas, decoration: const InputDecoration(labelText: 'المناطق (افصل بينها بفاصلة)')),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: Text('استهداف المحافظات (${selectedGovernorates.length})'),
+                    children: [
+                      Wrap(
+                        spacing: 5,
+                        runSpacing: 4,
+                        children: egyptGovernorates.map((name) => FilterChip(
+                          label: Text(name, style: const TextStyle(fontSize: 11)),
+                          selected: selectedGovernorates.contains(name),
+                          onSelected: (selected) => setDialogState(() {
+                            if (selected) { selectedGovernorates.add(name); } else { selectedGovernorates.remove(name); }
+                          }),
+                        )).toList(),
+                      ),
+                    ],
+                  ),
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: Text('أنواع العملاء المستهدفة (${selectedCustomerTypes.length})'),
+                    children: [
+                      Wrap(
+                        spacing: 5,
+                        runSpacing: 4,
+                        children: customerTypes.map((name) => FilterChip(
+                          label: Text(name, style: const TextStyle(fontSize: 11)),
+                          selected: selectedCustomerTypes.contains(name),
+                          onSelected: (selected) => setDialogState(() {
+                            if (selected) { selectedCustomerTypes.add(name); } else { selectedCustomerTypes.remove(name); }
+                          }),
+                        )).toList(),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 10),
                   Row(children: [
                     const Expanded(child: Text('الأصناف الداخلة في العرض', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -4313,12 +4380,12 @@ class _OffersScreenState extends State<OffersScreen> {
         }
         final now = DateTime.now();
         if (selectedProductIds.isEmpty) {
-          await supplierService.createOffer(title: title.text, description: description.text, startsAt: now, endsAt: now.add(const Duration(days: 7)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue);
+          await supplierService.createOffer(title: title.text, description: description.text, startsAt: now, endsAt: now.add(Duration(days: durationDays)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue, magazineColor: magazineColor, targetGovernorates: selectedGovernorates.toList(), targetDistricts: districts.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(), targetAreas: areas.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(), targetCustomerTypes: selectedCustomerTypes.toList());
         } else {
           for (final p in widget.availableProducts.where((p) => selectedProductIds.contains(p.cartKey))) {
             final price = double.tryParse(offerPrices[p.cartKey]?.text.trim() ?? '');
             if (price == null || !price.isFinite || price < 0) throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
-            await supplierService.createProductOffer(title: title.text.trim().isEmpty ? p.name : title.text.trim(), productId: p.id, originalPrice: p.price, offerPrice: price, description: description.text, startsAt: now, endsAt: now.add(const Duration(days: 7)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue);
+            await supplierService.createProductOffer(title: title.text.trim().isEmpty ? p.name : title.text.trim(), productName: p.name, productId: p.id, originalPrice: p.price, offerPrice: price, description: description.text, startsAt: now, endsAt: now.add(Duration(days: durationDays)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue, magazineColor: magazineColor, targetGovernorates: selectedGovernorates.toList(), targetDistricts: districts.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(), targetAreas: areas.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList(), targetCustomerTypes: selectedCustomerTypes.toList());
           }
         }
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم حفظ العرض. عدد الأصناف: ${selectedProductIds.length}')));
@@ -4331,6 +4398,8 @@ class _OffersScreenState extends State<OffersScreen> {
     description.dispose();
     discount.dispose();
     imageUrl.dispose();
+    districts.dispose();
+    areas.dispose();
   }
   List<Map<String, dynamic>> offers = [];
   bool loading = true;
