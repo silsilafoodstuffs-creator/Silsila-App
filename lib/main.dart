@@ -1105,7 +1105,7 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      OffersScreen(activityType: activity, canManage: isApprovedSupplier),
+      OffersScreen(activityType: activity, canManage: isApprovedSupplier, availableProducts: allProducts),
       marketPage(),
       StoriesScreen(activityType: activity),
       homePage(),
@@ -4067,9 +4067,10 @@ class _StoriesScreenState extends State<StoriesScreen> {
 }
 
 class OffersScreen extends StatefulWidget {
-  const OffersScreen({super.key, required this.activityType, required this.canManage});
+  const OffersScreen({super.key, required this.activityType, required this.canManage, this.availableProducts = const <Product>[]});
   final String activityType;
   final bool canManage;
+  final List<Product> availableProducts;
 
   @override
   State<OffersScreen> createState() => _OffersScreenState();
@@ -4078,6 +4079,8 @@ class OffersScreen extends StatefulWidget {
 class _OffersScreenState extends State<OffersScreen> {
   final service = OfferService();
   final supplierService = SupplierOfferService();
+  final Set<String> selectedProductIds = <String>{};
+  final Map<String, TextEditingController> offerPrices = <String, TextEditingController>{};
 
   Future<void> createOffer() async {
     final title = TextEditingController();
@@ -4088,12 +4091,16 @@ class _OffersScreenState extends State<OffersScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('إنشاء عرض جديد'),
-        content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض')),
+        content: StatefulBuilder(builder: (context, setDialogState) => SizedBox(width: 520, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: title, decoration: const InputDecoration(labelText: 'عنوان العرض / المجلة')),
           TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'تفاصيل العرض')),
           TextField(controller: discount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'نسبة الخصم (اختياري)')),
           TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'رابط صورة العرض (اختياري)')),
-        ])),
+          const SizedBox(height: 10),
+          Row(children: [const Expanded(child: Text('الأصناف الداخلة في العرض', style: TextStyle(fontWeight: FontWeight.bold))), TextButton(onPressed: () => setDialogState(() { if (selectedProductIds.length == widget.availableProducts.length) { selectedProductIds.clear(); } else { selectedProductIds.addAll(widget.availableProducts.map((p) => p.cartKey)); } }), child: Text(selectedProductIds.length == widget.availableProducts.length ? 'إلغاء الكل' : 'تحديد الكل'))]),
+          ...widget.availableProducts.map((p) { offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2))); return CheckboxListTile(dense: true, value: selectedProductIds.contains(p.cartKey), secondary: Icon(p.icon, color: purple), title: Text(p.name), subtitle: Row(children: [Expanded(child: Text('السعر الحالي: ${p.price.toStringAsFixed(2)} ج.م')), SizedBox(width: 100, child: TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض')))]), onChanged: (v) => setDialogState(() { if (v == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); } })); }),
+          if (widget.availableProducts.isEmpty) const Text('لا توجد أصناف محملة لهذا النشاط.'),
+        ]))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
           FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('نشر العرض')),
@@ -4107,16 +4114,16 @@ class _OffersScreenState extends State<OffersScreen> {
           throw ArgumentError('أدخل نسبة خصم صحيحة.');
         }
         final now = DateTime.now();
-        await supplierService.createOffer(
-          title: title.text,
-          description: description.text,
-          startsAt: now,
-          endsAt: now.add(const Duration(days: 7)),
-          imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
-          activityType: widget.activityType,
-          discountPercentage: discountValue,
-        );
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نشر العرض لمدة 7 أيام.')));
+        if (selectedProductIds.isEmpty) {
+          await supplierService.createOffer(title: title.text, description: description.text, startsAt: now, endsAt: now.add(const Duration(days: 7)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue);
+        } else {
+          for (final p in widget.availableProducts.where((p) => selectedProductIds.contains(p.cartKey))) {
+            final price = double.tryParse(offerPrices[p.cartKey]?.text.trim() ?? '');
+            if (price == null || !price.isFinite || price < 0) throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
+            await supplierService.createProductOffer(title: title.text.trim().isEmpty ? p.name : title.text.trim(), productId: int.tryParse(p.id ?? ''), originalPrice: p.price, offerPrice: price, description: description.text, startsAt: now, endsAt: now.add(const Duration(days: 7)), imageUrl: imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(), activityType: widget.activityType, discountPercentage: discountValue);
+          }
+        }
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تم حفظ العرض. عدد الأصناف: ${selectedProductIds.length}')));
         await loadOffers();
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر العرض: $e')));
