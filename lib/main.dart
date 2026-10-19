@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -551,6 +552,121 @@ class _EntryOptionTile extends StatelessWidget {
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_left),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _HomeAdvertisementsCarousel extends StatefulWidget {
+  const _HomeAdvertisementsCarousel();
+
+  @override
+  State<_HomeAdvertisementsCarousel> createState() => _HomeAdvertisementsCarouselState();
+}
+
+class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel> {
+  static const _ads = <(IconData, String, String)>[
+    (Icons.hub_rounded, 'سلسلة Silsila', 'بنربط السوق ببعضه'),
+    (Icons.local_shipping_rounded, 'توريد أسرع لتجارتك', 'الموردون والتجار في مكان واحد'),
+    (Icons.storefront_rounded, 'اكتشف الموردين', 'وسّع شبكة تعاملاتك التجارية'),
+    (Icons.local_offer_rounded, 'عروض التجار', 'تابع أحدث الفرص والعروض'),
+    (Icons.shopping_basket_rounded, 'كل احتياجات تجارتك', 'ابدأ رحلة الشراء مع سلسلة'),
+  ];
+
+  final PageController _controller = PageController();
+  Timer? _timer;
+  int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (!mounted || !_controller.hasClients) return;
+      final next = (_index + 1) % _ads.length;
+      _controller.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 142,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            PageView.builder(
+              controller: _controller,
+              itemCount: _ads.length,
+              onPageChanged: (value) => setState(() => _index = value),
+              itemBuilder: (context, index) {
+                final ad = _ads[index];
+                return Container(
+                  padding: const EdgeInsets.all(17),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [purple, Color(0xFF7026A8), Color(0xFF32105A)],
+                      begin: Alignment.topRight,
+                      end: Alignment.bottomLeft,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(ad.$2, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 7),
+                            Text(ad.$3, style: const TextStyle(color: orange, fontSize: 14, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 66,
+                        height: 66,
+                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)),
+                        child: Icon(ad.$1, size: 40, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              bottom: 9,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(_ads.length, (i) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: i == _index ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: i == _index ? orange : Colors.white54,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                )),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1313,40 +1429,7 @@ class _MainShellState extends State<MainShell> {
             }).toList(),
           ),
         ),
-        Container(
-          padding: const EdgeInsets.all(17),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [purple, Color(0xFF7026A8)],
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-            ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'أهلاً بك في سلسلة',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 5),
-              Text(
-                'سلسلة .. بنربط السوق ببعضه',
-                style: TextStyle(color: orange, fontSize: 15),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'تجارة الجملة والتوريدات في مكان واحد.',
-                style: TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
+        const _HomeAdvertisementsCarousel(),
         const SizedBox(height: 12),
         const SizedBox(height: 10),
         Container(
