@@ -4733,8 +4733,59 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final phone = TextEditingController();
   final password = TextEditingController();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool busy = false;
   bool obscurePassword = true;
+  bool rememberPassword = false;
+  String activity = activityTypes.first;
+  String accountType = 'عميل';
+  String activityUserType = 'مستخدم رئيسي للنشاط';
+
+  static const _phoneKey = 'silsila_login_phone';
+  static const _passwordKey = 'silsila_login_password';
+  static const _rememberKey = 'silsila_login_remember';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRememberedCredentials();
+  }
+
+  Future<void> _loadRememberedCredentials() async {
+    try {
+      final remembered = await _secureStorage.read(key: _rememberKey) == 'true';
+      if (!remembered) return;
+      final savedPhone = await _secureStorage.read(key: _phoneKey);
+      final savedPassword = await _secureStorage.read(key: _passwordKey);
+      if (!mounted) return;
+      setState(() {
+        rememberPassword = true;
+        phone.text = savedPhone ?? '';
+        password.text = savedPassword ?? '';
+      });
+    } catch (_) {
+      // A device without secure-storage support can still log in normally.
+    }
+  }
+
+  Future<void> _saveOrClearCredentials() async {
+    try {
+      if (rememberPassword) {
+        await _secureStorage.write(key: _phoneKey, value: phone.text.trim());
+        await _secureStorage.write(key: _passwordKey, value: password.text);
+        await _secureStorage.write(key: _rememberKey, value: 'true');
+      } else {
+        await _secureStorage.delete(key: _phoneKey);
+        await _secureStorage.delete(key: _passwordKey);
+        await _secureStorage.delete(key: _rememberKey);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر حفظ بيانات التذكّر الآمن على هذا الجهاز.')),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -4749,11 +4800,13 @@ class _LoginScreenState extends State<LoginScreen> {
       defaultValue: false,
     );
     final enteredPhone = normalizeArabicDigits(phone.text.trim())
-        .replaceAll(RegExp(r'[\s\-()]'), '');
+        .replaceAll(RegExp(r'[\\s\\-()]'), '');
 
     if (testLoginEnabled &&
         (enteredPhone == '01002251795' || enteredPhone == '01019617100')) {
       final isSupplier = enteredPhone == '01019617100';
+      await _saveOrClearCredentials();
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(
@@ -4771,9 +4824,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (testLoginEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('هذا الرقم غير مخصص لحسابات الاختبار.'),
-        ),
+        const SnackBar(content: Text('هذا الرقم غير مخصص لحسابات الاختبار.')),
       );
       return;
     }
@@ -4801,6 +4852,7 @@ class _LoginScreenState extends State<LoginScreen> {
         phone: normalizePhoneForAuth(phone.text),
         password: password.text,
       );
+      await _saveOrClearCredentials();
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
@@ -4813,7 +4865,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'تعذر تسجيل الدخول. راجع إعدادات مصادقة الهاتف في Supabase.',
+              'تعذر تسجيل الدخول. راجع رقم الهاتف وكلمة المرور وإعدادات مصادقة الهاتف.',
             ),
           ),
         );
@@ -4823,88 +4875,305 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _openPage(Widget page, String title) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: Scaffold(
+            appBar: AppBar(title: Text(title)),
+            body: page,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _accountTypeButton({
+    required String label,
+    required IconData icon,
+  }) {
+    final selected = accountType == label;
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Material(
+          color: selected ? purple : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => setState(() => accountType = label),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 58),
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 7),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: selected ? purple : const Color(0xFFE5DDED)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: orange, size: 17),
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: selected ? Colors.white : purple,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          const Icon(Icons.lock_outline, size: 60, color: purple),
-          const SizedBox(height: 12),
-          const Text(
-            'تسجيل الدخول',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: phone,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
-              labelText: 'اكتب هنا رقمك المسجل لدينا',
-              prefixIcon: Icon(Icons.phone),
-            ),
-          ),
-          if (!const bool.fromEnvironment(
-            'SILSILA_TEST_LOGIN',
-            defaultValue: false,
-          )) ...[
-            const SizedBox(height: 12),
-            TextField(
-            controller: password,
-            obscureText: obscurePassword,
-            decoration: InputDecoration(
-              labelText: 'اكتب كلمة المرور الخاصة بك',
-              prefixIcon: const Icon(Icons.lock),
-              suffixIcon: IconButton(
-                tooltip: obscurePassword ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور',
-                onPressed: () => setState(() => obscurePassword = !obscurePassword),
-                icon: Icon(obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+  Widget build(BuildContext context) {
+    const testLoginEnabled = bool.fromEnvironment(
+      'SILSILA_TEST_LOGIN',
+      defaultValue: false,
+    );
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('تسجيل الدخول'), centerTitle: true),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+                children: [
+                  Center(
+                    child: SizedBox(
+                      height: 100,
+                      width: 250,
+                      child: Image.asset(
+                        'assets/images/silsila_logo.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.hub_rounded, color: purple, size: 44),
+                            SizedBox(width: 10),
+                            Text(
+                              'سلسلة Silsila',
+                              style: TextStyle(
+                                color: purple,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 26,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: activity,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'نوع النشاط',
+                      prefixIcon: Icon(Icons.business_center_outlined),
+                    ),
+                    items: activityTypes
+                        .map((item) => DropdownMenuItem<String>(
+                              value: item,
+                              child: Text(item, overflow: TextOverflow.ellipsis),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) setState(() => activity = value);
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'اختار طريقة دخولك',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 23,
+                      fontWeight: FontWeight.w900,
+                      color: purple,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _accountTypeButton(label: 'مورد', icon: Icons.inventory_2_outlined),
+                      _accountTypeButton(label: 'عميل', icon: Icons.storefront_outlined),
+                      _accountTypeButton(label: 'مندوب', icon: Icons.badge_outlined),
+                      _accountTypeButton(label: 'شركة شحن', icon: Icons.local_shipping_outlined),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE5DDED)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Text(
+                          'تسجيل دخول (نشاط حالي)',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: purple,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SegmentedButton<String>(
+                          segments: const [
+                            ButtonSegment<String>(
+                              value: 'مستخدم رئيسي للنشاط',
+                              label: Text('مستخدم رئيسي'),
+                              icon: Icon(Icons.admin_panel_settings_outlined),
+                            ),
+                            ButtonSegment<String>(
+                              value: 'مستخدم فرعي للنشاط',
+                              label: Text('مستخدم فرعي'),
+                              icon: Icon(Icons.person_outline),
+                            ),
+                          ],
+                          selected: {activityUserType},
+                          showSelectedIcon: false,
+                          onSelectionChanged: (values) {
+                            setState(() => activityUserType = values.first);
+                          },
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: phone,
+                          keyboardType: TextInputType.phone,
+                          autofillHints: const [AutofillHints.telephoneNumber],
+                          decoration: const InputDecoration(
+                            labelText: 'اكتب هنا رقمك المسجل لدينا',
+                            prefixIcon: Icon(Icons.phone),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: password,
+                          obscureText: obscurePassword,
+                          autofillHints: const [AutofillHints.password],
+                          onSubmitted: (_) => busy ? null : login(),
+                          decoration: InputDecoration(
+                            labelText: 'اكتب كلمة المرور الخاصة بك',
+                            prefixIcon: const Icon(Icons.lock_outline),
+                            suffixIcon: IconButton(
+                              tooltip: obscurePassword
+                                  ? 'إظهار كلمة المرور'
+                                  : 'إخفاء كلمة المرور',
+                              onPressed: () => setState(
+                                () => obscurePassword = !obscurePassword,
+                              ),
+                              icon: Icon(
+                                obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          value: rememberPassword,
+                          activeColor: purple,
+                          title: const Text(
+                            'تذكر كلمة المرور',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: const Text(
+                            'حفظ آمن على هذا الجهاز لتسجيل الدخول في المرات القادمة',
+                            style: TextStyle(fontSize: 12),
+                          ),
+                          onChanged: (value) => setState(
+                            () => rememberPassword = value ?? false,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        FilledButton(
+                          onPressed: busy ? null : login,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: Text(
+                            testLoginEnabled
+                                ? 'دخول تجريبي'
+                                : (busy ? 'جارٍ الدخول...' : 'دخول'),
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => _openPage(
+                            const ForgotPasswordScreen(),
+                            'استعادة كلمة المرور',
+                          ),
+                          child: const Text('نسيت كلمة المرور؟'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _openPage(
+                      RegisterScreen(initialAccountType: accountType),
+                      'إنشاء مستخدم جديد',
+                    ),
+                    icon: const Icon(Icons.person_add_alt_1_rounded),
+                    label: const Text('إنشاء مستخدم جديد'),
+                  ),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: () => _openPage(
+                      const RegisterScreen(initialAccountType: 'إدارة نشاط'),
+                      'إنشاء نشاط جديد',
+                    ),
+                    icon: const Icon(Icons.add_business_rounded),
+                    label: const Text('إنشاء نشاط جديد'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: orange,
+                      foregroundColor: purple,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MainShell()),
+                      (route) => false,
+                    ),
+                    icon: const Icon(Icons.storefront_outlined),
+                    label: const Text('استكشاف التطبيق كزائر'),
+                  ),
+                ],
               ),
             ),
           ),
-          ],
-          if (const bool.fromEnvironment(
-            'SILSILA_TEST_LOGIN',
-            defaultValue: false,
-          )) ...[
-            const SizedBox(height: 8),
-            const Text(
-              'وضع اختبار: أدخل رقم العميل أو المورد المحدد للدخول مباشرة.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.deepOrange),
-            ),
-          ],
-          const SizedBox(height: 18),
-          FilledButton(
-            onPressed: busy ? null : login,
-            child: Text(
-              const bool.fromEnvironment(
-                'SILSILA_TEST_LOGIN',
-                defaultValue: false,
-              )
-                  ? 'دخول تجريبي'
-                  : (busy ? 'جارٍ الدخول...' : 'دخول'),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const ForgotPasswordScreen(),
-              ),
-            ),
-            child: const Text('نسيت كلمة المرور؟'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const RegisterScreen(),
-              ),
-            ),
-            child: const Text('إنشاء نشاط جديد'),
-          ),
-        ],
-      );
+        ),
+      ),
+    );
+  }
 }
 
 class ForgotPasswordScreen extends StatefulWidget {
