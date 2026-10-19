@@ -3815,6 +3815,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
   int durationMinutes = 60;
   XFile? selectedMedia;
   List<Map<String, dynamic>> stories = [];
+  final Set<String> viewedStoryIds = <String>{};
   bool loading = true;
   String? error;
 
@@ -3967,8 +3968,19 @@ class _StoriesScreenState extends State<StoriesScreen> {
     setState(() { loading = true; error = null; });
     try {
       final rows = await storyService.getActiveStories(activityType: widget.activityType);
+      Set<String> viewed = <String>{};
+      try {
+        viewed = await storyService.getViewedStoryIds();
+      } catch (_) {
+        // يمكن عرض القصص حتى لو تعذر تحميل سجل المشاهدات.
+      }
       if (!mounted) return;
-      setState(() => stories = rows);
+      setState(() {
+        stories = rows;
+        viewedStoryIds
+          ..clear()
+          ..addAll(viewed);
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() { stories = []; error = 'تعذر تحميل القصص حاليًا.'; });
@@ -3995,8 +4007,8 @@ class _StoriesScreenState extends State<StoriesScreen> {
       return true;
     }).toList()
       ..sort((a, b) {
-        final aSeen = a['is_seen'] == true || a['seen'] == true;
-        final bSeen = b['is_seen'] == true || b['seen'] == true;
+        final aSeen = viewedStoryIds.contains((a['id'] ?? '').toString());
+        final bSeen = viewedStoryIds.contains((b['id'] ?? '').toString());
         if (aSeen != bSeen) return aSeen ? 1 : -1;
         return (b['created_at'] ?? '').toString().compareTo((a['created_at'] ?? '').toString());
       });
@@ -4042,10 +4054,33 @@ class _StoriesScreenState extends State<StoriesScreen> {
               margin: const EdgeInsets.only(bottom: 10),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 ListTile(
-                  leading: CircleAvatar(backgroundColor: orange.withValues(alpha: .18), child: const Icon(Icons.person_outline, color: purple)),
+                  onTap: () async {
+                    final storyId = (story['id'] ?? '').toString();
+                    if (storyId.isEmpty) return;
+                    try {
+                      await storyService.markStoryViewed(storyId);
+                      if (mounted) setState(() => viewedStoryIds.add(storyId));
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('تعذر تسجيل مشاهدة القصة: $e')),
+                        );
+                      }
+                    }
+                  },
+                  leading: CircleAvatar(
+                    backgroundColor: orange.withValues(alpha: .18),
+                    child: const Icon(Icons.person_outline, color: purple),
+                  ),
                   title: Text((story['display_name'] ?? story['full_name'] ?? 'مستخدم سلسلة').toString()),
                   subtitle: Text(remainingText.isEmpty ? 'قصة نشطة' : remainingText),
-                  trailing: const Icon(Icons.circle, color: orange, size: 14),
+                  trailing: Icon(
+                    Icons.circle,
+                    color: viewedStoryIds.contains((story['id'] ?? '').toString())
+                        ? Colors.grey
+                        : orange,
+                    size: 14,
+                  ),
                 ),
                 if (type == 'text')
                   Padding(padding: const EdgeInsets.all(18), child: Text(caption, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)))
