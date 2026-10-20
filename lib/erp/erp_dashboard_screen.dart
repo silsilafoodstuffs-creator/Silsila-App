@@ -967,7 +967,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
         _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
         _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printCurrentPagePdf),
-        if (reports) _recordAction('إلغاء التحديد', Icons.deselect_outlined, _purple, () => setState(() => _selectedRecord = null)),
+        if (reports) _recordAction('إلغاء التحديد', Icons.clear_all_rounded, _purple, () => setState(() => _selectedRecord = null)),
       ]),
     );
   }
