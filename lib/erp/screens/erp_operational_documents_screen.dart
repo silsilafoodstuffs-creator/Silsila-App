@@ -1439,17 +1439,30 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFFE9DDF8), fontSize: 12)),
                 ]),
               ]),
-              Wrap(spacing: 8, runSpacing: 8, children: [
+              Wrap(spacing: 6, runSpacing: 6, children: [
                 Chip(avatar: const Icon(Icons.circle, size: 9, color: Color(0xFFFFA015)), label: Text(status), backgroundColor: Colors.white, side: BorderSide.none),
-                OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh_rounded), label: const Text('تحديث')),
                 FilledButton.icon(
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735)),
+                  onPressed: _loading ? null : _load,
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  label: const Text('تحديث'),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF2475B8), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
+                ),
+                FilledButton.icon(
                   onPressed: _saving ? null : () => setState(() {
                     _selectedDocumentId = null; _pendingLines = []; _lines = []; _documentNumber.clear(); _notes.clear(); _sourceChannel = 'manual'; _sourceDocumentIds = <String>[];
                     _invoiceDiscountAmount.text = '0'; _invoiceDiscountPercent.text = '0'; _isTaxInvoice = false; _error = null; _message = null;
                   }),
-                  icon: const Icon(Icons.add_rounded), label: Text('${_salesDocumentTitle(_documentType)} جديد'),
+                  icon: const Icon(Icons.add_rounded, size: 16),
+                  label: const Text('إضافة'),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF18865A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
                 ),
+                FilledButton.icon(onPressed: _saving ? null : (_selectedDocumentId == null ? _createDraft : _savePendingLines), icon: const Icon(Icons.save_outlined, size: 16), label: const Text('حفظ'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: _selectedDocumentId == null ? null : () => _loadLines(_selectedDocumentId!), icon: const Icon(Icons.edit_outlined, size: 16), label: const Text('تعديل'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: _selectedDocumentId == null ? null : () => setState(() => _error = 'الحذف متاح من قائمة المستندات للمسودات فقط.'), icon: const Icon(Icons.delete_outline_rounded, size: 16), label: const Text('حذف'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.preview_outlined, size: 16), label: const Text('معاينة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6E2BA6), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.print_outlined, size: 16), label: const Text('طباعة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.file_upload_outlined, size: 16), label: const Text('استيراد Excel'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.picture_as_pdf_outlined, size: 16), label: const Text('طباعة PDF'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
               ]),
             ]),
           ),
