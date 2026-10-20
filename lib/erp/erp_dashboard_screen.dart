@@ -1000,7 +1000,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                   final groupOpen = _expandedGroups.contains(groupKey);
                   final selectedGroup = selectedModule && _group == groupEntry.key;
                   return Container(
-                    color: const Color(0xFFFFA015),
+                    color: Colors.white,
                     child: Padding(
                     padding: const EdgeInsetsDirectional.only(start: 13, end: 8),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1020,7 +1020,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                             visualDensity: const VisualDensity(vertical: -3),
                             contentPadding: const EdgeInsetsDirectional.only(start: 10, end: 2),
                             selected: selectedGroup,
-                            selectedTileColor: const Color(0xFFFFC15C),
+                            selectedTileColor: const Color(0xFFFFA015),
+                            hoverColor: const Color(0xFFFFA015),
                             title: Text(groupEntry.key, style: const TextStyle(color: Color(0xFF3E007D), fontSize: 11, fontWeight: FontWeight.w800)),
                             onTap: () => setState(() {
                               _module = name;
@@ -1051,6 +1052,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                             dense: true,
                             visualDensity: const VisualDensity(vertical: -3),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 9),
+                            hoverColor: const Color(0xFFFFA015),
+                            selected: page == _page && selectedModule,
+                            selectedTileColor: const Color(0xFFFFA015),
                             minLeadingWidth: 12,
                             leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: const Color(0xFF3E007D), size: 11),
                             title: Text(page, style: TextStyle(color: const Color(0xFF3E007D), fontSize: 10.5, fontWeight: page == _page && selectedModule ? FontWeight.w800 : FontWeight.normal)),
