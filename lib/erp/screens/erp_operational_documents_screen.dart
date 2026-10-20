@@ -574,14 +574,22 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           throw StateError('لم يتمكن النظام من تحديد سياسة التسعير للصنف $itemId.');
         }
         final unitPrice = _n(resolved['base_unit_price']) * factor;
-        final discount = quantity * unitPrice * _n(resolved['discount_percent']) / 100;
+        final discountPercent = _n(resolved['discount_percent']);
+        final discount = quantity * unitPrice * discountPercent / 100;
         final item = _items.firstWhere((row) => _s(row['id']) == itemId, orElse: () => <String, dynamic>{});
+        final basePrice = (widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price'])) * factor;
+        final adjustedPrice = _n(resolved['net_unit_price']) * factor;
         final taxRate = widget.kind == ErpOperationalKind.sales && _isTaxInvoice ? _n(item['tax_rate']) : 0.0;
         final tax = ((quantity * unitPrice - discount).clamp(0, double.infinity)) * taxRate / 100;
         pricedLines.add({
           'item_id': itemId,
           'quantity': quantity,
           'unit_id': _s(line['unit_id']).isEmpty ? null : line['unit_id'],
+          'base_price': basePrice,
+          'policy_price': unitPrice,
+          'adjusted_price': adjustedPrice,
+          'discount_percent': discountPercent,
+          'discount_limit': _n(item['discount_limit']),
           'unit_price': unitPrice,
           'discount': discount,
           'tax': tax,
@@ -1009,8 +1017,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                       DataColumn(label: Text('اسم الصنف')),
                       DataColumn(label: Text('الكمية')),
                       DataColumn(label: Text('الوحدة')),
-                      DataColumn(label: Text('سعر البيع')),
-                      DataColumn(label: Text('الخصم')),
+                      DataColumn(label: Text('السعر الأساسي')),
+                      DataColumn(label: Text('سعر قائمة العميل')),
+                      DataColumn(label: Text('سعر البيع المعدل')),
+                      DataColumn(label: Text('خصم القيمة')),
+                      DataColumn(label: Text('خصم %')),
                       DataColumn(label: Text('الضريبة')),
                       DataColumn(label: Text('قيمة الصنف')),
                       DataColumn(label: Text('')),
@@ -1025,8 +1036,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                         DataCell(Text(_s(line['item_name']))),
                         DataCell(Text(_money(line['quantity']))),
                         DataCell(Text(_s(line['unit_name']))),
-                        DataCell(Text(_money(line['unit_price']))),
+                        DataCell(Text(_money(line['base_price'] ?? line['unit_price']))),
+                        DataCell(Text(_money(line['policy_price'] ?? line['unit_price']))),
+                        DataCell(Text(_money(line['adjusted_price'] ?? line['unit_price']))),
                         DataCell(Text(_money(line['discount']))),
+                        DataCell(Text(_money(line['discount_percent']))),
                         DataCell(Text(_money(line['tax']))),
                         DataCell(Text(_money(total), style: const TextStyle(fontWeight: FontWeight.w900))),
                         DataCell(IconButton(
