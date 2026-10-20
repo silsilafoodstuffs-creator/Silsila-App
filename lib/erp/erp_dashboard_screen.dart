@@ -1162,6 +1162,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ]),
             const SizedBox(height: 10),
             Wrap(spacing: 5, runSpacing: 5, children: [
+              _quick('فاتورة البيع', Icons.point_of_sale_rounded, () => _open('المبيعات والعملاء', 'حركات', 'فاتورة مبيعات')),
+              _quick('صلاحيات المستخدمين', Icons.admin_panel_settings_rounded, () => _open('إدارة البرنامج', 'بيانات أساسية', 'إدارة الصلاحيات')),
               _quick('قواعد الحضور والانصراف', Icons.access_time_filled_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
               _quick('شجرة الحسابات', Icons.account_tree_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'شجرة الحسابات')),
               _quick('الخزائن', Icons.account_balance_wallet_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'الخزائن الرئيسية والفرعية')),
