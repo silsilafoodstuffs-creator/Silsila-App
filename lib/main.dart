@@ -32,6 +32,7 @@ import 'services/address_service.dart';
 import 'services/review_service.dart';
 import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
+import 'services/activity_service.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -61,27 +62,11 @@ SupabaseClient? get database {
   }
 }
 
-const activityTypes = [
-  'مواد غذائية',
-  'لوازم بناء وتشطيبات',
-  'أجهزة وإلكترونيات',
-  'أثاث وتجهيزات',
-  'سيارات ومعدات',
-  'ملابس وأقمشة',
-  'أدوات منزلية',
-  'أدوات كهربائية',
-  'أدوات مكتبية',
-  'مستلزمات طبية',
-  'مستحضرات تجميل',
-  'زراعة ومستلزماتها',
-  'قطع غيار',
-  'مستلزمات مطاعم وفنادق',
-  'ورقيات وتعبئة وتغليف',
-  'منظفات ومطهرات',
-  'مستلزمات حيوانات',
-  'خدمات وشحن ونقل',
-  'أنشطة أخرى',
-];
+final activityTypes = List<String>.unmodifiable(
+  ActivityService.fallbackActivities
+      .map((activity) => activity['name']!)
+      .toList(growable: false),
+);
 
 const egyptGovernorates = [
   'القاهرة',
