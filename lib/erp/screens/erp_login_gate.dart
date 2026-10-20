@@ -221,7 +221,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                           decoration: const InputDecoration(labelText: 'رقم الهاتف'),
                           validator: (v) {
                             final digits =
-                                _asciiDigits(v ?? '').replaceAll(RegExp(r'\\D'), '');
+                                _asciiDigits(v ?? '').replaceAll(RegExp(r'\D'), '');
                             return digits.length < 10 || digits.length > 15
                                 ? 'أدخل رقم هاتف صحيحًا'
                                 : null;
