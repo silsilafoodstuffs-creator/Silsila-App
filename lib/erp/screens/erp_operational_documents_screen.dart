@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/erp_operational_documents_repository.dart';
 import '../services/erp_operational_accounting_repository.dart';
 import 'erp_operational_account_mappings_screen.dart';
@@ -184,6 +185,274 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر جلب سعر القائمة: $e'; });
+    }
+  }
+
+  Future<void> _openItemPicker() async {
+    final selectedDoc = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
+    if (selectedDoc.isEmpty || _s(selectedDoc.first['status']) != 'draft') {
+      setState(() => _error = 'أنشئ مسودة أو اختر مستندًا بحالة مسودة أولًا.');
+      return;
+    }
+    if (_warehouseId == null || _partyId == null || _items.isEmpty) {
+      setState(() => _error = 'حمّل بيانات الشركة واختر العميل والمخزن قبل اختيار الأصناف.');
+      return;
+    }
+
+    setState(() { _loading = true; _error = null; _message = null; });
+    List<Map<String, dynamic>> unitRows = [];
+    List<Map<String, dynamic>> balanceRows = [];
+    List<Map<String, dynamic>> reservationRows = [];
+    try {
+      try {
+        unitRows = await _repo.fetchUnits(
+          companyId: _company.text.trim(),
+          itemIds: _items.map((item) => _s(item['id'])).where((id) => id.isNotEmpty).toList(),
+        );
+      } catch (_) {
+        // Older installations may not have optional packaging units configured yet.
+        unitRows = [];
+      }
+      balanceRows = await _repo.fetchWarehouseBalances(
+        companyId: _company.text.trim(), warehouseId: _warehouseId!,
+      );
+      reservationRows = await _repo.fetchActiveReservations(
+        companyId: _company.text.trim(), warehouseId: _warehouseId!,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'تعذر تحميل أرصدة المخزن والحجوزات. طبّق ترحيل الوحدات والحجوزات قبل استخدام اختيار الأصناف: $error';
+      });
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    final unitsByItem = <String, List<Map<String, dynamic>>>{};
+    for (final unit in unitRows) {
+      unitsByItem.putIfAbsent(_s(unit['item_id']), () => []).add(unit);
+    }
+    final actual = <String, double>{};
+    final reserved = <String, double>{};
+    for (final row in balanceRows) {
+      final id = _s(row['item_id']);
+      actual[id] = (actual[id] ?? 0) + _n(row['quantity_on_hand']);
+    }
+    for (final row in reservationRows) {
+      final id = _s(row['item_id']);
+      reserved[id] = (reserved[id] ?? 0) + _n(row['quantity_base']);
+    }
+
+    final quantities = <String, TextEditingController>{};
+    final selectedUnits = <String, String>{};
+    final search = TextEditingController();
+    for (final item in _items) {
+      final id = _s(item['id']);
+      quantities[id] = TextEditingController();
+      final options = unitsByItem[id] ?? [];
+      final base = options.where((unit) => unit['is_base_unit'] == true);
+      selectedUnits[id] = base.isNotEmpty ? _s(base.first['id']) : (options.isNotEmpty ? _s(options.first['id']) : '');
+    }
+
+    List<Map<String, dynamic>>? picked;
+    try {
+      picked = await showDialog<List<Map<String, dynamic>>>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => StatefulBuilder(builder: (context, refresh) {
+          final query = search.text.trim().toLowerCase();
+          final visibleItems = _items.where((item) {
+            final haystack = '${_s(item['item_code'])} ${_s(item['item_name'])} ${_s(item['barcode'])}'.toLowerCase();
+            return query.isEmpty || haystack.contains(query);
+          }).toList();
+          final selectedItems = _items.where((item) {
+            final quantity = double.tryParse(quantities[_s(item['id'])]!.text.trim()) ?? 0;
+            return quantity > 0;
+          }).toList();
+
+          List<Map<String, dynamic>> optionsFor(Map<String, dynamic> item) {
+            final options = unitsByItem[_s(item['id'])] ?? [];
+            if (options.isNotEmpty) return options;
+            final base = _s(item['base_unit']).isEmpty ? 'وحدة' : _s(item['base_unit']);
+            return [{'id': '', 'unit_code': base, 'unit_name': base, 'conversion_factor': 1, 'is_base_unit': true}];
+          }
+
+          return AlertDialog(
+            title: Row(children: [
+              const Expanded(child: Text('اختيار الأصناف — F11', style: TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900))),
+              Chip(label: Text('${selectedItems.length} صنف')),
+            ]),
+            content: SizedBox(
+              width: 1240,
+              height: 650,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                TextField(
+                  controller: search,
+                  autofocus: true,
+                  onChanged: (_) => refresh(() {}),
+                  decoration: const InputDecoration(
+                    labelText: 'بحث بكود الصنف أو الاسم أو الباركود',
+                    prefixIcon: Icon(Icons.search),
+                    isDense: true,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                  color: const Color(0xFFF2EAFB),
+                  child: const Row(children: [
+                    SizedBox(width: 95, child: Text('الكود', style: TextStyle(fontWeight: FontWeight.w900))),
+                    SizedBox(width: 190, child: Text('اسم الصنف', style: TextStyle(fontWeight: FontWeight.w900))),
+                    SizedBox(width: 85, child: Text('سعر أساسي', style: TextStyle(fontWeight: FontWeight.w900))),
+                    SizedBox(width: 85, child: Text('فعلي', style: TextStyle(fontWeight: FontWeight.w900))),
+                    SizedBox(width: 85, child: Text('محجوز', style: TextStyle(fontWeight: FontWeight.w900))),
+                    SizedBox(width: 85, child: Text('متاح', style: TextStyle(fontWeight: FontWeight.w900))),
+                    SizedBox(width: 190, child: Text('الوحدة', style: TextStyle(fontWeight: FontWeight.w900))),
+                    SizedBox(width: 110, child: Text('الكمية', style: TextStyle(fontWeight: FontWeight.w900))),
+                  ]),
+                ),
+                const SizedBox(height: 4),
+                Expanded(child: SingleChildScrollView(
+                  child: Column(children: visibleItems.map((item) {
+                    final id = _s(item['id']);
+                    final options = optionsFor(item);
+                    final selectedUnitId = selectedUnits[id] ?? '';
+                    final selectedUnit = options.firstWhere(
+                      (unit) => _s(unit['id']) == selectedUnitId,
+                      orElse: () => options.first,
+                    );
+                    final factor = _n(selectedUnit['conversion_factor']) <= 0 ? 1.0 : _n(selectedUnit['conversion_factor']);
+                    final onHand = actual[id] ?? 0;
+                    final held = reserved[id] ?? 0;
+                    final available = onHand - held;
+                    final price = widget.kind == ErpOperationalKind.purchase
+                        ? _n(item['purchase_price']) : _n(item['sale_price']);
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (quantities[id]!.text.trim().isNotEmpty ? const Color(0xFFFFF3DB) : Colors.white),
+                        border: const Border(bottom: BorderSide(color: Color(0xFFE9E2EF))),
+                      ),
+                      child: Row(children: [
+                        SizedBox(width: 95, child: Text(_s(item['item_code']), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        SizedBox(width: 190, child: Text(_s(item['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                        SizedBox(width: 85, child: Text(_money(price))),
+                        SizedBox(width: 85, child: Text(_money(onHand))),
+                        SizedBox(width: 85, child: Text(_money(held), style: const TextStyle(color: Color(0xFFB56B00)))),
+                        SizedBox(width: 85, child: Text(_money(available), style: TextStyle(color: available < 0 ? Colors.red : const Color(0xFF3E007D), fontWeight: FontWeight.w800))),
+                        SizedBox(width: 190, child: DropdownButtonFormField<String>(
+                          value: selectedUnitId,
+                          isDense: true,
+                          isExpanded: true,
+                          decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 7)),
+                          items: options.map((unit) => DropdownMenuItem<String>(
+                            value: _s(unit['id']),
+                            child: Text(_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']), overflow: TextOverflow.ellipsis),
+                          )).toList(),
+                          onChanged: (value) => refresh(() => selectedUnits[id] = value ?? ''),
+                        )),
+                        const SizedBox(width: 8),
+                        SizedBox(width: 102, child: TextField(
+                          controller: quantities[id],
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          onChanged: (_) => refresh(() {}),
+                          decoration: const InputDecoration(hintText: '0', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+                        )),
+                        const SizedBox(width: 8),
+                        SizedBox(width: 95, child: Text('× ${_money(factor)}', style: const TextStyle(color: Colors.black54, fontSize: 11))),
+                      ]),
+                    );
+                  }).toList()),
+                )),
+                const SizedBox(height: 8),
+                const Text('معاينة البنود المحددة', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
+                const SizedBox(height: 4),
+                Container(
+                  height: 115,
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(color: const Color(0xFFF8F5FC), borderRadius: BorderRadius.circular(8)),
+                  child: selectedItems.isEmpty
+                      ? const Center(child: Text('اكتب كمية بجوار الصنف لإضافته إلى المعاينة.'))
+                      : ListView(children: selectedItems.map((item) {
+                          final id = _s(item['id']);
+                          final qty = double.tryParse(quantities[id]!.text.trim()) ?? 0;
+                          final options = optionsFor(item);
+                          final unitId = selectedUnits[id] ?? '';
+                          final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
+                          return ListTile(
+                            dense: true,
+                            title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}'),
+                            subtitle: Text('الكمية: ${_money(qty)} ${_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name'])} • الأساسي: ${_money(widget.kind == ErpOperationalKind.purchase ? item['purchase_price'] : item['sale_price'])}'),
+                            trailing: IconButton(tooltip: 'إزالة من المعاينة', onPressed: () { quantities[id]!.clear(); refresh(() {}); }, icon: const Icon(Icons.remove_circle_outline, color: Colors.red)),
+                          );
+                        }).toList()),
+                ),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+              FilledButton.icon(
+                onPressed: selectedItems.isEmpty ? null : () {
+                  final result = <Map<String, dynamic>>[];
+                  for (final item in selectedItems) {
+                    final id = _s(item['id']);
+                    final qty = double.tryParse(quantities[id]!.text.trim()) ?? 0;
+                    final options = optionsFor(item);
+                    final unitId = selectedUnits[id] ?? '';
+                    final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
+                    final factor = _n(unit['conversion_factor']) <= 0 ? 1.0 : _n(unit['conversion_factor']);
+                    final basePrice = widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']);
+                    result.add({
+                      'item_id': id,
+                      'quantity': qty,
+                      'unit_id': unitId,
+                      'unit_name': _s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']),
+                      'conversion_factor': factor,
+                      'unit_price': basePrice * factor,
+                      'discount': 0.0,
+                      'tax': 0.0,
+                    });
+                  }
+                  Navigator.pop(dialogContext, result);
+                },
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text('موافق وإضافة البنود'),
+              ),
+            ],
+          );
+        }),
+      );
+    } finally {
+      search.dispose();
+      for (final controller in quantities.values) {
+        controller.dispose();
+      }
+    }
+
+    if (picked == null || picked.isEmpty || !mounted) return;
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final count = await _repo.addLinesAtomically(
+        documentId: _selectedDocumentId!,
+        kind: widget.kind,
+        lines: picked.map((line) => <String, Object?>{
+          'item_id': line['item_id'],
+          'quantity': line['quantity'],
+          'unit_id': line['unit_id'],
+          'unit_price': line['unit_price'],
+          'discount': line['discount'],
+          'tax': line['tax'],
+        }).toList(),
+      );
+      if (!mounted) return;
+      setState(() { _saving = false; _message = 'تمت إضافة $count بندًا وحفظ الحجوزات المرتبطة بها في معاملة واحدة.'; });
+      await _load(clearMessage: false);
+      if (mounted && _selectedDocumentId != null) await _loadLines(_selectedDocumentId!);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() { _saving = false; _error = 'لم تُحفظ البنود المحددة؛ ألغت قاعدة البيانات العملية كاملة عند فشل التحقق أو الحجز: $error'; });
     }
   }
 
