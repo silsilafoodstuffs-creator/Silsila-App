@@ -1445,7 +1445,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 FilledButton.icon(
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735)),
                   onPressed: _saving ? null : () => setState(() {
-                    _selectedDocumentId = null; _pendingLines = []; _lines = []; _documentNumber.clear(); _notes.clear();
+                    _selectedDocumentId = null; _pendingLines = []; _lines = []; _documentNumber.clear(); _notes.clear(); _sourceChannel = 'manual'; _sourceDocumentIds = <String>[];
                     _invoiceDiscountAmount.text = '0'; _invoiceDiscountPercent.text = '0'; _isTaxInvoice = false; _error = null; _message = null;
                   }),
                   icon: const Icon(Icons.add_rounded), label: Text('${_salesDocumentTitle(_documentType)} جديد'),
@@ -1681,6 +1681,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                       _partyCode.text = p.isEmpty ? '' : _s(p.first['party_code']);
                       _warehouseId = _s(row['warehouse_id']); _documentNumber.text = _s(row['document_number']); _notes.text = _s(row['notes']);
                       _documentDate = DateTime.tryParse(_s(row['document_date'])) ?? _documentDate;
+                      _sourceChannel = _s(row['source_channel']).isEmpty ? 'manual' : _s(row['source_channel']);
+                      _sourceDocumentIds = (row['source_document_ids'] as List? ?? const []).map((id) => id.toString()).toList();
                       _salesRepId = _s(row['sales_rep_id']).isEmpty ? null : _s(row['sales_rep_id']); _isTaxInvoice = row['is_tax_invoice'] == true;
                     });
                     await _loadLines(_s(row['id'])); await _applyCustomerWarehouseRules(_partyId);
