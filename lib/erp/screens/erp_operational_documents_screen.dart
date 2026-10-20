@@ -294,9 +294,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       final matches = _parties.where((party) => _s(party['id']) == value);
       _partyCode.text = matches.isEmpty ? '' : _s(matches.first['party_code']);
       final defaultRep = matches.isEmpty ? '' : _s(matches.first['sales_rep_id']);
-      if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) {
-        _salesRepId = defaultRep;
-      }
+      _salesRepId = defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)
+          ? defaultRep
+          : null;
     });
     await _applyCustomerWarehouseRules(value);
   }
@@ -1022,9 +1022,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                       setState(() {
                         _partyId = id;
                         final defaultRep = _s(party['sales_rep_id']);
-                        if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) {
-                          _salesRepId = defaultRep;
-                        }
+                        _salesRepId = defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)
+                            ? defaultRep
+                            : null;
                       });
                       _applyCustomerWarehouseRules(id);
                     }
@@ -1040,7 +1040,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   setState(() {
                     _partyId = _s(party['id']);
                     final defaultRep = _s(party['sales_rep_id']);
-                    if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) _salesRepId = defaultRep;
+                    _salesRepId = defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)
+                        ? defaultRep
+                        : null;
                     _error = null;
                   });
                   _applyCustomerWarehouseRules(_s(party['id']));
