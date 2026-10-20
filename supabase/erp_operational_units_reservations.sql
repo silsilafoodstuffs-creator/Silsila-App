@@ -291,7 +291,7 @@ language plpgsql
 security definer
 set search_path = public
 set row_security = off
-as $
+as $$
 declare
   v_line jsonb;
   v_count integer := 0;
@@ -319,7 +319,7 @@ begin
   end loop;
   return v_count;
 end;
-$;
+$$;
 
 revoke all on function public.erp_add_operational_document_lines_v2(uuid,text,jsonb) from public, anon;
 grant execute on function public.erp_add_operational_document_lines_v2(uuid,text,jsonb) to authenticated;
