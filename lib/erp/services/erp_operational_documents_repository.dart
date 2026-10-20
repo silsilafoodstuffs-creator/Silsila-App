@@ -106,6 +106,58 @@ class ErpOperationalDocumentsRepository {
     return null;
   }
 
+  Future<List<Map<String, dynamic>>> fetchUnits({
+    required String companyId,
+    required List<String> itemIds,
+  }) async {
+    if (itemIds.isEmpty) return [];
+    final rows = await _db.from('erp_item_units')
+      .select('id, item_id, unit_code, unit_name, conversion_factor, is_base_unit')
+      .eq('company_id', companyId.trim())
+      .eq('is_active', true)
+      .inFilter('item_id', itemIds)
+      .order('unit_name');
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchWarehouseBalances({
+    required String companyId,
+    required String warehouseId,
+  }) async {
+    final rows = await _db.from('erp_stock_balances')
+      .select('item_id, quantity_on_hand')
+      .eq('company_id', companyId.trim())
+      .eq('warehouse_id', warehouseId);
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchActiveReservations({
+    required String companyId,
+    required String warehouseId,
+  }) async {
+    final rows = await _db.from('erp_stock_reservations')
+      .select('item_id, quantity_base')
+      .eq('company_id', companyId.trim())
+      .eq('warehouse_id', warehouseId)
+      .eq('status', 'active');
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<int> addLinesAtomically({
+    required String documentId,
+    required ErpOperationalKind kind,
+    required List<Map<String, Object?>> lines,
+  }) async {
+    if (lines.isEmpty) throw ArgumentError('اختر صنفًا واحدًا على الأقل.');
+    final result = await _db.rpc('erp_add_operational_document_lines_v2', params: {
+      'p_document_id': documentId,
+      'p_kind': kind == ErpOperationalKind.purchase ? 'purchase' : 'sales',
+      'p_lines': lines,
+    });
+    if (result is num) return result.toInt();
+    return int.tryParse((result ?? '').toString()) ?? lines.length;
+  }
+
   Future<void> addLine({
     required String documentId,
     required ErpOperationalKind kind,
@@ -114,12 +166,13 @@ class ErpOperationalDocumentsRepository {
     required double unitPrice,
     double discount = 0,
     double tax = 0,
+    String? unitId,
   }) async {
     final gross = quantity * unitPrice;
     if (itemId.isEmpty || quantity <= 0 || unitPrice < 0 || discount < 0 || tax < 0 || discount > gross) {
       throw ArgumentError('راجع الصنف والكمية والسعر والخصم والضريبة.');
     }
-    await _db.rpc('erp_add_operational_document_line', params: {
+    await _db.rpc('erp_add_operational_document_line_v2', params: {
       'p_document_id': documentId,
       'p_kind': kind == ErpOperationalKind.purchase ? 'purchase' : 'sales',
       'p_item_id': itemId,
@@ -127,6 +180,7 @@ class ErpOperationalDocumentsRepository {
       'p_unit_price': unitPrice,
       'p_discount': discount,
       'p_tax': tax,
+      'p_unit_id': unitId,
     });
   }
 
