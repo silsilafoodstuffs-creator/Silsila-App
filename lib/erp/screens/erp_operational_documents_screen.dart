@@ -54,12 +54,97 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   String? _itemId;
   String? _selectedDocumentId;
   String _documentType = 'invoice';
+  String _sourceChannel = 'manual';
+  List<String> _sourceDocumentIds = <String>[];
   bool _saving = false;
   bool _loading = false;
   String? _error;
   String? _message;
 
-  String get _title => widget.kind == ErpOperationalKind.purchase ? 'مستندات المشتريات' : 'مستندات المبيعات';
+  String get _title {
+    if (widget.kind == ErpOperationalKind.purchase) return 'مستندات المشتريات';
+    return _salesDocumentTitle(_documentType);
+  }
+
+  String _salesDocumentTitle(String type) => const <String, String>{
+    'quotation': 'عرض سعر',
+    'order': 'أمر بيع',
+    'invoice': 'فاتورة بيع',
+    'return': 'مرتجع البيع',
+    'delivery': 'إذن التسليم',
+  }[type] ?? 'مستندات المبيعات';
+
+  Future<void> _pickSourceDocuments() async {
+    if (widget.kind != ErpOperationalKind.sales ||
+        !['invoice', 'order'].contains(_documentType) ||
+        _company.text.trim().isEmpty) return;
+    final sourceType = _documentType == 'invoice' ? 'order' : 'quotation';
+    final sourceLabel = sourceType == 'order' ? 'أوامر البيع' : 'عروض الأسعار';
+    try {
+      final raw = await Supabase.instance.client
+          .from('erp_sales_documents')
+          .select('id, document_number, auto_number, document_date, customer_id, grand_total, status')
+          .eq('company_id', _company.text.trim())
+          .eq('document_type', sourceType)
+          .inFilter('status', ['draft', 'approved', 'posted'])
+          .order('document_date', ascending: false)
+          .limit(500);
+      final docs = raw.map((r) => Map<String, dynamic>.from(r)).toList();
+      final chosen = <String>{..._sourceDocumentIds};
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text('جلب $sourceLabel — F1'),
+            content: SizedBox(
+              width: 620,
+              height: 420,
+              child: docs.isEmpty
+                  ? const Center(child: Text('لا توجد مستندات مصدر متاحة.'))
+                  : Column(children: [
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Wrap(spacing: 8, children: [
+                          TextButton(onPressed: () => setDialogState(() => chosen.addAll(docs.map((d) => _s(d['id'])))), child: const Text('تحديد الكل')),
+                          TextButton(onPressed: () => setDialogState(chosen.clear), child: const Text('مسح التحديد')),
+                          Text('المحدد: ${chosen.length}'),
+                        ]),
+                      ),
+                      Expanded(child: ListView.builder(
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          final d = docs[index];
+                          final id = _s(d['id']);
+                          return CheckboxListTile(
+                            dense: true,
+                            value: chosen.contains(id),
+                            title: Text('${_s(d['document_number'])} • مسلسل ${_s(d['auto_number'])}'),
+                            subtitle: Text('${_s(d['document_date'])} • ${_money(d['grand_total'])} ج.م • ${_s(d['status'])}'),
+                            onChanged: (v) => setDialogState(() {
+                              if (v == true) chosen.add(id); else chosen.remove(id);
+                            }),
+                          );
+                        },
+                      )),
+                    ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+              FilledButton(onPressed: () {
+                setState(() {
+                  _sourceDocumentIds = chosen.toList();
+                  _sourceChannel = chosen.isEmpty ? 'manual' : 'documents';
+                });
+                Navigator.pop(dialogContext);
+              }, child: const Text('اعتماد المصادر')),
+            ],
+          ),
+        ),
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر جلب $sourceLabel: $error');
+    }
+  }
   @override
   void initState() {
     super.initState();
@@ -204,7 +289,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     ]);
     if (!mounted) return;
     setState(() {
-      _rows = results[0];
+      _rows = widget.kind == ErpOperationalKind.sales
+          ? results[0].where((r) => _s(r['document_type']) == (widget.initialDocumentType ?? _documentType)).toList()
+          : results[0];
       _parties = results[1];
       _allWarehouses = results[2];
       _warehouses = results[2];
@@ -341,6 +428,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         companyId: _company.text, kind: widget.kind, documentNumber: _documentNumber.text,
         documentType: _documentType, partyId: _partyId!, warehouseId: _warehouseId!, notes: _notes.text,
         documentDate: _documentDate, salesRepId: _salesRepId, isTaxInvoice: _isTaxInvoice,
+        sourceChannel: _sourceChannel, sourceDocumentIds: _sourceDocumentIds,
       );
       if (!mounted) return;
       _documentNumber.clear(); _notes.clear();
@@ -1345,10 +1433,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 Container(width: 44, height: 44, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(12)),
                   child: const Icon(Icons.receipt_long_rounded, color: Color(0xFFFFA015), size: 26)),
                 const SizedBox(width: 12),
-                const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('فاتورة بيع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22)),
-                  SizedBox(height: 3),
-                  Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFFE9DDF8), fontSize: 12)),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(_salesDocumentTitle(_documentType), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22)),
+                  const SizedBox(height: 3),
+                  const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFFE9DDF8), fontSize: 12)),
                 ]),
               ]),
               Wrap(spacing: 8, runSpacing: 8, children: [
@@ -1360,7 +1448,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     _selectedDocumentId = null; _pendingLines = []; _lines = []; _documentNumber.clear(); _notes.clear();
                     _invoiceDiscountAmount.text = '0'; _invoiceDiscountPercent.text = '0'; _isTaxInvoice = false; _error = null; _message = null;
                   }),
-                  icon: const Icon(Icons.add_rounded), label: const Text('فاتورة جديدة'),
+                  icon: const Icon(Icons.add_rounded), label: Text('${_salesDocumentTitle(_documentType)} جديد'),
                 ),
               ]),
             ]),
@@ -1369,11 +1457,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           if (_loading) const LinearProgressIndicator(minHeight: 3),
           if (_error != null) _notice(_error!, Colors.red),
           if (_message != null) _notice(_message!, Colors.green),
-          _invoiceCard('بيانات الفاتورة', Icons.description_outlined, LayoutBuilder(builder: (context, constraints) {
+          _invoiceCard('بيانات ${_salesDocumentTitle(_documentType)}', Icons.description_outlined, LayoutBuilder(builder: (context, constraints) {
             final count = constraints.maxWidth > 850 ? 4 : 2;
             final width = (constraints.maxWidth - (count - 1) * 10) / count;
             return Wrap(spacing: 10, runSpacing: 10, children: [
-              SizedBox(width: width, child: TextField(controller: _documentNumber, decoration: field('رقم الفاتورة *'))),
+              SizedBox(width: width, child: TextField(controller: _documentNumber, decoration: field('رقم ${_salesDocumentTitle(_documentType)} *'))),
               SizedBox(width: width, child: InkWell(
                 onTap: _saving ? null : () async {
                   final chosen = await showDatePicker(context: context, initialDate: _documentDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
@@ -1383,11 +1471,27 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   child: Text(dateText, style: const TextStyle(fontWeight: FontWeight.w800))),
               )),
               SizedBox(width: width, child: _invoiceMetric('المسلسل الآلي', doc.isEmpty ? 'يصدر بعد الحفظ' : _s(doc['auto_number']))),
+              SizedBox(width: width, child: _invoiceMetric('نوع المستند', _salesDocumentTitle(_documentType))),
               SizedBox(width: width, child: DropdownButtonFormField<String>(
-                value: _documentType, isExpanded: true, decoration: field('نوع المستند'),
-                items: const [DropdownMenuItem(value: 'invoice', child: Text('فاتورة بيع')), DropdownMenuItem(value: 'return', child: Text('مرتجع بيع'))],
-                onChanged: hasDraft ? null : (value) => setState(() => _documentType = value ?? 'invoice'),
+                value: _sourceChannel,
+                isExpanded: true,
+                decoration: field('مصدر المستند'),
+                items: const [
+                  DropdownMenuItem(value: 'app', child: Text('التطبيق')),
+                  DropdownMenuItem(value: 'manual', child: Text('يدوي')),
+                  DropdownMenuItem(value: 'crm', child: Text('علاقات العملاء')),
+                  DropdownMenuItem(value: 'documents', child: Text('مستند مصدر')),
+                ],
+                onChanged: hasDraft || _sourceDocumentIds.isNotEmpty ? null : (value) => setState(() => _sourceChannel = value ?? 'manual'),
               )),
+              if (['invoice', 'order'].contains(_documentType))
+                SizedBox(width: width, child: OutlinedButton.icon(
+                  onPressed: hasDraft || _saving ? null : _pickSourceDocuments,
+                  icon: const Icon(Icons.file_open_outlined),
+                  label: Text(_documentType == 'invoice' ? 'جلب أمر بيع F1' : 'جلب عرض سعر F1'),
+                )),
+              if (_sourceDocumentIds.isNotEmpty)
+                SizedBox(width: width, child: _invoiceMetric('المستندات المرتبطة', _sourceDocumentIds.length.toString())),
             ]);
           })),
           const SizedBox(height: 10),
@@ -1504,7 +1608,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             )),
             if (_lines.isNotEmpty) ...[
               const SizedBox(height: 10),
-              const Text('بنود محفوظة في الفاتورة', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
+              Text('بنود محفوظة في ${_salesDocumentTitle(_documentType)}', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
               ..._lines.map((line) => ListTile(
                 dense: true, leading: const Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32)),
                 title: Text(_itemLabel(_s(line['item_id']))),
@@ -1512,7 +1616,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 trailing: Text(_money(line['line_total']) + ' ج.م', style: const TextStyle(fontWeight: FontWeight.w900)),
               )),
             ],
-            CheckboxListTile(value: _isTaxInvoice, dense: true, contentPadding: EdgeInsets.zero, activeColor: const Color(0xFF3E007D),
+            if (_documentType == 'invoice') CheckboxListTile(value: _isTaxInvoice, dense: true, contentPadding: EdgeInsets.zero, activeColor: const Color(0xFF3E007D),
               title: const Text('فاتورة ضريبية'), subtitle: const Text('غير ضريبية افتراضيًا؛ تُحسب الضريبة وفق بيانات الصنف عند التفعيل.'),
               onChanged: hasDraft ? (v) => setState(() { _isTaxInvoice = v ?? false; _recalculatePendingTax(); }) : null),
           ])),
@@ -1544,10 +1648,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           })),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            FilledButton.icon(onPressed: _saving || _loading || hasDraft || doc.isNotEmpty ? null : _createDraft, icon: const Icon(Icons.save_outlined), label: const Text('حفظ المسودة')),
+            FilledButton.icon(onPressed: _saving || _loading || hasDraft || doc.isNotEmpty ? null : _createDraft, icon: const Icon(Icons.save_outlined), label: Text('حفظ مسودة ${_salesDocumentTitle(_documentType)}')),
             FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735)),
-              onPressed: _saving || _loading || !hasDraft || _pendingLines.isEmpty ? null : _savePendingLines, icon: const Icon(Icons.playlist_add_check), label: const Text('حفظ الأصناف')),
-            FilledButton.icon(onPressed: _saving || _loading || !hasDraft ? null : () => _post(doc), icon: const Icon(Icons.verified_outlined), label: const Text('اعتماد وترحيل')),
+              onPressed: _saving || _loading || !hasDraft || _pendingLines.isEmpty ? null : _savePendingLines, icon: const Icon(Icons.playlist_add_check), label: const Text('حفظ البنود')),
+            FilledButton.icon(onPressed: _saving || _loading || !hasDraft ? null : () => _post(doc), icon: const Icon(Icons.verified_outlined), label: const Text('اعتماد المستند')),
             OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.history_rounded), label: const Text('الفواتير السابقة')),
             OutlinedButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ErpOperationalAccountMappingsScreen(initialCompanyId: _company.text.trim()))), icon: const Icon(Icons.account_tree_outlined), label: const Text('خريطة الحسابات')),
           ]),
@@ -1595,7 +1699,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   @override
   Widget build(BuildContext context) {
-    if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice') {
+    if (widget.kind == ErpOperationalKind.sales) {
       return _buildSalesInvoiceScreen(context);
     }
     final draftCount = _rows.where((r) => _s(r['status']) == 'draft').length;
