@@ -174,6 +174,27 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
     return rows.isEmpty ? 'اختر الحساب' : '${_s(rows.first['account_code'])} — ${_s(rows.first['account_name'])}';
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewRuns() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة مسيرات الرواتب'),
+      content: SizedBox(width: 760, child: _runs.isEmpty ? const Text('لا توجد مسيرات محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _runs.take(100).map((r) => ListTile(
+          dense: true, title: Text('${_s(r['run_code'])} — ${_s(r['status'])}'),
+          subtitle: Text('${_s(r['period_start'])} إلى ${_s(r['period_end'])}'),
+          onTap: () { Navigator.pop(ctx); setState(() => _selectedRunId = _s(r['id'])); _loadLines(_s(r['id'])); },
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final selected = _runs.where((r) => _s(r['id']) == _selectedRunId).toList();
@@ -181,10 +202,21 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
     return Directionality(textDirection: TextDirection.rtl, child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('مسير الرواتب', style: TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 6),
-        const Text('إنشاء مسير، إدخال تفاصيل الموظفين، إعادة الحساب، الاعتماد ثم إنشاء قيد أستاذ عام متوازن.',
-          style: TextStyle(color: Colors.black54, height: 1.5)),
+        Card(color: const Color(0xFF3E007D), child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('مسير الرواتب', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+            const Text('إنشاء مسير ومراجعته واعتماده محاسبيًا.', style: TextStyle(color: Colors.white70, height: 1.5)),
+            const SizedBox(height: 8),
+            SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+              _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+              _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : () { _runCode.clear(); setState(() => _message = 'نموذج مسير جديد جاهز.'); }),
+              _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _createRun),
+              _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewRuns),
+              _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewRuns),
+            ])),
+          ]),
+        )),
         const SizedBox(height: 12),
         TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
         const SizedBox(height: 8),
