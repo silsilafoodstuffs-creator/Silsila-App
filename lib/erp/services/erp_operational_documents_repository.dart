@@ -73,6 +73,63 @@ class ErpOperationalDocumentsRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
+  Future<List<Map<String, dynamic>>> fetchSalesCampaigns({
+    required String companyId,
+    required String campaignType,
+  }) async {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final rows = await _db.from('erp_sales_campaigns')
+      .select('id, company_id, campaign_type, title, start_date, end_date, owner_party_id, owner_label, is_active')
+      .eq('company_id', companyId.trim())
+      .eq('campaign_type', campaignType)
+      .eq('is_active', true)
+      .lte('start_date', today)
+      .gte('end_date', today)
+      .order('start_date', ascending: false);
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchSalesCampaignItems({
+    required String companyId,
+    required String campaignId,
+  }) async {
+    final rows = await _db.from('erp_sales_campaign_items')
+      .select('id, campaign_id, item_id, offer_price, min_quantity, max_quantity, representative_incentive, customer_incentive')
+      .eq('company_id', companyId.trim())
+      .eq('campaign_id', campaignId)
+      .eq('is_active', true)
+      .order('created_at');
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCustomerShortages({
+    required String companyId,
+    required String customerId,
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    final rows = await _db.from('erp_customer_shortages')
+      .select('id, item_id, source_document_id, source_document_number, source_date, requested_quantity, fulfilled_quantity, status, created_at')
+      .eq('company_id', companyId.trim())
+      .eq('customer_id', customerId)
+      .inFilter('status', ['open', 'partial'])
+      .gte('source_date', from.toIso8601String().substring(0, 10))
+      .lte('source_date', to.toIso8601String().substring(0, 10))
+      .order('source_date', ascending: false)
+      .order('created_at', ascending: false);
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<void> deleteCustomerShortage({
+    required String companyId,
+    required String shortageId,
+  }) async {
+    await _db.from('erp_customer_shortages')
+      .delete()
+      .eq('company_id', companyId.trim())
+      .eq('id', shortageId);
+  }
+
   Future<String> createDraft({
     required String companyId,
     required ErpOperationalKind kind,
