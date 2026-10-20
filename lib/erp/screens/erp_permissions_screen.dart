@@ -148,7 +148,26 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
     if(_db==null||company.isEmpty){setState((){_loading=false;_error='اختر الشركة وسجّل الدخول أولًا.';});return;}
     try{
       final rows=await _db!.from('erp_company_members').select('id,user_id,member_role,is_active,created_at').eq('company_id',company).eq('is_active',true).order('created_at');
-      final users=(rows as List).whereType<Map<String,dynamic>>().toList();
+      final users=(rows as List).whereType<Map<String,dynamic>>().map((u)=>Map<String,dynamic>.from(u)).toList();
+      // Display useful employee labels instead of opaque UUIDs. This lookup is
+      // optional so missing profile setup does not prevent permission loading.
+      try {
+        final profileRows=await _db!.from('erp_company_member_profiles')
+            .select('user_id,display_name,job_title,branch_id')
+            .eq('company_id',company);
+        final profiles=<String,Map<String,dynamic>>{
+          for(final p in (profileRows as List).whereType<Map<String,dynamic>>())
+            _s(p['user_id']):p,
+        };
+        for(final user in users){
+          final profile=profiles[_s(user['user_id'])];
+          user['display_name']=profile?['display_name'];
+          user['job_title']=profile?['job_title'];
+          user['branch_id']=profile?['branch_id'];
+        }
+      } catch (_) {
+        // Older installations may not yet have the optional member directory.
+      }
       final saved=await _db!.from('erp_user_permissions').select('user_id,menu_key,allow_access,can_add,can_edit,can_delete,can_save,can_print,can_export_excel,can_export_pdf').eq('company_id',company);
       _draft.clear();for(final u in users){_draft[_s(u['user_id'])]=_blank('مخصص بلا صلاحيات');}
       final fields={'مسموح':'allow_access','إضافة':'can_add','تعديل':'can_edit','حذف':'can_delete','حفظ':'can_save','طباعة':'can_print','Excel':'can_export_excel','PDF':'can_export_pdf'};
@@ -263,8 +282,13 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
             ..._users.map((u){
               final id=_s(u['user_id']);
               final role=_s(u['member_role']);
+              final displayName=_s(u['display_name']).trim();
+              final jobTitle=_s(u['job_title']).trim();
               final shortId=id.length>10?id.substring(0,10):id;
-              return DropdownMenuItem(value:id,child:Text('$role — $shortId…'));
+              final label=displayName.isNotEmpty
+                  ? displayName + (jobTitle.isNotEmpty ? ' — ' + jobTitle : '') + ' (' + role + ')'
+                  : role + ' — ' + shortId + '…';
+              return DropdownMenuItem(value:id,child:Text(label,overflow:TextOverflow.ellipsis));
             }),
           ],
           onChanged:(v){if(v!=null)setState(()=>_scope=v);},
