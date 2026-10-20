@@ -500,11 +500,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
 
     final quantities = <String, TextEditingController>{};
+    final quantityFocusNodes = <String, FocusNode>{};
+    final unitFocusNodes = <String, FocusNode>{};
     final selectedUnits = <String, String>{};
     final search = TextEditingController();
+    final searchFocusNode = FocusNode();
     for (final item in _items) {
       final id = _s(item['id']);
       quantities[id] = TextEditingController();
+      quantityFocusNodes[id] = FocusNode(debugLabel: 'quantity-$id');
+      unitFocusNodes[id] = FocusNode(debugLabel: 'unit-$id');
       final options = unitsByItem[id] ?? [];
       final base = options.where((unit) => unit['is_base_unit'] == true);
       selectedUnits[id] = base.isNotEmpty ? _s(base.first['id']) : (options.isNotEmpty ? _s(options.first['id']) : '');
@@ -515,7 +520,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       picked = await showDialog<List<Map<String, dynamic>>>(
         context: context,
         barrierDismissible: false,
-        builder: (dialogContext) => StatefulBuilder(builder: (context, refresh) {
+        builder: (dialogContext) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: StatefulBuilder(builder: (context, refresh) {
           final query = search.text.trim().toLowerCase();
           final visibleItems = _items.where((item) {
             final haystack = '${_s(item['item_code'])} ${_s(item['item_name'])} ${_s(item['barcode'])}'.toLowerCase();
@@ -525,6 +532,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             final quantity = double.tryParse(quantities[_s(item['id'])]!.text.trim()) ?? 0;
             return quantity > 0;
           }).toList();
+          void focusQuantityAt(int index) {
+            if (visibleItems.isEmpty) return;
+            final safeIndex = index.clamp(0, visibleItems.length - 1);
+            quantityFocusNodes[_s(visibleItems[safeIndex]['id'])]?.requestFocus();
+          }
+          void focusUnitAt(int index) {
+            if (visibleItems.isEmpty) return;
+            final safeIndex = index.clamp(0, visibleItems.length - 1);
+            unitFocusNodes[_s(visibleItems[safeIndex]['id'])]?.requestFocus();
+          }
 
           List<Map<String, dynamic>> optionsFor(Map<String, dynamic> item) {
             final options = unitsByItem[_s(item['id'])] ?? [];
@@ -577,7 +594,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 TextField(
                   controller: search,
+                  focusNode: searchFocusNode,
                   autofocus: true,
+                  textInputAction: TextInputAction.next,
+                  onSubmitted: (_) => focusQuantityAt(0),
                   onChanged: (_) => refresh(() {}),
                   decoration: const InputDecoration(
                     labelText: 'بحث بكود الصنف أو الاسم أو الباركود',
@@ -602,7 +622,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 ),
                 const SizedBox(height: 4),
                 Expanded(child: SingleChildScrollView(
-                  child: Column(children: visibleItems.map((item) {
+                  child: Column(children: visibleItems.asMap().entries.map((entry) {
+                    final itemIndex = entry.key;
+                    final item = entry.value;
                     final id = _s(item['id']);
                     final options = optionsFor(item);
                     final selectedUnitId = selectedUnits[id] ?? '';
@@ -629,23 +651,73 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                         SizedBox(width: 85, child: Text(_money(onHand))),
                         SizedBox(width: 85, child: Text(_money(held), style: const TextStyle(color: Color(0xFFB56B00)))),
                         SizedBox(width: 85, child: Text(_money(available), style: TextStyle(color: available < 0 ? Colors.red : const Color(0xFF3E007D), fontWeight: FontWeight.w800))),
-                        SizedBox(width: 190, child: DropdownButtonFormField<String>(
-                          value: selectedUnitId,
-                          isDense: true,
-                          isExpanded: true,
-                          decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 7)),
-                          items: options.map((unit) => DropdownMenuItem<String>(
-                            value: _s(unit['id']),
-                            child: Text(_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']), overflow: TextOverflow.ellipsis),
-                          )).toList(),
-                          onChanged: (value) => refresh(() => selectedUnits[id] = value ?? ''),
+                        SizedBox(width: 190, child: Focus(
+                          focusNode: unitFocusNodes[id],
+                          onKeyEvent: (node, event) {
+                            if (event is KeyDownEvent) {
+                              if (event.logicalKey == LogicalKeyboardKey.enter ||
+                                  event.logicalKey == LogicalKeyboardKey.numpadEnter ||
+                                  event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+                                quantityFocusNodes[id]?.requestFocus();
+                                return KeyEventResult.handled;
+                              }
+                              if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                                focusUnitAt(itemIndex - 1);
+                                return KeyEventResult.handled;
+                              }
+                              if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                                focusUnitAt(itemIndex + 1);
+                                return KeyEventResult.handled;
+                              }
+                            }
+                            return KeyEventResult.ignored;
+                          },
+                          child: DropdownButtonFormField<String>(
+                            value: selectedUnitId,
+                            isDense: true,
+                            isExpanded: true,
+                            decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 7)),
+                            items: options.map((unit) => DropdownMenuItem<String>(
+                              value: _s(unit['id']),
+                              child: Text(_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']), overflow: TextOverflow.ellipsis),
+                            )).toList(),
+                            onChanged: (value) => refresh(() => selectedUnits[id] = value ?? ''),
+                          ),
                         )),
                         const SizedBox(width: 8),
-                        SizedBox(width: 102, child: TextField(
-                          controller: quantities[id],
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          onChanged: (_) => refresh(() {}),
-                          decoration: const InputDecoration(hintText: '0', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+                        SizedBox(width: 102, child: Focus(
+                          focusNode: quantityFocusNodes[id],
+                          onKeyEvent: (node, event) {
+                            if (event is KeyDownEvent) {
+                              if (event.logicalKey == LogicalKeyboardKey.enter ||
+                                  event.logicalKey == LogicalKeyboardKey.numpadEnter ||
+                                  event.logicalKey == LogicalKeyboardKey.arrowDown) {
+                                focusQuantityAt(itemIndex + 1);
+                                return KeyEventResult.handled;
+                              }
+                              if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+                                if (itemIndex == 0) {
+                                  searchFocusNode.requestFocus();
+                                } else {
+                                  focusQuantityAt(itemIndex - 1);
+                                }
+                                return KeyEventResult.handled;
+                              }
+                              if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
+                                unitFocusNodes[id]?.requestFocus();
+                                return KeyEventResult.handled;
+                              }
+                            }
+                            return KeyEventResult.ignored;
+                          },
+                          child: TextField(
+                            controller: quantities[id],
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            textInputAction: TextInputAction.next,
+                            onSubmitted: (_) => focusQuantityAt(itemIndex + 1),
+                            onChanged: (_) => refresh(() {}),
+                            decoration: const InputDecoration(hintText: '0', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+                          ),
                         )),
                         const SizedBox(width: 8),
                         SizedBox(width: 95, child: Text('× ${_money(factor)}', style: const TextStyle(color: Colors.black54, fontSize: 11))),
@@ -685,12 +757,20 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             ],
           ),
           );
-        }),
+          }),
+        ),
       );
     } finally {
       search.dispose();
-      for (final controller in quantities.values) {
+      searchFocusNode.dispose();
+      for (final controller of quantities.values) {
         controller.dispose();
+      }
+      for (final node of quantityFocusNodes.values) {
+        node.dispose();
+      }
+      for (final node of unitFocusNodes.values) {
+        node.dispose();
       }
     }
 
