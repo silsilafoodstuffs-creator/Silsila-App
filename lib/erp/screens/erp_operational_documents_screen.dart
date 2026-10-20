@@ -555,7 +555,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         final netBeforeInvoiceDiscount = (gross - _n(line['discount'])).clamp(0, double.infinity);
         final allocatedDiscount = index == _pendingLines.length - 1
             ? remainingInvoiceDiscount
-            : (grossTotal <= 0 ? 0.0 : (invoiceDiscount * gross / grossTotal).roundToDouble() / 100);
+            : (grossTotal <= 0 ? 0.0 : (invoiceDiscount * gross / grossTotal * 100).roundToDouble() / 100);
         remainingInvoiceDiscount = (remainingInvoiceDiscount - allocatedDiscount).clamp(0, double.infinity);
         final totalDiscount = _n(line['discount']) + allocatedDiscount;
         if (totalDiscount > gross + 0.005) throw ArgumentError('خصم السطر أكبر من قيمة الصنف.');
