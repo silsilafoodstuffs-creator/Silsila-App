@@ -916,26 +916,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
+              Image.asset(
+                'assets/images/silsila_logo.png',
                 width: 58,
                 height: 58,
-                padding: const EdgeInsets.all(5),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: _orange.withValues(alpha: .85), width: 1.4),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(9),
-                  child: Image.asset(
-                    'assets/images/silsila_logo.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.link_rounded,
-                      color: _purple,
-                      size: 34,
-                    ),
-                  ),
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.link_rounded,
+                  color: _orange,
+                  size: 34,
                 ),
               ),
               const SizedBox(width: 12),
