@@ -26,7 +26,7 @@ class AuthService {
   String _normalizeEmail(String value) => value.trim().toLowerCase();
 
   bool _isValidEmail(String value) =>
-      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+.hasMatch(value);
+      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value);
 
   bool _isStrongPassword(String value) {
     return value.length >= 8 &&
