@@ -160,6 +160,41 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
     return '${_s(row.first['warehouse_code'])} — ${_s(row.first['warehouse_name'])}';
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(
+      style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+    ),
+  );
+
+  void _newMovement() {
+    setState(() {
+      _quantity.clear();
+      _cost.text = '0';
+      _notes.clear();
+      _batch.clear();
+      _error = null;
+      _success = 'تم تجهيز نموذج حركة مخزنية جديدة.';
+    });
+  }
+
+  Future<void> _previewMovements() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة الحركات المخزنية'),
+      content: SizedBox(width: 780, child: _movements.isEmpty
+        ? const Text('لا توجد حركات مخزنية للمعاينة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _movements.take(100).map((r) =>
+          ListTile(dense: true, leading: const Icon(Icons.swap_horiz, color: Color(0xFF3E007D)),
+            title: Text('${_types[_s(r['movement_type'])] ?? _s(r['movement_type'])} • ${_itemName(_s(r['item_id']))}'),
+            subtitle: Text('${_warehouseName(_s(r['warehouse_id']))} • وارد ${_qty(r['quantity_in'])} • منصرف ${_qty(r['quantity_out'])} • ${_s(r['movement_date'])}'),
+          )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalItems = _balances.length;
@@ -169,18 +204,28 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('إدارة المخزون والحركات', style: TextStyle(
-            color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 6),
-          const Text('أرصدة محسوبة من دفتر حركات المخزون، مع تسجيل وارد ومنصرف عبر تحقق خادمي يمنع الصرف بما يتجاوز الرصيد.',
-            style: TextStyle(color: Colors.black54, height: 1.5)),
-          const SizedBox(height: 12),
+          Card(color: const Color(0xFF3E007D), child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('إدارة المخزون والحركات', style: TextStyle(
+                color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 4),
+              const Text('أرصدة دفتر المخزون وتسجيل الحركات والتحويلات بين المخازن.',
+                style: TextStyle(color: Colors.white70, height: 1.4)),
+              const SizedBox(height: 8),
+              SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+                _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _newMovement),
+                _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _save),
+                _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewMovements),
+              ])),
+            ]),
+          )),
+          const SizedBox(height: 10),
           TextField(controller: _company, decoration: const InputDecoration(
             labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder(),
             prefixIcon: Icon(Icons.business))),
           const SizedBox(height: 8),
-          FilledButton.icon(onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh), label: const Text('تحميل الأرصدة والحركات')),
           if (_error != null) _message(_error!, const Color(0xFFB42318)),
           if (_success != null) _message(_success!, const Color(0xFF18794E)),
           if (_loading) const LinearProgressIndicator(),
