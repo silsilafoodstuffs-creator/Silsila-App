@@ -234,6 +234,27 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
     return matches.isEmpty ? id : '${_s(matches.first['employee_code'])} — ${_s(matches.first['full_name'])}';
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewHrRecords(String title, List<Map<String, dynamic>> rows) async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(title),
+      content: SizedBox(width: 760, child: rows.isEmpty ? const Text('لا توجد بيانات محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: rows.take(100).map((r) => ListTile(
+          dense: true,
+          title: Text('${r['full_name'] ?? r['employee_name'] ?? r['name'] ?? r['request_type'] ?? 'سجل'}'),
+          subtitle: Text('${r['employee_code'] ?? r['status'] ?? r['attendance_date'] ?? ''}'),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final today = DateTime.now();
@@ -243,10 +264,21 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
     return Directionality(textDirection: TextDirection.rtl, child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text('الموارد البشرية', style: TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 6),
-        const Text('دليل الموظفين وتسجيل الحضور والانصراف اليومي. صلاحيات الرواتب منفصلة عن صلاحيات التشغيل.',
-          style: TextStyle(color: Colors.black54, height: 1.5)),
+        Card(color: const Color(0xFF3E007D), child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('الموارد البشرية', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+            const Text('دليل الموظفين والحضور والانصراف والإجازات. صلاحيات الرواتب منفصلة.', style: TextStyle(color: Colors.white70, height: 1.5)),
+            const SizedBox(height: 8),
+            SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+              _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+              _quickTask('إضافة موظف', Icons.person_add_alt_1, const Color(0xFF168447), _saving ? null : _addEmployee),
+              _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), () => _previewHrRecords(
+                _view == 'employees' ? 'معاينة الموظفين' : _view == 'attendance' ? 'معاينة الحضور' : 'معاينة الإجازات',
+                _view == 'employees' ? _employees : _view == 'attendance' ? _attendance : _leaveRequests)),
+            ])),
+          ]),
+        )),
         const SizedBox(height: 12),
         TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.business))),
         const SizedBox(height: 8),
