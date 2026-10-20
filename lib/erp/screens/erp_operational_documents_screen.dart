@@ -253,7 +253,14 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _applyCustomerWarehouseRules(String? partyId) async {
-    if (widget.kind != ErpOperationalKind.sales || partyId == null || partyId.isEmpty) return;
+    if (widget.kind != ErpOperationalKind.sales) return;
+    if (partyId == null || partyId.isEmpty) {
+      if (mounted) setState(() {
+        _warehouses = List<Map<String, dynamic>>.from(_allWarehouses);
+        _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
+      });
+      return;
+    }
     try {
       final allowedIds = await _repo.fetchPartyWarehouseIds(
         companyId: _company.text.trim(),
@@ -297,6 +304,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       _salesRepId = defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)
           ? defaultRep
           : null;
+      _warehouses = [];
+      _warehouseId = null;
     });
     await _applyCustomerWarehouseRules(value);
   }
@@ -1037,6 +1046,17 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     return;
                   }
                   final matches = _parties.where((party) => _s(party['party_code']).trim().toLowerCase() == normalized);
+                  if (matches.isEmpty) {
+                    setState(() {
+                      _partyId = null;
+                      _salesRepId = null;
+                      _warehouses = List<Map<String, dynamic>>.from(_allWarehouses);
+                      if (!_warehouses.any((row) => _s(row['id']) == _warehouseId)) {
+                        _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
+                      }
+                    });
+                    return;
+                  }
                   if (matches.length == 1) {
                     final party = matches.first;
                     final id = _s(party['id']);
