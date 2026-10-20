@@ -999,7 +999,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                   final groupKey = '$name::${groupEntry.key}';
                   final groupOpen = _expandedGroups.contains(groupKey);
                   final selectedGroup = selectedModule && _group == groupEntry.key;
-                  return Padding(
+                  return Container(
+                    color: const Color(0xFFEFE5F7),
+                    child: Padding(
                     padding: const EdgeInsetsDirectional.only(start: 13, end: 8),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       Row(children: [
@@ -1018,8 +1020,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                             visualDensity: const VisualDensity(vertical: -3),
                             contentPadding: const EdgeInsetsDirectional.only(start: 10, end: 2),
                             selected: selectedGroup,
-                            selectedTileColor: const Color(0xFF7040A0),
-                            title: Text(groupEntry.key, style: TextStyle(color: selectedGroup ? _orange : Colors.white70, fontSize: 11, fontWeight: FontWeight.w800)),
+                            selectedTileColor: const Color(0xFFDCC8EF),
+                            title: Text(groupEntry.key, style: TextStyle(color: selectedGroup ? const Color(0xFF3E007D) : const Color(0xFF604A70), fontSize: 11, fontWeight: FontWeight.w800)),
                             onTap: () => setState(() {
                               _module = name;
                               _group = groupEntry.key;
@@ -1039,7 +1041,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                               _expandedGroups.add(groupKey);
                             }
                           }),
-                          icon: Icon(groupOpen ? Icons.expand_more_rounded : Icons.chevron_left_rounded, color: groupOpen ? Colors.white : _orange, size: 22),
+                          icon: Icon(groupOpen ? Icons.expand_more_rounded : Icons.chevron_left_rounded, color: groupOpen ? const Color(0xFF3E007D) : const Color(0xFF8C5BB5), size: 22),
                         ),
                       ]),
                       if (groupOpen)
@@ -1050,8 +1052,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                             visualDensity: const VisualDensity(vertical: -3),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 9),
                             minLeadingWidth: 12,
-                            leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: _orange, size: 11),
-                            title: Text(page, style: TextStyle(color: page == _page && selectedModule ? Colors.white : Colors.white70, fontSize: 10.5, fontWeight: page == _page && selectedModule ? FontWeight.w800 : FontWeight.normal)),
+                            leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: const Color(0xFF8C5BB5), size: 11),
+                            title: Text(page, style: TextStyle(color: page == _page && selectedModule ? const Color(0xFF3E007D) : const Color(0xFF604A70), fontSize: 10.5, fontWeight: page == _page && selectedModule ? FontWeight.w800 : FontWeight.normal)),
                             onTap: () => setState(() {
                               _module = name;
                               _group = groupEntry.key;
@@ -1063,7 +1065,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                           ),
                         )),
                     ]),
-                  );
+                  ));
                 }),
             ]);
           }).toList(),
