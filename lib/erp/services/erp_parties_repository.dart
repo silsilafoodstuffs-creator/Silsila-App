@@ -14,7 +14,7 @@ class ErpPartiesRepository {
 
   Future<List<Map<String, dynamic>>> fetchParties(String companyId, {String kind = 'both'}) async {
     var query = _db.from('erp_parties')
-      .select('id, party_code, party_name, party_kind, phone, whatsapp, email, address, governorate, district, credit_limit, opening_balance, is_active')
+      .select('id, party_code, party_name, party_kind, phone, whatsapp, email, address, governorate, district, center, area, customer_type, credit_limit, opening_balance, is_active')
       .eq('company_id', companyId.trim());
     if (kind != 'both') query = query.inFilter('party_kind', [kind, 'both']);
     final rows = await query.order('party_name').limit(2000);
@@ -32,6 +32,9 @@ class ErpPartiesRepository {
     String? address,
     String? governorate,
     String? district,
+    String? center,
+    String? area,
+    String? customerType,
     double creditLimit = 0,
     double openingBalance = 0,
   }) async {
@@ -51,6 +54,9 @@ class ErpPartiesRepository {
       'address': _blank(address),
       'governorate': _blank(governorate),
       'district': _blank(district),
+      'center': _blank(center),
+      'area': _blank(area),
+      'customer_type': _blank(customerType),
       'credit_limit': creditLimit,
       'opening_balance': openingBalance,
       'is_active': true,
