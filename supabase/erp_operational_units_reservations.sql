@@ -1,0 +1,395 @@
+-- Sales/purchase line unit conversions and transactional per-line stock reservations.
+-- Apply after erp_schema.sql, erp_master_data_schema.sql, erp_operations_schema.sql,
+-- erp_operations_workflow.sql, erp_inventory_workflow.sql, and erp_security_membership.sql.
+begin;
+
+alter table public.erp_sales_lines
+  add column if not exists unit_id uuid references public.erp_item_units(id) on delete restrict,
+  add column if not exists unit_code text not null default 'وحدة',
+  add column if not exists conversion_factor numeric(14,6) not null default 1
+    check (conversion_factor > 0),
+  add column if not exists base_quantity numeric(20,6)
+    generated always as (quantity * conversion_factor) stored;
+
+alter table public.erp_purchase_lines
+  add column if not exists unit_id uuid references public.erp_item_units(id) on delete restrict,
+  add column if not exists unit_code text not null default 'وحدة',
+  add column if not exists conversion_factor numeric(14,6) not null default 1
+    check (conversion_factor > 0),
+  add column if not exists base_quantity numeric(20,6)
+    generated always as (quantity * conversion_factor) stored;
+
+update public.erp_sales_lines l
+set unit_code = i.base_unit
+from public.erp_sales_documents d
+join public.erp_items i on i.id = l.item_id
+where d.id = l.document_id and l.unit_id is null and l.unit_code = 'وحدة';
+
+update public.erp_purchase_lines l
+set unit_code = i.base_unit
+from public.erp_purchase_documents d
+join public.erp_items i on i.id = l.item_id
+where d.id = l.document_id and l.unit_id is null and l.unit_code = 'وحدة';
+
+create table if not exists public.erp_stock_reservations (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid not null references public.erp_companies(id) on delete cascade,
+  branch_id uuid references public.erp_branches(id) on delete set null,
+  warehouse_id uuid not null references public.erp_warehouses(id) on delete restrict,
+  item_id uuid not null references public.erp_items(id) on delete restrict,
+  sales_document_id uuid not null references public.erp_sales_documents(id) on delete cascade,
+  sales_line_id uuid not null unique references public.erp_sales_lines(id) on delete cascade,
+  quantity_base numeric(20,6) not null check (quantity_base > 0),
+  status text not null default 'active' check (status in ('active','consumed','released')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists erp_stock_reservations_available_idx
+  on public.erp_stock_reservations(company_id, warehouse_id, item_id, status);
+create index if not exists erp_stock_reservations_document_idx
+  on public.erp_stock_reservations(sales_document_id, status);
+
+alter table public.erp_stock_reservations enable row level security;
+drop policy if exists erp_stock_reservations_select_member on public.erp_stock_reservations;
+create policy erp_stock_reservations_select_member on public.erp_stock_reservations
+for select to authenticated using (public.erp_user_can_access_company(company_id));
+revoke all on public.erp_stock_reservations from anon, authenticated;
+grant select on public.erp_stock_reservations to authenticated;
+
+create or replace function public.erp_reserve_sales_line()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+set row_security = off
+as $$
+declare
+  v_doc public.erp_sales_documents%rowtype;
+  v_on_hand numeric(20,6);
+  v_reserved numeric(20,6);
+  v_needed numeric(20,6);
+begin
+  select * into v_doc
+  from public.erp_sales_documents
+  where id = new.document_id
+  for update;
+
+  if not found then raise exception 'مستند المبيعات غير موجود.'; end if;
+  if v_doc.document_type not in ('order','delivery','invoice') then
+    return new;
+  end if;
+
+  v_needed := coalesce(new.base_quantity, new.quantity);
+  -- Serialize reservation attempts for the same company/warehouse/item to prevent overselling.
+  perform pg_advisory_xact_lock(hashtextextended(
+    v_doc.company_id::text || ':' || v_doc.warehouse_id::text || ':' || new.item_id::text, 0
+  ));
+
+  select coalesce(sum(m.quantity_in - m.quantity_out), 0)
+    into v_on_hand
+  from public.erp_inventory_movements m
+  where m.company_id = v_doc.company_id
+    and m.warehouse_id = v_doc.warehouse_id
+    and m.item_id = new.item_id;
+
+  select coalesce(sum(r.quantity_base), 0)
+    into v_reserved
+  from public.erp_stock_reservations r
+  where r.company_id = v_doc.company_id
+    and r.warehouse_id = v_doc.warehouse_id
+    and r.item_id = new.item_id
+    and r.status = 'active';
+
+  if v_on_hand - v_reserved < v_needed then
+    raise exception 'الكمية المتاحة غير كافية. رصيد فعلي: %, محجوز: %, مطلوب: %.',
+      v_on_hand, v_reserved, v_needed;
+  end if;
+
+  insert into public.erp_stock_reservations(
+    company_id, branch_id, warehouse_id, item_id,
+    sales_document_id, sales_line_id, quantity_base, status
+  ) values (
+    v_doc.company_id, v_doc.branch_id, v_doc.warehouse_id, new.item_id,
+    v_doc.id, new.id, v_needed, 'active'
+  );
+  return new;
+end;
+$$;
+
+drop trigger if exists erp_reserve_sales_line_after_insert on public.erp_sales_lines;
+create trigger erp_reserve_sales_line_after_insert
+after insert on public.erp_sales_lines
+for each row execute function public.erp_reserve_sales_line();
+
+create or replace function public.erp_sync_sales_reservations_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+set row_security = off
+as $$
+begin
+  if new.status is distinct from old.status then
+    if new.status = 'posted' then
+      update public.erp_stock_reservations
+      set status = 'consumed', updated_at = now()
+      where sales_document_id = new.id and status = 'active';
+    elsif new.status = 'cancelled' then
+      update public.erp_stock_reservations
+      set status = 'released', updated_at = now()
+      where sales_document_id = new.id and status = 'active';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists erp_sync_sales_reservations_status_trigger on public.erp_sales_documents;
+create trigger erp_sync_sales_reservations_status_trigger
+after update of status on public.erp_sales_documents
+for each row execute function public.erp_sync_sales_reservations_status();
+
+-- Preserve stock held by eligible drafts created before this migration.
+insert into public.erp_stock_reservations(
+  company_id, branch_id, warehouse_id, item_id,
+  sales_document_id, sales_line_id, quantity_base, status
+)
+select d.company_id, d.branch_id, d.warehouse_id, l.item_id,
+       d.id, l.id, coalesce(l.base_quantity, l.quantity), 'active'
+from public.erp_sales_documents d
+join public.erp_sales_lines l on l.document_id = d.id
+where d.status = 'draft'
+  and d.document_type in ('order','delivery','invoice')
+  and d.warehouse_id is not null
+on conflict (sales_line_id) do nothing;
+
+-- Unit-aware, validated line insert. The unit and conversion factor are read from
+-- the company's master data, never trusted from a client-supplied factor.
+create or replace function public.erp_add_operational_document_line_v2(
+  p_document_id uuid,
+  p_kind text,
+  p_item_id uuid,
+  p_quantity numeric,
+  p_unit_price numeric,
+  p_discount numeric default 0,
+  p_tax numeric default 0,
+  p_unit_id uuid default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+set row_security = off
+as $$
+declare
+  v_company uuid;
+  v_status text;
+  v_line_id uuid;
+  v_subtotal numeric(14,2);
+  v_discount numeric(14,2);
+  v_tax numeric(14,2);
+  v_unit_code text;
+  v_factor numeric(14,6) := 1;
+begin
+  if p_kind not in ('purchase','sales') then raise exception 'نوع المستند غير مدعوم.'; end if;
+  if p_item_id is null or p_quantity is null or p_quantity <= 0
+     or p_unit_price is null or p_unit_price < 0
+     or coalesce(p_discount,0) < 0 or coalesce(p_tax,0) < 0
+     or coalesce(p_discount,0) > p_quantity * p_unit_price then
+    raise exception 'راجع الصنف والكمية والسعر والخصم والضريبة.';
+  end if;
+
+  if p_kind = 'purchase' then
+    select company_id, status into v_company, v_status
+    from public.erp_purchase_documents where id = p_document_id for update;
+  else
+    select company_id, status into v_company, v_status
+    from public.erp_sales_documents where id = p_document_id for update;
+  end if;
+  if v_company is null then raise exception 'المستند غير موجود.'; end if;
+  if not public.erp_user_has_company_role(v_company, array['owner','admin','manager','operator','accountant']::text[]) then
+    raise exception 'ليست لديك صلاحية تعديل المستند.';
+  end if;
+  if v_status <> 'draft' then raise exception 'يمكن تعديل المسودة فقط.'; end if;
+  if not exists (
+    select 1 from public.erp_items i
+    where i.id = p_item_id and i.company_id = v_company and i.is_active
+  ) then raise exception 'الصنف غير نشط أو لا يتبع الشركة.'; end if;
+
+  if p_unit_id is not null then
+    select u.unit_code, u.conversion_factor into v_unit_code, v_factor
+    from public.erp_item_units u
+    where u.id = p_unit_id and u.item_id = p_item_id
+      and u.company_id = v_company and u.is_active;
+    if not found then raise exception 'وحدة القياس غير نشطة أو لا تتبع الصنف.'; end if;
+  else
+    select i.base_unit into v_unit_code from public.erp_items i where i.id = p_item_id;
+    v_factor := 1;
+  end if;
+
+  if p_kind = 'purchase' then
+    insert into public.erp_purchase_lines(
+      document_id, item_id, quantity, unit_price, discount_amount, tax_amount,
+      line_total, unit_id, unit_code, conversion_factor
+    ) values (
+      p_document_id, p_item_id, p_quantity, p_unit_price, coalesce(p_discount,0),
+      coalesce(p_tax,0), round(p_quantity * p_unit_price,2) - coalesce(p_discount,0) + coalesce(p_tax,0),
+      p_unit_id, coalesce(v_unit_code,'وحدة'), v_factor
+    ) returning id into v_line_id;
+
+    select coalesce(sum(quantity * unit_price),0), coalesce(sum(discount_amount),0), coalesce(sum(tax_amount),0)
+      into v_subtotal, v_discount, v_tax
+    from public.erp_purchase_lines where document_id = p_document_id;
+    update public.erp_purchase_documents set subtotal = v_subtotal, discount_total = v_discount,
+      tax_total = v_tax, grand_total = v_subtotal - v_discount + v_tax, updated_at = now()
+    where id = p_document_id and status = 'draft';
+  else
+    insert into public.erp_sales_lines(
+      document_id, item_id, quantity, unit_price, discount_amount, tax_amount,
+      line_total, unit_id, unit_code, conversion_factor
+    ) values (
+      p_document_id, p_item_id, p_quantity, p_unit_price, coalesce(p_discount,0),
+      coalesce(p_tax,0), round(p_quantity * p_unit_price,2) - coalesce(p_discount,0) + coalesce(p_tax,0),
+      p_unit_id, coalesce(v_unit_code,'وحدة'), v_factor
+    ) returning id into v_line_id;
+
+    select coalesce(sum(quantity * unit_price),0), coalesce(sum(discount_amount),0), coalesce(sum(tax_amount),0)
+      into v_subtotal, v_discount, v_tax
+    from public.erp_sales_lines where document_id = p_document_id;
+    update public.erp_sales_documents set subtotal = v_subtotal, discount_total = v_discount,
+      tax_total = v_tax, grand_total = v_subtotal - v_discount + v_tax, updated_at = now()
+    where id = p_document_id and status = 'draft';
+  end if;
+  return v_line_id;
+end;
+$$;
+
+revoke all on function public.erp_add_operational_document_line_v2(uuid,text,uuid,numeric,numeric,numeric,numeric,uuid) from public, anon;
+grant execute on function public.erp_add_operational_document_line_v2(uuid,text,uuid,numeric,numeric,numeric,numeric,uuid) to authenticated;
+
+-- Use base-unit quantities in the immutable stock ledger after unit conversion.
+create or replace function public.erp_post_sales_document(p_document_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+set row_security = off
+as $$
+declare
+  v_doc public.erp_sales_documents%rowtype;
+  v_line record;
+  v_count integer := 0;
+  v_subtotal numeric(16,2);
+  v_discount numeric(16,2);
+  v_tax numeric(16,2);
+  v_line_total numeric(16,2);
+  v_movement_type text;
+begin
+  select * into v_doc from public.erp_sales_documents where id = p_document_id for update;
+  if not found then raise exception 'مستند المبيعات غير موجود'; end if;
+  if not public.erp_user_has_company_role(v_doc.company_id, array['owner','admin','manager','accountant']::text[]) then
+    raise exception 'ليست لديك صلاحية ترحيل مستند المبيعات';
+  end if;
+  if v_doc.status <> 'draft' then raise exception 'يمكن ترحيل المسودات فقط؛ الاعتماد يحتاج مسارًا مخصصًا'; end if;
+  if v_doc.document_type not in ('delivery','invoice','return') then
+    raise exception 'نوع المستند لا ينشئ حركة مخزنية؛ لا يمكن ترحيله كصرف';
+  end if;
+  if v_doc.warehouse_id is null then raise exception 'اختر مخزنًا للمستند قبل الترحيل'; end if;
+  if not exists (select 1 from public.erp_warehouses w where w.id = v_doc.warehouse_id and w.company_id = v_doc.company_id and w.is_active) then
+    raise exception 'المخزن غير نشط أو لا يتبع الشركة'; end if;
+  select count(*)::integer, coalesce(sum(round(l.quantity * l.unit_price,2)),0),
+    coalesce(sum(l.discount_amount),0), coalesce(sum(l.tax_amount),0), coalesce(sum(l.line_total),0)
+    into v_count, v_subtotal, v_discount, v_tax, v_line_total
+  from public.erp_sales_lines l where l.document_id = v_doc.id;
+  if v_count = 0 then raise exception 'لا يمكن ترحيل مستند مبيعات بلا بنود'; end if;
+  if v_doc.subtotal <> v_subtotal or v_doc.discount_total <> v_discount
+     or v_doc.tax_total <> v_tax or v_doc.grand_total <> v_line_total
+     or v_doc.grand_total <> v_subtotal - v_discount + v_tax then
+    raise exception 'إجماليات مستند المبيعات لا تطابق تفاصيل البنود؛ أعد حساب المستند قبل الترحيل';
+  end if;
+
+  v_movement_type := case when v_doc.document_type = 'return' then 'customer_return' else 'sales_issue' end;
+  for v_line in
+    select l.* from public.erp_sales_lines l where l.document_id = v_doc.id order by l.created_at, l.id
+  loop
+    perform public.erp_record_inventory_movement(
+      v_doc.company_id, v_doc.warehouse_id, v_line.item_id, v_movement_type,
+      coalesce(v_line.base_quantity, v_line.quantity),
+      greatest(round(v_line.unit_price / coalesce(nullif(v_line.conversion_factor,0),1),4),0),
+      v_doc.branch_id, case when v_doc.document_date = current_date then now() else (v_doc.document_date + time '23:59:59')::timestamptz end,
+      'sales_document', v_doc.id, v_line.batch_number, v_line.expiry_date,
+      'مستند مبيعات ' || v_doc.document_number
+    );
+  end loop;
+
+  update public.erp_sales_documents set status = 'posted', updated_at = now() where id = v_doc.id;
+  return v_doc.id;
+end;
+$$;
+
+create or replace function public.erp_post_purchase_document(p_document_id uuid)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+set row_security = off
+as $$
+declare
+  v_doc public.erp_purchase_documents%rowtype;
+  v_line record;
+  v_count integer := 0;
+  v_subtotal numeric(16,2);
+  v_discount numeric(16,2);
+  v_tax numeric(16,2);
+  v_line_total numeric(16,2);
+  v_movement_type text;
+begin
+  select * into v_doc from public.erp_purchase_documents where id = p_document_id for update;
+  if not found then raise exception 'مستند المشتريات غير موجود'; end if;
+  if not public.erp_user_has_company_role(v_doc.company_id, array['owner','admin','manager','accountant']::text[]) then
+    raise exception 'ليست لديك صلاحية ترحيل مستند المشتريات';
+  end if;
+  if v_doc.status <> 'draft' then raise exception 'يمكن ترحيل المسودات فقط؛ الاعتماد يحتاج مسارًا مخصصًا'; end if;
+  if v_doc.document_type not in ('receipt','invoice','return') then
+    raise exception 'نوع المستند لا ينشئ حركة مخزنية؛ لا يمكن ترحيله كاستلام';
+  end if;
+  if v_doc.warehouse_id is null then raise exception 'اختر مخزنًا للمستند قبل الترحيل'; end if;
+  if not exists (select 1 from public.erp_warehouses w where w.id = v_doc.warehouse_id and w.company_id = v_doc.company_id and w.is_active) then
+    raise exception 'المخزن غير نشط أو لا يتبع الشركة'; end if;
+  select count(*)::integer, coalesce(sum(round(l.quantity * l.unit_price,2)),0),
+    coalesce(sum(l.discount_amount),0), coalesce(sum(l.tax_amount),0), coalesce(sum(l.line_total),0)
+    into v_count, v_subtotal, v_discount, v_tax, v_line_total
+  from public.erp_purchase_lines l where l.document_id = v_doc.id;
+  if v_count = 0 then raise exception 'لا يمكن ترحيل مستند مشتريات بلا بنود'; end if;
+  if v_doc.subtotal <> v_subtotal or v_doc.discount_total <> v_discount
+     or v_doc.tax_total <> v_tax or v_doc.grand_total <> v_line_total
+     or v_doc.grand_total <> v_subtotal - v_discount + v_tax then
+    raise exception 'إجماليات مستند المشتريات لا تطابق تفاصيل البنود؛ أعد حساب المستند قبل الترحيل';
+  end if;
+
+  v_movement_type := case when v_doc.document_type = 'return' then 'supplier_return' else 'purchase_receipt' end;
+  for v_line in
+    select l.* from public.erp_purchase_lines l where l.document_id = v_doc.id order by l.created_at, l.id
+  loop
+    perform public.erp_record_inventory_movement(
+      v_doc.company_id, v_doc.warehouse_id, v_line.item_id, v_movement_type,
+      coalesce(v_line.base_quantity, v_line.quantity),
+      greatest(round((round(v_line.quantity * v_line.unit_price, 2) - v_line.discount_amount) / coalesce(nullif(v_line.base_quantity,0),v_line.quantity),4),0),
+      v_doc.branch_id, case when v_doc.document_date = current_date then now() else (v_doc.document_date + time '23:59:59')::timestamptz end,
+      'purchase_document', v_doc.id, v_line.batch_number, v_line.expiry_date,
+      'مستند مشتريات ' || v_doc.document_number
+    );
+  end loop;
+
+  update public.erp_purchase_documents set status = 'posted', updated_at = now() where id = v_doc.id;
+  return v_doc.id;
+end;
+$$;
+
+revoke all on function public.erp_post_sales_document(uuid) from public, anon;
+revoke all on function public.erp_post_purchase_document(uuid) from public, anon;
+grant execute on function public.erp_post_sales_document(uuid) to authenticated;
+grant execute on function public.erp_post_purchase_document(uuid) to authenticated;
+
+commit;
