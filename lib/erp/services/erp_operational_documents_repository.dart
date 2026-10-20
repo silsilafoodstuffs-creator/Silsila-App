@@ -79,7 +79,7 @@ class ErpOperationalDocumentsRepository {
   }) async {
     final today = DateTime.now().toIso8601String().substring(0, 10);
     final rows = await _db.from('erp_sales_campaigns')
-      .select('id, company_id, campaign_type, title, start_date, end_date, owner_party_id, owner_label, is_active')
+      .select('id, company_id, campaign_type, title, start_date, end_date, owner_party_id, owner_label, is_active, target_customer_ids, target_warehouse_ids, target_branch_ids, target_governorates, target_districts, target_areas, target_centers, target_customer_types')
       .eq('company_id', companyId.trim())
       .eq('campaign_type', campaignType)
       .eq('is_active', true)
@@ -94,7 +94,7 @@ class ErpOperationalDocumentsRepository {
     required String campaignId,
   }) async {
     final rows = await _db.from('erp_sales_campaign_items')
-      .select('id, campaign_id, item_id, offer_price, min_quantity, max_quantity, representative_incentive, customer_incentive')
+      .select('id, campaign_id, item_id, offer_price, min_quantity, max_quantity, offer_quantity, remaining_quantity, discount_value, discount_kind, representative_incentive, customer_incentive')
       .eq('company_id', companyId.trim())
       .eq('campaign_id', campaignId)
       .eq('is_active', true)
