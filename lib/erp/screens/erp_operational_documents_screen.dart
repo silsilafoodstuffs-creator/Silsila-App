@@ -727,14 +727,15 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               final offerPrice = sourceItems == null ? basePrice : _n(item['offer_price']);
               final minQuantity = sourceItems == null ? null : item['min_quantity'];
               final maxQuantity = sourceItems == null ? null : item['max_quantity'];
+              final selectedUnitPrice = factor > 1 ? offerPrice / factor : offerPrice;
               result.add({
                 'item_id': id,
                 'quantity': qty,
                 'unit_id': unitId,
                 'unit_name': _s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']),
                 'conversion_factor': factor,
-                'unit_price': offerPrice * factor,
-                'fixed_unit_price': sourceItems == null ? null : offerPrice * factor,
+                'unit_price': selectedUnitPrice,
+                'fixed_unit_price': sourceItems == null ? null : selectedUnitPrice,
                 'min_quantity': minQuantity,
                 'max_quantity': maxQuantity,
                 'representative_incentive': _n(item['representative_incentive']),
@@ -810,8 +811,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     final onHand = actual[id] ?? 0;
                     final held = reserved[id] ?? 0;
                     final available = onHand - held;
-                    final price = sourceItems != null ? _n(item['offer_price']) : (widget.kind == ErpOperationalKind.purchase
+                    final baseDisplayPrice = sourceItems != null ? _n(item['offer_price']) : (widget.kind == ErpOperationalKind.purchase
                         ? _n(item['purchase_price']) : _n(item['sale_price']));
+                    final price = factor > 1 ? baseDisplayPrice / factor : baseDisplayPrice;
                     final sourceDetails = sourceItems == null ? '' :
                         'سعر الصنف: ' + _money(item['sale_price']) + ' | سعر العرض: ' + _money(item['offer_price']) +
                         ' | أقل كمية: ' + _money(item['min_quantity']) + ' | أعلى كمية: ' +
@@ -911,21 +913,53 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 const Text('معاينة البنود المحددة', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
                 const SizedBox(height: 4),
                 Container(
-                  height: 115,
+                  height: 145,
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(color: const Color(0xFFF8F5FC), borderRadius: BorderRadius.circular(8)),
                   child: selectedItems.isEmpty
                       ? const Center(child: Text('اكتب كمية بجوار الصنف لإضافته إلى المعاينة.'))
-                      : ListView(children: selectedItems.map((item) {
-                          final id = _s(item['id']);
-                          final qty = double.tryParse(quantities[id]!.text.trim()) ?? 0;
-                          final options = optionsFor(item);
-                          final unitId = selectedUnits[id] ?? '';                          final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
-                          return ListTile(                            dense: true,
-                            title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}'),                            subtitle: Text('الكمية: ${_money(qty)} ${_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name'])} • الأساسي: ${_money(widget.kind == ErpOperationalKind.purchase ? item['purchase_price'] : item['sale_price'])}'),
-                            trailing: IconButton(tooltip: 'إزالة من المعاينة', onPressed: () { quantities[id]!.clear(); refresh(() {}); }, icon: const Icon(Icons.remove_circle_outline, color: Colors.red)),
-                          );
-                        }).toList()),
+                      : Column(children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                            color: const Color(0xFFF2EAFB),
+                            child: const Row(children: [
+                              SizedBox(width: 85, child: Text('الكود', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11))),
+                              Expanded(child: Text('اسم الصنف', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11))),
+                              SizedBox(width: 90, child: Text('الوحدة', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11))),
+                              SizedBox(width: 68, child: Text('الكمية', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11))),
+                              SizedBox(width: 78, child: Text('السعر', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11))),
+                              SizedBox(width: 40, child: Text('حذف', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11))),
+                            ]),
+                          ),
+                          Expanded(child: ListView(children: selectedItems.map((item) {
+                            final id = _s(item['id']);
+                            final qty = double.tryParse(quantities[id]!.text.trim()) ?? 0;
+                            final options = optionsFor(item);
+                            final unitId = selectedUnits[id] ?? '';
+                            final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
+                            final factor = _n(unit['conversion_factor']) <= 0 ? 1.0 : _n(unit['conversion_factor']);
+                            final itemPrice = sourceItems != null ? _n(item['offer_price']) : (widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']));
+                            final unitPrice = factor > 1 ? itemPrice / factor : itemPrice;
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFFE9E2EF)))),
+                              child: Row(children: [
+                                SizedBox(width: 85, child: Text(_s(item['item_code']), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11))),
+                                Expanded(child: Text(_s(item['item_name']), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11))),
+                                SizedBox(width: 90, child: Text(_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11))),
+                                SizedBox(width: 68, child: Text(_money(qty), style: const TextStyle(fontSize: 11))),
+                                SizedBox(width: 78, child: Text(_money(unitPrice), style: const TextStyle(fontSize: 11))),
+                                SizedBox(width: 40, child: IconButton(
+                                  tooltip: 'حذف من المعاينة',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  onPressed: () { quantities[id]!.clear(); refresh(() {}); },
+                                  icon: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 20),
+                                )),
+                              ]),
+                            );
+                          }).toList())),
+                        ]),
                 ),
               ]),
             ),
