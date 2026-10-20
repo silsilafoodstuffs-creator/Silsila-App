@@ -64,7 +64,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   late String _view;
   bool _loading = false, _saving = false, _editMode = true;
   String? _error, _message, _selectedId, _selectedUserId;
-  List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _rules = [];
+  List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
+  String? _selectedTemplateId;
   final Set<String> _chosenPages = {};
   final Map<String,bool> _expanded = {};
   static const _typeNames = <String,String>{
@@ -97,7 +98,9 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       final templateList=(templateRows as List).map((x)=>Map<String,dynamic>.from(x)).toList();
       if(!mounted)return;
       setState((){
-        _types=typeList;_users=userList;
+        _types=typeList;_users=userList;_templates=templateList;
+        if(_selectedTemplateId!=null&&!templateList.any((r)=>_s(r['id'])==_selectedTemplateId))_selectedTemplateId=null;
+        if(_selectedTemplateId==null&&templateList.isNotEmpty)_selectedTemplateId=_s(templateList.first['id']);
         _rows=_isType?typeList:_isUser?userList:_isTemplate?templateList:userList;
         if(_selectedId!=null&&!_rows.any((r)=>_s(r['id'])==_selectedId))_selectedId=null;
         if(_selectedUserId!=null&&!userList.any((r)=>_s(r['id'])==_selectedUserId))_selectedUserId=null;
@@ -223,6 +226,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إضافة القوائم المحددة'))],
     )));
     if(selected.isEmpty||!mounted)return;
+    if(template && _selectedId!=parentId){setState(()=>_selectedId=parentId);await _loadRules();}
+    if(!template && _selectedUserId!=parentId){setState(()=>_selectedUserId=parentId);await _loadUserRules();}
     final existing=_rules.map((r)=>'${r['menu_name']}|${r['submenu_name']}|${r['page_name']}').toSet();
     setState((){
       for(final key in selected){
@@ -336,7 +341,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           DataCell(_imageCell(row)),
           DataCell(Checkbox(value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
           if(_isType)DataCell(Checkbox(value:row['show_at_login']==true,onChanged:_editMode?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
-          if(_isTemplate)DataCell(OutlinedButton.icon(onPressed:()=>_openMenuPicker(parentId:id,template:true),icon:const Icon(Icons.drive_file_move_outlined,size:16),label:const Text('جلب قوائم'))),
+          if(_isTemplate)DataCell(OutlinedButton.icon(onPressed:()async{setState(()=>_selectedId=id);await _loadRules();await _openMenuPicker(parentId:id,template:true);},icon:const Icon(Icons.drive_file_move_outlined,size:16),label:const Text('جلب قوائم'))),
         ]);
       }),
     ));
@@ -355,6 +360,15 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         OutlinedButton.icon(onPressed:parentId==null?null:()=>_openMenuPicker(parentId:parentId,template:templateMode),icon:const Icon(Icons.account_tree_outlined),label:const Text('جلب قوائم (F1)')),
         if(_isPermissions)const SizedBox(width:8),
         if(_isPermissions)OutlinedButton.icon(onPressed:_openUserPicker,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
+        if(_isPermissions)const SizedBox(width:8),
+        if(_isPermissions)SizedBox(width:180,child:DropdownButtonFormField<String>(
+          key:ValueKey('template-select-$_selectedTemplateId'),
+          value:_templates.any((t)=>_s(t['id'])==_selectedTemplateId)?_selectedTemplateId:null,
+          decoration:const InputDecoration(labelText:'قالب صلاحيات',isDense:true),
+          items:_templates.where((t)=>t['is_active']==true).map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
+          onChanged:(v)=>setState(()=>_selectedTemplateId=v),
+        )),
+        if(_isPermissions)OutlinedButton.icon(onPressed:_selectedUserId==null||_selectedTemplateId==null?null:_applyTemplate,icon:const Icon(Icons.playlist_add_check),label:const Text('تطبيق القالب')),
       ]),
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
@@ -393,6 +407,20 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
 
       ]))))),
     ])));
+  }
+
+  Future<void> _applyTemplate() async {
+    if(_selectedUserId==null||_selectedTemplateId==null)return;
+    try{
+      final source=await _db!.from('erp_permission_template_rules').select().eq('company_id',_company).eq('template_id',_selectedTemplateId!);
+      for(final item in (source as List).whereType<Map<String,dynamic>>()){
+        final payload=<String,dynamic>{'company_id':_company,'user_id':_selectedUserId,'menu_name':item['menu_name'],'submenu_name':item['submenu_name']??'','page_name':item['page_name']};
+        for(final field in _userAdminActionFields.values)payload[field]=item[field]==true;
+        await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');
+      }
+      await _loadUserRules();
+      if(mounted)setState(()=>_message='تم تطبيق قالب الصلاحيات على المستخدم المحدد.');
+    }catch(e){if(mounted)setState(()=>_error='تعذر تطبيق القالب: $e');}
   }
 
   Future<void> _openUserPicker() async {
