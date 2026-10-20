@@ -8244,7 +8244,7 @@ class _MarketCardState extends State<MarketCard> {
                 ),
               ],
             ),
-            if (widget.isNegotiable && postOwnerId != database?.auth.currentUser?.id) ...[
+            if (widget.isNegotiable && widget.postOwnerId != database?.auth.currentUser?.id) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(onPressed: _busy ? null : _showNegotiationDialog, icon: const Icon(Icons.currency_exchange), label: const Text('اقتراح سعر تفاوض')),
             ],
