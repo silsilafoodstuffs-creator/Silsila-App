@@ -284,7 +284,7 @@ class SilsilaApp extends StatelessWidget {
             shadowColor: orange.withValues(alpha: 0.30),
             animationDuration: const Duration(milliseconds: 180),
             overlayColor: orange.withValues(alpha: 0.18),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(13),
             ),
@@ -330,9 +330,9 @@ class SilsilaApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: Color(0xFFE5DDED)),
           ),
           enabledBorder: OutlineInputBorder(
