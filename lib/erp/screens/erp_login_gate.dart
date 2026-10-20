@@ -56,9 +56,9 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   }
 
   String _normalizePhone(String value) {
-    final input = value.trim().replaceAll(RegExp(r'[\\s().-]'), '');
+    final input = value.trim().replaceAll(RegExp(r'[\s().-]'), '');
     if (input.startsWith('+')) return input;
-    final digits = input.replaceAll(RegExp(r'\\D'), '');
+    final digits = input.replaceAll(RegExp(r'\D'), '');
     if (digits.startsWith('00')) return '+${digits.substring(2)}';
     if (digits.startsWith('20')) return '+$digits';
     if (digits.startsWith('0') && digits.length >= 10) {
