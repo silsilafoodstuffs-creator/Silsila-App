@@ -150,11 +150,11 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
         const Text('Saturation / التشبع',style:TextStyle(fontSize:12)),Slider(value:hsv.saturation,min:0,max:1,onChanged:(v)=>ds(()=>hsv=hsv.withSaturation(v))),
         const Text('Brightness / السطوع',style:TextStyle(fontSize:12)),Slider(value:hsv.value,min:0,max:1,onChanged:(v)=>ds(()=>hsv=hsv.withValue(v))),
         Wrap(spacing:7,children:[for(final c in const [Color(0xFF3E007D),Color(0xFFFFA015),Color(0xFFFF27C3),Colors.red,Colors.green,Colors.blue,Colors.black,Colors.white])InkWell(onTap:()=>ds(()=>hsv=HSVColor.fromColor(c)),child:Container(width:28,height:28,decoration:BoxDecoration(color:c,shape:BoxShape.circle,border:Border.all(color:Colors.black26))))]),
-        Text('#${hsv.toColor().value.toRadixString(16).substring(2).toUpperCase()}'),
+        Text('#${hsv.toColor().toARGB32().toRadixString(16).substring(2).toUpperCase()}'),
       ])),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(silsilaText('إلغاء'))),FilledButton(onPressed:()=>Navigator.pop(ctx,hsv.toColor()),child:Text(silsilaText('اختيار')))],
     )));
-    if(result!=null&&mounted){controller.text='#${result.value.toRadixString(16).substring(2).toUpperCase()}';setState((){});}
+    if(result!=null&&mounted){controller.text='#${result.toARGB32().toRadixString(16).substring(2).toUpperCase()}';setState((){});}
   }
   Widget _colorField(TextEditingController c,String label,{double labelWidth=94})=>_labeledField(label,Row(children:[
     Expanded(child:_textField(c,label,hint:'#3E007D')),const SizedBox(width:5),
