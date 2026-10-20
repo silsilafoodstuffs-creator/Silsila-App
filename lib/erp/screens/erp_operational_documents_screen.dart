@@ -100,13 +100,27 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   );
   double get _invoiceDiscountValue => double.tryParse(_invoiceDiscountAmount.text.trim()) ?? 0;
 
+  double _invoiceDiscountForLine(int index) {
+    if (index < 0 || index >= _pendingLines.length || _pendingGross <= 0) return 0;
+    final gross = _n(_pendingLines[index]['quantity']) * _n(_pendingLines[index]['unit_price']);
+    if (index == _pendingLines.length - 1) {
+      final allocated = _pendingLines.take(index).fold<double>(0, (sum, line) {
+        final lineGross = _n(line['quantity']) * _n(line['unit_price']);
+        return sum + (_invoiceDiscountValue * lineGross / _pendingGross * 100).roundToDouble() / 100;
+      });
+      return (_invoiceDiscountValue - allocated).clamp(0, double.infinity);
+    }
+    return (_invoiceDiscountValue * gross / _pendingGross * 100).roundToDouble() / 100;
+  }
+
   void _recalculatePendingTax() {
-    for (final line in _pendingLines) {
+    for (var index = 0; index < _pendingLines.length; index++) {
+      final line = _pendingLines[index];
       final gross = _n(line['quantity']) * _n(line['unit_price']);
-      final discount = _n(line['discount']);
+      final invoiceDiscount = _invoiceDiscountForLine(index);
+      final taxable = (gross - _n(line['discount']) - invoiceDiscount).clamp(0, double.infinity);
       final rate = _isTaxInvoice ? _n(line['tax_rate']) : 0.0;
-      line['tax'] = ((gross - discount).clamp(0, double.infinity) * rate / 100 * 100).roundToDouble() / 100;
-      if (!_isTaxInvoice) line['tax_rate'] = 0.0;
+      line['tax'] = (taxable * rate / 100 * 100).roundToDouble() / 100;
     }
   }
 
@@ -151,8 +165,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         line['discount'] = gross * percent / 100;
       }
       final rate = _isTaxInvoice ? _n(line['tax_rate']) : 0.0;
-      line['tax'] = ((gross - _n(line['discount'])).clamp(0, double.infinity) * rate / 100 * 100).roundToDouble() / 100;
-      if (!_isTaxInvoice) line['tax_rate'] = 0.0;
+      final invoiceDiscount = _invoiceDiscountForLine(index);
+      line['adjusted_price'] = _n(line['unit_price']) - (_n(line['quantity']) <= 0 ? 0 : _n(line['discount']) / _n(line['quantity']));
+      line['tax'] = ((_n(line['quantity']) * _n(line['unit_price']) - _n(line['discount']) - invoiceDiscount).clamp(0, double.infinity) * rate / 100 * 100).roundToDouble() / 100;
       _pendingLines[index] = line;
       final subtotal = _pendingGross;
       final currentPercent = double.tryParse(_invoiceDiscountPercent.text.trim()) ?? 0;
@@ -649,8 +664,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         final item = _items.firstWhere((row) => _s(row['id']) == itemId, orElse: () => <String, dynamic>{});
         final basePrice = (widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price'])) * factor;
         final adjustedPrice = _n(resolved['net_unit_price']) * factor;
-        final taxRate = widget.kind == ErpOperationalKind.sales && _isTaxInvoice ? _n(item['tax_rate']) : 0.0;
-        final tax = ((quantity * unitPrice - discount).clamp(0, double.infinity)) * taxRate / 100;
+        final taxRate = widget.kind == ErpOperationalKind.sales ? _n(item['tax_rate']) : 0.0;
+        final tax = ((quantity * unitPrice - discount).clamp(0, double.infinity)) * (_isTaxInvoice ? taxRate : 0.0) / 100;
         pricedLines.add({
           'item_id': itemId,
           'quantity': quantity,
@@ -661,7 +676,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           'discount_percent': discountPercent,
           'discount_limit': _n(item['discount_limit']),
           'conversion_factor': factor,
-          'unit_price': adjustedPrice,
+          'unit_price': unitPrice,
           'discount': discount,
           'tax': tax,
           'tax_rate': taxRate,
@@ -942,7 +957,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                                 final subtotal = _pendingGross;
                                 final amount = double.tryParse(value) ?? 0;
                                 _invoiceDiscountPercent.text = subtotal <= 0 ? '0' : (amount * 100 / subtotal).toStringAsFixed(2);
-                                setState(() {});
+                                setState(_recalculatePendingTax);
                               },
                             )),
                             const SizedBox(width: 6),
@@ -952,7 +967,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                               decoration: const InputDecoration(labelText: 'خصم الفاتورة %', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10)),
                               onChanged: (value) {
                                 _invoiceDiscountAmount.text = (_pendingGross * ((double.tryParse(value) ?? 0) / 100)).toStringAsFixed(2);
-                                setState(() {});
+                                setState(_recalculatePendingTax);
                               },
                             )),
                           ]),
@@ -1152,7 +1167,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     rows: List<DataRow>.generate(_pendingLines.length, (index) {
                       final line = _pendingLines[index];
                       final gross = _n(line['quantity']) * _n(line['unit_price']);
-                      final total = (gross - _n(line['discount']) + _n(line['tax'])).clamp(0, double.infinity);
+                      final total = (gross - _n(line['discount']) - _invoiceDiscountForLine(index) + _n(line['tax'])).clamp(0, double.infinity);
                       return DataRow(cells: [
                         DataCell(Text('${index + 1}')),
                         DataCell(Text(_s(line['item_code']))),
