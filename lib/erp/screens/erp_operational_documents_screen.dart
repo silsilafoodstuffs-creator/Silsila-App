@@ -763,7 +763,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 'unit_price': selectedUnitPrice,
                 'fixed_unit_price': sourceItems == null ? null : selectedUnitPrice,
                 'min_quantity': minQuantity,
-                'max_quantity': maxQuantity,
+                'max_quantity': maxQuantity == null ? null : (_n(maxQuantity) / factor),
+                'campaign_item_id': item['campaign_item_id'],
                 'representative_incentive': _n(item['representative_incentive']),
                 'customer_incentive': _n(item['customer_incentive']),
                 'offer_title': sourceTitle,
@@ -1078,6 +1079,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           'representative_incentive': _n(line['representative_incentive']),
           'customer_incentive': _n(line['customer_incentive']),
           'offer_title': _s(line['offer_title']),
+          'campaign_item_id': line['campaign_item_id'],
         });
       }
       if (!mounted) return;
