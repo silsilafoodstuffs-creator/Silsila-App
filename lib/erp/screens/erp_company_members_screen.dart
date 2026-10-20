@@ -117,6 +117,7 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
         _profilesAvailable = profileTableAvailable;
         if (!_branches.any((branch) => _s(branch['id']) == _newBranchId)) _newBranchId = null;
         if (!_branches.any((branch) => _s(branch['id']) == _branchFilter)) _branchFilter = '__all__';
+        if (!_jobTitles.contains(_jobFilter)) _jobFilter = '__all__';
         _loading = false;
       });
     } catch (error) {
@@ -251,13 +252,13 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
       setState(() => _error = 'هذا المستخدم عضو بالفعل في الشركة.');
       return;
     }
+    final displayName = _memberName.text.trim();
+    if (_profilesAvailable && displayName.isEmpty) {
+      setState(() => _error = 'اكتب اسم المستخدم ليظهر في دليل المستخدمين.');
+      return;
+    }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      final displayName = _memberName.text.trim();
-      if (_profilesAvailable && displayName.isEmpty) {
-        setState(() => _error = 'اكتب اسم المستخدم ليظهر في دليل المستخدمين.');
-        return;
-      }
       await _db!.from('erp_company_members').insert({
         'company_id': companyId,
         'user_id': userId,
