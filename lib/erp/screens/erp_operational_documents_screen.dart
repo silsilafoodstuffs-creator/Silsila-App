@@ -36,6 +36,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _lines = [];
+  // Rows chosen in F11 remain a local invoice preview until the user confirms saving them.
+  List<Map<String, dynamic>> _pendingLines = [];
   String? _partyId;
   String? _warehouseId;
   String? _itemId;
@@ -480,18 +482,65 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           'tax': _n(line['tax']),
         });
       }
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _pendingLines = [
+          ..._pendingLines,
+          ...pricedLines.map((line) => <String, dynamic>{
+            ...line,
+            'item_code': _s(_items.firstWhere((item) => _s(item['id']) == _s(line['item_id']), orElse: () => {})['item_code']),
+            'item_name': _s(_items.firstWhere((item) => _s(item['id']) == _s(line['item_id']), orElse: () => {})['item_name']),
+            'unit_name': _s(picked!.firstWhere((pickedLine) => _s(pickedLine['item_id']) == _s(line['item_id']), orElse: () => {})['unit_name']),
+          }),
+        ];
+        _message = 'تم نقل الأصناف إلى جريد معاينة الفاتورة. لن تُحفظ في قاعدة البيانات إلا بعد الضغط على «موافقة وحفظ الأصناف».';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() { _saving = false; _error = 'لم تُحفظ البنود المحددة؛ ألغت قاعدة البيانات العملية كاملة عند فشل التحقق أو الحجز: $error'; });
+    }
+  }
+
+  Future<void> _savePendingLines() async {
+    if (_selectedDocumentId == null || _pendingLines.isEmpty) {
+      setState(() => _error = 'اختر الأصناف من F11 أولًا قبل الحفظ.');
+      return;
+    }
+    final selected = _rows.where((row) => _s(row['id']) == _selectedDocumentId);
+    if (selected.isEmpty || _s(selected.first['status']) != 'draft') {
+      setState(() => _error = 'لا يمكن حفظ الأصناف إلا داخل فاتورة بحالة مسودة.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final payload = _pendingLines.map((line) => <String, Object?>{
+        'item_id': line['item_id'],
+        'quantity': line['quantity'],
+        'unit_id': line['unit_id'],
+        'unit_price': line['unit_price'],
+        'discount': line['discount'],
+        'tax': line['tax'],
+      }).toList();
       final count = await _repo.addLinesAtomically(
         documentId: _selectedDocumentId!,
         kind: widget.kind,
-        lines: pricedLines,
+        lines: payload,
       );
       if (!mounted) return;
-      setState(() { _saving = false; _message = 'تمت إضافة $count بندًا بعد تطبيق سياسة التسعير، وحُفظت الحجوزات في معاملة واحدة.'; });
+      setState(() {
+        _saving = false;
+        _pendingLines = [];
+        _message = 'تم حفظ $count صنفًا في الفاتورة بنجاح.';
+      });
       await _load(clearMessage: false);
       if (mounted && _selectedDocumentId != null) await _loadLines(_selectedDocumentId!);
     } catch (error) {
       if (!mounted) return;
-      setState(() { _saving = false; _error = 'لم تُحفظ البنود المحددة؛ ألغت قاعدة البيانات العملية كاملة عند فشل التحقق أو الحجز: $error'; });
+      setState(() {
+        _saving = false;
+        _error = 'تعذر حفظ الأصناف؛ ما زالت بيانات المعاينة موجودة ولم يتم حذفها: $error';
+      });
     }
   }
 
@@ -617,7 +666,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('إنشاء مستند جديد', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+            Text(widget.kind == ErpOperationalKind.sales && _documentType == 'invoice' ? 'بيانات رأس فاتورة البيع' : 'إنشاء مستند جديد', style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 17)),
             const SizedBox(height: 8),
             TextField(controller: _documentNumber, decoration: const InputDecoration(labelText: 'المسلسل اليدوي للمستند *', border: OutlineInputBorder())),
             const SizedBox(height: 4),
@@ -697,6 +746,75 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               FilledButton.icon(onPressed: _saving ? null : _addLine, icon: const Icon(Icons.playlist_add), label: const Text('إضافة البند')),
             ],
           ))),
+        if (_selectedDocumentId != null && _pendingLines.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Row(children: [
+                  const Expanded(child: Text('جريد معاينة أصناف الفاتورة', style: TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 16))),
+                  Chip(label: Text('${_pendingLines.length} سطر')),
+                ]),
+                const SizedBox(height: 6),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(const Color(0xFFF2EAFB)),
+                    columns: const [
+                      DataColumn(label: Text('م')),
+                      DataColumn(label: Text('كود الصنف')),
+                      DataColumn(label: Text('اسم الصنف')),
+                      DataColumn(label: Text('الكمية')),
+                      DataColumn(label: Text('الوحدة')),
+                      DataColumn(label: Text('سعر البيع')),
+                      DataColumn(label: Text('الخصم')),
+                      DataColumn(label: Text('الضريبة')),
+                      DataColumn(label: Text('قيمة الصنف')),
+                      DataColumn(label: Text('')),
+                    ],
+                    rows: List<DataRow>.generate(_pendingLines.length, (index) {
+                      final line = _pendingLines[index];
+                      final gross = _n(line['quantity']) * _n(line['unit_price']);
+                      final total = (gross - _n(line['discount']) + _n(line['tax'])).clamp(0, double.infinity);
+                      return DataRow(cells: [
+                        DataCell(Text('${index + 1}')),
+                        DataCell(Text(_s(line['item_code']))),
+                        DataCell(Text(_s(line['item_name']))),
+                        DataCell(Text(_money(line['quantity']))),
+                        DataCell(Text(_s(line['unit_name']))),
+                        DataCell(Text(_money(line['unit_price']))),
+                        DataCell(Text(_money(line['discount']))),
+                        DataCell(Text(_money(line['tax']))),
+                        DataCell(Text(_money(total), style: const TextStyle(fontWeight: FontWeight.w900))),
+                        DataCell(IconButton(
+                          tooltip: 'حذف من المعاينة',
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: _saving ? null : () => setState(() => _pendingLines.removeAt(index)),
+                        )),
+                      ]);
+                    }),
+                  ),
+                ),
+                const Divider(),
+                Row(children: [
+                  const Expanded(child: Text('إجمالي الأصناف بالمعاينة', style: TextStyle(fontWeight: FontWeight.w900))),
+                  Text(
+                    '${_money(_pendingLines.fold<double>(0, (sum, line) => sum + (_n(line['quantity']) * _n(line['unit_price']) - _n(line['discount']) + _n(line['tax']))))} ج.م',
+                    style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 18),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  onPressed: _saving || _loading ? null : _savePendingLines,
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Text('موافقة وحفظ الأصناف في الفاتورة'),
+                ),
+                const Text('الأصناف في هذا الجدول معاينة مؤقتة؛ لن تُحفظ إلا بعد الموافقة.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+              ]),
+            ),
+          ),
+        ],
         if (_selectedDocumentId != null && _lines.isNotEmpty) ...[
           const SizedBox(height: 8),
           const Text('بنود المستند المحدد', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
@@ -716,7 +834,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               : ['delivery','invoice','return'].contains(type);
           final canPost = status == 'draft' && eligibleType;
           final date = _s(r['document_date']);
-          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () async { setState(() { _selectedDocumentId = _s(r['id']); _lines = []; _documentType = _s(r['document_type']); _partyId = _s(widget.kind == ErpOperationalKind.purchase ? r['supplier_id'] : r['customer_id']); _warehouseId = _s(r['warehouse_id']); }); await _loadLines(_s(r['id'])); }, child: Padding(padding: const EdgeInsets.all(12), child: Column(
+          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () async { setState(() { _selectedDocumentId = _s(r['id']); _lines = []; _pendingLines = []; _documentType = _s(r['document_type']); _partyId = _s(widget.kind == ErpOperationalKind.purchase ? r['supplier_id'] : r['customer_id']); _warehouseId = _s(r['warehouse_id']); }); await _loadLines(_s(r['id'])); }, child: Padding(padding: const EdgeInsets.all(12), child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(children: [
