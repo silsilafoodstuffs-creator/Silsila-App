@@ -25,14 +25,18 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   final _background = TextEditingController(text: '#FFFFFF');
   final List<TextEditingController> _sizes = List.generate(5, (i) => TextEditingController(text: ['24','20','17','15','13'][i]));
   final List<TextEditingController> _colors = List.generate(5, (i) => TextEditingController(text: ['#3E007D','#3E007D','#3E007D','#333333','#666666'][i]));
-  final List<String> _fonts = List.filled(5, 'Cairo');
+  final List<String> _fonts = List.filled(5, 'Tajawal');
+  final List<bool> _bold = List.filled(5, false);
+  final List<bool> _italic = List.filled(5, false);
+  final List<bool> _underline = List.filled(5, false);
   final List<String> _labels = ['العنوان الرئيسي','العنوان الفرعي الأول','العنوان الفرعي الثاني','العنوان الفرعي الثالث','النص والعناوين الصغيرة'];
   final List<String> _levels = ['heading_1','heading_2','heading_3','heading_4','heading_5'];
   String _language = 'ar';
   String? _logoBase64, _logoMime;
   bool _loading = true, _saving = false;
   String? _error, _message;
-  static const _fontOptions = ['Cairo','Tajawal','Almarai','Noto Sans Arabic','Arial','Roboto'];
+  // Kufam and Tajawal are bundled. Romman requires its licensed font asset for distinct rendering.
+  static const _fontOptions = ['Tajawal','Kufam','Romman','Almarai','Noto Sans Arabic','Arial','Roboto'];
 
   @override
   void initState() { super.initState(); try { _db = Supabase.instance.client; } catch (_) {} _load(); }
@@ -72,7 +76,10 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
               _sizes[i].text = (style['size'] ?? _sizes[i].text).toString();
               _colors[i].text = (style['color'] ?? _colors[i].text).toString();
               final font = (style['font'] ?? _fonts[i]).toString();
-              _fonts[i] = _fontOptions.contains(font) ? font : 'Cairo';
+              _fonts[i] = _fontOptions.contains(font) ? font : 'Tajawal';
+              _bold[i] = style['bold'] == true || style['fontWeight'] == 'bold';
+              _italic[i] = style['italic'] == true;
+              _underline[i] = style['underline'] == true;
             }
           }
         }
@@ -107,7 +114,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
     }
     setState(() { _saving=true; _error=null; _message=null; });
     try {
-      final styles = List.generate(5,(i)=>{'key':_levels[i],'label':_labels[i],'font':_fonts[i],'size':double.parse(_sizes[i].text.trim()),'color':_colors[i].text.trim().toUpperCase()});
+      final styles = List.generate(5,(i)=>{'key':_levels[i],'label':_labels[i],'font':_fonts[i],'size':double.parse(_sizes[i].text.trim()),'color':_colors[i].text.trim().toUpperCase(),'bold':_bold[i],'italic':_italic[i],'underline':_underline[i]});
       await _db!.from('erp_program_settings').upsert({
         'company_id':company,'program_name':_name.text.trim(),'language_code':_language,
         'logo_base64':_logoBase64,'logo_mime_type':_logoMime,
@@ -123,8 +130,36 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
     } catch(e) { if(!mounted) return; setState(() { _saving=false; _error='تعذر حفظ الإعدادات: $e'; }); }
   }
 
-  Widget _textField(TextEditingController controller,String label,{String? hint}) => TextField(controller:controller,style:const TextStyle(fontSize:14),decoration:InputDecoration(labelText:silsilaText(label),hintText:hint,isDense:true,constraints:const BoxConstraints(minHeight:52),contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12),border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))));
-  Widget _colorField(TextEditingController c,String label) => Row(children:[Expanded(child:_textField(c,label,hint:'#3E007D')),const SizedBox(width:10),Container(width:42,height:42,decoration:BoxDecoration(color:_parseColor(c.text,_settingsPurple),borderRadius:BorderRadius.circular(8),border:Border.all(color:Colors.black12)))]);
+
+  Widget _textField(TextEditingController controller,String label,{String? hint,double minHeight=42}) => TextField(
+    controller:controller,onChanged:(_)=>setState((){}),style:const TextStyle(fontSize:13),
+    decoration:InputDecoration(hintText:hint,isDense:true,constraints:BoxConstraints(minHeight:minHeight),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:9),border:OutlineInputBorder(borderRadius:BorderRadius.circular(8))),
+  );
+  Widget _labeledField(String label,Widget field,{double labelWidth=94})=>Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+    SizedBox(width:labelWidth,child:Text(silsilaText(label),style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
+    const SizedBox(width:7),Expanded(child:field),
+  ]);
+  Widget _compactTextField(TextEditingController c,String label,{String? hint,double labelWidth=94})=>_labeledField(label,_textField(c,label,hint:hint),labelWidth:labelWidth);
+  Future<void> _pickColor(TextEditingController controller,String label) async {
+    var hsv=HSVColor.fromColor(_parseColor(controller.text,_settingsPurple));
+    final result=await showDialog<Color>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,ds)=>AlertDialog(
+      title:Text('${silsilaText('اختيار اللون')} — ${silsilaText(label)}'),
+      content:SizedBox(width:360,child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Container(height:42,decoration:BoxDecoration(color:hsv.toColor(),borderRadius:BorderRadius.circular(8))),
+        const Text('Hue / درجة اللون',style:TextStyle(fontSize:12)),Slider(value:hsv.hue,min:0,max:360,onChanged:(v)=>ds(()=>hsv=hsv.withHue(v))),
+        const Text('Saturation / التشبع',style:TextStyle(fontSize:12)),Slider(value:hsv.saturation,min:0,max:1,onChanged:(v)=>ds(()=>hsv=hsv.withSaturation(v))),
+        const Text('Brightness / السطوع',style:TextStyle(fontSize:12)),Slider(value:hsv.value,min:0,max:1,onChanged:(v)=>ds(()=>hsv=hsv.withValue(v))),
+        Wrap(spacing:7,children:[for(final c in const [Color(0xFF3E007D),Color(0xFFFFA015),Color(0xFFFF27C3),Colors.red,Colors.green,Colors.blue,Colors.black,Colors.white])InkWell(onTap:()=>ds(()=>hsv=HSVColor.fromColor(c)),child:Container(width:28,height:28,decoration:BoxDecoration(color:c,shape:BoxShape.circle,border:Border.all(color:Colors.black26))))]),
+        Text('#${hsv.toColor().value.toRadixString(16).substring(2).toUpperCase()}'),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(silsilaText('إلغاء'))),FilledButton(onPressed:()=>Navigator.pop(ctx,hsv.toColor()),child:Text(silsilaText('اختيار')))],
+    )));
+    if(result!=null&&mounted){controller.text='#${result.value.toRadixString(16).substring(2).toUpperCase()}';setState((){});}
+  }
+  Widget _colorField(TextEditingController c,String label,{double labelWidth=94})=>_labeledField(label,Row(children:[
+    Expanded(child:_textField(c,label,hint:'#3E007D')),const SizedBox(width:5),
+    InkWell(onTap:()=>_pickColor(c,label),child:Container(width:38,height:38,decoration:BoxDecoration(color:_parseColor(c.text,_settingsPurple),borderRadius:BorderRadius.circular(8),border:Border.all(color:Colors.black26)),child:const Icon(Icons.palette_outlined,size:19,color:Colors.white))),
+  ]),labelWidth:labelWidth);
   Widget _section(String title,IconData icon,Widget child)=>Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Icon(icon,color:_settingsPurple),const SizedBox(width:8),Text(silsilaText(title),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800,color:_settingsPurple))]),const SizedBox(height:14),child])));
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
@@ -158,15 +193,17 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
       ])),
     ]))),
     const SizedBox(height:14),
-    _section('الاسم واللغة والشعار',Icons.apps_rounded,Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Row(children:[
-        Expanded(flex:3,child:_textField(_name,'اسم البرنامج')),
-        const SizedBox(width:12),
-        Expanded(flex:2,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:InputDecoration(labelText:silsilaText('لغة البرنامج'),isDense:true,constraints:BoxConstraints(minHeight:52)),items:[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:(v){if(v!=null){setState(()=>_language=v); SilsilaLanguage.setLanguage(v);}})),
-      ]),
-      const SizedBox(height:12),
-      Row(children:[Container(width:78,height:78,decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:Colors.black12)),child:_logoBase64==null?const Icon(Icons.image_outlined,size:34,color:_settingsPurple):ClipRRect(borderRadius:BorderRadius.circular(12),child:Image.memory(base64Decode(_logoBase64!),fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined)))),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(silsilaText('صورة البرنامج / الشعار'),style:TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),Wrap(spacing:8,runSpacing:8,children:[OutlinedButton.icon(onPressed:_pickLogo,icon:const Icon(Icons.upload_file_rounded),label:Text(silsilaText('اختيار صورة'))),if(_logoBase64!=null)TextButton.icon(onPressed:(){setState((){_logoBase64=null;_logoMime=null;});},icon:const Icon(Icons.delete_outline),label:Text(silsilaText('إزالة')))])]))]),
-    ])),
+
+    _section('الاسم واللغة والشعار',Icons.apps_rounded,SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1050,child:Row(children:[
+      SizedBox(width:300,child:_compactTextField(_name,'اسم البرنامج',labelWidth:82)),
+      const SizedBox(width:10),
+      Container(width:48,height:44,decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(8),border:Border.all(color:Colors.black12)),child:_logoBase64==null?const Icon(Icons.image_outlined,color:_settingsPurple):ClipRRect(borderRadius:BorderRadius.circular(8),child:Image.memory(base64Decode(_logoBase64!),fit:BoxFit.contain))),
+      const SizedBox(width:6),
+      OutlinedButton.icon(onPressed:_pickLogo,icon:const Icon(Icons.upload_file_rounded,size:18),label:Text(silsilaText('اختيار صورة'))),
+      if(_logoBase64!=null)IconButton(onPressed:()=>setState(()=>_logoBase64=null),icon:const Icon(Icons.delete_outline,color:Colors.red)),
+      const SizedBox(width:10),
+      SizedBox(width:240,child:_labeledField('لغة البرنامج',DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:42),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:7),border:OutlineInputBorder()),items:[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:(v){if(v!=null){setState(()=>_language=v);SilsilaLanguage.setLanguage(v);}}),labelWidth:82)),
+    ])))),
     _section('ألوان وهوية البرنامج',Icons.palette_outlined,Column(children:[
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1050,child:Row(children:[
         Expanded(child:_colorField(_primary,'اللون الأساسي')),
@@ -181,17 +218,18 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
     ])),
     _section('نظام الخطوط — خمسة مستويات',Icons.text_fields_rounded,Column(children:[
       for(var i=0;i<5;i++) ...[
-        Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:const Color(0xFFF7F5FA),borderRadius:BorderRadius.circular(10)),child:
-          SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1050,child:Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
-            SizedBox(width:175,child:Text('${i+1}. ${_labels[i]}',style:TextStyle(fontSize:14,color:_parseColor(_colors[i].text,_settingsPurple),fontWeight:FontWeight.w800))),
-            const SizedBox(width:10),
-            Expanded(flex:2,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:InputDecoration(labelText:silsilaText('نوع الخط'),isDense:true,constraints:BoxConstraints(minHeight:52)),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_fonts[i]=v);})),
-            const SizedBox(width:12),
-            Expanded(flex:1,child:_textField(_sizes[i],'الحجم')),
-            const SizedBox(width:12),
-            Expanded(flex:2,child:_colorField(_colors[i],'لون الخط')),
-          ]))),
-        ),
+
+        Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),decoration:BoxDecoration(color:const Color(0xFFF7F5FA),borderRadius:BorderRadius.circular(8)),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1250,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Padding(padding:const EdgeInsets.only(bottom:4),child:Text('${i+1}. ${_labels[i]}',style:TextStyle(fontSize:13,color:_parseColor(_colors[i].text,_settingsPurple),fontWeight:FontWeight.w800))),
+          Row(children:[
+            SizedBox(width:245,child:_labeledField('نوع الخط',DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:38),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:5),border:OutlineInputBorder()),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_fonts[i]=v);}),labelWidth:70)),
+            const SizedBox(width:8),SizedBox(width:135,child:_compactTextField(_sizes[i],'الحجم',labelWidth:42)),
+            const SizedBox(width:8),SizedBox(width:260,child:_colorField(_colors[i],'لون الخط',labelWidth:65)),
+            const SizedBox(width:8),FilterChip(label:Text(silsilaText('سميك')),selected:_bold[i],visualDensity:VisualDensity.compact,onSelected:(v)=>setState(()=>_bold[i]=v)),
+            const SizedBox(width:4),FilterChip(label:Text(silsilaText('مائل')),selected:_italic[i],visualDensity:VisualDensity.compact,onSelected:(v)=>setState(()=>_italic[i]=v)),
+            const SizedBox(width:4),FilterChip(label:Text(silsilaText('تحته سطر')),selected:_underline[i],visualDensity:VisualDensity.compact,onSelected:(v)=>setState(()=>_underline[i]=v)),
+          ]),
+        ])))),
         if(i<4) const SizedBox(height:8),
       ]
     ])),
