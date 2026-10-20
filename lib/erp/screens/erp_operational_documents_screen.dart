@@ -937,7 +937,17 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               : ['delivery','invoice','return'].contains(type);
           final canPost = status == 'draft' && eligibleType;
           final date = _s(r['document_date']);
-          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () async { setState(() { _selectedDocumentId = _s(r['id']); _lines = []; _pendingLines = []; _documentType = _s(r['document_type']); _partyId = _s(widget.kind == ErpOperationalKind.purchase ? r['supplier_id'] : r['customer_id']); _warehouseId = _s(r['warehouse_id']); }); await _loadLines(_s(r['id'])); }, child: Padding(padding: const EdgeInsets.all(12), child: Column(
+          return Card(color: _s(r['id']) == _selectedDocumentId ? const Color(0xFFF0E8FA) : null, child: InkWell(onTap: () async { setState(() {
+            _selectedDocumentId = _s(r['id']);
+            _lines = [];
+            _pendingLines = [];
+            _documentType = _s(r['document_type']);
+            _partyId = _s(widget.kind == ErpOperationalKind.purchase ? r['supplier_id'] : r['customer_id']);
+            _warehouseId = _s(r['warehouse_id']);
+            if (_s(r['document_date']).isNotEmpty) _documentDate = DateTime.tryParse(_s(r['document_date'])) ?? _documentDate;
+            _salesRepId = _s(r['sales_rep_id']).isEmpty ? null : _s(r['sales_rep_id']);
+            _isTaxInvoice = r['is_tax_invoice'] == true;
+          }); await _loadLines(_s(r['id'])); }, child: Padding(padding: const EdgeInsets.all(12), child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(children: [
