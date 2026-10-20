@@ -97,7 +97,9 @@ const Map<String, Map<String, List<String>>> _modules = {
 };
 
 class ErpDashboardScreen extends StatefulWidget {
-  const ErpDashboardScreen({super.key});
+  const ErpDashboardScreen({super.key, this.initialPage});
+
+  final String? initialPage;
   @override
   State<ErpDashboardScreen> createState() => _ErpDashboardScreenState();
 }
@@ -171,6 +173,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialPage == 'بيانات الشركة') {
+      _module = 'إدارة البرنامج';
+      _group = 'بيانات أساسية';
+      _page = 'بيانات الشركة';
+    }
     _loadManagedAppsFromCloud();
   }
 
