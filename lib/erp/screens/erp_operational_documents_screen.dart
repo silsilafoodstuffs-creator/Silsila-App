@@ -579,7 +579,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                       DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                         IconButton(tooltip: 'جلب الصنف', onPressed: remaining <= 0 ? null : () async {
                           Navigator.pop(dialogContext);
-                          await _openItemPicker(sourceItems: [{...row, 'id': _s(row['item_id']), 'shortage_id': _s(row['id']), 'offer_price': _n(row['sale_price']), 'min_quantity': remaining, 'max_quantity': remaining, 'offer_title': 'نواقص العميل'}], sourceTitle: 'نواقص العميل');
+                          await _openItemPicker(sourceItems: [{...row, 'id': _s(row['item_id']), 'shortage_id': _s(row['id']), 'offer_price': _n(row['sale_price']), 'min_quantity': 0.0001, 'max_quantity': remaining, 'offer_title': 'نواقص العميل'}], sourceTitle: 'نواقص العميل');
                         }, icon: const Icon(Icons.playlist_add, color: Color(0xFF3E007D))),
                         IconButton(tooltip: 'حذف النقص', onPressed: () async {
                           final yes = await showDialog<bool>(context: dialogContext, builder: (c) => AlertDialog(
