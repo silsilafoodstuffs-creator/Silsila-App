@@ -13,7 +13,7 @@ class ErpPermissionsScreen extends StatefulWidget {
 class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   SupabaseClient? _db;
   bool _loading=true, _saving=false, _expandAll=false;
-  String _mode='template', _scope='__all__', _template='مشغل';
+  String _mode='template', _scope='__all__', _menuScope='__all__', _template='مشغل';
   String? _error,_message;
   List<Map<String,dynamic>> _users=[];
   final Map<String,Map<String,bool>> _draft={};
@@ -86,6 +86,32 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   String _s(dynamic v)=>(v??'').toString();
   String _key(String m,String s,String p)=>m+'::'+s+'::'+p;
   List<String> get _allKeys=>[for(final m in _tree.entries)_key(m.key,'*','*'),for(final m in _tree.entries)for(final s in m.value.entries)_key(m.key,s.key,'*'),for(final m in _tree.entries)for(final s in m.value.entries)for(final p in s.value)_key(m.key,s.key,p)];
+  Map<String,Map<String,List<String>>> get _visibleTree => _menuScope == '__all__'
+      ? _tree
+      : Map.fromEntries(_tree.entries.where((entry) => entry.key == _menuScope));
+
+  List<String> get _scopeKeys => _menuScope == '__all__'
+      ? _allKeys
+      : _allKeys.where((key) => key.startsWith('$_menuScope::')).toList();
+
+  void _setColumn(String action, bool value) {
+    setState(() {
+      for (final uid in _targets) {
+        final map = _draft.putIfAbsent(uid, () => _blank('مخصص بلا صلاحيات'));
+        for (final key in _scopeKeys) {
+          map['$key::$action'] = value;
+          if (action == 'مسموح' && !value) {
+            for (final other in _actions.where((item) => item != 'مسموح')) {
+              map['$key::$other'] = false;
+            }
+          }
+        }
+      }
+      _message = 'تم تحديث عمود «$action» للقوائم المحددة. اضغط حفظ لتثبيت التغييرات.';
+      _error = null;
+    });
+  }
+
   Map<String,bool> _blank(String role){
     final out=<String,bool>{};
     for(final k in _allKeys){
@@ -151,8 +177,8 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
     return _scope=='__all__'?t.every((uid)=>_draft[uid]?[key+'::'+action]==true):_draft[_scope]?[key+'::'+action]==true;
   }
   void _bulk(bool value){setState((){
-    for(final uid in _targets){final map=_draft.putIfAbsent(uid,()=>_blank('مخصص بلا صلاحيات'));for(final key in _allKeys){for(final a in _actions){map[key+'::'+a]=value;}}}
-    _message=value?'تم تحديد جميع الصلاحيات للاختيار الحالي.':'تم إلغاء جميع الصلاحيات للاختيار الحالي.';_error=null;
+    for(final uid in _targets){final map=_draft.putIfAbsent(uid,()=>_blank('مخصص بلا صلاحيات'));for(final key in _scopeKeys){for(final a in _actions){map[key+'::'+a]=value;}}}
+    _message=value?'تم تحديد صلاحيات القوائم المحددة.':'تم إلغاء صلاحيات القوائم المحددة.';_error=null;
   });}
   Future<void> _save() async{
     final company=(widget.companyId??'').trim();if(_db==null||company.isEmpty){setState(()=>_error='لا توجد شركة محددة.');return;}
@@ -204,17 +230,53 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
         SegmentedButton<String>(segments:const[ButtonSegment(value:'template',label:Text('قالب جاهز')),ButtonSegment(value:'manual',label:Text('تحديد يدوي'))],selected:{_mode},onSelectionChanged:(v)=>setState(()=>_mode=v.first)),
         if(_mode=='template')Padding(padding:const EdgeInsets.only(top:8),child:DropdownButtonFormField<String>(value:_template,decoration:const InputDecoration(labelText:'القالب',isDense:true),items:const['مدير النظام','مدير','محاسب','مشغل','عرض فقط','مخصص بلا صلاحيات'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v){if(v!=null)_applyTemplate(v);})),
         const SizedBox(height:8),
-        DropdownButtonFormField<String>(value:_scope,decoration:const InputDecoration(labelText:'تطبيق على',isDense:true),items:[const DropdownMenuItem(value:'__all__',child:Text('كل المستخدمين النشطين')),..._users.map((u){final id=_s(u['user_id']);final role=_s(u['member_role']);return DropdownMenuItem(value:id,child:Text(role+' — '+(id.length>12?id.substring(0,12):id)+'…'));})],onChanged:(v){if(v!=null)setState(()=>_scope=v);}),
-        const SizedBox(height:6),const Text('اختيار مستخدم يعدّل صلاحياته فقط، واختيار الكل يطبّق التغيير على جميع المستخدمين النشطين.',style:TextStyle(fontSize:12,color:Colors.black54)),
+        DropdownButtonFormField<String>(
+          value:_scope,
+          decoration:const InputDecoration(labelText:'المستخدم المستهدف',isDense:true),
+          items:[
+            const DropdownMenuItem(value:'__all__',child:Text('كل المستخدمين النشطين')),
+            ..._users.map((u){
+              final id=_s(u['user_id']);
+              final role=_s(u['member_role']);
+              final shortId=id.length>10?id.substring(0,10):id;
+              return DropdownMenuItem(value:id,child:Text('$role — $shortId…'));
+            }),
+          ],
+          onChanged:(v){if(v!=null)setState(()=>_scope=v);},
+        ),
+        const SizedBox(height:8),
+        DropdownButtonFormField<String>(
+          value:_menuScope,
+          decoration:const InputDecoration(labelText:'نطاق القوائم',isDense:true),
+          items:[
+            const DropdownMenuItem(value:'__all__',child:Text('كل القوائم الرئيسية')),
+            ..._tree.keys.map((name)=>DropdownMenuItem(value:name,child:Text(name))),
+          ],
+          onChanged:(v){if(v!=null)setState(()=>_menuScope=v);},
+        ),
+        const SizedBox(height:6),
+        const Text('يطبّق الاختيار على المستخدم أو الكل، وعلى كل القوائم أو القائمة الرئيسية المحددة. استخدم مربعات أعلى الأعمدة لتحديد صلاحية لكل القوائم ضمن النطاق.',style:TextStyle(fontSize:12,color:Colors.black54)),
       ]))),
       Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         const Text('مصفوفة الصلاحيات',style:TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:_permPurple)),const SizedBox(height:8),
         SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:900,child:Column(children:[
-          Row(children:[const Expanded(flex:3,child:Text('القائمة / الشاشة',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900))),for(final a in _actions)Expanded(flex:1,child:Center(child:Text(a,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),textAlign:TextAlign.center)))]),
+          Row(children:[
+            const Expanded(flex:3,child:Text('القائمة / الشاشة',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900))),
+            for(final a in _actions)
+              Expanded(flex:1,child:Column(mainAxisSize:MainAxisSize.min,children:[
+                Text(a,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),textAlign:TextAlign.center),
+                Checkbox(
+                  value:_scopeKeys.isNotEmpty && _targets.isNotEmpty && _scopeKeys.every((key)=>_targets.every((uid)=>_draft[uid]?[key+'::'+a]==true)),
+                  onChanged:_saving?null:(value)=>_setColumn(a,value??false),
+                  activeColor:_permPurple,
+                  visualDensity:VisualDensity.compact,
+                ),
+              ])),
+          ]),
           const Divider(),
           Align(alignment:AlignmentDirectional.centerStart,child:Wrap(spacing:8,children:[FilledButton.tonal(onPressed:_saving?null:()=>_bulk(true),child:const Text('تحديد الكل')),OutlinedButton(onPressed:_saving?null:()=>_bulk(false),child:const Text('إزالة الكل'))])),
           const SizedBox(height:8),
-          for(final m in _tree.entries)_main(m.key,m.value),
+          for(final m in _visibleTree.entries)_main(m.key,m.value),
         ]))),
       ]))),
     ])),
