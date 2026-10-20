@@ -19,7 +19,7 @@ class ErpQuickTaskButton extends StatelessWidget {
 
   Color get _color {
     final value = label.trim().toLowerCase();
-    if (value == 'تحديث' || value == 'تحميل' || value.contains('إعادة تحميل')) {
+    if (value.contains('تحديث') || value.contains('تحميل') || value.contains('إعادة تحميل')) {
       return const Color(0xFF2475B8);
     }
     if (value == 'إضافة' || value.contains('إضافة ') || value.contains('إضافة/')) {
