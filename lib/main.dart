@@ -275,11 +275,17 @@ class SilsilaApp extends StatelessWidget {
           primary: purple,
           secondary: orange,
         ),
+        hoverColor: orange.withValues(alpha: 0.10),
+        splashColor: pink.withValues(alpha: 0.12),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
             backgroundColor: purple,
             foregroundColor: Colors.white,
-            overlayColor: pink.withValues(alpha: 0.12),
+            elevation: 2,
+            shadowColor: orange.withValues(alpha: 0.30),
+            animationDuration: const Duration(milliseconds: 180),
+            overlayColor: orange.withValues(alpha: 0.18),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(13),
             ),
@@ -289,7 +295,11 @@ class SilsilaApp extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: purple,
             foregroundColor: Colors.white,
-            overlayColor: pink.withValues(alpha: 0.14),
+            elevation: 1,
+            shadowColor: orange.withValues(alpha: 0.24),
+            animationDuration: const Duration(milliseconds: 180),
+            overlayColor: orange.withValues(alpha: 0.18),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(13),
             ),
@@ -315,12 +325,32 @@ class SilsilaApp extends StatelessWidget {
           backgroundColor: purple,
           foregroundColor: Colors.white,
           centerTitle: true,
+          elevation: 1,
+          surfaceTintColor: Colors.transparent,
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFE5DDED)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFE5DDED)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: orange, width: 1.8),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFB3261E)),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFB3261E), width: 1.8),
           ),
         ),
       ),
