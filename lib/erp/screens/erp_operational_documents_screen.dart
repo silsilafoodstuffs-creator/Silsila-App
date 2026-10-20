@@ -483,7 +483,40 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             return [{'id': '', 'unit_code': base, 'unit_name': base, 'conversion_factor': 1, 'is_base_unit': true}];
           }
 
-          return AlertDialog(
+          List<Map<String, dynamic>> buildPickedResult() {
+            final result = <Map<String, dynamic>>[];
+            for (final item in selectedItems) {
+              final id = _s(item['id']);
+              final qty = double.tryParse(quantities[id]!.text.trim()) ?? 0;
+              final options = optionsFor(item);
+              final unitId = selectedUnits[id] ?? '';
+              final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
+              final factor = _n(unit['conversion_factor']) <= 0 ? 1.0 : _n(unit['conversion_factor']);
+              final basePrice = widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']);
+              result.add({
+                'item_id': id,
+                'quantity': qty,
+                'unit_id': unitId,
+                'unit_name': _s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']),
+                'conversion_factor': factor,
+                'unit_price': basePrice * factor,
+                'discount': 0.0,
+                'tax': 0.0,
+              });
+            }
+            return result;
+          }
+
+          return Focus(
+            autofocus: true,
+            onKeyEvent: (node, event) {
+              if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f11) {
+                if (selectedItems.isNotEmpty) Navigator.pop(dialogContext, buildPickedResult());
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
+            },
+            child: AlertDialog(
             title: Row(children: [
               const Expanded(child: Text('اختيار الأصناف — F11', style: TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900))),
               Chip(label: Text('${selectedItems.length} صنف')),
@@ -595,33 +628,12 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             actions: [
               TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
               FilledButton.icon(
-                onPressed: selectedItems.isEmpty ? null : () {
-                  final result = <Map<String, dynamic>>[];
-                  for (final item in selectedItems) {
-                    final id = _s(item['id']);
-                    final qty = double.tryParse(quantities[id]!.text.trim()) ?? 0;
-                    final options = optionsFor(item);
-                    final unitId = selectedUnits[id] ?? '';
-                    final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
-                    final factor = _n(unit['conversion_factor']) <= 0 ? 1.0 : _n(unit['conversion_factor']);
-                    final basePrice = widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']);
-                    result.add({
-                      'item_id': id,
-                      'quantity': qty,
-                      'unit_id': unitId,
-                      'unit_name': _s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']),
-                      'conversion_factor': factor,
-                      'unit_price': basePrice * factor,
-                      'discount': 0.0,
-                      'tax': 0.0,
-                    });
-                  }
-                  Navigator.pop(dialogContext, result);
-                },
+                onPressed: selectedItems.isEmpty ? null : () => Navigator.pop(dialogContext, buildPickedResult()),
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text('موافق وإضافة البنود'),
               ),
             ],
+          ),
           );
         }),
       );
