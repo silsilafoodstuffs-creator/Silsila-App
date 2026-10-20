@@ -215,8 +215,11 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
                 ..addAll(_preparations.where((p) => chosen.contains(_s(p['id']))).map((p) => _s(p['invoice_id'])));
               for (final id in _selectedInvoiceIds) {
                 _controller(_manualNumbers, id);
-                _controller(_weights, id, '0');
-                _controller(_loads, id, '0');
+                final sourcePrep = _preparations.where((p) =>
+                    chosen.contains(_s(p['id'])) && _s(p['invoice_id']) == id);
+                final prep = sourcePrep.isEmpty ? <String, dynamic>{} : sourcePrep.first;
+                _controller(_weights, id, _s(prep['weight_kg']).isEmpty ? '0' : _s(prep['weight_kg']));
+                _controller(_loads, id, _s(prep['load_kg']).isEmpty ? '0' : _s(prep['load_kg']));
               }
             });
             Navigator.pop(dialogContext);
@@ -245,7 +248,10 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
     try {
       for (final invoiceId in _selectedInvoiceIds) {
         final invoice = _invoices.firstWhere((r) => _s(r['id']) == invoiceId);
-        final prepIds = _isPreparation ? <String>[] : _selectedPreparationIds.toList();
+        final prepIds = _isPreparation ? <String>[] : _preparations
+            .where((p) => _selectedPreparationIds.contains(_s(p['id'])) && _s(p['invoice_id']) == invoiceId)
+            .map((p) => _s(p['id']))
+            .toList();
         await _db.from('erp_sales_fulfillment_documents').upsert({
           'company_id': widget.companyId,
           'kind': widget.kind,
