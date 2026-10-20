@@ -490,13 +490,17 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         }
         final unitPrice = _n(resolved['base_unit_price']) * factor;
         final discount = quantity * unitPrice * _n(resolved['discount_percent']) / 100;
+        final item = _items.firstWhere((row) => _s(row['id']) == itemId, orElse: () => <String, dynamic>{});
+        final taxRate = widget.kind == ErpOperationalKind.sales && _isTaxInvoice ? _n(item['tax_rate']) : 0.0;
+        final tax = ((quantity * unitPrice - discount).clamp(0, double.infinity)) * taxRate / 100;
         pricedLines.add({
           'item_id': itemId,
           'quantity': quantity,
           'unit_id': _s(line['unit_id']).isEmpty ? null : line['unit_id'],
           'unit_price': unitPrice,
           'discount': discount,
-          'tax': _n(line['tax']),
+          'tax': tax,
+          'tax_rate': taxRate,
         });
       }
       if (!mounted) return;
@@ -511,6 +515,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             'unit_name': _s(picked!.firstWhere((pickedLine) => _s(pickedLine['item_id']) == _s(line['item_id']), orElse: () => {})['unit_name']),
           }),
         ];
+        final subtotal = _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']));
+        final percent = double.tryParse(_invoiceDiscountPercent.text.trim()) ?? 0;
+        if (percent > 0) _invoiceDiscountAmount.text = (subtotal * percent / 100).toStringAsFixed(2);
         _message = 'تم نقل الأصناف إلى جريد معاينة الفاتورة. لن تُحفظ في قاعدة البيانات إلا بعد الضغط على «موافقة وحفظ الأصناف».';
       });
     } catch (error) {
@@ -531,14 +538,39 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      final payload = _pendingLines.map((line) => <String, Object?>{
-        'item_id': line['item_id'],
-        'quantity': line['quantity'],
-        'unit_id': line['unit_id'],
-        'unit_price': line['unit_price'],
-        'discount': line['discount'],
-        'tax': line['tax'],
-      }).toList();
+      final grossTotal = _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']));
+      final currentLineDiscounts = _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['discount']));
+      final invoiceDiscount = widget.kind == ErpOperationalKind.sales && _documentType == 'invoice'
+          ? (double.tryParse(_invoiceDiscountAmount.text.trim()) ?? 0)
+          : 0.0;
+      final maxDiscount = (grossTotal - currentLineDiscounts).clamp(0, double.infinity);
+      if (invoiceDiscount < 0 || invoiceDiscount > maxDiscount + 0.005) {
+        throw ArgumentError('خصم الفاتورة يجب أن يكون بين صفر وصافي قيمة الأصناف بعد خصوماتها؛ الحد المتاح ${maxDiscount.toStringAsFixed(2)}.');
+      }
+      var remainingInvoiceDiscount = invoiceDiscount;
+      final payload = <Map<String, Object?>>[];
+      for (var index = 0; index < _pendingLines.length; index++) {
+        final line = _pendingLines[index];
+        final gross = _n(line['quantity']) * _n(line['unit_price']);
+        final netBeforeInvoiceDiscount = (gross - _n(line['discount'])).clamp(0, double.infinity);
+        final allocatedDiscount = index == _pendingLines.length - 1
+            ? remainingInvoiceDiscount
+            : (grossTotal <= 0 ? 0.0 : (invoiceDiscount * gross / grossTotal).roundToDouble() / 100);
+        remainingInvoiceDiscount = (remainingInvoiceDiscount - allocatedDiscount).clamp(0, double.infinity);
+        final totalDiscount = _n(line['discount']) + allocatedDiscount;
+        if (totalDiscount > gross + 0.005) throw ArgumentError('خصم السطر أكبر من قيمة الصنف.');
+        final taxRate = widget.kind == ErpOperationalKind.sales && _isTaxInvoice ? _n(line['tax_rate']) : 0.0;
+        final taxableBase = (gross - totalDiscount).clamp(0, double.infinity);
+        final taxAmount = (taxableBase * taxRate / 100 * 100).roundToDouble() / 100;
+        payload.add({
+          'item_id': line['item_id'],
+          'quantity': line['quantity'],
+          'unit_id': line['unit_id'],
+          'unit_price': line['unit_price'],
+          'discount': totalDiscount,
+          'tax': taxAmount,
+        });
+      }
       final count = await _repo.addLinesAtomically(
         documentId: _selectedDocumentId!,
         kind: widget.kind,
@@ -548,6 +580,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       setState(() {
         _saving = false;
         _pendingLines = [];
+        _invoiceDiscountAmount.text = '0';
+        _invoiceDiscountPercent.text = '0';
         _message = 'تم حفظ $count صنفًا في الفاتورة بنجاح.';
       });
       await _load(clearMessage: false);
