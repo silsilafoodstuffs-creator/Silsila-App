@@ -570,7 +570,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                       ])),
                     ]);
                   }),
-                )),
+                ))),
             ])),
             actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
           );
@@ -819,7 +819,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                         SizedBox(width: 95, child: Text(_s(item['item_code']), maxLines: 1, overflow: TextOverflow.ellipsis)),
                         SizedBox(width: 190, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text(_s(item['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis),
-                          if (sourceItems != null) Text('العرض: ' + _money(item['offer_price']) + ' | أقل: ' + _money(item['min_quantity']) + ' | أعلى: ' + (_s(item['max_quantity']).isEmpty ? 'مفتوح' : _money(item['max_quantity'])) + (sourceTitle == 'نواقص العميل' ? '' : ' | حافز م: ' + _money(item['representative_incentive']) + ' | حافز ع: ' + _money(item['customer_incentive'])), maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xFF3E007D))),
+                          if (sourceItems != null) Text('سعر الصنف: ' + _money(item['sale_price']) + ' | سعر العرض: ' + _money(item['offer_price']) + ' | أقل: ' + _money(item['min_quantity']) + ' | أعلى: ' + (_s(item['max_quantity']).isEmpty ? 'مفتوح' : _money(item['max_quantity'])) + (sourceTitle == 'نواقص العميل' ? '' : ' | حافز م: ' + _money(item['representative_incentive']) + ' | حافز ع: ' + _money(item['customer_incentive'])), maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xFF3E007D))),
                         ])),
                         SizedBox(width: 85, child: Text(_money(price))),
                         SizedBox(width: 85, child: Text(_money(onHand))),
