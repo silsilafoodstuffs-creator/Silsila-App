@@ -91,6 +91,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       final userRows=await _db!.from('erp_users').select('*,erp_user_types(name_ar,name_en)').eq('company_id',_company).order('user_code');
       final templateRows=await _db!.from('erp_permission_templates').select().eq('company_id',_company).order('template_code');
       final typeList=(typeRows as List).map((x)=>Map<String,dynamic>.from(x)).toList();
+      const typePriority={'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
+      typeList.sort((a,b)=>(typePriority[_s(a['name_ar'])]??99).compareTo(typePriority[_s(b['name_ar'])]??99));
       final userList=(userRows as List).map((x)=>Map<String,dynamic>.from(x)).toList();
       final templateList=(templateRows as List).map((x)=>Map<String,dynamic>.from(x)).toList();
       if(!mounted)return;
@@ -327,7 +329,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           DataCell(_imageCell(row)),
           DataCell(Checkbox(value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
           if(_isType)DataCell(Checkbox(value:row['show_at_login']==true,onChanged:_editMode?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
-          if(_isTemplate)DataCell(OutlinedButton(onPressed:()=>_openMenuPicker(parentId:id,template:true),child:const Text('جلب قوائم'))),
+          if(_isTemplate)DataCell(OutlinedButton.icon(onPressed:()=>_openMenuPicker(parentId:id,template:true),icon:const Icon(Icons.drive_file_move_outlined,size:16),label:const Text('جلب قوائم'))),
         ]);
       }),
     ));
