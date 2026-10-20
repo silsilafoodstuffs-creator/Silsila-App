@@ -16,6 +16,9 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   String _mode='template', _scope='__all__', _menuScope='__all__', _template='مشغل';
   String? _error,_message;
   List<Map<String,dynamic>> _users=[];
+  final Set<String> _selectedUsers = <String>{};
+  String _userFilterType = 'all';
+  String _userFilterValue = '__all__';
   final Map<String,Map<String,bool>> _draft={};
   final Map<String,bool> _expanded={};
   final List<String> _actions=const ['مسموح','إضافة','تعديل','حذف','حفظ','طباعة','Excel','PDF'];
@@ -190,7 +193,237 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       setState((){_loading=false;_error=message+details;});
     }
   }
-  List<String> get _targets=>_scope=='__all__'?_users.map((u)=>_s(u['user_id'])).toList():[_scope];
+  List<String> get _targets {
+    if (_selectedUsers.isNotEmpty) return _users
+        .map((u) => _s(u['user_id']))
+        .where(_selectedUsers.contains)
+        .toList();
+    return _scope == '__all__'
+        ? _users.map((u) => _s(u['user_id'])).toList()
+        : [_scope];
+  }
+
+  String _userLabel(Map<String, dynamic> user) {
+    final id = _s(user['user_id']);
+    final name = _s(user['display_name']).trim();
+    final job = _s(user['job_title']).trim();
+    final role = _s(user['member_role']).trim();
+    final shortId = id.length > 10 ? id.substring(0, 10) : id;
+    return (name.isNotEmpty ? name : '$role — $shortId…') +
+        (job.isNotEmpty ? ' — $job' : '') +
+        (role.isNotEmpty && name.isNotEmpty ? ' ($role)' : '');
+  }
+
+  List<String> get _userFilterValues {
+    final values = <String>{};
+    for (final user in _users) {
+      final value = _userFilterType == 'job'
+          ? _s(user['job_title']).trim()
+          : _s(user['member_role']).trim();
+      if (value.isNotEmpty) values.add(value);
+    }
+    return values.toList()..sort();
+  }
+
+  bool _matchesUserFilter(Map<String, dynamic> user) {
+    if (_userFilterValue == '__all__') return true;
+    final value = _userFilterType == 'job'
+        ? _s(user['job_title']).trim()
+        : _s(user['member_role']).trim();
+    return value == _userFilterValue;
+  }
+
+  Future<void> _pickUsersF1() async {
+    final chosen = <String>{..._selectedUsers};
+    if (chosen.isEmpty && _scope != '__all__') chosen.add(_scope);
+    String search = '';
+    String filterType = 'all';
+    String filterValue = '__all__';
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final filterValues = <String>{};
+          for (final user in _users) {
+            final value = filterType == 'job'
+                ? _s(user['job_title']).trim()
+                : _s(user['member_role']).trim();
+            if (value.isNotEmpty) filterValues.add(value);
+          }
+          final visible = _users.where((user) {
+            final id = _s(user['user_id']);
+            final role = _s(user['member_role']).trim();
+            final value = filterType == 'job'
+                ? _s(user['job_title']).trim()
+                : role;
+            final text = _userLabel(user).toLowerCase();
+            return (filterValue == '__all__' || value == filterValue) &&
+                (search.trim().isEmpty ||
+                    text.contains(search.trim().toLowerCase()) ||
+                    id.toLowerCase().contains(search.trim().toLowerCase()));
+          }).toList();
+          return AlertDialog(
+            title: const Text('جلب المستخدمين — F1'),
+            content: SizedBox(
+              width: 560,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'بحث بالاسم أو الوظيفة أو التصنيف',
+                      prefixIcon: Icon(Icons.search),
+                      isDense: true,
+                    ),
+                    onChanged: (value) => setDialogState(() => search = value),
+                    onSubmitted: (_) {},
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('كل المستخدمين'),
+                        selected: filterType == 'all',
+                        onSelected: (_) => setDialogState(() {
+                          filterType = 'all';
+                          filterValue = '__all__';
+                        }),
+                      ),
+                      ChoiceChip(
+                        label: const Text('حسب التصنيف'),
+                        selected: filterType == 'role',
+                        onSelected: (_) => setDialogState(() {
+                          filterType = 'role';
+                          filterValue = '__all__';
+                        }),
+                      ),
+                      ChoiceChip(
+                        label: const Text('حسب الوظيفة'),
+                        selected: filterType == 'job',
+                        onSelected: (_) => setDialogState(() {
+                          filterType = 'job';
+                          filterValue = '__all__';
+                        }),
+                      ),
+                    ],
+                  ),
+                  if (filterType != 'all')
+                    DropdownButtonFormField<String>(
+                      value: filterValue,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: filterType == 'job' ? 'الوظيفة' : 'التصنيف',
+                        isDense: true,
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: '__all__',
+                          child: Text('كل القيم'),
+                        ),
+                        ...filterValues.toList()..sort()
+                      ].map((value) => value is String
+                          ? DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value == '__all__' ? 'كل القيم' : value),
+                            )
+                          : value as DropdownMenuItem<String>).toList(),
+                      onChanged: (value) => setDialogState(
+                        () => filterValue = value ?? '__all__',
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text('المحدد: ${chosen.length}'),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => setDialogState(() {
+                          chosen.addAll(visible.map((u) => _s(u['user_id'])));
+                        }),
+                        child: const Text('تحديد الظاهر'),
+                      ),
+                      TextButton(
+                        onPressed: () => setDialogState(() {
+                          chosen.removeAll(visible.map((u) => _s(u['user_id'])));
+                        }),
+                        child: const Text('إلغاء الظاهر'),
+                      ),
+                      TextButton(
+                        onPressed: () => setDialogState(() {
+                          chosen
+                            ..clear()
+                            ..addAll(_users.map((u) => _s(u['user_id'])));
+                        }),
+                        child: const Text('تحديد الكل'),
+                      ),
+                    ],
+                  ),
+                  Flexible(
+                    child: SizedBox(
+                      height: 320,
+                      child: visible.isEmpty
+                          ? const Center(child: Text('لا يوجد مستخدمون مطابقون'))
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: visible.length,
+                              itemBuilder: (context, index) {
+                                final user = visible[index];
+                                final id = _s(user['user_id']);
+                                return CheckboxListTile(
+                                  dense: true,
+                                  value: chosen.contains(id),
+                                  title: Text(_userLabel(user)),
+                                  subtitle: Text('التصنيف: ${_s(user['member_role'])}'),
+                                  onChanged: (value) => setDialogState(() {
+                                    if (value == true) {
+                                      chosen.add(id);
+                                    } else {
+                                      chosen.remove(id);
+                                    }
+                                  }),
+                                );
+                              },
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _selectedUsers
+                      ..clear()
+                      ..addAll(chosen);
+                    if (chosen.isNotEmpty) {
+                      _scope = chosen.length == 1 ? chosen.first : '__selected__';
+                    } else {
+                      _scope = '__all__';
+                    }
+                    _message = chosen.isEmpty
+                        ? 'لم يتم اختيار مستخدمين.'
+                        : 'تم جلب ${chosen.length} مستخدم لتطبيق الصلاحيات عليهم.';
+                    _error = null;
+                  });
+                  Navigator.pop(dialogContext);
+                },
+                icon: const Icon(Icons.check),
+                label: const Text('اعتماد الاختيار'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
   void _applyTemplate(String role){
     final fresh=_blank(role);setState(()=>_template=role);
     setState((){
@@ -274,24 +507,60 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
         SegmentedButton<String>(segments:const[ButtonSegment(value:'template',label:Text('قالب جاهز')),ButtonSegment(value:'manual',label:Text('تحديد يدوي'))],selected:{_mode},onSelectionChanged:(v)=>setState(()=>_mode=v.first)),
         if(_mode=='template')Padding(padding:const EdgeInsets.only(top:8),child:DropdownButtonFormField<String>(value:_template,decoration:const InputDecoration(labelText:'القالب',isDense:true),items:const['مدير النظام','مدير','محاسب','مشغل','عرض فقط','مخصص بلا صلاحيات'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v){if(v!=null)_applyTemplate(v);})),
         const SizedBox(height:8),
-        DropdownButtonFormField<String>(
-          value:_scope,
-          decoration:const InputDecoration(labelText:'المستخدم المستهدف',isDense:true),
-          items:[
-            const DropdownMenuItem(value:'__all__',child:Text('كل المستخدمين النشطين')),
-            ..._users.map((u){
-              final id=_s(u['user_id']);
-              final role=_s(u['member_role']);
-              final displayName=_s(u['display_name']).trim();
-              final jobTitle=_s(u['job_title']).trim();
-              final shortId=id.length>10?id.substring(0,10):id;
-              final label=displayName.isNotEmpty
-                  ? displayName + (jobTitle.isNotEmpty ? ' — ' + jobTitle : '') + ' (' + role + ')'
-                  : role + ' — ' + shortId + '…';
-              return DropdownMenuItem(value:id,child:Text(label,overflow:TextOverflow.ellipsis));
-            }),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _loading || _saving || _users.isEmpty ? null : _pickUsersF1,
+                icon: const Icon(Icons.person_search),
+                label: const Text('جلب المستخدمين F1'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _permPurple,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: _userFilterType,
+                decoration: const InputDecoration(labelText: 'تصفية حسب', isDense: true),
+                items: const [
+                  DropdownMenuItem(value: 'all', child: Text('كل المستخدمين')),
+                  DropdownMenuItem(value: 'role', child: Text('التصنيف')),
+                  DropdownMenuItem(value: 'job', child: Text('الوظيفة')),
+                ],
+                onChanged: (v) => setState(() {
+                  _userFilterType = v ?? 'all';
+                  _userFilterValue = '__all__';
+                }),
+              ),
+            ),
           ],
-          onChanged:(v){if(v!=null)setState(()=>_scope=v);},
+        ),
+        if (_userFilterType != 'all')
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: DropdownButtonFormField<String>(
+              value: _userFilterValues.contains(_userFilterValue) ? _userFilterValue : '__all__',
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: _userFilterType == 'job' ? 'اختيار الوظيفة' : 'اختيار التصنيف',
+                isDense: true,
+              ),
+              items: [
+                const DropdownMenuItem(value: '__all__', child: Text('كل القيم')),
+                ..._userFilterValues.map((v) => DropdownMenuItem(value: v, child: Text(v))),
+              ],
+              onChanged: (v) => setState(() => _userFilterValue = v ?? '__all__'),
+            ),
+          ),
+        const SizedBox(height: 6),
+        Text(
+          _selectedUsers.isNotEmpty
+              ? 'المستخدمون المحددون: ${_targets.length}. يمكن تحديد مستخدم واحد أو عدة مستخدمين أو الكل من زر F1.'
+              : 'المستخدم الحالي: ${_scope == '__all__' ? 'كل المستخدمين النشطين' : _userLabel(_users.firstWhere((u) => _s(u['user_id']) == _scope, orElse: () => <String, dynamic>{'user_id': _scope}))}. استخدم F1 للاختيار المتعدد أو التصفية بالتصنيف والوظيفة.',
+          style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
         const SizedBox(height:8),
         DropdownButtonFormField<String>(
