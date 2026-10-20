@@ -350,24 +350,52 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     );
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewAccounts() async {
+    final rows = _filtered;
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة شجرة الحسابات'),
+      content: SizedBox(width: 720, child: rows.isEmpty ? const Text('لا توجد حسابات للمعاينة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: rows.take(120).map((r) => ListTile(
+          dense: true, title: Text('${_value(r, 'account_code')} — ${_value(r, 'account_name')}'),
+          subtitle: Text('النوع: ${_value(r, 'account_type')} • ${r['is_postable'] == true ? 'يقبل الترحيل' : 'رئيسي'}'),
+          trailing: IconButton(tooltip: 'تعديل', icon: const Icon(Icons.edit_outlined), onPressed: () { Navigator.pop(ctx); _openAccountEditor(account: r); }),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final rows = _filtered;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(children: [
-          const Expanded(
-            child: Text('شجرة الحسابات الفعلية', style: TextStyle(
-              fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF3E007D),
-            )),
-          ),
-          FilledButton.icon(
-            onPressed: _loading ? null : () => _openAccountEditor(),
-            icon: const Icon(Icons.add),
-            label: const Text('إضافة حساب'),
-          ),
-        ]),
+        Card(color: const Color(0xFF3E007D), child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('شجرة الحسابات الفعلية', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+            const SizedBox(height: 8),
+            SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+              _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+              _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : () => _openAccountEditor()),
+              _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewAccounts),
+              _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _filtered.isEmpty ? null : () => _openAccountEditor(account: _filtered.first)),
+              _quickTask('حذف/إيقاف', Icons.delete_outline, Colors.red, _filtered.isEmpty ? null : () => _confirmDeactivate(_filtered.first)),
+            ])),
+          ]),
+        )),
+        const SizedBox(height: 8),
+        const Text('تحتاج الشاشة إلى معرّف الشركة الصحيح وتطبيق مخططات SQL وسياسات الصلاحيات في Supabase.',
+          style: TextStyle(color: Colors.black54)),
+        const SizedBox(height: 12),
         const SizedBox(height: 8),
         const Text(
           'تحتاج الشاشة إلى معرّف الشركة الصحيح وتطبيق مخططات SQL وسياسات الصلاحيات في Supabase.',
