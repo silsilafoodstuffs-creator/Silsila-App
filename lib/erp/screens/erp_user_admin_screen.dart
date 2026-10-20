@@ -227,7 +227,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     if(selected.isEmpty||!mounted)return;
     if(template && _selectedId!=parentId){setState(()=>_selectedId=parentId);await _loadRules();}
     if(!template && _selectedUserId!=parentId){setState(()=>_selectedUserId=parentId);await _loadUserRules();}
-    final existing=_rules.map((r)=>'${r['menu_name']}|${r['submenu_name']}|${r['page_name']}').toSet();
+    final relevantRules=template?_rules:_rules.where((r)=>_s(r['user_id'])==parentId).toList();
+    final existing=relevantRules.map((r)=>'${r['menu_name']}|${r['submenu_name']}|${r['page_name']}').toSet();
     setState((){
       for(final key in selected){
         if(existing.contains(key))continue;
