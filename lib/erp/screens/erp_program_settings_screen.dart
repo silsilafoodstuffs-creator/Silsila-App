@@ -140,9 +140,9 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
         const SizedBox(height: 8),
         Text('اللغة: ${_language == 'ar' ? 'العربية' : 'English'}'),
         const SizedBox(height: 8),
-        Text('اللون الأساسي: ${_primaryColor.value.toRadixString(16).toUpperCase()}'),
+        Text('اللون الأساسي: ${_primary.text.trim()}'),
         const SizedBox(height: 8),
-        Text('اللون الثانوي: ${_secondaryColor.value.toRadixString(16).toUpperCase()}'),
+        Text('اللون الثانوي: ${_secondary.text.trim()}'),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
     ));
