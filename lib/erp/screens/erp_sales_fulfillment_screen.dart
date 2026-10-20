@@ -226,8 +226,8 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
                 final sourcePrep = _preparations.where((p) =>
                     chosen.contains(_s(p['id'])) && _s(p['invoice_id']) == id);
                 final prep = sourcePrep.isEmpty ? <String, dynamic>{} : sourcePrep.first;
-                _controller(_weights, id, _s(prep['weight_kg']).isEmpty ? '0' : _s(prep['weight_kg']));
-                _controller(_loads, id, _s(prep['load_kg']).isEmpty ? '0' : _s(prep['load_kg']));
+                _controller(_weights, id).text = _s(prep['weight_kg']).isEmpty ? '0' : _s(prep['weight_kg']);
+                _controller(_loads, id).text = _s(prep['load_kg']).isEmpty ? '0' : _s(prep['load_kg']);
               }
             });
             Navigator.pop(dialogContext);
