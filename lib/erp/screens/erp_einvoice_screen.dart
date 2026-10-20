@@ -132,15 +132,43 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
     return 'document_action';
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewTaxOperations() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة سجل التكامل الضريبي'),
+      content: SizedBox(width: 760, child: _operations.isEmpty ? const Text('لا توجد عمليات محمّلة لهذه الشاشة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _operations.take(100).map((r) => ListTile(
+          dense: true, title: Text('${r['document_uuid'] ?? r['submission_uuid'] ?? r['operation'] ?? r['id'] ?? 'عملية تكامل'}'),
+          subtitle: Text('${r['status'] ?? r['state'] ?? ''} • ${r['created_at'] ?? ''}'),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final config = _view == 'إعدادات الربط الضريبي' || _view == 'بيانات الممول والتوقيع الإلكتروني';
     final logs = <String>{'سجل عمليات التكامل','متابعة حالات الإرسال','إشعارات منظومة الضرائب','تقارير الفاتورة الإلكترونية','طلبات حزم المستندات','تنزيل حزم المستندات'}.contains(_view);
     return Directionality(textDirection: TextDirection.rtl, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(gradient: const LinearGradient(colors: [_taxPurple, Color(0xFF6B35A0)]), borderRadius: BorderRadius.circular(16)), child: Row(children: [
-        const Icon(Icons.receipt_long_rounded, color: _taxOrange, size: 32), const SizedBox(width: 12),
-        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('الفاتورة الإلكترونية المصرية', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900)), SizedBox(height: 5), Text('إدارة المستندات والتكامل مع منظومة مصلحة الضرائب', style: TextStyle(color: Colors.white70, fontSize: 12))])),
-        Text(_production ? 'بيئة فعلية' : 'بيئة اختبار', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+      Container(padding: const EdgeInsets.all(14), decoration: BoxDecoration(gradient: const LinearGradient(colors: [_taxPurple, Color(0xFF6B35A0)]), borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          const Icon(Icons.receipt_long_rounded, color: _taxOrange, size: 30), const SizedBox(width: 10),
+          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('الفاتورة الإلكترونية المصرية', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900)), SizedBox(height: 5), Text('إدارة المستندات والتكامل مع منظومة مصلحة الضرائب', style: TextStyle(color: Colors.white70, fontSize: 12))])),
+          Text(_production ? 'بيئة فعلية' : 'بيئة اختبار', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))
+        ]),
+        const SizedBox(height: 8),
+        SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+          _quickTask('تحديث', Icons.refresh, Colors.blue, config ? _loadSettings : _loadOperations),
+          _quickTask('حفظ الإعدادات', Icons.save_outlined, const Color(0xFF168447), config ? _saveSettings : null),
+          _quickTask('معاينة السجل', Icons.visibility_outlined, const Color(0xFF6841A5), _previewTaxOperations),
+        ])),
       ])),
       const SizedBox(height: 10),
       SizedBox(height: 48, child: ListView(scrollDirection: Axis.horizontal, children: views.map((v) => Padding(padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 4), child: ChoiceChip(label: Text(v), selected: _view == v, selectedColor: const Color(0xFFE9DDF5), labelStyle: TextStyle(color: _view == v ? _taxPurple : Colors.black87, fontWeight: FontWeight.w700), onSelected: (_) => setState(() => _view = v)))).toList())),
