@@ -394,6 +394,14 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
     }
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = _db?.auth.currentUser?.id;
@@ -401,28 +409,24 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Container(
-            width: 46, height: 46,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF3E007D), Color(0xFF6E32AD)]),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: const Icon(Icons.manage_accounts_outlined, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('المستخدمون وعضويات الشركة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _membersPurple)),
-            SizedBox(height: 4),
-            Text('دليل قابل للبحث بالاسم والوظيفة والفرع مع إدارة الدور وحالة العضوية.', style: TextStyle(color: Colors.black54)),
-          ])),
-        ]),
-        const SizedBox(height: 10),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh, size: 18), label: const Text('تحديث')),
-          OutlinedButton.icon(onPressed: _loading || _members.isEmpty ? null : _previewPrintMembers, icon: const Icon(Icons.preview_outlined, size: 18), label: const Text('معاينة / طباعة')),
-          OutlinedButton.icon(onPressed: _loading || visibleMembers.isEmpty ? null : _exportMembers, icon: const Icon(Icons.picture_as_pdf_outlined, size: 18), label: const Text('تصدير PDF')),
-        ]),
+        Card(color: const Color(0xFF3E007D), child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Row(children: [
+              Icon(Icons.manage_accounts_outlined, color: Color(0xFFFFA015), size: 27),
+              SizedBox(width: 10),
+              Expanded(child: Text('المستخدمون وعضويات الشركة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
+            ]),
+            const Text('دليل الأعضاء وإدارة الأدوار والوظائف والفروع.', style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 8),
+            SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+              _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+              _quickTask('إضافة', Icons.person_add_alt_1_outlined, const Color(0xFF168447), _loading ? null : _addMember),
+              _quickTask('معاينة / طباعة', Icons.print_outlined, const Color(0xFF4056A1), _loading || _members.isEmpty ? null : _previewPrintMembers),
+              _quickTask('تصدير PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _loading || visibleMembers.isEmpty ? null : _exportMembers),
+            ])),
+          ]),
+        )),
         const SizedBox(height: 12),
         if (!_profilesAvailable)
           _notice('لتفعيل أسماء المستخدمين والوظائف والفروع، طبّق الملف supabase/erp_company_member_profiles.sql من SQL Editor. ستظل العضويات الحالية محفوظة.', Colors.orange.shade800),
