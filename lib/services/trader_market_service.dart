@@ -272,6 +272,76 @@ class TraderMarketService {
     }
   }
 
+  /// جلب سجل التفاوض لطلب سوق التجار.
+  Future<List<Map<String, dynamic>>> getNegotiations(String postId) async {
+    final id = int.tryParse(postId.trim());
+    if (id == null || id <= 0) throw ArgumentError('معرّف المنشور غير صالح.');
+    final rows = await _requireClient.from('trader_market_negotiations')
+        .select().eq('post_id', id).order('created_at', ascending: true);
+    return _mapRows(rows);
+  }
+
+  /// إرسال اقتراح سعر إلى صاحب الطلب.
+  Future<Map<String, dynamic>> proposeNegotiation({
+    required String postId,
+    required double proposedPrice,
+  }) async {
+    if (!proposedPrice.isFinite || proposedPrice <= 0) {
+      throw ArgumentError('سعر التفاوض يجب أن يكون أكبر من صفر.');
+    }
+    final id = int.tryParse(postId.trim());
+    if (id == null || id <= 0) throw ArgumentError('معرّف المنشور غير صالح.');
+    final client = _requireClient;
+    final userId = _userId;
+    final post = await client.from('trader_market_posts')
+        .select('user_id,is_negotiable,is_active').eq('id', id).maybeSingle();
+    if (post == null || post['is_active'] == false) throw StateError('الطلب غير موجود أو تم إغلاقه.');
+    if (post['is_negotiable'] != true) throw StateError('صاحب الطلب لم يسمح بالتفاوض على السعر.');
+    final ownerId = (post['user_id'] ?? '').toString();
+    if (ownerId.isEmpty || ownerId == userId) throw StateError('لا يمكن التفاوض مع نفس حسابك.');
+    final row = await client.from('trader_market_negotiations').insert({
+      'post_id': id, 'proposer_id': userId, 'recipient_id': ownerId,
+      'proposed_price': proposedPrice, 'status': 'pending',
+    }).select().single();
+    return Map<String, dynamic>.from(row);
+  }
+
+  /// قبول أو رفض السعر، أو إرسال سعر مقابل.
+  Future<void> respondToNegotiation({
+    required String negotiationId,
+    required String action,
+    double? counterPrice,
+  }) async {
+    if (!const {'accept', 'reject', 'counter'}.contains(action)) {
+      throw ArgumentError('الإجراء غير صالح.');
+    }
+    if (action == 'counter' &&
+        (counterPrice == null || !counterPrice.isFinite || counterPrice <= 0)) {
+      throw ArgumentError('أدخل سعرًا مقابلًا صحيحًا.');
+    }
+    final client = _requireClient;
+    final userId = _userId;
+    final id = int.tryParse(negotiationId.trim());
+    if (id == null || id <= 0) throw ArgumentError('معرّف التفاوض غير صالح.');
+    final current = await client.from('trader_market_negotiations')
+        .select().eq('id', id).maybeSingle();
+    if (current == null) throw StateError('اقتراح التفاوض غير موجود.');
+    if ((current['recipient_id'] ?? '').toString() != userId ||
+        (current['status'] ?? '').toString() != 'pending') {
+      throw StateError('هذا الاقتراح ليس بانتظار ردك.');
+    }
+    await client.from('trader_market_negotiations').update({
+      'status': action == 'counter' ? 'countered' : action == 'accept' ? 'accepted' : 'rejected',
+    }).eq('id', id);
+    if (action == 'counter') {
+      await client.from('trader_market_negotiations').insert({
+        'post_id': current['post_id'], 'parent_id': id,
+        'proposer_id': userId, 'recipient_id': current['proposer_id'],
+        'proposed_price': counterPrice, 'status': 'pending',
+      });
+    }
+  }
+
   /// إحصاءات المشاهدة والقبول والرفض لمنشور واحد.
   Future<Map<String, int>> getInteractionCounts(String postId) async {
     final id = int.tryParse(postId.trim());
