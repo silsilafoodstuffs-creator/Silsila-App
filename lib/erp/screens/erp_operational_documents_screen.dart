@@ -247,8 +247,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           .eq('company_id', companyId)
           .eq('user_id', userId)
           .eq('is_active', true)
-          .maybeSingle();
-      if (membership == null) return false;
+          .maybeSingle();      if (membership == null) return false;
       final role = _s(membership['member_role']).toLowerCase();
       if (role == 'owner' || role == 'admin') return true;
       final permission = await db.from('erp_user_permissions')
@@ -497,8 +496,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                           final id = _s(item['id']);
                           final qty = double.tryParse(quantities[id]!.text.trim()) ?? 0;
                           final options = optionsFor(item);
-                          final unitId = selectedUnits[id] ?? '';
-                          final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
+                          final unitId = selectedUnits[id] ?? '';                          final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
                           return ListTile(
                             dense: true,
                             title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}'),
@@ -747,8 +745,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _post(Map<String, dynamic> row) async {
-    final number = _s(row['document_number']);
-    final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+    final number = _s(row['document_number']);    final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('تأكيد الترحيل'),
       content: Text('سيتم ترحيل المستند $number وإنشاء حركات مخزنية فعلية. لا يمكن إعادة ترحيله بعد نجاح العملية.'),
       actions: [
@@ -815,21 +812,51 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(10)),
-                child: Row(children: [
-                  Expanded(child: Text(
-                    'مسلسل الفاتورة: ${_rows.where((row) => _s(row['id']) == _selectedDocumentId).isEmpty ? 'يُنشأ عند الحفظ' : _s(_rows.where((row) => _s(row['id']) == _selectedDocumentId).first['auto_number'])}',
-                    style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900),
-                  )),
-                  const SizedBox(width: 8),
-                  OutlinedButton.icon(
-                    onPressed: _saving ? null : () async {
-                      final chosen = await showDatePicker(context: context, initialDate: _documentDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                      if (chosen != null && mounted) setState(() => _documentDate = chosen);
-                    },
-                    icon: const Icon(Icons.calendar_month_outlined, size: 18),
-                    label: Text('التاريخ: ${_documentDate.year}-${_documentDate.month.toString().padLeft(2,'0')}-${_documentDate.day.toString().padLeft(2,'0')}'),
-                  ),
-                ]),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // RTL: date and the selected customer warehouse stay at the upper-right.
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _saving ? null : () async {
+                              final chosen = await showDatePicker(context: context, initialDate: _documentDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                              if (chosen != null && mounted) setState(() => _documentDate = chosen);
+                            },
+                            icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                            label: Text('التاريخ: ${_documentDate.year}-${_documentDate.month.toString().padLeft(2,'0')}-${_documentDate.day.toString().padLeft(2,'0')}'),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'المخزن: ${_warehouseLabel(_warehouseId)}',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w700, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'مسلسل الفاتورة: ${_rows.where((row) => _s(row['id']) == _selectedDocumentId).isEmpty ? 'يُنشأ عند الحفظ' : _s(_rows.where((row) => _s(row['id']) == _selectedDocumentId).first['auto_number'])}',
+                            style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'قيمة الأصناف: ${_money(_pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']) - _n(line['discount']) + _n(line['tax'])))} ج.م',
+                            style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             const SizedBox(height: 8),
             TextField(controller: _documentNumber, decoration: const InputDecoration(labelText: 'رقم المستند / المسلسل اليدوي *', border: OutlineInputBorder(), isDense: true)),
@@ -997,8 +1024,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             ],
           ))),
         if (_selectedDocumentId != null && _pendingLines.isNotEmpty) ...[
-          const SizedBox(height: 10),
-          Card(
+          const SizedBox(height: 10),          Card(
             child: Padding(
               padding: const EdgeInsets.all(10),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
