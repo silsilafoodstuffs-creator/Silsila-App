@@ -1,4 +1,6 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/erp_inventory_master_repository.dart';
 
 class ErpInventoryMasterScreen extends StatefulWidget {
@@ -11,6 +13,9 @@ class ErpInventoryMasterScreen extends StatefulWidget {
 
 class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   final _repo = ErpInventoryMasterRepository();
+  final _imagePicker = ImagePicker();
+  XFile? _pickedItemImage;
+  Uint8List? _pickedItemImageBytes;
   final _company = TextEditingController();
   final _groupCode = TextEditingController();
   final _groupName = TextEditingController();
@@ -111,6 +116,27 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     }
   }
 
+
+  Future<void> _pickItemImage(ImageSource source) async {
+    try {
+      final file = await _imagePicker.pickImage(source: source, imageQuality: 85, maxWidth: 1600);
+      if (file == null || !mounted) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.length > 8 * 1024 * 1024) {
+        setState(() => _error = 'حجم الصورة أكبر من 8 ميجابايت.');
+        return;
+      }
+      setState(() {
+        _pickedItemImage = file;
+        _pickedItemImageBytes = bytes;
+        _error = null;
+        _message = 'تم اختيار الصورة، وسيتم رفعها وحفظها مع الصنف عند الضغط على حفظ الصنف.';
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر فتح الصور أو الكاميرا: $e');
+    }
+  }
+
   Future<void> _createItem() async {
     final purchase = double.tryParse(_purchasePrice.text.trim()) ?? -1;
     final sale = double.tryParse(_salePrice.text.trim()) ?? -1;
@@ -118,11 +144,32 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     final taxRate = double.tryParse(_taxRate.text.trim()) ?? -1;
     setState(() { _saving = true; _error = null; _message = null; });
     try {
+
+      String? imageUrl;
+      final image = _pickedItemImage;
+      final imageBytes = _pickedItemImageBytes;
+      if (image != null && imageBytes != null) {
+        final extension = image.name.contains('.') ? image.name.split('.').last.toLowerCase() : 'jpg';
+        final contentType = switch (extension) {
+          'png' => 'image/png',
+          'webp' => 'image/webp',
+          'jpeg' || 'jpg' => 'image/jpeg',
+          _ => '',
+        };
+        if (contentType.isEmpty) throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
+        imageUrl = await _repo.uploadItemImage(
+          companyId: _company.text.trim(),
+          itemCode: _itemCode.text,
+          fileName: image.name,
+          contentType: contentType,
+          bytes: imageBytes,
+        );
+      }
       await _repo.createItem(companyId: _company.text, code: _itemCode.text, name: _itemName.text,
         barcode: _barcode.text, groupId: _itemGroupId, unit: _unit.text, purchasePrice: purchase,
-        salePrice: sale, taxRate: taxRate, reorderLevel: reorder, expiryTracking: _expiry);
+        salePrice: sale, taxRate: taxRate, reorderLevel: reorder, expiryTracking: _expiry, imageUrl: imageUrl);
       if (!mounted) return;
-      _itemCode.clear(); _itemName.clear(); _barcode.clear(); _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
+      _itemCode.clear(); _itemName.clear(); _barcode.clear(); _pickedItemImage = null; _pickedItemImageBytes = null; _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
       setState(() { _saving = false; _message = 'تمت إضافة الصنف.'; });
       await _load(clearMessage: false);
     } catch (e) {
@@ -246,7 +293,62 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
               onChanged: (v) => setState(() => _itemGroupId = v),
             ),
             TextField(controller: _itemName, decoration: const InputDecoration(labelText: 'اسم الصنف *')),
+
             TextField(controller: _barcode, decoration: const InputDecoration(labelText: 'الباركود')),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5EFFB),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x223E007D)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('صورة الصنف', style: TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF3E007D))),
+                  const SizedBox(height: 8),
+                  if (_pickedItemImageBytes != null)
+                    Center(child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.memory(_pickedItemImageBytes!, height: 150, width: 180, fit: BoxFit.contain),
+                    ))
+                  else
+                    const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Icon(Icons.add_photo_alternate_outlined, size: 54, color: Color(0xFF3E007D)),
+                    ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: _saving ? null : () => _pickItemImage(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library_outlined),
+                        label: const Text('استيراد صورة من الجهاز'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _saving ? null : () => _pickItemImage(ImageSource.camera),
+                        icon: const Icon(Icons.camera_alt_outlined),
+                        label: const Text('تصوير بالكاميرا'),
+                      ),
+                      if (_pickedItemImageBytes != null)
+                        TextButton.icon(
+                          onPressed: _saving ? null : () => setState(() {
+                            _pickedItemImage = null;
+                            _pickedItemImageBytes = null;
+                            _message = 'تم إلغاء اختيار الصورة.';
+                          }),
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          label: const Text('إزالة الصورة المختارة'),
+                        ),
+                    ],
+                  ),
+                  const Text('الحد الأقصى 8 ميجابايت • JPG / PNG / WEBP', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                ],
+              ),
+            ),
             TextField(controller: _unit, decoration: const InputDecoration(labelText: 'وحدة القياس')),
             const SizedBox(height: 8),
             Row(children: [
@@ -266,7 +368,9 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         ))),
         Text('الأصناف المسجلة • ' + _items.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
         ..._items.map((i) => Card(child: ListTile(
-          leading: const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
+          leading: _s(i['image_url']).isNotEmpty
+              ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(_s(i['image_url']), width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D))))
+              : const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
           title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
           subtitle: Text(_groupLabel(_s(i['group_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
           isThreeLine: true,
