@@ -206,7 +206,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             for(final sub in menu.value.entries)
               ExpansionTile(tilePadding:const EdgeInsetsDirectional.only(start:18,end:8),title:Text(sub.key,style:const TextStyle(fontWeight:FontWeight.w700)),children:[
                 for(final page in sub.value)
-                  CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:28,end:8),title:Text(page),value:selected.contains('${menu.key}|${sub.key}|${page}'),onChanged:(v)=>refresh(()=>v==true?selected.add('${menu.key}|${sub.key}|${page}'):selected.remove('$menu.key|$sub.key|$page')),
+                  CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:28,end:8),title:Text(page),value:selected.contains('${menu.key}|${sub.key}|${page}'),onChanged:(v)=>refresh(()=>v==true?selected.add('${menu.key}|${sub.key}|${page}'):selected.remove('${menu.key}|${sub.key}|${page}')),
                   ),
               ]),
           ]),
@@ -362,7 +362,13 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
 
   @override Widget build(BuildContext context){
     final title=_typeNames[_view]??'المستخدمين';
-    return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    return Focus(autofocus:true,onKeyEvent:(node,event){
+      if(event is KeyDownEvent && event.logicalKey==LogicalKeyboardKey.f1){
+        if(_isTemplate && _selectedId!=null){_openMenuPicker(parentId:_selectedId!,template:true);return KeyEventResult.handled;}
+        if(_isPermissions && _selectedUserId!=null){_openMenuPicker(parentId:_selectedUserId!,template:false);return KeyEventResult.handled;}
+      }
+      return KeyEventResult.ignored;
+    },child:Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Container(color:Colors.white,padding:const EdgeInsets.symmetric(horizontal:14,vertical:12),child:Row(children:[
         const Icon(Icons.admin_panel_settings_outlined,color:_userAdminPurple,size:27),const SizedBox(width:10),
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:_userAdminPurple)),Text('إدارة البيانات والصلاحيات للشركة الحالية',style:TextStyle(fontSize:11,color:Colors.grey.shade700))])),
@@ -375,7 +381,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         if(_isPermissions) _ruleGrid() else if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
         if(_isPermissions)Align(alignment:AlignmentDirectional.centerStart,child:Padding(padding:const EdgeInsets.only(top:8),child:OutlinedButton.icon(onPressed:()=>_openUserPicker(),icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')))),
       ]))))),
-    ]));
+    ])));
   }
 
   Future<void> _openUserPicker() async {
