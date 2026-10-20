@@ -80,7 +80,7 @@ with check (exists (
 create or replace function public.erp_guard_sales_direct_delivery()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = public
 as $$
 declare
@@ -118,3 +118,19 @@ create trigger erp_guard_sales_direct_delivery
 before insert or update of kind, source_mode
 on public.erp_sales_fulfillment_documents
 for each row execute function public.erp_guard_sales_direct_delivery();
+
+-- Allow each member to read their own permission row so the direct-delivery
+-- guard can evaluate the assigned permission without bypassing RLS.
+drop policy if exists erp_user_permissions_self_select on public.erp_user_permissions;
+create policy erp_user_permissions_self_select
+on public.erp_user_permissions for select to authenticated
+using (
+  user_id = auth.uid()
+  and exists (
+    select 1 from public.erp_company_members m
+    where m.company_id = erp_user_permissions.company_id
+      and m.user_id = auth.uid()
+      and m.is_active = true
+  )
+);
+grant select, insert, update on public.erp_sales_fulfillment_documents to authenticated;
