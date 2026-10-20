@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../widgets/erp_quick_task_button.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/erp_inventory_master_repository.dart';
 
@@ -203,13 +204,8 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     return rows.isEmpty ? 'بدون فرع محدد' : _s(rows.first['branch_code']) + ' — ' + _s(rows.first['branch_name']);
   }
 
-  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
-    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
-    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
-      onPressed: action, icon: Icon(icon, size: 17),
-      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-  );
+Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
+    ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   void _newCurrentRecord() {
     setState(() {
