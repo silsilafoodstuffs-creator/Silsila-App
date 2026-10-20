@@ -23,6 +23,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   final _unit = TextEditingController(text: 'وحدة');
   final _purchasePrice = TextEditingController(text: '0');
   final _salePrice = TextEditingController(text: '0');
+  final _taxRate = TextEditingController(text: '0');
   final _reorder = TextEditingController(text: '0');
   List<Map<String, dynamic>> _groups = [];
   List<Map<String, dynamic>> _warehouses = [];
@@ -51,7 +52,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   void dispose() {
     _company.dispose(); _groupCode.dispose(); _groupName.dispose(); _warehouseCode.dispose(); _warehouseName.dispose(); _address.dispose();
     _itemCode.dispose(); _itemName.dispose(); _barcode.dispose(); _unit.dispose();
-    _purchasePrice.dispose(); _salePrice.dispose(); _reorder.dispose(); super.dispose();
+    _purchasePrice.dispose(); _salePrice.dispose(); _taxRate.dispose(); _reorder.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
@@ -114,13 +115,14 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     final purchase = double.tryParse(_purchasePrice.text.trim()) ?? -1;
     final sale = double.tryParse(_salePrice.text.trim()) ?? -1;
     final reorder = double.tryParse(_reorder.text.trim()) ?? -1;
+    final taxRate = double.tryParse(_taxRate.text.trim()) ?? -1;
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       await _repo.createItem(companyId: _company.text, code: _itemCode.text, name: _itemName.text,
         barcode: _barcode.text, groupId: _itemGroupId, unit: _unit.text, purchasePrice: purchase,
-        salePrice: sale, reorderLevel: reorder, expiryTracking: _expiry);
+        salePrice: sale, taxRate: taxRate, reorderLevel: reorder, expiryTracking: _expiry);
       if (!mounted) return;
-      _itemCode.clear(); _itemName.clear(); _barcode.clear(); _purchasePrice.text = '0'; _salePrice.text = '0'; _reorder.text = '0';
+      _itemCode.clear(); _itemName.clear(); _barcode.clear(); _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
       setState(() { _saving = false; _message = 'تمت إضافة الصنف.'; });
       await _load(clearMessage: false);
     } catch (e) {
@@ -253,7 +255,11 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
               Expanded(child: TextField(controller: _salePrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'سعر البيع'))),
             ]),
             const SizedBox(height: 8),
-            TextField(controller: _reorder, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'حد إعادة الطلب')),
+            Row(children: [
+              Expanded(child: TextField(controller: _taxRate, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'ضريبة الصنف % (0–100)'))),
+              const SizedBox(width: 8),
+              Expanded(child: TextField(controller: _reorder, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'حد إعادة الطلب'))),
+            ]),
             CheckboxListTile(value: _expiry, onChanged: (v) => setState(() => _expiry = v ?? false), title: const Text('تتبع تاريخ الصلاحية'), contentPadding: EdgeInsets.zero),
             FilledButton.icon(onPressed: _saving ? null : _createItem, icon: const Icon(Icons.add), label: const Text('حفظ الصنف')),
           ],
@@ -262,7 +268,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         ..._items.map((i) => Card(child: ListTile(
           leading: const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
           title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
-          subtitle: Text(_groupLabel(_s(i['group_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + '\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
+          subtitle: Text(_groupLabel(_s(i['group_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
           isThreeLine: true,
           trailing: IconButton(onPressed: _saving ? null : () => _toggle(i, true), icon: Icon(i['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
         ))),
