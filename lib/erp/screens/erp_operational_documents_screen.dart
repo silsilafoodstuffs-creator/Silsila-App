@@ -184,57 +184,77 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       return;
     }
     setState(() { _loading = true; _error = null; if (clearMessage) _message = null; });
-    try {
-      final results = await Future.wait([
-        _repo.fetchDocuments(companyId: _company.text, kind: widget.kind),
-        _repo.fetchParties(_company.text, widget.kind),
-        _repo.fetchWarehouses(_company.text),
-        _repo.fetchItems(_company.text),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        _rows = results[0]; _parties = results[1]; _allWarehouses = results[2]; _warehouses = results[2]; _items = results[3];
-        if (!_parties.any((r) => _s(r['id']) == _partyId)) _partyId = _parties.isEmpty ? null : _s(_parties.first['id']);
-        if (!_warehouses.any((r) => _s(r['id']) == _warehouseId)) _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
-        if (!_items.any((r) => _s(r['id']) == _itemId)) _itemId = _items.isEmpty ? null : _s(_items.first['id']);
-        if (_selectedDocumentId != null && !_rows.any((r) => _s(r['id']) == _selectedDocumentId)) _selectedDocumentId = null;
-        if (_selectedDocumentId != null) {
-          final current = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
-          if (current.isNotEmpty) {
-            final documentPartyId = _s(widget.kind == ErpOperationalKind.purchase
-                ? current.first['supplier_id']
-                : current.first['customer_id']);
-            final documentWarehouseId = _s(current.first['warehouse_id']);
-
-            // A document can reference an archived party/warehouse that is
-            // intentionally absent from the active dropdown options. Never
-            // pass a value to DropdownButtonFormField that has no matching item.
-            _partyId = _parties.any((r) => _s(r['id']) == documentPartyId)
-                ? documentPartyId
-                : null;
-            _warehouseId = _warehouses.any((r) => _s(r['id']) == documentWarehouseId)
-                ? documentWarehouseId
-                : null;
-          }
-        }
-        _loading = false;
-      });
-      if (widget.kind == ErpOperationalKind.sales) {
-        try {
-          final reps = await _repo.fetchRepresentatives(_company.text.trim());
-          final canChangeRep = await _resolveSalesRepChangePermission(_company.text.trim());
-          if (mounted) setState(() {
-            _canChangeSalesRep = canChangeRep;
-            _representatives = reps;
-            final selectedParty = _parties.where((party) => _s(party['id']) == _partyId);
-            if (_salesRepId == null && selectedParty.isNotEmpty) _salesRepId = _s(selectedParty.first['sales_rep_id']).isEmpty ? null : _s(selectedParty.first['sales_rep_id']);
-          });
-        } catch (_) { if (mounted) setState(() => _representatives = []); }
-        if (_selectedDocumentId == null && mounted) await _applyCustomerWarehouseRules(_partyId);
+    final loadIssues = <String>[];
+    Future<List<Map<String, dynamic>>> safeLoad(
+      String label,
+      Future<List<Map<String, dynamic>>> Function() action,
+    ) async {
+      try {
+        return await action();
+      } catch (error) {
+        loadIssues.add('$label: $error');
+        return <Map<String, dynamic>>[];
       }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() { _loading = false; _error = 'تعذر تحميل المستندات: $e'; });
+    }
+    final results = await Future.wait<List<Map<String, dynamic>>>([
+      safeLoad('المستندات', () => _repo.fetchDocuments(companyId: _company.text, kind: widget.kind)),
+      safeLoad('العملاء/الموردون', () => _repo.fetchParties(_company.text, widget.kind)),
+      safeLoad('المخازن', () => _repo.fetchWarehouses(_company.text)),
+      safeLoad('الأصناف', () => _repo.fetchItems(_company.text)),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _rows = results[0];
+      _parties = results[1];
+      _allWarehouses = results[2];
+      _warehouses = results[2];
+      _items = results[3];
+      if (!_parties.any((r) => _s(r['id']) == _partyId)) {
+        _partyId = _parties.isEmpty ? null : _s(_parties.first['id']);
+      }
+      final selectedParty = _parties.where((r) => _s(r['id']) == _partyId);
+      _partyCode.text = selectedParty.isEmpty ? '' : _s(selectedParty.first['party_code']);
+      if (!_warehouses.any((r) => _s(r['id']) == _warehouseId)) {
+        _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
+      }
+      if (!_items.any((r) => _s(r['id']) == _itemId)) _itemId = _items.isEmpty ? null : _s(_items.first['id']);
+      if (_selectedDocumentId != null && !_rows.any((r) => _s(r['id']) == _selectedDocumentId)) _selectedDocumentId = null;
+      if (_selectedDocumentId != null) {
+        final current = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
+        if (current.isNotEmpty) {
+          final documentPartyId = _s(widget.kind == ErpOperationalKind.purchase
+              ? current.first['supplier_id']
+              : current.first['customer_id']);
+          final documentWarehouseId = _s(current.first['warehouse_id']);
+          _partyId = _parties.any((r) => _s(r['id']) == documentPartyId) ? documentPartyId : null;
+          _warehouseId = _warehouses.any((r) => _s(r['id']) == documentWarehouseId) ? documentWarehouseId : null;
+          final currentParty = _parties.where((r) => _s(r['id']) == _partyId);
+          _partyCode.text = currentParty.isEmpty ? '' : _s(currentParty.first['party_code']);
+        }
+      }
+      _loading = false;
+      _error = loadIssues.isEmpty ? null : 'تعذر تحميل بعض البيانات: ${loadIssues.join(' • ')}';
+    });
+    if (widget.kind == ErpOperationalKind.sales) {
+      try {
+        final reps = await _repo.fetchRepresentatives(_company.text.trim());
+        final canChangeRep = await _resolveSalesRepChangePermission(_company.text.trim());
+        if (mounted) setState(() {
+          _canChangeSalesRep = canChangeRep;
+          _representatives = reps;
+          final selectedParty = _parties.where((party) => _s(party['id']) == _partyId);
+          if (selectedParty.isNotEmpty) {
+            final defaultRep = _s(selectedParty.first['sales_rep_id']);
+            _salesRepId = reps.any((rep) => _s(rep['id']) == defaultRep) ? defaultRep : null;
+          }
+        });
+      } catch (error) {
+        if (mounted) setState(() {
+          _representatives = [];
+          _error = '${_error == null ? '' : '$_error • '}تعذر تحميل مندوبي المبيعات: $error';
+        });
+      }
+      if (_selectedDocumentId == null && mounted) await _applyCustomerWarehouseRules(_partyId);
     }
   }
 
@@ -400,10 +420,27 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _openItemPicker() async {
-    final selectedDoc = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
+    if (_saving || _loading) return;
+    var selectedDoc = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
     if (selectedDoc.isEmpty || _s(selectedDoc.first['status']) != 'draft') {
-      setState(() => _error = 'أنشئ مسودة أو اختر مستندًا بحالة مسودة أولًا.');
-      return;
+      if (_company.text.trim().isEmpty) {
+        setState(() => _error = 'أدخل معرّف الشركة ثم اضغط تحديث قبل جلب الأصناف.');
+        return;
+      }
+      if (_partyId == null || _warehouseId == null) {
+        setState(() => _error = 'اختر العميل والمخزن أولًا. تأكد من تحميل بيانات الشركة.');
+        return;
+      }
+      if (_documentNumber.text.trim().isEmpty) {
+        _documentNumber.text = 'S-' + DateTime.now().millisecondsSinceEpoch.toString();
+      }
+      await _createDraft();
+      if (!mounted || _selectedDocumentId == null) return;
+      selectedDoc = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
+      if (selectedDoc.isEmpty || _s(selectedDoc.first['status']) != 'draft') {
+        setState(() => _error = 'لم يتم إنشاء مسودة صالحة؛ راجع رسالة الخطأ قبل اختيار الأصناف.');
+        return;
+      }
     }
     if (_warehouseId == null || _partyId == null || _items.isEmpty) {
       setState(() => _error = 'حمّل بيانات الشركة واختر العميل والمخزن قبل اختيار الأصناف.');
@@ -519,7 +556,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           return Focus(
             autofocus: true,
             onKeyEvent: (node, event) {
-              if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f11) {
+              if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f1) {
                 if (selectedItems.isNotEmpty) Navigator.pop(dialogContext, buildPickedResult());
                 return KeyEventResult.handled;
               }
@@ -527,7 +564,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             },
             child: AlertDialog(
             title: Row(children: [
-              const Expanded(child: Text('اختيار الأصناف — F11', style: TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900))),
+              const Expanded(child: Text('اختيار الأصناف — F1', style: TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900))),
               Chip(label: Text('${selectedItems.length} صنف')),
             ]),
             content: SizedBox(
@@ -639,7 +676,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               FilledButton.icon(
                 onPressed: selectedItems.isEmpty ? null : () => Navigator.pop(dialogContext, buildPickedResult()),
                 icon: const Icon(Icons.check_circle_outline),
-                label: const Text('موافق وإضافة البنود'),
+                label: const Text('موافق وإضافة البنود (F1)'),
               ),
             ],
           ),
@@ -729,7 +766,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   Future<void> _savePendingLines() async {
     if (_selectedDocumentId == null || _pendingLines.isEmpty) {
-      setState(() => _error = 'اختر الأصناف من F11 أولًا قبل الحفظ.');
+      setState(() => _error = 'اختر الأصناف باستخدام F1 أولًا قبل الحفظ.');
       return;
     }
     final selected = _rows.where((row) => _s(row['id']) == _selectedDocumentId);
@@ -1043,8 +1080,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               )),
               SizedBox(width: width, child: DropdownButtonFormField<String>(
                 value: _parties.any((p) => _s(p['id']) == _partyId) ? _partyId : null, isExpanded: true, decoration: field('اسم العميل'),
+                hint: Text(_parties.isEmpty ? 'لا توجد بيانات عملاء نشطة' : 'اختر العميل'),
                 items: _parties.map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_partyLabel(_s(p['id'])), overflow: TextOverflow.ellipsis))).toList(),
-                onChanged: _onPartyChanged,
+                onChanged: _parties.isEmpty || hasDraft ? null : _onPartyChanged,
               )),
               SizedBox(width: width, child: DropdownButtonFormField<String>(
                 value: _warehouses.any((w) => _s(w['id']) == _warehouseId) ? _warehouseId : null, isExpanded: true, decoration: field('المخزن المسموح للعميل'),
@@ -1065,7 +1103,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           const SizedBox(height: 10),
           _invoiceCard('تفاصيل الأصناف', Icons.inventory_2_outlined, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Wrap(spacing: 8, runSpacing: 8, children: [
-              FilledButton.icon(onPressed: _saving || _loading || !hasDraft ? null : _openItemPicker, icon: const Icon(Icons.playlist_add_rounded), label: const Text('اختيار أصناف  F2 / F11')),
+              FilledButton.icon(onPressed: _saving || _loading ? null : _openItemPicker, icon: const Icon(Icons.playlist_add_rounded), label: const Text('جلب الأصناف  F1')),
               if (_pendingLines.isNotEmpty) FilledButton.icon(
                 style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735)),
                 onPressed: _saving || _loading || !hasDraft ? null : _savePendingLines,
@@ -1077,7 +1115,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 child: const Column(children: [
                   Icon(Icons.inventory_2_outlined, size: 34, color: Color(0xFF9B8BAE)),
                   SizedBox(height: 8), Text('لم تتم إضافة أصناف بعد', style: TextStyle(fontWeight: FontWeight.w800)),
-                  SizedBox(height: 4), Text('افتح نافذة اختيار الأصناف باستخدام F2 أو F11.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                  SizedBox(height: 4), Text('اضغط F1 أو زر اختيار الأصناف لفتح نافذة الاختيار.', style: TextStyle(color: Colors.black54, fontSize: 12)),
                 ])),
             if (_pendingLines.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
               headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
@@ -1198,7 +1236,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             ],
           ])),
           const SizedBox(height: 8),
-          const Text('اختصارات: F2 / F11 اختيار الأصناف • F5 أو Ctrl+S حفظ المسودة أو الأصناف المحددة • Esc لإغلاق نافذة الاختيار.',
+          const Text('اختصارات: F1 اختيار الأصناف • F5 أو Ctrl+S حفظ المسودة أو الأصناف المحددة • Esc لإغلاق نافذة الاختيار.',
             style: TextStyle(color: Colors.black54, fontSize: 12)),
         ]),
       ),
