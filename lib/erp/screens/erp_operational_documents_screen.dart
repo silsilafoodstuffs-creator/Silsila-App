@@ -46,7 +46,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   List<Map<String, dynamic>> _allWarehouses = [];
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _lines = [];
-  // Rows chosen in F11 remain a local invoice preview until the user confirms saving them.
+  // Rows chosen in the item picker remain a local invoice preview until the user confirms saving them.
   List<Map<String, dynamic>> _pendingLines = [];
   Map<String, List<Map<String, dynamic>>> _unitsByItem = {};
   String? _partyId;
@@ -423,6 +423,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     if (_saving || _loading) return;
     var selectedDoc = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
     if (selectedDoc.isEmpty || _s(selectedDoc.first['status']) != 'draft') {
+      if (!(widget.kind == ErpOperationalKind.sales && _documentType == 'invoice')) {
+        setState(() => _error = 'أنشئ مسودة أو اختر مستندًا بحالة مسودة أولًا.');
+        return;
+      }
       if (_company.text.trim().isEmpty) {
         setState(() => _error = 'أدخل معرّف الشركة ثم اضغط تحديث قبل جلب الأصناف.');
         return;
@@ -1524,7 +1528,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               FilledButton.tonalIcon(
                 onPressed: _saving || _loading ? null : _openItemPicker,
                 icon: const Icon(Icons.search_rounded),
-                label: const Text('اختيار عدة أصناف — F11'),
+                label: const Text('اختيار عدة أصناف — F1'),
               ),
               if (!(widget.kind == ErpOperationalKind.sales && _documentType == 'invoice')) ...[
               const SizedBox(height: 8),
