@@ -27,6 +27,7 @@
 23. `23_atomic_default_address_save.sql`
 24. `24_foreign_key_indexes.sql`
 25. `25_trigger_function_rpc_hardening.sql`
+26. `26_offer_item_minimum_quantity.sql`
 
 تجنب تشغيل النسخ القديمة `03_secure_checkout.sql` و`04_service_compatibility.sql`؛ استخدم النسخ ذات اللاحقة `fixed` المذكورة أعلاه.
 
@@ -52,3 +53,6 @@ COMMIT;
 ```
 
 استبدل القيمة بالـ UUID الصحيح فقط، وتأكد من وجود صف الملف الشخصي لهذا المستخدم. لا تشغّل هذا الإجراء على حساب غير موثوق.
+
+
+ترحيل 26 يضيف `min_quantity` إلى `offer_items` لتخزين أقل كمية مطلوبة لكل صنف داخل مجلة العرض. شغّله بعد الترحيلات 1–25 قبل اختبار نشر عروض تحتوي على أقل كمية.
