@@ -493,11 +493,17 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
     ]));
   }
   @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Row(children:[Container(width:44,height:44,decoration:BoxDecoration(color:_permPurple.withValues(alpha:.1),borderRadius:BorderRadius.circular(12)),child:const Icon(Icons.admin_panel_settings_outlined,color:_permPurple)),const SizedBox(width:10),const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('إدارة الصلاحيات',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:_permPurple)),Text('قوالب أو تحديد يدوي حسب المستخدم والقائمة',style:TextStyle(fontSize:12,color:Colors.black54))])),_quick('تحديث',Icons.refresh,_loading||_saving?null:_load)]),
-    const SizedBox(height:8),Wrap(spacing:8,runSpacing:8,children:[
-      _quick('حفظ',Icons.save,_saving?null:_save),
-      _quick(_expandAll?'طي الكل':'فتح الكل',_expandAll?Icons.unfold_less:Icons.unfold_more,()=>setState((){_expandAll=!_expandAll;for(final m in _tree.keys){_expanded[m]=_expandAll;for(final s in _tree[m]!.keys){_expanded[m+'::'+s]=_expandAll;}}})),
-    ]),
+    Card(color:_permPurple,child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      const Row(children:[Icon(Icons.admin_panel_settings_outlined,color:Color(0xFFFFA015),size:27),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('إدارة الصلاحيات',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)),Text('قوالب أو تحديد يدوي حسب المستخدم والقائمة',style:TextStyle(fontSize:12,color:Colors.white70))]))]),
+      const SizedBox(height:8),
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+        _quickTask('تحديث',Icons.refresh,Colors.blue,_loading||_saving?null:_load),
+        _quickTask('حفظ',Icons.save_outlined,const Color(0xFF168447),_saving?null:_save),
+        _quickTask(_expandAll?'طي الكل':'فتح الكل',_expandAll?Icons.unfold_less:Icons.unfold_more,const Color(0xFFEF9B13),()=>setState(()=>{_expandAll=!_expandAll;for(final m in _tree.keys){_expanded[m]=_expandAll;for(final sub in _tree[m]!.keys){_expanded[m+'::'+sub]=_expandAll;}}})),
+        _quickTask('معاينة',Icons.visibility_outlined,const Color(0xFF6841A5),_previewPermissions),
+      ])),
+    ]))),
+    const SizedBox(height:8),
     if(_error!=null)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
     if(_message!=null)Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text(_message!,style:const TextStyle(color:Colors.green))),
     if(_loading)const Expanded(child:Center(child:CircularProgressIndicator()))else Expanded(child:ListView(padding:const EdgeInsets.only(bottom:20),children:[
