@@ -226,23 +226,46 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     return 'فرع غير متاح';
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewCostCenters() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة مراكز التكلفة'),
+      content: SizedBox(width: 720, child: _centers.isEmpty ? const Text('لا توجد مراكز تكلفة محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _centers.take(100).map((r) => ListTile(
+          dense: true, title: Text('${_s(r['center_code'])} — ${_s(r['center_name'])}'),
+          subtitle: Text('${r['is_active'] == true ? 'نشط' : 'موقوف'}'),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [
-        Container(width: 46, height: 46, decoration: BoxDecoration(color: _costPurple.withValues(alpha: .09), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.account_balance_outlined, color: _costPurple)),
-        const SizedBox(width: 12),
-        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('مراكز التكلفة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _costPurple)),
-          SizedBox(height: 4),
-          Text('تصنيف المصروفات والإيرادات حسب مركز وفرع النشاط.', style: TextStyle(color: Colors.black54)),
-        ])),
-        IconButton(tooltip: 'تحديث', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
-        OutlinedButton.icon(onPressed: _loading ? null : _seedStandardTemplate, icon: const Icon(Icons.account_tree_outlined), label: const Text('إنشاء الهيكل القياسي')),
-        const SizedBox(width: 8),
-        FilledButton.icon(onPressed: () => _edit(), icon: const Icon(Icons.add), label: const Text('إضافة مركز')),
-      ]),
+      Card(color: _costPurple, child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('مراكز التكلفة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+          const Text('تصنيف المصروفات والإيرادات حسب مركز وفرع النشاط.', style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : () => _edit()),
+            _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _centers.isEmpty ? null : () => _edit(_centers.first)),
+            _quickTask('حذف', Icons.delete_outline, Colors.red, _centers.isEmpty ? null : () => _delete(_centers.first)),
+            _quickTask('إنشاء الهيكل القياسي', Icons.account_tree_outlined, const Color(0xFF137C8B), _loading ? null : _seedStandardTemplate),
+            _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewCostCenters),
+          ])),
+        ]),
+      )),
       const SizedBox(height: 12),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
