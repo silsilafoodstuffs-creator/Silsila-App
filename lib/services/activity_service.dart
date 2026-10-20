@@ -25,6 +25,8 @@ class ActivityService {
   }
 
   /// قائمة الأنشطة الاحتياطية عند تعذر الاتصال بقاعدة البيانات.
+  // Keep the offline fallback in the same order and with the same labels
+  // as supabase/02_activity_classifications.sql and the app activity catalog.
   static const List<Map<String, String>> fallbackActivities = [
     {'code': 'food', 'name': 'مواد غذائية'},
     {'code': 'building', 'name': 'لوازم بناء وتشطيبات'},
@@ -33,10 +35,17 @@ class ActivityService {
     {'code': 'vehicles', 'name': 'سيارات ومعدات'},
     {'code': 'clothing', 'name': 'ملابس وأقمشة'},
     {'code': 'household', 'name': 'أدوات منزلية'},
-    {'code': 'stationery', 'name': 'أدوات مكتبية وقرطاسية'},
+    {'code': 'electrical_tools', 'name': 'أدوات كهربائية'},
+    {'code': 'stationery', 'name': 'أدوات مكتبية'},
     {'code': 'medical', 'name': 'مستلزمات طبية'},
-    {'code': 'agriculture', 'name': 'مستلزمات زراعية'},
-    {'code': 'packaging', 'name': 'خامات ومواد تعبئة وتغليف'},
+    {'code': 'cosmetics', 'name': 'مستحضرات تجميل'},
+    {'code': 'agriculture', 'name': 'زراعة ومستلزماتها'},
+    {'code': 'spare_parts', 'name': 'قطع غيار'},
+    {'code': 'hospitality', 'name': 'مستلزمات مطاعم وفنادق'},
+    {'code': 'paper_packaging', 'name': 'ورقيات وتعبئة وتغليف'},
+    {'code': 'cleaning', 'name': 'منظفات ومطهرات'},
+    {'code': 'pet_supplies', 'name': 'مستلزمات حيوانات'},
+    {'code': 'shipping', 'name': 'خدمات وشحن ونقل'},
     {'code': 'other', 'name': 'أنشطة أخرى'},
   ];
 
