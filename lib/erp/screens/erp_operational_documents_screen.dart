@@ -53,18 +53,20 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     _company.text = widget.initialCompanyId ?? '';
     _documentType = widget.initialDocumentType ?? 'invoice';
     _selectedDocumentId = widget.initialDocumentId;
-    if (_company.text.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
     if (widget.initialDocumentId != null) {
+      // Load once when opening a specific document; scheduling a second load
+      // here can race the initial company load and overwrite selected state.
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         await _load(clearMessage: false);
-        if (mounted && _selectedDocumentId != null) {
-          final selected = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
-          if (selected.isNotEmpty) setState(() => _documentType = _s(selected.first['document_type']));
+        if (!mounted || _selectedDocumentId == null) return;
+        final selected = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
+        if (selected.isNotEmpty) {
+          setState(() => _documentType = _s(selected.first['document_type']));
           await _loadLines(_selectedDocumentId!);
         }
       });
+    } else if (_company.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
     }
   }
   @override
