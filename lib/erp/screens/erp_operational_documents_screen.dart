@@ -247,8 +247,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           .eq('company_id', companyId)
           .eq('user_id', userId)
           .eq('is_active', true)
-          .maybeSingle();      if (membership == null) return false;
-      final role = _s(membership['member_role']).toLowerCase();
+          .maybeSingle();      if (membership == null) return false;      final role = _s(membership['member_role']).toLowerCase();
       if (role == 'owner' || role == 'admin') return true;
       final permission = await db.from('erp_user_permissions')
           .select('allow_access,can_edit')
@@ -497,8 +496,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                           final qty = double.tryParse(quantities[id]!.text.trim()) ?? 0;
                           final options = optionsFor(item);
                           final unitId = selectedUnits[id] ?? '';                          final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
-                          return ListTile(
-                            dense: true,
+                          return ListTile(                            dense: true,
                             title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}'),
                             subtitle: Text('الكمية: ${_money(qty)} ${_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name'])} • الأساسي: ${_money(widget.kind == ErpOperationalKind.purchase ? item['purchase_price'] : item['sale_price'])}'),
                             trailing: IconButton(tooltip: 'إزالة من المعاينة', onPressed: () { quantities[id]!.clear(); refresh(() {}); }, icon: const Icon(Icons.remove_circle_outline, color: Colors.red)),
@@ -747,8 +745,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   Future<void> _post(Map<String, dynamic> row) async {
     final number = _s(row['document_number']);    final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('تأكيد الترحيل'),
-      content: Text('سيتم ترحيل المستند $number وإنشاء حركات مخزنية فعلية. لا يمكن إعادة ترحيله بعد نجاح العملية.'),
-      actions: [
+      content: Text('سيتم ترحيل المستند $number وإنشاء حركات مخزنية فعلية. لا يمكن إعادة ترحيله بعد نجاح العملية.'),      actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
         FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ترحيل')),
       ],
@@ -888,6 +885,25 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               TextField(
                 controller: _partyCode,
                 decoration: const InputDecoration(labelText: 'كود العميل', border: OutlineInputBorder(), isDense: true, suffixIcon: Icon(Icons.person_search_outlined)),
+                onChanged: (code) {
+                  final normalized = code.trim().toLowerCase();
+                  if (normalized.isEmpty) return;
+                  final matches = _parties.where((party) => _s(party['party_code']).trim().toLowerCase() == normalized);
+                  if (matches.length == 1) {
+                    final party = matches.first;
+                    final id = _s(party['id']);
+                    if (_partyId != id) {
+                      setState(() {
+                        _partyId = id;
+                        final defaultRep = _s(party['sales_rep_id']);
+                        if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) {
+                          _salesRepId = defaultRep;
+                        }
+                      });
+                      _applyCustomerWarehouseRules(id);
+                    }
+                  }
+                },
                 onSubmitted: (code) {
                   final matches = _parties.where((party) => _s(party['party_code']).trim().toLowerCase() == code.trim().toLowerCase());
                   if (matches.isEmpty) {
@@ -997,8 +1013,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 onPressed: _saving || _loading ? null : _openItemPicker,
                 icon: const Icon(Icons.search_rounded),
                 label: const Text('اختيار عدة أصناف — F11'),
-              ),
-              const SizedBox(height: 8),
+              ),              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _itemId, isExpanded: true,
                 decoration: const InputDecoration(labelText: 'الصنف', border: OutlineInputBorder()),
