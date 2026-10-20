@@ -283,6 +283,85 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
     }
   }
 
+  Future<void> _quickPreview() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text('معاينة $_title'),
+      content: SizedBox(width: 720, child: _saved.isEmpty
+        ? const Text('لا توجد أذون محفوظة للمعاينة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _saved.map((r) => ListTile(
+            dense: true,
+            title: Text('إذن ${_s(r['manual_number'])} • فاتورة ${_invoiceSerial(_s(r['invoice_id']))}'),
+            subtitle: Text('${_s(r['customer_name'])} • ${_money(r['invoice_amount'])} ج.م'),
+          )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
+  Future<void> _quickEdit() async {
+    if (_saved.isEmpty) { setState(() => _message = 'لا توجد أذون محفوظة للتعديل.'); return; }
+    String selected = _s(_saved.first['id']);
+    final number = TextEditingController(text: _s(_saved.first['manual_number']));
+    await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setDialog) => AlertDialog(
+      title: Text('تعديل $_title محفوظ'),
+      content: SizedBox(width: 500, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        DropdownButtonFormField<String>(
+          value: selected,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'الإذن'),
+          items: _saved.map((r) => DropdownMenuItem(value: _s(r['id']), child: Text('${_s(r['manual_number'])} • ${_s(r['customer_name'])}'))).toList(),
+          onChanged: (v) { if (v != null) { setDialog(() => selected = v); number.text = _s(_saved.firstWhere((r) => _s(r['id']) == v)['manual_number']); } },
+        ),
+        TextField(controller: number, decoration: const InputDecoration(labelText: 'رقم الإذن اليدوي')),
+      ])),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+        FilledButton(onPressed: () async {
+          try {
+            await _db.from('erp_sales_fulfillment_documents').update({'manual_number': number.text.trim()})
+              .eq('id', selected).eq('company_id', widget.companyId);
+            if (mounted) setState(() => _message = 'تم تعديل الإذن.');
+            if (ctx.mounted) Navigator.pop(ctx);
+            await _load();
+          } catch (e) { if (mounted) setState(() => _error = 'تعذر تعديل الإذن: $e'); }
+        }, child: const Text('حفظ التعديل')),
+      ],
+    )));
+    number.dispose();
+  }
+
+  Future<void> _quickDelete() async {
+    if (_saved.isEmpty) { setState(() => _message = 'لا توجد أذون محفوظة للحذف.'); return; }
+    String selected = _s(_saved.first['id']);
+    final confirmed = await showDialog<bool>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setDialog) => AlertDialog(
+      title: Text('حذف $_title'),
+      content: SizedBox(width: 500, child: DropdownButtonFormField<String>(
+        value: selected, isExpanded: true, decoration: const InputDecoration(labelText: 'اختر الإذن'),
+        items: _saved.map((r) => DropdownMenuItem(value: _s(r['id']), child: Text('${_s(r['manual_number'])} • ${_s(r['customer_name'])}'))).toList(),
+        onChanged: (v) { if (v != null) setDialog(() => selected = v); },
+      )),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+        FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف')),
+      ],
+    )));
+    if (confirmed != true) return;
+    try {
+      await _db.from('erp_sales_fulfillment_documents').delete().eq('id', selected).eq('company_id', widget.companyId);
+      if (mounted) setState(() => _message = 'تم حذف الإذن المحدد.');
+      await _load();
+    } catch (e) { if (mounted) setState(() => _error = 'تعذر حذف الإذن: $e'); }
+  }
+
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 4, bottom: 4),
+    child: FilledButton.icon(
+      style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action,
+      icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -299,15 +378,31 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
         },
         child: ListView(padding: const EdgeInsets.all(12), children: [
           Card(color: const Color(0xFF3E007D), child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(children: [
-              const Icon(Icons.local_shipping_outlined, color: Color(0xFFFFA015), size: 32),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(_title, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
-                const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Colors.white70)),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                const Icon(Icons.local_shipping_outlined, color: Color(0xFFFFA015), size: 30),
+                const SizedBox(width: 10),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(_title, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                  const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Colors.white70)),
+                ])),
+              ]),
+              const SizedBox(height: 8),
+              SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+                _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : () {
+                  setState(() { _selectedInvoiceIds.clear(); _selectedPreparationIds.clear(); _message = 'اختر الفواتير أو أذون التجهيز لإضافة إذن جديد.'; _error = null; });
+                  if (!_isPreparation && _sourceMode == 'preparation') { _pickPreparations(); } else { _pickInvoices(); }
+                }),
+                _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _save),
+                _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _loading ? null : _quickEdit),
+                _quickTask('حذف', Icons.delete_outline, Colors.red, _loading ? null : _quickDelete),
+                _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _quickPreview),
+                _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _quickPreview),
+                _quickTask('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF137C8B), () => setState(() => _message = 'لاستيراد بيانات الإذن، استخدم اختيار الفواتير F1؛ استيراد البنود غير متاح في شاشة أذون التجهيز والتسليم.')),
+                _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _quickPreview),
               ])),
-              IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh, color: Colors.white), tooltip: 'تحديث'),
             ]),
           )),
           if (_loading) const LinearProgressIndicator(),
