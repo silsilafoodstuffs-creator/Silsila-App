@@ -135,18 +135,55 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
     return r.isEmpty ? 'غير محدد' : '${_s(r.first['account_code'])} — ${_s(r.first['account_name'])}';
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewVouchers() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة سندات الخزائن والبنوك'),
+      content: SizedBox(width: 760, child: _vouchers.isEmpty ? const Text('لا توجد سندات محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _vouchers.take(100).map((v) => ListTile(
+          dense: true, leading: const Icon(Icons.receipt_long_outlined, color: Color(0xFF3E007D)),
+          title: Text('سند ${_s(v['voucher_number'])} • ${_typeLabel(_s(v['voucher_type']))} • ${_money(v['amount'])} ج.م'),
+          subtitle: Text('${_s(v['description'])} • ${_s(v['status'])}'),
+          trailing: _s(v['status']) == 'draft' ? IconButton(tooltip:'ترحيل',icon:const Icon(Icons.publish_outlined),onPressed:()=>Navigator.pop(ctx)) : null,
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text('سندات الخزائن والبنوك', style: TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      const Text('حفظ مسودة قبض أو صرف أو تحويل، ثم ترحيلها لإنشاء قيد يومية متوازن في نفس المعاملة.',
-        style: TextStyle(color: Colors.black54, height: 1.5)),
-      const SizedBox(height: 12),
+      Card(color: const Color(0xFF3E007D), child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('سندات الخزائن والبنوك', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+          const Text('مسودات القبض والصرف والتحويل وترحيلها محاسبيًا.', style: TextStyle(color: Colors.white70, height: 1.5)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : () {
+              _number.clear(); _amount.clear(); _description.clear();
+              setState(() { _error = null; _message = 'نموذج سند جديد جاهز.'; });
+            }),
+            _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _createDraft),
+            _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewVouchers),
+            _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewVouchers),
+            _quickTask('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF137C8B), () => setState(() => _message = 'استيراد سندات Excel غير مفعّل؛ أنشئ المسودة من النموذج لضمان التحقق المحاسبي.')),
+            _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _previewVouchers),
+          ])),
+        ]),
+      )),
+      const SizedBox(height: 10),
       TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
       const SizedBox(height: 8),
-      FilledButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh), label: const Text('تحميل الخزائن والحسابات والسندات')),
       if (_loading || _saving) const LinearProgressIndicator(),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
