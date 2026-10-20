@@ -116,7 +116,7 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
     }
   }
 
-  Widget _reportAction(String label, IconData icon, Color color, VoidCallback action) => FilledButton.icon(
+  Widget _reportAction(String label, IconData icon, Color color, VoidCallback? action) => FilledButton.icon(
     onPressed: action,
     icon: Icon(icon, size: 15),
     label: Text(label),
