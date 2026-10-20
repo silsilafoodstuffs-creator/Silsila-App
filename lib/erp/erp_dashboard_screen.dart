@@ -942,8 +942,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     icon: Icon(icon, size: 16),
     label: Text(label),
     style: FilledButton.styleFrom(
-      foregroundColor: Colors.white,
-      backgroundColor: color,
+      foregroundColor: _purple,
+      backgroundColor: _canvas,
+      side: BorderSide(color: _purple.withValues(alpha: .18)),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
       textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
@@ -966,6 +967,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
         _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
         _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printCurrentPagePdf),
+        if (reports) _recordAction('إلغاء التحديد', Icons.deselect_outlined, _purple, () => setState(() => _selectedRecord = null)),
       ]),
     );
   }
