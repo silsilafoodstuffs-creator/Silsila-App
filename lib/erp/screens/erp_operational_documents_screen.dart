@@ -1025,7 +1025,17 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 decoration: const InputDecoration(labelText: 'كود العميل', border: OutlineInputBorder(), isDense: true, suffixIcon: Icon(Icons.person_search_outlined)),
                 onChanged: (code) {
                   final normalized = code.trim().toLowerCase();
-                  if (normalized.isEmpty) return;
+                  if (normalized.isEmpty) {
+                    setState(() {
+                      _partyId = null;
+                      _salesRepId = null;
+                      _warehouses = List<Map<String, dynamic>>.from(_allWarehouses);
+                      if (!_warehouses.any((row) => _s(row['id']) == _warehouseId)) {
+                        _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
+                      }
+                    });
+                    return;
+                  }
                   final matches = _parties.where((party) => _s(party['party_code']).trim().toLowerCase() == normalized);
                   if (matches.length == 1) {
                     final party = matches.first;
