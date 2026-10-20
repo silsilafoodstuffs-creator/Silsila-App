@@ -36,30 +36,49 @@ create policy trader_market_negotiations_participant_select
     )
   );
 
+create or replace function public.can_insert_trader_market_negotiation(
+  p_post_id bigint,
+  p_parent_id bigint,
+  p_proposer_id uuid,
+  p_recipient_id uuid
+) returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $
+begin
+  if p_proposer_id is distinct from auth.uid() then
+    return false;
+  end if;
+
+  if p_parent_id is null then
+    return exists (
+      select 1 from public.trader_market_posts p
+      where p.id = p_post_id
+        and p.user_id = p_recipient_id
+        and p.user_id <> auth.uid()
+        and p.is_active = true
+        and p.is_negotiable = true
+    );
+  end if;
+
+  return exists (
+    select 1 from public.trader_market_negotiations parent
+    where parent.id = p_parent_id
+      and parent.post_id = p_post_id
+      and parent.status = 'countered'
+      and parent.proposer_id = p_recipient_id
+      and parent.recipient_id = auth.uid()
+  );
+end;
+$;
+
 drop policy if exists trader_market_negotiations_proposer_insert
   on public.trader_market_negotiations;
 create policy trader_market_negotiations_proposer_insert
   on public.trader_market_negotiations for insert to authenticated
   with check (
-    proposer_id = auth.uid()
-    and (
-      exists (
-        select 1 from public.trader_market_posts p
-        where p.id = post_id
-          and p.user_id = recipient_id
-          and p.user_id <> auth.uid()
-          and p.is_active = true
-          and p.is_negotiable = true
-      )
-      or exists (
-        select 1 from public.trader_market_negotiations parent
-        where parent.id = parent_id
-          and parent.post_id = post_id
-          and parent.status = 'countered'
-          and parent.proposer_id = recipient_id
-          and parent.recipient_id = auth.uid()
-      )
-    )
+    public.can_insert_trader_market_negotiation(post_id, parent_id, proposer_id, recipient_id)
   );
 
 drop policy if exists trader_market_negotiations_recipient_update
