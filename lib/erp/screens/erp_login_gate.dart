@@ -157,27 +157,50 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                 child: SingleChildScrollView(
                   child: Form(
                     key: formKey,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      TextFormField(controller: name, decoration: const InputDecoration(labelText: 'اسم النشاط أو صاحب الحساب'), validator: (v) => v == null || v.trim().isEmpty ? 'اكتب الاسم' : null),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextFormField(
+                          controller: name,
+                          decoration: const InputDecoration(
+                            labelText: 'اسم النشاط أو صاحب الحساب',
+                          ),
+                          validator: (v) =>
+                              v == null || v.trim().isEmpty ? 'اكتب الاسم' : null,
+                        ),
                         const SizedBox(height: 10),
                         TextFormField(
                           controller: email,
                           keyboardType: TextInputType.emailAddress,
                           autofillHints: const [AutofillHints.email],
-                          decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.email_outlined)),
-                          validator: (v) { final value = v?.trim() ?? ''; return value.contains('@') && value.contains('.') ? null : 'أدخل بريدًا إلكترونيًا صحيحًا'; },
+                          decoration: const InputDecoration(
+                            labelText: 'البريد الإلكتروني',
+                            prefixIcon: Icon(Icons.email_outlined),
+                          ),
+                          validator: (v) {
+                            final value = v?.trim() ?? '';
+                            return value.contains('@') && value.contains('.')
+                                ? null
+                                : 'أدخل بريدًا إلكترونيًا صحيحًا';
+                          },
                         ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
-                          value: activity, isExpanded: true,
+                          value: activity,
+                          isExpanded: true,
                           decoration: const InputDecoration(labelText: 'نوع النشاط'),
-                          items: _activityTypes.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
-                          onChanged: (v) { if (v != null) refresh(() => activity = v); },
+                          items: _activityTypes
+                              .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                              .toList(),
+                          onChanged: (v) {
+                            if (v != null) refresh(() => activity = v);
+                          },
                         ),
                         if (!newActivity) ...[
                           const SizedBox(height: 10),
                           DropdownButtonFormField<String>(
-                            value: accountType, isExpanded: true,
+                            value: accountType,
+                            isExpanded: true,
                             decoration: const InputDecoration(labelText: 'نوع الحساب'),
                             items: const [
                               DropdownMenuItem(value: 'عميل', child: Text('عميل')),
@@ -186,35 +209,61 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                               DropdownMenuItem(value: 'شركة شحن', child: Text('شركة شحن')),
                               DropdownMenuItem(value: 'إدارة نشاط', child: Text('إدارة نشاط')),
                             ],
-                            onChanged: (v) { if (v != null) refresh(() => accountType = v); },
+                            onChanged: (v) {
+                              if (v != null) refresh(() => accountType = v);
+                            },
                           ),
                         ],
                         const SizedBox(height: 10),
                         TextFormField(
-                          controller: phone, keyboardType: TextInputType.phone,
+                          controller: phone,
+                          keyboardType: TextInputType.phone,
                           decoration: const InputDecoration(labelText: 'رقم الهاتف'),
                           validator: (v) {
-                            final digits = _asciiDigits(v ?? '').replaceAll(RegExp(r'\D'), '');
-                            return digits.length < 10 || digits.length > 15 ? 'أدخل رقم هاتف صحيحًا' : null;
+                            final digits =
+                                _asciiDigits(v ?? '').replaceAll(RegExp(r'\\D'), '');
+                            return digits.length < 10 || digits.length > 15
+                                ? 'أدخل رقم هاتف صحيحًا'
+                                : null;
                           },
                         ),
                         const SizedBox(height: 10),
                         TextFormField(
-                          controller: password, obscureText: obscure,
+                          controller: password,
+                          obscureText: obscure,
                           decoration: InputDecoration(
-                            labelText: 'كلمة المرور', helperText: '8 أحرف على الأقل مع حرف كبير وصغير ورقم ورمز',
-                            suffixIcon: IconButton(onPressed: () => refresh(() => obscure = !obscure), icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined)),
+                            labelText: 'كلمة المرور',
+                            helperText: '8 أحرف على الأقل مع حرف كبير وصغير ورقم ورمز',
+                            suffixIcon: IconButton(
+                              onPressed: () => refresh(() => obscure = !obscure),
+                              icon: Icon(
+                                obscure
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                            ),
                           ),
                           validator: (v) => _validateNewPassword(v ?? ''),
                         ),
                         const SizedBox(height: 10),
                         TextFormField(
-                          controller: confirmation, obscureText: obscureConfirm,
+                          controller: confirmation,
+                          obscureText: obscureConfirm,
                           decoration: InputDecoration(
                             labelText: 'تأكيد كلمة المرور',
-                            suffixIcon: IconButton(onPressed: () => refresh(() => obscureConfirm = !obscureConfirm), icon: Icon(obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined)),
+                            suffixIcon: IconButton(
+                              onPressed: () =>
+                                  refresh(() => obscureConfirm = !obscureConfirm),
+                              icon: Icon(
+                                obscureConfirm
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                              ),
+                            ),
                           ),
-                          validator: (v) => v != password.text ? 'كلمتا المرور غير متطابقتين' : null,
+                          validator: (v) => v != password.text
+                              ? 'كلمتا المرور غير متطابقتين'
+                              : null,
                         ),
                       if (error.isNotEmpty) ...[
                         const SizedBox(height: 10),
