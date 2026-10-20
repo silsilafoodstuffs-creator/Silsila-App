@@ -25,4 +25,16 @@ void main() {
     expect(theme.colorScheme.secondary, const Color(0xFFFFA015));
     expect(theme.textTheme.bodyMedium?.fontFamily, 'Tajawal');
   });
+
+  testWidgets('login flow requests email and password, not phone OTP',
+      (tester) async {
+    await tester.pumpWidget(const SilsilaApp());
+    await tester.tap(find.text('ابدأ الآن'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('البريد الإلكتروني'), findsOneWidget);
+    expect(find.text('كلمة المرور'), findsOneWidget);
+    expect(find.text('رقم الهاتف المسجل'), findsNothing);
+    expect(find.text('إرسال رمز التحقق'), findsNothing);
+  });
 }
