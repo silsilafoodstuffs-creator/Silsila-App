@@ -211,7 +211,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
               ]),
           ]),
       ]))),
-      actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(dialogContext,'ok'),child:const Text('إضافة القوائم المحددة'))],
+      actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إضافة القوائم المحددة'))],
     )));
     if(selected.isEmpty||!mounted)return;
     final existing=_rules.map((r)=>'${r['menu_name']}|${r['submenu_name']}|${r['page_name']}').toSet();
