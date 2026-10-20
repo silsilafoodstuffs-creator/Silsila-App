@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as excel;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../services/erp_ledger_reports_repository.dart';
 
 enum ErpLedgerReportKind { trialBalance, generalLedger, accountMovement }
@@ -25,6 +30,7 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
   DateTime? _end;
   bool _loading = false;
   String? _error;
+  String? _message;
   List<Map<String, dynamic>> _rows = [];
 
   @override
@@ -110,6 +116,71 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
     }
   }
 
+  Widget _reportAction(String label, IconData icon, Color color, VoidCallback action) => FilledButton.icon(
+    onPressed: action,
+    icon: Icon(icon, size: 15),
+    label: Text(label),
+    style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9), visualDensity: VisualDensity.compact, textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+  );
+
+  void _previewReport() {
+    showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text('معاينة ' + _title),
+      content: SizedBox(width: 720, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('عدد السجلات: ' + _rows.length.toString()),
+        const Divider(),
+        if (_rows.isEmpty) const Text('لا توجد بيانات للمعاينة.')
+        else ..._rows.take(100).map((row) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Text(row.entries.map((entry) => entry.key + ': ' + (entry.value?.toString() ?? '')).join(' • ')))),
+        if (_rows.length > 100) const Text('المعاينة تعرض أول 100 سجل.'),
+      ]))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
+  Future<void> _printReportPdf() async {
+    if (_rows.isEmpty) { setState(() => _message = 'لا توجد بيانات للطباعة.'); return; }
+    try {
+      final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final keys = _rows.first.keys.toList();
+      final pdf = pw.Document();
+      pdf.addPage(pw.MultiPage(theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
+        pw.Text('Silsila • ' + _title, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 10),
+        pw.TableHelper.fromTextArray(headers: keys, data: _rows.map((row) => keys.map((key) => row[key]?.toString() ?? '').toList()).toList()),
+      ]));
+      await Printing.layoutPdf(onLayout: (_) async => pdf.save());
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذرت الطباعة أو إنشاء PDF: ' + error.toString());
+    }
+  }
+
+  Future<void> _importReportExcel() async {
+    try {
+      final picked = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: const ['xlsx'], withData: true);
+      if (picked == null || picked.files.isEmpty) return;
+      final bytes = picked.files.single.bytes;
+      if (bytes == null || bytes.isEmpty) throw StateError('تعذر قراءة ملف Excel.');
+      final workbook = excel.Excel.decodeBytes(bytes);
+      final sheets = workbook.tables.values.where((sheet) => sheet.rows.isNotEmpty).toList();
+      if (sheets.isEmpty) throw StateError('ملف Excel فارغ.');
+      final rows = sheets.first.rows;
+      final headers = rows.first.map((cell) => cell?.value?.toString().trim() ?? '').toList();
+      final imported = <Map<String, dynamic>>[];
+      for (final row in rows.skip(1)) {
+        final record = <String, dynamic>{};
+        for (var i = 0; i < headers.length && i < row.length; i++) {
+          if (headers[i].isNotEmpty) record[headers[i]] = row[i]?.value?.toString() ?? '';
+        }
+        if (record.values.any((value) => value.toString().trim().isNotEmpty)) imported.add(record);
+      }
+      if (imported.isEmpty) throw StateError('لم يتم العثور على سجلات بعد صف العناوين.');
+      if (!mounted) return;
+      setState(() { _rows = imported; _message = 'تم تحميل ' + imported.length.toString() + ' سجلًا من Excel للمعاينة والطباعة فقط؛ اضغط تحديث للعودة إلى بيانات التقرير الفعلية.'; _error = null; });
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر استيراد Excel: ' + error.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final debit = _rows.fold<double>(0, (s, r) =>
@@ -124,6 +195,15 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
           Text(_title, style: const TextStyle(
             color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900,
           )),
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            _reportAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), _loading ? () {} : _load),
+            _reportAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), _previewReport),
+            _reportAction('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printReportPdf),
+            _reportAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importReportExcel),
+            _reportAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printReportPdf),
+          ]),
+          if (_message != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_message!, style: const TextStyle(color: Color(0xFF16834A)))),
           const SizedBox(height: 6),
           const Text(
             'يعرض التقرير الحركات المرحلة فقط؛ المسودات والقيود المعكوسة مستبعدة.',
