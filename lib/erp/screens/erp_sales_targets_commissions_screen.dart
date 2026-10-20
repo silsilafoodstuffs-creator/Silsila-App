@@ -267,16 +267,47 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
 
   Widget _stat(String title,String value,IconData icon,Color color)=>Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),child:Row(children:[Icon(icon,color:color,size:28),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.black54,fontSize:13)),Text(value,style:TextStyle(color:color,fontSize:22,fontWeight:FontWeight.w900))]))]));
 
+Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+  padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+  child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+    onPressed: action, icon: Icon(icon, size: 17),
+    label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+);
+
+Future<void> _previewSalesTargets() async {
+  await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+    title: const Text('معاينة الأهداف والعمولات'),
+    content: SizedBox(width: 680, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text('العملاء: ${_customers.length}'),
+      Text('المندوبون: ${_reps.length}'),
+      Text('أهداف مسجلة: ${_goals.length}'),
+      Text('خطط عمولة: ${_plans.length}'),
+      Text('مسودات عمولات: ${_runs.length}'),
+      const SizedBox(height: 8),
+      const Text('استخدم التبويبات لمراجعة التفاصيل وتعديل الأهداف أو إعدادات العمولة.'),
+    ])),
+    actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+  ));
+}
+
   @override
   Widget build(BuildContext context){
     final demo=_db==null || (widget.companyId ?? '').isEmpty;
     return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Container(padding:const EdgeInsets.all(22),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_p,Color(0xFF7443A6)]),borderRadius:BorderRadius.circular(20)),child:Row(children:[
-        const Icon(Icons.track_changes_rounded,color:_o,size:42),const SizedBox(width:14),
-        const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          Text('أهداف العملاء وعمولات المبيعات',style:TextStyle(color:Colors.white,fontSize:25,fontWeight:FontWeight.w900)),
-          SizedBox(height:5),Text('أهداف شهرية • نسب ثابتة ومتدرجة • اعتماد قبل الصرف',style:TextStyle(color:Color(0xFFEFE5F8),fontSize:14)),
-        ])),IconButton(onPressed:_load,icon:const Icon(Icons.refresh,color:Colors.white)),
+      Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_p,Color(0xFF7443A6)]),borderRadius:BorderRadius.circular(20)),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        const Row(children:[
+          Icon(Icons.track_changes_rounded,color:_o,size:30),const SizedBox(width:10),
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text('أهداف العملاء وعمولات المبيعات',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
+            SizedBox(height:5),Text('أهداف شهرية • نسب ثابتة ومتدرجة • اعتماد قبل الصرف',style:TextStyle(color:Color(0xFFEFE5F8),fontSize:12)),
+          ])),
+        ]),
+        const SizedBox(height:8),
+        SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+          _quickTask('تحديث',Icons.refresh,Colors.blue,_loading?null:_load),
+          _quickTask('معاينة المؤشرات',Icons.visibility_outlined,const Color(0xFF6841A5),_previewSalesTargets),
+        ])),
       ])),
       const SizedBox(height:12),
       if(demo) Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFFFF4DE),borderRadius:BorderRadius.circular(12)),child:const Text('وضع تجريبي: الأسماء والأهداف والعمولات افتراضية وليست بيانات حقيقية. طبّق ملف SQL واربط الشركة لتمكين الحفظ.',style:TextStyle(color:Color(0xFF795000),fontWeight:FontWeight.w700))),
