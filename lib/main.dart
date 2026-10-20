@@ -2793,7 +2793,7 @@ class _MainShellState extends State<MainShell> {
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
-        builder: (_) => const Directionality(
+        builder: (_) => Directionality(
           textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: WelcomeScreen(),
         ),
