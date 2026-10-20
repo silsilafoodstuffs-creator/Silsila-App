@@ -541,7 +541,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   @override
   Widget build(BuildContext context) {
     final draftCount = _rows.where((r) => _s(r['status']) == 'draft').length;
-    return Directionality(textDirection: TextDirection.rtl, child: Column(
+    return Directionality(textDirection: TextDirection.rtl, child: Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f11) {
+          _openItemPicker();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(_title, style: const TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
@@ -617,6 +626,12 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             children: [
               const Text('إضافة بند للمستند المحدد', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
               const SizedBox(height: 8),
+              FilledButton.tonalIcon(
+                onPressed: _saving || _loading ? null : _openItemPicker,
+                icon: const Icon(Icons.search_rounded),
+                label: const Text('اختيار عدة أصناف — F11'),
+              ),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _itemId, isExpanded: true,
                 decoration: const InputDecoration(labelText: 'الصنف', border: OutlineInputBorder()),
@@ -689,7 +704,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           ))));
         }),
       ],
-    ));
+    )));
   }
 
   Widget _notice(String text, Color color) => Container(
