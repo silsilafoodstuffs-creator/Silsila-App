@@ -227,12 +227,17 @@ class SupplierOfferService {
           originalPrice < 0 || offerPrice < 0) {
         throw ArgumentError('تحقق من أسعار جميع الأصناف المحددة.');
       }
+      final minQuantity = item['min_quantity'] ?? 1;
+      if (minQuantity is! num || !minQuantity.isFinite || minQuantity <= 0) {
+        throw ArgumentError('أقل كمية للصنف "$name" يجب أن تكون أكبر من صفر.');
+      }
       itemRows.add({
         if ((item['product_id'] ?? '').toString().trim().isNotEmpty)
           'product_id': item['product_id'].toString().trim(),
         'product_name': name,
         'original_price': originalPrice,
         'offer_price': offerPrice,
+        'min_quantity': minQuantity,
         'discount_percentage': discountPercentage,
       });
     }
