@@ -1375,7 +1375,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         pw.Text('Silsila - ' + _salesDocumentTitle(_documentType), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 8),
         pw.Text('Document: ' + _documentNumber.text),
-        pw.Table.fromTextArray(headers: ['Item', 'Quantity', 'Unit price', 'Total'], data: rows.map((line) => [_s(line['item_name']), _money(line['quantity']), _money(line['unit_price']), _money(_n(line['quantity']) * _n(line['unit_price']))]).toList()),
+        pw.TableHelper.fromTextArray(headers: ['Item', 'Quantity', 'Unit price', 'Total'], data: rows.map((line) => [_s(line['item_name']), _money(line['quantity']), _money(line['unit_price']), _money(_n(line['quantity']) * _n(line['unit_price']))]).toList()),
         pw.SizedBox(height: 8),
         pw.Text('Total: ' + _money(rows.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price'])))),
       ]));
@@ -1412,7 +1412,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         if (qty <= 0) continue;
         final basePrice = widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']);
         final importedPrice = double.tryParse(valueAt(row, priceCol).replaceAll(',', '.')) ?? basePrice;
-        added.add({'item_id': _s(item['id']), 'item_name': _s(item['item_name']), 'quantity': qty, 'unit_id': '', 'unit_name': _s(item['base_unit']).ifEmpty('وحدة'), 'conversion_factor': 1.0, 'unit_price': importedPrice, 'discount': 0.0, 'tax': 0.0});
+        added.add({'item_id': _s(item['id']), 'item_name': _s(item['item_name']), 'quantity': qty, 'unit_id': '', 'unit_name': (_s(item['base_unit']).trim().isEmpty ? 'وحدة' : _s(item['base_unit'])), 'conversion_factor': 1.0, 'unit_price': importedPrice, 'discount': 0.0, 'tax': 0.0});
       }
       if (added.isEmpty) throw StateError('لم تتطابق صفوف الملف مع الأصناف أو كانت الكميات غير صحيحة.');
       if (mounted) setState(() { _pendingLines = [..._pendingLines, ...added]; _message = 'تم استيراد ' + added.length.toString() + ' بندًا إلى المعاينة. اضغط حفظ بعد المراجعة.'; });
@@ -1549,9 +1549,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 FilledButton.icon(onPressed: _selectedDocumentId == null ? null : () => _loadLines(_selectedDocumentId!), icon: const Icon(Icons.edit_outlined, size: 16), label: const Text('تعديل'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                 FilledButton.icon(onPressed: _selectedDocumentId == null ? null : _deleteSelectedSalesDraft, icon: const Icon(Icons.delete_outline_rounded, size: 16), label: const Text('حذف'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                 FilledButton.icon(onPressed: () => _showSalesQuickPreview(), icon: const Icon(Icons.preview_outlined, size: 16), label: const Text('معاينة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6E2BA6), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.print_outlined, size: 16), label: const Text('طباعة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.file_upload_outlined, size: 16), label: const Text('استيراد Excel'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.picture_as_pdf_outlined, size: 16), label: const Text('طباعة PDF'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: _printSalesQuickPdf, icon: const Icon(Icons.print_outlined, size: 16), label: const Text('طباعة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: _importSalesQuickExcel, icon: const Icon(Icons.file_upload_outlined, size: 16), label: const Text('استيراد Excel'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: _printSalesQuickPdf, icon: const Icon(Icons.picture_as_pdf_outlined, size: 16), label: const Text('طباعة PDF'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
               ]),
             ]),
           ),
