@@ -708,7 +708,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               Row(children: [
                 const Icon(Icons.description_outlined, color: Color(0xFF3E007D)),
                 const SizedBox(width: 8),
-                Expanded(child: Text('مستند رقم ${_s(r['document_number'])}', style: const TextStyle(fontWeight: FontWeight.w900))),
+                Expanded(child: Text('مسلسل آلي ${_s(r['auto_number'])} • رقم المستند ${_s(r['document_number'])}', style: const TextStyle(fontWeight: FontWeight.w900))),
                 Chip(label: Text(status)),
               ]),
               const SizedBox(height: 4),
