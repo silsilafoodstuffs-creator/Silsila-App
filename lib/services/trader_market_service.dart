@@ -39,10 +39,12 @@ class TraderMarketService {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
 
+    final today = DateTime.now().toIso8601String().split('T').first;
     var query = _requireClient
         .from('trader_market_posts')
         .select()
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .or('expiry_date.is.null,expiry_date.gte.$today');
 
     final activity = _clean(activityType);
     if (activity != null) {
