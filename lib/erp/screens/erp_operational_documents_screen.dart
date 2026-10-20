@@ -960,7 +960,19 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         final itemId = _s(line['item_id']);
         final quantity = _n(line['quantity']);
         final factor = _n(line['conversion_factor']) <= 0 ? 1.0 : _n(line['conversion_factor']);
-        final resolved = await _repo.resolvePrice(
+        final fixedOfferPrice = line['fixed_unit_price'];
+        if (fixedOfferPrice != null) {
+          final minQty = line['min_quantity'] == null ? 0.0 : _n(line['min_quantity']);
+          final maxQty = line['max_quantity'] == null || _s(line['max_quantity']).isEmpty ? double.infinity : _n(line['max_quantity']);
+          if (quantity < minQty || quantity > maxQty) {
+            throw ArgumentError('كمية الصنف $itemId يجب أن تكون بين ${minQty.toStringAsFixed(2)} و ${maxQty.isInfinite ? 'غير محدد' : maxQty.toStringAsFixed(2)} حسب شروط العرض.');
+          }
+        }
+        final resolved = fixedOfferPrice != null ? <String, dynamic>{
+          'base_unit_price': fixedOfferPrice,
+          'net_unit_price': fixedOfferPrice,
+          'discount_percent': 0,
+        } : await _repo.resolvePrice(
           companyId: _company.text.trim(),
           itemId: itemId,
           kind: widget.kind == ErpOperationalKind.purchase ? 'purchase' : 'sale',
@@ -970,12 +982,12 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         if (resolved == null) {
           throw StateError('لم يتمكن النظام من تحديد سياسة التسعير للصنف $itemId.');
         }
-        final unitPrice = _n(resolved['base_unit_price']) * factor;
-        final discountPercent = _n(resolved['discount_percent']);
+        final unitPrice = fixedOfferPrice != null ? _n(fixedOfferPrice) : _n(resolved['base_unit_price']) * factor;
+        final discountPercent = fixedOfferPrice != null ? 0.0 : _n(resolved['discount_percent']);
         final discount = quantity * unitPrice * discountPercent / 100;
         final item = _items.firstWhere((row) => _s(row['id']) == itemId, orElse: () => <String, dynamic>{});
         final basePrice = (widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price'])) * factor;
-        final adjustedPrice = _n(resolved['net_unit_price']) * factor;
+        final adjustedPrice = fixedOfferPrice != null ? _n(fixedOfferPrice) : _n(resolved['net_unit_price']) * factor;
         final taxRate = widget.kind == ErpOperationalKind.sales ? _n(item['tax_rate']) : 0.0;
         final tax = ((quantity * unitPrice - discount).clamp(0, double.infinity)) * (_isTaxInvoice ? taxRate : 0.0) / 100;
         pricedLines.add({
@@ -992,6 +1004,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           'discount': discount,
           'tax': tax,
           'tax_rate': taxRate,
+          'representative_incentive': _n(line['representative_incentive']),
+          'customer_incentive': _n(line['customer_incentive']),
+          'offer_title': _s(line['offer_title']),
         });
       }
       if (!mounted) return;
