@@ -128,6 +128,15 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
     return rows.isEmpty ? 'عميل غير محدد' : _s(rows.first['party_name']);
   }
 
+  String _invoiceSerial(String? id) {
+    final rows = _invoices.where((invoice) => _s(invoice['id']) == id);
+    if (rows.isEmpty) return id ?? '—';
+    final invoice = rows.first;
+    return _s(invoice['auto_number']).isNotEmpty
+        ? _s(invoice['auto_number'])
+        : _s(invoice['document_number']);
+  }
+
   String _area(String? id) {
     final rows = _parties.where((p) => _s(p['id']) == id);
     if (rows.isEmpty) return '—';
@@ -310,7 +319,7 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
               const Text('مصدر إذن التسليم', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
               RadioListTile<String>(value: 'preparation', groupValue: _sourceMode, title: const Text('إذن تجهيز أو أكثر'), onChanged: (v) => setState(() { _sourceMode = v!; _selectedInvoiceIds.clear(); _selectedPreparationIds.clear(); })),
               RadioListTile<String>(value: 'direct', groupValue: _sourceMode, title: const Text('تحميل بدون تجهيز'), subtitle: Text(_canDirectLoad ? 'متاح بصلاحيتك' : 'مقيد بصلاحية خاصة'), onChanged: _canDirectLoad ? (v) => setState(() { _sourceMode = v!; _selectedInvoiceIds.clear(); _selectedPreparationIds.clear(); }) : null),
-              OutlinedButton.icon(onPressed: _loading ? null : (_sourceMode == 'preparation' ? _pickPreparations : _pickInvoices), icon: const Icon(Icons.file_open_outlined), label: Text(_sourceMode == 'preparation' ? 'جلب أذون التجهيز F1' : 'جلب فواتير البيع F1')),
+              OutlinedButton.icon(onPressed: _loading ? null : (_sourceMode == 'preparation' ? _pickPreparations : _pickInvoices), icon: const Icon(Icons.file_open_outlined), label: Text(_sourceMode == 'preparation' ? 'جلب أذون التجهيز المرتبطة بالفواتير F1' : 'جلب فواتير البيع F1')),
             ]))),
           ],
           Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -350,7 +359,7 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
           const Text('الأذون المحفوظة', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
           ..._saved.map((row) => Card(child: ListTile(
             leading: Icon(_isPreparation ? Icons.inventory_2_outlined : Icons.local_shipping_outlined, color: const Color(0xFF3E007D)),
-            title: Text('${_title} رقم ${_s(row['manual_number'])} • مسلسل فاتورة ${_s(row['invoice_id'])}'),
+            title: Text('${_title} رقم ${_s(row['manual_number'])} • مسلسل فاتورة ${_invoiceSerial(_s(row['invoice_id']))}'),
             subtitle: Text('${_s(row['customer_name'])} • ${_s(row['area_name'])} • ${_money(row['invoice_amount'])} ج.م • وزن ${_money(row['weight_kg'])} كجم • حمولة ${_money(row['load_kg'])} كجم'),
           ))),
         ]),
