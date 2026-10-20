@@ -83,32 +83,51 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   String get _table => _isType?'erp_user_types':_isUser?'erp_users':'erp_permission_templates';
 
   Future<void> _load() async {
-    if(!mounted)return;
-    if(_company.isEmpty){setState(()=>_error='اختر الشركة وسجّل الدخول أولًا.');return;}
-    setState(()=>_loading=true);
+    if (!mounted) return;
+    if (_db == null) {
+      setState(() { _loading = false; _error = 'الاتصال بقاعدة البيانات غير متاح. أعد تسجيل الدخول ثم حاول مرة أخرى.'; });
+      return;
+    }
+    if (_company.isEmpty) {
+      setState(() { _loading = false; _error = 'لم يتم تحديد الشركة الحالية. اختر الشركة وسجّل الدخول أولًا.'; });
+      return;
+    }
+    setState(() { _loading = true; _error = null; _message = null; });
     try {
-      final typeRows=await _db!.from('erp_user_types').select().eq('company_id',_company).order('type_code');
-      final userRows=await _db!.from('erp_users').select('*,erp_user_types(name_ar,name_en)').eq('company_id',_company).order('user_code');
-      final templateRows=await _db!.from('erp_permission_templates').select().eq('company_id',_company).order('template_code');
-      final typeList=(typeRows as List).map((x)=>Map<String,dynamic>.from(x)).toList();
-      const typePriority={'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
-      typeList.sort((a,b)=>(typePriority[_s(a['name_ar'])]??99).compareTo(typePriority[_s(b['name_ar'])]??99));
-      final userList=(userRows as List).map((x)=>Map<String,dynamic>.from(x)).toList();
-      final templateList=(templateRows as List).map((x)=>Map<String,dynamic>.from(x)).toList();
-      if(!mounted)return;
-      setState((){
-        _types=typeList;_users=userList;_templates=templateList;
-        if(_selectedTemplateId!=null&&!templateList.any((r)=>_s(r['id'])==_selectedTemplateId))_selectedTemplateId=null;
-        if(_selectedTemplateId==null&&templateList.isNotEmpty)_selectedTemplateId=_s(templateList.first['id']);
-        _rows=_isType?typeList:_isUser?userList:_isTemplate?templateList:userList;
-        if(_selectedId!=null&&!_rows.any((r)=>_s(r['id'])==_selectedId))_selectedId=null;
-        if(_selectedUserId!=null&&!userList.any((r)=>_s(r['id'])==_selectedUserId))_selectedUserId=null;
-        if(_selectedUserId==null&&userList.isNotEmpty)_selectedUserId=_s(userList.first['id']);
-        _loading=false;_error=null;
+      // Keep each master screen independent: unrelated table failures must not hide its grid.
+      List<Map<String, dynamic>> typeList = _types;
+      List<Map<String, dynamic>> userList = _users;
+      List<Map<String, dynamic>> templateList = _templates;
+      if (_isType || _isUser || _isPermissions) {
+        final typeRows = await _db!.from('erp_user_types').select().eq('company_id', _company).order('type_code');
+        typeList = (typeRows as List).map((x) => Map<String, dynamic>.from(x)).toList();
+        const typePriority = {'ادمن': 0, 'موظف': 1, 'مورد': 2, 'عميل': 3, 'مندوب': 4, 'شركة شحن': 5};
+        typeList.sort((a, b) => (typePriority[_s(a['name_ar'])] ?? 99).compareTo(typePriority[_s(b['name_ar'])] ?? 99));
+      }
+      if (_isUser || _isPermissions) {
+        final userRows = await _db!.from('erp_users').select('*,erp_user_types(name_ar,name_en)').eq('company_id', _company).order('user_code');
+        userList = (userRows as List).map((x) => Map<String, dynamic>.from(x)).toList();
+      }
+      if (_isTemplate || _isPermissions) {
+        final templateRows = await _db!.from('erp_permission_templates').select().eq('company_id', _company).order('template_code');
+        templateList = (templateRows as List).map((x) => Map<String, dynamic>.from(x)).toList();
+      }
+      if (!mounted) return;
+      setState(() {
+        _types = typeList; _users = userList; _templates = templateList;
+        if (_selectedTemplateId != null && !templateList.any((r) => _s(r['id']) == _selectedTemplateId)) _selectedTemplateId = null;
+        if (_selectedTemplateId == null && templateList.isNotEmpty) _selectedTemplateId = _s(templateList.first['id']);
+        _rows = _isType ? typeList : _isUser ? userList : _isTemplate ? templateList : userList;
+        if (_selectedId != null && !_rows.any((r) => _s(r['id']) == _selectedId)) _selectedId = null;
+        if (_selectedUserId != null && !userList.any((r) => _s(r['id']) == _selectedUserId)) _selectedUserId = null;
+        if (_selectedUserId == null && userList.isNotEmpty) _selectedUserId = _s(userList.first['id']);
+        _loading = false; _error = null;
       });
-      if(_isTemplate && _selectedId!=null) await _loadRules();
-      if(_isPermissions) await _loadUserRules();
-    } catch(e) { if(mounted)setState((){_loading=false;_error='تعذر تحميل البيانات: $e';}); }
+      if (_isTemplate && _selectedId != null) await _loadRules();
+      if (_isPermissions) await _loadUserRules();
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات الشاشة: $e'; });
+    }
   }
 
   Future<void> _loadRules() async {
