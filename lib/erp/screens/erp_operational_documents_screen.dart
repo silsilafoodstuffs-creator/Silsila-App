@@ -193,8 +193,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _warehouses = List<Map<String, dynamic>>.from(_allWarehouses);
-        _error = 'تعذر قراءة مخازن العميل المسموح بها؛ عُرضت المخازن النشطة دون تطبيق قيد العميل: $error';
+        // Fail closed: if access rules cannot be read, do not expose selectable warehouses.
+        _warehouses = [];
+        _warehouseId = null;
+        _error = 'تعذر قراءة مخازن العميل المسموح بها؛ أوقف النظام اختيار المخزن حتى يمكن التحقق من الصلاحيات: $error';
       });
     }
   }
