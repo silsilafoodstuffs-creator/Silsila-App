@@ -1,5 +1,10 @@
 name: Build Silsila Android App
 
+# Keep the newest commit's verification/build run; cancel stale duplicate runs.
+concurrency:
+  group: silsila-build-${{ github.ref }}
+  cancel-in-progress: true
+
 'on':
   push:
     branches: [main]
