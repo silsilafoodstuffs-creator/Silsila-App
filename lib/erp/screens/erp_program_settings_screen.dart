@@ -148,7 +148,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   @override
   Widget build(BuildContext context) => Directionality(textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,child:Padding(padding:const EdgeInsets.all(18),child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Card(color:_settingsPurple,child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      const Row(children:[Icon(Icons.tune_rounded,color:Color(0xFFFFA015),size:28),SizedBox(width:10),Expanded(child:Text(silsilaText('إعدادات البرنامج'),style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)))]),
+      Row(children:[Icon(Icons.tune_rounded,color:Color(0xFFFFA015),size:28),SizedBox(width:10),Expanded(child:Text(silsilaText('إعدادات البرنامج'),style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)))]),
       Text(silsilaText('إدارة الاسم واللغة والهوية البصرية وخطوط العناوين بشكل موحد.'),style:TextStyle(color:Colors.white70)),
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
@@ -162,7 +162,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
       Row(children:[
         Expanded(flex:3,child:_textField(_name,'اسم البرنامج')),
         const SizedBox(width:12),
-        Expanded(flex:2,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(labelText:silsilaText('لغة البرنامج'),isDense:true,constraints:BoxConstraints(minHeight:52)),items:const[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:(v){if(v!=null){setState(()=>_language=v); SilsilaLanguage.setLanguage(v);}})),
+        Expanded(flex:2,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:InputDecoration(labelText:silsilaText('لغة البرنامج'),isDense:true,constraints:BoxConstraints(minHeight:52)),items:const[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:(v){if(v!=null){setState(()=>_language=v); SilsilaLanguage.setLanguage(v);}})),
       ]),
       const SizedBox(height:12),
       Row(children:[Container(width:78,height:78,decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:Colors.black12)),child:_logoBase64==null?const Icon(Icons.image_outlined,size:34,color:_settingsPurple):ClipRRect(borderRadius:BorderRadius.circular(12),child:Image.memory(base64Decode(_logoBase64!),fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined)))),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(silsilaText('صورة البرنامج / الشعار'),style:TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),Wrap(spacing:8,runSpacing:8,children:[OutlinedButton.icon(onPressed:_pickLogo,icon:const Icon(Icons.upload_file_rounded),label:Text(silsilaText('اختيار صورة'))),if(_logoBase64!=null)TextButton.icon(onPressed:(){setState((){_logoBase64=null;_logoMime=null;});},icon:const Icon(Icons.delete_outline),label:Text(silsilaText('إزالة')))])]))]),
@@ -185,7 +185,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
           SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1050,child:Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
             SizedBox(width:175,child:Text('${i+1}. ${_labels[i]}',style:TextStyle(fontSize:14,color:_parseColor(_colors[i].text,_settingsPurple),fontWeight:FontWeight.w800))),
             const SizedBox(width:10),
-            Expanded(flex:2,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(labelText:silsilaText('نوع الخط'),isDense:true,constraints:BoxConstraints(minHeight:52)),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_fonts[i]=v);})),
+            Expanded(flex:2,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:InputDecoration(labelText:silsilaText('نوع الخط'),isDense:true,constraints:BoxConstraints(minHeight:52)),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_fonts[i]=v);})),
             const SizedBox(width:12),
             Expanded(flex:1,child:_textField(_sizes[i],'الحجم')),
             const SizedBox(width:12),

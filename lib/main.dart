@@ -1228,7 +1228,7 @@ class _MainShellState extends State<MainShell> {
 
     if (nextQuantity < 1 || nextQuantity > maxQuantityPerProduct) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('وصلت للحد الأقصى المسموح لكمية هذا المنتج.'))),
+        SnackBar(content: Text(silsilaText('وصلت للحد الأقصى المسموح لكمية هذا المنتج.'))),
       );
       return;
     }
@@ -1700,7 +1700,7 @@ class _MainShellState extends State<MainShell> {
           _sectionTitle('فئات الأصناف', visibleCategoryNames.length - 1),
           const SizedBox(height: 8),
           if (visibleCategoryNames.where((c) => c != 'الكل').isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(20),
               child: Text(silsilaText('لا توجد فئات مسجلة حتى الآن.'), textAlign: TextAlign.center),
             ),
@@ -1730,7 +1730,7 @@ class _MainShellState extends State<MainShell> {
                     Padding(
                       padding: const EdgeInsetsDirectional.only(start: 12, end: 12, bottom: 10),
                       child: productsInCategory.isEmpty
-                          ? const Align(
+                          ? Align(
                               alignment: Alignment.centerRight,
                               child: Text(silsilaText('لا توجد أصناف منشورة تحت هذه الفئة بعد.'), style: TextStyle(color: Colors.black54, fontSize: 12)),
                             )
@@ -1825,7 +1825,7 @@ class _MainShellState extends State<MainShell> {
                   }).length,
           ),
           if (database == null)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(top: 4, bottom: 8),
               child: Text(silsilaText('وضع عرض تجريبي: الأسماء التالية أمثلة للواجهة وليست حسابات موردين مسجلة.'),
                 style: TextStyle(color: Colors.black54, fontSize: 12),
@@ -1844,7 +1844,7 @@ class _MainShellState extends State<MainShell> {
                 search.isEmpty || name.toLowerCase().contains(search.toLowerCase()))
                 .map(supplierTile)
           else if (!loadingLiveSuppliers)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(24),
               child: Center(
                 child: Text(silsilaText('لا توجد حسابات موردين معتمدة منشورة حاليًا.'),
@@ -2276,7 +2276,7 @@ class _MainShellState extends State<MainShell> {
           _sectionTitle('المفضلة', favorites.length),
           const SizedBox(height: 10),
           if (favorites.isEmpty)
-            const Padding(
+            Padding(
               padding: EdgeInsets.all(35),
               child: Column(
                 children: [
@@ -2486,7 +2486,7 @@ class _MainShellState extends State<MainShell> {
         ),
         const SizedBox(height: 12),
         if (entries.isEmpty)
-          const Padding(
+          Padding(
             padding: EdgeInsets.all(40),
             child: Column(
               children: [
@@ -2929,7 +2929,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                 if (rating is num) Text('التقييم: ${rating.toStringAsFixed(1)} / 5 • ${reviewCount} تقييم'),
                 Text(details?['accepts_negotiation'] == true ? 'الأسعار قابلة للتفاوض' : 'راجع سياسة الأسعار مع المورد'),
                 if (details?['is_verified'] == true)
-                  const Padding(padding: EdgeInsets.only(top: 8), child: Chip(label: Text(silsilaText('مورد موثّق')))),
+                  Padding(padding: EdgeInsets.only(top: 8), child: Chip(label: Text(silsilaText('مورد موثّق')))),
               ]),
             ),
           ),
@@ -2937,7 +2937,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
           const SizedBox(height: 8),
           Text(silsilaText('منتجات المورد'), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: purple)),
           if (products.isEmpty && error == null)
-            const Padding(padding: EdgeInsets.all(20), child: Text(silsilaText('لا توجد منتجات منشورة حاليًا.'), textAlign: TextAlign.center)),
+            Padding(padding: EdgeInsets.all(20), child: Text(silsilaText('لا توجد منتجات منشورة حاليًا.'), textAlign: TextAlign.center)),
           ...products.map((row) {
             final product = toProduct(row);
             return Card(
@@ -2957,7 +2957,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
           const SizedBox(height: 20),
           Text(silsilaText('آراء العملاء'), style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: purple)),
           if (reviews.isEmpty)
-            const Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('لا توجد تقييمات منشورة لهذا المورد بعد.'))),
+            Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('لا توجد تقييمات منشورة لهذا المورد بعد.'))),
           ...reviews.map((review) => Card(
             child: ListTile(
               leading: const Icon(Icons.star, color: orange),
@@ -3126,7 +3126,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
           imageUrl: uploadedImageUrl,
           offerPrice: parsedOfferPrice,
         );
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم نشر المنتج.'))));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم نشر المنتج.'))));
         await loadProducts();
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إضافة المنتج: $e')));
@@ -3170,11 +3170,11 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Row(children: [
-            const Expanded(child: Text(silsilaText('منتجاتي'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+            Expanded(child: Text(silsilaText('منتجاتي'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
             FilledButton.icon(onPressed: addProduct, icon: const Icon(Icons.add), label: Text(silsilaText('إضافة'))),
           ]),
           if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
-          if (products.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لم تنشر منتجات بعد.'), textAlign: TextAlign.center)),
+          if (products.isEmpty && error == null) Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لم تنشر منتجات بعد.'), textAlign: TextAlign.center)),
           ...products.map((product) {
             final rawId = product['id'];
             final id = rawId?.toString().trim();
@@ -3293,7 +3293,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         (companyId ?? '').isEmpty ||
         pickupController.text.trim().isEmpty ||
         deliveryController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('أكمل رقم الطلب وشركة الشحن وعنوانَي الاستلام والتوصيل.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('أكمل رقم الطلب وشركة الشحن وعنوانَي الاستلام والتوصيل.'))));
       return;
     }
     setState(() => sending = true);
@@ -3310,7 +3310,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       pickupController.clear();
       deliveryController.clear();
       notesController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم إرسال طلب التوصيل.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم إرسال طلب التوصيل.'))));
       await loadDeliveryData();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إنشاء الشحنة: $e')));
@@ -3330,7 +3330,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           children: [
             Text(silsilaText('الشحنات المسندة لشركتك'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
             if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
-            if (deliveries.isEmpty) const Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لا توجد شحنات مسندة حاليًا.'), textAlign: TextAlign.center)),
+            if (deliveries.isEmpty) Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لا توجد شحنات مسندة حاليًا.'), textAlign: TextAlign.center)),
             ...deliveries.map((delivery) {
               final status = (delivery['status'] ?? 'pending').toString();
               final nextStatus = switch (status) {
@@ -3381,7 +3381,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         if (loading) const LinearProgressIndicator(minHeight: 2),
         if (error != null) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Text(error!)),
         if (companies.isEmpty && !loading)
-          const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text(silsilaText('لا توجد شركات شحن نشطة حاليًا.'))),
+          Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text(silsilaText('لا توجد شركات شحن نشطة حاليًا.'))),
         TextField(controller: orderIdController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'رقم الطلب')),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
@@ -3407,7 +3407,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ),
         const Divider(height: 32),
         Text(silsilaText('شحناتي السابقة'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        if (!loading && deliveries.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('لا توجد شحنات سابقة.'))),
+        if (!loading && deliveries.isEmpty) Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('لا توجد شحنات سابقة.'))),
         ...deliveries.map((delivery) => Card(
           child: ListTile(
             leading: const Icon(Icons.local_shipping_outlined, color: purple),
@@ -3469,12 +3469,12 @@ class _SupportScreenState extends State<SupportScreen> {
   Future<void> submitTicket() async {
     if (sending) return;
     if (subjectController.text.trim().isEmpty || messageController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('أدخل عنوان الشكوى والتفاصيل.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('أدخل عنوان الشكوى والتفاصيل.'))));
       return;
     }
     final orderText = orderIdController.text.trim();
     if (orderText.isNotEmpty && int.tryParse(orderText) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('رقم الطلب يجب أن يكون رقمًا صحيحًا.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('رقم الطلب يجب أن يكون رقمًا صحيحًا.'))));
       return;
     }
     setState(() => sending = true);
@@ -3489,7 +3489,7 @@ class _SupportScreenState extends State<SupportScreen> {
       subjectController.clear();
       messageController.clear();
       orderIdController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم إرسال تذكرة الدعم.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم إرسال تذكرة الدعم.'))));
       await loadTickets();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التذكرة: $e')));
@@ -3510,7 +3510,7 @@ class _SupportScreenState extends State<SupportScreen> {
         DropdownButtonFormField<String>(
           value: category,
           decoration: const InputDecoration(labelText: 'نوع التذكرة'),
-          items: const [
+          items: [
             DropdownMenuItem(value: 'general', child: Text(silsilaText('استفسار عام'))),
             DropdownMenuItem(value: 'orders', child: Text(silsilaText('الطلبات'))),
             DropdownMenuItem(value: 'payments', child: Text(silsilaText('الدفع والمحفظة'))),
@@ -3533,7 +3533,7 @@ class _SupportScreenState extends State<SupportScreen> {
         Text(silsilaText('تذاكري السابقة'), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         if (loading) const Padding(padding: EdgeInsets.all(20), child: Center(child: CircularProgressIndicator(color: purple))),
         if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
-        if (!loading && tickets.isEmpty && error == null) const Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('لا توجد تذاكر سابقة.'))),
+        if (!loading && tickets.isEmpty && error == null) Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('لا توجد تذاكر سابقة.'))),
         ...tickets.map((ticket) => Card(
           child: ListTile(
             leading: const Icon(Icons.support_agent, color: purple),
@@ -3637,7 +3637,7 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
             isActive: active,
           );
         }
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم حفظ القسم.'))));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم حفظ القسم.'))));
         await loadCategories();
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ القسم: $e')));
@@ -3667,7 +3667,7 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
       onRefresh: loadCategories,
       child: ListView(padding: const EdgeInsets.all(16), children: [
         Row(children: [
-          const Expanded(child: Text(silsilaText('أقسام المنتجات'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+          Expanded(child: Text(silsilaText('أقسام المنتجات'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
           FilledButton.icon(onPressed: () => editCategory(), icon: const Icon(Icons.add), label: Text(silsilaText('إضافة'))),
         ]),
         if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
@@ -3684,7 +3684,7 @@ class _AdminCategoriesScreenState extends State<AdminCategoriesScreen> {
                   if (value == 'toggle') toggleCategory(category);
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text(silsilaText('تعديل'))),
+                  PopupMenuItem(value: 'edit', child: Text(silsilaText('تعديل'))),
                   PopupMenuItem(value: 'toggle', child: Text(active ? 'إيقاف' : 'تفعيل')),
                 ],
               ),
@@ -3749,7 +3749,7 @@ class _AdminSupportTicketsScreenState extends State<AdminSupportTicketsScreen> {
             DropdownButtonFormField<String>(
               value: status,
               decoration: const InputDecoration(labelText: 'حالة التذكرة'),
-              items: const [
+              items: [
                 DropdownMenuItem(value: 'open', child: Text(silsilaText('مفتوحة'))),
                 DropdownMenuItem(value: 'in_progress', child: Text(silsilaText('قيد المعالجة'))),
                 DropdownMenuItem(value: 'resolved', child: Text(silsilaText('تم الحل'))),
@@ -3774,7 +3774,7 @@ class _AdminSupportTicketsScreenState extends State<AdminSupportTicketsScreen> {
           reply: reply.text.trim().isEmpty ? null : reply.text.trim(),
         );
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم تحديث التذكرة وإرسال الرد.'))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم تحديث التذكرة وإرسال الرد.'))));
         await loadTickets();
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تحديث التذكرة: $e')));
@@ -3793,7 +3793,7 @@ class _AdminSupportTicketsScreenState extends State<AdminSupportTicketsScreen> {
       child: ListView(padding: const EdgeInsets.all(16), children: [
         Text(silsilaText('تذاكر الدعم المفتوحة'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
         if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
-        if (tickets.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لا توجد تذاكر مفتوحة.'), textAlign: TextAlign.center)),
+        if (tickets.isEmpty && error == null) Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لا توجد تذاكر مفتوحة.'), textAlign: TextAlign.center)),
         ...tickets.map((ticket) {
           final id = (ticket['id'] ?? '').toString();
           final date = ticket['created_at']?.toString() ?? '';
@@ -3887,7 +3887,7 @@ class _AdminShippingCompaniesScreenState extends State<AdminShippingCompaniesScr
           phone: phone.text,
           isActive: active,
         );
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم حفظ شركة الشحن.'))));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم حفظ شركة الشحن.'))));
         await loadCompanies();
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الشركة: $e')));
@@ -3925,11 +3925,11 @@ class _AdminShippingCompaniesScreenState extends State<AdminShippingCompaniesScr
       onRefresh: loadCompanies,
       child: ListView(padding: const EdgeInsets.all(16), children: [
         Row(children: [
-          const Expanded(child: Text(silsilaText('شركات الشحن'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+          Expanded(child: Text(silsilaText('شركات الشحن'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
           FilledButton.icon(onPressed: () => editCompany(), icon: const Icon(Icons.add), label: Text(silsilaText('إضافة'))),
         ]),
         if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
-        if (companies.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لم تتم إضافة شركات شحن بعد.'), textAlign: TextAlign.center)),
+        if (companies.isEmpty && error == null) Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لم تتم إضافة شركات شحن بعد.'), textAlign: TextAlign.center)),
         ...companies.map((company) {
           final active = company['is_active'] == true;
           return Card(
@@ -3948,7 +3948,7 @@ class _AdminShippingCompaniesScreenState extends State<AdminShippingCompaniesScr
                   if (value == 'toggle') toggleCompany(company);
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text(silsilaText('تعديل'))),
+                  PopupMenuItem(value: 'edit', child: Text(silsilaText('تعديل'))),
                   PopupMenuItem(value: 'toggle', child: Text(active ? 'إيقاف' : 'تفعيل')),
                 ],
               ),
@@ -4029,7 +4029,7 @@ class _AdminTopUpReviewScreenState extends State<AdminTopUpReviewScreen> {
           const SizedBox(height: 8),
           Text(silsilaText('لا يُضاف أي مبلغ إلى رصيد المستخدم إلا بعد الاعتماد من الإدارة.')),
           if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
-          if (requests.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لا توجد طلبات شحن معلقة.'), textAlign: TextAlign.center)),
+          if (requests.isEmpty && error == null) Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لا توجد طلبات شحن معلقة.'), textAlign: TextAlign.center)),
           ...requests.map((request) {
             final id = (request['id'] ?? '').toString();
             final busy = busyIds.contains(id);
@@ -4137,7 +4137,7 @@ class _AdminApprovalsScreenState extends State<AdminApprovalsScreen> {
           Text(silsilaText('طلبات تفعيل الحسابات'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
           if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center)),
           if (accounts.isEmpty && error == null)
-            const Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد حسابات معلقة للمراجعة.'), textAlign: TextAlign.center)),
+            Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد حسابات معلقة للمراجعة.'), textAlign: TextAlign.center)),
           ...accounts.map((account) {
             final id = (account['id'] ?? '').toString();
             final name = (account['full_name'] ?? 'حساب جديد').toString();
@@ -4236,7 +4236,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
 
   Future<void> createStory() async {
     if (database?.auth.currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('سجّل الدخول أولًا لنشر قصة.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('سجّل الدخول أولًا لنشر قصة.'))));
       return;
     }
     mediaUrlController.clear();
@@ -4252,7 +4252,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               SegmentedButton<String>(
-                segments: const [
+                segments: [
                   ButtonSegment(value: 'image', label: Text(silsilaText('صورة')), icon: Icon(Icons.image_outlined)),
                   ButtonSegment(value: 'video', label: Text(silsilaText('فيديو')), icon: Icon(Icons.video_library_outlined)),
                   ButtonSegment(value: 'text', label: Text(silsilaText('نص')), icon: Icon(Icons.text_fields)),
@@ -4336,7 +4336,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
         duration: Duration(minutes: durationMinutes),
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم نشر القصة.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم نشر القصة.'))));
       await loadStories();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر نشر القصة: $e')));
@@ -4347,7 +4347,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
     final recipientId = (story['user_id'] ?? '').toString();
     final storyId = (story['id'] ?? '').toString();
     if (recipientId.isEmpty || storyId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تعذر تحديد صاحب القصة.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تعذر تحديد صاحب القصة.'))));
       return;
     }
     final controller = TextEditingController();
@@ -4370,7 +4370,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
     if (send == true) {
       try {
         await storyService.sendReply(storyId: storyId, recipientId: recipientId, body: controller.text);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم إرسال الرسالة لصاحب القصة.'))));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم إرسال الرسالة لصاحب القصة.'))));
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال الرسالة: $e')));
       }
@@ -4442,7 +4442,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Row(children: [
-            const Expanded(child: Text(silsilaText('القصص'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+            Expanded(child: Text(silsilaText('القصص'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
             FilledButton.icon(onPressed: createStory, icon: const Icon(Icons.add), label: Text(silsilaText('إضافة قصة'))),
           ]),
           const SizedBox(height: 10),
@@ -4464,7 +4464,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
           Text(silsilaText('تختفي القصة تلقائيًا عند انتهاء مدتها، بحد أقصى 60 دقيقة.')),
           if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center)),
           if (filtered.isEmpty && error == null)
-            const Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد قصص نشطة حاليًا.'), textAlign: TextAlign.center)),
+            Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد قصص نشطة حاليًا.'), textAlign: TextAlign.center)),
           ...filtered.map((story) {
             final url = (story['media_url'] ?? '').toString();
             final type = (story['media_type'] ?? 'image').toString();
@@ -4603,7 +4603,7 @@ class _StoryRepliesScreenState extends State<StoryRepliesScreen> {
           Text(silsilaText('رسائل القصص'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple)),
           if (_error != null) Padding(padding: const EdgeInsets.all(16), child: Text(_error!, textAlign: TextAlign.center)),
           if (_messages.isEmpty && _error == null)
-            const Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لا توجد رسائل حتى الآن.'), textAlign: TextAlign.center)),
+            Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لا توجد رسائل حتى الآن.'), textAlign: TextAlign.center)),
           ..._messages.map((message) {
             final incoming = message['recipient_id']?.toString() == userId;
             final created = DateTime.tryParse((message['created_at'] ?? '').toString());
@@ -4784,7 +4784,7 @@ class _OffersScreenState extends State<OffersScreen> {
                   DropdownButtonFormField<String>(
                     value: magazineColor,
                     decoration: const InputDecoration(labelText: 'لون مجلة العرض'),
-                    items: const [
+                    items: [
                       DropdownMenuItem(value: '#FFA015', child: Text(silsilaText('برتقالي'))),
                       DropdownMenuItem(value: '#3E007D', child: Text(silsilaText('بنفسجي'))),
                       DropdownMenuItem(value: '#168A4A', child: Text(silsilaText('أخضر'))),
@@ -4796,7 +4796,7 @@ class _OffersScreenState extends State<OffersScreen> {
                   DropdownButtonFormField<int>(
                     value: durationDays,
                     decoration: const InputDecoration(labelText: 'مدة العرض'),
-                    items: const [
+                    items: [
                       DropdownMenuItem(value: 1, child: Text(silsilaText('يوم واحد'))),
                       DropdownMenuItem(value: 7, child: Text(silsilaText('أسبوع'))),
                       DropdownMenuItem(value: 14, child: Text(silsilaText('أسبوعان'))),
@@ -4842,7 +4842,7 @@ class _OffersScreenState extends State<OffersScreen> {
                   ),
                   const SizedBox(height: 10),
                   Row(children: [
-                    const Expanded(child: Text(silsilaText('الأصناف الداخلة في العرض'), style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(child: Text(silsilaText('الأصناف الداخلة في العرض'), style: TextStyle(fontWeight: FontWeight.bold))),
                     TextButton(
                       onPressed: () => setDialogState(() {
                         if (selectedProductIds.length == visibleOfferProducts.length) {
@@ -5002,7 +5002,7 @@ class _OffersScreenState extends State<OffersScreen> {
         bytes: bytes,
       );
       if (mounted && saved != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم تجهيز ملف CSV المتوافق مع Excel.'))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم تجهيز ملف CSV المتوافق مع Excel.'))));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تصدير Excel: $e')));
@@ -5076,7 +5076,7 @@ class _OffersScreenState extends State<OffersScreen> {
     try {
       await supplierService.deleteOffer(id.toInt());
       await loadOffers();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم حذف العرض.'))));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم حذف العرض.'))));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حذف العرض: $e')));
     }
@@ -5113,7 +5113,7 @@ class _OffersScreenState extends State<OffersScreen> {
                 DropdownButtonFormField<String>(
                   value: magazineColor,
                   decoration: const InputDecoration(labelText: 'لون مجلة العرض'),
-                  items: const [
+                  items: [
                     DropdownMenuItem(value: '#FFA015', child: Text(silsilaText('برتقالي'))),
                     DropdownMenuItem(value: '#3E007D', child: Text(silsilaText('بنفسجي'))),
                     DropdownMenuItem(value: '#168A4A', child: Text(silsilaText('أخضر'))),
@@ -5180,7 +5180,7 @@ class _OffersScreenState extends State<OffersScreen> {
         targetCustomerTypes: parseList(customerTypesController.text),
       );
       await loadOffers();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم حفظ تعديلات العرض.'))));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم حفظ تعديلات العرض.'))));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعديل العرض: $e')));
     } finally {
@@ -5222,14 +5222,14 @@ class _OffersScreenState extends State<OffersScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           Row(children: [
-            const Expanded(child: Text(silsilaText('عروض الموردين'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+            Expanded(child: Text(silsilaText('عروض الموردين'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
             if (widget.canManage) FilledButton.icon(onPressed: createOffer, icon: const Icon(Icons.add), label: Text(silsilaText('إضافة عرض'))),
           ]),
           const SizedBox(height: 8),
           Text('النشاط: ${widget.activityType}'),
           if (error != null) Padding(padding: const EdgeInsets.all(16), child: Text(error!, textAlign: TextAlign.center)),
           if (offers.isEmpty && error == null)
-            const Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد عروض منشورة حاليًا.'), textAlign: TextAlign.center)),
+            Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد عروض منشورة حاليًا.'), textAlign: TextAlign.center)),
           ...offers.map((offer) {
             final title = (offer['title'] ?? 'عرض من المورد').toString();
             final description = (offer['description'] ?? '').toString();
@@ -5487,7 +5487,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final client = database;
     if (client == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('الاتصال بالخدمة غير متاح حاليًا.'))),
+        SnackBar(content: Text(silsilaText('الاتصال بالخدمة غير متاح حاليًا.'))),
       );
       return;
     }
@@ -5519,7 +5519,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (mounted && response.user != null && response.session == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(silsilaText('تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.')),
           ),
         );
@@ -5531,7 +5531,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(silsilaText('لم يكتمل إنشاء الحساب. راجع البريد الإلكتروني وكلمة المرور.'),
             ),
           ),
@@ -5540,7 +5540,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(silsilaText('تعذر التسجيل. تحقق من البريد الإلكتروني وكلمة المرور وإعدادات البريد في Supabase.'),
             ),
           ),
@@ -5589,7 +5589,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 decoration: const InputDecoration(
                   labelText: 'نوع الحساب',
                 ),
-                items: const [
+                items: [
                   DropdownMenuItem(value: 'عميل', child: Text(silsilaText('عميل'))),
                   DropdownMenuItem(value: 'مورد', child: Text(silsilaText('مورد'))),
                   DropdownMenuItem(value: 'مندوب', child: Text(silsilaText('مندوب'))),
@@ -5996,7 +5996,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('تعذر حفظ إعداد تذكّر البريد على هذا الجهاز.'))),
+        SnackBar(content: Text(silsilaText('تعذر حفظ إعداد تذكّر البريد على هذا الجهاز.'))),
       );
     }
   }
@@ -6012,14 +6012,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final enteredEmail = email.text.trim().toLowerCase();
     if (enteredEmail.isEmpty || !enteredEmail.contains('@') || password.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('اكتب البريد الإلكتروني الصحيح وكلمة المرور.'))),
+        SnackBar(content: Text(silsilaText('اكتب البريد الإلكتروني الصحيح وكلمة المرور.'))),
       );
       return;
     }
     final client = database;
     if (client == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('الاتصال بالخدمة غير متاح حاليًا. حاول مرة أخرى لاحقًا.'))),
+        SnackBar(content: Text(silsilaText('الاتصال بالخدمة غير متاح حاليًا. حاول مرة أخرى لاحقًا.'))),
       );
       return;
     }
@@ -6046,7 +6046,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(silsilaText('تعذر تسجيل الدخول. راجع البريد الإلكتروني وكلمة المرور.'))),
+          SnackBar(content: Text(silsilaText('تعذر تسجيل الدخول. راجع البريد الإلكتروني وكلمة المرور.'))),
         );
       }
     } finally {
@@ -6058,7 +6058,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final value = email.text.trim().toLowerCase();
     if (value.isEmpty || !value.contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('اكتب البريد الإلكتروني أولًا لاستعادة كلمة المرور.'))),
+        SnackBar(content: Text(silsilaText('اكتب البريد الإلكتروني أولًا لاستعادة كلمة المرور.'))),
       );
       return;
     }
@@ -6068,7 +6068,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await client.auth.resetPasswordForEmail(value);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(silsilaText('إذا كان البريد مسجلًا، فستصلك رسالة لاستعادة كلمة المرور.'))),
+          SnackBar(content: Text(silsilaText('إذا كان البريد مسجلًا، فستصلك رسالة لاستعادة كلمة المرور.'))),
         );
       }
     } on AuthException catch (error) {
@@ -6167,7 +6167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Image.asset(
                         'assets/images/silsila_logo.png',
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => const Row(
+                        errorBuilder: (_, __, ___) => Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.hub_rounded, color: purple, size: 44),
@@ -6240,7 +6240,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 10),
                         SegmentedButton<String>(
-                          segments: const [
+                          segments: [
                             ButtonSegment<String>(
                               value: 'مستخدم رئيسي للنشاط',
                               label: Text(silsilaText('مستخدم رئيسي')),
@@ -6430,7 +6430,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
         }
         final posts = snapshot.data ?? const <Map<String, dynamic>>[];
         if (posts.isEmpty) {
-          return const Card(
+          return Card(
             child: Padding(
               padding: EdgeInsets.all(22),
               child: Center(child: Text(silsilaText('لا توجد إعلانات منشورة حتى الآن.'))),
@@ -6528,7 +6528,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     if (titleController.text.trim().isEmpty ||
         detailsController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('أدخل عنوان الإعلان والتفاصيل.'))),
+        SnackBar(content: Text(silsilaText('أدخل عنوان الإعلان والتفاصيل.'))),
       );
       return;
     }
@@ -6542,14 +6542,14 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     if (contactText.isNotEmpty &&
         !RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(normalizedContact ?? '')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('أدخل رقم تواصل صحيحًا أو اترك الحقل فارغًا.'))),
+        SnackBar(content: Text(silsilaText('أدخل رقم تواصل صحيحًا أو اترك الحقل فارغًا.'))),
       );
       return;
     }
     if ((quantityText.isNotEmpty && (quantity == null || !quantity.isFinite || quantity <= 0)) ||
         (priceText.isNotEmpty && (targetPrice == null || !targetPrice.isFinite || targetPrice < 0))) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('راجع الكمية والسعر؛ يجب إدخال أرقام صحيحة.'))),
+        SnackBar(content: Text(silsilaText('راجع الكمية والسعر؛ يجب إدخال أرقام صحيحة.'))),
       );
       return;
     }
@@ -6576,14 +6576,14 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(silsilaText('تم نشر الإعلان في سوق التجار.'))),
+          SnackBar(content: Text(silsilaText('تم نشر الإعلان في سوق التجار.'))),
         );
         Navigator.pop(context, true);
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(silsilaText('تعذر نشر الإعلان. تأكد من تسجيل الدخول وإعداد قاعدة البيانات.')),
           ),
         );
@@ -6614,7 +6614,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           if (widget.availableProducts.isNotEmpty) ...[
             const SizedBox(height: 12),
             Row(children: [
-              const Expanded(child: Text(silsilaText('اختيار الأصناف'), style: TextStyle(fontWeight: FontWeight.bold))),
+              Expanded(child: Text(silsilaText('اختيار الأصناف'), style: TextStyle(fontWeight: FontWeight.bold))),
               TextButton(
                 onPressed: () => setState(() {
                   selectAllProducts = !selectAllProducts;
@@ -6728,7 +6728,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(silsilaText('تعذر تحديث الإشعار.'))),
+          SnackBar(content: Text(silsilaText('تعذر تحديث الإشعار.'))),
         );
       }
     }
@@ -6762,7 +6762,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           return RefreshIndicator(
             onRefresh: reload,
             child: ListView(
-              children: const [
+              children: [
                 SizedBox(height: 100),
                 Icon(Icons.notifications_none, size: 62, color: purple),
                 SizedBox(height: 12),
@@ -6786,7 +6786,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     } catch (_) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text(silsilaText('تعذر تحديث الإشعارات.'))),
+                          SnackBar(content: Text(silsilaText('تعذر تحديث الإشعارات.'))),
                         );
                       }
                     }
@@ -6903,13 +6903,13 @@ class _ProfileEditorScreenState extends State<ProfileEditorScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(silsilaText('تم حفظ بيانات الحساب.'))),
+          SnackBar(content: Text(silsilaText('تم حفظ بيانات الحساب.'))),
         );
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(silsilaText('تعذر حفظ البيانات. تأكد من تسجيل الدخول وصلاحيات الحساب.'))),
+          SnackBar(content: Text(silsilaText('تعذر حفظ البيانات. تأكد من تسجيل الدخول وصلاحيات الحساب.'))),
         );
       }
     } finally {
@@ -7111,7 +7111,7 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
             isDefault: args['isDefault'] as bool,
           );
         }
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم حفظ العنوان.'))));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم حفظ العنوان.'))));
         await loadAddresses();
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ العنوان: $e')));
@@ -7170,11 +7170,11 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
       onRefresh: loadAddresses,
       child: ListView(padding: const EdgeInsets.all(16), children: [
         Row(children: [
-          const Expanded(child: Text(silsilaText('عناويني المحفوظة'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+          Expanded(child: Text(silsilaText('عناويني المحفوظة'), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
           FilledButton.icon(onPressed: () => editAddress(), icon: const Icon(Icons.add), label: Text(silsilaText('إضافة'))),
         ]),
         if (error != null) Padding(padding: const EdgeInsets.all(12), child: Text(error!)),
-        if (addresses.isEmpty && error == null) const Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لم تحفظ عناوين بعد.'), textAlign: TextAlign.center)),
+        if (addresses.isEmpty && error == null) Padding(padding: EdgeInsets.all(24), child: Text(silsilaText('لم تحفظ عناوين بعد.'), textAlign: TextAlign.center)),
         ...addresses.map((item) {
           final isDefault = item['is_default'] == true;
           final subtitle = [
@@ -7190,7 +7190,7 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
               leading: Icon(isDefault ? Icons.location_on : Icons.location_on_outlined, color: isDefault ? orange : purple),
               title: Row(children: [
                 Expanded(child: Text((item['title'] ?? 'عنوان').toString())),
-                if (isDefault) const Chip(label: Text(silsilaText('افتراضي'))),
+                if (isDefault) Chip(label: Text(silsilaText('افتراضي'))),
               ]),
               subtitle: Text(subtitle),
               isThreeLine: true,
@@ -7201,9 +7201,9 @@ class _AddressBookScreenState extends State<AddressBookScreen> {
                   if (value == 'delete') deleteAddress(item);
                 },
                 itemBuilder: (_) => [
-                  const PopupMenuItem(value: 'edit', child: Text(silsilaText('تعديل'))),
-                  if (!isDefault) const PopupMenuItem(value: 'default', child: Text(silsilaText('تعيين افتراضي'))),
-                  const PopupMenuItem(value: 'delete', child: Text(silsilaText('حذف'))),
+                  PopupMenuItem(value: 'edit', child: Text(silsilaText('تعديل'))),
+                  if (!isDefault) PopupMenuItem(value: 'default', child: Text(silsilaText('تعيين افتراضي'))),
+                  PopupMenuItem(value: 'delete', child: Text(silsilaText('حذف'))),
                 ],
               ),
             ),
@@ -7293,7 +7293,7 @@ class _LoyaltyOverviewScreenState extends State<LoyaltyOverviewScreen> {
             const SizedBox(height: 20),
             Text(silsilaText('أهدافي'), style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
             if (goals.isEmpty)
-              const Card(child: Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('ستظهر أهدافك هنا عند إضافتها إلى حسابك.')))),
+              Card(child: Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('ستظهر أهدافك هنا عند إضافتها إلى حسابك.')))),
             ...goals.map((goal) {
               final title = (goal['title'] ?? goal['name'] ?? 'هدف جديد').toString();
               final current = num.tryParse((goal['current_value'] ?? 0).toString()) ?? 0;
@@ -7315,7 +7315,7 @@ class _LoyaltyOverviewScreenState extends State<LoyaltyOverviewScreen> {
             const SizedBox(height: 20),
             Text(silsilaText('سجل النقاط'), style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
             if (history.isEmpty)
-              const Card(child: Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('لا توجد حركات نقاط مسجلة حتى الآن.')))),
+              Card(child: Padding(padding: EdgeInsets.all(16), child: Text(silsilaText('لا توجد حركات نقاط مسجلة حتى الآن.')))),
             ...history.map((entry) {
               final points = entry['points'] ?? 0;
               final description = (entry['description'] ?? 'حركة نقاط').toString();
@@ -7391,7 +7391,7 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
               DropdownButtonFormField<String>(
                 value: method,
                 decoration: const InputDecoration(labelText: 'طريقة الدفع'),
-                items: const [
+                items: [
                   DropdownMenuItem(value: 'تحويل بنكي', child: Text(silsilaText('تحويل بنكي'))),
                   DropdownMenuItem(value: 'محفظة إلكترونية', child: Text(silsilaText('محفظة إلكترونية'))),
                   DropdownMenuItem(value: 'إيداع نقدي', child: Text(silsilaText('إيداع نقدي'))),
@@ -7433,7 +7433,7 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
     if (amount == null || !amount.isFinite || amount <= 0) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(silsilaText('أدخل مبلغًا صحيحًا أكبر من صفر.'))),
+          SnackBar(content: Text(silsilaText('أدخل مبلغًا صحيحًا أكبر من صفر.'))),
         );
       }
       return;
@@ -7447,14 +7447,14 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(silsilaText('تم تسجيل طلب الشحن للمراجعة.'))),
+          SnackBar(content: Text(silsilaText('تم تسجيل طلب الشحن للمراجعة.'))),
         );
         await reload();
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(silsilaText('تعذر إرسال طلب الشحن. سجّل الدخول وحاول مرة أخرى.'))),
+          SnackBar(content: Text(silsilaText('تعذر إرسال طلب الشحن. سجّل الدخول وحاول مرة أخرى.'))),
         );
       }
     }
@@ -7523,7 +7523,7 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
               Text(silsilaText('آخر المعاملات'), style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               if (transactions.isEmpty)
-                const Card(
+                Card(
                   child: Padding(
                     padding: EdgeInsets.all(18),
                     child: Text(silsilaText('لا توجد معاملات مسجلة حتى الآن.')),
@@ -7548,7 +7548,7 @@ class _WalletOverviewScreenState extends State<WalletOverviewScreen> {
               Text(silsilaText('طلبات الشحن وحالة المراجعة'), style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               if (topUps.isEmpty)
-                const Card(child: Padding(padding: EdgeInsets.all(18), child: Text(silsilaText('لا توجد طلبات شحن سابقة.')))),
+                Card(child: Padding(padding: EdgeInsets.all(18), child: Text(silsilaText('لا توجد طلبات شحن سابقة.')))),
               ...topUps.map((request) {
                 final amount = request['amount'];
                 final status = (request['status'] ?? 'pending').toString();
@@ -7627,7 +7627,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     try {
       await OrderStatusService().cancelOrder(id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم إلغاء الطلب.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم إلغاء الطلب.'))));
       await reload();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إلغاء الطلب: $e')));
@@ -7675,7 +7675,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           rating: rating,
           comment: comment.text,
         );
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('شكرًا لك، تم إرسال تقييمك.'))));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('شكرًا لك، تم إرسال تقييمك.'))));
       } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التقييم: $e')));
       }
@@ -7729,7 +7729,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           return RefreshIndicator(
             onRefresh: reload,
             child: ListView(
-              children: const [
+              children: [
                 SizedBox(height: 100),
                 Icon(Icons.receipt_long_outlined, size: 62, color: purple),
                 SizedBox(height: 12),
@@ -7786,7 +7786,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                           return const LinearProgressIndicator(minHeight: 2);
                         }
                         if (itemSnapshot.hasError) {
-                          return const Align(alignment: Alignment.centerRight, child: Text(silsilaText('تعذر تحميل تفاصيل الأصناف.')));
+                          return Align(alignment: Alignment.centerRight, child: Text(silsilaText('تعذر تحميل تفاصيل الأصناف.')));
                         }
                         final items = itemSnapshot.data ?? const <Map<String, dynamic>>[];
                         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -7853,7 +7853,7 @@ class FavoritesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (names.isEmpty) {
-      return const Center(child: Text(silsilaText('لم تضف عناصر للمفضلة بعد.')));
+      return Center(child: Text(silsilaText('لم تضف عناصر للمفضلة بعد.')));
     }
 
     return ListView(
@@ -8010,11 +8010,11 @@ class _MarketCardState extends State<MarketCard> {
     final price = double.tryParse(_negotiationPrice.text.trim());
     if (price == null || !price.isFinite || price <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('أدخل سعر تفاوض صحيحًا أكبر من صفر.'))),
+        SnackBar(content: Text(silsilaText('أدخل سعر تفاوض صحيحًا أكبر من صفر.'))),
       );
       return;
     }
-    try { await _service.proposeNegotiation(postId: widget.postId, proposedPrice: price); if (!mounted) return; setState(() { _negotiationStatus = 'تم إرسال اقتراح السعر: ${price.toStringAsFixed(2)} ج.م'; _negotiationsFuture = _service.getNegotiations(widget.postId); }); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('تم إرسال اقتراح السعر لصاحب الطلب.')))); } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التفاوض: $e'))); }
+    try { await _service.proposeNegotiation(postId: widget.postId, proposedPrice: price); if (!mounted) return; setState(() { _negotiationStatus = 'تم إرسال اقتراح السعر: ${price.toStringAsFixed(2)} ج.م'; _negotiationsFuture = _service.getNegotiations(widget.postId); }); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم إرسال اقتراح السعر لصاحب الطلب.')))); } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التفاوض: $e'))); }
   }
 
   Future<void> _respondNegotiation(Map<String, dynamic> row, String action) async {
@@ -8056,7 +8056,7 @@ class _MarketCardState extends State<MarketCard> {
     controller.dispose();
     if (confirmed != true || price == null || !price.isFinite || price <= 0) {
       if (confirmed == true && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('أدخل سعرًا صحيحًا أكبر من صفر.'))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('أدخل سعرًا صحيحًا أكبر من صفر.'))));
       }
       return;
     }
@@ -8069,7 +8069,7 @@ class _MarketCardState extends State<MarketCard> {
       if (!mounted) return;
       setState(() => _negotiationsFuture = _service.getNegotiations(widget.postId));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(silsilaText('تم إرسال السعر المعدل للطرف الآخر.'))),
+        SnackBar(content: Text(silsilaText('تم إرسال السعر المعدل للطرف الآخر.'))),
       );
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(
@@ -8190,7 +8190,7 @@ class _MarketCardState extends State<MarketCard> {
                 ),
                 child: Row(
                   children: [
-                    const Expanded(child: Text(silsilaText('تفاصيل الطلب'), style: TextStyle(fontWeight: FontWeight.w700))),
+                    Expanded(child: Text(silsilaText('تفاصيل الطلب'), style: TextStyle(fontWeight: FontWeight.w700))),
                     Icon(_detailsExpanded ? Icons.keyboard_double_arrow_up : Icons.keyboard_double_arrow_down, color: purple),
                   ],
                 ),
@@ -8339,22 +8339,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void dispose() { address.dispose(); notes.dispose(); super.dispose(); }
   Future<void> send() async {
     if (database?.auth.currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('سجّل الدخول أولًا لإتمام الطلب.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('سجّل الدخول أولًا لإتمام الطلب.'))));
       return;
     }
     if (address.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('أدخل عنوان التوصيل بالتفصيل قبل تأكيد الطلب.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('أدخل عنوان التوصيل بالتفصيل قبل تأكيد الطلب.'))));
       return;
     }
     if (widget.items.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('السلة فارغة؛ أضف منتجات أولًا.'))));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('السلة فارغة؛ أضف منتجات أولًا.'))));
       return;
     }
     final items = <CartItem>[];
     for (final row in widget.items) {
       final p = row['product'] as Product;
       if (p.id == null || (p.supplierId ?? '').isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text(silsilaText('لا يمكن طلب المنتجات التوضيحية؛ اختر منتجًا منشورًا من مورد.'))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('لا يمكن طلب المنتجات التوضيحية؛ اختر منتجًا منشورًا من مورد.'))));
         return;
       }
       items.add(CartItem(productId: p.id!, name: p.name, supplierId: p.supplierId!, category: p.category, unit: p.unit, price: p.price, minQuantity: p.minQuantity, quantity: row['quantity'] as int));
