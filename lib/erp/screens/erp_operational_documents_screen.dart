@@ -945,13 +945,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     } finally {
       search.dispose();
       searchFocusNode.dispose();
-      for (final controller of quantities.values) {
+      for (final controller in quantities.values) {
         controller.dispose();
       }
-      for (final node of quantityFocusNodes.values) {
+      for (final node in quantityFocusNodes.values) {
         node.dispose();
       }
-      for (final node of unitFocusNodes.values) {
+      for (final node in unitFocusNodes.values) {
         node.dispose();
       }
     }
