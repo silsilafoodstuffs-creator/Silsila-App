@@ -124,10 +124,43 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   Widget _textField(TextEditingController controller,String label,{String? hint}) => TextField(controller:controller,style:const TextStyle(fontSize:14),decoration:InputDecoration(labelText:label,hintText:hint,isDense:true,constraints:const BoxConstraints(minHeight:52),contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12),border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))));
   Widget _colorField(TextEditingController c,String label) => Row(children:[Expanded(child:_textField(c,label,hint:'#3E007D')),const SizedBox(width:10),Container(width:42,height:42,decoration:BoxDecoration(color:_parseColor(c.text,_settingsPurple),borderRadius:BorderRadius.circular(8),border:Border.all(color:Colors.black12)))]);
   Widget _section(String title,IconData icon,Widget child)=>Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Icon(icon,color:_settingsPurple),const SizedBox(width:8),Text(title,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800,color:_settingsPurple))]),const SizedBox(height:14),child])));
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewSettings() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة إعدادات البرنامج'),
+      content: SizedBox(width: 540, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('اسم البرنامج: ${_name.text.trim().isEmpty ? 'سلسلة' : _name.text.trim()}'),
+        const SizedBox(height: 8),
+        Text('اللغة: ${_language == 'ar' ? 'العربية' : 'English'}'),
+        const SizedBox(height: 8),
+        Text('اللون الأساسي: ${_primaryColor.value.toRadixString(16).toUpperCase()}'),
+        const SizedBox(height: 8),
+        Text('اللون الثانوي: ${_secondaryColor.value.toRadixString(16).toUpperCase()}'),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(textDirection:TextDirection.rtl,child:Padding(padding:const EdgeInsets.all(18),child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Row(children:[const Icon(Icons.tune_rounded,color:_settingsPurple,size:28),const SizedBox(width:10),const Expanded(child:Text('إعدادات البرنامج',style:TextStyle(fontSize:22,fontWeight:FontWeight.w900,color:_settingsPurple))),IconButton(onPressed:_load,tooltip:'إعادة تحميل',icon:const Icon(Icons.refresh_rounded))]),
-    const SizedBox(height:6),const Text('إدارة الاسم واللغة والهوية البصرية وخطوط العناوين بشكل موحد.',style:TextStyle(color:Colors.black54)),const SizedBox(height:14),
+    Card(color:_settingsPurple,child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      const Row(children:[Icon(Icons.tune_rounded,color:Color(0xFFFFA015),size:28),SizedBox(width:10),Expanded(child:Text('إعدادات البرنامج',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)))]),
+      const Text('إدارة الاسم واللغة والهوية البصرية وخطوط العناوين بشكل موحد.',style:TextStyle(color:Colors.white70)),
+      const SizedBox(height:8),
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+        _quickTask('تحديث',Icons.refresh_rounded,Colors.blue,_loading?null:_load),
+        _quickTask('حفظ',Icons.save_outlined,const Color(0xFF168447),_saving?null:_save),
+        _quickTask('معاينة',Icons.visibility_outlined,const Color(0xFF6841A5),_previewSettings),
+      ])),
+    ]))),
+    const SizedBox(height:14),
     _section('الاسم واللغة والشعار',Icons.apps_rounded,Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       _textField(_name,'اسم البرنامج'),
       const SizedBox(height:12),
