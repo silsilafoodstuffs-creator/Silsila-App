@@ -352,6 +352,57 @@ class SilsilaApp extends StatelessWidget {
             borderSide: const BorderSide(color: Color(0xFFB3261E), width: 1.8),
           ),
         ),
+        // Shared Silsila visual language: crisp surfaces, warm interactive states,
+        // and accessible contrast across customer and ERP screens.
+        listTileTheme: ListTileThemeData(
+          iconColor: purple,
+          selectedColor: purple,
+          selectedTileColor: orange.withValues(alpha: 0.16),
+          minVerticalPadding: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: orange,
+          foregroundColor: purple,
+          elevation: 3,
+          hoverElevation: 5,
+          focusElevation: 4,
+          highlightElevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        ),
+        progressIndicatorTheme: ProgressIndicatorThemeData(
+          color: orange,
+          circularTrackColor: purple.withValues(alpha: 0.10),
+          linearTrackColor: purple.withValues(alpha: 0.10),
+        ),
+        dividerTheme: const DividerThemeData(
+          color: Color(0xFFE8DDF2),
+          thickness: 1,
+          space: 1,
+        ),
+        iconTheme: const IconThemeData(color: purple),
+        textSelectionTheme: TextSelectionThemeData(
+          cursorColor: orange,
+          selectionColor: orange.withValues(alpha: 0.24),
+          selectionHandleColor: purple,
+        ),
+        snackBarTheme: SnackBarThemeData(
+          backgroundColor: purple,
+          contentTextStyle: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+          actionTextColor: orange,
+          behavior: SnackBarBehavior.floating,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(13),
+          ),
+        ),
       ),
       home: kIsWeb
           ? const ErpLoginGate()
