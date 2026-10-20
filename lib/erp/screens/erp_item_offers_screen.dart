@@ -112,6 +112,8 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     final db = _db;
     if (company.isEmpty || db == null) { setState(() => _error = 'لا توجد شركة نشطة أو اتصال بقاعدة البيانات.'); return; }
     if (_name.text.trim().isEmpty || _offerLines.isEmpty) { setState(() => _error = 'أدخل اسم العرض واختر صنفًا واحدًا على الأقل.'); return; }
+    if (_customerScope == 'عملاء محددون' && _selectedCustomers.isEmpty) { setState(() => _error = 'اختر عميلًا واحدًا على الأقل أو غيّر النطاق إلى كل العملاء.'); return; }
+    if (_warehouseScope == 'مخازن محددة' && _selectedWarehouses.isEmpty) { setState(() => _error = 'اختر مخزنًا واحدًا على الأقل أو غيّر النطاق إلى كل المخازن.'); return; }
     if (_to.isBefore(_from)) { setState(() => _error = 'تاريخ نهاية العرض يجب ألا يسبق بدايته.'); return; }
     for (final line in _offerLines) {
       if (_n(line['offer_qty']) <= 0 || _n(line['remaining_qty']) < 0 || _n(line['remaining_qty']) > _n(line['offer_qty']) || _n(line['offer_price']) < 0) {
