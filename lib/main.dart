@@ -355,33 +355,15 @@ class WelcomeScreen extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
+                Image.asset(
+                  'assets/images/silsila_logo.png',
                   width: 132,
                   height: 132,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.16),
-                        blurRadius: 24,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(22),
-                    child: Image.asset(
-                      'assets/images/silsila_logo.png',
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(
-                        Icons.hub_rounded,
-                        size: 76,
-                        color: purple,
-                      ),
-                    ),
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.hub_rounded,
+                    size: 76,
+                    color: orange,
                   ),
                 ),
                 const SizedBox(height: 24),
