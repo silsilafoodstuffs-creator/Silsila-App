@@ -247,8 +247,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           .eq('company_id', companyId)
           .eq('user_id', userId)
           .eq('is_active', true)
-          .maybeSingle();      if (membership == null) return false;      final role = _s(membership['member_role']).toLowerCase();
-      if (role == 'owner' || role == 'admin') return true;
+          .maybeSingle();      if (membership == null) return false;      final role = _s(membership['member_role']).toLowerCase();      if (role == 'owner' || role == 'admin') return true;
       final permission = await db.from('erp_user_permissions')
           .select('allow_access,can_edit')
           .eq('company_id', companyId)
@@ -497,8 +496,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                           final options = optionsFor(item);
                           final unitId = selectedUnits[id] ?? '';                          final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
                           return ListTile(                            dense: true,
-                            title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}'),
-                            subtitle: Text('الكمية: ${_money(qty)} ${_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name'])} • الأساسي: ${_money(widget.kind == ErpOperationalKind.purchase ? item['purchase_price'] : item['sale_price'])}'),
+                            title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}'),                            subtitle: Text('الكمية: ${_money(qty)} ${_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name'])} • الأساسي: ${_money(widget.kind == ErpOperationalKind.purchase ? item['purchase_price'] : item['sale_price'])}'),
                             trailing: IconButton(tooltip: 'إزالة من المعاينة', onPressed: () { quantities[id]!.clear(); refresh(() {}); }, icon: const Icon(Icons.remove_circle_outline, color: Colors.red)),
                           );
                         }).toList()),
@@ -747,8 +745,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       title: const Text('تأكيد الترحيل'),
       content: Text('سيتم ترحيل المستند $number وإنشاء حركات مخزنية فعلية. لا يمكن إعادة ترحيله بعد نجاح العملية.'),      actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ترحيل')),
-      ],
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('ترحيل')),      ],
     ));
     if (yes != true || !mounted) return;
     setState(() { _loading = true; _error = null; _message = null; });
@@ -997,8 +994,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         const SizedBox(height: 10),
         Wrap(spacing: 8, children: [
           _metric('المستندات', '${_rows.length}'),
-          _metric('جاهز للترحيل', '$draftCount'),
-          _metric('مرحّل', '${_rows.where((r) => _s(r['status']) == 'posted').length}'),
+          _metric('جاهز للترحيل', '$draftCount'),          _metric('مرحّل', '${_rows.where((r) => _s(r['status']) == 'posted').length}'),
         ]),
         const SizedBox(height: 10),
         if (_rows.isEmpty && !_loading) const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد مستندات للعرض؛ لم تُضف بيانات تجريبية.')),
@@ -1063,7 +1059,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                       DataColumn(label: Text('سعر البيع المعدل')),
                       DataColumn(label: Text('خصم القيمة')),
                       DataColumn(label: Text('خصم %')),
-                      DataColumn(label: Text('الضريبة')),
+                      DataColumn(label: Text('نسبة الضريبة')),
+                      DataColumn(label: Text('قيمة الضريبة')),
                       DataColumn(label: Text('قيمة الصنف')),
                       DataColumn(label: Text('')),
                     ],
@@ -1082,7 +1079,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                         DataCell(Text(_money(line['adjusted_price'] ?? line['unit_price']))),
                         DataCell(Text(_money(line['discount']))),
                         DataCell(Text(_money(line['discount_percent']))),
-                        DataCell(Text(_money(line['tax']))),
+                        DataCell(Text(_isTaxInvoice ? '${_money(line['tax_rate'])}%' : '—')),
+                        DataCell(Text(_isTaxInvoice ? _money(line['tax']) : '—')),
                         DataCell(Text(_money(total), style: const TextStyle(fontWeight: FontWeight.w900))),
                         DataCell(IconButton(
                           tooltip: 'حذف من المعاينة',
