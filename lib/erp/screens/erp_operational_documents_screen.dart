@@ -43,6 +43,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   List<Map<String, dynamic>> _rows = [];
   List<Map<String, dynamic>> _parties = [];
   List<Map<String, dynamic>> _warehouses = [];
+  List<Map<String, dynamic>> _allWarehouses = [];
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _lines = [];
   // Rows chosen in F11 remain a local invoice preview until the user confirms saving them.
@@ -105,7 +106,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       ]);
       if (!mounted) return;
       setState(() {
-        _rows = results[0]; _parties = results[1]; _warehouses = results[2]; _items = results[3];
+        _rows = results[0]; _parties = results[1]; _allWarehouses = results[2]; _warehouses = results[2]; _items = results[3];
         if (!_parties.any((r) => _s(r['id']) == _partyId)) _partyId = _parties.isEmpty ? null : _s(_parties.first['id']);
         if (!_warehouses.any((r) => _s(r['id']) == _warehouseId)) _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
         if (!_items.any((r) => _s(r['id']) == _itemId)) _itemId = _items.isEmpty ? null : _s(_items.first['id']);
@@ -142,6 +143,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             if (_salesRepId == null && selectedParty.isNotEmpty) _salesRepId = _s(selectedParty.first['sales_rep_id']).isEmpty ? null : _s(selectedParty.first['sales_rep_id']);
           });
         } catch (_) { if (mounted) setState(() => _representatives = []); }
+        if (_selectedDocumentId == null && mounted) await _applyCustomerWarehouseRules(_partyId);
       }
     } catch (e) {
       if (!mounted) return;
@@ -161,6 +163,53 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   String _itemLabel(String? id) {
     final matches = _items.where((r) => _s(r['id']) == id);
     return matches.isEmpty ? 'اختر الصنف' : _s(matches.first['item_code']) + ' — ' + _s(matches.first['item_name']);
+  }
+
+  Future<void> _applyCustomerWarehouseRules(String? partyId) async {
+    if (widget.kind != ErpOperationalKind.sales || partyId == null || partyId.isEmpty) return;
+    try {
+      final allowedIds = await _repo.fetchPartyWarehouseIds(
+        companyId: _company.text.trim(),
+        partyId: partyId,
+      );
+      final party = _parties.firstWhere(
+        (row) => _s(row['id']) == partyId,
+        orElse: () => <String, dynamic>{},
+      );
+      final defaultId = _s(party['default_warehouse_id']);
+      if (!mounted) return;
+      setState(() {
+        // An empty permission list means no warehouse restrictions have been
+        // configured for this customer yet; retain all active warehouses.
+        _warehouses = allowedIds.isEmpty
+            ? List<Map<String, dynamic>>.from(_allWarehouses)
+            : _allWarehouses.where((warehouse) => allowedIds.contains(_s(warehouse['id']))).toList();
+        if (defaultId.isNotEmpty && _warehouses.any((row) => _s(row['id']) == defaultId)) {
+          _warehouseId = defaultId;
+        } else if (!_warehouses.any((row) => _s(row['id']) == _warehouseId)) {
+          _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
+        }
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _warehouses = List<Map<String, dynamic>>.from(_allWarehouses);
+        _error = 'تعذر قراءة مخازن العميل المسموح بها؛ عُرضت المخازن النشطة دون تطبيق قيد العميل: $error';
+      });
+    }
+  }
+
+  Future<void> _onPartyChanged(String? value) async {
+    setState(() {
+      _partyId = value;
+      final matches = _parties.where((party) => _s(party['id']) == value);
+      _partyCode.text = matches.isEmpty ? '' : _s(matches.first['party_code']);
+      final defaultRep = matches.isEmpty ? '' : _s(matches.first['sales_rep_id']);
+      if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) {
+        _salesRepId = defaultRep;
+      }
+    });
+    await _applyCustomerWarehouseRules(value);
   }
 
   Future<void> _createDraft() async {
@@ -815,6 +864,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) _salesRepId = defaultRep;
                     _error = null;
                   });
+                  _applyCustomerWarehouseRules(_s(party['id']));
                 },
               ),
               const SizedBox(height: 6),
@@ -823,13 +873,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               value: _partyId, isExpanded: true,
               decoration: InputDecoration(labelText: widget.kind == ErpOperationalKind.purchase ? 'المورد' : 'اختيار العميل بالاسم أو الكود', border: const OutlineInputBorder()),
               items: _parties.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_partyLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
-              onChanged: (v) => setState(() {
-                _partyId = v;
-                final matches = _parties.where((party) => _s(party['id']) == v);
-                _partyCode.text = matches.isEmpty ? '' : _s(matches.first['party_code']);
-                final defaultRep = matches.isEmpty ? '' : _s(matches.first['sales_rep_id']);
-                if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) _salesRepId = defaultRep;
-              }),
+              onChanged: _onPartyChanged,
             ),
             if (widget.kind == ErpOperationalKind.sales) ...[
               const SizedBox(height: 4),
