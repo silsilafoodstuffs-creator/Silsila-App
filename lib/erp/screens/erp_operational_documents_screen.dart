@@ -271,7 +271,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         orElse: () => <String, dynamic>{},
       );
       final defaultId = _s(party['default_warehouse_id']);
-      if (!mounted) return;
+      if (!mounted || _partyId != partyId) return;
       setState(() {
         // An empty permission list means no warehouse restrictions have been
         // configured for this customer yet; retain all active warehouses.
@@ -285,7 +285,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         }
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || _partyId != partyId) return;
       setState(() {
         // Fail closed: if access rules cannot be read, do not expose selectable warehouses.
         _warehouses = [];
