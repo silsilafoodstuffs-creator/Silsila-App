@@ -7981,8 +7981,27 @@ class MarketCard extends StatefulWidget {
 
 class _MarketCardState extends State<MarketCard> {
   final TraderMarketService _service = TraderMarketService();
+  final TextEditingController _negotiationPrice = TextEditingController();
   Map<String, int> _counts = const {'view': 0, 'accept': 0, 'reject': 0};
   bool _busy = false;
+  bool _closed = false;
+  bool _detailsExpanded = false;
+  bool _accepted = false;
+  String? _negotiationStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _service.getInteractionCounts(widget.postId).then((value) {
+      if (mounted) setState(() => _counts = value);
+    }).catchError((_) {});
+  }
+
+  @override
+  void dispose() {
+    _negotiationPrice.dispose();
+    super.dispose();
+  }
 
   Future<void> _interact(String action) async {
     if (_busy) return;
@@ -7993,10 +8012,15 @@ class _MarketCardState extends State<MarketCard> {
         interactionType: action,
       );
       final counts = await _service.getInteractionCounts(widget.postId);
-      if (mounted) setState(() => _counts = counts);
+      if (mounted) setState(() {
+        _counts = counts;
+        if (action == 'accept') _accepted = true;
+      });
       if (mounted && action != 'view') {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(action == 'accept' ? 'تم تسجيل قبولك للمنشور.' : 'تم تسجيل رفضك للمنشور.')),
+          SnackBar(content: Text(action == 'accept'
+              ? 'تم تسجيل قبولك للمنشور.'
+              : 'تم تسجيل رفضك للمنشور.')),
         );
       }
     } catch (e) {
@@ -8010,69 +8034,192 @@ class _MarketCardState extends State<MarketCard> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _service.getInteractionCounts(widget.postId).then((value) {
-      if (mounted) setState(() => _counts = value);
-    }).catchError((_) {});
+  Future<void> _showNegotiationDialog() async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('اقتراح سعر تفاوض'),
+        content: TextField(
+          controller: _negotiationPrice,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'السعر المقترح بالجنيه',
+            prefixIcon: Icon(Icons.currency_exchange),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('رجوع')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('إرسال الاقتراح')),
+        ],
+      ),
+    );
+    if (accepted != true || !mounted) return;
+    final price = double.tryParse(_negotiationPrice.text.trim());
+    if (price == null || !price.isFinite || price <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('أدخل سعر تفاوض صحيحًا أكبر من صفر.')),
+      );
+      return;
+    }
+    // العرض المحلي لا يُعرض على الطرف الآخر إلا بعد ربطه بمسار تفاوض محفوظ في قاعدة البيانات.
+    setState(() => _negotiationStatus = 'اقتراح غير مُرسل إلى الطرف الآخر: ${price.toStringAsFixed(2)} ج.م');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('تم تجهيز السعر المقترح في الشاشة. يلزم تفعيل سجل التفاوض في قاعدة البيانات لإرساله للطرف الآخر.')),
+    );
   }
 
   @override
-  Widget build(BuildContext context) => Card(
-        color: Colors.white,
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                decoration: BoxDecoration(
-                  color: widget.color.withValues(alpha: .10),
-                  border: Border.all(color: widget.color.withValues(alpha: .45)),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  widget.type == 'طلب شراء' ? 'عايز أشتري' : 'عايز أبيع',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
+  Widget build(BuildContext context) {
+    if (_closed) return const SizedBox.shrink();
+    final detailLines = widget.details.split('\n').map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
+    final parsed = <String, String>{};
+    for (final line in detailLines) {
+      final splitAt = line.indexOf(':');
+      if (splitAt > 0) parsed[line.substring(0, splitAt).trim()] = line.substring(splitAt + 1).trim();
+    }
+    return Card(
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: widget.color.withValues(alpha: .24)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(11),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsetsDirectional.fromSTEB(4, 4, 10, 4),
+              decoration: BoxDecoration(
+                color: widget.color.withValues(alpha: .10),
+                border: Border.all(color: widget.color.withValues(alpha: .40)),
+                borderRadius: BorderRadius.circular(11),
               ),
-              const SizedBox(height: 8),
-              Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 6),
-              Text(widget.details),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 7,
-                runSpacing: 7,
+              child: Row(
                 children: [
-                  OutlinedButton.icon(
-                    onPressed: _busy ? null : () => _interact('view'),
-                    style: OutlinedButton.styleFrom(foregroundColor: orange),
-                    icon: const Icon(Icons.visibility_outlined, size: 18),
-                    label: Text('معاينة ${_counts['view'] ?? 0}'),
+                  IconButton(
+                    tooltip: 'إغلاق هذا الطلب من القائمة',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                    padding: EdgeInsets.zero,
+                    onPressed: () => setState(() => _closed = true),
+                    icon: const Icon(Icons.close_rounded, size: 20),
                   ),
-                  FilledButton.icon(
-                    onPressed: _busy ? null : () => _interact('accept'),
-                    style: FilledButton.styleFrom(backgroundColor: Colors.green.shade700),
-                    icon: const Icon(Icons.check_circle_outline, size: 18),
-                    label: Text('قبول ${_counts['accept'] ?? 0}'),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      widget.type == 'طلب شراء' ? 'عايز أشتري' : 'عايز أبيع',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 15),
+                    ),
                   ),
-                  FilledButton.icon(
-                    onPressed: _busy ? null : () => _interact('reject'),
-                    style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
-                    icon: const Icon(Icons.cancel_outlined, size: 18),
-                    label: Text('رفض ${_counts['reject'] ?? 0}'),
-                  ),
+                  const SizedBox(width: 34),
                 ],
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 7),
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => setState(() => _detailsExpanded = !_detailsExpanded),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F4FC),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(child: Text('تفاصيل الطلب', style: TextStyle(fontWeight: FontWeight.w700))),
+                    Icon(_detailsExpanded ? Icons.keyboard_double_arrow_up : Icons.keyboard_double_arrow_down, color: purple),
+                  ],
+                ),
+              ),
+            ),
+            if (_detailsExpanded) ...[
+              const SizedBox(height: 8),
+              if (parsed['الصنف'] != null) _detailRow('اسم الصنف', parsed['الصنف']!),
+              if (parsed['الكمية'] != null) _detailRow('الكمية', parsed['الكمية']!),
+              if (parsed['تاريخ الصلاحية'] != null) _detailRow('تاريخ الصلاحية', parsed['تاريخ الصلاحية']!),
+              if (parsed['السعر'] != null) _detailRow('سعر العرض', parsed['السعر']!),
+              if (parsed['التفاوض'] != null) _detailRow('التفاوض', parsed['التفاوض']!),
+              if (parsed.isEmpty || detailLines.any((line) => !line.contains(':')))
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(widget.details, style: const TextStyle(height: 1.5)),
+                ),
             ],
-          ),
+            if (_negotiationStatus != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 7),
+                child: Text(_negotiationStatus!, style: const TextStyle(color: purple, fontWeight: FontWeight.w600)),
+              ),
+            const SizedBox(height: 9),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : () {
+                      setState(() => _detailsExpanded = !_detailsExpanded);
+                      _interact('view');
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: orange,
+                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 9),
+                      minimumSize: const Size(0, 36),
+                    ),
+                    child: FittedBox(fit: BoxFit.scaleDown, child: Text('معاينة ${_counts['view'] ?? 0}')),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _busy ? null : () => _interact('accept'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.green.shade700,
+                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 9),
+                      minimumSize: const Size(0, 36),
+                    ),
+                    child: FittedBox(fit: BoxFit.scaleDown, child: Text('قبول ${_counts['accept'] ?? 0}')),
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _busy ? null : () => _interact('reject'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.red.shade700,
+                      padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 9),
+                      minimumSize: const Size(0, 36),
+                    ),
+                    child: FittedBox(fit: BoxFit.scaleDown, child: Text('رفض ${_counts['reject'] ?? 0}')),
+                  ),
+                ),
+              ],
+            ),
+            if (_accepted) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _showNegotiationDialog,
+                icon: const Icon(Icons.currency_exchange),
+                label: const Text('اقتراح سعر تفاوض'),
+              ),
+            ],
+          ],
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(width: 112, child: Text(label, style: const TextStyle(color: purple, fontWeight: FontWeight.w700))),
+      Expanded(child: Text(value)),
+    ]),
+  );
 }
 
 class CheckoutScreen extends StatefulWidget {
