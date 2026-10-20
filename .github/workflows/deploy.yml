@@ -1,0 +1,49 @@
+name: Deploy Silsila Web App
+
+'on':
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: silsila-pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build Flutter web app
+        run: flutter build web --release --base-href "/Silsila-App/"
+
+      - name: Upload web build
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/web
+
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
