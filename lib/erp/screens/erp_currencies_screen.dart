@@ -72,10 +72,44 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
   }
 
   Widget _input(TextEditingController c, String label) => TextField(controller:c, style:const TextStyle(fontSize:14), decoration:InputDecoration(labelText:label,isDense:true,constraints:const BoxConstraints(minHeight:52),contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12),border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))));
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewCurrencies() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة دليل العملات'),
+      content: SizedBox(width: 620, child: _rows.isEmpty ? const Text('لا توجد عملات مسجلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _rows.map((r) => ListTile(
+          dense: true, title: Text('${r['currency_code'] ?? ''} — ${r['currency_name_ar'] ?? ''}'),
+          subtitle: Text('الاختصار: ${r['currency_symbol'] ?? ''} • ${r['is_active'] == true ? 'نشطة' : 'موقوفة'}'),
+          trailing: IconButton(tooltip: 'تعديل', icon: const Icon(Icons.edit_outlined), onPressed: () { Navigator.pop(ctx); _edit(r); }),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(textDirection:TextDirection.rtl,child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Row(children:[const Icon(Icons.currency_exchange_rounded,color:_currencyPurple,size:28),const SizedBox(width:10),const Expanded(child:Text('دليل العملات',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:_currencyPurple))),IconButton(onPressed:_load,tooltip:'تحديث',icon:const Icon(Icons.refresh_rounded))]),
-    const SizedBox(height:6),const Text('بيانات أساسية في الحسابات المالية',style:TextStyle(color:Colors.black54)),const SizedBox(height:16),
+    Card(color:_currencyPurple,child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      const Row(children:[Icon(Icons.currency_exchange_rounded,color:_currencyOrange,size:28),SizedBox(width:10),Expanded(child:Text('دليل العملات',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)))]),
+      const SizedBox(height:8),
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+        _quickTask('تحديث',Icons.refresh_rounded,Colors.blue,_loading?null:_load),
+        _quickTask(_editingId==null?'إضافة':'حفظ',_editingId==null?Icons.add_circle_outline:Icons.save_outlined,const Color(0xFF168447),_saving?null:_save),
+        _quickTask('تعديل',Icons.edit_outlined,const Color(0xFFEF9B13),_rows.isEmpty?null:()=>_edit(_rows.first)),
+        _quickTask('حذف',Icons.delete_outline,Colors.red,_rows.isEmpty?null:()=>_toggleActive(_rows.first)),
+        _quickTask('معاينة',Icons.visibility_outlined,const Color(0xFF6841A5),_previewCurrencies),
+        _quickTask('طباعة',Icons.print_outlined,const Color(0xFF4056A1),_previewCurrencies),
+        _quickTask('استيراد Excel',Icons.file_upload_outlined,const Color(0xFF137C8B),()=>setState(()=>_error='استيراد العملات من Excel غير مفعّل بعد؛ يمكنك إضافة العملات من النموذج.')),
+        _quickTask('طباعة PDF',Icons.picture_as_pdf_outlined,const Color(0xFFB3261E),_previewCurrencies),
+      ])),
+    ]))),
+    const SizedBox(height:16),
     Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[
       Row(children:[Expanded(flex:2,child:_input(_code,'كود')),const SizedBox(width:10),Expanded(flex:3,child:_input(_name,'اسم العملة عربي')),const SizedBox(width:10),Expanded(flex:2,child:_input(_symbol,'مختصر العملة إنجليزي'))]),
       const SizedBox(height:12),Row(children:[FilledButton.icon(onPressed:_saving?null:_save,icon:Icon(_editingId==null?Icons.add_rounded:Icons.save_rounded),label:Text(_saving?'جارٍ الحفظ...':_editingId==null?'إضافة عملة':'حفظ التعديل')),const SizedBox(width:8),OutlinedButton.icon(onPressed: () { setState(() { _clear(); _error = null; }); },icon:const Icon(Icons.clear_rounded),label:const Text('تفريغ'))]),
