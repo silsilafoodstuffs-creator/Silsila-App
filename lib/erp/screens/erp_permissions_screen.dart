@@ -157,7 +157,19 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
         for(final a in fields.entries){_draft[uid]![key+'::'+a.key]=r[a.value]==true;}
       }
       if(!mounted)return;setState((){_users=users;_loading=false;_error=null;_message=null;});
-    }catch(e){if(!mounted)return;setState((){_loading=false;_error='تعذر تحميل الصلاحيات. تأكد من تطبيق ملف SQL. '+e.toString();});}
+    }catch(e){
+      if(!mounted)return;
+      final details=e.toString();
+      final normalized=details.toLowerCase();
+      final message = normalized.contains('erp_user_permissions') ||
+              normalized.contains('does not exist') ||
+              normalized.contains('42p01')
+          ? 'جدول الصلاحيات غير موجود أو لم تُطبّق تهيئته. شغّل supabase/erp_user_permissions.sql من SQL Editor ثم أعد التحميل. '
+          : (normalized.contains('permission denied') || normalized.contains('row-level security') || normalized.contains('rls')
+              ? 'تعذر الوصول إلى الصلاحيات بسبب سياسات قاعدة البيانات. تأكد أن عضويتك مالك أو مدير للشركة وأن سياسات RLS مطبّقة. '
+              : 'تعذر تحميل الصلاحيات. راجع تهيئة الجداول وسياسات الوصول. ');
+      setState((){_loading=false;_error=message+details;});
+    }
   }
   List<String> get _targets=>_scope=='__all__'?_users.map((u)=>_s(u['user_id'])).toList():[_scope];
   void _applyTemplate(String role){
