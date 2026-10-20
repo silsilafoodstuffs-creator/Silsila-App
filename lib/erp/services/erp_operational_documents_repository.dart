@@ -33,7 +33,7 @@ class ErpOperationalDocumentsRepository {
 
   Future<List<Map<String, dynamic>>> fetchParties(String companyId, ErpOperationalKind kind) async {
     final rows = await _db.from('erp_parties')
-      .select('id, party_code, party_name, party_kind, sales_rep_id')
+      .select('id, party_code, party_name, party_kind, sales_rep_id, default_warehouse_id')
       .eq('company_id', companyId.trim()).eq('is_active', true)
       .inFilter('party_kind', kind == ErpOperationalKind.purchase ? ['supplier','both'] : ['customer','both'])
       .order('party_name').limit(2000);
@@ -52,6 +52,18 @@ class ErpOperationalDocumentsRepository {
       .select('id, warehouse_code, warehouse_name')
       .eq('company_id', companyId.trim()).eq('is_active', true).order('warehouse_name');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<List<String>> fetchPartyWarehouseIds({
+    required String companyId,
+    required String partyId,
+  }) async {
+    final rows = await _db.from('erp_party_warehouses')
+      .select('warehouse_id')
+      .eq('company_id', companyId.trim())
+      .eq('party_id', partyId);
+    return rows.map((row) => (row['warehouse_id'] ?? '').toString())
+      .where((id) => id.isNotEmpty).toList();
   }
 
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
