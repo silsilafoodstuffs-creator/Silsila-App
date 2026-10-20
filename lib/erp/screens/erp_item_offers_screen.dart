@@ -24,8 +24,8 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   String? _groupId;
   bool _loading = false, _saving = false;
   String? _error, _message;
-  List<Map<String,dynamic>> _items = [], _groups = [], _parties = [], _warehouses = [], _campaigns = [];
-  final Set<String> _selectedCustomers = {}, _selectedWarehouses = {}, _selectedBranches = {}, _governorates = {}, _centers = {}, _areas = {}, _customerTypes = {};
+  List<Map<String,dynamic>> _items = [], _groups = [], _parties = [], _warehouses = [], _branches = [], _campaigns = [];
+  final Set<String> _selectedCustomers = {}, _selectedWarehouses = {}, _selectedBranches = {}, _governorates = {}, _districts = {}, _centers = {}, _areas = {}, _customerTypes = {};
   final List<Map<String,dynamic>> _offerLines = [];
   SupabaseClient? get _db { try { return Supabase.instance.client; } catch (_) { return null; } }
   String _s(dynamic v) => (v ?? '').toString();
@@ -41,7 +41,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final values = await Future.wait([
-        _inventory.fetchItems(company), _inventory.fetchGroups(company), _inventory.fetchWarehouses(company),
+        _inventory.fetchItems(company), _inventory.fetchGroups(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company),
         _partiesRepo.fetchParties(company, kind: 'customer'),
         _db!.from('erp_sales_campaigns').select('id,title,campaign_type,start_date,end_date,is_active').eq('company_id', company).order('created_at', ascending: false).limit(100),
       ]);
@@ -50,8 +50,9 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         _items = (values[0] as List).cast<Map<String,dynamic>>();
         _groups = (values[1] as List).cast<Map<String,dynamic>>();
         _warehouses = (values[2] as List).cast<Map<String,dynamic>>();
-        _parties = (values[3] as List).cast<Map<String,dynamic>>();
-        _campaigns = (values[4] as List).map((r) => Map<String,dynamic>.from(r)).toList();
+        _branches = (values[3] as List).cast<Map<String,dynamic>>();
+        _parties = (values[4] as List).cast<Map<String,dynamic>>();
+        _campaigns = (values[5] as List).map((r) => Map<String,dynamic>.from(r)).toList();
         _loading = false;
       });
     } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات العروض: $e'; }); }
@@ -128,7 +129,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         'target_customer_ids':_customerScope == 'كل العملاء' ? [] : _selectedCustomers.toList(),
         'target_warehouse_ids':_warehouseScope == 'كل المخازن' ? [] : _selectedWarehouses.toList(),
         'target_branch_ids':_selectedBranches.toList(),
-        'target_governorates':_governorates.toList(), 'target_districts':_areas.toList(),
+        'target_governorates':_governorates.toList(), 'target_districts':_districts.toList(),
         'target_areas':_areas.toList(), 'target_centers':_centers.toList(), 'target_customer_types':_customerTypes.toList(),
       }).select('id').single();
       final campaignId = _s(header['id']);
@@ -167,10 +168,11 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         Wrap(spacing:8, runSpacing:8, children: [
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'جلب العملاء', options:_parties, idKey:'id', labelKey:'party_name', selected:_selectedCustomers), icon:const Icon(Icons.people_alt), label:Text('جلب العملاء (${_selectedCustomers.length})')),
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'جلب المخازن', options:_warehouses, idKey:'id', labelKey:'warehouse_name', selected:_selectedWarehouses), icon:const Icon(Icons.warehouse), label:Text('جلب المخازن (${_selectedWarehouses.length})')),
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'الفروع', options:[], idKey:'id', labelKey:'branch_name', selected:_selectedBranches), icon:const Icon(Icons.store), label:Text('الفروع (${_selectedBranches.length})')),
+          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'الفروع', options:_branches, idKey:'id', labelKey:'branch_name', selected:_selectedBranches), icon:const Icon(Icons.store), label:Text('الفروع (${_selectedBranches.length})')),
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المحافظات', options:_distinctOptions('governorate'), idKey:'id', labelKey:'name', selected:_governorates), icon:const Icon(Icons.map), label:Text('المحافظات (${_governorates.length})')),
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المراكز', options:_distinctOptions('center'), idKey:'id', labelKey:'name', selected:_centers), icon:const Icon(Icons.location_city), label:Text('المراكز (${_centers.length})')),
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المناطق', options:_distinctOptions('district'), idKey:'id', labelKey:'name', selected:_areas), icon:const Icon(Icons.place), label:Text('المناطق (${_areas.length})')),
+          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المراكز/الأحياء', options:_distinctOptions('district'), idKey:'id', labelKey:'name', selected:_districts), icon:const Icon(Icons.location_city), label:Text('المراكز/الأحياء (${_districts.length})')),
+          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المناطق', options:_distinctOptions('area'), idKey:'id', labelKey:'name', selected:_areas), icon:const Icon(Icons.place), label:Text('المناطق (${_areas.length})')),
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'تصنيفات العملاء', options:_distinctOptions('customer_type'), idKey:'id', labelKey:'name', selected:_customerTypes), icon:const Icon(Icons.category), label:Text('تصنيفات العملاء (${_customerTypes.length})')),
         ]),
       ]))),
