@@ -140,9 +140,8 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     final phone = TextEditingController();
     final password = TextEditingController();
     final confirmation = TextEditingController();
-    final otp = TextEditingController();
     final formKey = GlobalKey<FormState>();
-    var otpStep = false, busy = false, obscure = true, obscureConfirm = true;
+    var busy = false, obscure = true, obscureConfirm = true;
     var error = '', activity = _activity;
     var accountType = newActivity ? 'إدارة نشاط' : _accountType;
     try {
@@ -159,7 +158,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                   child: Form(
                     key: formKey,
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      if (!otpStep) ...[
+                      ...[
                         TextFormField(controller: name, decoration: const InputDecoration(labelText: 'اسم النشاط أو صاحب الحساب'), validator: (v) => v == null || v.trim().isEmpty ? 'اكتب الاسم' : null),
                         const SizedBox(height: 10),
                         TextFormField(
@@ -218,10 +217,6 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                           ),
                           validator: (v) => v != password.text ? 'كلمتا المرور غير متطابقتين' : null,
                         ),
-                      ] else ...[
-                        const Text('أدخل رمز التحقق الذي أُرسل إلى الهاتف لاستكمال التسجيل.'),
-                        const SizedBox(height: 10),
-                        TextFormField(controller: otp, keyboardType: TextInputType.number, maxLength: 6, decoration: const InputDecoration(labelText: 'رمز التحقق'), validator: (v) => _asciiDigits(v ?? '').trim().length == 6 ? null : 'أدخل رمزًا من 6 أرقام'),
                       ],
                       if (error.isNotEmpty) ...[
                         const SizedBox(height: 10),
@@ -240,8 +235,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                     refresh(() { busy = true; error = ''; });
                     try {
                       final client = Supabase.instance.client;
-                      if (!otpStep) {
-                        final response = await client.auth.signUp(
+                          final response = await client.auth.signUp(
                           email: email.text.trim().toLowerCase(),
                           password: password.text,
                           data: {
@@ -259,11 +253,6 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                         } else {
                           refresh(() { error = 'تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.'; busy = false; });
                         }
-                      } else {
-                        await client.auth.verifyOTP(phone: _normalizePhone(_asciiDigits(phone.text)), token: _asciiDigits(otp.text.trim()), type: OtpType.sms);
-                        if (mounted) setState(() { _signedIn = client.auth.currentSession != null; _phone.text = phone.text; });
-                        if (dialogContext.mounted) Navigator.pop(dialogContext);
-                      }
                     } on AuthException catch (e) {
                       refresh(() { error = e.message; busy = false; });
                     } catch (e) {
@@ -281,7 +270,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
       );
     } finally {
       if (!_signedIn) _newActivityPending = false;
-      name.dispose(); email.dispose(); phone.dispose(); password.dispose(); confirmation.dispose(); otp.dispose();
+      name.dispose(); email.dispose(); phone.dispose(); password.dispose(); confirmation.dispose();
     }
   }
 
