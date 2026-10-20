@@ -142,7 +142,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
           final oldFactor = _n(line['conversion_factor']) <= 0 ? 1.0 : _n(line['conversion_factor']);
           final newFactor = _n(unit['conversion_factor']) <= 0 ? 1.0 : _n(unit['conversion_factor']);
-          final ratio = newFactor / oldFactor;
+          final ratio = oldFactor / newFactor;
           line['base_price'] = _n(line['base_price']) * ratio;
           line['policy_price'] = _n(line['policy_price']) * ratio;
           line['adjusted_price'] = _n(line['adjusted_price']) * ratio;
@@ -1026,12 +1026,12 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         if (resolved == null) {
           throw StateError('لم يتمكن النظام من تحديد سياسة التسعير للصنف $itemId.');
         }
-        final unitPrice = fixedOfferPrice != null ? _n(fixedOfferPrice) : _n(resolved['base_unit_price']) * factor;
+        final unitPrice = fixedOfferPrice != null ? _n(fixedOfferPrice) : _n(resolved['base_unit_price']) / factor;
         final discountPercent = fixedOfferPrice != null ? 0.0 : _n(resolved['discount_percent']);
         final discount = quantity * unitPrice * discountPercent / 100;
         final item = _items.firstWhere((row) => _s(row['id']) == itemId, orElse: () => <String, dynamic>{});
-        final basePrice = (widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price'])) * factor;
-        final adjustedPrice = fixedOfferPrice != null ? _n(fixedOfferPrice) : _n(resolved['net_unit_price']) * factor;
+        final basePrice = (widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price'])) / factor;
+        final adjustedPrice = fixedOfferPrice != null ? _n(fixedOfferPrice) : _n(resolved['net_unit_price']) / factor;
         final taxRate = widget.kind == ErpOperationalKind.sales ? _n(item['tax_rate']) : 0.0;
         final tax = ((quantity * unitPrice - discount).clamp(0, double.infinity)) * (_isTaxInvoice ? taxRate : 0.0) / 100;
         pricedLines.add({
