@@ -162,14 +162,14 @@ class ErpOperationalDocumentsRepository {
       'tax_total': 0,
       'grand_total': 0,
       'paid_total': 0,
-      'source_channel': sourceChannel,
-      'source_document_ids': sourceDocumentIds,
     };
     if (kind == ErpOperationalKind.purchase) {
       payload['supplier_id'] = partyId;
       final row = await _db.from('erp_purchase_documents').insert(payload).select('id').single();
       return row['id'].toString();
     } else {
+      payload['source_channel'] = sourceChannel;
+      payload['source_document_ids'] = sourceDocumentIds;
       payload['customer_id'] = partyId;
       payload['sales_rep_id'] = (salesRepId == null || salesRepId.isEmpty) ? null : salesRepId;
       payload['is_tax_invoice'] = isTaxInvoice;
