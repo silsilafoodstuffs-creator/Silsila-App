@@ -130,3 +130,31 @@ end $$;
 drop trigger if exists erp_seed_default_user_types_trigger on public.erp_companies;
 create trigger erp_seed_default_user_types_trigger after insert on public.erp_companies for each row execute function public.erp_seed_default_user_types();
 commit;
+
+ 
+-- Mirror existing/new company memberships into the ERP user directory.
+create or replace function public.erp_sync_company_member_to_erp_user()
+returns trigger language plpgsql security definer set search_path=public as $$
+declare v_type_id uuid; v_email text; v_name text;
+begin
+ select id into v_type_id from public.erp_user_types
+ where company_id=new.company_id
+ and name_ar=case when new.member_role in ('owner','admin') then 'ادمن' else 'موظف' end
+ order by type_code limit 1;
+ select email into v_email from auth.users where id=new.user_id;
+ v_name:=coalesce(nullif(v_email,''),'مستخدم '||left(new.user_id::text,8));
+ insert into public.erp_users(company_id,auth_user_id,name_ar,name_en,user_type_id,is_active)
+ values(new.company_id,new.user_id,v_name,coalesce(v_email,''),v_type_id,new.is_active)
+ on conflict(company_id,auth_user_id) do update
+ set user_type_id=excluded.user_type_id,is_active=excluded.is_active,updated_at=now();
+ return new;
+end $$;
+drop trigger if exists erp_sync_company_member_to_erp_user_trigger on public.erp_company_members;
+create trigger erp_sync_company_member_to_erp_user_trigger after insert or update of member_role,is_active
+on public.erp_company_members for each row execute function public.erp_sync_company_member_to_erp_user();
+insert into public.erp_users(company_id,auth_user_id,name_ar,name_en,user_type_id,is_active)
+select m.company_id,m.user_id,coalesce(nullif(u.email,''),'مستخدم '||left(m.user_id::text,8)),coalesce(u.email,''),t.id,m.is_active
+from public.erp_company_members m left join auth.users u on u.id=m.user_id
+join public.erp_user_types t on t.company_id=m.company_id
+and t.name_ar=case when m.member_role in ('owner','admin') then 'ادمن' else 'موظف' end
+where not exists(select 1 from public.erp_users eu where eu.company_id=m.company_id and eu.auth_user_id=m.user_id);
