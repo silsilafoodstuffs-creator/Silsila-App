@@ -157,6 +157,30 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   InputDecoration _dec(String label) => InputDecoration(labelText: label, isDense: true, border: const OutlineInputBorder(), contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10));
   Widget _notice(String text, bool error) => Container(margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:error?Colors.red.shade50:Colors.green.shade50,borderRadius:BorderRadius.circular(8)),child:Text(text,style:TextStyle(color:error?Colors.red.shade900:Colors.green.shade900)));
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewOffer() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة عرض الأصناف'),
+      content: SizedBox(width: 620, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('اسم العرض: ${_name.text.trim().isEmpty ? '—' : _name.text.trim()}'),
+        const SizedBox(height: 6),
+        Text('نوع العرض: $_campaignType'),
+        const SizedBox(height: 6),
+        Text('من ${_from.toIso8601String().substring(0, 10)} إلى ${_to.toIso8601String().substring(0, 10)}'),
+        const SizedBox(height: 6),
+        Text('الأصناف المحددة: ${_selectedProductIds.length}'),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Shortcuts(
@@ -176,16 +200,27 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.local_offer, color: Color(0xFF3E007D)),
-                        const SizedBox(width: 8),
-                        const Expanded(
-                          child: Text('عروض الأصناف', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                        ),
-                        OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('تحديث')),
-                      ],
-                    ),
+                    Card(color: const Color(0xFF3E007D), child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        const Row(children: [
+                          Icon(Icons.local_offer, color: Color(0xFFFFA015), size: 26),
+                          SizedBox(width: 8),
+                          Expanded(child: Text('عروض الأصناف', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
+                        ]),
+                        const SizedBox(height: 8),
+                        SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                          _quickTask('تحديث', Icons.refresh, Colors.blue, _load),
+                          _quickTask('إضافة / مسح النموذج', Icons.add_circle_outline, const Color(0xFF168447), () {
+                            _name.clear(); _search.clear();
+                            setState(() { _message = 'نموذج عرض جديد جاهز.'; _error = null; });
+                          }),
+                          _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _save),
+                          _quickTask('اختيار الأصناف', Icons.inventory_2_outlined, const Color(0xFF137C8B), _pickProducts),
+                          _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewOffer),
+                        ])),
+                      ]),
+                    )),
                     const SizedBox(height: 8),
                     if (_error != null) _notice(_error!, true),
                     if (_message != null) _notice(_message!, false),
