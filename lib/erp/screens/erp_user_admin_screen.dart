@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/erp_quick_task_button.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pdf/pdf.dart';
@@ -283,22 +284,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     await showDialog<void>(context:context,builder:(c)=>AlertDialog(title:Text('معاينة — ${_typeNames[_view]}'),content:SizedBox(width:700,child:Text('عدد السجلات: ${_rows.length}\n\n'+_rows.take(12).map((r)=>'${_s(r['name_ar'])} — ${_s(r['name_en'])}').join('\n'))),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('إغلاق'))]));
   }
 
-  Widget _taskButton(String label,IconData icon,VoidCallback? action)=>Padding(
-    padding:const EdgeInsetsDirectional.only(start:5,top:2,bottom:2),
-    child:OutlinedButton.icon(onPressed:action,icon:Icon(icon,size:16),label:Text(label,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
-      style:OutlinedButton.styleFrom(foregroundColor:_userAdminPurple,backgroundColor:_userAdminCanvas,side:BorderSide(color:_userAdminPurple.withValues(alpha:.2)),padding:const EdgeInsets.symmetric(horizontal:10,vertical:9),visualDensity:VisualDensity.compact)),
-  );
-  Widget _toolbar()=>Container(color:_userAdminCanvas,padding:const EdgeInsets.symmetric(horizontal:4,vertical:4),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(mainAxisSize:MainAxisSize.min,children:[
-    _taskButton('تحديث',Icons.refresh_rounded,_loading?null:_load),
-    _taskButton('إضافة',Icons.add_rounded,_saving?null:_add),
-    _taskButton('حفظ',Icons.save_outlined,_saving?null:_save),
-    _taskButton('تعديل',Icons.edit_outlined,()=>setState(()=>_editMode=!_editMode)),
-    _taskButton('حذف',Icons.delete_outline_rounded,_saving?null:_delete),
-    _taskButton('معاينة',Icons.preview_outlined,_preview),
-    _taskButton('طباعة',Icons.print_outlined,_printPdf),
-    _taskButton('استيراد Excel',Icons.file_upload_outlined,_importExcel),
-    _taskButton('طباعة PDF',Icons.picture_as_pdf_outlined,_printPdf),
-  ])));
+Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
+    ErpQuickTaskButton(label: label, icon: icon, onPressed: action, compact: true);
 
   Widget _imageCell(Map<String,dynamic> row){
     final raw=_s(row['image_data']);
