@@ -492,14 +492,37 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       if(open)Padding(padding:const EdgeInsets.fromLTRB(8,0,8,8),child:Column(children:[_row(_key(main,'*','*'),'صلاحيات القائمة الرئيسية'),for(final s in sections.entries)_section(main,s.key,s.value)])),
     ]));
   }
-  @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+  @override   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewPermissions() async {
+    final enabled = _draft.values.fold<int>(0, (sum, values) => sum + values.values.where((v) => v).length);
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة إعدادات الصلاحيات'),
+      content: SizedBox(width: 560, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('المستخدمون المحمّلون: ${_users.length}'),
+        Text('المستخدمون المحددون: ${_selectedUsers.length}'),
+        Text('القائمة الحالية: $_menuScope'),
+        Text('عدد خيارات الصلاحيات المفعّلة في المسودة: $enabled'),
+        Text('طريقة الإعداد: $_mode'),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
+Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Card(color:_permPurple,child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       const Row(children:[Icon(Icons.admin_panel_settings_outlined,color:Color(0xFFFFA015),size:27),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('إدارة الصلاحيات',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)),Text('قوالب أو تحديد يدوي حسب المستخدم والقائمة',style:TextStyle(fontSize:12,color:Colors.white70))]))]),
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
         _quickTask('تحديث',Icons.refresh,Colors.blue,_loading||_saving?null:_load),
         _quickTask('حفظ',Icons.save_outlined,const Color(0xFF168447),_saving?null:_save),
-        _quickTask(_expandAll?'طي الكل':'فتح الكل',_expandAll?Icons.unfold_less:Icons.unfold_more,const Color(0xFFEF9B13),()=>setState(()=>{_expandAll=!_expandAll;for(final m in _tree.keys){_expanded[m]=_expandAll;for(final sub in _tree[m]!.keys){_expanded[m+'::'+sub]=_expandAll;}}})),
+        _quickTask(_expandAll?'طي الكل':'فتح الكل',_expandAll?Icons.unfold_less:Icons.unfold_more,const Color(0xFFEF9B13),()=>setState((){_expandAll=!_expandAll;for(final m in _tree.keys){_expanded[m]=_expandAll;for(final sub in _tree[m]!.keys){_expanded[m+'::'+sub]=_expandAll;}}})),
         _quickTask('معاينة',Icons.visibility_outlined,const Color(0xFF6841A5),_previewPermissions),
       ])),
     ]))),
