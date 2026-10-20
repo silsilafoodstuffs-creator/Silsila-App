@@ -104,21 +104,47 @@ class _ErpShippingCompaniesScreenState extends State<ErpShippingCompaniesScreen>
     }
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewShippingCompanies() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة شركات الشحن'),
+      content: SizedBox(width: 700, child: _rows.isEmpty ? const Text('لا توجد شركات شحن محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _rows.take(100).map((r) => ListTile(
+          dense: true, title: Text('${r['company_name'] ?? r['name'] ?? '—'}'),
+          subtitle: Text('${r['phone'] ?? ''} • ${r['is_active'] == true ? 'نشطة' : 'موقوفة'}'),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [
-        Container(width: 46, height: 46, decoration: BoxDecoration(color: _shippingPurple.withValues(alpha: .09), borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.local_shipping_outlined, color: _shippingPurple)),
-        const SizedBox(width: 12),
-        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('إدارة شركات الشحن', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _shippingPurple)),
-          SizedBox(height: 4),
-          Text('إدارة الشركات المسجلة وربطها بحسابات الشحن.', style: TextStyle(color: Colors.black54)),
-        ])),
-        IconButton(tooltip: 'تحديث', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
-        FilledButton.icon(onPressed: () => _edit(), icon: const Icon(Icons.add), label: const Text('إضافة')),
-      ]),
+      Card(color: _shippingPurple, child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Row(children: [
+            Icon(Icons.local_shipping_outlined, color: Color(0xFFFFA015), size: 28),
+            SizedBox(width: 10),
+            Expanded(child: Text('إدارة شركات الشحن', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
+          ]),
+          const Text('إدارة الشركات المسجلة وربطها بحسابات الشحن.', style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), () => _edit()),
+            _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewShippingCompanies),
+          ])),
+        ]),
+      )),
       const SizedBox(height: 12),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
