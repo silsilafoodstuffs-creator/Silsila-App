@@ -103,6 +103,10 @@ begin
   execute format('create policy %I on public.%I for delete to authenticated using (public.erp_user_has_company_role(company_id,array[''owner'',''admin'']::text[]))',t||'_admin_delete',t);
  end loop;
 end $$;
+drop policy if exists erp_user_types_public_login_read on public.erp_user_types;
+create policy erp_user_types_public_login_read on public.erp_user_types for select to anon,authenticated
+using (is_active=true and show_at_login=true);
+grant select on public.erp_user_types to anon,authenticated;
 grant select,insert,update,delete on public.erp_user_types,public.erp_users,public.erp_permission_templates,public.erp_permission_template_rules,public.erp_user_permission_matrix to authenticated;
 insert into public.erp_user_types(company_id,name_ar,name_en,is_active,show_at_login)
 select c.id,v.name_ar,v.name_en,true,v.show_at_login
