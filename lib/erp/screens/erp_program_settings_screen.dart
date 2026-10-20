@@ -158,25 +158,40 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
     ]))),
     const SizedBox(height:14),
     _section('الاسم واللغة والشعار',Icons.apps_rounded,Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      _textField(_name,'اسم البرنامج'),
-      const SizedBox(height:12),
-      DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(labelText:'لغة البرنامج',isDense:true,constraints:BoxConstraints(minHeight:52)),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:(v){if(v!=null)setState(()=>_language=v);}),
+      Row(children:[
+        Expanded(flex:3,child:_textField(_name,'اسم البرنامج')),
+        const SizedBox(width:12),
+        Expanded(flex:2,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(labelText:'لغة البرنامج',isDense:true,constraints:BoxConstraints(minHeight:52)),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:(v){if(v!=null)setState(()=>_language=v);})),
+      ]),
       const SizedBox(height:12),
       Row(children:[Container(width:78,height:78,decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:Colors.black12)),child:_logoBase64==null?const Icon(Icons.image_outlined,size:34,color:_settingsPurple):ClipRRect(borderRadius:BorderRadius.circular(12),child:Image.memory(base64Decode(_logoBase64!),fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined)))),const SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('صورة البرنامج / الشعار',style:TextStyle(fontWeight:FontWeight.w700)),const SizedBox(height:8),Wrap(spacing:8,runSpacing:8,children:[OutlinedButton.icon(onPressed:_pickLogo,icon:const Icon(Icons.upload_file_rounded),label:const Text('اختيار صورة')),if(_logoBase64!=null)TextButton.icon(onPressed:(){setState((){_logoBase64=null;_logoMime=null;});},icon:const Icon(Icons.delete_outline),label:const Text('إزالة'))])]))]),
     ])),
     _section('ألوان وهوية البرنامج',Icons.palette_outlined,Column(children:[
-      _colorField(_primary,'اللون الأساسي'),const SizedBox(height:10),_colorField(_secondary,'اللون الثانوي'),const SizedBox(height:10),_colorField(_accent,'لون التمييز'),const SizedBox(height:10),_colorField(_background,'لون الخلفية'),
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1050,child:Row(children:[
+        Expanded(child:_colorField(_primary,'اللون الأساسي')),
+        const SizedBox(width:12),
+        Expanded(child:_colorField(_secondary,'اللون الثانوي')),
+        const SizedBox(width:12),
+        Expanded(child:_colorField(_accent,'لون التمييز')),
+        const SizedBox(width:12),
+        Expanded(child:_colorField(_background,'لون الخلفية')),
+      ]))),
       const SizedBox(height:12),Wrap(spacing:8,runSpacing:8,children:[for(final c in [_settingsPurple,_settingsOrange,_settingsPink,Colors.white,Colors.black])Container(width:32,height:32,decoration:BoxDecoration(color:c,shape:BoxShape.circle,border:Border.all(color:Colors.black12)))])
     ])),
     _section('نظام الخطوط — خمسة مستويات',Icons.text_fields_rounded,Column(children:[
       for(var i=0;i<5;i++) ...[
-        Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFF7F5FA),borderRadius:BorderRadius.circular(10)),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          Text('${i+1}. ${_labels[i]}',style:TextStyle(fontSize:double.tryParse(_sizes[i].text)??14,color:_parseColor(_colors[i].text,_settingsPurple),fontWeight:FontWeight.w800)),
-          const SizedBox(height:10),
-          Row(children:[Expanded(flex:3,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(labelText:'نوع الخط',isDense:true,constraints:BoxConstraints(minHeight:52)),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_fonts[i]=v);})),const SizedBox(width:10),Expanded(flex:1,child:_textField(_sizes[i],'الحجم'))]),
-          const SizedBox(height:10),_colorField(_colors[i],'لون الخط')
-        ])),
-        if(i<4) const SizedBox(height:10),
+        Container(padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:const Color(0xFFF7F5FA),borderRadius:BorderRadius.circular(10)),child:
+          SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1050,child:Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+            SizedBox(width:175,child:Text('${i+1}. ${_labels[i]}',style:TextStyle(fontSize:14,color:_parseColor(_colors[i].text,_settingsPurple),fontWeight:FontWeight.w800))),
+            const SizedBox(width:10),
+            Expanded(flex:2,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(labelText:'نوع الخط',isDense:true,constraints:BoxConstraints(minHeight:52)),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_fonts[i]=v);})),
+            const SizedBox(width:12),
+            Expanded(flex:1,child:_textField(_sizes[i],'الحجم')),
+            const SizedBox(width:12),
+            Expanded(flex:2,child:_colorField(_colors[i],'لون الخط')),
+          ]))),
+        ),
+        if(i<4) const SizedBox(height:8),
       ]
     ])),
     if(_error!=null)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Text(_error!,style:const TextStyle(color:Colors.red,fontWeight:FontWeight.w600))),
