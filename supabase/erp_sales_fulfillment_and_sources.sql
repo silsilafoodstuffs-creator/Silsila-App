@@ -30,7 +30,7 @@ create table if not exists public.erp_sales_fulfillment_documents (
   created_by uuid references auth.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (company_id, kind, manual_number),
+  unique (company_id, manual_number),
   unique (company_id, kind, invoice_id)
 );
 
