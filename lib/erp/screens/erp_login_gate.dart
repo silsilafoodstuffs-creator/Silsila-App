@@ -461,8 +461,8 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
-                  autofillHints: _rememberPassword ? const [AutofillHints.telephoneNumber] : const [],
-                  decoration: const InputDecoration(labelText: 'اكتب هنا رقمك المسجل لدينا', prefixIcon: Icon(Icons.email_outlined), border: OutlineInputBorder()),
+                  autofillHints: _rememberPassword ? const [AutofillHints.email] : const [],
+                  decoration: const InputDecoration(labelText: 'البريد الإلكتروني المسجل', prefixIcon: Icon(Icons.email_outlined), border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 11),
                 TextField(
