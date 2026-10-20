@@ -94,3 +94,8 @@ COMMIT;
 **ترتيب مهم لترحيل دورة المستندات:** لا تشغّل `erp_operational_units_reservations.sql` إلا بعد نجاح `erp_schema.sql` و`erp_master_data_schema.sql` و`erp_operations_schema.sql` و`erp_operations_workflow.sql` و`erp_inventory_workflow.sql` و`erp_security_membership.sql`. ثم شغّل ترحيل الوحدات والحجوزات مرة واحدة. لا تشغّل ترحيل صور المنشأة قبل وجود `erp_companies` ودوال `erp_user_can_access_company` و`erp_user_has_company_role`.
 
 لا تشغّل ملفات التهيئة قبل التأكد من وجود جداول `erp_companies` و`erp_company_members` و`erp_branches` ودوال التحقق من عضوية الشركة. ملفات SQL في المستودع لا تُطبّق تلقائيًا على مشروع Supabase.
+
+
+## مصادر جلب أصناف فاتورة البيع
+
+طبّق `supabase/erp_sales_invoice_campaigns_and_shortages.sql` بعد مخطط ERP الأساسي وسياسات عضوية الشركة. ينشئ جداول مجلات عروض العملاء وعروض الترويج والرواكد وأصناف كل عرض، إضافة إلى قائمة نواقص العميل المفتوحة. تُقيّد القراءة والكتابة بسياسات RLS وعضوية الشركة. تم تطبيق هذا المخطط بالفعل على مشروع Supabase المرتبط بهذا المستودع؛ يلزم إنشاء بيانات الحملات والنواقص في شاشات إدارتها قبل أن تظهر سجلات فعلية في أزرار الجلب.
