@@ -601,8 +601,6 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
             _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, _companyPurple, _loading || _saving ? null : _exportCompany),
           ])),
         ),
-          ]),
-        )),
         const SizedBox(height: 16),
         if (_error != null) _notice(_error!, Colors.red),
         if (_message != null) _notice(_message!, Colors.green),
