@@ -297,7 +297,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                   controller: _phone,
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.telephoneNumber],
+                  autofillHints: _rememberPassword ? const [AutofillHints.telephoneNumber] : const [],
                   decoration: const InputDecoration(labelText: 'اكتب هنا رقمك المسجل لدينا', prefixIcon: Icon(Icons.phone_android), border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 11),
@@ -305,7 +305,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                   controller: _password,
                   obscureText: _obscurePassword,
                   onSubmitted: (_) => _busy ? null : _login(),
-                  autofillHints: const [AutofillHints.password],
+                  autofillHints: _rememberPassword ? const [AutofillHints.password] : const [],
                   decoration: InputDecoration(
                     labelText: 'اكتب كلمة المرور الخاصة بك',
                     prefixIcon: const Icon(Icons.lock_outline),
