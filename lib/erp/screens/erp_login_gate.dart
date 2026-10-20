@@ -159,6 +159,8 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   }
 
   Future<void> _openRegisterDialog({required bool newActivity}) async {
+    if (_activitiesLoading) await _loadActivityTypes();
+    if (!mounted) return;
     _newActivityPending = newActivity;
     final name = TextEditingController();
     final email = TextEditingController();
