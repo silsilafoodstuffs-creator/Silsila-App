@@ -433,20 +433,39 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     if (picked == null || picked.isEmpty || !mounted) return;
     setState(() { _saving = true; _error = null; _message = null; });
     try {
+      final pricedLines = <Map<String, Object?>>[];
+      for (final line in picked) {
+        final itemId = _s(line['item_id']);
+        final quantity = _n(line['quantity']);
+        final factor = _n(line['conversion_factor']) <= 0 ? 1.0 : _n(line['conversion_factor']);
+        final resolved = await _repo.resolvePrice(
+          companyId: _company.text.trim(),
+          itemId: itemId,
+          kind: widget.kind == ErpOperationalKind.purchase ? 'purchase' : 'sale',
+          quantity: quantity * factor,
+          partyId: _partyId,
+        );
+        if (resolved == null) {
+          throw StateError('لم يتمكن النظام من تحديد سياسة التسعير للصنف $itemId.');
+        }
+        final unitPrice = _n(resolved['base_unit_price']) * factor;
+        final discount = quantity * unitPrice * _n(resolved['discount_percent']) / 100;
+        pricedLines.add({
+          'item_id': itemId,
+          'quantity': quantity,
+          'unit_id': _s(line['unit_id']).isEmpty ? null : line['unit_id'],
+          'unit_price': unitPrice,
+          'discount': discount,
+          'tax': _n(line['tax']),
+        });
+      }
       final count = await _repo.addLinesAtomically(
         documentId: _selectedDocumentId!,
         kind: widget.kind,
-        lines: picked.map((line) => <String, Object?>{
-          'item_id': line['item_id'],
-          'quantity': line['quantity'],
-          'unit_id': line['unit_id'],
-          'unit_price': line['unit_price'],
-          'discount': line['discount'],
-          'tax': line['tax'],
-        }).toList(),
+        lines: pricedLines,
       );
       if (!mounted) return;
-      setState(() { _saving = false; _message = 'تمت إضافة $count بندًا وحفظ الحجوزات المرتبطة بها في معاملة واحدة.'; });
+      setState(() { _saving = false; _message = 'تمت إضافة $count بندًا بعد تطبيق سياسة التسعير، وحُفظت الحجوزات في معاملة واحدة.'; });
       await _load(clearMessage: false);
       if (mounted && _selectedDocumentId != null) await _loadLines(_selectedDocumentId!);
     } catch (error) {
