@@ -485,6 +485,20 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
+Future<List<Map<String, dynamic>>> _loadLoginUserTypes() async {
+  try {
+    final result = await Supabase.instance.client
+      .from('erp_user_types')
+      .select('name_ar,name_en,image_data,type_code')
+      .eq('is_active', true)
+      .eq('show_at_login', true)
+      .order('type_code');
+    return (result as List).map((row) => Map<String, dynamic>.from(row)).toList();
+  } catch (_) {
+    return const [];
+  }
+}
+
 class EntryOptionsScreen extends StatelessWidget {
   const EntryOptionsScreen({super.key});
 
@@ -532,6 +546,61 @@ class EntryOptionsScreen extends StatelessWidget {
               title: 'تسجيل الدخول',
               subtitle: 'لديك حساب بالفعل',
               onTap: () => _open(context, const LoginScreen()),
+            ),
+            const SizedBox(height: 12),
+            const Text('اختار نوع المستخدم للدخول', textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: purple)),
+            const SizedBox(height: 8),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _loadLoginUserTypes(),
+              builder: (context, snapshot) {
+                final rows = snapshot.data ?? const <Map<String, dynamic>>[];
+                const priority = {'مورد': 0, 'عميل': 1, 'مندوب': 2, 'شركة شحن': 3};
+                final unique = <String, Map<String, dynamic>>{};
+                for (final row in rows) {
+                  final name = (row['name_ar'] ?? '').toString();
+                  if (priority.containsKey(name)) unique.putIfAbsent(name, () => row);
+                }
+                final visible = unique.values.toList()
+                  ..sort((a, b) => (priority[(a['name_ar'] ?? '').toString()] ?? 99)
+                    .compareTo(priority[(b['name_ar'] ?? '').toString()] ?? 99));
+                if (visible.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(padding: EdgeInsets.all(10), child: Center(child: CircularProgressIndicator()));
+                }
+                final types = visible.isEmpty ? [
+                  {'name_ar': 'مورد', 'name_en': 'Supplier'},
+                  {'name_ar': 'عميل', 'name_en': 'Customer'},
+                  {'name_ar': 'مندوب', 'name_en': 'Delegate'},
+                  {'name_ar': 'شركة شحن', 'name_en': 'Shipping Company'},
+                ] : visible;
+                return Wrap(alignment: WrapAlignment.center, spacing: 9, runSpacing: 9,
+                  children: types.map((row) {
+                    final name = (row['name_ar'] ?? '').toString();
+                    final imageData = (row['image_data'] ?? '').toString();
+                    Uint8List? imageBytes;
+                    try { if (imageData.isNotEmpty) imageBytes = base64Decode(imageData); } catch (_) {}
+                    return SizedBox(width: 142, child: InkWell(
+                      borderRadius: BorderRadius.circular(14),
+                      onTap: () => _open(context, LoginScreen(initialAccountType: name)),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: purple.withValues(alpha: .18))),
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          if (imageBytes != null)
+                            ClipRRect(borderRadius: BorderRadius.circular(30), child: Image.memory(imageBytes, width: 48, height: 48, fit: BoxFit.cover))
+                          else
+                            CircleAvatar(radius: 24, backgroundColor: const Color(0xFFF0E8F8),
+                              child: Icon(name == 'مورد' ? Icons.storefront_outlined : name == 'عميل' ? Icons.shopping_bag_outlined : name == 'مندوب' ? Icons.delivery_dining : Icons.local_shipping_outlined, color: purple)),
+                          const SizedBox(height: 6),
+                          Text(name, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w900, color: purple)),
+                          Text((row['name_en'] ?? '').toString(), textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 10, color: Colors.black54)),
+                        ]),
+                      ),
+                    ));
+                  }).toList());
+              },
             ),
             const SizedBox(height: 12),
             _EntryOptionTile(
@@ -5873,7 +5942,8 @@ String? passwordValidator(String? value) {
 
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.initialAccountType});
+  final String? initialAccountType;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -5897,6 +5967,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialAccountType != null && {'مورد','عميل','مندوب','شركة شحن'}.contains(widget.initialAccountType)) {
+      accountType = widget.initialAccountType!;
+    }
     _loadRememberedCredentials();
   }
 
