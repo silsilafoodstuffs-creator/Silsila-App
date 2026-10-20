@@ -584,6 +584,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                 Text((_activeCompanyId ?? widget.companyId) == null ? 'إنشاء ملف الشركة وربط حساب المالك.' : 'تعديل البيانات القانونية والتجارية للشركة.', style: const TextStyle(color: Colors.white70)),
               ])),
             ]),
+          ]),
         )),
         Container(
           color: const Color(0xFFF7F5FA),
