@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _membersPurple = Color(0xFF3E007D);
@@ -333,27 +337,94 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
     }
   }
 
+  Future<Uint8List> _membersPdfBytes() async {
+    final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+    final doc = pw.Document();
+    final rows = _filteredMembers;
+    doc.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4.landscape,
+      theme: pw.ThemeData.withFont(base: font, bold: font),
+      build: (_) => [
+        pw.Text('دليل مستخدمي الشركة — سلسلة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 10),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey400, width: .5),
+          children: [
+            _pdfRow(['م', 'اسم المستخدم', 'الوظيفة', 'الفرع', 'الدور', 'الحالة'], true),
+            for (var i = 0; i < rows.length; i++)
+              _pdfRow([
+                '${i + 1}',
+                _s(rows[i]['display_name']).isEmpty ? _s(rows[i]['user_id']) : _s(rows[i]['display_name']),
+                _s(rows[i]['job_title']),
+                _branchName(rows[i]['branch_id']),
+                _roles[_s(rows[i]['member_role'])] ?? _s(rows[i]['member_role']),
+                rows[i]['is_active'] == true ? 'نشط' : 'موقوف',
+              ], false),
+          ],
+        ),
+      ],
+    ));
+    return doc.save();
+  }
+
+  pw.TableRow _pdfRow(List<String> values, bool header) => pw.TableRow(
+    decoration: header ? const pw.BoxDecoration(color: PdfColors.orange100) : null,
+    children: values.map((value) => pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(value, style: pw.TextStyle(fontSize: header ? 10 : 9, fontWeight: header ? pw.FontWeight.bold : pw.FontWeight.normal)),
+    )).toList(),
+  );
+
+  Future<void> _previewPrintMembers() async {
+    try {
+      final bytes = await _membersPdfBytes();
+      await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'silsila-company-members.pdf');
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذرت معاينة وطباعة دليل المستخدمين: $error');
+    }
+  }
+
+  Future<void> _exportMembers() async {
+    try {
+      final bytes = await _membersPdfBytes();
+      await Printing.sharePdf(bytes: bytes, filename: 'silsila-company-members.pdf');
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر تصدير دليل المستخدمين: $error');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUserId = _db?.auth.currentUser?.id;
+    final visibleMembers = _filteredMembers;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Container(
             width: 46, height: 46,
-            decoration: BoxDecoration(color: _membersPurple.withValues(alpha: .09), borderRadius: BorderRadius.circular(13)),
-            child: const Icon(Icons.manage_accounts_outlined, color: _membersPurple),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF3E007D), Color(0xFF6E32AD)]),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: const Icon(Icons.manage_accounts_outlined, color: Colors.white),
           ),
           const SizedBox(width: 12),
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('المستخدمون وعضويات الشركة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _membersPurple)),
             SizedBox(height: 4),
-            Text('إدارة المستخدمين المسجلين وأدوارهم وحالة عضويتهم الفعلية.', style: TextStyle(color: Colors.black54)),
+            Text('دليل قابل للبحث بالاسم والوظيفة والفرع مع إدارة الدور وحالة العضوية.', style: TextStyle(color: Colors.black54)),
           ])),
-          IconButton(tooltip: 'تحديث', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
         ]),
-        const SizedBox(height: 14),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh, size: 18), label: const Text('تحديث')),
+          OutlinedButton.icon(onPressed: _loading || _members.isEmpty ? null : _previewPrintMembers, icon: const Icon(Icons.preview_outlined, size: 18), label: const Text('معاينة / طباعة')),
+          OutlinedButton.icon(onPressed: _loading || visibleMembers.isEmpty ? null : _exportMembers, icon: const Icon(Icons.picture_as_pdf_outlined, size: 18), label: const Text('تصدير PDF')),
+        ]),
+        const SizedBox(height: 12),
+        if (!_profilesAvailable)
+          _notice('لتفعيل أسماء المستخدمين والوظائف والفروع، طبّق الملف supabase/erp_company_member_profiles.sql من SQL Editor. ستظل العضويات الحالية محفوظة.', Colors.orange.shade800),
         if (_error != null) _notice(_error!, Colors.red),
         if (_message != null) _notice(_message!, Colors.green),
         Card(
@@ -364,74 +435,144 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Text('إضافة مستخدم مسجل', style: TextStyle(fontWeight: FontWeight.w900, color: _membersPurple)),
               const SizedBox(height: 5),
-              const Text('أدخل UUID لمستخدم موجود بالفعل في Supabase Auth. إنشاء الحساب أو إرسال الدعوة يتم من نظام المصادقة.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+              const Text('أدخل UUID لمستخدم موجود بالفعل في Supabase Auth، ثم عرّف اسمه ووظيفته والفرع المرتبط به.', style: TextStyle(color: Colors.black54, fontSize: 12)),
               const SizedBox(height: 10),
-              TextField(controller: _userId, decoration: const InputDecoration(labelText: 'معرّف المستخدم UUID', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: _newRole,
-                decoration: const InputDecoration(labelText: 'الدور داخل الشركة', border: OutlineInputBorder()),
-                items: _roles.entries.where((entry) => entry.key != 'owner').map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),
-                onChanged: _saving ? null : (value) { if (value != null) setState(() => _newRole = value); },
-              ),
-              const SizedBox(height: 10),
-              FilledButton.icon(
-                onPressed: _saving ? null : _addMember,
-                icon: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.person_add_alt_1),
-                label: Text(_saving ? 'جارٍ الحفظ...' : 'إضافة العضوية'),
-                style: FilledButton.styleFrom(backgroundColor: _membersPurple),
-              ),
+              Wrap(spacing: 10, runSpacing: 10, children: [
+                SizedBox(width: 270, child: TextField(controller: _userId, decoration: const InputDecoration(labelText: 'معرّف المستخدم UUID', isDense: true))),
+                SizedBox(width: 240, child: TextField(controller: _memberName, decoration: const InputDecoration(labelText: 'اسم المستخدم', isDense: true))),
+                SizedBox(width: 220, child: TextField(controller: _jobTitle, decoration: const InputDecoration(labelText: 'الوظيفة', isDense: true))),
+                SizedBox(width: 220, child: DropdownButtonFormField<String?>(
+                  value: _newBranchId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'الفرع', isDense: true),
+                  items: [
+                    const DropdownMenuItem<String?>(value: null, child: Text('بدون فرع')),
+                    ..._branches.map((branch) => DropdownMenuItem<String?>(
+                      value: _s(branch['id']),
+                      child: Text(_s(branch['branch_name']), overflow: TextOverflow.ellipsis),
+                    )),
+                  ],
+                  onChanged: _saving ? null : (value) => setState(() => _newBranchId = value),
+                )),
+                SizedBox(width: 220, child: DropdownButtonFormField<String>(
+                  value: _newRole,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'الدور داخل الشركة', isDense: true),
+                  items: _roles.entries.where((entry) => entry.key != 'owner').map((entry) => DropdownMenuItem(value: entry.key, child: Text(entry.value))).toList(),
+                  onChanged: _saving ? null : (value) { if (value != null) setState(() => _newRole = value); },
+                )),
+                FilledButton.icon(
+                  onPressed: _saving ? null : _addMember,
+                  icon: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.person_add_alt_1),
+                  label: Text(_saving ? 'جارٍ الحفظ...' : 'إضافة العضوية'),
+                  style: FilledButton.styleFrom(backgroundColor: _membersPurple),
+                ),
+              ]),
             ]),
           ),
         ),
         const SizedBox(height: 12),
         Row(children: [
-          const Expanded(child: Text('أعضاء الشركة', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900))),
-          Text('${_members.length} مستخدم', style: const TextStyle(color: _membersPurple, fontWeight: FontWeight.w800)),
+          const Expanded(child: Text('دليل المستخدمين', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900))),
+          Text('${visibleMembers.length} من ${_members.length}', style: const TextStyle(color: _membersPurple, fontWeight: FontWeight.w800)),
+        ]),
+        const SizedBox(height: 8),
+        Wrap(spacing: 10, runSpacing: 8, children: [
+          SizedBox(width: 280, child: TextField(
+            controller: _nameFilter,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(labelText: 'بحث بالاسم أو UUID', prefixIcon: Icon(Icons.search), isDense: true),
+          )),
+          SizedBox(width: 220, child: DropdownButtonFormField<String>(
+            value: _jobFilter,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'فلتر الوظيفة', isDense: true),
+            items: [
+              const DropdownMenuItem(value: '__all__', child: Text('كل الوظائف')),
+              ..._jobTitles.map((job) => DropdownMenuItem(value: job, child: Text(job, overflow: TextOverflow.ellipsis))),
+            ],
+            onChanged: (value) => setState(() => _jobFilter = value ?? '__all__'),
+          )),
+          SizedBox(width: 220, child: DropdownButtonFormField<String>(
+            value: _branchFilter,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'فلتر الفرع', isDense: true),
+            items: [
+              const DropdownMenuItem(value: '__all__', child: Text('كل الفروع')),
+              ..._branches.map((branch) => DropdownMenuItem(value: _s(branch['id']), child: Text(_s(branch['branch_name']), overflow: TextOverflow.ellipsis))),
+            ],
+            onChanged: (value) => setState(() => _branchFilter = value ?? '__all__'),
+          )),
         ]),
         const SizedBox(height: 8),
         if (_loading)
           const Center(child: Padding(padding: EdgeInsets.all(28), child: CircularProgressIndicator()))
-        else if (_members.isEmpty)
-          const Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد عضويات ظاهرة لهذا المستخدم أو ليست لديه صلاحية الإدارة.')))
+        else if (visibleMembers.isEmpty)
+          const Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد نتائج مطابقة للبحث والفلاتر، أو ليست لديك صلاحية إدارة الأعضاء.')))
         else
-          ..._members.map((member) {
-            final userId = _s(member['user_id']);
-            final role = _s(member['member_role']);
-            final isCurrent = userId == currentUserId;
-            final isOwner = role == 'owner';
-            return Card(
-              elevation: 0,
-              margin: const EdgeInsets.only(bottom: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: BorderSide(color: Colors.grey.shade300)),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Row(children: [
-                    CircleAvatar(backgroundColor: _membersPurple.withValues(alpha: .1), child: const Icon(Icons.person_outline, color: _membersPurple)),
-                    const SizedBox(width: 10),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(isCurrent ? 'المستخدم الحالي' : 'مستخدم ${userId.length > 12 ? userId.substring(0, 12) : userId}…', style: const TextStyle(fontWeight: FontWeight.w800)),
-                      Text(userId, style: const TextStyle(color: Colors.black45, fontSize: 11)),
-                    ])),
-                    Switch(
-                      value: member['is_active'] == true,
-                      onChanged: isCurrent || isOwner ? null : (value) => _updateMember(member, active: value),
-                    ),
-                  ]),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _roles.containsKey(role) ? role : 'viewer',
-                    decoration: const InputDecoration(labelText: 'الدور الوظيفي', border: OutlineInputBorder()),
-                    items: _roles.entries.map((entry) => DropdownMenuItem(value: entry.key, enabled: entry.key != 'owner', child: Text(entry.value))).toList(),
-                    onChanged: isCurrent || isOwner ? null : (value) { if (value != null && value != role) _updateMember(member, role: value); },
-                  ),
-                ]),
+          Card(
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade300)),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.all(const Color(0xFFF1E8FB)),
+                columnSpacing: 20,
+                horizontalMargin: 14,
+                columns: const [
+                  DataColumn(label: Text('م')),
+                  DataColumn(label: Text('اسم المستخدم / UUID')),
+                  DataColumn(label: Text('الوظيفة')),
+                  DataColumn(label: Text('الفرع')),
+                  DataColumn(label: Text('الدور')),
+                  DataColumn(label: Text('الحالة')),
+                  DataColumn(label: Text('تعديل')),
+                ],
+                rows: [
+                  for (var index = 0; index < visibleMembers.length; index++)
+                    _memberRow(visibleMembers[index], index + 1, currentUserId),
+                ],
               ),
-            );
-          }),
+            ),
+          ),
       ]),
     );
+  }
+
+  DataRow _memberRow(Map<String, dynamic> member, int index, String? currentUserId) {
+    final userId = _s(member['user_id']);
+    final role = _s(member['member_role']);
+    final displayName = _s(member['display_name']).trim();
+    final isCurrent = userId == currentUserId;
+    final isOwner = role == 'owner';
+    return DataRow(cells: [
+      DataCell(Text('$index')),
+      DataCell(SizedBox(width: 230, child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(displayName.isEmpty ? (isCurrent ? 'المستخدم الحالي' : 'مستخدم بدون اسم') : displayName, style: const TextStyle(fontWeight: FontWeight.w800)),
+          Text(userId, style: const TextStyle(color: Colors.black45, fontSize: 10)),
+        ],
+      ))),
+      DataCell(Text(_s(member['job_title']).isEmpty ? '—' : _s(member['job_title']))),
+      DataCell(Text(_branchName(member['branch_id']))),
+      DataCell(DropdownButton<String>(
+        value: _roles.containsKey(role) ? role : 'viewer',
+        items: _roles.entries.map((entry) => DropdownMenuItem(value: entry.key, enabled: entry.key != 'owner', child: Text(entry.value))).toList(),
+        onChanged: isCurrent || isOwner ? null : (value) { if (value != null && value != role) _updateMember(member, role: value); },
+      )),
+      DataCell(Switch(
+        value: member['is_active'] == true,
+        onChanged: isCurrent || isOwner ? null : (value) => _updateMember(member, active: value),
+      )),
+      DataCell(IconButton(
+        tooltip: 'تعديل الاسم والوظيفة والفرع',
+        onPressed: _saving || !_profilesAvailable ? null : () => _editMemberProfile(member),
+        icon: const Icon(Icons.edit_outlined, color: _membersPurple),
+      )),
+    ]);
   }
 
   Widget _notice(String message, Color color) => Container(
