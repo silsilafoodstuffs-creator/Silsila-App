@@ -21,7 +21,7 @@ class ErpOperationalDocumentsRepository {
     final table = kind == ErpOperationalKind.purchase
       ? 'erp_purchase_documents' : 'erp_sales_documents';
     final rows = await _db.from(table)
-      .select('id, company_id, branch_id, warehouse_id, supplier_id, customer_id, document_number, document_date, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes')
+      .select('id, company_id, branch_id, warehouse_id, supplier_id, customer_id, auto_number, document_number, document_date, document_timestamp, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes')
       .eq('company_id', companyId.trim())
       .order('document_date', ascending: false)
       .limit(300);
@@ -69,6 +69,7 @@ class ErpOperationalDocumentsRepository {
       'warehouse_id': warehouseId,
       'document_number': documentNumber.trim(),
       'document_date': DateTime.now().toIso8601String().substring(0, 10),
+      'document_timestamp': DateTime.now().toUtc().toIso8601String(),
       'document_type': documentType,
       'status': 'draft',
       'notes': notes?.trim().isEmpty == true ? null : notes?.trim(),
