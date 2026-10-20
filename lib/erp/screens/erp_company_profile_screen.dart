@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_app_asset_storage.dart';
@@ -325,6 +328,60 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     }
   }
 
+  Future<Uint8List> _companyPdfBytes() async {
+    final fontData = await rootBundle.load('assets/fonts/Tajawal.ttf');
+    final font = pw.Font.ttf(fontData);
+    final document = pw.Document();
+    final values = <String, String>{
+      'كود الشركة': _companyCode.text,
+      'الاسم القانوني': _legalName.text,
+      'الاسم التجاري': _tradeName.text,
+      'الرقم الضريبي': _taxNumber.text,
+      'السجل التجاري': _commercialRegister.text,
+      'المأمورية الضريبية': _taxOffice.text,
+      'الهاتف': _phone.text,
+      'البريد الإلكتروني': _email.text,
+      'العملة الأساسية': _currency.text,
+      'العنوان': _address.text,
+      'معرّف الشركة': _activeCompanyId ?? widget.companyId ?? '',
+    };
+    document.addPage(pw.MultiPage(
+      theme: pw.ThemeData.withFont(base: font, bold: font),
+      pageFormat: PdfPageFormat.a4,
+      build: (_) => [
+        pw.Text('بيانات الشركة - سلسلة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 14),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey400, width: .5),
+          columnWidths: {0: const pw.FlexColumnWidth(1), 1: const pw.FlexColumnWidth(2)},
+          children: values.entries.map((entry) => pw.TableRow(children: [
+            pw.Padding(padding: const pw.EdgeInsets.all(7), child: pw.Text(entry.key)),
+            pw.Padding(padding: const pw.EdgeInsets.all(7), child: pw.Text(entry.value.trim().isEmpty ? '—' : entry.value.trim())),
+          ])).toList(),
+        ),
+      ],
+    ));
+    return document.save();
+  }
+
+  Future<void> _printCompany() async {
+    try {
+      final bytes = await _companyPdfBytes();
+      await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'silsila-company-profile.pdf');
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذرت معاينة/طباعة بيانات الشركة: $error');
+    }
+  }
+
+  Future<void> _exportCompany() async {
+    try {
+      final bytes = await _companyPdfBytes();
+      await Printing.sharePdf(bytes: bytes, filename: 'silsila-company-profile.pdf');
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر تصدير بيانات الشركة: $error');
+    }
+  }
+
   Future<void> _chooseCompanyImage(ImageSource source) async {
     final companyId = (_activeCompanyId ?? widget.companyId ?? '').trim();
     if (companyId.isEmpty) {
@@ -415,7 +472,12 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
             const SizedBox(height: 4),
             Text((_activeCompanyId ?? widget.companyId) == null ? 'سجّل بيانات شركتك لإنشاء ملفها وربط حسابك بها كمالك.' : 'تعديل البيانات القانونية والتجارية للشركة المرتبطة بحسابك.', style: const TextStyle(color: Colors.black54)),
           ])),
-          IconButton(tooltip: 'إعادة تحميل', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh, size: 17), label: const Text('تحديث')),
+            OutlinedButton.icon(onPressed: _loading || _saving ? null : _printCompany, icon: const Icon(Icons.preview_outlined, size: 17), label: const Text('معاينة / طباعة')),
+            OutlinedButton.icon(onPressed: _loading || _saving ? null : _exportCompany, icon: const Icon(Icons.picture_as_pdf_outlined, size: 17), label: const Text('تصدير PDF')),
+            FilledButton.icon(onPressed: _saving || _loading ? null : _save, icon: const Icon(Icons.save_outlined, size: 17), label: const Text('حفظ')),
+          ]),
         ]),
         const SizedBox(height: 16),
         if (_error != null) _notice(_error!, Colors.red),
