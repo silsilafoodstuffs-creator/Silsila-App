@@ -109,8 +109,6 @@ String silsilaText(String value) {
     'كلمة المرور': 'Password',
     'البريد الإلكتروني': 'Email',
     'رقم الهاتف': 'Phone Number',
-    'إدارة البرنامج': 'Program Administration',
-    'إدارة التطبيقات': 'Application Management',
     'بيانات أساسية': 'Master Data',
     'حركات': 'Transactions',
     'تقارير': 'Reports',
