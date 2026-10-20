@@ -102,16 +102,48 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
     return rows.isEmpty ? 'بدون فرع' : _s(rows.first['branch_code']) + ' — ' + _s(rows.first['branch_name']);
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewRecords(String title) async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text(title),
+      content: SizedBox(width: 720, child: _rows.isEmpty ? const Text('لا توجد بيانات محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _rows.take(100).map((r) => ListTile(
+          dense: true,
+          title: Text('${r['name'] ?? r['cashbox_name'] ?? r['code'] ?? r['cashbox_code'] ?? '—'}'),
+          subtitle: Text('${r['code'] ?? r['cashbox_code'] ?? ''} • ${r['is_active'] == true ? 'نشط' : 'موقوف'}'),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final visible = _rows.where((r) => widget.initialBankOnly ? r['is_bank_account'] == true : true).toList();
     return Directionality(textDirection: TextDirection.rtl, child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(widget.initialBankOnly ? 'الحسابات البنكية' : 'الخزائن الرئيسية والفرعية',
-          style: const TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 6),
-        const Text('كل خزينة أو حساب بنكي يجب ربطه بحساب أستاذ عام نشط وقابل للترحيل.', style: TextStyle(color: Colors.black54, height: 1.5)),
+        Card(color: const Color(0xFF3E007D), child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(widget.initialBankOnly ? 'الحسابات البنكية' : 'الخزائن الرئيسية والفرعية',
+              style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+            const Text('ربط كل خزينة أو بنك بحساب أستاذ عام نشط وقابل للترحيل.', style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 8),
+            SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+              _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+              _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : () { _code.clear(); _name.clear(); _bankName.clear(); _maskedNumber.clear(); setState(() => _message = 'نموذج جديد جاهز.'); }),
+              _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving ? null : _create),
+              _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), () => _previewRecords(widget.initialBankOnly ? 'معاينة الحسابات البنكية' : 'معاينة الخزائن')),
+            ])),
+          ]),
+        )),
         const SizedBox(height: 12),
         TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
         const SizedBox(height: 8),
