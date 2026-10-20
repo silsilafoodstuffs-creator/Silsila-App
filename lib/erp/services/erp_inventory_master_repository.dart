@@ -47,7 +47,7 @@ class ErpInventoryMasterRepository {
 
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
     final rows = await _db.from('erp_items')
-      .select('id, item_code, barcode, item_name, group_id, base_unit, purchase_price, sale_price, reorder_level, expiry_tracking, is_active')
+      .select('id, item_code, barcode, item_name, group_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active')
       .eq('company_id', companyId.trim()).order('item_code').limit(2000);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
@@ -72,16 +72,16 @@ class ErpInventoryMasterRepository {
   Future<void> createItem({
     required String companyId, required String code, required String name,
     String? barcode, String? groupId, String unit = 'وحدة', double purchasePrice = 0,
-    double salePrice = 0, double reorderLevel = 0, bool expiryTracking = false,
+    double salePrice = 0, double taxRate = 0, double reorderLevel = 0, bool expiryTracking = false,
   }) async {
     if (code.trim().isEmpty || name.trim().isEmpty || unit.trim().isEmpty) {
       throw ArgumentError('كود الصنف والاسم ووحدة القياس حقول مطلوبة.');
     }
-    if (purchasePrice < 0 || salePrice < 0 || reorderLevel < 0) throw ArgumentError('الأسعار وحد إعادة الطلب لا تقبل القيم السالبة.');
+    if (purchasePrice < 0 || salePrice < 0 || reorderLevel < 0 || taxRate < 0 || taxRate > 100) throw ArgumentError('الأسعار وحد إعادة الطلب لا تقبل القيم السالبة، ونسبة الضريبة من 0 إلى 100.');
     await _db.from('erp_items').insert({
       'company_id': companyId.trim(), 'item_code': code.trim(), 'item_name': name.trim(), 'group_id': groupId,
       'barcode': _blank(barcode), 'base_unit': unit.trim(),
-      'purchase_price': purchasePrice, 'sale_price': salePrice,
+      'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking, 'is_active': true,
     });
   }
