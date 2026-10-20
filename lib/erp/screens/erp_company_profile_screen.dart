@@ -290,18 +290,21 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       }
       // Store auxiliary company details separately so existing company RPCs and
       // installations remain compatible while the schema is upgraded safely.
-      final cleanCode = _companyCode.text.trim();
-      if (cleanCode.isNotEmpty) {
-        await ErpCompanySettingsRepository(client: db).saveSetting(
-          companyId: id,
-          key: 'company_profile_extra',
-          value: <String, Object?>{
-            'company_code': cleanCode,
-            'tax_office': _taxOffice.text.trim().isEmpty ? null : _taxOffice.text.trim(),
-            'logo_path': _logoStoragePath,
-          },
-        );
+      var cleanCode = _companyCode.text.trim();
+      if (cleanCode.isEmpty) {
+        final compactId = id.replaceAll('-', '').toUpperCase();
+        cleanCode = 'SIL-${compactId.substring(0, compactId.length >= 8 ? 8 : compactId.length)}';
+        _companyCode.text = cleanCode;
       }
+      await ErpCompanySettingsRepository(client: db).saveSetting(
+        companyId: id,
+        key: 'company_profile_extra',
+        value: <String, Object?>{
+          'company_code': cleanCode,
+          'tax_office': _taxOffice.text.trim().isEmpty ? null : _taxOffice.text.trim(),
+          'logo_path': _logoStoragePath,
+        },
+      );
       if (!mounted) return;
       setState(() {
         _saving = false;
