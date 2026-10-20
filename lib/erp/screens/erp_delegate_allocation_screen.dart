@@ -167,6 +167,29 @@ class _ErpDelegateAllocationScreenState extends State<ErpDelegateAllocationScree
     }
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewDelegateData() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة توزيع المندوبين'),
+      content: SizedBox(width: 700, child: _employees.isEmpty ? const Text('لا توجد بيانات موظفين محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _employees.take(100).map((r) => ListTile(
+          dense: true,
+          title: Text(_s(r['full_name']).isEmpty ? _s(r['employee_name']) : _s(r['full_name'])),
+          subtitle: Text('كود الموظف: ${_s(r['employee_code'])}'),
+          trailing: _s(r['id']) == _employeeId ? const Icon(Icons.check_circle, color: Colors.green) : null,
+          onTap: () { Navigator.pop(ctx); setState(() => _employeeId = _s(r['id'])); },
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     Map<String, dynamic>? employee;
@@ -181,20 +204,22 @@ class _ErpDelegateAllocationScreenState extends State<ErpDelegateAllocationScree
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Container(
-            width: 46, height: 46,
-            decoration: BoxDecoration(color: _delegatePurple.withValues(alpha: .09), borderRadius: BorderRadius.circular(13)),
-            child: const Icon(Icons.assignment_ind_outlined, color: _delegatePurple),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('توزيع الأصناف على المندوبين', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: _delegatePurple)),
-            SizedBox(height: 4),
-            Text('اختيار موظف مبيعات نشط وتحديد الأصناف المسموح له ببيعها.', style: TextStyle(color: Colors.black54)),
-          ])),
-          IconButton(tooltip: 'تحديث', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
-        ]),
+        Card(color: _delegatePurple, child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Row(children: [
+              Icon(Icons.assignment_ind_outlined, color: Color(0xFFFFA015), size: 27),
+              SizedBox(width: 10),
+              Expanded(child: Text('توزيع الأصناف على المندوبين', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
+            ]),
+            const Text('اختيار موظف مبيعات نشط وتحديد الأصناف المسموح له ببيعها.', style: TextStyle(color: Colors.white70)),
+            const SizedBox(height: 8),
+            SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+              _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+              _quickTask('معاينة المندوبين', Icons.visibility_outlined, const Color(0xFF6841A5), _previewDelegateData),
+            ])),
+          ]),
+        )),
         const SizedBox(height: 16),
         if (_error != null) _notice(_error!, Colors.red),
         if (_message != null) _notice(_message!, Colors.green),
