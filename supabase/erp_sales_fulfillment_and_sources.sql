@@ -75,3 +75,46 @@ with check (exists (
   where m.company_id = erp_sales_fulfillment_documents.company_id
     and m.user_id = auth.uid() and m.is_active = true
 ));
+
+-- Direct delivery without a preparation note is a privileged operation.
+create or replace function public.erp_guard_sales_direct_delivery()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text;
+  v_allowed boolean := false;
+begin
+  if new.kind <> 'delivery' or new.source_mode <> 'direct' then
+    return new;
+  end if;
+  select m.member_role into v_role
+  from public.erp_company_members m
+  where m.company_id = new.company_id
+    and m.user_id = auth.uid()
+    and m.is_active = true
+  limit 1;
+  if v_role in ('owner', 'admin') then
+    return new;
+  end if;
+  select coalesce(p.allow_access, false) and coalesce(p.can_edit, false)
+    into v_allowed
+  from public.erp_user_permissions p
+  where p.company_id = new.company_id
+    and p.user_id = auth.uid()
+    and p.menu_key = 'المبيعات والعملاء::حركات::إذن التسليم'
+  limit 1;
+  if not coalesce(v_allowed, false) then
+    raise exception 'التحميل بدون تجهيز يتطلب صلاحية تعديل إذن التسليم';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists erp_guard_sales_direct_delivery on public.erp_sales_fulfillment_documents;
+create trigger erp_guard_sales_direct_delivery
+before insert or update of kind, source_mode
+on public.erp_sales_fulfillment_documents
+for each row execute function public.erp_guard_sales_direct_delivery();
