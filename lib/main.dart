@@ -8228,38 +8228,6 @@ class _MarketCardState extends State<MarketCard> {
             const SizedBox(height: 8),
             Text(widget.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 7),
-            InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => setState(() => _detailsExpanded = !_detailsExpanded),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F4FC),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    const Expanded(child: Text('تفاصيل الطلب', style: TextStyle(fontWeight: FontWeight.w700))),
-                    Icon(_detailsExpanded ? Icons.keyboard_double_arrow_up : Icons.keyboard_double_arrow_down, color: purple),
-                  ],
-                ),
-              ),
-            ),
-            if (_detailsExpanded) ...[
-              const SizedBox(height: 8),
-              if (parsed['الصنف'] != null) _detailRow('اسم الصنف', parsed['الصنف']!),
-              if (parsed['الكمية'] != null) _detailRow('الكمية', parsed['الكمية']!),
-              if (parsed['تاريخ الصلاحية'] != null) _detailRow('تاريخ الصلاحية', parsed['تاريخ الصلاحية']!),
-              if (parsed['السعر'] != null) _detailRow('سعر العرض', parsed['السعر']!),
-              if (parsed['التفاوض'] != null) _detailRow('التفاوض', parsed['التفاوض']!),
-              _detailRow('تاريخ الصلاحية', widget.expiryDate.isEmpty ? 'غير محدد' : widget.expiryDate),
-              _detailRow('السعر', widget.isNegotiable ? 'قابل للتفاوض البسيط' : 'السعر نهائي'),
-              if (parsed.isEmpty || detailLines.any((line) => !line.contains(':')))
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text(widget.details, style: const TextStyle(height: 1.5)),
-                ),
-            ],
             if (_negotiationStatus != null)
               Padding(
                 padding: const EdgeInsets.only(top: 7),
@@ -8308,6 +8276,38 @@ class _MarketCardState extends State<MarketCard> {
                 ),
               ],
             ),
+            InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => setState(() => _detailsExpanded = !_detailsExpanded),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F4FC),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(child: Text('تفاصيل الطلب', style: TextStyle(fontWeight: FontWeight.w700))),
+                    Icon(_detailsExpanded ? Icons.keyboard_double_arrow_up : Icons.keyboard_double_arrow_down, color: purple),
+                  ],
+                ),
+              ),
+            ),
+            if (_detailsExpanded) ...[
+              const SizedBox(height: 8),
+              if (parsed['الصنف'] != null) _detailRow('اسم الصنف', parsed['الصنف']!),
+              if (parsed['الكمية'] != null) _detailRow('الكمية', parsed['الكمية']!),
+              if (parsed['تاريخ الصلاحية'] != null) _detailRow('تاريخ الصلاحية', parsed['تاريخ الصلاحية']!),
+              if (parsed['السعر'] != null) _detailRow('سعر العرض', parsed['السعر']!),
+              if (parsed['التفاوض'] != null) _detailRow('التفاوض', parsed['التفاوض']!),
+              _detailRow('تاريخ الصلاحية', widget.expiryDate.isEmpty ? 'غير محدد' : widget.expiryDate),
+              _detailRow('السعر', widget.isNegotiable ? 'قابل للتفاوض البسيط' : 'السعر نهائي'),
+              if (parsed.isEmpty || detailLines.any((line) => !line.contains(':')))
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(widget.details, style: const TextStyle(height: 1.5)),
+                ),
+            ],
             if (widget.isNegotiable && _hasAccepted && widget.postOwnerId != database?.auth.currentUser?.id) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(onPressed: _busy ? null : _showNegotiationDialog, icon: const Icon(Icons.currency_exchange), label: const Text('اقتراح سعر تفاوض')),
