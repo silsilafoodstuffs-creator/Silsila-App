@@ -42,13 +42,23 @@ create policy trader_market_negotiations_proposer_insert
   on public.trader_market_negotiations for insert to authenticated
   with check (
     proposer_id = auth.uid()
-    and exists (
-      select 1 from public.trader_market_posts p
-      where p.id = post_id
-        and p.user_id = recipient_id
-        and p.user_id <> auth.uid()
-        and p.is_active = true
-        and p.is_negotiable = true
+    and (
+      exists (
+        select 1 from public.trader_market_posts p
+        where p.id = post_id
+          and p.user_id = recipient_id
+          and p.user_id <> auth.uid()
+          and p.is_active = true
+          and p.is_negotiable = true
+      )
+      or exists (
+        select 1 from public.trader_market_negotiations parent
+        where parent.id = parent_id
+          and parent.post_id = post_id
+          and parent.status = 'countered'
+          and parent.proposer_id = recipient_id
+          and parent.recipient_id = auth.uid()
+      )
     )
   );
 
