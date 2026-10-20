@@ -473,7 +473,6 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       if(!mounted)return;setState((){_saving=false;_message=_scope=='__all__'?'تم حفظ الصلاحيات لجميع المستخدمين النشطين.':'تم حفظ صلاحيات المستخدم المحدد فقط.';});
     }catch(e){if(!mounted)return;setState((){_saving=false;_error='تعذر حفظ الصلاحيات: '+e.toString();});}
   }
-  Widget _quick(String text,IconData icon,VoidCallback? action)=>OutlinedButton.icon(onPressed:action,icon:Icon(icon,size:17),label:Text(text),style:OutlinedButton.styleFrom(foregroundColor:_permPurple,padding:const EdgeInsets.symmetric(horizontal:10,vertical:12)));
   Widget _row(String key,String label,{bool nested=false})=>Container(margin:EdgeInsetsDirectional.only(start:nested?12:0,bottom:5),padding:const EdgeInsets.symmetric(horizontal:6,vertical:5),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:Colors.black12),borderRadius:BorderRadius.circular(8)),child:Row(children:[
     Expanded(flex:3,child:Text(label,style:TextStyle(fontSize:11,fontWeight:nested?FontWeight.w600:FontWeight.w800))),
     for(final a in _actions)Expanded(flex:1,child:Center(child:Checkbox(value:_cell(key,a),onChanged:_saving?null:(v)=>_setCell(key,a,v??false),activeColor:_permPurple,visualDensity:VisualDensity.compact))),
@@ -492,7 +491,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       if(open)Padding(padding:const EdgeInsets.fromLTRB(8,0,8,8),child:Column(children:[_row(_key(main,'*','*'),'صلاحيات القائمة الرئيسية'),for(final s in sections.entries)_section(main,s.key,s.value)])),
     ]));
   }
-  @override   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
     padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
     child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
