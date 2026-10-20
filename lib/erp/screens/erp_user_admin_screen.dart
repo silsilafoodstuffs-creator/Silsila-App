@@ -66,16 +66,17 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   String? _error, _message, _selectedId, _selectedUserId;
   List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
   String? _selectedTemplateId;
+  String? _activeCompanyId;
   String _selectedPageKey = 'إدارة البرنامج|بيانات أساسية|بيانات الشركة';
   static const _typeNames = <String,String>{
     'types':'أنواع المستخدمين','users':'المستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
   };
 
-  @override void initState() { super.initState(); _view=widget.initialView; try {_db=Supabase.instance.client;} catch (_) {} _load(); }
-  @override void didUpdateWidget(covariant ErpUserAdminScreen oldWidget) { super.didUpdateWidget(oldWidget); if(oldWidget.companyId!=widget.companyId || oldWidget.initialView!=widget.initialView){_view=widget.initialView;_load();} }
+  @override void initState() { super.initState(); _view=widget.initialView; _activeCompanyId=widget.companyId; try {_db=Supabase.instance.client;} catch (_) {} _load(); }
+  @override void didUpdateWidget(covariant ErpUserAdminScreen oldWidget) { super.didUpdateWidget(oldWidget); if(oldWidget.companyId!=widget.companyId || oldWidget.initialView!=widget.initialView){_activeCompanyId=widget.companyId;_view=widget.initialView;_load();} }
   @override void dispose() { super.dispose(); }
   String _s(dynamic v) => (v??'').toString();
-  String get _company => (widget.companyId??'').trim();
+  String get _company => (_activeCompanyId ?? widget.companyId ?? '').trim();
   bool get _isType => _view=='types';
   bool get _isUser => _view=='users';
   bool get _isTemplate => _view=='templates';
@@ -88,12 +89,19 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       setState(() { _loading = false; _error = 'الاتصال بقاعدة البيانات غير متاح.'; });
       return;
     }
-    if (_company.isEmpty) {
-      setState(() { _loading = false; _error = 'لم يتم تحديد الشركة الحالية؛ لا يمكن تحميل البيانات.'; });
-      return;
-    }
     setState(() { _loading = true; _error = null; _message = null; });
     try {
+      // The dashboard may create this screen before its asynchronous company lookup completes.
+      // Resolve the active company from the signed-in user's membership instead of leaving the grid blank.
+      if (_company.isEmpty) {
+        final userId = _db!.auth.currentUser?.id;
+        if (userId != null) {
+          final memberships = await _db!.from('erp_company_members').select('company_id').eq('user_id', userId).eq('is_active', true).order('created_at');
+          final ids = (memberships as List).map((row) => (row['company_id'] ?? '').toString()).where((id) => id.isNotEmpty).toList();
+          if (ids.isNotEmpty) _activeCompanyId = ids.first;
+        }
+      }
+      if (_company.isEmpty) throw StateError('لم يتم العثور على شركة نشطة مرتبطة بالمستخدم الحالي.');
       List<Map<String, dynamic>> typeList = [];
       List<Map<String, dynamic>> userList = [];
       List<Map<String, dynamic>> templateList = [];
