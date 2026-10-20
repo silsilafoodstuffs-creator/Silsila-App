@@ -14,8 +14,16 @@ class ErpCompanyMembersScreen extends StatefulWidget {
 class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
   SupabaseClient? _db;
   final _userId = TextEditingController();
+  final _memberName = TextEditingController();
+  final _jobTitle = TextEditingController();
+  final _nameFilter = TextEditingController();
   String _newRole = 'operator';
+  String? _newBranchId;
+  String _jobFilter = '__all__';
+  String _branchFilter = '__all__';
   List<Map<String, dynamic>> _members = [];
+  List<Map<String, dynamic>> _branches = [];
+  bool _profilesAvailable = true;
   bool _loading = false;
   bool _saving = false;
   String? _error;
@@ -46,6 +54,9 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
   @override
   void dispose() {
     _userId.dispose();
+    _memberName.dispose();
+    _jobTitle.dispose();
+    _nameFilter.dispose();
     super.dispose();
   }
 
@@ -62,14 +73,46 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
     }
     setState(() { _loading = true; _error = null; });
     try {
-      final rows = await _db!
-          .from('erp_company_members')
+      final values = await Future.wait([
+        _db!.from('erp_company_members')
           .select('id, user_id, member_role, is_active, created_at')
           .eq('company_id', companyId)
-          .order('created_at');
+          .order('created_at'),
+        _db!.from('erp_branches')
+          .select('id, branch_code, branch_name')
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+          .order('branch_code'),
+      ]);
+      List<Map<String, dynamic>> profiles = [];
+      var profileTableAvailable = true;
+      try {
+        final profileRows = await _db!
+          .from('erp_company_member_profiles')
+          .select('user_id, display_name, job_title, branch_id')
+          .eq('company_id', companyId);
+        profiles = profileRows.map((row) => Map<String, dynamic>.from(row)).toList();
+      } catch (_) {
+        profileTableAvailable = false;
+      }
+      final profileByUser = <String, Map<String, dynamic>>{
+        for (final profile in profiles) _s(profile['user_id']): profile,
+      };
+      final memberRows = (values[0] as List).map((row) {
+        final member = Map<String, dynamic>.from(row);
+        final profile = profileByUser[_s(member['user_id'])];
+        member['display_name'] = profile?['display_name'] ?? '';
+        member['job_title'] = profile?['job_title'] ?? '';
+        member['branch_id'] = profile?['branch_id'];
+        return member;
+      }).toList();
       if (!mounted) return;
       setState(() {
-        _members = (rows as List).whereType<Map<String, dynamic>>().toList(growable: false);
+        _members = memberRows;
+        _branches = (values[1] as List).map((row) => Map<String, dynamic>.from(row)).toList();
+        _profilesAvailable = profileTableAvailable;
+        if (!_branches.any((branch) => _s(branch['id']) == _newBranchId)) _newBranchId = null;
+        if (!_branches.any((branch) => _s(branch['id']) == _branchFilter)) _branchFilter = '__all__';
         _loading = false;
       });
     } catch (error) {
@@ -79,6 +122,114 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
         _error = 'تعذر تحميل عضويات الشركة. يجب أن يكون حسابك مالكًا أو مديرًا: $error';
       });
     }
+  }
+
+  String _branchName(dynamic id) {
+    final key = _s(id);
+    if (key.isEmpty) return 'بدون فرع';
+    final rows = _branches.where((branch) => _s(branch['id']) == key);
+    return rows.isEmpty ? 'فرع غير متاح' : _s(rows.first['branch_name']);
+  }
+
+  List<String> get _jobTitles => _members
+      .map((member) => _s(member['job_title']).trim())
+      .where((title) => title.isNotEmpty)
+      .toSet()
+      .toList()
+    ..sort();
+
+  List<Map<String, dynamic>> get _filteredMembers {
+    final query = _nameFilter.text.trim().toLowerCase();
+    return _members.where((member) {
+      final name = _s(member['display_name']).trim().isEmpty
+          ? _s(member['user_id'])
+          : _s(member['display_name']);
+      final job = _s(member['job_title']);
+      final branch = _s(member['branch_id']);
+      final matchesName = query.isEmpty || name.toLowerCase().contains(query) ||
+          _s(member['user_id']).toLowerCase().contains(query);
+      final matchesJob = _jobFilter == '__all__' || job == _jobFilter;
+      final matchesBranch = _branchFilter == '__all__' || branch == _branchFilter;
+      return matchesName && matchesJob && matchesBranch;
+    }).toList();
+  }
+
+  Future<void> _saveMemberProfile({
+    required String userId,
+    required String name,
+    required String jobTitle,
+    String? branchId,
+  }) async {
+    final companyId = (widget.companyId ?? '').trim();
+    if (companyId.isEmpty || name.trim().isEmpty) {
+      setState(() => _error = 'اسم المستخدم والشركة حقول مطلوبة.');
+      return;
+    }
+    try {
+      await _db!.from('erp_company_member_profiles').upsert({
+        'company_id': companyId,
+        'user_id': userId,
+        'display_name': name.trim(),
+        'job_title': jobTitle.trim().isEmpty ? null : jobTitle.trim(),
+        'branch_id': branchId,
+        'updated_by': _db!.auth.currentUser?.id,
+      }, onConflict: 'company_id,user_id');
+      if (!mounted) return;
+      setState(() => _message = 'تم حفظ الاسم والوظيفة والفرع.');
+      await _load();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _error = 'تعذر حفظ بيانات المستخدم. تأكد من تطبيق supabase/erp_company_member_profiles.sql: $error');
+    }
+  }
+
+  Future<void> _editMemberProfile(Map<String, dynamic> member) async {
+    final userId = _s(member['user_id']);
+    final name = TextEditingController(text: _s(member['display_name']));
+    final job = TextEditingController(text: _s(member['job_title']));
+    String? branchId = _s(member['branch_id']).isEmpty ? null : _s(member['branch_id']);
+    final result = await showDialog<Map<String, Object?>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(builder: (context, refresh) => AlertDialog(
+        title: const Text('بيانات المستخدم'),
+        content: SizedBox(width: 460, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم المستخدم *')),
+          const SizedBox(height: 8),
+          TextField(controller: job, decoration: const InputDecoration(labelText: 'الوظيفة')),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String?>(
+            value: branchId,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'الفرع'),
+            items: [
+              const DropdownMenuItem<String?>(value: null, child: Text('بدون فرع')),
+              ..._branches.map((branch) => DropdownMenuItem<String?>(
+                value: _s(branch['id']),
+                child: Text(_s(branch['branch_name']), overflow: TextOverflow.ellipsis),
+              )),
+            ],
+            onChanged: (value) => refresh(() => branchId = value),
+          ),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, {
+            'name': name.text,
+            'job': job.text,
+            'branch': branchId,
+          }), child: const Text('حفظ')),
+        ],
+      )),
+    );
+    name.dispose();
+    job.dispose();
+    if (result == null || !mounted) return;
+    await _saveMemberProfile(
+      userId: userId,
+      name: _s(result['name']),
+      jobTitle: _s(result['job']),
+      branchId: result['branch'] as String?,
+    );
   }
 
   Future<void> _addMember() async {
@@ -98,17 +249,43 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
+      final displayName = _memberName.text.trim();
+      if (_profilesAvailable && displayName.isEmpty) {
+        setState(() => _error = 'اكتب اسم المستخدم ليظهر في دليل المستخدمين.');
+        return;
+      }
       await _db!.from('erp_company_members').insert({
         'company_id': companyId,
         'user_id': userId,
         'member_role': _newRole,
         'is_active': true,
       });
+      String? profileWarning;
+      if (_profilesAvailable) {
+        try {
+          await _db!.from('erp_company_member_profiles').upsert({
+            'company_id': companyId,
+            'user_id': userId,
+            'display_name': displayName,
+            'job_title': _jobTitle.text.trim().isEmpty ? null : _jobTitle.text.trim(),
+            'branch_id': _newBranchId,
+            'updated_by': _db!.auth.currentUser?.id,
+          }, onConflict: 'company_id,user_id');
+        } catch (error) {
+          profileWarning = 'أُضيفت العضوية لكن تعذر حفظ الاسم والوظيفة والفرع: $error';
+        }
+      } else {
+        profileWarning = 'أُضيفت العضوية، لكن يلزم تطبيق ترحيل بيانات المستخدمين لحفظ الاسم والوظيفة والفرع.';
+      }
       if (!mounted) return;
       setState(() {
         _userId.clear();
+        _memberName.clear();
+        _jobTitle.clear();
+        _newBranchId = null;
         _saving = false;
-        _message = 'تمت إضافة المستخدم إلى الشركة.';
+        _message = profileWarning ?? 'تمت إضافة المستخدم وبياناته إلى الشركة.';
+        _error = null;
       });
       await _load();
     } catch (error) {
