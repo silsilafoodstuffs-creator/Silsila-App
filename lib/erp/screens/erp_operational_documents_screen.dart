@@ -100,8 +100,20 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         if (_selectedDocumentId != null) {
           final current = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
           if (current.isNotEmpty) {
-            _partyId = _s(widget.kind == ErpOperationalKind.purchase ? current.first['supplier_id'] : current.first['customer_id']);
-            _warehouseId = _s(current.first['warehouse_id']);
+            final documentPartyId = _s(widget.kind == ErpOperationalKind.purchase
+                ? current.first['supplier_id']
+                : current.first['customer_id']);
+            final documentWarehouseId = _s(current.first['warehouse_id']);
+
+            // A document can reference an archived party/warehouse that is
+            // intentionally absent from the active dropdown options. Never
+            // pass a value to DropdownButtonFormField that has no matching item.
+            _partyId = _parties.any((r) => _s(r['id']) == documentPartyId)
+                ? documentPartyId
+                : null;
+            _warehouseId = _warehouses.any((r) => _s(r['id']) == documentWarehouseId)
+                ? documentWarehouseId
+                : null;
           }
         }
         _loading = false;
