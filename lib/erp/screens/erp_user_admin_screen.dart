@@ -284,6 +284,25 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     await showDialog<void>(context:context,builder:(c)=>AlertDialog(title:Text('معاينة — ${_typeNames[_view]}'),content:SizedBox(width:700,child:Text('عدد السجلات: ${_rows.length}\n\n'+_rows.take(12).map((r)=>'${_s(r['name_ar'])} — ${_s(r['name_en'])}').join('\n'))),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('إغلاق'))]));
   }
 
+Widget _toolbar() => Container(
+  color: _userAdminCanvas,
+  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+  child: SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      _taskButton('تحديث', Icons.refresh_rounded, _loading ? null : _load),
+      _taskButton('إضافة', Icons.add_circle_outline_rounded, _saving ? null : _add),
+      _taskButton('حفظ', Icons.save_outlined, _saving ? null : _save),
+      _taskButton('تعديل', Icons.edit_outlined, () => setState(() => _editMode = !_editMode)),
+      _taskButton('حذف', Icons.delete_outline_rounded, _saving ? null : _delete),
+      _taskButton('معاينة', Icons.preview_outlined, _preview),
+      _taskButton('طباعة', Icons.print_outlined, _printPdf),
+      _taskButton('استيراد Excel', Icons.file_upload_outlined, _importExcel),
+      _taskButton('طباعة PDF', Icons.picture_as_pdf_outlined, _printPdf),
+    ]),
+  ),
+);
+
 Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     ErpQuickTaskButton(label: label, icon: icon, onPressed: action, compact: true);
 
