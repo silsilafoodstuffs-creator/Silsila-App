@@ -11,7 +11,12 @@ class ClassificationService {
   static SupabaseClient? get _defaultClient {
     try {
       return Supabase.instance.client;
-    } catch (_)  static final List<String> defaultActivityTypes = List<String>.unmodifiable(
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static final List<String> defaultActivityTypes = List<String>.unmodifiable(
     ActivityService.fallbackActivities
         .map((activity) => activity['name']!)
         .toList(growable: false),
