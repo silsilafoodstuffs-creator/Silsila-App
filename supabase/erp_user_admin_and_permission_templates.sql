@@ -144,6 +144,13 @@ begin
 end $$;
 drop trigger if exists erp_seed_default_user_types_trigger on public.erp_companies;
 create trigger erp_seed_default_user_types_trigger after insert on public.erp_companies for each row execute function public.erp_seed_default_user_types();
+update public.erp_user_types set show_at_login=false where name_ar in ('ادمن','موظف') and show_at_login is distinct from false;
+do $
+begin
+ if not exists(select 1 from pg_constraint where conname='erp_user_types_internal_hidden_check' and conrelid='public.erp_user_types'::regclass) then
+  alter table public.erp_user_types add constraint erp_user_types_internal_hidden_check check (name_ar not in ('ادمن','موظف') or show_at_login=false);
+ end if;
+end $;
 commit;
 
  
