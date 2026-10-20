@@ -8114,6 +8114,67 @@ class _MarketCardState extends State<MarketCard> {
     try { await _service.proposeNegotiation(postId: widget.postId, proposedPrice: price); if (!mounted) return; setState(() { _negotiationStatus = 'تم إرسال اقتراح السعر: ${price.toStringAsFixed(2)} ج.م'; _negotiationsFuture = _service.getNegotiations(widget.postId); }); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال اقتراح السعر لصاحب الطلب.'))); } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التفاوض: $e'))); }
   }
 
+  Future<void> _respondNegotiation(Map<String, dynamic> row, String action) async {
+    try {
+      await _service.respondToNegotiation(
+        negotiationId: (row['id'] ?? '').toString(),
+        action: action,
+      );
+      if (!mounted) return;
+      setState(() => _negotiationsFuture = _service.getNegotiations(widget.postId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(action == 'accept' ? 'تم قبول سعر التفاوض.' : 'تم رفض سعر التفاوض.')),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تحديث التفاوض: $e')),
+      );
+    }
+  }
+
+  Future<void> _counterNegotiation(Map<String, dynamic> row) async {
+    final controller = TextEditingController(text: (row['proposed_price'] ?? '').toString());
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تعديل سعر التفاوض'),
+        content: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'السعر الجديد بالجنيه'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('إرسال السعر المعدل')),
+        ],
+      ),
+    );
+    final price = double.tryParse(controller.text.trim());
+    controller.dispose();
+    if (confirmed != true || price == null || !price.isFinite || price <= 0) {
+      if (confirmed == true && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل سعرًا صحيحًا أكبر من صفر.')));
+      }
+      return;
+    }
+    try {
+      await _service.respondToNegotiation(
+        negotiationId: (row['id'] ?? '').toString(),
+        action: 'counter',
+        counterPrice: price,
+      );
+      if (!mounted) return;
+      setState(() => _negotiationsFuture = _service.getNegotiations(widget.postId));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تم إرسال السعر المعدل للطرف الآخر.')),
+      );
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تعديل التفاوض: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_closed) return const SizedBox.shrink();
