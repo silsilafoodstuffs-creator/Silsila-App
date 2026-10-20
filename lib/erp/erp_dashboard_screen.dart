@@ -833,13 +833,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ].join('\\r\\n');
   }
 
-  void _exportExcel() {
-    final csv = _currentPageCsv();
-    if (csv.isEmpty) { _showActionMessage('لا توجد بيانات لتصديرها من شاشة $_page'); return; }
-    Clipboard.setData(ClipboardData(text: csv));
-    _showActionMessage('تم تجهيز ملف CSV متوافق مع Excel ونسخ محتواه للحافظة. استخدم لصق في Excel ثم احفظه بصيغة XLSX.');
-  }
-
   Future<void> _importExcel() async {
     final companyId = _appManagementCompanyId;
     if (companyId == null || companyId.trim().isEmpty) {
