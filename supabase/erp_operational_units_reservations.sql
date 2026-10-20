@@ -21,15 +21,15 @@ alter table public.erp_purchase_lines
 
 update public.erp_sales_lines l
 set unit_code = i.base_unit
-from public.erp_sales_documents d
-join public.erp_items i on i.id = l.item_id
-where d.id = l.document_id and l.unit_id is null and l.unit_code = 'وحدة';
+from public.erp_sales_documents d, public.erp_items i
+where d.id = l.document_id and i.id = l.item_id
+  and l.unit_id is null and l.unit_code = 'وحدة';
 
 update public.erp_purchase_lines l
 set unit_code = i.base_unit
-from public.erp_purchase_documents d
-join public.erp_items i on i.id = l.item_id
-where d.id = l.document_id and l.unit_id is null and l.unit_code = 'وحدة';
+from public.erp_purchase_documents d, public.erp_items i
+where d.id = l.document_id and i.id = l.item_id
+  and l.unit_id is null and l.unit_code = 'وحدة';
 
 create table if not exists public.erp_stock_reservations (
   id uuid primary key default gen_random_uuid(),
