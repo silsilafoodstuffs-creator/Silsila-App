@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/erp_quick_task_button.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
@@ -936,19 +937,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ));
   }
 
-  Widget _recordAction(String label, IconData icon, Color color, VoidCallback action) => FilledButton.icon(
-    onPressed: action,
-    icon: Icon(icon, size: 16),
-    label: Text(label),
-    style: FilledButton.styleFrom(
-      foregroundColor: _purple,
-      backgroundColor: _canvas,
-      side: BorderSide(color: _purple.withValues(alpha: .18)),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
-      textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
-    ),
-  );
+  Widget _recordAction(String label, IconData icon, Color color, VoidCallback action) =>
+      ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color, compact: true);
 
   Widget _recordToolbar({bool includeAdd = true}) {
     final reports = _group == 'تقارير';
