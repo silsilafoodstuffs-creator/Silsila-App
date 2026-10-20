@@ -10,7 +10,6 @@ const _silsilaOrange = Color(0xFFFFA015);
 const _silsilaPink = Color(0xFFFF27C3);
 const _pageBackground = Color(0xFFFAF8FC);
 const _palePurple = Color(0xFFF5EFFB);
-const _ink = Color(0xFF241735);
 
 /// Professional Silsila-branded sign-in gate for the ERP web application.
 class ErpLoginGate extends StatefulWidget {
