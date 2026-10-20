@@ -5849,13 +5849,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool busy = false;
   bool obscurePassword = true;
-  bool rememberPassword = false;
+  bool rememberEmail = false;
   String activity = activityTypes.first;
   String accountType = 'عميل';
   String activityUserType = 'مستخدم رئيسي للنشاط';
 
   static const _emailKey = 'silsila_login_email';
-  static const _passwordKey = 'silsila_login_password';
+  static const _legacyPasswordKey = 'silsila_login_password';
   static const _rememberKey = 'silsila_login_remember';
 
   @override
@@ -5866,15 +5866,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadRememberedCredentials() async {
     try {
+      // Remove passwords stored by older versions; only the email may be remembered.
+      await _secureStorage.delete(key: _legacyPasswordKey);
       final remembered = await _secureStorage.read(key: _rememberKey) == 'true';
       if (!remembered) return;
       final savedEmail = await _secureStorage.read(key: _emailKey);
-      final savedPassword = await _secureStorage.read(key: _passwordKey);
       if (!mounted) return;
       setState(() {
-        rememberPassword = true;
+        rememberEmail = true;
         email.text = savedEmail ?? '';
-        password.text = savedPassword ?? '';
       });
     } catch (_) {
       // A device without secure-storage support can still log in normally.
@@ -5883,19 +5883,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _saveOrClearCredentials() async {
     try {
-      if (rememberPassword) {
+      await _secureStorage.delete(key: _legacyPasswordKey);
+      if (rememberEmail) {
         await _secureStorage.write(key: _emailKey, value: email.text.trim().toLowerCase());
-        await _secureStorage.write(key: _passwordKey, value: password.text);
         await _secureStorage.write(key: _rememberKey, value: 'true');
       } else {
         await _secureStorage.delete(key: _emailKey);
-        await _secureStorage.delete(key: _passwordKey);
         await _secureStorage.delete(key: _rememberKey);
       }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر حفظ بيانات التذكّر الآمن على هذا الجهاز.')),
+        const SnackBar(content: Text('تعذر حفظ إعداد تذكّر البريد على هذا الجهاز.')),
       );
     }
   }
@@ -6198,18 +6197,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         CheckboxListTile(
                           contentPadding: EdgeInsets.zero,
                           controlAffinity: ListTileControlAffinity.leading,
-                          value: rememberPassword,
+                          value: rememberEmail,
                           activeColor: purple,
                           title: const Text(
-                            'تذكر كلمة المرور',
+                            'تذكر البريد الإلكتروني',
                             style: TextStyle(fontWeight: FontWeight.w700),
                           ),
                           subtitle: const Text(
-                            'حفظ آمن على هذا الجهاز لتسجيل الدخول في المرات القادمة',
+                            'يتم حفظ البريد فقط؛ لا يتم تخزين كلمة المرور على الجهاز.',
                             style: TextStyle(fontSize: 12),
                           ),
                           onChanged: (value) => setState(
-                            () => rememberPassword = value ?? false,
+                            () => rememberEmail = value ?? false,
                           ),
                         ),
                         const SizedBox(height: 8),
