@@ -180,7 +180,6 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
                 ..clear()
                 ..addAll(chosen);
               for (final id in chosen) {
-                final invoice = _invoices.firstWhere((r) => _s(r['id']) == id);
                 _controller(_manualNumbers, id);
                 _controller(_weights, id, '0');
                 _controller(_loads, id, '0');
