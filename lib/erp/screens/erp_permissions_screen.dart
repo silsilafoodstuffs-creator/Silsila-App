@@ -90,9 +90,22 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       ? _tree
       : Map.fromEntries(_tree.entries.where((entry) => entry.key == _menuScope));
 
-  List<String> get _scopeKeys => _menuScope == '__all__'
-      ? _allKeys
-      : _allKeys.where((key) => key.startsWith('$_menuScope::')).toList();
+  List<String> get _scopeKeys {
+    final visible = <String>[];
+    for (final menu in _visibleTree.entries) {
+      visible.add(_key(menu.key, '*', '*'));
+      if (_expanded[menu.key] != true) continue;
+      for (final section in menu.value.entries) {
+        visible.add(_key(menu.key, section.key, '*'));
+        if (_expanded['${menu.key}::${section.key}'] == true) {
+          for (final page in section.value) {
+            visible.add(_key(menu.key, section.key, page));
+          }
+        }
+      }
+    }
+    return visible;
+  }
 
   void _setColumn(String action, bool value) {
     setState(() {
