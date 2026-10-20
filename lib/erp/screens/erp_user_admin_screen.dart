@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -103,7 +104,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       });
       if(_isTemplate && _selectedId!=null) await _loadRules();
       if(_isPermissions) await _loadUserRules();
-    } catch(e) { if(mounted)setState(()=>_loading=false,_error='تعذر تحميل البيانات: $e'); }
+    } catch(e) { if(mounted)setState((){_loading=false;_error='تعذر تحميل البيانات: $e';}); }
   }
 
   Future<void> _loadRules() async {
@@ -147,15 +148,22 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           if(_isTemplate)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true});
           if(_s(row['id']).isNotEmpty)await _db!.from(_table).update(payload).eq('company_id',_company).eq('id',row['id']);
         }
+        if(_isTemplate && _selectedId!=null){
+          for(final rule in _rules){
+            final payload=<String,dynamic>{'company_id':_company,'template_id':_selectedId,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};
+            for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;
+            await _db!.from('erp_permission_template_rules').upsert(payload,onConflict:'template_id,menu_name,submenu_name,page_name');
+          }
+        }
       } else {
-        final table=_isTemplate?'erp_permission_template_rules':'erp_user_permission_matrix';
-        final parentKey=_isTemplate?'template_id':'user_id';
-        final parentId=_isTemplate?_selectedId:_selectedUserId;
+        final table='erp_user_permission_matrix';
+        final parentKey='user_id';
+        final parentId=_selectedUserId;
         if(parentId==null)throw StateError('اختر قالبًا أو مستخدمًا أولًا.');
         for(final rule in _rules){
           final payload=<String,dynamic>{'company_id':_company,parentKey:parentId,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};
           for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;
-          await _db!.from(table).upsert(payload,onConflict:_isTemplate?'template_id,menu_name,submenu_name,page_name':'user_id,menu_name,submenu_name,page_name');
+          await _db!.from(table).upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');
         }
       }
       if(mounted)setState(()=>_message='تم حفظ التغييرات في قاعدة البيانات.');
@@ -198,7 +206,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             for(final sub in menu.value.entries)
               ExpansionTile(tilePadding:const EdgeInsetsDirectional.only(start:18,end:8),title:Text(sub.key,style:const TextStyle(fontWeight:FontWeight.w700)),children:[
                 for(final page in sub.value)
-                  CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:28,end:8),title:Text(page),value:selected.contains('$menu.key|$sub.key|$page'),onChanged:(v)=>refresh(()=>v==true?selected.add('$menu.key|$sub.key|$page'):selected.remove('$menu.key|$sub.key|$page')),
+                  CheckboxListTile(dense:true,contentPadding:const EdgeInsetsDirectional.only(start:28,end:8),title:Text(page),value:selected.contains('${menu.key}|${sub.key}|${page}'),onChanged:(v)=>refresh(()=>v==true?selected.add('${menu.key}|${sub.key}|${page}'):selected.remove('$menu.key|$sub.key|$page')),
                   ),
               ]),
           ]),
@@ -364,7 +372,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if(_message!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_message!,style:const TextStyle(color:Colors.green))),
       if(_isPermissions)Padding(padding:const EdgeInsets.all(8),child:Text('حدد المستخدم ثم عيّن صلاحيات كل شاشة باستخدام أعمدة المهام التسعة. زر جلب المستخدمين يتيح الاختيار من القائمة.',style:TextStyle(color:Colors.grey.shade700))),
       Expanded(child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        if(_isPermissions||_isTemplate)_ruleGrid() else _masterGrid(),
+        if(_isPermissions) _ruleGrid() else if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
         if(_isPermissions)Align(alignment:AlignmentDirectional.centerStart,child:Padding(padding:const EdgeInsets.only(top:8),child:OutlinedButton.icon(onPressed:()=>_openUserPicker(),icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')))),
       ]))))),
     ]));
