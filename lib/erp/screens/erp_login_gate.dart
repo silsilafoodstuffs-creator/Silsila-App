@@ -29,6 +29,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   bool _busy = false;
   bool _obscurePassword = true;
   bool _rememberPassword = false;
+  bool _recoveryInProgress = false;
   String _activity = 'مواد غذائية';
   String _accountType = 'إدارة نشاط';
   String _activityUserType = 'مستخدم رئيسي للنشاط';
@@ -53,7 +54,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
       _authSubscription = client.auth.onAuthStateChange.listen((state) {
         if (!mounted) return;
         setState(() {
-          _signedIn = state.session != null;
+          _signedIn = state.session != null && !_recoveryInProgress;
           _loading = false;
           if (_signedIn) _error = null;
         });
@@ -112,6 +113,243 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
       setState(() => _error = 'تعذر تسجيل الدخول. تحقق من الاتصال ورقم الهاتف وكلمة المرور.');
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+
+  String _asciiDigits(String value) => value.replaceAllMapped(RegExp(r'[٠-٩۰-۹]'), (match) {
+    final code = match.group(0)!.codeUnitAt(0);
+    return String.fromCharCode(0x30 + (code >= 0x0660 && code <= 0x0669 ? code - 0x0660 : code - 0x06F0));
+  });
+
+  String? _validateNewPassword(String value) {
+    if (value.length < 8 || !RegExp(r'[A-Z]').hasMatch(value) ||
+        !RegExp(r'[a-z]').hasMatch(value) || !RegExp(r'[0-9]').hasMatch(value) ||
+        !RegExp(r'[^A-Za-z0-9]').hasMatch(value)) {
+      return 'استخدم 8 أحرف على الأقل مع حرف كبير وصغير ورقم ورمز.';
+    }
+    return null;
+  }
+
+  Future<void> _openRegisterDialog({required bool newActivity}) async {
+    final name = TextEditingController();
+    final phone = TextEditingController(text: _phone.text.trim());
+    final password = TextEditingController();
+    final confirmation = TextEditingController();
+    final otp = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    var otpStep = false, busy = false, obscure = true, obscureConfirm = true;
+    var error = '', activity = _activity;
+    var accountType = newActivity ? 'إدارة نشاط' : _accountType;
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: StatefulBuilder(
+            builder: (context, refresh) => AlertDialog(
+              title: Text(newActivity ? 'إنشاء نشاط جديد' : 'إنشاء مستخدم جديد'),
+              content: SizedBox(
+                width: 440,
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: formKey,
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      if (!otpStep) ...[
+                        TextFormField(controller: name, decoration: const InputDecoration(labelText: 'اسم النشاط أو صاحب الحساب'), validator: (v) => v == null || v.trim().isEmpty ? 'اكتب الاسم' : null),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          value: activity, isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'نوع النشاط'),
+                          items: _activityTypes.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                          onChanged: (v) { if (v != null) refresh(() => activity = v); },
+                        ),
+                        if (!newActivity) ...[
+                          const SizedBox(height: 10),
+                          DropdownButtonFormField<String>(
+                            value: accountType, isExpanded: true,
+                            decoration: const InputDecoration(labelText: 'نوع الحساب'),
+                            items: const [
+                              DropdownMenuItem(value: 'عميل', child: Text('عميل')),
+                              DropdownMenuItem(value: 'مورد', child: Text('مورد')),
+                              DropdownMenuItem(value: 'مندوب', child: Text('مندوب')),
+                              DropdownMenuItem(value: 'شركة شحن', child: Text('شركة شحن')),
+                              DropdownMenuItem(value: 'إدارة نشاط', child: Text('إدارة نشاط')),
+                            ],
+                            onChanged: (v) { if (v != null) refresh(() => accountType = v); },
+                          ),
+                        ],
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: phone, keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(labelText: 'رقم الهاتف'),
+                          validator: (v) {
+                            final digits = _asciiDigits(v ?? '').replaceAll(RegExp(r'\D'), '');
+                            return digits.length < 10 || digits.length > 15 ? 'أدخل رقم هاتف صحيحًا' : null;
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: password, obscureText: obscure,
+                          decoration: InputDecoration(
+                            labelText: 'كلمة المرور', helperText: '8 أحرف على الأقل مع حرف كبير وصغير ورقم ورمز',
+                            suffixIcon: IconButton(onPressed: () => refresh(() => obscure = !obscure), icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined)),
+                          ),
+                          validator: (v) => _validateNewPassword(v ?? ''),
+                        ),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: confirmation, obscureText: obscureConfirm,
+                          decoration: InputDecoration(
+                            labelText: 'تأكيد كلمة المرور',
+                            suffixIcon: IconButton(onPressed: () => refresh(() => obscureConfirm = !obscureConfirm), icon: Icon(obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined)),
+                          ),
+                          validator: (v) => v != password.text ? 'كلمتا المرور غير متطابقتين' : null,
+                        ),
+                      ] else ...[
+                        const Text('أدخل رمز التحقق الذي أُرسل إلى الهاتف لاستكمال التسجيل.'),
+                        const SizedBox(height: 10),
+                        TextFormField(controller: otp, keyboardType: TextInputType.number, maxLength: 6, decoration: const InputDecoration(labelText: 'رمز التحقق'), validator: (v) => _asciiDigits(v ?? '').trim().length == 6 ? null : 'أدخل رمزًا من 6 أرقام'),
+                      ],
+                      if (error.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Align(alignment: Alignment.centerRight, child: Text(error, style: const TextStyle(color: Color(0xFFB42318), height: 1.5))),
+                      ],
+                    ]),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: _silsilaPurple),
+                  onPressed: busy ? null : () async {
+                    if (!formKey.currentState!.validate()) return;
+                    refresh(() { busy = true; error = ''; });
+                    try {
+                      final client = Supabase.instance.client;
+                      if (!otpStep) {
+                        final response = await client.auth.signUp(
+                          phone: _normalizePhone(_asciiDigits(phone.text)),
+                          password: password.text,
+                          data: {
+                            'full_name': name.text.trim(),
+                            'account_type': newActivity ? 'إدارة نشاط' : accountType,
+                            'activity_type': activity,
+                            'activity_user_type': newActivity ? 'مستخدم رئيسي للنشاط' : _activityUserType,
+                          },
+                        );
+                        if (response.user == null) throw StateError('لم يتم إنشاء الحساب.');
+                        if (response.session != null) {
+                          if (mounted) setState(() { _signedIn = true; _phone.text = phone.text; });
+                          if (dialogContext.mounted) Navigator.pop(dialogContext);
+                        } else {
+                          refresh(() { otpStep = true; busy = false; });
+                        }
+                      } else {
+                        await client.auth.verifyOTP(phone: _normalizePhone(_asciiDigits(phone.text)), token: _asciiDigits(otp.text.trim()), type: OtpType.sms);
+                        if (mounted) setState(() { _signedIn = client.auth.currentSession != null; _phone.text = phone.text; });
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      }
+                    } on AuthException catch (e) {
+                      refresh(() { error = e.message; busy = false; });
+                    } catch (e) {
+                      refresh(() { error = e.toString().replaceFirst('Exception: ', ''); busy = false; });
+                    } finally {
+                      if (dialogContext.mounted && busy) refresh(() => busy = false);
+                    }
+                  },
+                  child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(otpStep ? 'تأكيد التسجيل' : 'إنشاء الحساب'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } finally {
+      name.dispose(); phone.dispose(); password.dispose(); confirmation.dispose(); otp.dispose();
+    }
+  }
+
+  Future<void> _openPasswordRecovery() async {
+    final phone = TextEditingController(text: _phone.text.trim());
+    final code = TextEditingController();
+    final password = TextEditingController();
+    final confirmation = TextEditingController();
+    var codeSent = false, busy = false, obscure = true, obscureConfirm = true;
+    var error = '';
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: StatefulBuilder(
+            builder: (context, refresh) => AlertDialog(
+              title: const Text('استعادة كلمة المرور'),
+              content: SizedBox(
+                width: 420,
+                child: SingleChildScrollView(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف المسجل', prefixIcon: Icon(Icons.phone_android))),
+                    if (codeSent) ...[
+                      const SizedBox(height: 10),
+                      TextField(controller: code, keyboardType: TextInputType.number, maxLength: 6, decoration: const InputDecoration(labelText: 'رمز التحقق')),
+                      const SizedBox(height: 10),
+                      TextField(controller: password, obscureText: obscure, decoration: InputDecoration(labelText: 'كلمة المرور الجديدة', suffixIcon: IconButton(onPressed: () => refresh(() => obscure = !obscure), icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined)))),
+                      const SizedBox(height: 10),
+                      TextField(controller: confirmation, obscureText: obscureConfirm, decoration: InputDecoration(labelText: 'تأكيد كلمة المرور الجديدة', suffixIcon: IconButton(onPressed: () => refresh(() => obscureConfirm = !obscureConfirm), icon: Icon(obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined)))),
+                    ],
+                    if (error.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Align(alignment: Alignment.centerRight, child: Text(error, style: const TextStyle(color: Color(0xFFB42318), height: 1.5))),
+                    ],
+                  ]),
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: _silsilaPurple),
+                  onPressed: busy ? null : () async {
+                    if (phone.text.trim().isEmpty) { refresh(() => error = 'أدخل رقم الهاتف المسجل.'); return; }
+                    final token = _asciiDigits(code.text.trim());
+                    if (codeSent) {
+                      final validation = _validateNewPassword(password.text);
+                      if (token.length != 6 || int.tryParse(token) == null) { refresh(() => error = 'أدخل رمز التحقق المكوّن من 6 أرقام.'); return; }
+                      if (validation != null || password.text != confirmation.text) { refresh(() => error = validation ?? 'كلمتا المرور غير متطابقتين.'); return; }
+                    }
+                    refresh(() { busy = true; error = ''; });
+                    try {
+                      final client = Supabase.instance.client;
+                      if (!codeSent) {
+                        await client.auth.signInWithOtp(phone: _normalizePhone(_asciiDigits(phone.text)), shouldCreateUser: false);
+                        refresh(() { codeSent = true; busy = false; });
+                      } else {
+                        if (mounted) setState(() => _recoveryInProgress = true);
+                        await client.auth.verifyOTP(phone: _normalizePhone(_asciiDigits(phone.text)), token: token, type: OtpType.sms);
+                        await client.auth.updateUser(UserAttributes(password: password.text));
+                        if (mounted) setState(() { _recoveryInProgress = false; _signedIn = client.auth.currentSession != null; _phone.text = phone.text; });
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      }
+                    } on AuthException catch (e) {
+                      if (mounted && _recoveryInProgress) setState(() => _recoveryInProgress = false);
+                      refresh(() { error = e.message; busy = false; });
+                    } catch (_) {
+                      if (mounted && _recoveryInProgress) setState(() => _recoveryInProgress = false);
+                      refresh(() { error = 'تعذر إكمال العملية. تحقق من الرمز وإعدادات رسائل الهاتف.'; busy = false; });
+                    } finally {
+                      if (dialogContext.mounted && busy) refresh(() => busy = false);
+                    }
+                  },
+                  child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(codeSent ? 'تأكيد الرمز وتحديث كلمة المرور' : 'إرسال رمز التحقق'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    } finally {
+      phone.dispose(); code.dispose(); password.dispose(); confirmation.dispose();
     }
   }
 
@@ -346,19 +584,19 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _showHelp('استعادة كلمة المرور', 'لاستعادة كلمة المرور، استخدم خيار الاستعادة في تطبيق سلسلة أو تواصل مع مسؤول النظام للتحقق من رقم الهاتف المسجل وإعادة تفعيل الحساب.', Icons.lock_reset_rounded),
+                  onPressed: _openPasswordRecovery,
                   child: const Text('نسيت كلمة المرور؟'),
                 ),
                 const Divider(height: 22),
                 OutlinedButton.icon(
-                  onPressed: () => _showHelp('إنشاء مستخدم جديد', 'يتم إنشاء الحساب من خلال تطبيق سلسلة، ثم يضيف مدير النشاط المستخدم إلى الشركة ويحدد صلاحياته قبل دخوله إلى نظام الإدارة.', Icons.person_add_alt_1_rounded),
+                  onPressed: () => _openRegisterDialog(newActivity: false),
                   icon: const Icon(Icons.person_add_alt_1_rounded),
                   label: const Text('إنشاء مستخدم جديد'),
                   style: OutlinedButton.styleFrom(foregroundColor: _silsilaPurple, side: const BorderSide(color: _silsilaPurple), padding: const EdgeInsets.symmetric(vertical: 13)),
                 ),
                 const SizedBox(height: 8),
                 FilledButton.icon(
-                  onPressed: () => _showHelp('إنشاء نشاط جديد', 'ابدأ بإنشاء حسابك في تطبيق سلسلة، ثم افتح نظام الإدارة لاستكمال بيانات الشركة. يلزم تسجيل الدخول بحساب فعلي قبل حفظ بيانات الشركة.', Icons.add_business_rounded),
+                  onPressed: () => _openRegisterDialog(newActivity: true),
                   icon: const Icon(Icons.add_business_rounded),
                   label: const Text('إنشاء نشاط جديد'),
                   style: FilledButton.styleFrom(backgroundColor: _silsilaOrange, foregroundColor: _silsilaPurple, padding: const EdgeInsets.symmetric(vertical: 13)),
