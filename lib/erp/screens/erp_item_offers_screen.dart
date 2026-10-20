@@ -175,7 +175,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         const SizedBox(height: 6),
         Text('من ${_from.toIso8601String().substring(0, 10)} إلى ${_to.toIso8601String().substring(0, 10)}'),
         const SizedBox(height: 6),
-        Text('الأصناف المحددة: ${_selectedProductIds.length}'),
+        Text('الأصناف المحددة: ${_offerLines.length}'),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
     ));

@@ -195,7 +195,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _lists.take(100).map((r) => ListTile(
           dense: true, title: Text('${_s(r['list_code'])} — ${_s(r['list_name'])}'),
           subtitle: Text('${r['is_default'] == true ? 'افتراضية' : 'عادية'} • ${_s(r['currency_code'])}'),
-          onTap: () { Navigator.pop(ctx); setState(() => _selectedListId = _s(r['id'])); _loadLines(_s(r['id'])); },
+          onTap: () { Navigator.pop(ctx); setState(() => _selectedListId = _s(r['id'])); _loadLines(); },
         )).toList()))),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
     ));

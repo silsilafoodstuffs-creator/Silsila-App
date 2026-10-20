@@ -189,7 +189,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
         : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _runs.take(100).map((r) => ListTile(
           dense: true, title: Text('${_s(r['run_code'])} — ${_s(r['status'])}'),
           subtitle: Text('${_s(r['period_start'])} إلى ${_s(r['period_end'])}'),
-          onTap: () { Navigator.pop(ctx); setState(() => _selectedRunId = _s(r['id'])); _loadLines(_s(r['id'])); },
+          onTap: () { Navigator.pop(ctx); setState(() => _selectedRunId = _s(r['id'])); _loadLines(); },
         )).toList()))),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
     ));
