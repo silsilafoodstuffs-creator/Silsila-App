@@ -48,6 +48,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   List<Map<String, dynamic>> _lines = [];
   // Rows chosen in F11 remain a local invoice preview until the user confirms saving them.
   List<Map<String, dynamic>> _pendingLines = [];
+  Map<String, List<Map<String, dynamic>>> _unitsByItem = {};
   String? _partyId;
   String? _warehouseId;
   String? _itemId;
@@ -90,6 +91,79 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
+
+  double get _pendingGross => _pendingLines.fold<double>(
+    0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']),
+  );
+  double get _pendingLineDiscounts => _pendingLines.fold<double>(
+    0, (sum, line) => sum + _n(line['discount']),
+  );
+  double get _invoiceDiscountValue => double.tryParse(_invoiceDiscountAmount.text.trim()) ?? 0;
+
+  void _recalculatePendingTax() {
+    for (final line in _pendingLines) {
+      final gross = _n(line['quantity']) * _n(line['unit_price']);
+      final discount = _n(line['discount']);
+      final rate = _isTaxInvoice ? _n(line['tax_rate']) : 0.0;
+      line['tax'] = ((gross - discount).clamp(0, double.infinity) * rate / 100 * 100).roundToDouble() / 100;
+      if (!_isTaxInvoice) line['tax_rate'] = 0.0;
+    }
+  }
+
+  void _updatePendingLine(
+    int index, {
+    double? quantity,
+    double? discountAmount,
+    double? discountPercent,
+    String? unitId,
+  }) {
+    if (index < 0 || index >= _pendingLines.length) return;
+    setState(() {
+      final line = Map<String, dynamic>.from(_pendingLines[index]);
+      final oldGross = _n(line['quantity']) * _n(line['unit_price']);
+      if (quantity != null) line['quantity'] = quantity < 0 ? 0.0 : quantity;
+      if (unitId != null) {
+        final options = _unitsByItem[_s(line['item_id'])] ?? [];
+        if (options.isNotEmpty) {
+          final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
+          final oldFactor = _n(line['conversion_factor']) <= 0 ? 1.0 : _n(line['conversion_factor']);
+          final newFactor = _n(unit['conversion_factor']) <= 0 ? 1.0 : _n(unit['conversion_factor']);
+          final ratio = newFactor / oldFactor;
+          line['base_price'] = _n(line['base_price']) * ratio;
+          line['policy_price'] = _n(line['policy_price']) * ratio;
+          line['adjusted_price'] = _n(line['adjusted_price']) * ratio;
+          line['unit_price'] = _n(line['unit_price']) * ratio;
+          line['conversion_factor'] = newFactor;
+          line['unit_id'] = unitId.isEmpty ? null : unitId;
+          line['unit_name'] = _s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']);
+        }
+      }
+      final gross = _n(line['quantity']) * _n(line['unit_price']);
+      if (discountAmount != null) {
+        line['discount'] = discountAmount.clamp(0, gross);
+        line['discount_percent'] = gross <= 0 ? 0.0 : _n(line['discount']) * 100 / gross;
+      } else if (discountPercent != null) {
+        final percent = discountPercent.clamp(0, 100);
+        line['discount_percent'] = percent;
+        line['discount'] = gross * percent / 100;
+      } else if (quantity != null || unitId != null) {
+        final percent = _n(line['discount_percent']);
+        line['discount'] = gross * percent / 100;
+      }
+      final rate = _isTaxInvoice ? _n(line['tax_rate']) : 0.0;
+      line['tax'] = ((gross - _n(line['discount'])).clamp(0, double.infinity) * rate / 100 * 100).roundToDouble() / 100;
+      if (!_isTaxInvoice) line['tax_rate'] = 0.0;
+      _pendingLines[index] = line;
+      final subtotal = _pendingGross;
+      final currentPercent = double.tryParse(_invoiceDiscountPercent.text.trim()) ?? 0;
+      if (currentPercent > 0 && subtotal >= 0) {
+        _invoiceDiscountAmount.text = (subtotal * currentPercent / 100).toStringAsFixed(2);
+      } else if (oldGross != gross && _invoiceDiscountValue > subtotal) {
+        _invoiceDiscountAmount.text = _money(subtotal);
+        _invoiceDiscountPercent.text = subtotal <= 0 ? '0' : '100';
+      }
+    });
+  }
 
   Future<void> _load({bool clearMessage = true}) async {
     if (_company.text.trim().isEmpty) {
@@ -349,6 +423,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     for (final unit in unitRows) {
       unitsByItem.putIfAbsent(_s(unit['item_id']), () => []).add(unit);
     }
+    if (mounted) setState(() => _unitsByItem = unitsByItem);
+
     final actual = <String, double>{};
     final reserved = <String, double>{};
     for (final row in balanceRows) {
@@ -584,7 +660,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           'adjusted_price': adjustedPrice,
           'discount_percent': discountPercent,
           'discount_limit': _n(item['discount_limit']),
-          'unit_price': unitPrice,
+          'conversion_factor': factor,
+          'unit_price': adjustedPrice,
           'discount': discount,
           'tax': tax,
           'tax_rate': taxRate,
@@ -824,10 +901,19 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'المخزن: ${_warehouseLabel(_warehouseId)}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            'المخزن الافتراضي / المحدد',
                             style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w700, fontSize: 12),
+                          ),
+                          const SizedBox(height: 2),
+                          DropdownButtonFormField<String>(
+                            value: _warehouses.any((row) => _s(row['id']) == _warehouseId) ? _warehouseId : null,
+                            isExpanded: true,
+                            decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+                            items: _warehouses.map((row) => DropdownMenuItem<String>(
+                              value: _s(row['id']),
+                              child: Text(_warehouseLabel(_s(row['id'])), overflow: TextOverflow.ellipsis),
+                            )).toList(),
+                            onChanged: (value) => setState(() => _warehouseId = value),
                           ),
                         ],
                       ),
@@ -841,11 +927,35 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                             'مسلسل الفاتورة: ${_rows.where((row) => _s(row['id']) == _selectedDocumentId).isEmpty ? 'يُنشأ عند الحفظ' : _s(_rows.where((row) => _s(row['id']) == _selectedDocumentId).first['auto_number'])}',
                             style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
                           Text(
-                            'قيمة الأصناف: ${_money(_pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']) - _n(line['discount']) + _n(line['tax'])))} ج.م',
+                            'قيمة الأصناف: ${_money(_pendingGross)} ج.م',
                             style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900),
                           ),
+                          const SizedBox(height: 6),
+                          Row(children: [
+                            Expanded(child: TextField(
+                              controller: _invoiceDiscountAmount,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'خصم الفاتورة بالقيمة', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10)),
+                              onChanged: (value) {
+                                final subtotal = _pendingGross;
+                                final amount = double.tryParse(value) ?? 0;
+                                _invoiceDiscountPercent.text = subtotal <= 0 ? '0' : (amount * 100 / subtotal).toStringAsFixed(2);
+                                setState(() {});
+                              },
+                            )),
+                            const SizedBox(width: 6),
+                            Expanded(child: TextField(
+                              controller: _invoiceDiscountPercent,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'خصم الفاتورة %', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10)),
+                              onChanged: (value) {
+                                _invoiceDiscountAmount.text = (_pendingGross * ((double.tryParse(value) ?? 0) / 100)).toStringAsFixed(2);
+                                setState(() {});
+                              },
+                            )),
+                          ]),
                         ],
                       ),
                     ),
@@ -864,7 +974,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 value: _isTaxInvoice,
                 title: const Text('فاتورة ضريبية'),
                 subtitle: const Text('الافتراضي فاتورة غير ضريبية؛ عند التفعيل تُحتسب ضريبة الأصناف وفق بياناتها.'),
-                onChanged: (value) => setState(() => _isTaxInvoice = value ?? false),
+                onChanged: (value) => setState(() {
+                  _isTaxInvoice = value ?? false;
+                  _recalculatePendingTax();
+                }),
               ),
             ],
             const SizedBox(height: 8),
@@ -948,42 +1061,14 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               ),
             ],
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _warehouseId, isExpanded: true,
-              decoration: const InputDecoration(labelText: 'المخزن', border: OutlineInputBorder()),
-              items: _warehouses.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_warehouseLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
-              onChanged: (v) => setState(() => _warehouseId = v),
-            ),
-            Align(alignment: Alignment.centerRight, child: Text('المخزن المحدد: ${_warehouseLabel(_warehouseId)}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF3E007D)))),
-            if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice') ...[
-              const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: TextField(
-                  controller: _invoiceDiscountAmount,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'خصم الفاتورة بالقيمة', border: OutlineInputBorder(), isDense: true),
-                  onChanged: (value) {
-                    final subtotal = _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']));
-                    final amount = double.tryParse(value) ?? 0;
-                    if (subtotal > 0) _invoiceDiscountPercent.text = (amount * 100 / subtotal).toStringAsFixed(2);
-                    setState(() {});
-                  },
-                )),
-                const SizedBox(width: 8),
-                Expanded(child: TextField(
-                  controller: _invoiceDiscountPercent,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'خصم الفاتورة %', border: OutlineInputBorder(), isDense: true),
-                  onChanged: (value) {
-                    final subtotal = _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']));
-                    final percent = double.tryParse(value) ?? 0;
-                    _invoiceDiscountAmount.text = (subtotal * percent / 100).toStringAsFixed(2);
-                    setState(() {});
-                  },
-                )),
-              ]),
-              const SizedBox(height: 4),
-              const Text('تحديث الخصم يعرض القيمة المكافئة حسب إجمالي معاينة الأصناف الحالية.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+            if (!(widget.kind == ErpOperationalKind.sales && _documentType == 'invoice')) ...[
+              DropdownButtonFormField<String>(
+                value: _warehouses.any((row) => _s(row['id']) == _warehouseId) ? _warehouseId : null, isExpanded: true,
+                decoration: const InputDecoration(labelText: 'المخزن', border: OutlineInputBorder()),
+                items: _warehouses.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_warehouseLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
+                onChanged: (v) => setState(() => _warehouseId = v),
+              ),
+              Align(alignment: Alignment.centerRight, child: Text('المخزن المحدد: ${_warehouseLabel(_warehouseId)}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF3E007D)))),
             ],
             const SizedBox(height: 8),
             TextField(controller: _notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات', border: OutlineInputBorder())),
@@ -1072,13 +1157,54 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                         DataCell(Text('${index + 1}')),
                         DataCell(Text(_s(line['item_code']))),
                         DataCell(Text(_s(line['item_name']))),
-                        DataCell(Text(_money(line['quantity']))),
-                        DataCell(Text(_s(line['unit_name']))),
+                        DataCell(SizedBox(
+                          width: 84,
+                          child: TextFormField(
+                            key: ValueKey('preview-qty-$index-${_s(line['item_id'])}'),
+                            initialValue: _money(line['quantity']),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8), border: OutlineInputBorder()),
+                            onChanged: (value) => _updatePendingLine(index, quantity: double.tryParse(value) ?? 0),
+                          ),
+                        )),
+                        DataCell(SizedBox(
+                          width: 135,
+                          child: DropdownButtonFormField<String>(
+                            value: (_unitsByItem[_s(line['item_id'])] ?? []).any((unit) => _s(unit['id']) == _s(line['unit_id']))
+                                ? _s(line['unit_id'])
+                                : ((_unitsByItem[_s(line['item_id'])] ?? []).isNotEmpty ? _s((_unitsByItem[_s(line['item_id'])]!).first['id']) : null),
+                            isDense: true,
+                            decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6), border: OutlineInputBorder()),
+                            items: (_unitsByItem[_s(line['item_id'])] ?? []).map((unit) => DropdownMenuItem<String>(
+                              value: _s(unit['id']),
+                              child: Text(_s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']), overflow: TextOverflow.ellipsis),
+                            )).toList(),
+                            onChanged: (_unitsByItem[_s(line['item_id'])] ?? []).isEmpty ? null : (value) { if (value != null) _updatePendingLine(index, unitId: value); },
+                          ),
+                        )),
                         DataCell(Text(_money(line['base_price'] ?? line['unit_price']))),
                         DataCell(Text(_money(line['policy_price'] ?? line['unit_price']))),
                         DataCell(Text(_money(line['adjusted_price'] ?? line['unit_price']))),
-                        DataCell(Text(_money(line['discount']))),
-                        DataCell(Text(_money(line['discount_percent']))),
+                        DataCell(SizedBox(
+                          width: 95,
+                          child: TextFormField(
+                            key: ValueKey('preview-disc-$index-${_s(line['item_id'])}'),
+                            initialValue: _money(line['discount']),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8), border: OutlineInputBorder()),
+                            onChanged: (value) => _updatePendingLine(index, discountAmount: double.tryParse(value) ?? 0),
+                          ),
+                        )),
+                        DataCell(SizedBox(
+                          width: 78,
+                          child: TextFormField(
+                            key: ValueKey('preview-disc-pct-$index-${_s(line['item_id'])}'),
+                            initialValue: _money(line['discount_percent']),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8), border: OutlineInputBorder()),
+                            onChanged: (value) => _updatePendingLine(index, discountPercent: double.tryParse(value) ?? 0),
+                          ),
+                        )),
                         DataCell(Text(_isTaxInvoice ? '${_money(line['tax_rate'])}%' : '—')),
                         DataCell(Text(_isTaxInvoice ? _money(line['tax']) : '—')),
                         DataCell(Text(_money(total), style: const TextStyle(fontWeight: FontWeight.w900))),
@@ -1093,9 +1219,24 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 ),
                 const Divider(),
                 Row(children: [
-                  const Expanded(child: Text('إجمالي الأصناف بالمعاينة', style: TextStyle(fontWeight: FontWeight.w900))),
+                  const Expanded(child: Text('قيمة الأصناف قبل خصم الفاتورة', style: TextStyle(fontWeight: FontWeight.w900))),
+                  Text('${_money(_pendingGross - _pendingLineDiscounts)} ج.م', style: const TextStyle(fontWeight: FontWeight.w800)),
+                ]),
+                const SizedBox(height: 4),
+                Row(children: [
+                  const Expanded(child: Text('ضريبة الأصناف', style: TextStyle(fontWeight: FontWeight.w700))),
+                  Text('${_money(_isTaxInvoice ? _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['tax'])) : 0)} ج.م'),
+                ]),
+                const SizedBox(height: 4),
+                Row(children: [
+                  const Expanded(child: Text('خصم الفاتورة', style: TextStyle(fontWeight: FontWeight.w700))),
+                  Text('${_money(_invoiceDiscountValue)} ج.م'),
+                ]),
+                const Divider(),
+                Row(children: [
+                  const Expanded(child: Text('صافي الإجمالي بالمعاينة', style: TextStyle(fontWeight: FontWeight.w900))),
                   Text(
-                    '${_money(_pendingLines.fold<double>(0, (sum, line) => sum + (_n(line['quantity']) * _n(line['unit_price']) - _n(line['discount']) + _n(line['tax']))))} ج.م',
+                    '${_money((_pendingGross - _pendingLineDiscounts - _invoiceDiscountValue + (_isTaxInvoice ? _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['tax'])) : 0)).clamp(0, double.infinity))} ج.م',
                     style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 18),
                   ),
                 ]),
