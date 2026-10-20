@@ -30,6 +30,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   bool _obscurePassword = true;
   bool _rememberPassword = false;
   bool _recoveryInProgress = false;
+  bool _newActivityPending = false;
   String _activity = 'مواد غذائية';
   String _accountType = 'إدارة نشاط';
   String _activityUserType = 'مستخدم رئيسي للنشاط';
@@ -132,6 +133,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   }
 
   Future<void> _openRegisterDialog({required bool newActivity}) async {
+    _newActivityPending = newActivity;
     final name = TextEditingController();
     final phone = TextEditingController(text: _phone.text.trim());
     final password = TextEditingController();
@@ -267,6 +269,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
         ),
       );
     } finally {
+      if (!_signedIn) _newActivityPending = false;
       name.dispose(); phone.dispose(); password.dispose(); confirmation.dispose(); otp.dispose();
     }
   }
@@ -708,7 +711,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (_signedIn) return const ErpDashboardScreen();
+    if (_signedIn) return ErpDashboardScreen(initialPage: _newActivityPending ? 'بيانات الشركة' : null);
 
     return Directionality(
       textDirection: TextDirection.rtl,
