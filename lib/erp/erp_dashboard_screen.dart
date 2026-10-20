@@ -952,17 +952,22 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _recordToolbar({bool includeAdd = true}) {
     final reports = _group == 'تقارير';
-    return Wrap(spacing: 7, runSpacing: 7, children: [
-      _recordAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), () => _loadWorkspacePage(_page)),
-      if (!reports && includeAdd) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
-      if (!reports) _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
-      if (!reports) _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
-      if (!reports) _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _deleteCurrentRecord),
-      _recordAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), () => _showPrintPreview(pdf: false)),
-      _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
-      _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
-      _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printCurrentPagePdf),
-    ]);
+    // Keep the task actions on one horizontal line at every viewport width.
+    // Narrow screens can scroll the toolbar horizontally instead of wrapping.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        _recordAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), () => _loadWorkspacePage(_page)),
+        if (!reports && includeAdd) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
+        if (!reports) _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
+        if (!reports) _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
+        if (!reports) _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _deleteCurrentRecord),
+        _recordAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), () => _showPrintPreview(pdf: false)),
+        _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
+        _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
+        _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printCurrentPagePdf),
+      ]),
+    );
   }
 
   @override
