@@ -399,6 +399,12 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
               ),
               FilledButton.icon(
                 onPressed: () {
+                  if (chosen.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('اختر مستخدمًا واحدًا على الأقل، أو استخدم تحديد الكل.')),
+                    );
+                    return;
+                  }
                   setState(() {
                     _selectedUsers
                       ..clear()
