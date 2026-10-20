@@ -81,5 +81,9 @@ COMMIT;
 2. `erp_cost_centers_schema.sql` — هيكل مراكز التكلفة وسياسات الوصول والتحقق من التسلسل الهرمي.
 3. `erp_user_permissions.sql` — مصفوفة صلاحيات المستخدمين.
 4. `erp_cost_centers_standard_template.sql` — إجراء إنشاء هيكل مراكز تكلفة مقترح لتوزيع الجملة. هذا قالب إداري قابل للتعديل وليس قائمة مفروضة بنص معايير المحاسبة المصرية.
+5. `erp_company_logo_storage.sql` — مخزن خاص لصور المنشآت مع سياسات وصول حسب عضوية الشركة ودور المالك/المدير.
+6. `erp_operational_units_reservations.sql` — وحدات بديلة وتحويلها للوحدة الأساسية، مسلسل تلقائي وتوقيت دقيق للمستندات، حجز مخزون لكل سطر بيع، وإضافة عدة أصناف في معاملة واحدة.
+
+**ترتيب مهم لترحيل دورة المستندات:** لا تشغّل `erp_operational_units_reservations.sql` إلا بعد نجاح `erp_schema.sql` و`erp_master_data_schema.sql` و`erp_operations_schema.sql` و`erp_operations_workflow.sql` و`erp_inventory_workflow.sql` و`erp_security_membership.sql`. ثم شغّل ترحيل الوحدات والحجوزات مرة واحدة. لا تشغّل ترحيل صور المنشأة قبل وجود `erp_companies` ودوال `erp_user_can_access_company` و`erp_user_has_company_role`.
 
 لا تشغّل ملفات التهيئة قبل التأكد من وجود جداول `erp_companies` و`erp_company_members` و`erp_branches` ودوال التحقق من عضوية الشركة. ملفات SQL في المستودع لا تُطبّق تلقائيًا على مشروع Supabase.
