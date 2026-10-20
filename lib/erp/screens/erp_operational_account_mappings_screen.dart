@@ -84,13 +84,40 @@ class _ErpOperationalAccountMappingsScreenState extends State<ErpOperationalAcco
     }
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17), label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewMappings() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة خريطة الحسابات التشغيلية'),
+      content: SizedBox(width: 680, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: _fields.map((field) => Padding(padding: const EdgeInsets.symmetric(vertical: 5),
+          child: Text('${field.$2}: ${_selected[field.$1] == null ? 'غير محدد' : _accounts.where((a) => _s(a['id']) == _selected[field.$1]).map((a) => _s(a['account_name'])).firstOrNull ?? _selected[field.$1]}'))).toList())),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text('خريطة الحسابات التشغيلية', style: TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      const Text('اربط حسابات الأستاذ التي ستستخدمها قيود فواتير المبيعات والمشتريات والمرتجعات. لن يُنشأ قيد آلي قبل إعداد هذه الخريطة.', style: TextStyle(color: Colors.black54, height: 1.5)),
+      Card(color: const Color(0xFF3E007D), child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('خريطة الحسابات التشغيلية', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+          const Text('ربط حسابات الأستاذ بقيود المبيعات والمشتريات والمرتجعات.', style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+            _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _save),
+            _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewMappings),
+          ])),
+        ]),
+      )),
       const SizedBox(height: 12),
       TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
       const SizedBox(height: 8),
