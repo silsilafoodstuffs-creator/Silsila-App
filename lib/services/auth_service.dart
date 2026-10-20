@@ -1,9 +1,9 @@
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// Email-first authentication for Silsila during pre-launch testing.
+/// Phone numbers are profile/contact data only; phone OTP is intentionally disabled.
 class AuthService {
-  AuthService({SupabaseClient? client})
-      : _client = client ?? _defaultClient;
+  AuthService({SupabaseClient? client}) : _client = client ?? _defaultClient;
 
   final SupabaseClient? _client;
 
@@ -17,102 +17,17 @@ class AuthService {
 
   SupabaseClient get _requireClient {
     final client = _client;
-
     if (client == null) {
       throw StateError('اتصال Supabase غير متاح.');
     }
-
     return client;
   }
 
-  /// إنشاء حساب جديد باستخدام رقم الهاتف وكلمة المرور.
-  Future<AuthResponse> register({
-    required String phone,
-    required String password,
-    Map<String, dynamic> metadata = const {},
-  }) async {
-    final normalizedPhone = _normalizePhone(phone);
+  String _normalizeEmail(String value) => value.trim().toLowerCase();
 
-    if (!_isValidPhone(normalizedPhone)) {
-      throw ArgumentError('يرجى إدخال رقم هاتف صحيح.');
-    }
+  bool _isValidEmail(String value) =>
+      RegExp(r'^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$').hasMatch(value);
 
-    if (!_isStrongPassword(password)) {
-      throw ArgumentError(
-        'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، '
-        'وحرف كبير وحرف صغير ورقم ورمز.',
-      );
-    }
-
-    return _requireClient.auth.signUp(
-      phone: normalizedPhone,
-      password: password,
-      data: Map<String, dynamic>.from(metadata),
-    );
-  }
-
-  /// تسجيل الدخول برقم الهاتف وكلمة المرور.
-  Future<AuthResponse> login({
-    required String phone,
-    required String password,
-  }) async {
-    final normalizedPhone = _normalizePhone(phone);
-
-    if (!_isValidPhone(normalizedPhone) || password.isEmpty) {
-      throw ArgumentError(
-        'يرجى إدخال رقم الهاتف الصحيح وكلمة المرور.',
-      );
-    }
-
-    return _requireClient.auth.signInWithPassword(
-      phone: normalizedPhone,
-      password: password,
-    );
-  }
-
-  /// تسجيل الخروج من الحساب الحالي.
-  Future<void> logout() async {
-    await _requireClient.auth.signOut();
-  }
-
-  /// إعادة إرسال رمز التحقق إلى الهاتف.
-  Future<void> resendPhoneOtp(String phone) async {
-    final normalizedPhone = _normalizePhone(phone);
-
-    if (!_isValidPhone(normalizedPhone)) {
-      throw ArgumentError('يرجى إدخال رقم هاتف صحيح.');
-    }
-
-    await _requireClient.auth.resend(
-      type: OtpType.sms,
-      phone: normalizedPhone,
-    );
-  }
-
-  /// التحقق من رمز الهاتف.
-  Future<AuthResponse> verifyPhoneOtp({
-    required String phone,
-    required String token,
-  }) async {
-    final normalizedPhone = _normalizePhone(phone);
-    final normalizedToken = _normalizeDigits(token.trim());
-
-    if (!_isValidPhone(normalizedPhone)) {
-      throw ArgumentError('يرجى إدخال رقم هاتف صحيح.');
-    }
-
-    if (!RegExp(r'^\d{6}$').hasMatch(normalizedToken)) {
-      throw ArgumentError('رمز التحقق يجب أن يتكون من 6 أرقام.');
-    }
-
-    return _requireClient.auth.verifyOTP(
-      type: OtpType.sms,
-      phone: normalizedPhone,
-      token: normalizedToken,
-    );
-  }
-
-  /// التحقق من قوة كلمة المرور.
   bool _isStrongPassword(String value) {
     return value.length >= 8 &&
         RegExp(r'[A-Z]').hasMatch(value) &&
@@ -121,60 +36,65 @@ class AuthService {
         RegExp(r'[^A-Za-z0-9]').hasMatch(value);
   }
 
-  /// تحويل الأرقام العربية والهندية إلى أرقام إنجليزية.
-  String _normalizeDigits(String value) {
-    return value.replaceAllMapped(
-      RegExp(r'[٠-٩۰-۹]'),
-      (match) {
-        final code = match.group(0)!.codeUnitAt(0);
-        final digit = code >= 0x0660 && code <= 0x0669
-            ? code - 0x0660
-            : code - 0x06F0;
-        return String.fromCharCode(0x30 + digit);
-      },
-    );
-  }
-
-  /// توحيد رقم الهاتف إلى صيغة E.164 قبل إرساله إلى Supabase.
-  /// يحوّل أرقام مصر المحلية مثل 01012345678 إلى +201012345678.
-  String _normalizePhone(String value) {
-    final asciiInput = value.trim().replaceAllMapped(
-      RegExp(r'[٠-٩۰-۹]'),
-      (match) {
-        final code = match.group(0)!.codeUnitAt(0);
-        final digit = code >= 0x0660 && code <= 0x0669
-            ? code - 0x0660
-            : code - 0x06F0;
-        return String.fromCharCode(0x30 + digit);
-      },
-    );
-    final compact = asciiInput.replaceAll(RegExp(r'[\s().-]'), '');
-    final digits = compact.replaceAll(RegExp(r'\D'), '');
-
-    if (compact.startsWith('+')) return '+' + digits;
-    if (digits.startsWith('00')) return '+' + digits.substring(2);
-    if (digits.startsWith('20')) return '+' + digits;
-    if (digits.startsWith('0') &&
-        (digits.length == 10 || digits.length == 11)) {
-      return '+20' + digits.substring(1);
+  /// Creates a user with email/password; optional contact details belong in metadata.
+  Future<AuthResponse> register({
+    required String email,
+    required String password,
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (!_isValidEmail(normalizedEmail)) {
+      throw ArgumentError('يرجى إدخال بريد إلكتروني صحيح.');
     }
-    return '+' + digits;
+    if (!_isStrongPassword(password)) {
+      throw ArgumentError(
+        'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل، '
+        'وحرف كبير وحرف صغير ورقم ورمز.',
+      );
+    }
+
+    return _requireClient.auth.signUp(
+      email: normalizedEmail,
+      password: password,
+      data: Map<String, dynamic>.from(metadata),
+    );
   }
 
-  /// التحقق الأساسي من صيغة رقم الهاتف.
-  bool _isValidPhone(String value) {
-    return RegExp(r'^\+[1-9]\d{7,14}$').hasMatch(value);
+  /// Signs in with email/password only. Phone-based authentication is not enabled.
+  Future<AuthResponse> login({
+    required String email,
+    required String password,
+  }) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (!_isValidEmail(normalizedEmail) || password.isEmpty) {
+      throw ArgumentError('يرجى إدخال البريد الإلكتروني الصحيح وكلمة المرور.');
+    }
+
+    return _requireClient.auth.signInWithPassword(
+      email: normalizedEmail,
+      password: password,
+    );
   }
 
-  /// هل توجد جلسة دخول حالية؟
-  bool get isLoggedIn =>
-      _client?.auth.currentSession != null;
+  /// Sends a password-reset link to the registered email address.
+  Future<void> resetPassword(String email, {String? redirectTo}) async {
+    final normalizedEmail = _normalizeEmail(email);
+    if (!_isValidEmail(normalizedEmail)) {
+      throw ArgumentError('يرجى إدخال بريد إلكتروني صحيح.');
+    }
+    await _requireClient.auth.resetPasswordForEmail(
+      normalizedEmail,
+      redirectTo: redirectTo,
+    );
+  }
 
-  /// معرّف المستخدم الحالي.
-  String? get currentUserId =>
-      _client?.auth.currentUser?.id;
+  Future<void> logout() async {
+    await _requireClient.auth.signOut();
+  }
 
-  /// رقم الهاتف المسجل.
-  String? get currentPhone =>
-      _client?.auth.currentUser?.phone;
+  bool get isLoggedIn => _client?.auth.currentSession != null;
+
+  String? get currentUserId => _client?.auth.currentUser?.id;
+
+  String? get currentEmail => _client?.auth.currentUser?.email;
 }
