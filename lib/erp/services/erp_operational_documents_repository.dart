@@ -141,6 +141,8 @@ class ErpOperationalDocumentsRepository {
     DateTime? documentDate,
     String? salesRepId,
     bool isTaxInvoice = false,
+    String sourceChannel = 'manual',
+    List<String> sourceDocumentIds = const [],
   }) async {
     if (documentNumber.trim().isEmpty || partyId.isEmpty || warehouseId.isEmpty) {
       throw ArgumentError('رقم المستند والطرف والمخزن حقول إلزامية.');
@@ -160,6 +162,8 @@ class ErpOperationalDocumentsRepository {
       'tax_total': 0,
       'grand_total': 0,
       'paid_total': 0,
+      'source_channel': sourceChannel,
+      'source_document_ids': sourceDocumentIds,
     };
     if (kind == ErpOperationalKind.purchase) {
       payload['supplier_id'] = partyId;
