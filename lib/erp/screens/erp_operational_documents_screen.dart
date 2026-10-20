@@ -451,7 +451,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   leading: const Icon(Icons.local_offer_outlined, color: Color(0xFF3E007D)),
                   title: Text(_s(c['title']), style: const TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: Text('الفترة: ' + _s(c['start_date']) + ' إلى ' + _s(c['end_date']) +
-                    (owner.isEmpty ? '' : '\n' + (campaignType == 'promotion' ? 'المورد: ' : 'مسؤول الشراء: ') + owner)),
+                    (owner.isEmpty || campaignType == 'customer_magazine' ? '' : '\n' + (campaignType == 'promotion' ? 'المورد: ' : 'مسؤول الشراء: ') + owner)),
                   trailing: const Icon(Icons.chevron_left),
                   onTap: () => Navigator.pop(dialogContext, c),
                 );
