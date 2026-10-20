@@ -85,48 +85,72 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   Future<void> _load() async {
     if (!mounted) return;
     if (_db == null) {
-      setState(() { _loading = false; _error = 'الاتصال بقاعدة البيانات غير متاح. أعد تسجيل الدخول ثم حاول مرة أخرى.'; });
+      setState(() { _loading = false; _error = 'الاتصال بقاعدة البيانات غير متاح.'; });
       return;
     }
     if (_company.isEmpty) {
-      setState(() { _loading = false; _error = 'لم يتم تحديد الشركة الحالية. اختر الشركة وسجّل الدخول أولًا.'; });
+      setState(() { _loading = false; _error = 'لم يتم تحديد الشركة الحالية؛ لا يمكن تحميل البيانات.'; });
       return;
     }
     setState(() { _loading = true; _error = null; _message = null; });
     try {
-      // Keep each master screen independent: unrelated table failures must not hide its grid.
-      List<Map<String, dynamic>> typeList = _types;
-      List<Map<String, dynamic>> userList = _users;
-      List<Map<String, dynamic>> templateList = _templates;
+      List<Map<String, dynamic>> typeList = [];
+      List<Map<String, dynamic>> userList = [];
+      List<Map<String, dynamic>> templateList = [];
+
       if (_isType || _isUser || _isPermissions) {
-        final typeRows = await _db!.from('erp_user_types').select().eq('company_id', _company).order('type_code');
-        typeList = (typeRows as List).map((x) => Map<String, dynamic>.from(x)).toList();
-        const typePriority = {'ادمن': 0, 'موظف': 1, 'مورد': 2, 'عميل': 3, 'مندوب': 4, 'شركة شحن': 5};
-        typeList.sort((a, b) => (typePriority[_s(a['name_ar'])] ?? 99).compareTo(typePriority[_s(b['name_ar'])] ?? 99));
+        final result = await _db!.from('erp_user_types').select().eq('company_id', _company).order('type_code');
+        typeList = (result as List).map((x) => Map<String, dynamic>.from(x)).toList();
+        const defaults = <Map<String, dynamic>>[
+          {'name_ar':'ادمن','name_en':'Admin','show_at_login':false},
+          {'name_ar':'موظف','name_en':'Employee','show_at_login':false},
+          {'name_ar':'مورد','name_en':'Supplier','show_at_login':true},
+          {'name_ar':'عميل','name_en':'Customer','show_at_login':true},
+          {'name_ar':'مندوب','name_en':'Delegate','show_at_login':true},
+          {'name_ar':'شركة شحن','name_en':'Shipping Company','show_at_login':true},
+        ];
+        if (typeList.isEmpty) {
+          try {
+            await _db!.from('erp_user_types').insert(defaults.asMap().entries.map((e) => <String,dynamic>{
+              ...e.value, 'company_id':_company, 'type_code':e.key+1, 'is_active':true,
+            }).toList());
+            final seeded = await _db!.from('erp_user_types').select().eq('company_id', _company).order('type_code');
+            typeList = (seeded as List).map((x) => Map<String,dynamic>.from(x)).toList();
+          } catch (_) {
+            typeList = defaults.asMap().entries.map((e) => <String,dynamic>{
+              ...e.value, 'type_code':e.key+1, 'id':'', 'company_id':_company, 'is_active':true, '_local_default':true,
+            }).toList();
+          }
+        }
+        const priority = {'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
+        typeList.sort((a,b) => (priority[_s(a['name_ar'])] ?? 99).compareTo(priority[_s(b['name_ar'])] ?? 99));
       }
       if (_isUser || _isPermissions) {
-        final userRows = await _db!.from('erp_users').select('*,erp_user_types(name_ar,name_en)').eq('company_id', _company).order('user_code');
-        userList = (userRows as List).map((x) => Map<String, dynamic>.from(x)).toList();
+        // Load users directly; avoid a fragile PostgREST embedded foreign-key relationship.
+        final result = await _db!.from('erp_users').select().eq('company_id', _company).order('user_code');
+        userList = (result as List).map((x) => Map<String,dynamic>.from(x)).toList();
       }
       if (_isTemplate || _isPermissions) {
-        final templateRows = await _db!.from('erp_permission_templates').select().eq('company_id', _company).order('template_code');
-        templateList = (templateRows as List).map((x) => Map<String, dynamic>.from(x)).toList();
+        final result = await _db!.from('erp_permission_templates').select().eq('company_id', _company).order('template_code');
+        templateList = (result as List).map((x) => Map<String,dynamic>.from(x)).toList();
       }
       if (!mounted) return;
       setState(() {
-        _types = typeList; _users = userList; _templates = templateList;
-        if (_selectedTemplateId != null && !templateList.any((r) => _s(r['id']) == _selectedTemplateId)) _selectedTemplateId = null;
-        if (_selectedTemplateId == null && templateList.isNotEmpty) _selectedTemplateId = _s(templateList.first['id']);
-        _rows = _isType ? typeList : _isUser ? userList : _isTemplate ? templateList : userList;
-        if (_selectedId != null && !_rows.any((r) => _s(r['id']) == _selectedId)) _selectedId = null;
-        if (_selectedUserId != null && !userList.any((r) => _s(r['id']) == _selectedUserId)) _selectedUserId = null;
-        if (_selectedUserId == null && userList.isNotEmpty) _selectedUserId = _s(userList.first['id']);
-        _loading = false; _error = null;
+        _types=typeList; _users=userList; _templates=templateList;
+        _rows=_isType?typeList:_isUser?userList:_isTemplate?templateList:userList;
+        if (_selectedId != null && !_rows.any((r)=>_s(r['id'])==_selectedId)) _selectedId=null;
+        if (_selectedUserId != null && !userList.any((r)=>_s(r['id'])==_selectedUserId)) _selectedUserId=null;
+        if (_selectedUserId==null && userList.isNotEmpty) _selectedUserId=_s(userList.first['id']);
+        if (_selectedTemplateId != null && !templateList.any((r)=>_s(r['id'])==_selectedTemplateId)) _selectedTemplateId=null;
+        if (_selectedTemplateId==null && templateList.isNotEmpty) _selectedTemplateId=_s(templateList.first['id']);
+        _loading=false; _error=null;
+        if (_isUser && userList.isEmpty) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
+        if (_isType && typeList.any((r)=>r['_local_default']==true)) _message='الأنواع المتفق عليها معروضة، لكن قاعدة البيانات منعت حفظها. راجع صلاحيات INSERT وسياسات RLS.';
       });
-      if (_isTemplate && _selectedId != null) await _loadRules();
+      if (_isTemplate && _selectedId!=null) await _loadRules();
       if (_isPermissions) await _loadUserRules();
-    } catch (e) {
-      if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات الشاشة: $e'; });
+    } catch(e) {
+      if (mounted) setState(() { _loading=false; _error='تعذر تحميل بيانات الشاشة: $e'; });
     }
   }
 
