@@ -104,14 +104,58 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     }
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(
+      style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+    ),
+  );
+
+  void _newParty() {
+    _code.clear(); _name.clear(); _phone.clear(); _whatsapp.clear(); _email.clear(); _address.clear();
+    _governorate.clear(); _district.clear(); _center.clear(); _area.clear(); _customerType.clear();
+    _creditLimit.text = '0'; _openingBalance.text = '0';
+    setState(() { _error = null; _message = 'نموذج إضافة طرف جديد جاهز.'; });
+  }
+
+  Future<void> _previewParties() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة دليل العملاء والموردين'),
+      content: SizedBox(width: 760, child: _rows.isEmpty
+        ? const Text('لا توجد أطراف محمّلة للمعاينة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _rows.take(100).map((r) => ListTile(
+            dense: true,
+            leading: Icon(r['party_kind'] == 'supplier' ? Icons.local_shipping_outlined : Icons.person_outline,
+              color: const Color(0xFF3E007D)),
+            title: Text('${_s(r['party_code'])} — ${_s(r['party_name'])}'),
+            subtitle: Text('${_kindLabel(_s(r['party_kind']))} • ${_s(r['phone'])} • حد ائتمان ${_n(r['credit_limit']).toStringAsFixed(2)} • ${r['is_active'] == true ? 'نشط' : 'موقوف'}'),
+          )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text('دليل العملاء والموردين', style: TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      const Text('إضافة الأطراف وتحديد نوع التعامل وبيانات الاتصال وحد الائتمان.', style: TextStyle(color: Colors.black54, height: 1.5)),
-      const SizedBox(height: 12),
+      Card(color: const Color(0xFF3E007D), child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('دليل العملاء والموردين', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+          const Text('إدارة بيانات الأطراف وحدود الائتمان ووسائل الاتصال.', style: TextStyle(color: Colors.white70, height: 1.5)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _newParty),
+            _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _create),
+            _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewParties),
+          ])),
+        ]),
+      )),
+      const SizedBox(height: 10),
       TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
       const SizedBox(height: 8),
       Row(children: [
