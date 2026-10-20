@@ -107,7 +107,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
     padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
     child: FilledButton.icon(
-      style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF7F5FA), foregroundColor: const Color(0xFF3E007D), side: BorderSide(color: const Color(0xFF3E007D).withValues(alpha: .18)),
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
       onPressed: action, icon: Icon(icon, size: 17),
       label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
