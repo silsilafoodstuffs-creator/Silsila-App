@@ -180,7 +180,7 @@ jobs:
           PY
 
       - name: Check code
-        run: flutter analyze lib --no-fatal-infos
+        run: flutter analyze lib test --no-fatal-infos
 
       - name: Build Android APK
         run: |
@@ -277,7 +277,7 @@ jobs:
         run: flutter pub get
 
       - name: Analyze Dart source
-        run: flutter analyze lib --no-fatal-infos
+        run: flutter analyze lib test --no-fatal-infos
 
       - name: Run automated tests
         run: flutter test
