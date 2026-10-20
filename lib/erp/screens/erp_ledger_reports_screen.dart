@@ -120,7 +120,7 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
     onPressed: action,
     icon: Icon(icon, size: 15),
     label: Text(label),
-    style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9), visualDensity: VisualDensity.compact, textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF7F5FA), foregroundColor: const Color(0xFF3E007D), side: BorderSide(color: const Color(0xFF3E007D).withValues(alpha: .18)), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9), visualDensity: VisualDensity.compact, textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
   );
 
   void _previewReport() {
@@ -204,6 +204,7 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
               _reportAction('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printReportPdf),
               _reportAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importReportExcel),
               _reportAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printReportPdf),
+              _reportAction('كل الفترات', Icons.date_range_outlined, const Color(0xFF6E2BA6), () => setState(() { _start = null; _end = null; })),
             ]),
           ),
           if (_message != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_message!, style: const TextStyle(color: Color(0xFF16834A)))),
