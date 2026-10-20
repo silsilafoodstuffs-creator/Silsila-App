@@ -668,7 +668,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final searchFocusNode = FocusNode();
     for (final item in pickerItems) {
       final id = _s(item['id']);
-      quantities[id] = TextEditingController();
+      final suggestedQuantity = sourceTitle == 'نواقص العميل'
+          ? (_n(item['requested_quantity']) - _n(item['fulfilled_quantity'])).clamp(0, double.infinity)
+          : 0.0;
+      quantities[id] = TextEditingController(text: suggestedQuantity > 0 ? suggestedQuantity.toString() : '');
       quantityFocusNodes[id] = FocusNode(debugLabel: 'quantity-$id');
       unitFocusNodes[id] = FocusNode(debugLabel: 'unit-$id');
       final options = unitsByItem[id] ?? [];
