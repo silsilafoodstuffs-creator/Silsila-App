@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_operational_documents_repository.dart';
 import '../services/erp_operational_accounting_repository.dart';
 import 'erp_operational_account_mappings_screen.dart';
@@ -38,6 +39,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   bool _isTaxInvoice = false;
   List<Map<String, dynamic>> _representatives = [];
   String? _salesRepId;
+  bool _canChangeSalesRep = false;
   List<Map<String, dynamic>> _rows = [];
   List<Map<String, dynamic>> _parties = [];
   List<Map<String, dynamic>> _warehouses = [];
@@ -132,7 +134,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       if (widget.kind == ErpOperationalKind.sales) {
         try {
           final reps = await _repo.fetchRepresentatives(_company.text.trim());
+          final canChangeRep = await _resolveSalesRepChangePermission(_company.text.trim());
           if (mounted) setState(() {
+            _canChangeSalesRep = canChangeRep;
             _representatives = reps;
             final selectedParty = _parties.where((party) => _s(party['id']) == _partyId);
             if (_salesRepId == null && selectedParty.isNotEmpty) _salesRepId = _s(selectedParty.first['sales_rep_id']).isEmpty ? null : _s(selectedParty.first['sales_rep_id']);
@@ -179,6 +183,35 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر إنشاء المسودة: $e'; });
+    }
+  }
+
+  Future<bool> _resolveSalesRepChangePermission(String companyId) async {
+    try {
+      final db = Supabase.instance.client;
+      final userId = db.auth.currentUser?.id;
+      if (userId == null) return false;
+      final membership = await db.from('erp_company_members')
+          .select('member_role')
+          .eq('company_id', companyId)
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .maybeSingle();
+      if (membership == null) return false;
+      final role = _s(membership['member_role']).toLowerCase();
+      if (role == 'owner' || role == 'admin') return true;
+      final permission = await db.from('erp_user_permissions')
+          .select('allow_access,can_edit')
+          .eq('company_id', companyId)
+          .eq('user_id', userId)
+          .eq('menu_key', 'المبيعات والعملاء::حركات::فاتورة مبيعات')
+          .maybeSingle();
+      return permission != null &&
+          permission['allow_access'] == true &&
+          permission['can_edit'] == true;
+    } catch (_) {
+      // Fail closed: when permissions cannot be verified, do not permit changing the rep.
+      return false;
     }
   }
 
@@ -813,7 +846,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   value: _s(rep['id']),
                   child: Text('${_s(rep['rep_code'])} — ${_s(rep['rep_name'])}', overflow: TextOverflow.ellipsis),
                 )).toList(),
-                onChanged: (value) => setState(() => _salesRepId = value),
+                onChanged: _canChangeSalesRep ? (value) => setState(() => _salesRepId = value) : null,
+              ),
+              if (!_canChangeSalesRep) const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text('تغيير المندوب مقيد بصلاحية تعديل فاتورة المبيعات.', style: TextStyle(fontSize: 12, color: Colors.black54)),
               ),
             ],
             const SizedBox(height: 8),
