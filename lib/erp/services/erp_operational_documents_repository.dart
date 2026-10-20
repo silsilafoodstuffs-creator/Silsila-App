@@ -21,7 +21,7 @@ class ErpOperationalDocumentsRepository {
     final table = kind == ErpOperationalKind.purchase
       ? 'erp_purchase_documents' : 'erp_sales_documents';
     final rows = await _db.from(table)
-      .select('id, company_id, branch_id, warehouse_id, supplier_id, customer_id, auto_number, document_number, document_date, document_timestamp, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes')
+      .select('id, company_id, branch_id, warehouse_id, supplier_id, customer_id, sales_rep_id, is_tax_invoice, auto_number, document_number, document_date, document_timestamp, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes')
       .eq('company_id', companyId.trim())
       .order('document_date', ascending: false)
       .limit(300);
@@ -30,10 +30,17 @@ class ErpOperationalDocumentsRepository {
 
   Future<List<Map<String, dynamic>>> fetchParties(String companyId, ErpOperationalKind kind) async {
     final rows = await _db.from('erp_parties')
-      .select('id, party_code, party_name, party_kind')
+      .select('id, party_code, party_name, party_kind, sales_rep_id')
       .eq('company_id', companyId.trim()).eq('is_active', true)
       .inFilter('party_kind', kind == ErpOperationalKind.purchase ? ['supplier','both'] : ['customer','both'])
       .order('party_name').limit(2000);
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchRepresentatives(String companyId) async {
+    final rows = await _db.from('erp_sales_representatives')
+      .select('id, rep_code, rep_name')
+      .eq('company_id', companyId.trim()).eq('is_active', true).order('rep_name');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
@@ -59,6 +66,9 @@ class ErpOperationalDocumentsRepository {
     required String partyId,
     required String warehouseId,
     String? notes,
+    DateTime? documentDate,
+    String? salesRepId,
+    bool isTaxInvoice = false,
   }) async {
     if (documentNumber.trim().isEmpty || partyId.isEmpty || warehouseId.isEmpty) {
       throw ArgumentError('رقم المستند والطرف والمخزن حقول إلزامية.');
@@ -68,7 +78,7 @@ class ErpOperationalDocumentsRepository {
       'created_by': _db.auth.currentUser?.id,
       'warehouse_id': warehouseId,
       'document_number': documentNumber.trim(),
-      'document_date': DateTime.now().toIso8601String().substring(0, 10),
+      'document_date': (documentDate ?? DateTime.now()).toIso8601String().substring(0, 10),
       'document_timestamp': DateTime.now().toUtc().toIso8601String(),
       'document_type': documentType,
       'status': 'draft',
@@ -85,6 +95,8 @@ class ErpOperationalDocumentsRepository {
       return row['id'].toString();
     } else {
       payload['customer_id'] = partyId;
+      payload['sales_rep_id'] = (salesRepId == null || salesRepId.isEmpty) ? null : salesRepId;
+      payload['is_tax_invoice'] = isTaxInvoice;
       final row = await _db.from('erp_sales_documents').insert(payload).select('id').single();
       return row['id'].toString();
     }
