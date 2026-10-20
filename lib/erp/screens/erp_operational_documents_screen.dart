@@ -26,6 +26,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   final _accountingRepo = ErpOperationalAccountingRepository();
   final _company = TextEditingController();
   final _documentNumber = TextEditingController();
+  final _partyCode = TextEditingController();
   final _notes = TextEditingController();
   final _quantity = TextEditingController(text: '1');
   final _unitPrice = TextEditingController(text: '0');
@@ -79,7 +80,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
   @override
   void dispose() {
-    _company.dispose(); _documentNumber.dispose(); _notes.dispose(); _quantity.dispose();
+    _company.dispose(); _documentNumber.dispose(); _partyCode.dispose(); _notes.dispose(); _quantity.dispose();
     _unitPrice.dispose(); _discount.dispose(); _tax.dispose(); _invoiceDiscountAmount.dispose(); _invoiceDiscountPercent.dispose(); super.dispose();
   }
 
@@ -764,13 +765,35 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               onChanged: (v) => setState(() => _documentType = v ?? _documentType),
             ),
             const SizedBox(height: 8),
+            if (widget.kind == ErpOperationalKind.sales) ...[
+              TextField(
+                controller: _partyCode,
+                decoration: const InputDecoration(labelText: 'كود العميل', border: OutlineInputBorder(), isDense: true, suffixIcon: Icon(Icons.person_search_outlined)),
+                onSubmitted: (code) {
+                  final matches = _parties.where((party) => _s(party['party_code']).trim().toLowerCase() == code.trim().toLowerCase());
+                  if (matches.isEmpty) {
+                    setState(() => _error = 'كود العميل غير موجود أو العميل غير نشط.');
+                    return;
+                  }
+                  final party = matches.first;
+                  setState(() {
+                    _partyId = _s(party['id']);
+                    final defaultRep = _s(party['sales_rep_id']);
+                    if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) _salesRepId = defaultRep;
+                    _error = null;
+                  });
+                },
+              ),
+              const SizedBox(height: 6),
+            ],
             DropdownButtonFormField<String>(
               value: _partyId, isExpanded: true,
-              decoration: InputDecoration(labelText: widget.kind == ErpOperationalKind.purchase ? 'المورد' : 'العميل', border: const OutlineInputBorder()),
+              decoration: InputDecoration(labelText: widget.kind == ErpOperationalKind.purchase ? 'المورد' : 'اختيار العميل بالاسم أو الكود', border: const OutlineInputBorder()),
               items: _parties.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_partyLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
               onChanged: (v) => setState(() {
                 _partyId = v;
                 final matches = _parties.where((party) => _s(party['id']) == v);
+                _partyCode.text = matches.isEmpty ? '' : _s(matches.first['party_code']);
                 final defaultRep = matches.isEmpty ? '' : _s(matches.first['sales_rep_id']);
                 if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) _salesRepId = defaultRep;
               }),
@@ -976,6 +999,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             _pendingLines = [];
             _documentType = _s(r['document_type']);
             _partyId = _s(widget.kind == ErpOperationalKind.purchase ? r['supplier_id'] : r['customer_id']);
+            final partyMatches = _parties.where((party) => _s(party['id']) == _partyId);
+            _partyCode.text = partyMatches.isEmpty ? '' : _s(partyMatches.first['party_code']);
             _warehouseId = _s(r['warehouse_id']);
             if (_s(r['document_date']).isNotEmpty) _documentDate = DateTime.tryParse(_s(r['document_date'])) ?? _documentDate;
             _salesRepId = _s(r['sales_rep_id']).isEmpty ? null : _s(r['sales_rep_id']);
