@@ -329,7 +329,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       ],
       rows:List.generate(_rows.length,(i){
         final row=_rows[i];final id=_s(row['id']);
-        return DataRow(selected:id==_selectedId,onSelectChanged:(v)=>setState(()=>_selectedId=v==true?id:null),cells:[
+        return DataRow(selected:id==_selectedId,onSelectChanged:(v)async{setState(()=>_selectedId=v==true?id:null);if(v==true&&_isTemplate)await _loadRules();},cells:[
           DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]))),
           DataCell(_textCell(row,'name_ar')),DataCell(_textCell(row,'name_en')),
           if(_isUser)DataCell(SizedBox(width:155,child:DropdownButtonFormField<String>(
