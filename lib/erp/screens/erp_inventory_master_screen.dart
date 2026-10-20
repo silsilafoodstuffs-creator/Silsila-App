@@ -203,17 +203,73 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     return rows.isEmpty ? 'بدون فرع محدد' : _s(rows.first['branch_code']) + ' — ' + _s(rows.first['branch_name']);
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  void _newCurrentRecord() {
+    setState(() {
+      _error = null; _message = 'نموذج إضافة جديد جاهز.';
+      if (_view == 'warehouses') { _warehouseCode.clear(); _warehouseName.clear(); _address.clear(); _branchId = null; }
+      else if (_view == 'groups') { _groupCode.clear(); _groupName.clear(); _parentGroupId = null; }
+      else {
+        _itemCode.clear(); _itemName.clear(); _barcode.clear(); _unit.text = 'وحدة';
+        _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
+        _itemGroupId = null; _expiry = false; _pickedItemImage = null; _pickedItemImageBytes = null;
+      }
+    });
+  }
+
+  Future<void> _saveCurrentRecord() async {
+    if (_view == 'warehouses') { await _createWarehouse(); }
+    else if (_view == 'groups') { await _createGroup(); }
+    else { await _createItem(); }
+  }
+
+  Future<void> _previewMasterData() async {
+    final rows = _view == 'warehouses' ? _warehouses : _view == 'groups' ? _groups : _items;
+    final label = _view == 'warehouses' ? 'المخازن' : _view == 'groups' ? 'مجموعات الأصناف' : 'الأصناف';
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text('معاينة $label'),
+      content: SizedBox(width: 740, child: rows.isEmpty ? Text('لا توجد بيانات في $label.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: rows.take(100).map((r) => ListTile(
+          dense: true,
+          title: Text(_view == 'warehouses' ? '${_s(r['warehouse_code'])} — ${_s(r['warehouse_name'])}' :
+            _view == 'groups' ? '${_s(r['group_code'])} — ${_s(r['group_name'])}' : '${_s(r['item_code'])} — ${_s(r['item_name'])}'),
+          subtitle: Text(r['is_active'] == true ? 'نشط' : 'موقوف'),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text('بيانات المخازن والأصناف', style: TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      const Text('تعريف المخازن والأصناف الأساسية قبل تسجيل حركات المخزون والمشتريات والمبيعات.', style: TextStyle(color: Colors.black54, height: 1.5)),
-      const SizedBox(height: 12),
+      Card(color: const Color(0xFF3E007D), child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('بيانات المخازن والأصناف', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+          const Text('تعريف المخازن والأصناف الأساسية قبل تسجيل الحركات.', style: TextStyle(color: Colors.white70, height: 1.5)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : _newCurrentRecord),
+            _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _saveCurrentRecord),
+            _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewMasterData),
+            _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewMasterData),
+            _quickTask('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF137C8B), () => setState(() => _message = 'استيراد Excel غير مفعّل في دليل الأصناف والمخازن بعد.')),
+            _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _previewMasterData),
+          ])),
+        ]),
+      )),
+      const SizedBox(height: 10),
       TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
       const SizedBox(height: 8),
-      FilledButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh), label: const Text('تحميل البيانات')),
       if (_loading || _saving) const LinearProgressIndicator(),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
