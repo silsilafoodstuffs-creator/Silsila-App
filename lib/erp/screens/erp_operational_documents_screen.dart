@@ -552,7 +552,6 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       for (var index = 0; index < _pendingLines.length; index++) {
         final line = _pendingLines[index];
         final gross = _n(line['quantity']) * _n(line['unit_price']);
-        final netBeforeInvoiceDiscount = (gross - _n(line['discount'])).clamp(0, double.infinity);
         final allocatedDiscount = index == _pendingLines.length - 1
             ? remainingInvoiceDiscount
             : (grossTotal <= 0 ? 0.0 : (invoiceDiscount * gross / grossTotal * 100).roundToDouble() / 100);
@@ -725,7 +724,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(10)),
                 child: Row(children: [
                   Expanded(child: Text(
-                    'مسلسل الفاتورة: ${_rows.where((row) => _s(row['id']) == _selectedDocumentId).map((row) => _s(row['auto_number'])).firstOrNull ?? 'يُنشأ عند الحفظ'}',
+                    'مسلسل الفاتورة: ${_rows.where((row) => _s(row['id']) == _selectedDocumentId).isEmpty ? 'يُنشأ عند الحفظ' : _s(_rows.where((row) => _s(row['id']) == _selectedDocumentId).first['auto_number'])}',
                     style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900),
                   )),
                   const SizedBox(width: 8),
