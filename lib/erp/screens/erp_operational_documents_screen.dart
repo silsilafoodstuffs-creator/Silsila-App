@@ -578,6 +578,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _openItemPicker({List<Map<String, dynamic>>? sourceItems, String? sourceTitle}) async {
+    final pickerItems = sourceItems ?? _items;
     if (_saving || _loading) return;
     var selectedDoc = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
     if (selectedDoc.isEmpty || _s(selectedDoc.first['status']) != 'draft') {
@@ -604,7 +605,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         return;
       }
     }
-    if (_warehouseId == null || _partyId == null || _items.isEmpty) {
+    if (_warehouseId == null || _partyId == null || pickerItems.isEmpty) {
       setState(() => _error = 'حمّل بيانات الشركة واختر العميل والمخزن قبل اختيار الأصناف.');
       return;
     }
@@ -663,7 +664,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final selectedUnits = <String, String>{};
     final search = TextEditingController();
     final searchFocusNode = FocusNode();
-    for (final item in _items) {
+    for (final item in pickerItems) {
       final id = _s(item['id']);
       quantities[id] = TextEditingController();
       quantityFocusNodes[id] = FocusNode(debugLabel: 'quantity-$id');
@@ -682,11 +683,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           textDirection: TextDirection.rtl,
           child: StatefulBuilder(builder: (context, refresh) {
           final query = search.text.trim().toLowerCase();
-          final visibleItems = _items.where((item) {
+          final visibleItems = pickerItems.where((item) {
             final haystack = '${_s(item['item_code'])} ${_s(item['item_name'])} ${_s(item['barcode'])}'.toLowerCase();
             return query.isEmpty || haystack.contains(query);
           }).toList();
-          final selectedItems = _items.where((item) {
+          final selectedItems = pickerItems.where((item) {
             final quantity = double.tryParse(quantities[_s(item['id'])]!.text.trim()) ?? 0;
             return quantity > 0;
           }).toList();
@@ -718,13 +719,23 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
               final factor = _n(unit['conversion_factor']) <= 0 ? 1.0 : _n(unit['conversion_factor']);
               final basePrice = widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']);
+              final offerPrice = sourceItems == null ? basePrice : _n(item['offer_price']);
+              final minQuantity = sourceItems == null ? null : item['min_quantity'];
+              final maxQuantity = sourceItems == null ? null : item['max_quantity'];
               result.add({
                 'item_id': id,
                 'quantity': qty,
                 'unit_id': unitId,
                 'unit_name': _s(unit['unit_name']).isEmpty ? _s(unit['unit_code']) : _s(unit['unit_name']),
                 'conversion_factor': factor,
-                'unit_price': basePrice * factor,
+                'unit_price': offerPrice * factor,
+                'fixed_unit_price': sourceItems == null ? null : offerPrice * factor,
+                'min_quantity': minQuantity,
+                'max_quantity': maxQuantity,
+                'representative_incentive': _n(item['representative_incentive']),
+                'customer_incentive': _n(item['customer_incentive']),
+                'offer_title': sourceTitle,
+                'shortage_id': item['shortage_id'],
                 'discount': 0.0,
                 'tax': 0.0,
               });
@@ -794,8 +805,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     final onHand = actual[id] ?? 0;
                     final held = reserved[id] ?? 0;
                     final available = onHand - held;
-                    final price = widget.kind == ErpOperationalKind.purchase
-                        ? _n(item['purchase_price']) : _n(item['sale_price']);
+                    final price = sourceItems != null ? _n(item['offer_price']) : (widget.kind == ErpOperationalKind.purchase
+                        ? _n(item['purchase_price']) : _n(item['sale_price']));
                     return Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
@@ -804,7 +815,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                       ),
                       child: Row(children: [
                         SizedBox(width: 95, child: Text(_s(item['item_code']), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                        SizedBox(width: 190, child: Text(_s(item['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                        SizedBox(width: 190, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(_s(item['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis),
+                          if (sourceItems != null) Text('العرض: ' + _money(item['offer_price']) + ' | أقل: ' + _money(item['min_quantity']) + ' | أعلى: ' + (_s(item['max_quantity']).isEmpty ? 'مفتوح' : _money(item['max_quantity'])) + (sourceTitle == 'نواقص العميل' ? '' : ' | حافز م: ' + _money(item['representative_incentive']) + ' | حافز ع: ' + _money(item['customer_incentive'])), maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Color(0xFF3E007D))),
+                        ])),
                         SizedBox(width: 85, child: Text(_money(price))),
                         SizedBox(width: 85, child: Text(_money(onHand))),
                         SizedBox(width: 85, child: Text(_money(held), style: const TextStyle(color: Color(0xFFB56B00)))),
