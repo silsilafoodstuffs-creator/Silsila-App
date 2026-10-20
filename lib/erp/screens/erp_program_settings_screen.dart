@@ -131,9 +131,22 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   }
 
 
-  Widget _textField(TextEditingController controller,String label,{String? hint,double minHeight=42}) => TextField(
-    controller:controller,onChanged:(_)=>setState((){}),style:const TextStyle(fontSize:13),
-    decoration:InputDecoration(hintText:hint,isDense:true,constraints:BoxConstraints(minHeight:minHeight),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:9),border:OutlineInputBorder(borderRadius:BorderRadius.circular(8))),
+  Widget _textField(TextEditingController controller,String label,{String? hint,double minHeight=42}) => SizedBox(
+    height: minHeight,
+    child: TextField(
+      controller: controller,
+      maxLines: 1,
+      textAlignVertical: TextAlignVertical.center,
+      onChanged: (_) => setState(() {}),
+      style: const TextStyle(fontSize: 13, height: 1.15),
+      decoration: InputDecoration(
+        hintText: hint,
+        isDense: true,
+        constraints: BoxConstraints(minHeight: minHeight, maxHeight: minHeight),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    ),
   );
   Widget _labeledField(String label,Widget field,{double labelWidth=94})=>Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
     SizedBox(width:labelWidth,child:Text(silsilaText(label),style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700))),
