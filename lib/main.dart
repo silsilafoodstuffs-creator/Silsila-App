@@ -5933,7 +5933,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final phone = TextEditingController();
+  final email = TextEditingController();
   final password = TextEditingController();
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool busy = false;
@@ -5943,7 +5943,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String accountType = 'عميل';
   String activityUserType = 'مستخدم رئيسي للنشاط';
 
-  static const _phoneKey = 'silsila_login_phone';
+  static const _emailKey = 'silsila_login_email';
   static const _passwordKey = 'silsila_login_password';
   static const _rememberKey = 'silsila_login_remember';
 
@@ -5957,12 +5957,12 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final remembered = await _secureStorage.read(key: _rememberKey) == 'true';
       if (!remembered) return;
-      final savedPhone = await _secureStorage.read(key: _phoneKey);
+      final savedEmail = await _secureStorage.read(key: _emailKey);
       final savedPassword = await _secureStorage.read(key: _passwordKey);
       if (!mounted) return;
       setState(() {
         rememberPassword = true;
-        phone.text = savedPhone ?? '';
+        email.text = savedEmail ?? '';
         password.text = savedPassword ?? '';
       });
     } catch (_) {
@@ -5973,11 +5973,11 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _saveOrClearCredentials() async {
     try {
       if (rememberPassword) {
-        await _secureStorage.write(key: _phoneKey, value: phone.text.trim());
+        await _secureStorage.write(key: _emailKey, value: email.text.trim().toLowerCase());
         await _secureStorage.write(key: _passwordKey, value: password.text);
         await _secureStorage.write(key: _rememberKey, value: 'true');
       } else {
-        await _secureStorage.delete(key: _phoneKey);
+        await _secureStorage.delete(key: _emailKey);
         await _secureStorage.delete(key: _passwordKey);
         await _secureStorage.delete(key: _rememberKey);
       }
@@ -5991,67 +5991,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    phone.dispose();
+    email.dispose();
     password.dispose();
     super.dispose();
   }
 
   Future<void> login() async {
-    const testLoginEnabled = bool.fromEnvironment(
-      'SILSILA_TEST_LOGIN',
-      defaultValue: false,
-    );
-    final enteredPhone = normalizeArabicDigits(phone.text.trim())
-        .replaceAll(RegExp(r'[\s\-()]'), '');
-
-    if (testLoginEnabled &&
-        (enteredPhone == '01002251795' || enteredPhone == '01019617100')) {
-      final isSupplier = enteredPhone == '01019617100';
-      await _saveOrClearCredentials();
-      if (!mounted) return;
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MainShell(
-            testRole: isSupplier ? 'supplier' : 'client',
-            testAccountName: isSupplier
-                ? 'سلسلة للمواد الغذائية'
-                : 'عايز وظيفة',
-          ),
-        ),
-        (route) => false,
-      );
-      return;
-    }
-
-    if (testLoginEnabled) {
+    final enteredEmail = email.text.trim().toLowerCase();
+    if (enteredEmail.isEmpty || !enteredEmail.contains('@') || password.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('هذا الرقم غير مخصص لحسابات الاختبار.')),
+        const SnackBar(content: Text('اكتب البريد الإلكتروني الصحيح وكلمة المرور.')),
       );
       return;
     }
-
-    if (phone.text.trim().isEmpty || password.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('اكتب رقم الهاتف وكلمة المرور.')),
-      );
-      return;
-    }
-
     final client = database;
     if (client == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('الاتصال بالخدمة غير متاح حاليًا. حاول مرة أخرى لاحقًا.'),
-        ),
+        const SnackBar(content: Text('الاتصال بالخدمة غير متاح حاليًا. حاول مرة أخرى لاحقًا.')),
       );
       return;
     }
-
     setState(() => busy = true);
     try {
       await client.auth.signInWithPassword(
-        phone: normalizePhoneForAuth(phone.text),
+        email: enteredEmail,
         password: password.text,
       );
       await _saveOrClearCredentials();
@@ -6062,18 +6025,46 @@ class _LoginScreenState extends State<LoginScreen> {
           (route) => false,
         );
       }
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذر تسجيل الدخول: ${error.message}')),
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'تعذر تسجيل الدخول. راجع رقم الهاتف وكلمة المرور وإعدادات مصادقة الهاتف.',
-            ),
-          ),
+          const SnackBar(content: Text('تعذر تسجيل الدخول. راجع البريد الإلكتروني وكلمة المرور.')),
         );
       }
     } finally {
       if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _sendPasswordReset() async {
+    final value = email.text.trim().toLowerCase();
+    if (value.isEmpty || !value.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('اكتب البريد الإلكتروني أولًا لاستعادة كلمة المرور.')),
+      );
+      return;
+    }
+    final client = database;
+    if (client == null) return;
+    try {
+      await client.auth.resetPasswordForEmail(value);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('إذا كان البريد مسجلًا، فستصلك رسالة لاستعادة كلمة المرور.')),
+        );
+      }
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذّر إرسال رسالة الاستعادة: ${error.message}')),
+        );
+      }
     }
   }
 
@@ -6260,12 +6251,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 14),
                         TextField(
-                          controller: phone,
-                          keyboardType: TextInputType.phone,
-                          autofillHints: const [AutofillHints.telephoneNumber],
+                          controller: email,
+                          keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [AutofillHints.email],
                           decoration: const InputDecoration(
-                            labelText: 'اكتب هنا رقمك المسجل لدينا',
-                            prefixIcon: Icon(Icons.phone),
+                            labelText: 'البريد الإلكتروني المسجل',
+                            prefixIcon: Icon(Icons.email_outlined),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -6327,10 +6318,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () => _openPage(
-                            const ForgotPasswordScreen(),
-                            'استعادة كلمة المرور',
-                          ),
+                          onPressed: _sendPasswordReset,
                           child: const Text('نسيت كلمة المرور؟'),
                         ),
                       ],
