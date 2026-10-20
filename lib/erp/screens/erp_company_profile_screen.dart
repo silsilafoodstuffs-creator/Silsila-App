@@ -1,5 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/erp_app_asset_storage.dart';
+import '../services/erp_company_settings_repository.dart';
 
 const _companyPurple = Color(0xFF3E007D);
 
@@ -18,6 +23,8 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   final _tradeName = TextEditingController();
   final _taxNumber = TextEditingController();
   final _commercialRegister = TextEditingController();
+  final _companyCode = TextEditingController();
+  final _taxOffice = TextEditingController();
   final _phone = TextEditingController();
   final _email = TextEditingController();
   final _address = TextEditingController();
@@ -28,6 +35,9 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   String? _message;
   Map<String, dynamic>? _company;
   String? _activeCompanyId;
+  String? _logoStoragePath;
+  String? _logoPreviewUrl;
+  bool _uploadingLogo = false;
   List<Map<String, String>> _currencyOptions = [
     {'code': 'EGP', 'name': 'جنيه مصري'}, {'code': 'USD', 'name': 'دولار أمريكي'},
     {'code': 'SAR', 'name': 'ريال سعودي'}, {'code': 'AED', 'name': 'درهم إماراتي'},
@@ -58,6 +68,8 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     _tradeName.dispose();
     _taxNumber.dispose();
     _commercialRegister.dispose();
+    _companyCode.dispose();
+    _taxOffice.dispose();
     _phone.dispose();
     _email.dispose();
     _address.dispose();
@@ -104,6 +116,11 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         return;
       }
       _currency.text = (row['base_currency'] ?? 'EGP').toString().trim();
+      Map<String, dynamic>? profileSettings;
+      try {
+        profileSettings = await ErpCompanySettingsRepository(client: _db).getSetting(
+          companyId: id, key: 'company_profile_extra');
+      } catch (_) {}
       try {
         final currencies = await _db!.from('erp_currencies').select('currency_code,currency_name_ar')
             .eq('company_id', id).eq('is_active', true).order('currency_code');
@@ -121,11 +138,21 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         _tradeName.text = (row['trade_name'] ?? '').toString();
         _taxNumber.text = (row['tax_number'] ?? '').toString();
         _commercialRegister.text = (row['commercial_register'] ?? '').toString();
+        _companyCode.text = (profileSettings?['company_code'] ?? 'SIL-${id.replaceAll('-', '').substring(0, id.replaceAll('-', '').length >= 8 ? 8 : id.replaceAll('-', '').length).toUpperCase()}').toString();
+        _taxOffice.text = (profileSettings?['tax_office'] ?? '').toString();
+        _logoStoragePath = (profileSettings?['logo_path'] ?? '').toString().trim().isEmpty ? null : profileSettings!['logo_path'].toString();
+        _logoPreviewUrl = null;
         _phone.text = (row['phone'] ?? '').toString();
         _email.text = (row['email'] ?? '').toString();
         _address.text = (row['address'] ?? '').toString();
         _loading = false;
       });
+      if (_logoStoragePath != null) {
+        try {
+          final url = await ErpAppAssetStorage(client: _db).createSignedImageUrl(storagePath: _logoStoragePath!);
+          if (mounted) setState(() => _logoPreviewUrl = url);
+        } catch (_) {}
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -261,6 +288,20 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           throw StateError('لم تؤكد قاعدة البيانات تحديث سجل الشركة.');
         }
       }
+      // Store auxiliary company details separately so existing company RPCs and
+      // installations remain compatible while the schema is upgraded safely.
+      final cleanCode = _companyCode.text.trim();
+      if (cleanCode.isNotEmpty) {
+        await ErpCompanySettingsRepository(client: db).saveSetting(
+          companyId: id,
+          key: 'company_profile_extra',
+          value: <String, Object?>{
+            'company_code': cleanCode,
+            'tax_office': _taxOffice.text.trim().isEmpty ? null : _taxOffice.text.trim(),
+            'logo_path': _logoStoragePath,
+          },
+        );
+      }
       if (!mounted) return;
       setState(() {
         _saving = false;
@@ -279,6 +320,58 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         _error = 'تعذر حفظ بيانات الشركة: ${_companySaveError(error)}';
       });
     }
+  }
+
+  Future<void> _chooseCompanyImage(ImageSource source) async {
+    final companyId = (_activeCompanyId ?? widget.companyId ?? '').trim();
+    if (companyId.isEmpty) {
+      setState(() => _error = 'احفظ بيانات الشركة أولًا قبل رفع صورتها.');
+      return;
+    }
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 88,
+        maxWidth: 1800,
+      );
+      if (picked == null) return;
+      setState(() { _uploadingLogo = true; _error = null; _message = null; });
+      final bytes = await picked.readAsBytes();
+      final type = _imageContentType(picked.name, bytes);
+      final path = await ErpAppAssetStorage(client: _db).uploadImage(
+        companyId: companyId,
+        appId: 'erp-company-profile',
+        fileName: picked.name,
+        bytes: bytes,
+        contentType: type,
+        assetType: 'other',
+      );
+      final preview = await ErpAppAssetStorage(client: _db).createSignedImageUrl(storagePath: path);
+      if (!mounted) return;
+      setState(() {
+        _logoStoragePath = path;
+        _logoPreviewUrl = preview;
+        _uploadingLogo = false;
+        _message = 'تم رفع صورة المنشأة. اضغط حفظ لتثبيت بياناتها.';
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _uploadingLogo = false;
+        _error = 'تعذر استيراد صورة المنشأة. تحقق من صلاحيات مخزن الصور: $error';
+      });
+    }
+  }
+
+  String _imageContentType(String name, Uint8List bytes) {
+    final lower = name.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (bytes.length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50) return 'image/png';
+    if (bytes.length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) return 'image/jpeg';
+    throw ArgumentError('امتداد الصورة غير مدعوم؛ استخدم JPG أو PNG أو WEBP أو GIF.');
   }
 
   String _companySaveError(Object error) {
@@ -344,14 +437,47 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                       Flexible(child: Text('ID: ${_activeCompanyId ?? widget.companyId ?? '—'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 11))),
                     ]),
                   ),
-                _field(_legalName, 'الاسم القانوني *', Icons.business),
-                _field(_tradeName, 'الاسم التجاري', Icons.storefront_outlined),
-                _field(_taxNumber, 'الرقم الضريبي', Icons.receipt_long_outlined),
-                _field(_commercialRegister, 'السجل التجاري', Icons.assignment_outlined),
-                _field(_phone, 'رقم الهاتف', Icons.phone_outlined, keyboard: TextInputType.phone),
-                _field(_email, 'البريد الإلكتروني', Icons.email_outlined, keyboard: TextInputType.emailAddress),
+                Row(children: [
+                  Expanded(child: _field(_companyCode, 'كود الشركة', Icons.qr_code_2)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _field(_legalName, 'الاسم القانوني *', Icons.business)),
+                ]),
+                Row(children: [
+                  Expanded(child: _field(_tradeName, 'الاسم التجاري', Icons.storefront_outlined)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _field(_taxNumber, 'الرقم الضريبي', Icons.receipt_long_outlined)),
+                ]),
+                Row(children: [
+                  Expanded(child: _field(_commercialRegister, 'السجل التجاري', Icons.assignment_outlined)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _field(_taxOffice, 'المأمورية الضريبية', Icons.account_balance_outlined)),
+                ]),
+                Row(children: [
+                  Expanded(child: _field(_phone, 'رقم الهاتف', Icons.phone_outlined, keyboard: TextInputType.phone)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _field(_email, 'البريد الإلكتروني', Icons.email_outlined, keyboard: TextInputType.emailAddress)),
+                ]),
                 _currencyField(),
                 _field(_address, 'العنوان', Icons.location_on_outlined, maxLines: 2),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: const Color(0xFFF8F4FC), borderRadius: BorderRadius.circular(12), border: Border.all(color: _companyPurple.withValues(alpha: .15))),
+                  child: Row(children: [
+                    Container(width: 84, height: 84, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.black12)), clipBehavior: Clip.antiAlias,
+                      child: _logoPreviewUrl == null ? const Icon(Icons.business, size: 38, color: _companyPurple) : Image.network(_logoPreviewUrl!, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.business, size: 38, color: _companyPurple))),
+                    const SizedBox(width: 14),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('صورة المنشأة / الشعار', style: TextStyle(color: _companyPurple, fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        OutlinedButton.icon(onPressed: _uploadingLogo ? null : () => _chooseCompanyImage(ImageSource.gallery), icon: const Icon(Icons.photo_library_outlined, size: 18), label: const Text('استيراد صورة')),
+                        OutlinedButton.icon(onPressed: _uploadingLogo ? null : () => _chooseCompanyImage(ImageSource.camera), icon: const Icon(Icons.camera_alt_outlined, size: 18), label: const Text('الكاميرا')),
+                      ]),
+                      if (_uploadingLogo) const LinearProgressIndicator(minHeight: 3),
+                    ])),
+                  ]),
+                ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
                   onPressed: _saving || _loading ? null : _save,
