@@ -225,14 +225,6 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
     return values.toList()..sort();
   }
 
-  bool _matchesUserFilter(Map<String, dynamic> user) {
-    if (_userFilterValue == '__all__') return true;
-    final value = _userFilterType == 'job'
-        ? _s(user['job_title']).trim()
-        : _s(user['member_role']).trim();
-    return value == _userFilterValue;
-  }
-
   Future<void> _pickUsersF1() async {
     final chosen = <String>{..._selectedUsers};
     if (chosen.isEmpty && _scope != '__all__') chosen.add(_scope);
