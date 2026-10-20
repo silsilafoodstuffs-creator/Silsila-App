@@ -52,6 +52,21 @@ class ErpQuickTaskButton extends StatelessWidget {
     return fallbackColor;
   }
 
+  IconData get _icon {
+    final value = label.trim().toLowerCase();
+    if (value.contains('تحديث') || value.contains('تحميل')) return Icons.refresh_rounded;
+    if (value == 'إضافة' || value.contains('إضافة ') || value.contains('إضافة/')) return Icons.add_circle_outline_rounded;
+    if (value == 'حفظ' || value.contains('حفظ ')) return Icons.save_outlined;
+    if (value == 'تعديل' || value.contains('تعديل ')) return Icons.edit_outlined;
+    if (value == 'حذف' || value.contains('حذف ')) return Icons.delete_outline_rounded;
+    if (value.contains('معاينة') || value.contains('عرض')) return Icons.preview_outlined;
+    if (value.contains('excel') || value.contains('استيراد')) return Icons.file_upload_outlined;
+    if (value.contains('pdf')) return Icons.picture_as_pdf_outlined;
+    if (value.contains('طباعة') || value.contains('print')) return Icons.print_outlined;
+    if (value.contains('إلغاء')) return Icons.clear_all_rounded;
+    return icon;
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = _color;
@@ -59,7 +74,7 @@ class ErpQuickTaskButton extends StatelessWidget {
       padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
       child: FilledButton.icon(
         onPressed: onPressed,
-        icon: Icon(icon, size: compact ? 16 : 17),
+        icon: Icon(_icon, size: compact ? 16 : 17),
         label: Text(
           label,
           softWrap: false,
