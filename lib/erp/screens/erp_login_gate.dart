@@ -561,16 +561,12 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
         children: [
           Row(
             children: [
-              Container(
+              Image.asset(
+                'assets/images/silsila_logo.png',
                 width: 66,
                 height: 66,
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-                child: Image.asset(
-                  'assets/images/silsila_logo.png',
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.hub_rounded, color: _silsilaPurple, size: 44),
-                ),
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(Icons.hub_rounded, color: _silsilaOrange, size: 44),
               ),
               const SizedBox(width: 15),
               const Expanded(
