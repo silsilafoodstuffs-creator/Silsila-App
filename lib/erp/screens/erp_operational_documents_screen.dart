@@ -979,7 +979,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         autofocus: true,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
-            if (event.logicalKey == LogicalKeyboardKey.f2 || event.logicalKey == LogicalKeyboardKey.f11) {
+            if (event.logicalKey == LogicalKeyboardKey.f1) {
               _openItemPicker();
               return KeyEventResult.handled;
             }
@@ -1255,7 +1255,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     return Directionality(textDirection: TextDirection.rtl, child: Focus(
       autofocus: true,
       onKeyEvent: (node, event) {
-        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f11) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f1) {
           _openItemPicker();
           return KeyEventResult.handled;
         }
