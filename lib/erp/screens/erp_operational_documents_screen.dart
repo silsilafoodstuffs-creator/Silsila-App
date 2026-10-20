@@ -1375,6 +1375,12 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           _invoiceCard('تفاصيل الأصناف', Icons.inventory_2_outlined, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Wrap(spacing: 8, runSpacing: 8, children: [
               FilledButton.icon(onPressed: _saving || _loading ? null : _openItemPicker, icon: const Icon(Icons.playlist_add_rounded), label: const Text('جلب الأصناف  F1')),
+              if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice') ...[
+                FilledButton.tonalIcon(onPressed: _saving || _loading ? null : () => _openCampaignPicker('customer_magazine'), icon: const Icon(Icons.menu_book_outlined), label: const Text('جلب من عروض عملاء')),
+                FilledButton.tonalIcon(onPressed: _saving || _loading ? null : () => _openCampaignPicker('promotion'), icon: const Icon(Icons.campaign_outlined), label: const Text('جلب من عروض ترويج')),
+                FilledButton.tonalIcon(onPressed: _saving || _loading ? null : () => _openCampaignPicker('slow_moving'), icon: const Icon(Icons.inventory_2_outlined), label: const Text('جلب من عروض رواكد')),
+                FilledButton.tonalIcon(onPressed: _saving || _loading ? null : _openCustomerShortages, icon: const Icon(Icons.playlist_remove_outlined), label: const Text('جلب من نواقص عميل')),
+              ],
               if (_pendingLines.isNotEmpty) FilledButton.icon(
                 style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735)),
                 onPressed: _saving || _loading || !hasDraft ? null : _savePendingLines,
