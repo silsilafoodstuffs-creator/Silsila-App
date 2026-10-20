@@ -472,30 +472,41 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     return 'تعذر حفظ بيانات الشركة من قاعدة البيانات. التفاصيل: $message';
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(
+      style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Row(children: [
-          Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(color: _companyPurple.withValues(alpha: .09), borderRadius: BorderRadius.circular(14)),
-            child: const Icon(Icons.business_outlined, color: _companyPurple),
-          ),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('بيانات الشركة', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _companyPurple)),
-            const SizedBox(height: 4),
-            Text((_activeCompanyId ?? widget.companyId) == null ? 'سجّل بيانات شركتك لإنشاء ملفها وربط حسابك بها كمالك.' : 'تعديل البيانات القانونية والتجارية للشركة المرتبطة بحسابك.', style: const TextStyle(color: Colors.black54)),
-          ])),
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh, size: 17), label: const Text('تحديث')),
-            OutlinedButton.icon(onPressed: _loading || _saving ? null : _printCompany, icon: const Icon(Icons.preview_outlined, size: 17), label: const Text('معاينة / طباعة')),
-            OutlinedButton.icon(onPressed: _loading || _saving ? null : _exportCompany, icon: const Icon(Icons.picture_as_pdf_outlined, size: 17), label: const Text('تصدير PDF')),
-            FilledButton.icon(onPressed: _saving || _loading ? null : _save, icon: const Icon(Icons.save_outlined, size: 17), label: const Text('حفظ')),
+        Card(color: _companyPurple, child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              const Icon(Icons.business_outlined, color: Color(0xFFFFA015), size: 30),
+              const SizedBox(width: 10),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('بيانات الشركة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+                Text((_activeCompanyId ?? widget.companyId) == null ? 'إنشاء ملف الشركة وربط حساب المالك.' : 'تعديل البيانات القانونية والتجارية للشركة.', style: const TextStyle(color: Colors.white70)),
+              ])),
+            ]),
+            const SizedBox(height: 8),
+            SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+              _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+              _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _save),
+              _quickTask('معاينة / طباعة', Icons.visibility_outlined, const Color(0xFF6841A5), _loading || _saving ? null : _printCompany),
+              _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _loading || _saving ? null : _exportCompany),
+            ])),
           ]),
-        ]),
+        )),
         const SizedBox(height: 16),
         if (_error != null) _notice(_error!, Colors.red),
         if (_message != null) _notice(_message!, Colors.green),
