@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_inventory_master_repository.dart';
 import '../services/erp_parties_repository.dart';
-import '../services/erp_workspace_records_service.dart';
 
 class ErpItemOffersScreen extends StatefulWidget {
   const ErpItemOffersScreen({super.key, required this.companyId});
@@ -13,42 +12,38 @@ class ErpItemOffersScreen extends StatefulWidget {
 }
 
 class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
-  final _records = ErpWorkspaceRecordsService();
   final _inventory = ErpInventoryMasterRepository();
   final _partiesRepo = ErpPartiesRepository();
   final _name = TextEditingController();
   final _search = TextEditingController();
-  final _qty = TextEditingController(text: '1');
-  final _discount = TextEditingController(text: '0');
-  DateTime _from = DateTime.now(), _to = DateTime.now().add(const Duration(days: 7));
-  String _offerType = 'خصم نسبة';
+  DateTime _from = DateTime.now(), _to = DateTime.now().add(const Duration(days: 30));
+  String _campaignType = 'customer_magazine';
+  String _discountKind = 'special_price';
   String _customerScope = 'كل العملاء';
   String _warehouseScope = 'كل المخازن';
   String? _groupId;
   bool _loading = false, _saving = false;
   String? _error, _message;
-  List<Map<String,dynamic>> _items = [], _groups = [], _parties = [], _warehouses = [];
-  final Set<String> _selectedCustomers = {}, _selectedWarehouses = {}, _governorates = {}, _centers = {}, _areas = {};
+  List<Map<String,dynamic>> _items = [], _groups = [], _parties = [], _warehouses = [], _campaigns = [];
+  final Set<String> _selectedCustomers = {}, _selectedWarehouses = {}, _selectedBranches = {}, _governorates = {}, _centers = {}, _areas = {}, _customerTypes = {};
   final List<Map<String,dynamic>> _offerLines = [];
-  List<Map<String,dynamic>> get _visibleItems {
-    final q = _search.text.trim().toLowerCase();
-    return _items.where((i) {
-      final matchesQuery = q.isEmpty || ['item_code','barcode','item_name'].any((k) => (i[k] ?? '').toString().toLowerCase().contains(q));
-      return matchesQuery && (_groupId == null || (i['group_id'] ?? '').toString() == _groupId);
-    }).toList();
-  }
+  SupabaseClient? get _db { try { return Supabase.instance.client; } catch (_) { return null; } }
   String _s(dynamic v) => (v ?? '').toString();
+  double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _date(DateTime d) => '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+  String get _campaignTypeLabel => switch (_campaignType) { 'customer_magazine' => 'عرض تجريبي للعملاء', 'promotion' => 'عرض ترويج', _ => 'عرض رواكد' };
   @override void initState() { super.initState(); _load(); }
-  @override void dispose() { _name.dispose(); _search.dispose(); _qty.dispose(); _discount.dispose(); super.dispose(); }
+  @override void dispose() { _name.dispose(); _search.dispose(); super.dispose(); }
+
   Future<void> _load() async {
     final company = widget.companyId;
     if (company == null || company.isEmpty) { setState(() => _error = 'اربط الشاشة بشركة نشطة أولًا.'); return; }
     setState(() { _loading = true; _error = null; });
     try {
       final values = await Future.wait([
-        _inventory.fetchItems(company), _inventory.fetchGroups(company), _inventory.fetchWarehouses(company), _partiesRepo.fetchParties(company, kind: 'customer'),
-        _records.listPage(companyId: company, pageKey: 'عروض الأصناف'),
+        _inventory.fetchItems(company), _inventory.fetchGroups(company), _inventory.fetchWarehouses(company),
+        _partiesRepo.fetchParties(company, kind: 'customer'),
+        _db!.from('erp_sales_campaigns').select('id,title,campaign_type,start_date,end_date,is_active').eq('company_id', company).order('created_at', ascending: false).limit(100),
       ]);
       if (!mounted) return;
       setState(() {
@@ -56,25 +51,34 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         _groups = (values[1] as List).cast<Map<String,dynamic>>();
         _warehouses = (values[2] as List).cast<Map<String,dynamic>>();
         _parties = (values[3] as List).cast<Map<String,dynamic>>();
+        _campaigns = (values[4] as List).map((r) => Map<String,dynamic>.from(r)).toList();
         _loading = false;
       });
     } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات العروض: $e'; }); }
   }
+
   Future<void> _chooseDate(bool start) async {
     final selected = await showDatePicker(context: context, initialDate: start ? _from : _to, firstDate: DateTime(2020), lastDate: DateTime(2100));
     if (selected != null) setState(() { if (start) { _from = selected; if (_to.isBefore(_from)) _to = _from; } else { _to = selected; if (_to.isBefore(_from)) _from = _to; } });
   }
+
   Future<void> _pickMulti({required String title, required List<Map<String,dynamic>> options, required String idKey, required String labelKey, required Set<String> selected}) async {
     final draft = Set<String>.from(selected);
     await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
       title: Text(title, textDirection: TextDirection.rtl),
-      content: SizedBox(width: 520, height: 420, child: ListView(children: options.map((r) {
+      content: SizedBox(width: 520, height: 420, child: options.isEmpty ? const Center(child: Text('لا توجد بيانات متاحة لهذا الاختيار.')) : ListView(children: options.map((r) {
         final id = _s(r[idKey]); final label = _s(r[labelKey]);
         return CheckboxListTile(value: draft.contains(id), title: Text(label, textDirection: TextDirection.rtl), onChanged: (v) => refresh(() { v == true ? draft.add(id) : draft.remove(id); }));
       }).toList())),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')), FilledButton(onPressed: () { setState(() { selected..clear()..addAll(draft); }); Navigator.pop(ctx); }, child: const Text('تطبيق الاختيار'))],
     )));
   }
+
+  List<Map<String,dynamic>> _distinctOptions(String field) {
+    final values = _parties.map((p)=>_s(p[field])).where((v)=>v.isNotEmpty).toSet().toList()..sort();
+    return values.map((v)=>{'id':v,'name':v}).toList();
+  }
+
   Future<void> _pickProducts() async {
     final chosen = <String>{};
     final search = TextEditingController();
@@ -93,7 +97,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
             for (final id in chosen) {
               if (_offerLines.any((l) => _s(l['item_id']) == id)) continue;
               final item = _items.firstWhere((i) => _s(i['id']) == id);
-              _offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':item['sale_price'] ?? 0,'offer_qty':1,'remaining_qty':1,'discount':0});
+              _offerLines.add({'item_id':id,'item_code':_s(item['item_code']),'item_name':_s(item['item_name']),'unit':_s(item['base_unit']),'sale_price':_n(item['sale_price']),'offer_price':_n(item['sale_price']),'offer_qty':100.0,'remaining_qty':100.0,'discount':0.0});
             }
           }); Navigator.pop(ctx);
         }, child: const Text('إضافة الأصناف المحددة'))],
@@ -101,57 +105,89 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     }));
     search.dispose();
   }
+
   Future<void> _save() async {
-    final company = widget.companyId;
-    if (company == null || company.isEmpty) { setState(() => _error = 'لا توجد شركة نشطة.'); return; }
+    final company = widget.companyId?.trim() ?? '';
+    final db = _db;
+    if (company.isEmpty || db == null) { setState(() => _error = 'لا توجد شركة نشطة أو اتصال بقاعدة البيانات.'); return; }
     if (_name.text.trim().isEmpty || _offerLines.isEmpty) { setState(() => _error = 'أدخل اسم العرض واختر صنفًا واحدًا على الأقل.'); return; }
+    if (_to.isBefore(_from)) { setState(() => _error = 'تاريخ نهاية العرض يجب ألا يسبق بدايته.'); return; }
+    for (final line in _offerLines) {
+      if (_n(line['offer_qty']) <= 0 || _n(line['remaining_qty']) < 0 || _n(line['remaining_qty']) > _n(line['offer_qty']) || _n(line['offer_price']) < 0) {
+        setState(() => _error = 'راجع أسعار وكميات العرض؛ المتبقي لا يتجاوز الكمية الأصلية.'); return;
+      }
+    }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      final data = <String,String>{
-        'اسم العرض':_name.text.trim(), 'نوع العرض':_offerType, 'من تاريخ':_date(_from), 'إلى تاريخ':_date(_to),
-        'نطاق العملاء':_customerScope, 'العملاء المحددون':_selectedCustomers.join(','), 'نطاق المخازن':_warehouseScope,
-        'المخازن المحددة':_selectedWarehouses.join(','), 'المحافظات':_governorates.join(','), 'المراكز':_centers.join(','), 'المناطق':_areas.join(','),
-        'بنود العرض':_offerLines.map((l) => '${_s(l['item_id'])}~${_s(l['item_code'])}~${_s(l['item_name'])}~${_s(l['offer_qty'])}~${_s(l['remaining_qty'])}~${_s(l['discount'])}').join('|'),
-        'حالة العرض':_offerLines.every((l) => (double.tryParse(_s(l['remaining_qty'])) ?? 0) <= 0) ? 'منتهي' : 'نشط'
-      };
-      await _records.saveRecord(companyId: company, pageKey: 'عروض الأصناف', record: data);
-      if (mounted) setState(() { _saving = false; _message = 'تم حفظ إعدادات العرض في قاعدة البيانات. يتم تتبع الكمية المتبقية داخل العرض.'; });
+      final singleCustomer = _selectedCustomers.length == 1 ? _selectedCustomers.first : null;
+      final header = await db.from('erp_sales_campaigns').insert({
+        'company_id':company, 'campaign_type':_campaignType, 'title':_name.text.trim(),
+        'start_date':_date(_from), 'end_date':_date(_to), 'owner_party_id':singleCustomer,
+        'owner_label':_customerScope == 'كل العملاء' ? 'كل العملاء' : 'عملاء محددون',
+        'is_active':true,
+        'target_customer_ids':_customerScope == 'كل العملاء' ? [] : _selectedCustomers.toList(),
+        'target_warehouse_ids':_warehouseScope == 'كل المخازن' ? [] : _selectedWarehouses.toList(),
+        'target_branch_ids':_selectedBranches.toList(),
+        'target_governorates':_governorates.toList(), 'target_districts':_areas.toList(),
+        'target_areas':_areas.toList(), 'target_centers':_centers.toList(), 'target_customer_types':_customerTypes.toList(),
+      }).select('id').single();
+      final campaignId = _s(header['id']);
+      final rows = _offerLines.map((line) {
+        final original = _n(line['sale_price']), offerPrice = _n(line['offer_price']);
+        final discountValue = _n(line['discount']);
+        return <String,dynamic>{
+          'company_id':company, 'campaign_id':campaignId, 'item_id':_s(line['item_id']),
+          'offer_price':offerPrice, 'min_quantity':1, 'max_quantity':_n(line['offer_qty']),
+          'offer_quantity':_n(line['offer_qty']), 'remaining_quantity':_n(line['remaining_qty']),
+          'discount_value':discountValue, 'discount_kind':_discountKind,
+          'representative_incentive':_campaignType == 'slow_moving' ? 2 : 0,
+          'customer_incentive':_campaignType == 'promotion' ? 2 : 0, 'is_active':true,
+        };
+      }).toList();
+      await db.from('erp_sales_campaign_items').insert(rows);
+      if (!mounted) return;
+      setState(() { _saving = false; _message = 'تم حفظ العرض وبنوده في قاعدة بيانات العروض، وأصبح متاحًا في جلب العروض داخل فاتورة المبيعات.'; _name.clear(); _offerLines.clear(); });
+      await _load();
     } catch (e) { if (mounted) setState(() { _saving = false; _error = 'تعذر حفظ العرض: $e'; }); }
   }
+
   Widget _field(String label, Widget child) => Padding(padding: const EdgeInsets.all(6), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [Text(label, textDirection: TextDirection.rtl, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)), const SizedBox(height: 5), child]));
   InputDecoration _dec(String label) => InputDecoration(labelText: label, isDense: true, border: const OutlineInputBorder(), contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10));
+  Widget _notice(String text, bool error) => Container(margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:error?Colors.red.shade50:Colors.green.shade50,borderRadius:BorderRadius.circular(8)),child:Text(text,style:TextStyle(color:error?Colors.red.shade900:Colors.green.shade900)));
+
   @override Widget build(BuildContext context) {
     return Shortcuts(shortcuts: <LogicalKeySet, Intent>{LogicalKeySet(LogicalKeyboardKey.f1): const ActivateIntent()}, child: Actions(actions: <Type, Action<Intent>>{ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) { _pickProducts(); return null; })}, child: Directionality(textDirection: TextDirection.rtl, child: _loading ? const Center(child: CircularProgressIndicator()) : ListView(padding: const EdgeInsets.all(16), children: [
       Row(children: [const Icon(Icons.local_offer, color: Color(0xFF3E007D)), const SizedBox(width: 8), const Expanded(child: Text('عروض الأصناف', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('تحديث'))]),
       const SizedBox(height: 8), if (_error != null) _notice(_error!, true), if (_message != null) _notice(_message!, false),
       Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [
-        Row(children: [Expanded(child: _field('اسم العرض', TextField(controller: _name, decoration: _dec('مثال: عرض نهاية الأسبوع')))), Expanded(child: _field('نوع العرض', DropdownButtonFormField<String>(value: _offerType, decoration: _dec('نوع العرض'), items: ['خصم نسبة','خصم قيمة','سعر عرض','اشترِ كمية واحصل على كمية','عرض تصفية'].map((e) => DropdownMenuItem(value:e,child:Text(e))).toList(), onChanged:(v)=>setState(()=>_offerType=v??_offerType))))]),
-        Row(children: [Expanded(child: _field('بداية العرض', OutlinedButton.icon(onPressed:()=>_chooseDate(true), icon:const Icon(Icons.calendar_month), label:Text(_date(_from)))), Expanded(child: _field('نهاية العرض', OutlinedButton.icon(onPressed:()=>_chooseDate(false), icon:const Icon(Icons.event_busy), label:Text(_date(_to)))))]),
+        Row(children: [Expanded(child: _field('اسم العرض', TextField(controller: _name, decoration: _dec('مثال: عرض نهاية الأسبوع')))), Expanded(child: _field('نوع العرض في المبيعات', DropdownButtonFormField<String>(value: _campaignType, decoration: _dec('نوع العرض'), items: const [DropdownMenuItem(value:'customer_magazine',child:Text('عرض للعملاء')),DropdownMenuItem(value:'promotion',child:Text('عرض ترويج')),DropdownMenuItem(value:'slow_moving',child:Text('عرض الرواكد'))], onChanged:(v)=>setState(()=>_campaignType=v??_campaignType))))]),
+        Row(children: [Expanded(child: _field('طريقة التسعير', DropdownButtonFormField<String>(value:_discountKind, decoration:_dec('طريقة التسعير'), items: const [DropdownMenuItem(value:'special_price',child:Text('سعر عرض خاص')),DropdownMenuItem(value:'percent',child:Text('خصم نسبة')),DropdownMenuItem(value:'amount',child:Text('خصم قيمة')),DropdownMenuItem(value:'buy_get',child:Text('اشترِ كمية واحصل على كمية')),DropdownMenuItem(value:'clearance',child:Text('تصفية رواكد'))], onChanged:(v)=>setState(()=>_discountKind=v??_discountKind))), Expanded(child: _field('بداية العرض', OutlinedButton.icon(onPressed:()=>_chooseDate(true), icon:const Icon(Icons.calendar_month), label:Text(_date(_from))))), Expanded(child: _field('نهاية العرض', OutlinedButton.icon(onPressed:()=>_chooseDate(false), icon:const Icon(Icons.event_busy), label:Text(_date(_to))))) ]),
         const Divider(), Align(alignment: Alignment.centerRight, child: Text('نطاق تطبيق العرض', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF3E007D)))),
-        Row(children: [Expanded(child: _field('العملاء', DropdownButtonFormField<String>(value:_customerScope, decoration:_dec('تطبيق على'), items:['كل العملاء','تصنيف عميل','عملاء محددون','حسب المنطقة الجغرافية'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(), onChanged:(v)=>setState(()=>_customerScope=v??_customerScope))),), Expanded(child: _field('المخازن والفروع', DropdownButtonFormField<String>(value:_warehouseScope, decoration:_dec('تطبيق على'), items:['كل المخازن','مخازن محددة','فروع محددة'].map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(), onChanged:(v)=>setState(()=>_warehouseScope=v??_warehouseScope))) )]),
+        Row(children: [Expanded(child: _field('العملاء', DropdownButtonFormField<String>(value:_customerScope, decoration:_dec('تطبيق على'), items:const [DropdownMenuItem(value:'كل العملاء',child:Text('كل العملاء')),DropdownMenuItem(value:'عملاء محددون',child:Text('عملاء محددون'))], onChanged:(v)=>setState(()=>_customerScope=v??_customerScope))), Expanded(child: _field('المخازن والفروع', DropdownButtonFormField<String>(value:_warehouseScope, decoration:_dec('تطبيق على'), items:const [DropdownMenuItem(value:'كل المخازن',child:Text('كل المخازن')),DropdownMenuItem(value:'مخازن محددة',child:Text('مخازن محددة'))], onChanged:(v)=>setState(()=>_warehouseScope=v??_warehouseScope))) ]),
         Wrap(spacing:8, runSpacing:8, children: [
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'جلب العملاء', options:_parties, idKey:'id', labelKey:'party_name', selected:_selectedCustomers), icon:const Icon(Icons.people_alt), label:Text('جلب العملاء (${_selectedCustomers.length})')),
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'جلب المخازن', options:_warehouses, idKey:'id', labelKey:'warehouse_name', selected:_selectedWarehouses), icon:const Icon(Icons.warehouse), label:Text('جلب المخازن (${_selectedWarehouses.length})')),
+          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'الفروع', options:[], idKey:'id', labelKey:'branch_name', selected:_selectedBranches), icon:const Icon(Icons.store), label:Text('الفروع (${_selectedBranches.length})')),
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المحافظات', options:_distinctOptions('governorate'), idKey:'id', labelKey:'name', selected:_governorates), icon:const Icon(Icons.map), label:Text('المحافظات (${_governorates.length})')),
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المراكز', options:_distinctOptions('center'), idKey:'id', labelKey:'name', selected:_centers), icon:const Icon(Icons.location_city), label:Text('المراكز (${_centers.length})')),
           OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المناطق', options:_distinctOptions('district'), idKey:'id', labelKey:'name', selected:_areas), icon:const Icon(Icons.place), label:Text('المناطق (${_areas.length})')),
+          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'تصنيفات العملاء', options:_distinctOptions('customer_type'), idKey:'id', labelKey:'name', selected:_customerTypes), icon:const Icon(Icons.category), label:Text('تصنيفات العملاء (${_customerTypes.length})')),
         ]),
       ]))),
       Row(children: [Expanded(child: TextField(controller:_search, onChanged:(_)=>setState((){}), decoration:_dec('بحث الأصناف — اضغط F1 لجلب الأصناف'))), const SizedBox(width:8), FilledButton.icon(onPressed:_pickProducts, icon:const Icon(Icons.playlist_add), label:const Text('جلب الأصناف F1'))]),
       const SizedBox(height:8), Row(children: [Expanded(child: DropdownButtonFormField<String?>(value:_groupId, decoration:_dec('تصفية حسب الفئة'), items:[const DropdownMenuItem<String?>(value:null,child:Text('كل الفئات')),..._groups.map((g)=>DropdownMenuItem<String?>(value:_s(g['id']),child:Text(_s(g['group_name']))))], onChanged:(v)=>setState(()=>_groupId=v))), const SizedBox(width:8), TextButton(onPressed:()=>setState(()=>_groupId=null), child:const Text('الكل'))]),
-      const SizedBox(height:8), Card(child: SingleChildScrollView(scrollDirection:Axis.horizontal, child: DataTable(columns: const [DataColumn(label:Text('كود')),DataColumn(label:Text('الصنف')),DataColumn(label:Text('الوحدة')),DataColumn(label:Text('سعر البيع')),DataColumn(label:Text('كمية العرض')),DataColumn(label:Text('المتبقي')),DataColumn(label:Text('قيمة/نسبة')),DataColumn(label:Text('حذف'))], rows:_offerLines.map((line) => DataRow(cells:[
-        DataCell(Text(_s(line['item_code']))), DataCell(SizedBox(width:180, child:Text(_s(line['item_name'])))), DataCell(Text(_s(line['unit']))), DataCell(Text(_s(line['sale_price']))),
-        DataCell(SizedBox(width:85, child:TextFormField(initialValue:_s(line['offer_qty']), keyboardType:TextInputType.number, decoration:_dec('الكمية'), onChanged:(v)=>setState(()=>line['offer_qty']=double.tryParse(v)??0)))),
-        DataCell(SizedBox(width:85, child:TextFormField(initialValue:_s(line['remaining_qty']), keyboardType:TextInputType.number, decoration:_dec('المتبقي'), onChanged:(v)=>setState(()=>line['remaining_qty']=double.tryParse(v)??0)))),
-        DataCell(SizedBox(width:85, child:TextFormField(initialValue:_s(line['discount']), keyboardType:const TextInputType.numberWithOptions(decimal:true), decoration:_dec('الخصم'), onChanged:(v)=>setState(()=>line['discount']=double.tryParse(v)??0)))),
+      const SizedBox(height:8), Card(child: SingleChildScrollView(scrollDirection:Axis.horizontal, child: DataTable(columns: const [DataColumn(label:Text('كود')),DataColumn(label:Text('الصنف')),DataColumn(label:Text('الوحدة')),DataColumn(label:Text('سعر البيع')),DataColumn(label:Text('سعر العرض')),DataColumn(label:Text('كمية العرض')),DataColumn(label:Text('المتبقي')),DataColumn(label:Text('خصم')),DataColumn(label:Text('حذف'))], rows:_offerLines.map((line) => DataRow(cells:[
+        DataCell(Text(_s(line['item_code']))), DataCell(SizedBox(width:180, child:Text(_s(line['item_name'])))), DataCell(Text(_s(line['unit']))), DataCell(Text(_n(line['sale_price']).toStringAsFixed(2))),
+        DataCell(SizedBox(width:90, child:TextFormField(initialValue:_s(line['offer_price']), keyboardType:const TextInputType.numberWithOptions(decimal:true), decoration:_dec('السعر'), onChanged:(v)=>setState(()=>line['offer_price']=_n(v))))),
+        DataCell(SizedBox(width:85, child:TextFormField(initialValue:_s(line['offer_qty']), keyboardType:const TextInputType.numberWithOptions(decimal:true), decoration:_dec('الكمية'), onChanged:(v)=>setState(()=>line['offer_qty']=_n(v))))),
+        DataCell(SizedBox(width:85, child:TextFormField(initialValue:_s(line['remaining_qty']), keyboardType:const TextInputType.numberWithOptions(decimal:true), decoration:_dec('المتبقي'), onChanged:(v)=>setState(()=>line['remaining_qty']=_n(v))))),
+        DataCell(SizedBox(width:75, child:TextFormField(initialValue:_s(line['discount']), keyboardType:const TextInputType.numberWithOptions(decimal:true), decoration:_dec('الخصم'), onChanged:(v)=>setState(()=>line['discount']=_n(v))))),
         DataCell(IconButton(tooltip:'حذف الصنف', onPressed:()=>setState(()=>_offerLines.remove(line)), icon:const Icon(Icons.delete_forever,color:Colors.red))),
       ])).toList())),
-      const SizedBox(height:10), Row(children:[Expanded(child:Text('عدد الأصناف: ${_offerLines.length} | الأصناف التي نفدت كميتها تنتهي عروضها عند وصول المتبقي إلى صفر.', style:const TextStyle(fontSize:12))), FilledButton.icon(onPressed:_saving?null:_save, icon:const Icon(Icons.save), label:Text(_saving?'جارٍ الحفظ…':'حفظ العرض'))]),
+      const SizedBox(height:10), Row(children:[Expanded(child:Text('عدد الأصناف: ${_offerLines.length} | يتم حفظ العروض في جداول الحملات الفعلية المتصلة بأزرار جلب العروض في فاتورة البيع.', style:const TextStyle(fontSize:12))), FilledButton.icon(onPressed:_saving?null:_save, icon:const Icon(Icons.save), label:Text(_saving?'جارٍ الحفظ…':'حفظ العرض'))]),
+      const SizedBox(height:18), const Text('العروض المسجلة', style:TextStyle(fontSize:16,fontWeight:FontWeight.bold,color:Color(0xFF3E007D))),
+      if (_campaigns.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('لا توجد عروض مسجلة بعد.')),
+      ..._campaigns.map((c)=>Card(child:ListTile(leading:Icon(_s(c['campaign_type'])=='slow_moving'?Icons.inventory_2_outlined:_s(c['campaign_type'])=='promotion'?Icons.campaign_outlined:Icons.menu_book_outlined,color:const Color(0xFF3E007D)),title:Text(_s(c['title'])),subtitle:Text('${_s(c['start_date'])} ← ${_s(c['end_date'])} | ${_s(c['campaign_type'])}'),trailing:Icon(_s(c['is_active'])=='true'?Icons.check_circle:Icons.pause_circle_outline,color:_s(c['is_active'])=='true'?Colors.green:Colors.grey)))),
     ]))));
   }
-  List<Map<String,dynamic>> _distinctOptions(String field) {
-    final values = _parties.map((p)=>_s(p[field])).where((v)=>v.isNotEmpty).toSet().toList()..sort();
-    return values.map((v)=>{'id':v,'name':v}).toList();
-  }
-  Widget _notice(String text, bool error) => Container(margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:error?Colors.red.shade50:Colors.green.shade50,borderRadius:BorderRadius.circular(8)),child:Text(text,style:TextStyle(color:error?Colors.red.shade900:Colors.green.shade900)));
 }
