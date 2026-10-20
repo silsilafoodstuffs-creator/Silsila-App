@@ -68,7 +68,7 @@ class ErpOperationalDocumentsRepository {
 
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
     final rows = await _db.from('erp_items')
-      .select('id, item_code, item_name, barcode, base_unit, purchase_price, sale_price, tax_rate')
+      .select('id, item_code, item_name, barcode, base_unit, purchase_price, sale_price, tax_rate, discount_limit')
       .eq('company_id', companyId.trim()).eq('is_active', true).order('item_name').limit(2000);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
