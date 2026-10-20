@@ -300,15 +300,22 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
         cleanCode = 'SIL-${compactId.substring(0, compactId.length >= 8 ? 8 : compactId.length)}';
         _companyCode.text = cleanCode;
       }
-      await ErpCompanySettingsRepository(client: db).saveSetting(
-        companyId: id,
-        key: 'company_profile_extra',
-        value: <String, Object?>{
-          'company_code': cleanCode,
-          'tax_office': _taxOffice.text.trim().isEmpty ? null : _taxOffice.text.trim(),
-          'logo_path': _logoStoragePath,
-        },
-      );
+      try {
+        await ErpCompanySettingsRepository(client: db).saveSetting(
+          companyId: id,
+          key: 'company_profile_extra',
+          value: <String, Object?>{
+            'company_code': cleanCode,
+            'tax_office': _taxOffice.text.trim().isEmpty ? null : _taxOffice.text.trim(),
+            'logo_path': _logoStoragePath,
+          },
+        );
+      } catch (settingsError) {
+        dashboardRefreshError = [
+          if (dashboardRefreshError != null) dashboardRefreshError,
+          'تعذر حفظ كود الشركة والمأمورية ومسار الصورة: $settingsError',
+        ].join(' | ');
+      }
       if (!mounted) return;
       setState(() {
         _saving = false;
