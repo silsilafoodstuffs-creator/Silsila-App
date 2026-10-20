@@ -759,7 +759,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             },
             child: AlertDialog(
             title: Row(children: [
-              const Expanded(child: Text('اختيار الأصناف — F1', style: TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900))),
+              Expanded(child: Text(sourceTitle == null ? 'اختيار الأصناف — F1' : 'اختيار الأصناف — ' + sourceTitle + ' (F1)', style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900))),
               Chip(label: Text('${selectedItems.length} صنف')),
             ]),
             content: SizedBox(
