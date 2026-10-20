@@ -10,7 +10,7 @@ select
   m.branch_id,
   m.warehouse_id,
   m.item_id,
-  coalesce(sum(m.quantity_in - m.quantity_out), 0)::numeric(18,3) as quantity_on_hand,
+  coalesce(sum(m.quantity_in - m.quantity_out), 0)::numeric as quantity_on_hand,
   coalesce(sum(case when m.movement_date::date = current_date then m.quantity_in else 0 end), 0)::numeric(18,3) as today_quantity_in,
   coalesce(sum(case when m.movement_date::date = current_date then m.quantity_out else 0 end), 0)::numeric(18,3) as today_quantity_out,
   max(m.movement_date) as last_movement_at,
