@@ -353,27 +353,6 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     }
   }
 
-  void _showHelp(String title, String message, IconData icon) {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          icon: Icon(icon, color: _silsilaPurple, size: 34),
-          title: Text(title, style: const TextStyle(color: _silsilaPurple, fontWeight: FontWeight.w900)),
-          content: Text(message, style: const TextStyle(height: 1.7, color: _ink)),
-          actions: [
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: _silsilaPurple),
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('حسنًا'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _accountTypeButton(String label, IconData icon) {
     final selected = _accountType == label;
     return Expanded(
