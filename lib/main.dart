@@ -8031,7 +8031,6 @@ class _MarketCardState extends State<MarketCard> {
   bool _busy = false;
   bool _closed = false;
   bool _detailsExpanded = false;
-  bool _accepted = false;
   String? _negotiationStatus;
   late Future<List<Map<String, dynamic>>> _negotiationsFuture;
 
@@ -8061,7 +8060,6 @@ class _MarketCardState extends State<MarketCard> {
       final counts = await _service.getInteractionCounts(widget.postId);
       if (mounted) setState(() {
         _counts = counts;
-        if (action == 'accept') _accepted = true;
       });
       if (mounted && action != 'view') {
         ScaffoldMessenger.of(context).showSnackBar(
