@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../services/activity_service.dart';
 import '../erp_dashboard_screen.dart';
 
 const _silsilaPurple = Color(0xFF3E007D);
@@ -35,19 +36,43 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   String _accountType = 'إدارة نشاط';
   String _activityUserType = 'مستخدم رئيسي للنشاط';
   String? _error;
+  List<String> _activityTypes = const <String>[];
+  bool _activitiesLoading = true;
 
-  static const _activityTypes = <String>[
-    'مواد غذائية',
-    'تجارة وتوزيع',
-    'سوبر ماركت وبقالة',
-    'مخازن ومستودعات',
-    'تجارة عامة',
-    'خدمات أخرى',
-  ];
+  Future<void> _loadActivityTypes() async {
+    try {
+      final rows = await ActivityService().getActivities();
+      final names = rows
+          .map((row) => row['name']?.toString().trim() ?? '')
+          .where((name) => name.isNotEmpty)
+          .toSet()
+          .toList(growable: false);
+      if (!mounted) return;
+      setState(() {
+        _activityTypes = names;
+        if (!_activityTypes.contains(_activity) && _activityTypes.isNotEmpty) {
+          _activity = _activityTypes.first;
+        }
+        _activitiesLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _activityTypes = ActivityService.fallbackActivities
+            .map((row) => row['name']!)
+            .toList(growable: false);
+        if (!_activityTypes.contains(_activity) && _activityTypes.isNotEmpty) {
+          _activity = _activityTypes.first;
+        }
+        _activitiesLoading = false;
+      });
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _loadActivityTypes();
     try {
       final client = Supabase.instance.client;
       _signedIn = client.auth.currentSession != null;
@@ -142,7 +167,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     final confirmation = TextEditingController();
     final formKey = GlobalKey<FormState>();
     var busy = false, obscure = true, obscureConfirm = true;
-    var error = '', activity = _activity;
+    var error = '', activity = _activityTypes.contains(_activity) ? _activity : (_activityTypes.isNotEmpty ? _activityTypes.first : '');
     var accountType = newActivity ? 'إدارة نشاط' : _accountType;
     try {
       await showDialog<void>(
@@ -186,13 +211,16 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                         ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
-                          value: activity,
+                          value: _activityTypes.contains(activity) ? activity : null,
                           isExpanded: true,
-                          decoration: const InputDecoration(labelText: 'نوع النشاط'),
+                          decoration: InputDecoration(
+                            labelText: 'نوع النشاط',
+                            hintText: _activitiesLoading ? 'جارٍ تحميل الأنشطة...' : 'اختر النشاط',
+                          ),
                           items: _activityTypes
-                              .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                              .map((v) => DropdownMenuItem<String>(value: v, child: Text(v, overflow: TextOverflow.ellipsis)))
                               .toList(),
-                          onChanged: (v) {
+                          onChanged: _activitiesLoading ? null : (v) {
                             if (v != null) refresh(() => activity = v);
                           },
                         ),
@@ -465,15 +493,18 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
           const Text('سجّل دخولك لإدارة شركتك وبياناتك بأمان', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF756A80), fontSize: 12, height: 1.6)),
           const SizedBox(height: 19),
           DropdownButtonFormField<String>(
-            value: _activity,
+            value: _activityTypes.contains(_activity) ? _activity : null,
             isExpanded: true,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'نوع النشاط',
-              prefixIcon: Icon(Icons.business_center_outlined, color: _silsilaPurple),
-              border: OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.business_center_outlined, color: _silsilaPurple),
+              border: const OutlineInputBorder(),
+              hintText: _activitiesLoading ? 'جارٍ تحميل الأنشطة...' : 'اختر النشاط',
             ),
-            items: _activityTypes.map((item) => DropdownMenuItem(value: item, child: Text(item, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (value) { if (value != null) setState(() => _activity = value); },
+            items: _activityTypes.map((item) => DropdownMenuItem<String>(value: item, child: Text(item, overflow: TextOverflow.ellipsis))).toList(),
+            onChanged: _activitiesLoading ? null : (value) {
+              if (value != null) setState(() => _activity = value);
+            },
           ),
           const SizedBox(height: 14),
           const Text('اختار طريقة دخولك', textAlign: TextAlign.center, style: TextStyle(color: _silsilaPurple, fontSize: 16, fontWeight: FontWeight.w900)),
