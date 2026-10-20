@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/erp_quick_task_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _settingsPurple = Color(0xFF3E007D);
@@ -124,13 +125,8 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   Widget _textField(TextEditingController controller,String label,{String? hint}) => TextField(controller:controller,style:const TextStyle(fontSize:14),decoration:InputDecoration(labelText:label,hintText:hint,isDense:true,constraints:const BoxConstraints(minHeight:52),contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12),border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))));
   Widget _colorField(TextEditingController c,String label) => Row(children:[Expanded(child:_textField(c,label,hint:'#3E007D')),const SizedBox(width:10),Container(width:42,height:42,decoration:BoxDecoration(color:_parseColor(c.text,_settingsPurple),borderRadius:BorderRadius.circular(8),border:Border.all(color:Colors.black12)))]);
   Widget _section(String title,IconData icon,Widget child)=>Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Icon(icon,color:_settingsPurple),const SizedBox(width:8),Text(title,style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800,color:_settingsPurple))]),const SizedBox(height:14),child])));
-  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
-    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
-    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
-      onPressed: action, icon: Icon(icon, size: 17),
-      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-  );
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
+      ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   Future<void> _previewSettings() async {
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
