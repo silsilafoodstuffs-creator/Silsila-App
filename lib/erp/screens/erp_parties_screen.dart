@@ -20,6 +20,9 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   final _address = TextEditingController();
   final _governorate = TextEditingController();
   final _district = TextEditingController();
+  final _center = TextEditingController();
+  final _area = TextEditingController();
+  final _customerType = TextEditingController();
   final _creditLimit = TextEditingController(text: '0');
   final _openingBalance = TextEditingController(text: '0');
   String _kind = 'customer';
@@ -43,7 +46,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   @override
   void dispose() {
     _company.dispose(); _code.dispose(); _name.dispose(); _phone.dispose(); _whatsapp.dispose();
-    _email.dispose(); _address.dispose(); _governorate.dispose(); _district.dispose();
+    _email.dispose(); _address.dispose(); _governorate.dispose(); _district.dispose(); _center.dispose(); _area.dispose(); _customerType.dispose();
     _creditLimit.dispose(); _openingBalance.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
@@ -75,10 +78,11 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       await _repo.createParty(companyId: _company.text, code: _code.text, name: _name.text,
         kind: _kind, phone: _phone.text, whatsapp: _whatsapp.text, email: _email.text,
         address: _address.text, governorate: _governorate.text, district: _district.text,
+        center: _center.text, area: _area.text, customerType: _customerType.text,
         creditLimit: credit, openingBalance: opening);
       if (!mounted) return;
       _code.clear(); _name.clear(); _phone.clear(); _whatsapp.clear(); _email.clear(); _address.clear();
-      _governorate.clear(); _district.clear(); _creditLimit.text = '0'; _openingBalance.text = '0';
+      _governorate.clear(); _district.clear(); _center.clear(); _area.clear(); _customerType.clear(); _creditLimit.text = '0'; _openingBalance.text = '0';
       setState(() { _saving = false; _message = 'تمت إضافة الطرف.'; });
       await _load(clearMessage: false);
     } catch (e) {
@@ -159,8 +163,16 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
           Row(children: [
             Expanded(child: TextField(controller: _governorate, decoration: const InputDecoration(labelText: 'المحافظة', border: OutlineInputBorder()))),
             const SizedBox(width: 6),
-            Expanded(child: TextField(controller: _district, decoration: const InputDecoration(labelText: 'المنطقة / المركز', border: OutlineInputBorder()))),
+            Expanded(child: TextField(controller: _center, decoration: const InputDecoration(labelText: 'المركز', border: OutlineInputBorder()))),
           ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: TextField(controller: _district, decoration: const InputDecoration(labelText: 'الحي / المركز المحلي', border: OutlineInputBorder()))),
+            const SizedBox(width: 6),
+            Expanded(child: TextField(controller: _area, decoration: const InputDecoration(labelText: 'المنطقة', border: OutlineInputBorder()))),
+          ]),
+          const SizedBox(height: 8),
+          TextField(controller: _customerType, decoration: const InputDecoration(labelText: 'تصنيف العميل (مثال: سوبر ماركت / بقالة / تاجر نصف جملة)', border: OutlineInputBorder())),
           const SizedBox(height: 8),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 6),
