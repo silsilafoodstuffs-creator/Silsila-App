@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_quick_task_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _p = Color(0xFF3E007D);
@@ -267,13 +268,8 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
 
   Widget _stat(String title,String value,IconData icon,Color color)=>Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),child:Row(children:[Icon(icon,color:color,size:28),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.black54,fontSize:13)),Text(value,style:TextStyle(color:color,fontSize:22,fontWeight:FontWeight.w900))]))]));
 
-Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
-  padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
-  child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF7F5FA), foregroundColor: const Color(0xFF3E007D), side: BorderSide(color: const Color(0xFF3E007D).withValues(alpha: .18)),
-    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
-    onPressed: action, icon: Icon(icon, size: 17),
-    label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-);
+Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
+    ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
 Future<void> _previewSalesTargets() async {
   await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
