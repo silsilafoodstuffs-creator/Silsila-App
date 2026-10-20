@@ -275,6 +275,29 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
     if (mounted) _run();
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewAudit() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة تقرير اختبار الحركات'),
+      content: SizedBox(width: 800, child: _issues.isEmpty ? const Text('لا توجد نتائج بعد. اضغط تحديث / تشغيل الفحص.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _issues.take(150).map((r) => ListTile(
+          dense: true,
+          leading: Icon(r['severity'] == 'خطأ' ? Icons.error_outline : r['severity'] == 'تحذير' ? Icons.warning_amber : Icons.check_circle_outline,
+            color: r['severity'] == 'خطأ' ? Colors.red : r['severity'] == 'تحذير' ? Colors.orange : Colors.green),
+          title: Text('${r['severity'] ?? 'معلومة'} — ${r['title'] ?? r['check_name'] ?? 'نتيجة فحص'}'),
+          subtitle: Text('${r['details'] ?? r['message'] ?? ''}'),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final errors = _issues.where((r) => r['severity'] == 'خطأ').length;
@@ -284,16 +307,20 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'اختبار ومراجعة الحركات',
-            style: TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'فحص فعلي للبيانات المتاحة في قاعدة ERP، مع تقرير بكل ملاحظة وزر للانتقال إلى شاشة المعالجة المناسبة.',
-            style: TextStyle(color: Colors.black54, height: 1.5),
-          ),
-          const SizedBox(height: 14),
+          Card(color: const Color(0xFF3E007D), child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('اختبار ومراجعة الحركات', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+              const Text('فحص بيانات ERP وعرض الأخطاء والتحذيرات وروابط المعالجة.', style: TextStyle(color: Colors.white70, height: 1.5)),
+              const SizedBox(height: 8),
+              SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                _quickTask('تحديث / تشغيل الفحص', Icons.refresh, Colors.blue, _loading ? null : _run),
+                _quickTask('معاينة التقرير', Icons.visibility_outlined, const Color(0xFF6841A5), _previewAudit),
+                _quickTask('نسخ التقرير', Icons.copy_outlined, const Color(0xFF137C8B), _copyReport),
+              ])),
+            ]),
+          )),
+          const SizedBox(height: 12),
           TextField(
             controller: _company,
             decoration: const InputDecoration(
