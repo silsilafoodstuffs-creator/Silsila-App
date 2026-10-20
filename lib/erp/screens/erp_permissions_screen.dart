@@ -319,17 +319,17 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
                         isDense: true,
                       ),
                       items: [
-                        const DropdownMenuItem(
+                        const DropdownMenuItem<String>(
                           value: '__all__',
                           child: Text('كل القيم'),
                         ),
-                        ...filterValues.toList()..sort()
-                      ].map((value) => value is String
-                          ? DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value == '__all__' ? 'كل القيم' : value),
-                            )
-                          : value as DropdownMenuItem<String>).toList(),
+                        ...((filterValues.toList()..sort()).map(
+                          (value) => DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          ),
+                        )),
+                      ],
                       onChanged: (value) => setDialogState(
                         () => filterValue = value ?? '__all__',
                       ),
@@ -451,7 +451,9 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   });}
   bool _cell(String key,String action){
     final t=_targets;if(t.isEmpty)return false;
-    return _scope=='__all__'?t.every((uid)=>_draft[uid]?[key+'::'+action]==true):_draft[_scope]?[key+'::'+action]==true;
+    return (_scope == '__all__' || _selectedUsers.isNotEmpty)
+        ? t.every((uid) => _draft[uid]?[key + '::' + action] == true)
+        : _draft[_scope]?[key + '::' + action] == true;
   }
   void _bulk(bool value){setState((){
     for(final uid in _targets){final map=_draft.putIfAbsent(uid,()=>_blank('مخصص بلا صلاحيات'));for(final key in _scopeKeys){for(final a in _actions){map[key+'::'+a]=value;}}}
