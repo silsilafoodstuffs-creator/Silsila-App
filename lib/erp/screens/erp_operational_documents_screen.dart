@@ -31,6 +31,12 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   final _unitPrice = TextEditingController(text: '0');
   final _discount = TextEditingController(text: '0');
   final _tax = TextEditingController(text: '0');
+  final _invoiceDiscountAmount = TextEditingController(text: '0');
+  final _invoiceDiscountPercent = TextEditingController(text: '0');
+  DateTime _documentDate = DateTime.now();
+  bool _isTaxInvoice = false;
+  List<Map<String, dynamic>> _representatives = [];
+  String? _salesRepId;
   List<Map<String, dynamic>> _rows = [];
   List<Map<String, dynamic>> _parties = [];
   List<Map<String, dynamic>> _warehouses = [];
@@ -74,7 +80,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   @override
   void dispose() {
     _company.dispose(); _documentNumber.dispose(); _notes.dispose(); _quantity.dispose();
-    _unitPrice.dispose(); _discount.dispose(); _tax.dispose(); super.dispose();
+    _unitPrice.dispose(); _discount.dispose(); _tax.dispose(); _invoiceDiscountAmount.dispose(); _invoiceDiscountPercent.dispose(); super.dispose();
   }
 
   String _s(dynamic v) => (v ?? '').toString();
@@ -122,6 +128,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         }
         _loading = false;
       });
+      if (widget.kind == ErpOperationalKind.sales) {
+        try {
+          final reps = await _repo.fetchRepresentatives(_company.text.trim());
+          if (mounted) setState(() {
+            _representatives = reps;
+            final selectedParty = _parties.where((party) => _s(party['id']) == _partyId);
+            if (_salesRepId == null && selectedParty.isNotEmpty) _salesRepId = _s(selectedParty.first['sales_rep_id']).isEmpty ? null : _s(selectedParty.first['sales_rep_id']);
+          });
+        } catch (_) { if (mounted) setState(() => _representatives = []); }
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر تحميل المستندات: $e'; });
@@ -152,10 +168,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       final id = await _repo.createDraft(
         companyId: _company.text, kind: widget.kind, documentNumber: _documentNumber.text,
         documentType: _documentType, partyId: _partyId!, warehouseId: _warehouseId!, notes: _notes.text,
+        documentDate: _documentDate, salesRepId: _salesRepId, isTaxInvoice: _isTaxInvoice,
       );
       if (!mounted) return;
       _documentNumber.clear(); _notes.clear();
-      setState(() { _saving = false; _selectedDocumentId = id; _lines = []; _message = 'تم إنشاء مسودة المستند. أضف البنود ثم رحّلها.'; });
+      setState(() { _saving = false; _selectedDocumentId = id; _lines = []; _pendingLines = []; _message = 'تم إنشاء مسودة المستند. أضف البنود ثم رحّلها.'; });
       await _load(clearMessage: false);
       if (mounted) setState(() => _selectedDocumentId = id);
     } catch (e) {
@@ -668,9 +685,41 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           children: [
             Text(widget.kind == ErpOperationalKind.sales && _documentType == 'invoice' ? 'بيانات رأس فاتورة البيع' : 'إنشاء مستند جديد', style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 17)),
             const SizedBox(height: 8),
-            TextField(controller: _documentNumber, decoration: const InputDecoration(labelText: 'المسلسل اليدوي للمستند *', border: OutlineInputBorder())),
+            if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice')
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(10)),
+                child: Row(children: [
+                  Expanded(child: Text(
+                    'مسلسل الفاتورة: ${_rows.where((row) => _s(row['id']) == _selectedDocumentId).map((row) => _s(row['auto_number'])).firstOrNull ?? 'يُنشأ عند الحفظ'}',
+                    style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900),
+                  )),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: _saving ? null : () async {
+                      final chosen = await showDatePicker(context: context, initialDate: _documentDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                      if (chosen != null && mounted) setState(() => _documentDate = chosen);
+                    },
+                    icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                    label: Text('التاريخ: ${_documentDate.year}-${_documentDate.month.toString().padLeft(2,'0')}-${_documentDate.day.toString().padLeft(2,'0')}'),
+                  ),
+                ]),
+              ),
+            const SizedBox(height: 8),
+            TextField(controller: _documentNumber, decoration: const InputDecoration(labelText: 'رقم المستند / المسلسل اليدوي *', border: OutlineInputBorder(), isDense: true)),
             const SizedBox(height: 4),
-            const Text('المسلسل التلقائي والتاريخ والوقت الدقيق يُسجّلان من قاعدة البيانات عند الحفظ.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+            const Text('المسلسل الآلي يصدر من قاعدة البيانات، ورقم المستند اليدوي يمكن إدخاله هنا.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+            if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice') ...[
+              const SizedBox(height: 8),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                value: _isTaxInvoice,
+                title: const Text('فاتورة ضريبية'),
+                subtitle: const Text('الافتراضي فاتورة غير ضريبية؛ عند التفعيل تُحتسب ضريبة الأصناف وفق بياناتها.'),
+                onChanged: (value) => setState(() => _isTaxInvoice = value ?? false),
+              ),
+            ],
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _documentType, isExpanded: true,
@@ -686,8 +735,31 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               value: _partyId, isExpanded: true,
               decoration: InputDecoration(labelText: widget.kind == ErpOperationalKind.purchase ? 'المورد' : 'العميل', border: const OutlineInputBorder()),
               items: _parties.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_partyLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
-              onChanged: (v) => setState(() => _partyId = v),
+              onChanged: (v) => setState(() {
+                _partyId = v;
+                final matches = _parties.where((party) => _s(party['id']) == v);
+                final defaultRep = matches.isEmpty ? '' : _s(matches.first['sales_rep_id']);
+                if (defaultRep.isNotEmpty && _representatives.any((rep) => _s(rep['id']) == defaultRep)) _salesRepId = defaultRep;
+              }),
             ),
+            if (widget.kind == ErpOperationalKind.sales) ...[
+              const SizedBox(height: 4),
+              Align(alignment: Alignment.centerRight, child: Text(
+                'اسم العميل: ${_partyLabel(_partyId)}',
+                style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF3E007D)),
+              )),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                value: _representatives.any((rep) => _s(rep['id']) == _salesRepId) ? _salesRepId : null,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'مندوب المبيعات', border: OutlineInputBorder(), isDense: true),
+                items: _representatives.map((rep) => DropdownMenuItem<String>(
+                  value: _s(rep['id']),
+                  child: Text('${_s(rep['rep_code'])} — ${_s(rep['rep_name'])}', overflow: TextOverflow.ellipsis),
+                )).toList(),
+                onChanged: (value) => setState(() => _salesRepId = value),
+              ),
+            ],
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _warehouseId, isExpanded: true,
@@ -695,6 +767,37 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               items: _warehouses.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_warehouseLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
               onChanged: (v) => setState(() => _warehouseId = v),
             ),
+            Align(alignment: Alignment.centerRight, child: Text('المخزن المحدد: ${_warehouseLabel(_warehouseId)}', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF3E007D)))),
+            if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice') ...[
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: TextField(
+                  controller: _invoiceDiscountAmount,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'خصم الفاتورة بالقيمة', border: OutlineInputBorder(), isDense: true),
+                  onChanged: (value) {
+                    final subtotal = _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']));
+                    final amount = double.tryParse(value) ?? 0;
+                    if (subtotal > 0) _invoiceDiscountPercent.text = (amount * 100 / subtotal).toStringAsFixed(2);
+                    setState(() {});
+                  },
+                )),
+                const SizedBox(width: 8),
+                Expanded(child: TextField(
+                  controller: _invoiceDiscountPercent,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'خصم الفاتورة %', border: OutlineInputBorder(), isDense: true),
+                  onChanged: (value) {
+                    final subtotal = _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']));
+                    final percent = double.tryParse(value) ?? 0;
+                    _invoiceDiscountAmount.text = (subtotal * percent / 100).toStringAsFixed(2);
+                    setState(() {});
+                  },
+                )),
+              ]),
+              const SizedBox(height: 4),
+              const Text('تحديث الخصم يعرض القيمة المكافئة حسب إجمالي معاينة الأصناف الحالية.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+            ],
             const SizedBox(height: 8),
             TextField(controller: _notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات', border: OutlineInputBorder())),
             const SizedBox(height: 8),
