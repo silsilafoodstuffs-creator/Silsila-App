@@ -102,7 +102,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
         _quickTask('تحديث',Icons.refresh_rounded,Colors.blue,_loading?null:_load),
         _quickTask(_editingId==null?'إضافة':'حفظ',_editingId==null?Icons.add_circle_outline:Icons.save_outlined,const Color(0xFF168447),_saving?null:_save),
         _quickTask('تعديل',Icons.edit_outlined,const Color(0xFFEF9B13),_rows.isEmpty?null:()=>_edit(_rows.first)),
-        _quickTask('حذف',Icons.delete_outline,Colors.red,_rows.isEmpty?null:()=>_toggleActive(_rows.first)),
+        _quickTask('تفعيل/إيقاف',Icons.toggle_on_outlined,const Color(0xFFEF9B13),_rows.isEmpty?null:()=>_toggleActive(_rows.first)),
         _quickTask('معاينة',Icons.visibility_outlined,const Color(0xFF6841A5),_previewCurrencies),
         _quickTask('طباعة',Icons.print_outlined,const Color(0xFF4056A1),_previewCurrencies),
         _quickTask('استيراد Excel',Icons.file_upload_outlined,const Color(0xFF137C8B),()=>setState(()=>_error='استيراد العملات من Excel غير مفعّل بعد؛ يمكنك إضافة العملات من النموذج.')),
