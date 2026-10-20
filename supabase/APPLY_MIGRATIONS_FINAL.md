@@ -85,6 +85,7 @@ COMMIT;
 6. `erp_operational_units_reservations.sql` — وحدات بديلة وتحويلها للوحدة الأساسية، مسلسل تلقائي وتوقيت دقيق للمستندات، حجز مخزون لكل سطر بيع، وإضافة عدة أصناف في معاملة واحدة.
 7. `erp_company_member_profiles.sql` — أسماء المستخدمين ووظائفهم وفروعهم في دليل قابل للبحث مع صلاحيات المالك/المدير.
 8. `erp_operational_rls_and_indexes_hardening.sql` — سياسات RLS مغلقة افتراضيًا لجداول وحدات الأصناف وجهات الاتصال وقوائم الأسعار ومستندات البيع والشراء، مع فهارس لعلاقات المفاتيح الخارجية.
+9. `erp_remaining_fk_performance_indexes.sql` — فهارس إضافية لعلاقات الأعضاء ومراكز التكلفة وحركات المخزون وربط الحسابات ومستندات البيع والشراء.
 
 **ترتيب مهم لترحيل دورة المستندات:** لا تشغّل `erp_operational_units_reservations.sql` إلا بعد نجاح `erp_schema.sql` و`erp_master_data_schema.sql` و`erp_operations_schema.sql` و`erp_operations_workflow.sql` و`erp_inventory_workflow.sql` و`erp_security_membership.sql`. ثم شغّل ترحيل الوحدات والحجوزات مرة واحدة. لا تشغّل ترحيل صور المنشأة قبل وجود `erp_companies` ودوال `erp_user_can_access_company` و`erp_user_has_company_role`.
 
