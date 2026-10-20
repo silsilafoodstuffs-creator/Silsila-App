@@ -205,7 +205,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
             _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : () => _edit()),
-            _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _rows.isEmpty ? null : () => _edit(row: _rows.first)),
+            _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _rows.isEmpty ? null : () => _edit(_rows.first)),
             _quickTask('حذف', Icons.delete_outline, Colors.red, _rows.isEmpty ? null : () => _delete(_rows.first)),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewDirectory),
           ])),
