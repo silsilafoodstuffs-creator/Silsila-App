@@ -403,15 +403,27 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       setState(() { _uploadingLogo = true; _error = null; _message = null; });
       final bytes = await picked.readAsBytes();
       final type = _imageContentType(picked.name, bytes);
-      final path = await ErpAppAssetStorage(client: _db).uploadImage(
-        companyId: companyId,
-        appId: 'erp-company-profile',
-        fileName: picked.name,
-        bytes: bytes,
-        contentType: type,
-        assetType: 'other',
+      final db = _db;
+      if (db == null || db.auth.currentUser == null) {
+        throw StateError('يجب تسجيل الدخول قبل رفع صورة المنشأة.');
+      }
+      if (bytes.isEmpty || bytes.length > 8 * 1024 * 1024) {
+        throw ArgumentError('حجم الصورة يجب ألا يتجاوز 8 ميجابايت.');
+      }
+      final extension = switch (type) {
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'image/gif' => 'gif',
+        _ => throw ArgumentError('نوع الصورة غير مدعوم.'),
+      };
+      final path = '$companyId/${DateTime.now().toUtc().microsecondsSinceEpoch}.$extension';
+      await db.storage.from('erp-company-assets').uploadBinary(
+        path,
+        bytes,
+        fileOptions: FileOptions(contentType: type, upsert: false),
       );
-      final preview = await ErpAppAssetStorage(client: _db).createSignedImageUrl(storagePath: path);
+      final preview = await db.storage.from('erp-company-assets').createSignedUrl(path, 900);
       if (!mounted) return;
       setState(() {
         _logoStoragePath = path;
