@@ -426,7 +426,28 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
     setState(() { _loading = true; _error = null; _message = null; });
     try {
-      final campaigns = await _repo.fetchSalesCampaigns(companyId: _company.text.trim(), campaignType: campaignType);
+      final fetchedCampaigns = await _repo.fetchSalesCampaigns(companyId: _company.text.trim(), campaignType: campaignType);
+      final partyRows = _parties.where((p) => _s(p['id']) == _partyId);
+      final party = partyRows.isEmpty ? <String,dynamic>{} : partyRows.first;
+      final warehouseRows = _allWarehouses.where((w) => _s(w['id']) == _warehouseId);
+      final warehouse = warehouseRows.isEmpty ? <String,dynamic>{} : warehouseRows.first;
+      bool targetMatches(dynamic raw, String actual) {
+        final values = raw is List ? raw.map((e) => e.toString()).where((e) => e.isNotEmpty).toList() : <String>[];
+        return values.isEmpty || (actual.isNotEmpty && values.contains(actual));
+      }
+      final campaigns = fetchedCampaigns.where((campaign) {
+        final owner = _s(campaign['owner_party_id']);
+        if (owner.isNotEmpty && owner != _partyId) return false;
+        if (!targetMatches(campaign['target_customer_ids'], _s(_partyId))) return false;
+        if (!targetMatches(campaign['target_warehouse_ids'], _s(_warehouseId))) return false;
+        if (!targetMatches(campaign['target_branch_ids'], _s(warehouse['branch_id']))) return false;
+        if (!targetMatches(campaign['target_governorates'], _s(party['governorate']))) return false;
+        if (!targetMatches(campaign['target_districts'], _s(party['district']))) return false;
+        if (!targetMatches(campaign['target_areas'], _s(party['area']))) return false;
+        if (!targetMatches(campaign['target_centers'], _s(party['center']))) return false;
+        if (!targetMatches(campaign['target_customer_types'], _s(party['customer_type']))) return false;
+        return true;
+      }).toList();
       if (!mounted) return;
       setState(() => _loading = false);
       if (campaigns.isEmpty) {
@@ -467,7 +488,12 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       final sourceItems = <Map<String, dynamic>>[];
       for (final line in lines) {
         final base = _items.where((item) => _s(item['id']) == _s(line['item_id']));
-        if (base.isNotEmpty) sourceItems.add({...base.first, ...line, 'id': _s(base.first['id']), 'offer_title': _s(selected['title']), 'offer_type': campaignType});
+        final remaining = line['remaining_quantity'];
+        final configuredMax = line['max_quantity'];
+        final maxAllowed = remaining == null ? configuredMax : (configuredMax == null ? remaining : (_n(remaining) < _n(configuredMax) ? remaining : configuredMax));
+        if (base.isNotEmpty && (remaining == null || _n(remaining) > 0)) {
+          sourceItems.add({...base.first, ...line, 'id': _s(base.first['id']), 'campaign_item_id': _s(line['id']), 'max_quantity': maxAllowed, 'offer_title': _s(selected['title']), 'offer_type': campaignType});
+        }
       }
       if (!mounted) return;
       setState(() => _loading = false);
@@ -742,6 +768,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 'customer_incentive': _n(item['customer_incentive']),
                 'offer_title': sourceTitle,
                 'shortage_id': item['shortage_id'],
+                'campaign_item_id': item['campaign_item_id'],
                 'discount': 0.0,
                 'tax': 0.0,
               });
@@ -1121,6 +1148,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           'unit_price': line['unit_price'],
           'discount': totalDiscount,
           'tax': taxAmount,
+          'campaign_item_id': line['campaign_item_id'],
         });
       }
       final count = await _repo.addLinesAtomically(
