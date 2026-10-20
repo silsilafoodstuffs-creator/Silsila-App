@@ -158,40 +158,338 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   InputDecoration _dec(String label) => InputDecoration(labelText: label, isDense: true, border: const OutlineInputBorder(), contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10));
   Widget _notice(String text, bool error) => Container(margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:error?Colors.red.shade50:Colors.green.shade50,borderRadius:BorderRadius.circular(8)),child:Text(text,style:TextStyle(color:error?Colors.red.shade900:Colors.green.shade900)));
 
-  @override Widget build(BuildContext context) {
-    return Shortcuts(shortcuts: <LogicalKeySet, Intent>{LogicalKeySet(LogicalKeyboardKey.f1): const ActivateIntent()}, child: Actions(actions: <Type, Action<Intent>>{ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) { _pickProducts(); return null; })}, child: Directionality(textDirection: TextDirection.rtl, child: _loading ? const Center(child: CircularProgressIndicator()) : ListView(padding: const EdgeInsets.all(16), children: [
-      Row(children: [const Icon(Icons.local_offer, color: Color(0xFF3E007D)), const SizedBox(width: 8), const Expanded(child: Text('عروض الأصناف', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold))), OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('تحديث'))]),
-      const SizedBox(height: 8), if (_error != null) _notice(_error!, true), if (_message != null) _notice(_message!, false),
-      Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(children: [
-        Row(children: [Expanded(child: _field('اسم العرض', TextField(controller: _name, decoration: _dec('مثال: عرض نهاية الأسبوع')))), Expanded(child: _field('نوع العرض في المبيعات', DropdownButtonFormField<String>(value: _campaignType, decoration: _dec('نوع العرض'), items: const [DropdownMenuItem(value:'customer_magazine',child:Text('عرض للعملاء')),DropdownMenuItem(value:'promotion',child:Text('عرض ترويج')),DropdownMenuItem(value:'slow_moving',child:Text('عرض الرواكد'))], onChanged:(v)=>setState(()=>_campaignType=v??_campaignType))))]),
-        Row(children: [Expanded(child: _field('طريقة التسعير', DropdownButtonFormField<String>(value:_discountKind, decoration:_dec('طريقة التسعير'), items: const [DropdownMenuItem(value:'special_price',child:Text('سعر عرض خاص')),DropdownMenuItem(value:'percent',child:Text('خصم نسبة')),DropdownMenuItem(value:'amount',child:Text('خصم قيمة')),DropdownMenuItem(value:'buy_get',child:Text('اشترِ كمية واحصل على كمية')),DropdownMenuItem(value:'clearance',child:Text('تصفية رواكد'))], onChanged:(v)=>setState(() { _discountKind=v??_discountKind; for (final line in _offerLines) { final base=_n(line['sale_price']); final discount=_n(line['discount']); if (_discountKind=='percent') line['offer_price']=(base-(base*discount/100)).clamp(0,double.infinity); else if (_discountKind=='amount') line['offer_price']=(base-discount).clamp(0,double.infinity); } }))), Expanded(child: _field('بداية العرض', OutlinedButton.icon(onPressed:()=>_chooseDate(true), icon:const Icon(Icons.calendar_month), label:Text(_date(_from))))), Expanded(child: _field('نهاية العرض', OutlinedButton.icon(onPressed:()=>_chooseDate(false), icon:const Icon(Icons.event_busy), label:Text(_date(_to))))) ]),
-        const Divider(), Align(alignment: Alignment.centerRight, child: Text('نطاق تطبيق العرض', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF3E007D)))),
-        Row(children: [Expanded(child: _field('العملاء', DropdownButtonFormField<String>(value:_customerScope, decoration:_dec('تطبيق على'), items:const [DropdownMenuItem(value:'كل العملاء',child:Text('كل العملاء')),DropdownMenuItem(value:'عملاء محددون',child:Text('عملاء محددون'))], onChanged:(v)=>setState(()=>_customerScope=v??_customerScope))), Expanded(child: _field('المخازن والفروع', DropdownButtonFormField<String>(value:_warehouseScope, decoration:_dec('تطبيق على'), items:const [DropdownMenuItem(value:'كل المخازن',child:Text('كل المخازن')),DropdownMenuItem(value:'مخازن محددة',child:Text('مخازن محددة'))], onChanged:(v)=>setState(()=>_warehouseScope=v??_warehouseScope))) ]),
-        Wrap(spacing:8, runSpacing:8, children: [
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'جلب العملاء', options:_parties, idKey:'id', labelKey:'party_name', selected:_selectedCustomers), icon:const Icon(Icons.people_alt), label:Text('جلب العملاء (${_selectedCustomers.length})')),
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'جلب المخازن', options:_warehouses, idKey:'id', labelKey:'warehouse_name', selected:_selectedWarehouses), icon:const Icon(Icons.warehouse), label:Text('جلب المخازن (${_selectedWarehouses.length})')),
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'الفروع', options:_branches, idKey:'id', labelKey:'branch_name', selected:_selectedBranches), icon:const Icon(Icons.store), label:Text('الفروع (${_selectedBranches.length})')),
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المحافظات', options:_distinctOptions('governorate'), idKey:'id', labelKey:'name', selected:_governorates), icon:const Icon(Icons.map), label:Text('المحافظات (${_governorates.length})')),
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المراكز', options:_distinctOptions('center'), idKey:'id', labelKey:'name', selected:_centers), icon:const Icon(Icons.location_city), label:Text('المراكز (${_centers.length})')),
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المراكز/الأحياء', options:_distinctOptions('district'), idKey:'id', labelKey:'name', selected:_districts), icon:const Icon(Icons.location_city), label:Text('المراكز/الأحياء (${_districts.length})')),
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'المناطق', options:_distinctOptions('area'), idKey:'id', labelKey:'name', selected:_areas), icon:const Icon(Icons.place), label:Text('المناطق (${_areas.length})')),
-          OutlinedButton.icon(onPressed:()=>_pickMulti(title:'تصنيفات العملاء', options:_distinctOptions('customer_type'), idKey:'id', labelKey:'name', selected:_customerTypes), icon:const Icon(Icons.category), label:Text('تصنيفات العملاء (${_customerTypes.length})')),
-        ]),
-      ]))),
-      Row(children: [Expanded(child: TextField(controller:_search, onChanged:(_)=>setState((){}), decoration:_dec('بحث الأصناف — اضغط F1 لجلب الأصناف'))), const SizedBox(width:8), FilledButton.icon(onPressed:_pickProducts, icon:const Icon(Icons.playlist_add), label:const Text('جلب الأصناف F1'))]),
-      const SizedBox(height:8), Row(children: [Expanded(child: DropdownButtonFormField<String?>(value:_groupId, decoration:_dec('تصفية حسب الفئة'), items:[const DropdownMenuItem<String?>(value:null,child:Text('كل الفئات')),..._groups.map((g)=>DropdownMenuItem<String?>(value:_s(g['id']),child:Text(_s(g['group_name']))))], onChanged:(v)=>setState(()=>_groupId=v))), const SizedBox(width:8), TextButton(onPressed:()=>setState(()=>_groupId=null), child:const Text('الكل'))]),
-      const SizedBox(height:8), Card(child: SingleChildScrollView(scrollDirection:Axis.horizontal, child: DataTable(columns: const [DataColumn(label:Text('كود')),DataColumn(label:Text('الصنف')),DataColumn(label:Text('الوحدة')),DataColumn(label:Text('سعر البيع')),DataColumn(label:Text('سعر العرض')),DataColumn(label:Text('كمية العرض')),DataColumn(label:Text('المتبقي')),DataColumn(label:Text('خصم')),DataColumn(label:Text('حذف'))], rows:_offerLines.map((line) => DataRow(cells:[
-        DataCell(Text(_s(line['item_code']))), DataCell(SizedBox(width:180, child:Text(_s(line['item_name'])))), DataCell(Text(_s(line['unit']))), DataCell(Text(_n(line['sale_price']).toStringAsFixed(2))),
-        DataCell(SizedBox(width:90, child:TextFormField(initialValue:_s(line['offer_price']), keyboardType:const TextInputType.numberWithOptions(decimal:true), decoration:_dec('السعر'), onChanged:(v)=>setState(()=>line['offer_price']=_n(v))))),
-        DataCell(SizedBox(width:85, child:TextFormField(initialValue:_s(line['offer_qty']), keyboardType:const TextInputType.numberWithOptions(decimal:true), decoration:_dec('الكمية'), onChanged:(v)=>setState(()=>line['offer_qty']=_n(v))))),
-        DataCell(SizedBox(width:85, child:TextFormField(initialValue:_s(line['remaining_qty']), keyboardType:const TextInputType.numberWithOptions(decimal:true), decoration:_dec('المتبقي'), onChanged:(v)=>setState(()=>line['remaining_qty']=_n(v))))),
-        DataCell(SizedBox(width:75, child:TextFormField(initialValue:_s(line['discount']), keyboardType:const TextInputType.numberWithOptions(decimal:true), decoration:_dec('الخصم'), onChanged:(v)=>setState(() { line['discount']=_n(v); final base=_n(line['sale_price']); final discount=_n(v); if (_discountKind=='percent') line['offer_price']=(base-(base*discount/100)).clamp(0,double.infinity); else if (_discountKind=='amount') line['offer_price']=(base-discount).clamp(0,double.infinity); })))),
-        DataCell(IconButton(tooltip:'حذف الصنف', onPressed:()=>setState(()=>_offerLines.remove(line)), icon:const Icon(Icons.delete_forever,color:Colors.red))),
-      ])).toList()))),
-      const SizedBox(height:10), Row(children:[Expanded(child:Text('عدد الأصناف: ${_offerLines.length} | يتم حفظ العروض في جداول الحملات الفعلية المتصلة بأزرار جلب العروض في فاتورة البيع.', style:const TextStyle(fontSize:12))), FilledButton.icon(onPressed:_saving?null:_save, icon:const Icon(Icons.save), label:Text(_saving?'جارٍ الحفظ…':'حفظ العرض'))]),
-      const SizedBox(height:18), const Text('العروض المسجلة', style:TextStyle(fontSize:16,fontWeight:FontWeight.bold,color:Color(0xFF3E007D))),
-      if (_campaigns.isEmpty) const Padding(padding:EdgeInsets.all(12),child:Text('لا توجد عروض مسجلة بعد.')),
-      ..._campaigns.map((c)=>Card(child:ListTile(leading:Icon(_s(c['campaign_type'])=='slow_moving'?Icons.inventory_2_outlined:_s(c['campaign_type'])=='promotion'?Icons.campaign_outlined:Icons.menu_book_outlined,color:const Color(0xFF3E007D)),title:Text(_s(c['title'])),subtitle:Text('${_s(c['start_date'])} ← ${_s(c['end_date'])} | ${_s(c['campaign_type'])}'),trailing:Icon(_s(c['is_active'])=='true'?Icons.check_circle:Icons.pause_circle_outline,color:_s(c['is_active'])=='true'?Colors.green:Colors.grey)))),
-    ]))));
+  @override
+  Widget build(BuildContext context) {
+    return Shortcuts(
+      shortcuts: <LogicalKeySet, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.f1): const ActivateIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) { _pickProducts(); return null; },
+          ),
+        },
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.local_offer, color: Color(0xFF3E007D)),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text('عروض الأصناف', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        ),
+                        OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('تحديث')),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_error != null) _notice(_error!, true),
+                    if (_message != null) _notice(_message!, false),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _field('اسم العرض', TextField(
+                                    controller: _name,
+                                    decoration: _dec('مثال: عرض نهاية الأسبوع'),
+                                  )),
+                                ),
+                                Expanded(
+                                  child: _field('نوع العرض في المبيعات', DropdownButtonFormField<String>(
+                                    value: _campaignType,
+                                    decoration: _dec('نوع العرض'),
+                                    items: const [
+                                      DropdownMenuItem(value: 'customer_magazine', child: Text('عرض للعملاء')),
+                                      DropdownMenuItem(value: 'promotion', child: Text('عرض ترويج')),
+                                      DropdownMenuItem(value: 'slow_moving', child: Text('عرض الرواكد')),
+                                    ],
+                                    onChanged: (v) => setState(() => _campaignType = v ?? _campaignType),
+                                  )),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _field('طريقة التسعير', DropdownButtonFormField<String>(
+                                    value: _discountKind,
+                                    decoration: _dec('طريقة التسعير'),
+                                    items: const [
+                                      DropdownMenuItem(value: 'special_price', child: Text('سعر عرض خاص')),
+                                      DropdownMenuItem(value: 'percent', child: Text('خصم نسبة')),
+                                      DropdownMenuItem(value: 'amount', child: Text('خصم قيمة')),
+                                      DropdownMenuItem(value: 'buy_get', child: Text('اشترِ كمية واحصل على كمية')),
+                                      DropdownMenuItem(value: 'clearance', child: Text('تصفية رواكد')),
+                                    ],
+                                    onChanged: (v) => setState(() {
+                                      _discountKind = v ?? _discountKind;
+                                      for (final line in _offerLines) {
+                                        final base = _n(line['sale_price']);
+                                        final discount = _n(line['discount']);
+                                        if (_discountKind == 'percent') {
+                                          line['offer_price'] = (base - base * discount / 100).clamp(0, double.infinity);
+                                        } else if (_discountKind == 'amount') {
+                                          line['offer_price'] = (base - discount).clamp(0, double.infinity);
+                                        }
+                                      }
+                                    }),
+                                  )),
+                                ),
+                                Expanded(
+                                  child: _field('بداية العرض', OutlinedButton.icon(
+                                    onPressed: () => _chooseDate(true),
+                                    icon: const Icon(Icons.calendar_month),
+                                    label: Text(_date(_from)),
+                                  )),
+                                ),
+                                Expanded(
+                                  child: _field('نهاية العرض', OutlinedButton.icon(
+                                    onPressed: () => _chooseDate(false),
+                                    icon: const Icon(Icons.event_busy),
+                                    label: Text(_date(_to)),
+                                  )),
+                                ),
+                              ],
+                            ),
+                            const Divider(),
+                            const Align(
+                              alignment: Alignment.centerRight,
+                              child: Text('نطاق تطبيق العرض', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF3E007D))),
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _field('العملاء', DropdownButtonFormField<String>(
+                                    value: _customerScope,
+                                    decoration: _dec('تطبيق على'),
+                                    items: const [
+                                      DropdownMenuItem(value: 'كل العملاء', child: Text('كل العملاء')),
+                                      DropdownMenuItem(value: 'عملاء محددون', child: Text('عملاء محددون')),
+                                    ],
+                                    onChanged: (v) => setState(() => _customerScope = v ?? _customerScope),
+                                  )),
+                                ),
+                                Expanded(
+                                  child: _field('المخازن والفروع', DropdownButtonFormField<String>(
+                                    value: _warehouseScope,
+                                    decoration: _dec('تطبيق على'),
+                                    items: const [
+                                      DropdownMenuItem(value: 'كل المخازن', child: Text('كل المخازن')),
+                                      DropdownMenuItem(value: 'مخازن محددة', child: Text('مخازن محددة')),
+                                    ],
+                                    onChanged: (v) => setState(() => _warehouseScope = v ?? _warehouseScope),
+                                  )),
+                                ),
+                              ],
+                            ),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () => _pickMulti(title: 'جلب العملاء', options: _parties, idKey: 'id', labelKey: 'party_name', selected: _selectedCustomers),
+                                  icon: const Icon(Icons.people_alt),
+                                  label: Text('جلب العملاء (${_selectedCustomers.length})'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => _pickMulti(title: 'جلب المخازن', options: _warehouses, idKey: 'id', labelKey: 'warehouse_name', selected: _selectedWarehouses),
+                                  icon: const Icon(Icons.warehouse),
+                                  label: Text('جلب المخازن (${_selectedWarehouses.length})'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => _pickMulti(title: 'الفروع', options: _branches, idKey: 'id', labelKey: 'branch_name', selected: _selectedBranches),
+                                  icon: const Icon(Icons.store),
+                                  label: Text('الفروع (${_selectedBranches.length})'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => _pickMulti(title: 'المحافظات', options: _distinctOptions('governorate'), idKey: 'id', labelKey: 'name', selected: _governorates),
+                                  icon: const Icon(Icons.map),
+                                  label: Text('المحافظات (${_governorates.length})'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => _pickMulti(title: 'المراكز', options: _distinctOptions('center'), idKey: 'id', labelKey: 'name', selected: _centers),
+                                  icon: const Icon(Icons.location_city),
+                                  label: Text('المراكز (${_centers.length})'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => _pickMulti(title: 'المراكز/الأحياء', options: _distinctOptions('district'), idKey: 'id', labelKey: 'name', selected: _districts),
+                                  icon: const Icon(Icons.location_city),
+                                  label: Text('المراكز/الأحياء (${_districts.length})'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => _pickMulti(title: 'المناطق', options: _distinctOptions('area'), idKey: 'id', labelKey: 'name', selected: _areas),
+                                  icon: const Icon(Icons.place),
+                                  label: Text('المناطق (${_areas.length})'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () => _pickMulti(title: 'تصنيفات العملاء', options: _distinctOptions('customer_type'), idKey: 'id', labelKey: 'name', selected: _customerTypes),
+                                  icon: const Icon(Icons.category),
+                                  label: Text('تصنيفات العملاء (${_customerTypes.length})'),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _search,
+                            onChanged: (_) => setState(() {}),
+                            decoration: _dec('بحث الأصناف — اضغط F1 لجلب الأصناف'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.icon(onPressed: _pickProducts, icon: const Icon(Icons.playlist_add), label: const Text('جلب الأصناف F1')),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String?>(
+                            value: _groupId,
+                            decoration: _dec('تصفية حسب الفئة'),
+                            items: [
+                              const DropdownMenuItem<String?>(value: null, child: Text('كل الفئات')),
+                              ..._groups.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text(_s(g['group_name'])))),
+                            ],
+                            onChanged: (v) => setState(() => _groupId = v),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(onPressed: () => setState(() => _groupId = null), child: const Text('الكل')),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Card(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: DataTable(
+                          columns: const [
+                            DataColumn(label: Text('كود')),
+                            DataColumn(label: Text('الصنف')),
+                            DataColumn(label: Text('الوحدة')),
+                            DataColumn(label: Text('سعر البيع')),
+                            DataColumn(label: Text('سعر العرض')),
+                            DataColumn(label: Text('كمية العرض')),
+                            DataColumn(label: Text('المتبقي')),
+                            DataColumn(label: Text('خصم')),
+                            DataColumn(label: Text('حذف')),
+                          ],
+                          rows: _offerLines.map((line) => DataRow(cells: [
+                            DataCell(Text(_s(line['item_code']))),
+                            DataCell(SizedBox(width: 180, child: Text(_s(line['item_name'])))),
+                            DataCell(Text(_s(line['unit']))),
+                            DataCell(Text(_n(line['sale_price']).toStringAsFixed(2))),
+                            DataCell(SizedBox(
+                              width: 90,
+                              child: TextFormField(
+                                initialValue: _s(line['offer_price']),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                decoration: _dec('السعر'),
+                                onChanged: (v) => setState(() => line['offer_price'] = _n(v)),
+                              ),
+                            )),
+                            DataCell(SizedBox(
+                              width: 85,
+                              child: TextFormField(
+                                initialValue: _s(line['offer_qty']),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                decoration: _dec('الكمية'),
+                                onChanged: (v) => setState(() => line['offer_qty'] = _n(v)),
+                              ),
+                            )),
+                            DataCell(SizedBox(
+                              width: 85,
+                              child: TextFormField(
+                                initialValue: _s(line['remaining_qty']),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                decoration: _dec('المتبقي'),
+                                onChanged: (v) => setState(() => line['remaining_qty'] = _n(v)),
+                              ),
+                            )),
+                            DataCell(SizedBox(
+                              width: 75,
+                              child: TextFormField(
+                                initialValue: _s(line['discount']),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                decoration: _dec('الخصم'),
+                                onChanged: (v) => setState(() {
+                                  line['discount'] = _n(v);
+                                  final base = _n(line['sale_price']);
+                                  final discount = _n(v);
+                                  if (_discountKind == 'percent') {
+                                    line['offer_price'] = (base - base * discount / 100).clamp(0, double.infinity);
+                                  } else if (_discountKind == 'amount') {
+                                    line['offer_price'] = (base - discount).clamp(0, double.infinity);
+                                  }
+                                }),
+                              ),
+                            )),
+                            DataCell(IconButton(
+                              tooltip: 'حذف الصنف',
+                              onPressed: () => setState(() => _offerLines.remove(line)),
+                              icon: const Icon(Icons.delete_forever, color: Colors.red),
+                            )),
+                          ])).toList(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'عدد الأصناف: ${_offerLines.length} | يتم حفظ العروض في جداول الحملات الفعلية المتصلة بأزرار جلب العروض في فاتورة البيع.',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        FilledButton.icon(
+                          onPressed: _saving ? null : _save,
+                          icon: const Icon(Icons.save),
+                          label: Text(_saving ? 'جارٍ الحفظ…' : 'حفظ العرض'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    const Text('العروض المسجلة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF3E007D))),
+                    if (_campaigns.isEmpty)
+                      const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد عروض مسجلة بعد.')),
+                    ..._campaigns.map((campaign) => Card(
+                      child: ListTile(
+                        leading: Icon(
+                          _s(campaign['campaign_type']) == 'slow_moving'
+                              ? Icons.inventory_2_outlined
+                              : _s(campaign['campaign_type']) == 'promotion'
+                                  ? Icons.campaign_outlined
+                                  : Icons.menu_book_outlined,
+                          color: const Color(0xFF3E007D),
+                        ),
+                        title: Text(_s(campaign['title'])),
+                        subtitle: Text('${_s(campaign['start_date'])} ← ${_s(campaign['end_date'])} | ${_s(campaign['campaign_type'])}'),
+                        trailing: Icon(
+                          _s(campaign['is_active']) == 'true' ? Icons.check_circle : Icons.pause_circle_outline,
+                          color: _s(campaign['is_active']) == 'true' ? Colors.green : Colors.grey,
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+        ),
+      ),
+    );
   }
+
 }
