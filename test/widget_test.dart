@@ -24,6 +24,11 @@ void main() {
     expect(theme.colorScheme.primary, const Color(0xFF3E007D));
     expect(theme.colorScheme.secondary, const Color(0xFFFFA015));
     expect(theme.textTheme.bodyMedium?.fontFamily, 'Tajawal');
+    expect(theme.floatingActionButtonTheme.backgroundColor,
+        const Color(0xFFFFA015));
+    expect(theme.snackBarTheme.backgroundColor, const Color(0xFF3E007D));
+    expect(theme.progressIndicatorTheme.color, const Color(0xFFFFA015));
+    expect(theme.listTileTheme.selectedTileColor, isNotNull);
   });
 
   testWidgets('login flow requests email and password, not phone OTP',
