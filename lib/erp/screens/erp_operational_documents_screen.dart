@@ -1192,8 +1192,6 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
   }
 
-  @override
-
   Widget _invoiceCard(String title, IconData icon, Widget child) {
     return Card(
       elevation: 0,
@@ -1530,6 +1528,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     );
   }
 
+  @override
   Widget build(BuildContext context) {
     if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice') {
       return _buildSalesInvoiceScreen(context);
