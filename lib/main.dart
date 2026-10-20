@@ -8031,6 +8031,7 @@ class _MarketCardState extends State<MarketCard> {
   bool _busy = false;
   bool _closed = false;
   bool _detailsExpanded = false;
+  bool _hasAccepted = false;
   String? _negotiationStatus;
   late Future<List<Map<String, dynamic>>> _negotiationsFuture;
 
@@ -8038,6 +8039,9 @@ class _MarketCardState extends State<MarketCard> {
   void initState() {
     super.initState();
     _negotiationsFuture = _service.getNegotiations(widget.postId);
+    _service.hasInteraction(widget.postId, 'accept').then((value) {
+      if (mounted) setState(() => _hasAccepted = value);
+    }).catchError((_) {});
     _service.getInteractionCounts(widget.postId).then((value) {
       if (mounted) setState(() => _counts = value);
     }).catchError((_) {});
@@ -8060,6 +8064,7 @@ class _MarketCardState extends State<MarketCard> {
       final counts = await _service.getInteractionCounts(widget.postId);
       if (mounted) setState(() {
         _counts = counts;
+        if (action == 'accept') _hasAccepted = true;
       });
       if (mounted && action != 'view') {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -8242,7 +8247,7 @@ class _MarketCardState extends State<MarketCard> {
                 ),
               ],
             ),
-            if (widget.isNegotiable && widget.postOwnerId != database?.auth.currentUser?.id) ...[
+            if (widget.isNegotiable && _hasAccepted && widget.postOwnerId != database?.auth.currentUser?.id) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(onPressed: _busy ? null : _showNegotiationDialog, icon: const Icon(Icons.currency_exchange), label: const Text('اقتراح سعر تفاوض')),
             ],
