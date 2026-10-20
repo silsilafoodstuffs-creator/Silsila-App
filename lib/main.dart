@@ -6555,6 +6555,9 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
             ].where((part) => part.toString().trim().isNotEmpty).join('\n');
             return MarketCard(
               postId: (post['id'] ?? '').toString(),
+              postOwnerId: (post['user_id'] ?? '').toString(),
+              expiryDate: (post['expiry_date'] ?? '').toString(),
+              isNegotiable: post['is_negotiable'] == true,
               title: title,
               type: isBuy ? 'طلب شراء' : 'عرض بيع',
               details: subtitle,
@@ -6598,6 +6601,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final governorateController = TextEditingController();
   final categoryController = TextEditingController();
   final contactPhoneController = TextEditingController();
+  DateTime? expiryDate;
+  bool isNegotiable = false;
   late String type;
   bool busy = false;
 
@@ -6661,6 +6666,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         governorate: governorateController.text.trim().isEmpty ? null : governorateController.text.trim(),
         category: categoryController.text.trim().isEmpty ? null : categoryController.text.trim(),
         contactPhone: contactPhoneController.text.trim().isEmpty ? null : normalizePhoneForAuth(contactPhoneController.text),
+        expiryDate: expiryDate,
+        isNegotiable: isNegotiable,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -6768,6 +6775,9 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             keyboardType: TextInputType.phone,
             decoration: const InputDecoration(labelText: 'رقم للتواصل (اختياري)', prefixIcon: Icon(Icons.phone_outlined)),
           ),
+          const SizedBox(height: 8),
+          SwitchListTile(contentPadding: EdgeInsets.zero, value: isNegotiable, onChanged: (value) => setState(() => isNegotiable = value), title: const Text('السعر قابل للتفاوض البسيط'), subtitle: const Text('يمكن للطرف الآخر إرسال سعر مقترح للموافقة أو الرفض أو التعديل.')),
+          ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.event_busy_outlined, color: purple), title: const Text('تاريخ صلاحية الطلب'), subtitle: Text(expiryDate == null ? 'غير محدد' : '${expiryDate!.year}/${expiryDate!.month.toString().padLeft(2, '0')}/${expiryDate!.day.toString().padLeft(2, '0')}'), trailing: IconButton(tooltip: 'اختيار التاريخ', icon: const Icon(Icons.calendar_month), onPressed: () async { final now = DateTime.now(); final value = await showDatePicker(context: context, initialDate: expiryDate ?? now.add(const Duration(days: 7)), firstDate: DateTime(now.year, now.month, now.day), lastDate: DateTime(2100)); if (value != null) setState(() => expiryDate = value); })),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: busy ? null : savePost,
@@ -7992,6 +8002,9 @@ class MarketCard extends StatefulWidget {
   const MarketCard({
     super.key,
     required this.postId,
+    required this.postOwnerId,
+    required this.expiryDate,
+    required this.isNegotiable,
     required this.title,
     required this.type,
     required this.details,
@@ -7999,6 +8012,9 @@ class MarketCard extends StatefulWidget {
   });
 
   final String postId;
+  final String postOwnerId;
+  final String expiryDate;
+  final bool isNegotiable;
   final String title;
   final String type;
   final String details;
@@ -8017,10 +8033,12 @@ class _MarketCardState extends State<MarketCard> {
   bool _detailsExpanded = false;
   bool _accepted = false;
   String? _negotiationStatus;
+  late Future<List<Map<String, dynamic>>> _negotiationsFuture;
 
   @override
   void initState() {
     super.initState();
+    _negotiationsFuture = _service.getNegotiations(widget.postId);
     _service.getInteractionCounts(widget.postId).then((value) {
       if (mounted) setState(() => _counts = value);
     }).catchError((_) {});
@@ -8090,11 +8108,7 @@ class _MarketCardState extends State<MarketCard> {
       );
       return;
     }
-    // العرض المحلي لا يُعرض على الطرف الآخر إلا بعد ربطه بمسار تفاوض محفوظ في قاعدة البيانات.
-    setState(() => _negotiationStatus = 'اقتراح غير مُرسل إلى الطرف الآخر: ${price.toStringAsFixed(2)} ج.م');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم تجهيز السعر المقترح في الشاشة. يلزم تفعيل سجل التفاوض في قاعدة البيانات لإرساله للطرف الآخر.')),
-    );
+    try { await _service.proposeNegotiation(postId: widget.postId, proposedPrice: price); if (!mounted) return; setState(() { _negotiationStatus = 'تم إرسال اقتراح السعر: ${price.toStringAsFixed(2)} ج.م'; _negotiationsFuture = _service.getNegotiations(widget.postId); }); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال اقتراح السعر لصاحب الطلب.'))); } catch (e) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر إرسال التفاوض: $e'))); }
   }
 
   @override
@@ -8174,6 +8188,8 @@ class _MarketCardState extends State<MarketCard> {
               if (parsed['تاريخ الصلاحية'] != null) _detailRow('تاريخ الصلاحية', parsed['تاريخ الصلاحية']!),
               if (parsed['السعر'] != null) _detailRow('سعر العرض', parsed['السعر']!),
               if (parsed['التفاوض'] != null) _detailRow('التفاوض', parsed['التفاوض']!),
+              _detailRow('تاريخ الصلاحية', widget.expiryDate.isEmpty ? 'غير محدد' : widget.expiryDate),
+              _detailRow('السعر', widget.isNegotiable ? 'قابل للتفاوض البسيط' : 'السعر نهائي'),
               if (parsed.isEmpty || detailLines.any((line) => !line.contains(':')))
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
@@ -8228,14 +8244,38 @@ class _MarketCardState extends State<MarketCard> {
                 ),
               ],
             ),
-            if (_accepted) ...[
+            if (widget.isNegotiable && postOwnerId != database?.auth.currentUser?.id) ...[
               const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: _showNegotiationDialog,
-                icon: const Icon(Icons.currency_exchange),
-                label: const Text('اقتراح سعر تفاوض'),
-              ),
+              OutlinedButton.icon(onPressed: _busy ? null : _showNegotiationDialog, icon: const Icon(Icons.currency_exchange), label: const Text('اقتراح سعر تفاوض')),
             ],
+            if (_detailsExpanded)
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _negotiationsFuture,
+                builder: (context, snapshot) {
+                  final rows = snapshot.data ?? const <Map<String, dynamic>>[];
+                  final userId = database?.auth.currentUser?.id;
+                  if (rows.isEmpty) return const SizedBox.shrink();
+                  return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    const Divider(),
+                    const Text('سجل التفاوض', style: TextStyle(fontWeight: FontWeight.bold, color: purple)),
+                    ...rows.map((row) {
+                      final pendingForMe = row['recipient_id']?.toString() == userId && row['status'] == 'pending';
+                      final proposer = row['proposer_id']?.toString() == userId;
+                      final price = row['proposed_price']?.toString() ?? '—';
+                      final status = switch ((row['status'] ?? '').toString()) { 'accepted' => 'مقبول', 'rejected' => 'مرفوض', 'countered' => 'تم تقديم سعر مقابل', _ => 'بانتظار الرد' };
+                      return Card(margin: const EdgeInsets.only(top: 6), child: Padding(padding: const EdgeInsets.all(9), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        Text('${proposer ? 'اقتراحك' : 'اقتراح وارد'}: $price ج.م', style: const TextStyle(fontWeight: FontWeight.w700)),
+                        Text('الحالة: $status', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                        if (pendingForMe) Wrap(spacing: 6, children: [
+                          TextButton(onPressed: () => _respondNegotiation(row, 'accept'), child: const Text('قبول السعر')),
+                          TextButton(onPressed: () => _respondNegotiation(row, 'reject'), child: const Text('رفض')),
+                          TextButton(onPressed: () => _counterNegotiation(row), child: const Text('تعديل السعر')),
+                        ]),
+                      ])));
+                    }),
+                  ]);
+                },
+              ),
           ],
         ),
       ),
