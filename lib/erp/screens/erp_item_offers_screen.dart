@@ -31,7 +31,6 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _date(DateTime d) => '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
-  String get _campaignTypeLabel => switch (_campaignType) { 'customer_magazine' => 'عرض تجريبي للعملاء', 'promotion' => 'عرض ترويج', _ => 'عرض رواكد' };
   @override void initState() { super.initState(); _load(); }
   @override void dispose() { _name.dispose(); _search.dispose(); super.dispose(); }
 
@@ -136,7 +135,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       }).select('id').single();
       final campaignId = _s(header['id']);
       final rows = _offerLines.map((line) {
-        final original = _n(line['sale_price']), offerPrice = _n(line['offer_price']);
+        final offerPrice = _n(line['offer_price']);
         final discountValue = _n(line['discount']);
         return <String,dynamic>{
           'company_id':company, 'campaign_id':campaignId, 'item_id':_s(line['item_id']),
