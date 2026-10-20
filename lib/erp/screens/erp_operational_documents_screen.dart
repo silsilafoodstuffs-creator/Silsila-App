@@ -662,7 +662,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           const Text('بنود المستند المحدد', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
           ..._lines.map((line) => Card(child: ListTile(
             title: Text(_itemLabel(_s(line['item_id']))),
-            subtitle: Text('الكمية: ' + _s(line['quantity']) + ' • السعر: ' + _money(line['unit_price']) +
+            subtitle: Text('الكمية: ' + _s(line['quantity']) + ' ' + _s(line['unit_code']) + ' • الأساس: ' + _money(line['base_quantity']) + ' • السعر: ' + _money(line['unit_price']) +
               ' • خصم: ' + _money(line['discount_amount']) + ' • ضريبة: ' + _money(line['tax_amount'])),
             isThreeLine: false,
             trailing: Text(_money(line['line_total']) + ' ج.م', style: const TextStyle(fontWeight: FontWeight.w900)),
