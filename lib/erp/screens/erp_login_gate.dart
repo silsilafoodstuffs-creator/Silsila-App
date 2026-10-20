@@ -136,7 +136,8 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   Future<void> _openRegisterDialog({required bool newActivity}) async {
     _newActivityPending = newActivity;
     final name = TextEditingController();
-    final phone = TextEditingController(text: _phone.text.trim());
+    final email = TextEditingController();
+    final phone = TextEditingController();
     final password = TextEditingController();
     final confirmation = TextEditingController();
     final otp = TextEditingController();
@@ -160,6 +161,14 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       if (!otpStep) ...[
                         TextFormField(controller: name, decoration: const InputDecoration(labelText: 'اسم النشاط أو صاحب الحساب'), validator: (v) => v == null || v.trim().isEmpty ? 'اكتب الاسم' : null),
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: email,
+                          keyboardType: TextInputType.emailAddress,
+                          autofillHints: const [AutofillHints.email],
+                          decoration: const InputDecoration(labelText: 'البريد الإلكتروني', prefixIcon: Icon(Icons.email_outlined)),
+                          validator: (v) { final value = v?.trim() ?? ''; return value.contains('@') && value.contains('.') ? null : 'أدخل بريدًا إلكترونيًا صحيحًا'; },
+                        ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
                           value: activity, isExpanded: true,
@@ -233,10 +242,11 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                       final client = Supabase.instance.client;
                       if (!otpStep) {
                         final response = await client.auth.signUp(
-                          phone: _normalizePhone(_asciiDigits(phone.text)),
+                          email: email.text.trim().toLowerCase(),
                           password: password.text,
                           data: {
                             'full_name': name.text.trim(),
+                            'contact_phone': _normalizePhone(_asciiDigits(phone.text)),
                             'account_type': newActivity ? 'إدارة نشاط' : accountType,
                             'activity_type': activity,
                             'activity_user_type': newActivity ? 'مستخدم رئيسي للنشاط' : _activityUserType,
@@ -247,7 +257,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                           if (mounted) setState(() { _signedIn = true; _phone.text = phone.text; });
                           if (dialogContext.mounted) Navigator.pop(dialogContext);
                         } else {
-                          refresh(() { otpStep = true; busy = false; });
+                          refresh(() { error = 'تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.'; busy = false; });
                         }
                       } else {
                         await client.auth.verifyOTP(phone: _normalizePhone(_asciiDigits(phone.text)), token: _asciiDigits(otp.text.trim()), type: OtpType.sms);
@@ -271,7 +281,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
       );
     } finally {
       if (!_signedIn) _newActivityPending = false;
-      name.dispose(); phone.dispose(); password.dispose(); confirmation.dispose(); otp.dispose();
+      name.dispose(); email.dispose(); phone.dispose(); password.dispose(); confirmation.dispose(); otp.dispose();
     }
   }
 
