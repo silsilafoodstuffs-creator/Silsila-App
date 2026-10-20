@@ -285,7 +285,7 @@ class TraderMarketService {
         .eq('user_id', _userId)
         .eq('interaction_type', interactionType)
         .limit(1);
-    return rows is List && rows.isNotEmpty;
+    return rows.isNotEmpty;
   }
 
   /// إحصاءات المشاهدة والقبول والرفض لمنشور واحد.
