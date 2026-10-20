@@ -158,8 +158,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                   child: Form(
                     key: formKey,
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      ...[
-                        TextFormField(controller: name, decoration: const InputDecoration(labelText: 'اسم النشاط أو صاحب الحساب'), validator: (v) => v == null || v.trim().isEmpty ? 'اكتب الاسم' : null),
+                      TextFormField(controller: name, decoration: const InputDecoration(labelText: 'اسم النشاط أو صاحب الحساب'), validator: (v) => v == null || v.trim().isEmpty ? 'اكتب الاسم' : null),
                         const SizedBox(height: 10),
                         TextFormField(
                           controller: email,
@@ -217,7 +216,6 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                           ),
                           validator: (v) => v != password.text ? 'كلمتا المرور غير متطابقتين' : null,
                         ),
-                      ],
                       if (error.isNotEmpty) ...[
                         const SizedBox(height: 10),
                         Align(alignment: Alignment.centerRight, child: Text(error, style: const TextStyle(color: Color(0xFFB42318), height: 1.5))),
@@ -235,24 +233,24 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                     refresh(() { busy = true; error = ''; });
                     try {
                       final client = Supabase.instance.client;
-                          final response = await client.auth.signUp(
-                          email: email.text.trim().toLowerCase(),
-                          password: password.text,
-                          data: {
-                            'full_name': name.text.trim(),
-                            'contact_phone': _normalizePhone(_asciiDigits(phone.text)),
-                            'account_type': newActivity ? 'إدارة نشاط' : accountType,
-                            'activity_type': activity,
-                            'activity_user_type': newActivity ? 'مستخدم رئيسي للنشاط' : _activityUserType,
-                          },
-                        );
-                        if (response.user == null) throw StateError('لم يتم إنشاء الحساب.');
-                        if (response.session != null) {
-                          if (mounted) setState(() { _signedIn = true; _phone.text = phone.text; });
-                          if (dialogContext.mounted) Navigator.pop(dialogContext);
-                        } else {
-                          refresh(() { error = 'تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.'; busy = false; });
-                        }
+                      final response = await client.auth.signUp(
+                        email: email.text.trim().toLowerCase(),
+                        password: password.text,
+                        data: {
+                          'full_name': name.text.trim(),
+                          'contact_phone': _normalizePhone(_asciiDigits(phone.text)),
+                          'account_type': newActivity ? 'إدارة نشاط' : accountType,
+                          'activity_type': activity,
+                          'activity_user_type': newActivity ? 'مستخدم رئيسي للنشاط' : _activityUserType,
+                        },
+                      );
+                      if (response.user == null) throw StateError('لم يتم إنشاء الحساب.');
+                      if (response.session != null) {
+                        if (mounted) setState(() { _signedIn = true; _phone.text = phone.text; });
+                        if (dialogContext.mounted) Navigator.pop(dialogContext);
+                      } else {
+                        refresh(() { error = 'تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.'; busy = false; });
+                      }
                     } on AuthException catch (e) {
                       refresh(() { error = e.message; busy = false; });
                     } catch (e) {
@@ -261,7 +259,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                       if (dialogContext.mounted && busy) refresh(() => busy = false);
                     }
                   },
-                  child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(otpStep ? 'تأكيد التسجيل' : 'إنشاء الحساب'),
+                  child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('إنشاء الحساب'),
                 ),
               ],
             ),
