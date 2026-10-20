@@ -4,6 +4,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as excel;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_company_settings_repository.dart';
 
@@ -472,11 +474,95 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     return 'تعذر حفظ بيانات الشركة من قاعدة البيانات. التفاصيل: $message';
   }
 
+  Future<void> _newCompany() async {
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: const Text('بيانات شركة جديدة'),
+      content: const Text('سيتم تفريغ الحقول الحالية لبدء إدخال بيانات جديدة. احفظ البيانات الحالية أولًا إن لزم.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('متابعة'))],
+    ));
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      _activeCompanyId = null; _company = null; _logoStoragePath = null; _logoPreviewUrl = null;
+      for (final controller in [_legalName, _tradeName, _taxNumber, _commercialRegister, _companyCode, _taxOffice, _phone, _email, _address]) { controller.clear(); }
+      _currency.text = 'EGP'; _error = null; _message = 'أدخل بيانات الشركة الجديدة ثم اضغط حفظ.';
+    });
+  }
+
+  void _editCompany() {
+    if (_loading || _saving) return;
+    setState(() => _message = 'حقول بيانات الشركة متاحة للتعديل. احفظ التغييرات بعد الانتهاء.');
+    FocusScope.of(context).requestFocus(FocusNode());
+  }
+
+  Future<void> _deleteCompany() async {
+    final id = (_activeCompanyId ?? widget.companyId ?? '').trim();
+    if (id.isEmpty || _db == null) {
+      setState(() => _error = 'لا توجد شركة محفوظة لإيقافها.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: const Text('إيقاف الشركة'),
+      content: const Text('سيتم إيقاف الشركة منطقيًا دون حذف بياناتها المالية أو مستنداتها. هل تريد المتابعة؟'),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('نعم، إيقاف الشركة'))],
+    ));
+    if (confirmed != true) return;
+    try {
+      await _db!.from('erp_companies').update({'is_active': false}).eq('id', id);
+      if (!mounted) return;
+      setState(() { _message = 'تم إرسال طلب إيقاف الشركة إلى قاعدة البيانات.'; _error = null; });
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر إيقاف الشركة؛ تحقق من الصلاحيات وسياسات قاعدة البيانات: $error');
+    }
+  }
+
+  Future<void> _importCompanyExcel() async {
+    try {
+      final picked = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx', 'xls'], withData: true);
+      if (picked == null || picked.files.isEmpty) return;
+      final bytes = picked.files.single.bytes;
+      if (bytes == null) throw StateError('تعذر قراءة محتوى ملف Excel.');
+      final workbook = excel.Excel.decodeBytes(bytes);
+      final sheets = workbook.tables.values.where((sheet) => sheet.maxRows > 0);
+      if (sheets.isEmpty) throw StateError('ملف Excel لا يحتوي على بيانات.');
+      final values = <String, String>{};
+      for (final row in sheets.first.rows) {
+        if (row.length < 2) continue;
+        final key = row[0]?.value?.toString().trim() ?? '';
+        final value = row[1]?.value?.toString().trim() ?? '';
+        if (key.isNotEmpty) values[key] = value;
+      }
+      String getValue(List<String> keys) { for (final key in keys) { if (values.containsKey(key)) return values[key]!; } return ''; }
+      setState(() {
+        _companyCode.text = getValue(['كود الشركة', 'company_code']);
+        _legalName.text = getValue(['الاسم القانوني', 'الاسم القانوني للشركة', 'legal_name']);
+        _tradeName.text = getValue(['الاسم التجاري', 'trade_name']);
+        _taxNumber.text = getValue(['الرقم الضريبي', 'tax_number']);
+        _commercialRegister.text = getValue(['السجل التجاري', 'commercial_register']);
+        _taxOffice.text = getValue(['المأمورية الضريبية', 'tax_office']);
+        _phone.text = getValue(['الهاتف', 'رقم الهاتف', 'phone']);
+        _email.text = getValue(['البريد الإلكتروني', 'email']);
+        _address.text = getValue(['العنوان', 'address']);
+        final currency = getValue(['العملة الأساسية', 'base_currency', 'currency']);
+        if (currency.isNotEmpty) _currency.text = currency.toUpperCase();
+        _message = 'تم استيراد القيم المتاحة من Excel إلى الحقول. راجعها ثم اضغط حفظ.';
+        _error = null;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر استيراد ملف Excel: $error');
+    }
+  }
+
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
     padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
     child: FilledButton.icon(
-      style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      style: FilledButton.styleFrom(
+        backgroundColor: const Color(0xFFF7F5FA),
+        foregroundColor: _companyPurple,
+        side: BorderSide(color: _companyPurple.withValues(alpha: .18)),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
+        visualDensity: VisualDensity.compact,
+      ),
       onPressed: action, icon: Icon(icon, size: 17),
       label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
     ),
@@ -498,13 +584,22 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                 Text((_activeCompanyId ?? widget.companyId) == null ? 'إنشاء ملف الشركة وربط حساب المالك.' : 'تعديل البيانات القانونية والتجارية للشركة.', style: const TextStyle(color: Colors.white70)),
               ])),
             ]),
-            const SizedBox(height: 8),
-            SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
-              _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-              _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _save),
-              _quickTask('معاينة / طباعة', Icons.visibility_outlined, const Color(0xFF6841A5), _loading || _saving ? null : _printCompany),
-              _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _loading || _saving ? null : _exportCompany),
-            ])),
+        )),
+        Container(
+          color: const Color(0xFFF7F5FA),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+          child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
+            _quickTask('تحديث', Icons.refresh, _companyPurple, _loading ? null : _load),
+            _quickTask('إضافة', Icons.add_circle_outline, _companyPurple, _saving ? null : _newCompany),
+            _quickTask('حفظ', Icons.save_outlined, _companyPurple, _saving || _loading ? null : _save),
+            _quickTask('تعديل', Icons.edit_outlined, _companyPurple, _loading || _saving ? null : _editCompany),
+            _quickTask('حذف', Icons.delete_outline, _companyPurple, _loading || _saving ? null : _deleteCompany),
+            _quickTask('معاينة', Icons.visibility_outlined, _companyPurple, _loading || _saving ? null : _printCompany),
+            _quickTask('طباعة', Icons.print_outlined, _companyPurple, _loading || _saving ? null : _printCompany),
+            _quickTask('استيراد Excel', Icons.file_upload_outlined, _companyPurple, _loading || _saving ? null : _importCompanyExcel),
+            _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, _companyPurple, _loading || _saving ? null : _exportCompany),
+          ])),
+        ),
           ]),
         )),
         const SizedBox(height: 16),
