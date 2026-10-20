@@ -164,10 +164,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         final percent = _n(line['discount_percent']);
         line['discount'] = gross * percent / 100;
       }
-      final rate = _isTaxInvoice ? _n(line['tax_rate']) : 0.0;
-      final invoiceDiscount = _invoiceDiscountForLine(index);
       line['adjusted_price'] = _n(line['unit_price']) - (_n(line['quantity']) <= 0 ? 0 : _n(line['discount']) / _n(line['quantity']));
-      line['tax'] = ((_n(line['quantity']) * _n(line['unit_price']) - _n(line['discount']) - invoiceDiscount).clamp(0, double.infinity) * rate / 100 * 100).roundToDouble() / 100;
       _pendingLines[index] = line;
       final subtotal = _pendingGross;
       final currentPercent = double.tryParse(_invoiceDiscountPercent.text.trim()) ?? 0;
@@ -177,6 +174,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         _invoiceDiscountAmount.text = _money(subtotal);
         _invoiceDiscountPercent.text = subtotal <= 0 ? '0' : '100';
       }
+      _recalculatePendingTax();
     });
   }
 
@@ -696,7 +694,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         ];
         final subtotal = _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']));
         final percent = double.tryParse(_invoiceDiscountPercent.text.trim()) ?? 0;
-        if (percent > 0) _invoiceDiscountAmount.text = (subtotal * percent / 100).toStringAsFixed(2);
+        if (percent > 0) {
+          _invoiceDiscountAmount.text = (subtotal * percent / 100).toStringAsFixed(2);
+        }
+        _recalculatePendingTax();
         _message = 'تم نقل الأصناف إلى جريد معاينة الفاتورة. لن تُحفظ في قاعدة البيانات إلا بعد الضغط على «موافقة وحفظ الأصناف».';
       });
     } catch (error) {
