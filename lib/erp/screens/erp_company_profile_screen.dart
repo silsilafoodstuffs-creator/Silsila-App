@@ -520,9 +520,9 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                     ]),
                   ),
                 Row(children: [
-                  Expanded(child: _field(_companyCode, 'كود الشركة', Icons.qr_code_2)),
+                  Expanded(flex: 1, child: _field(_companyCode, 'كود الشركة', Icons.qr_code_2)),
                   const SizedBox(width: 12),
-                  Expanded(child: _field(_legalName, 'الاسم القانوني *', Icons.business)),
+                  Expanded(flex: 2, child: _field(_legalName, 'الاسم القانوني *', Icons.business)),
                 ]),
                 Row(children: [
                   Expanded(child: _field(_tradeName, 'الاسم التجاري', Icons.storefront_outlined)),
@@ -530,9 +530,9 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                   Expanded(child: _field(_taxNumber, 'الرقم الضريبي', Icons.receipt_long_outlined)),
                 ]),
                 Row(children: [
-                  Expanded(child: _field(_commercialRegister, 'السجل التجاري', Icons.assignment_outlined)),
+                  Expanded(flex: 1, child: _field(_commercialRegister, 'السجل التجاري', Icons.assignment_outlined)),
                   const SizedBox(width: 12),
-                  Expanded(child: _field(_taxOffice, 'المأمورية الضريبية', Icons.account_balance_outlined)),
+                  Expanded(flex: 2, child: _field(_taxOffice, 'المأمورية الضريبية', Icons.account_balance_outlined)),
                 ]),
                 Row(children: [
                   Expanded(child: _field(_phone, 'رقم الهاتف', Icons.phone_outlined, keyboard: TextInputType.phone)),
@@ -587,7 +587,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
             Expanded(child: DropdownButtonFormField<String>(
               value: current, isExpanded: true,
               decoration: InputDecoration(prefixIcon: const Icon(Icons.currency_exchange, size: 20), isDense: true,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
               items: _currencyOptions.map((item) => DropdownMenuItem<String>(
                 value: item['code'], child: Text('${item['name']} (${item['code']})', overflow: TextOverflow.ellipsis))).toList(),
@@ -632,7 +632,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                     decoration: InputDecoration(
                       prefixIcon: Icon(icon, size: 20),
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
