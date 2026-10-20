@@ -764,7 +764,6 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 'fixed_unit_price': sourceItems == null ? null : selectedUnitPrice,
                 'min_quantity': minQuantity,
                 'max_quantity': maxQuantity == null ? null : (_n(maxQuantity) / factor),
-                'campaign_item_id': item['campaign_item_id'],
                 'representative_incentive': _n(item['representative_incentive']),
                 'customer_incentive': _n(item['customer_incentive']),
                 'offer_title': sourceTitle,
