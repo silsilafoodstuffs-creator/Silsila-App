@@ -4,7 +4,10 @@ alter table public.erp_sales_campaigns
   add column if not exists target_warehouse_ids jsonb not null default '[]'::jsonb,
   add column if not exists target_branch_ids jsonb not null default '[]'::jsonb,
   add column if not exists target_centers jsonb not null default '[]'::jsonb,
-  add column if not exists target_customer_types jsonb not null default '[]'::jsonb;
+  add column if not exists target_customer_types jsonb not null default '[]'::jsonb,
+  add column if not exists target_governorates jsonb not null default '[]'::jsonb,
+  add column if not exists target_districts jsonb not null default '[]'::jsonb,
+  add column if not exists target_areas jsonb not null default '[]'::jsonb;
 
 alter table public.erp_sales_campaign_items
   add column if not exists offer_quantity numeric(18,4),
