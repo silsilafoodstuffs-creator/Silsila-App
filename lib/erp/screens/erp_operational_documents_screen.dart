@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as excel;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_operational_documents_repository.dart';
 import '../services/erp_operational_accounting_repository.dart';
@@ -1345,6 +1349,91 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
   }
 
+  void _showSalesQuickPreview() {
+    final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
+    showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: Text('معاينة ' + _salesDocumentTitle(_documentType)),
+      content: SizedBox(width: 650, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text('رقم المستند: ' + _documentNumber.text),
+        Text('العميل: ' + _partyCode.text),
+        const Divider(),
+        if (rows.isEmpty) const Text('لا توجد بنود للمعاينة.'),
+        ...rows.map((line) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Text(_s(line['item_name']) + ' • كمية ' + _money(line['quantity']) + ' • سعر ' + _money(line['unit_price'])))),
+        const Divider(),
+        Text('الإجمالي: ' + _money(rows.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']))) + ' ج.م'),
+      ]))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
+  Future<void> _printSalesQuickPdf() async {
+    try {
+      final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
+      final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final pdf = pw.Document();
+      pdf.addPage(pw.MultiPage(theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
+        pw.Text('Silsila - ' + _salesDocumentTitle(_documentType), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 8),
+        pw.Text('Document: ' + _documentNumber.text),
+        pw.Table.fromTextArray(headers: ['Item', 'Quantity', 'Unit price', 'Total'], data: rows.map((line) => [_s(line['item_name']), _money(line['quantity']), _money(line['unit_price']), _money(_n(line['quantity']) * _n(line['unit_price']))]).toList()),
+        pw.SizedBox(height: 8),
+        pw.Text('Total: ' + _money(rows.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price'])))),
+      ]));
+      await Printing.layoutPdf(onLayout: (_) async => pdf.save());
+    } catch (e) { if (mounted) setState(() => _error = 'تعذرت الطباعة أو إنشاء PDF: ' + e.toString()); }
+  }
+
+  Future<void> _importSalesQuickExcel() async {
+    if (_selectedDocumentId == null) { setState(() => _error = 'أنشئ مسودة أو اختر فاتورة بحالة مسودة قبل استيراد الأصناف.'); return; }
+    try {
+      final picked = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: const ['xlsx'], withData: true);
+      if (picked == null || picked.files.isEmpty) return;
+      final bytes = picked.files.single.bytes;
+      if (bytes == null || bytes.isEmpty) throw StateError('تعذر قراءة ملف Excel.');
+      final book = excel.Excel.decodeBytes(bytes);
+      final sheets = book.tables.values.where((sheet) => sheet.rows.isNotEmpty).toList();
+      if (sheets.isEmpty) throw StateError('ملف Excel فارغ.');
+      final rows = sheets.first.rows;
+      final headers = rows.first.map((cell) => (cell?.value?.toString() ?? '').trim().toLowerCase()).toList();
+      final codeCol = headers.indexWhere((h) => ['كود الصنف', 'الكود', 'item code', 'code', 'barcode'].contains(h));
+      final nameCol = headers.indexWhere((h) => ['اسم الصنف', 'الصنف', 'item name', 'item'].contains(h));
+      final qtyCol = headers.indexWhere((h) => ['الكمية', 'qty', 'quantity'].contains(h));
+      final priceCol = headers.indexWhere((h) => ['سعر الوحدة', 'السعر', 'unit price', 'price'].contains(h));
+      if (qtyCol < 0 || (codeCol < 0 && nameCol < 0)) throw StateError('يلزم عمود كود/اسم الصنف وعمود الكمية.');
+      String valueAt(List<excel.Data?> row, int col) => col >= 0 && col < row.length ? (row[col]?.value?.toString().trim() ?? '') : '';
+      final added = <Map<String, dynamic>>[];
+      for (final row in rows.skip(1)) {
+        final code = valueAt(row, codeCol).toLowerCase();
+        final name = valueAt(row, nameCol).toLowerCase();
+        final matches = _items.where((item) => (code.isNotEmpty && (code == _s(item['item_code']).toLowerCase() || code == _s(item['barcode']).toLowerCase())) || (name.isNotEmpty && name == _s(item['item_name']).toLowerCase()));
+        if (matches.isEmpty) continue;
+        final item = matches.first;
+        final qty = double.tryParse(valueAt(row, qtyCol).replaceAll(',', '.')) ?? 0;
+        if (qty <= 0) continue;
+        final basePrice = widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']);
+        final importedPrice = double.tryParse(valueAt(row, priceCol).replaceAll(',', '.')) ?? basePrice;
+        added.add({'item_id': _s(item['id']), 'item_name': _s(item['item_name']), 'quantity': qty, 'unit_id': '', 'unit_name': _s(item['base_unit']).ifEmpty('وحدة'), 'conversion_factor': 1.0, 'unit_price': importedPrice, 'discount': 0.0, 'tax': 0.0});
+      }
+      if (added.isEmpty) throw StateError('لم تتطابق صفوف الملف مع الأصناف أو كانت الكميات غير صحيحة.');
+      if (mounted) setState(() { _pendingLines = [..._pendingLines, ...added]; _message = 'تم استيراد ' + added.length.toString() + ' بندًا إلى المعاينة. اضغط حفظ بعد المراجعة.'; });
+    } catch (e) { if (mounted) setState(() => _error = 'تعذر استيراد Excel: ' + e.toString()); }
+  }
+
+  Future<void> _deleteSelectedSalesDraft() async {
+    final id = _selectedDocumentId;
+    if (id == null) { setState(() => _error = 'اختر مسودة أولًا.'); return; }
+    final rows = _rows.where((row) => _s(row['id']) == id);
+    if (rows.isEmpty || _s(rows.first['status']) != 'draft') { setState(() => _error = 'الحذف متاح للمسودات فقط.'); return; }
+    final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: const Text('تأكيد الحذف'), content: const Text('حذف مسودة المستند المحددة؟'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('نعم، احذف'))]));
+    if (yes != true) return;
+    try {
+      await Supabase.instance.client.from('erp_sales_documents').delete().eq('company_id', _company.text.trim()).eq('id', id).eq('status', 'draft');
+      if (!mounted) return;
+      setState(() { _selectedDocumentId = null; _lines = []; _pendingLines = []; _message = 'تم حذف المسودة.'; });
+      await _load(clearMessage: false);
+    } catch (e) { if (mounted) setState(() => _error = 'تعذر حذف المسودة: ' + e.toString()); }
+  }
+
   Widget _invoiceCard(String title, IconData icon, Widget child) {
     return Card(
       elevation: 0,
@@ -1458,8 +1547,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 ),
                 FilledButton.icon(onPressed: _saving ? null : (_selectedDocumentId == null ? _createDraft : _savePendingLines), icon: const Icon(Icons.save_outlined, size: 16), label: const Text('حفظ'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                 FilledButton.icon(onPressed: _selectedDocumentId == null ? null : () => _loadLines(_selectedDocumentId!), icon: const Icon(Icons.edit_outlined, size: 16), label: const Text('تعديل'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: _selectedDocumentId == null ? null : () => setState(() => _error = 'الحذف متاح من قائمة المستندات للمسودات فقط.'), icon: const Icon(Icons.delete_outline_rounded, size: 16), label: const Text('حذف'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.preview_outlined, size: 16), label: const Text('معاينة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6E2BA6), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: _selectedDocumentId == null ? null : _deleteSelectedSalesDraft, icon: const Icon(Icons.delete_outline_rounded, size: 16), label: const Text('حذف'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                FilledButton.icon(onPressed: () => _showSalesQuickPreview(), icon: const Icon(Icons.preview_outlined, size: 16), label: const Text('معاينة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6E2BA6), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                 FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.print_outlined, size: 16), label: const Text('طباعة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                 FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.file_upload_outlined, size: 16), label: const Text('استيراد Excel'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                 FilledButton.icon(onPressed: () => _showSourceHistory(), icon: const Icon(Icons.picture_as_pdf_outlined, size: 16), label: const Text('طباعة PDF'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
