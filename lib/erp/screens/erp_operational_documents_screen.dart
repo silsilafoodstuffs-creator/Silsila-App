@@ -579,7 +579,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           children: [
             const Text('إنشاء مستند جديد', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
             const SizedBox(height: 8),
-            TextField(controller: _documentNumber, decoration: const InputDecoration(labelText: 'رقم المستند *', border: OutlineInputBorder())),
+            TextField(controller: _documentNumber, decoration: const InputDecoration(labelText: 'المسلسل اليدوي للمستند *', border: OutlineInputBorder())),
+            const SizedBox(height: 4),
+            const Text('المسلسل التلقائي والتاريخ والوقت الدقيق يُسجّلان من قاعدة البيانات عند الحفظ.', style: TextStyle(fontSize: 12, color: Colors.black54)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _documentType, isExpanded: true,
