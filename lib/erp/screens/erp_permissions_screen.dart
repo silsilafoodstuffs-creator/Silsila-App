@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_quick_task_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _permPurple = Color(0xFF3E007D);
@@ -491,13 +492,8 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       if(open)Padding(padding:const EdgeInsets.fromLTRB(8,0,8,8),child:Column(children:[_row(_key(main,'*','*'),'صلاحيات القائمة الرئيسية'),for(final s in sections.entries)_section(main,s.key,s.value)])),
     ]));
   }
-  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
-    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
-    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF7F5FA), foregroundColor: const Color(0xFF3E007D), side: BorderSide(color: const Color(0xFF3E007D).withValues(alpha: .18)),
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
-      onPressed: action, icon: Icon(icon, size: 17),
-      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-  );
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
+      ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   Future<void> _previewPermissions() async {
     final enabled = _draft.values.fold<int>(0, (sum, values) => sum + values.values.where((v) => v).length);
