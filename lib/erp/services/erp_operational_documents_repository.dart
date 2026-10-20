@@ -188,7 +188,7 @@ class ErpOperationalDocumentsRepository {
   Future<List<Map<String, dynamic>>> fetchLines(String documentId, ErpOperationalKind kind) async {
     final table = kind == ErpOperationalKind.purchase ? 'erp_purchase_lines' : 'erp_sales_lines';
     final rows = await _db.from(table)
-      .select('id, item_id, quantity, unit_price, discount_amount, tax_amount, line_total, batch_number, expiry_date')
+      .select('id, item_id, quantity, unit_price, discount_amount, tax_amount, line_total, unit_code, conversion_factor, base_quantity, batch_number, expiry_date')
       .eq('document_id', documentId).order('created_at');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
