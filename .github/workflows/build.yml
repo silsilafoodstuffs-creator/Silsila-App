@@ -217,7 +217,10 @@ jobs:
         run: |
           APK="build/app/outputs/flutter-apk/app-release.apk"
           SDK="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          APKANALYZER="$(find "$SDK" -name apkanalyzer -type f | head -n 1)"
+          APKANALYZER="$SDK/cmdline-tools/latest/bin/apkanalyzer"
+          if [ ! -x "$APKANALYZER" ]; then
+            APKANALYZER="$(find "$SDK/cmdline-tools" "$SDK/build-tools" -name apkanalyzer -type f -print -quit 2>/dev/null || true)"
+          fi
           if [ -z "$APKANALYZER" ]; then
             echo "apkanalyzer was not found"
             exit 1
