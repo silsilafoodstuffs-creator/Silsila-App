@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ErpInventoryMasterRepository {
@@ -47,7 +48,7 @@ class ErpInventoryMasterRepository {
 
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
     final rows = await _db.from('erp_items')
-      .select('id, item_code, barcode, item_name, group_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active')
+      .select('id, item_code, barcode, item_name, group_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url')
       .eq('company_id', companyId.trim()).order('item_code').limit(2000);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
@@ -72,7 +73,7 @@ class ErpInventoryMasterRepository {
   Future<void> createItem({
     required String companyId, required String code, required String name,
     String? barcode, String? groupId, String unit = 'وحدة', double purchasePrice = 0,
-    double salePrice = 0, double taxRate = 0, double reorderLevel = 0, bool expiryTracking = false,
+    double salePrice = 0, double taxRate = 0, double reorderLevel = 0, bool expiryTracking = false, String? imageUrl,
   }) async {
     if (code.trim().isEmpty || name.trim().isEmpty || unit.trim().isEmpty) {
       throw ArgumentError('كود الصنف والاسم ووحدة القياس حقول مطلوبة.');
@@ -82,8 +83,30 @@ class ErpInventoryMasterRepository {
       'company_id': companyId.trim(), 'item_code': code.trim(), 'item_name': name.trim(), 'group_id': groupId,
       'barcode': _blank(barcode), 'base_unit': unit.trim(),
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
-      'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking, 'is_active': true,
+      'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking, 'image_url': _blank(imageUrl), 'is_active': true,
     });
+  }
+
+
+  Future<String> uploadItemImage({
+    required String companyId,
+    required String itemCode,
+    required String fileName,
+    required String contentType,
+    required Uint8List bytes,
+  }) async {
+    if (companyId.trim().isEmpty) throw ArgumentError('معرّف الشركة مطلوب لرفع صورة الصنف.');
+    if (_db.auth.currentUser == null) throw StateError('يجب تسجيل الدخول بحساب مخوّل لرفع صور الأصناف.');
+    if (bytes.isEmpty) throw ArgumentError('ملف الصورة فارغ.');
+    if (bytes.length > 8 * 1024 * 1024) throw ArgumentError('حجم الصورة أكبر من 8 ميجابايت.');
+    const types = <String, String>{'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp'};
+    final extension = types[contentType.toLowerCase()];
+    if (extension == null) throw ArgumentError('الصورة يجب أن تكون JPG أو PNG أو WEBP.');
+    final safeCode = itemCode.trim().replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    final path = 'erp/$companyId/items/${safeCode}_${DateTime.now().microsecondsSinceEpoch}.$extension';
+    await _db.storage.from('products').uploadBinary(path, bytes,
+      fileOptions: FileOptions(contentType: contentType.toLowerCase(), upsert: false));
+    return _db.storage.from('products').getPublicUrl(path);
   }
 
   Future<void> setWarehouseActive(String id, bool active) async {
