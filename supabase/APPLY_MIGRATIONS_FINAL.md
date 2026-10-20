@@ -83,6 +83,7 @@ COMMIT;
 4. `erp_cost_centers_standard_template.sql` — إجراء إنشاء هيكل مراكز تكلفة مقترح لتوزيع الجملة. هذا قالب إداري قابل للتعديل وليس قائمة مفروضة بنص معايير المحاسبة المصرية.
 5. `erp_company_logo_storage.sql` — مخزن خاص لصور المنشآت مع سياسات وصول حسب عضوية الشركة ودور المالك/المدير.
 6. `erp_operational_units_reservations.sql` — وحدات بديلة وتحويلها للوحدة الأساسية، مسلسل تلقائي وتوقيت دقيق للمستندات، حجز مخزون لكل سطر بيع، وإضافة عدة أصناف في معاملة واحدة.
+7. `erp_company_member_profiles.sql` — أسماء المستخدمين ووظائفهم وفروعهم في دليل قابل للبحث مع صلاحيات المالك/المدير.
 
 **ترتيب مهم لترحيل دورة المستندات:** لا تشغّل `erp_operational_units_reservations.sql` إلا بعد نجاح `erp_schema.sql` و`erp_master_data_schema.sql` و`erp_operations_schema.sql` و`erp_operations_workflow.sql` و`erp_inventory_workflow.sql` و`erp_security_membership.sql`. ثم شغّل ترحيل الوحدات والحجوزات مرة واحدة. لا تشغّل ترحيل صور المنشأة قبل وجود `erp_companies` ودوال `erp_user_can_access_company` و`erp_user_has_company_role`.
 
