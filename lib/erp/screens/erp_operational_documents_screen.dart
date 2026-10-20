@@ -1472,25 +1472,26 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               )),
               SizedBox(width: width, child: _invoiceMetric('المسلسل الآلي', doc.isEmpty ? 'يصدر بعد الحفظ' : _s(doc['auto_number']))),
               SizedBox(width: width, child: _invoiceMetric('نوع المستند', _salesDocumentTitle(_documentType))),
-              SizedBox(width: width, child: DropdownButtonFormField<String>(
-                value: _sourceChannel,
-                isExpanded: true,
-                decoration: field('مصدر المستند'),
-                items: const [
-                  DropdownMenuItem(value: 'app', child: Text('التطبيق')),
-                  DropdownMenuItem(value: 'manual', child: Text('يدوي')),
-                  DropdownMenuItem(value: 'crm', child: Text('علاقات العملاء')),
-                  DropdownMenuItem(value: 'documents', child: Text('مستند مصدر')),
-                ],
-                onChanged: hasDraft || _sourceDocumentIds.isNotEmpty ? null : (value) => setState(() => _sourceChannel = value ?? 'manual'),
-              )),
+              if (['quotation', 'order', 'invoice'].contains(_documentType))
+                SizedBox(width: width, child: DropdownButtonFormField<String>(
+                  value: _sourceChannel,
+                  isExpanded: true,
+                  decoration: field('مصدر المستند'),
+                  items: const [
+                    DropdownMenuItem(value: 'app', child: Text('التطبيق')),
+                    DropdownMenuItem(value: 'manual', child: Text('يدوي')),
+                    DropdownMenuItem(value: 'crm', child: Text('علاقات العملاء')),
+                    DropdownMenuItem(value: 'documents', child: Text('مستند مصدر')),
+                  ],
+                  onChanged: hasDraft || _sourceDocumentIds.isNotEmpty ? null : (value) => setState(() => _sourceChannel = value ?? 'manual'),
+                )),
               if (['invoice', 'order'].contains(_documentType))
                 SizedBox(width: width, child: OutlinedButton.icon(
                   onPressed: hasDraft || _saving ? null : _pickSourceDocuments,
                   icon: const Icon(Icons.file_open_outlined),
                   label: Text(_documentType == 'invoice' ? 'جلب أمر بيع F1' : 'جلب عرض سعر F1'),
                 )),
-              if (_sourceDocumentIds.isNotEmpty)
+              if (['quotation', 'order', 'invoice'].contains(_documentType) && _sourceDocumentIds.isNotEmpty)
                 SizedBox(width: width, child: _invoiceMetric('المستندات المرتبطة', _sourceDocumentIds.length.toString())),
             ]);
           })),
