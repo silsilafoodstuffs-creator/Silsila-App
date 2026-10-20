@@ -44,6 +44,7 @@ import 'services/erp_app_management_service.dart';
 import 'services/erp_app_settings.dart';
 import 'services/erp_app_permission_catalog.dart';
 import 'services/erp_company_settings_repository.dart';
+import '../services/app_language.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -695,7 +696,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           TextField(controller: details, maxLines: 3, decoration: const InputDecoration(labelText: 'الوصف أو ملاحظات')),
         ]))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dctx), child: const Text('إلغاء')),
+          TextButton(onPressed: () => Navigator.pop(dctx), child: Text(silsilaText('إلغاء'))),
           FilledButton(onPressed: () async {
             if (name.text.trim().isEmpty) return;
             final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
@@ -720,7 +721,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 _showActionMessage('تعذر الحفظ الدائم: $error');
               }
             }
-          }, child: const Text('حفظ السجل')),
+          }, child: Text(silsilaText('حفظ السجل'))),
         ],
       ),
     ).then((_) { code.dispose(); name.dispose(); details.dispose(); });
@@ -775,7 +776,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         padding: const EdgeInsets.only(bottom: 10), child: TextField(controller: entry.value, decoration: InputDecoration(labelText: entry.key)),
       )).toList()))),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(silsilaText('إلغاء'))),
         FilledButton(onPressed: () {
           final updated = <String, String>{for (final entry in controllers.entries) entry.key: entry.value.text.trim()};
           final internalKey = rows[targetIndex]['_مرجع داخلي'];
@@ -795,7 +796,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           } else {
             _showActionMessage('تم تعديل السجل محليًا؛ لا يُحفظ السجل التوضيحي في قاعدة البيانات.');
           }
-        }, child: const Text('حفظ التعديل')),
+        }, child: Text(silsilaText('حفظ التعديل'))),
       ],
     )).then((_) { for (final controller in controllers.values) { controller.dispose(); } });
   }
@@ -814,11 +815,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final approved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('تأكيد حذف السجل'),
+        title: Text(silsilaText('تأكيد حذف السجل')),
         content: Text('هل تريد حذف السجل «$visibleCode» من شاشة «$_page»؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText('إلغاء'))),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(silsilaText('حذف'))),
         ],
       ),
     );
@@ -892,11 +893,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final confirm = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('تأكيد استيراد Excel'),
+          title: Text(silsilaText('تأكيد استيراد Excel')),
           content: Text('سيتم استيراد ${imported.length} سجلًا إلى شاشة «$_page». ستُحدّث السجلات التي تتطابق مفاتيحها. هل تريد المتابعة؟'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('استيراد')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText('إلغاء'))),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(silsilaText('استيراد'))),
           ],
         ),
       );
@@ -947,13 +948,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       content: SizedBox(width: 560, child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text('سلسلة Silsila • $_module • $_group', style: const TextStyle(color: _purple, fontWeight: FontWeight.w900)),
         const SizedBox(height: 8), Text('الشاشة: $_page • عدد السجلات: ${rows.length}'), const Divider(),
-        if (rows.isEmpty) const Text('لا توجد بيانات لعرضها.')
+        if (rows.isEmpty) Text(silsilaText('لا توجد بيانات لعرضها.'))
         else ...rows.take(30).map((row) => Padding(padding: const EdgeInsets.symmetric(vertical: 5), child: Text(row.entries.map((e) => '${e.key}: ${e.value}').join('  |  ')))),
-        if (rows.length > 30) const Text('تم عرض أول 30 سجلًا في المعاينة.'),
+        if (rows.length > 30) Text(silsilaText('تم عرض أول 30 سجلًا في المعاينة.')),
         const SizedBox(height: 8),
         Text(pdf ? 'هذه معاينة تجهيز PDF؛ يلزم إضافة محرك PDF للتنزيل الفعلي.' : 'هذه معاينة للطباعة؛ إرسالها إلى الطابعة يحتاج تفعيل خدمة الطباعة في نسخة التشغيل.', style: const TextStyle(color: Colors.black54, fontSize: 11)),
       ]))),
-      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(silsilaText('إغلاق')))],
     ));
   }
 
@@ -984,7 +985,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
       child: LayoutBuilder(builder: (context, c) {
         // Responsive breakpoints: phone/tablet portrait, compact laptop, desktop.
         final width = c.maxWidth;
@@ -1052,14 +1053,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(child: Column(
+              Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('سلسلة Silsila', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
+                  Text(silsilaText('سلسلة Silsila'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
                   SizedBox(height: 4),
-                  Text('سلسلة .. بنربط السوق ببعضه', style: TextStyle(color: _orange, fontSize: 12, fontWeight: FontWeight.w700)),
+                  Text(silsilaText('سلسلة .. بنربط السوق ببعضه'), style: TextStyle(color: _orange, fontSize: 12, fontWeight: FontWeight.w700)),
                   SizedBox(height: 3),
-                  Text('ERP • إدارة موارد المؤسسة', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                  Text(silsilaText('ERP • إدارة موارد المؤسسة'), style: TextStyle(color: Colors.white70, fontSize: 10)),
                 ],
               )),
             ],
@@ -1198,14 +1199,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ]);
           }).toList(),
           const SizedBox(height: 8),
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: ListTile(dense: true, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), selected: _page == 'عن البرنامج', selectedTileColor: Colors.white.withValues(alpha: .14), leading: const Icon(Icons.info_outline_rounded, color: _orange, size: 20), title: const Text('عن البرنامج', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)), onTap: () => setState(() { _page = 'عن البرنامج'; _search = ''; }))),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: ListTile(dense: true, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), selected: _page == 'عن البرنامج', selectedTileColor: Colors.white.withValues(alpha: .14), leading: const Icon(Icons.info_outline_rounded, color: _orange, size: 20), title: Text(silsilaText('عن البرنامج'), style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)), onTap: () => setState(() { _page = 'عن البرنامج'; _search = ''; }))),
           ],
         )),
         const Divider(color: Colors.white24, height: 1),
-        const Padding(padding: EdgeInsets.all(14), child: Column(children: [
-          Text('سلسلة للبرمجيات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        Padding(padding: EdgeInsets.all(14), child: Column(children: [
+          Text(silsilaText('سلسلة للبرمجيات'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           SizedBox(height: 4),
-          Text('سلسلة .. بنربط السوق ببعضه', style: TextStyle(color: _orange, fontSize: 12)),
+          Text(silsilaText('سلسلة .. بنربط السوق ببعضه'), style: TextStyle(color: _orange, fontSize: 12)),
         ])),
       ]),
     ),
@@ -1240,8 +1241,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Row(children: [
               const Icon(Icons.notifications_active_outlined, color: Colors.white),
               const SizedBox(width: 8),
-              const Expanded(child: Text('لوحة التنبيهات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: _orange, borderRadius: BorderRadius.circular(20)), child: const Text('3', style: TextStyle(color: _purple, fontWeight: FontWeight.w900))),
+              Expanded(child: Text(silsilaText('لوحة التنبيهات'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: _orange, borderRadius: BorderRadius.circular(20)), child: Text(silsilaText('3'), style: TextStyle(color: _purple, fontWeight: FontWeight.w900))),
             ]),
             const SizedBox(height: 12),
             _notice(Icons.inventory_2_outlined, 'مراجعة المخزون', 'راجع حدود إعادة الطلب والصلاحية', _orange),
@@ -1259,7 +1260,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Row(children: [
               const Icon(Icons.history_rounded, color: Colors.white),
               const SizedBox(width: 8),
-              const Expanded(child: Text('سجل النشاطات', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+              Expanded(child: Text(silsilaText('سجل النشاطات'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
             ]),
             const SizedBox(height: 12),
             ..._activityLog.map((entry) => Padding(
@@ -1282,7 +1283,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Row(children: [
               const Icon(Icons.star_rounded, color: Colors.white),
               const SizedBox(width: 8),
-              const Expanded(child: Text('الوصول السريع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
+              Expanded(child: Text(silsilaText('الوصول السريع'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
             ]),
             const SizedBox(height: 10),
             Wrap(spacing: 5, runSpacing: 5, children: [
@@ -1301,14 +1302,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ),
       ],
       if (_notificationsPanelVisible || _activityPanelVisible)
-        const Padding(
+        Padding(
           padding: EdgeInsets.only(top: 12),
-          child: Text('ملاحظة: التنبيهات وسجل النشاطات حاليًا أمثلة محلية، وليسا متصلين بعد بأحداث النظام الفعلية.', style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
+          child: Text(silsilaText('ملاحظة: التنبيهات وسجل النشاطات حاليًا أمثلة محلية، وليسا متصلين بعد بأحداث النظام الفعلية.'), style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
         ),
       if (!_notificationsPanelVisible && !_activityPanelVisible && !_quickAccessPanelVisible)
-        const Padding(
+        Padding(
           padding: EdgeInsets.all(12),
-          child: Text('تم إخفاء لوحات المهام. استخدم زر إظهار اللوحات في الشريط العلوي لإعادتها.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54, fontSize: 12, height: 1.6)),
+          child: Text(silsilaText('تم إخفاء لوحات المهام. استخدم زر إظهار اللوحات في الشريط العلوي لإعادتها.'), textAlign: TextAlign.center, style: TextStyle(color: Colors.black54, fontSize: 12, height: 1.6)),
         ),
     ])),
   );
@@ -1331,22 +1332,22 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _appManagement() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     _recordToolbar(includeAdd: false),
     const SizedBox(height: 12),
-    Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(gradient: const LinearGradient(colors: [_purple, Color(0xFF6E2BA6)]), borderRadius: BorderRadius.circular(20)), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('إدارة التطبيقات', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
+    Container(padding: const EdgeInsets.all(22), decoration: BoxDecoration(gradient: const LinearGradient(colors: [_purple, Color(0xFF6E2BA6)]), borderRadius: BorderRadius.circular(20)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(silsilaText('إدارة التطبيقات'), style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
       SizedBox(height: 8),
-      Text('مكان موحد لتخصيص الهوية والألوان والصور والصلاحيات وإعدادات التطبيقات التابعة لسلسلة.', style: TextStyle(color: Colors.white70, height: 1.7)),
+      Text(silsilaText('مكان موحد لتخصيص الهوية والألوان والصور والصلاحيات وإعدادات التطبيقات التابعة لسلسلة.'), style: TextStyle(color: Colors.white70, height: 1.7)),
     ])),
     const SizedBox(height: 18),
     Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(17), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const Text('التطبيقات التابعة لسلسلة', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
+      Text(silsilaText('التطبيقات التابعة لسلسلة'), style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
       const SizedBox(height: 8),
-      const Text('إدارة تطبيق سلسلة والتطبيقات الإضافية من مكان واحد؛ التطبيقات غير المنشورة تظل قيد التجهيز دون إظهار قسم مستقل لها.', style: TextStyle(color: Colors.black54, height: 1.6, fontSize: 12)),
+      Text(silsilaText('إدارة تطبيق سلسلة والتطبيقات الإضافية من مكان واحد؛ التطبيقات غير المنشورة تظل قيد التجهيز دون إظهار قسم مستقل لها.'), style: TextStyle(color: Colors.black54, height: 1.6, fontSize: 12)),
       const SizedBox(height: 12),
       _managedAppCard('تطبيق سلسلة', 'التطبيق الرئيسي', Icons.apps_rounded, _selectedAppKey == 'silsila', () => _selectManagedApp('silsila')),
       _managedAppCard('تطبيق رقم 2', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.phone_android_rounded, _selectedAppKey == 'app_2', () => _selectManagedApp('app_2')),
       _managedAppCard('تطبيق رقم 3', 'قيد التجهيز — يمكن استكمال إعداداته هنا', Icons.web_rounded, _selectedAppKey == 'app_3', () => _selectManagedApp('app_3')),
       const Divider(height: 28),
-      const Text('هوية التطبيق المحدد', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
+      Text(silsilaText('هوية التطبيق المحدد'), style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
       const SizedBox(height: 14),
       TextFormField(key: ValueKey(_selectedAppKey), initialValue: _appName, decoration: const InputDecoration(labelText: 'اسم التطبيق', border: OutlineInputBorder()), onChanged: (v) => _updateManagedAppDraft(name: v)),
       const SizedBox(height: 12),
@@ -1357,16 +1358,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _colorChoice('أزرق', const Color(0xFF1565C0), _appAccent, (v) => _updateManagedAppDraft(accent: v)),
       ]),
       const SizedBox(height: 14),
-      Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: _appPrimary, borderRadius: BorderRadius.circular(14)), child: Row(children: [const Icon(Icons.apps_rounded, color: Colors.white, size: 30), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_appName.trim().isEmpty ? 'اسم التطبيق' : _appName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)), const Text('معاينة الألوان المختارة', style: TextStyle(color: Colors.white70, fontSize: 11))])), Container(width: 18, height: 18, decoration: BoxDecoration(color: _appAccent, shape: BoxShape.circle))])),
+      Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(color: _appPrimary, borderRadius: BorderRadius.circular(14)), child: Row(children: [const Icon(Icons.apps_rounded, color: Colors.white, size: 30), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(_appName.trim().isEmpty ? 'اسم التطبيق' : _appName, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)), Text(silsilaText('معاينة الألوان المختارة'), style: TextStyle(color: Colors.white70, fontSize: 11))])), Container(width: 18, height: 18, decoration: BoxDecoration(color: _appAccent, shape: BoxShape.circle))])),
       const SizedBox(height: 18),
-      const Text('إدارة الملفات والصور', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
+      Text(silsilaText('إدارة الملفات والصور'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
       const SizedBox(height: 8),
       _managementTile(Icons.image_outlined, 'شعار التطبيق وصورة البداية', 'تحديد ملفات الهوية التي ستستخدم عند ربط رفع الملفات'),
       _managementTile(Icons.category_outlined, 'صور الأصناف والفئات', 'إضافة صور المنتجات وتصنيفات المواد الغذائية'),
       _managementTile(Icons.factory_outlined, 'صور الموردين والعملاء', 'إدارة الشعارات والصور والبيانات التعريفية'),
       _managementTile(Icons.local_shipping_outlined, 'شركات الشحن', 'صور الشركات وبيانات التواصل وخيارات التوصيل'),
       const SizedBox(height: 18),
-      const Text('صلاحيات الأدوار', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
+      Text(silsilaText('صلاحيات الأدوار'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(
         value: _selectedPermissionRole,
@@ -1398,12 +1399,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         }).toList(),
       ),
       const SizedBox(height: 6),
-      const Text('تُحفظ كل صلاحية منفردة في Supabase. لا تُعد هذه الواجهة بديلًا عن تحقق الخادم وسياسات RLS.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.6)),
+      Text(silsilaText('تُحفظ كل صلاحية منفردة في Supabase. لا تُعد هذه الواجهة بديلًا عن تحقق الخادم وسياسات RLS.'), style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.6)),
       const SizedBox(height: 18),
-      const Text('سجل النشاطات المحفوظ', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
+      Text(silsilaText('سجل النشاطات المحفوظ'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple)),
       const SizedBox(height: 6),
       if (_savedAppActivity.isEmpty)
-        const Text('لا توجد أحداث محفوظة للتطبيق أو أن سجل النشاطات غير مهيأ.', style: TextStyle(color: Colors.black54, fontSize: 11))
+        Text(silsilaText('لا توجد أحداث محفوظة للتطبيق أو أن سجل النشاطات غير مهيأ.'), style: TextStyle(color: Colors.black54, fontSize: 11))
       else
         ..._savedAppActivity.map((entry) => ListTile(
           dense: true,
@@ -1439,7 +1440,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         label: Text(_appManagementLoading ? 'جارٍ تحميل الإعدادات...' : 'إعادة تحميل الإعدادات المحفوظة'),
       ),
       const SizedBox(height: 8),
-      const Text('الحفظ الدائم يعمل بعد تهيئة Supabase وتطبيق جداول إدارة التطبيقات وسياسات RLS المقيدة بالشركة. لم يتم ربط رفع الصور أو فرض الصلاحيات من هذه الأزرار.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.7)),
+      Text(silsilaText('الحفظ الدائم يعمل بعد تهيئة Supabase وتطبيق جداول إدارة التطبيقات وسياسات RLS المقيدة بالشركة. لم يتم ربط رفع الصور أو فرض الصلاحيات من هذه الأزرار.'), style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.7)),
     ])),
   ]);
 
@@ -1521,12 +1522,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           InkWell(
             onTap: _goHome,
             borderRadius: BorderRadius.circular(5),
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.symmetric(vertical: 2, horizontal: 3),
-              child: Text('الرئيسية', style: TextStyle(color: _purple, fontSize: 11, fontWeight: FontWeight.w800, decoration: TextDecoration.underline)),
+              child: Text(silsilaText('الرئيسية'), style: TextStyle(color: _purple, fontSize: 11, fontWeight: FontWeight.w800, decoration: TextDecoration.underline)),
             ),
           ),
-          const Text('/', style: TextStyle(color: Colors.black45, fontSize: 11)),
+          Text(silsilaText('/'), style: TextStyle(color: Colors.black45, fontSize: 11)),
           InkWell(
             onTap: () {
               final groups = _modules[_module]!;
@@ -1538,7 +1539,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               child: Text(_module, style: const TextStyle(color: _purple, fontSize: 13, fontWeight: FontWeight.w700, decoration: TextDecoration.underline)),
             ),
           ),
-          const Text('/', style: TextStyle(color: Colors.black45, fontSize: 11)),
+          Text(silsilaText('/'), style: TextStyle(color: Colors.black45, fontSize: 11)),
           Text(_page, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 11)),
         ],
       ),
@@ -1560,7 +1561,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         icon: const Icon(Icons.menu_rounded, color: _purple),
       ),
     ],
-    IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('مركز الإشعارات التجريبي'))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
+    IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('مركز الإشعارات التجريبي')))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
     const CircleAvatar(radius: 18, backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple, size: 20)),
   ]));
 
@@ -1644,7 +1645,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           const SizedBox(height: 12),
           Text(_executiveSummaryAllowed ? 'لا توجد أقسام متاحة في الملخص التنفيذي' : 'الملخص التنفيذي غير متاح لحسابك', style: const TextStyle(color: _purple, fontSize: 20, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          const Text('اطلب من مسؤول النظام منح صلاحية الملخص التنفيذي أو تفعيل قسم واحد على الأقل من أقسامه.', textAlign: TextAlign.center, style: TextStyle(height: 1.6)),
+          Text(silsilaText('اطلب من مسؤول النظام منح صلاحية الملخص التنفيذي أو تفعيل قسم واحد على الأقل من أقسامه.'), textAlign: TextAlign.center, style: TextStyle(height: 1.6)),
         ]),
       ));
     }
@@ -1757,9 +1758,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ),
             const SizedBox(width: 16),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('الملخص التنفيذي', style: TextStyle(fontSize: 29, height: 1.2, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3)),
+              Text(silsilaText('الملخص التنفيذي'), style: TextStyle(fontSize: 29, height: 1.2, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3)),
               const SizedBox(height: 6),
-              const Text('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة', style: TextStyle(color: Color(0xFFECE2F8), fontSize: 15, height: 1.5)),
+              Text(silsilaText('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة'), style: TextStyle(color: Color(0xFFECE2F8), fontSize: 15, height: 1.5)),
               const SizedBox(height: 5),
               Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة من قاعدة البيانات…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'المؤشرات الرئيسية من الحركات المرحلة؛ بقية المؤشرات حسب اكتمال الربط', style: const TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
             ])),
@@ -1858,10 +1859,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           );
         }),
         const SizedBox(height: 4),
-        const Row(children: [
+        Row(children: [
           Icon(Icons.info_outline_rounded, color: _orange, size: 11),
           SizedBox(width: 4),
-          Expanded(child: Text('المؤشرات الرقمية والمخططات توضيحية حتى ربطها بالحركات الفعلية المعتمدة.', style: TextStyle(fontSize: 11, color: Colors.black54))),
+          Expanded(child: Text(silsilaText('المؤشرات الرقمية والمخططات توضيحية حتى ربطها بالحركات الفعلية المعتمدة.'), style: TextStyle(fontSize: 11, color: Colors.black54))),
         ]),
       ]);
     });
@@ -1956,7 +1957,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 5))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      const Text('مؤشرات تحتاج متابعة', style: TextStyle(fontSize: 20, color: _purple, fontWeight: FontWeight.w900)),
+      Text(silsilaText('مؤشرات تحتاج متابعة'), style: TextStyle(fontSize: 20, color: _purple, fontWeight: FontWeight.w900)),
       const SizedBox(height: 7),
       _executiveHighlightRow('مديونية العملاء', _executiveMoney(_executiveReceivables), _pink),
       _executiveHighlightRow('مبيعات آخر 7 أيام', _executiveMoney(_executiveLast7Sales), _purple),
@@ -2052,7 +2053,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             },
           )).toList())),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(silsilaText('إغلاق')))],
       ),
     );
   }
@@ -2068,9 +2069,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           const SizedBox(height: 10),
           Text(details, style: const TextStyle(fontSize: 11, height: 1.6)),
           const SizedBox(height: 7),
-          const Text('تظهر النتائج الرقمية التفصيلية بعد ربط المؤشر بالحركات الفعلية المعتمدة.', style: TextStyle(color: Colors.black54, fontSize: 9, height: 1.4)),
+          Text(silsilaText('تظهر النتائج الرقمية التفصيلية بعد ربط المؤشر بالحركات الفعلية المعتمدة.'), style: TextStyle(color: Colors.black54, fontSize: 9, height: 1.4)),
         ])),
-        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(silsilaText('إغلاق')))],
       ),
     );
   }
@@ -2198,8 +2199,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         onPressed: () { setState(() { _page = p; _selectedRecord = null; }); _loadWorkspacePage(p); },
       )).toList()),
       const SizedBox(height: 16),
-      if (_group == 'تقارير') const Padding(padding: EdgeInsets.only(bottom: 12), child: Text('نموذج تقارير تجريبي؛ ستظهر المؤشرات الفعلية بعد ربط مصادر البيانات واعتماد المعادلات المحاسبية.', style: TextStyle(color: Colors.black54, height: 1.6))),
-      if (_rows.isEmpty) const Padding(padding: EdgeInsets.all(28), child: Text('لا توجد نتائج مطابقة.', textAlign: TextAlign.center))
+      if (_group == 'تقارير') Padding(padding: EdgeInsets.only(bottom: 12), child: Text(silsilaText('نموذج تقارير تجريبي؛ ستظهر المؤشرات الفعلية بعد ربط مصادر البيانات واعتماد المعادلات المحاسبية.'), style: TextStyle(color: Colors.black54, height: 1.6))),
+      if (_rows.isEmpty) Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد نتائج مطابقة.'), textAlign: TextAlign.center))
       else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _rows.first.keys.where((k) => k != '_مرجع داخلي').map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _rows.first.keys.where((k) => k != '_مرجع داخلي').map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
       const SizedBox(height: 12),
       Text('عدد السجلات المعروضة: ${_rows.length} • تحقق من حالة الحفظ بجوار كل عملية', style: const TextStyle(color: Colors.black45, fontSize: 11)),
@@ -2225,43 +2226,43 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('سياسات التسعير والخصومات','حد تسعير الصنف والزيادة أو النقصان وحدود خصم الصنف والفاتورة'),
       Wrap(spacing:12,runSpacing:12,children:[_fieldBox('سعر الصنف الأساسي',_basePriceController),_fieldBox('حد التسعير المعتمد',_priceLimitController),SizedBox(width:220,child:DropdownButtonFormField<String>(value:_pricingMode,decoration:const InputDecoration(labelText:'طريقة التعديل',border:OutlineInputBorder()),items:const ['نسبة','قيمة'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_pricingMode=v??_pricingMode))),SizedBox(width:220,child:DropdownButtonFormField<String>(value:_pricingDirection,decoration:const InputDecoration(labelText:'الاتجاه من حد التسعير',border:OutlineInputBorder()),items:const ['زيادة','نقصان'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_pricingDirection=v??_pricingDirection)),),_fieldBox(_pricingMode=='نسبة'?'نسبة الزيادة / النقصان %':'قيمة الزيادة / النقصان',_priceValueController),_fieldBox('أقصى خصم على إجمالي الفاتورة %',_invoiceDiscountController),_fieldBox('أقصى خصم على مستوى الصنف %',_itemDiscountController)]),
       const SizedBox(height:12),
-      FilledButton.icon(onPressed:()=>_saveWorkspaceSetting('pricing_policy', {'base_price':_basePriceController.text.trim(),'price_limit':_priceLimitController.text.trim(),'mode':_pricingMode,'direction':_pricingDirection,'price_value':_priceValueController.text.trim(),'invoice_discount':_invoiceDiscountController.text.trim(),'item_discount':_itemDiscountController.text.trim()}, successMessage:'تم حفظ سياسة التسعير في قاعدة البيانات.').then((_) {}),icon:const Icon(Icons.save),label:const Text('حفظ سياسة التسعير')),
+      FilledButton.icon(onPressed:()=>_saveWorkspaceSetting('pricing_policy', {'base_price':_basePriceController.text.trim(),'price_limit':_priceLimitController.text.trim(),'mode':_pricingMode,'direction':_pricingDirection,'price_value':_priceValueController.text.trim(),'invoice_discount':_invoiceDiscountController.text.trim(),'item_discount':_itemDiscountController.text.trim()}, successMessage:'تم حفظ سياسة التسعير في قاعدة البيانات.').then((_) {}),icon:const Icon(Icons.save),label:Text(silsilaText('حفظ سياسة التسعير'))),
       const SizedBox(height:8),
-      const Text('يجب أن يُحسب السعر النهائي من حد التسعير المسجل للصنف، مع منع تجاوز صلاحية المستخدم وحدود الخصم. يلزم ربط الحقول ببيانات الأصناف وقاعدة البيانات قبل تطبيقها على الفواتير.',style:TextStyle(color:Colors.black54,height:1.6))]);
+      Text(silsilaText('يجب أن يُحسب السعر النهائي من حد التسعير المسجل للصنف، مع منع تجاوز صلاحية المستخدم وحدود الخصم. يلزم ربط الحقول ببيانات الأصناف وقاعدة البيانات قبل تطبيقها على الفواتير.'),style:TextStyle(color:Colors.black54,height:1.6))]);
   }
 
   Widget _transactionRestrictionsScreen() {
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('قيود البيع والشراء','إيقاف البيع أو الشراء أو تحديد الحد حسب الصنف أو الفاتورة أو العميل أو المندوب'),
       Wrap(spacing:12,runSpacing:12,children:[SizedBox(width:220,child:DropdownButtonFormField<String>(value:_restrictionAction,decoration:const InputDecoration(labelText:'الإجراء',border:OutlineInputBorder()),items:const ['إيقاف البيع','إيقاف الشراء','تحديد حد البيع'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_restrictionAction=v??_restrictionAction))),SizedBox(width:220,child:DropdownButtonFormField<String>(value:_restrictionTarget,decoration:const InputDecoration(labelText:'مستوى تطبيق القيد',border:OutlineInputBorder()),items:const ['الصنف','الفاتورة الواحدة','العميل','المندوب'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v)=>setState(()=>_restrictionTarget=v??_restrictionTarget))),_fieldBox('كود الصنف / الفاتورة / العميل / المندوب',_restrictionItem),_fieldBox('العميل (اختياري)',_restrictionCustomer),_fieldBox('المندوب (اختياري)',_restrictionDelegate)]),
       const SizedBox(height:12),
-      FilledButton.icon(onPressed:()=>showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('إضافة قيد'),content:Text('الإجراء: $_restrictionAction • المستوى: $_restrictionTarget • المعرف: ${_restrictionItem.text}'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق')),FilledButton(onPressed:() async {final saved=await _saveWorkspaceSetting('transaction_restrictions', {'action':_restrictionAction,'target':_restrictionTarget,'item':_restrictionItem.text.trim(),'customer':_restrictionCustomer.text.trim(),'delegate':_restrictionDelegate.text.trim()}, successMessage:'تم حفظ إعداد القيد في قاعدة البيانات.');if(saved&&mounted){setState(()=>_activityLog.insert(0,'تم حفظ إعداد قيد: $_restrictionAction / $_restrictionTarget / ${_restrictionItem.text}'));Navigator.pop(ctx);}},child:const Text('حفظ الإعداد'))])),icon:const Icon(Icons.block),label:const Text('إضافة قيد / إيقاف')),
+      FilledButton.icon(onPressed:()=>showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:Text(silsilaText('إضافة قيد')),content:Text('الإجراء: $_restrictionAction • المستوى: $_restrictionTarget • المعرف: ${_restrictionItem.text}'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(silsilaText('إغلاق'))),FilledButton(onPressed:() async {final saved=await _saveWorkspaceSetting('transaction_restrictions', {'action':_restrictionAction,'target':_restrictionTarget,'item':_restrictionItem.text.trim(),'customer':_restrictionCustomer.text.trim(),'delegate':_restrictionDelegate.text.trim()}, successMessage:'تم حفظ إعداد القيد في قاعدة البيانات.');if(saved&&mounted){setState(()=>_activityLog.insert(0,'تم حفظ إعداد قيد: $_restrictionAction / $_restrictionTarget / ${_restrictionItem.text}'));Navigator.pop(ctx);}},child:Text(silsilaText('حفظ الإعداد')))])),icon:const Icon(Icons.block),label:Text(silsilaText('إضافة قيد / إيقاف'))),
       const SizedBox(height:8),
-      const Text('يتم حفظ إعداد القيد في قاعدة البيانات. يلزم ربط قواعد حفظ وترحيل الفواتير بهذا الإعداد حتى يمنع البيع أو الشراء فعليًا على مستوى الخادم.',style:TextStyle(color:Colors.black54,height:1.6))]);
+      Text(silsilaText('يتم حفظ إعداد القيد في قاعدة البيانات. يلزم ربط قواعد حفظ وترحيل الفواتير بهذا الإعداد حتى يمنع البيع أو الشراء فعليًا على مستوى الخادم.'),style:TextStyle(color:Colors.black54,height:1.6))]);
   }
 
   Widget _journalApprovalScreen() {
     const journals=[('JV-301','قيد مشتريات','2026-10-08','18,000','غير متوازن'),('JV-302','قيد مبيعات','2026-10-09','7,600','بانتظار الاعتماد'),('JV-303','قيد خزينة','2026-10-10','2,200','بانتظار الاعتماد')];
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[_screenHeading('قائمة اعتماد القيود','مراجعة القيود قبل اعتمادها أو إعادتها للتعديل أو تسجيل طلب عكس'),
-      const Text('القيود أدناه أمثلة للواجهة فقط، ولا تمثل قيودًا محفوظة في دفتر الأستاذ.',style:TextStyle(color:Colors.black54)),
+      Text(silsilaText('القيود أدناه أمثلة للواجهة فقط، ولا تمثل قيودًا محفوظة في دفتر الأستاذ.'),style:TextStyle(color:Colors.black54)),
       const SizedBox(height:10),
       ...journals.map((j)=>Card(child:ListTile(title:Text('${j.$1} • ${j.$2}',style:const TextStyle(fontWeight:FontWeight.w800)),subtitle:Text('${j.$3} • ${j.$4} ج.م • ${j.$5}'),trailing:Wrap(spacing:3,children:[IconButton(tooltip:'اعتماد',onPressed:()=>setState(()=>_approvedJournals.add(j.$1)),icon:const Icon(Icons.check_circle_outline,color:Color(0xFF18865A))),IconButton(tooltip:'إعادة للتعديل',onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تم تسجيل طلب إعادة ${j.$1} للمراجعة محليًا.'))),icon:const Icon(Icons.edit_outlined,color:_orange)),IconButton(tooltip:'طلب عكس',onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تم تسجيل طلب عكس ${j.$1} محليًا؛ لم يُعكس القيد.'))),icon:const Icon(Icons.undo,color:_pink))]),leading:Icon(_approvedJournals.contains(j.$1)?Icons.verified:Icons.pending_actions,color:_approvedJournals.contains(j.$1)?const Color(0xFF18865A):_orange)))),
       const SizedBox(height:8),
-      const Text('زر الاعتماد في هذه المرحلة يسجل اختيارًا داخل الجلسة فقط؛ الترحيل المالي الحقيقي يتطلب التحقق من توازن القيد وصلاحية المستخدم وحالة الفترة المالية.',style:TextStyle(color:Colors.black54,height:1.6))]);
+      Text(silsilaText('زر الاعتماد في هذه المرحلة يسجل اختيارًا داخل الجلسة فقط؛ الترحيل المالي الحقيقي يتطلب التحقق من توازن القيد وصلاحية المستخدم وحالة الفترة المالية.'),style:TextStyle(color:Colors.black54,height:1.6))]);
   }
 
   Widget _screenHeading(String title,String subtitle)=>Padding(padding:const EdgeInsets.only(bottom:14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:_purple,fontSize:22,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(subtitle,style:const TextStyle(color:Colors.black54,height:1.5))]));
   Widget _fieldBox(String label,TextEditingController controller)=>SizedBox(width:220,child:TextField(controller:controller,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:label,border:const OutlineInputBorder())));
 
-  Widget _about() => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Text('عن البرنامج', style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
+  Widget _about() => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text(silsilaText('عن البرنامج'), style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
     SizedBox(height: 12),
-    Text('تم إنشاء هذا البرنامج بواسطة شركة سلسلة للبرمجيات — أ. محمد عبد العاطي.', style: TextStyle(fontWeight: FontWeight.w700, height: 1.7)),
-    Text('موبايل: 01121237271', style: TextStyle(height: 1.7)),
+    Text(silsilaText('تم إنشاء هذا البرنامج بواسطة شركة سلسلة للبرمجيات — أ. محمد عبد العاطي.'), style: TextStyle(fontWeight: FontWeight.w700, height: 1.7)),
+    Text(silsilaText('موبايل: 01121237271'), style: TextStyle(height: 1.7)),
     Text('البريد الإلكتروني: attymanatty@gmail.com', style: TextStyle(height: 1.7)),
     SizedBox(height: 6),
-    Text('خبرة في جوانب تجارة وتوزيع المواد الغذائية لمدة تقارب 20 عامًا، والمشاركة في تطوير كبرى التجار والشركات بنظام الفروع وإعادة هيكلتها وتطويرها في مختلف الأقسام.', style: TextStyle(height: 1.8)),
+    Text(silsilaText('خبرة في جوانب تجارة وتوزيع المواد الغذائية لمدة تقارب 20 عامًا، والمشاركة في تطوير كبرى التجار والشركات بنظام الفروع وإعادة هيكلتها وتطويرها في مختلف الأقسام.'), style: TextStyle(height: 1.8)),
     SizedBox(height: 8),
-    Text('المنظومة مصممة للتوسع إلى إدارة مالية ومخزنية وتشغيلية موحدة متعددة الفروع.', style: TextStyle(color: _purple, height: 1.7)),
+    Text(silsilaText('المنظومة مصممة للتوسع إلى إدارة مالية ومخزنية وتشغيلية موحدة متعددة الفروع.'), style: TextStyle(color: _purple, height: 1.7)),
   ]));
 
 }

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../services/activity_service.dart';
 import '../erp_dashboard_screen.dart';
+import '../../services/app_language.dart';
 
 const _silsilaPurple = Color(0xFF3E007D);
 const _silsilaOrange = Color(0xFFFFA015);
@@ -175,7 +176,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: StatefulBuilder(
             builder: (context, refresh) => AlertDialog(
               title: Text(newActivity ? 'إنشاء نشاط جديد' : 'إنشاء مستخدم جديد'),
@@ -232,12 +233,12 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                             value: accountType,
                             isExpanded: true,
                             decoration: const InputDecoration(labelText: 'نوع الحساب'),
-                            items: const [
-                              DropdownMenuItem(value: 'عميل', child: Text('عميل')),
-                              DropdownMenuItem(value: 'مورد', child: Text('مورد')),
-                              DropdownMenuItem(value: 'مندوب', child: Text('مندوب')),
-                              DropdownMenuItem(value: 'شركة شحن', child: Text('شركة شحن')),
-                              DropdownMenuItem(value: 'إدارة نشاط', child: Text('إدارة نشاط')),
+                            items: [
+                              DropdownMenuItem(value: 'عميل', child: Text(silsilaText('عميل'))),
+                              DropdownMenuItem(value: 'مورد', child: Text(silsilaText('مورد'))),
+                              DropdownMenuItem(value: 'مندوب', child: Text(silsilaText('مندوب'))),
+                              DropdownMenuItem(value: 'شركة شحن', child: Text(silsilaText('شركة شحن'))),
+                              DropdownMenuItem(value: 'إدارة نشاط', child: Text(silsilaText('إدارة نشاط'))),
                             ],
                             onChanged: (v) {
                               if (v != null) refresh(() => accountType = v);
@@ -304,7 +305,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                 ),
               ),
               actions: [
-                TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+                TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext), child: Text(silsilaText('إلغاء'))),
                 FilledButton(
                   style: FilledButton.styleFrom(backgroundColor: _silsilaPurple),
                   onPressed: busy ? null : () async {
@@ -338,7 +339,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                       if (dialogContext.mounted && busy) refresh(() => busy = false);
                     }
                   },
-                  child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('إنشاء الحساب'),
+                  child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(silsilaText('إنشاء الحساب')),
                 ),
               ],
             ),
@@ -479,20 +480,20 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
               decoration: BoxDecoration(color: _palePurple, borderRadius: BorderRadius.circular(30)),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.verified_user_outlined, color: _silsilaPurple, size: 16),
                   SizedBox(width: 6),
-                  Text('بوابة دخول آمنة', style: TextStyle(color: _silsilaPurple, fontSize: 12, fontWeight: FontWeight.w800)),
+                  Text(silsilaText('بوابة دخول آمنة'), style: TextStyle(color: _silsilaPurple, fontSize: 12, fontWeight: FontWeight.w800)),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 13),
-          const Text('أهلًا بك في سلسلة', textAlign: TextAlign.center, style: TextStyle(color: _silsilaPurple, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(silsilaText('أهلًا بك في سلسلة'), textAlign: TextAlign.center, style: TextStyle(color: _silsilaPurple, fontSize: 24, fontWeight: FontWeight.w900)),
           const SizedBox(height: 5),
-          const Text('سجّل دخولك لإدارة شركتك وبياناتك بأمان', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF756A80), fontSize: 12, height: 1.6)),
+          Text(silsilaText('سجّل دخولك لإدارة شركتك وبياناتك بأمان'), textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF756A80), fontSize: 12, height: 1.6)),
           const SizedBox(height: 19),
           DropdownButtonFormField<String>(
             value: _activityTypes.contains(_activity) ? _activity : null,
@@ -509,7 +510,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
             },
           ),
           const SizedBox(height: 14),
-          const Text('اختار طريقة دخولك', textAlign: TextAlign.center, style: TextStyle(color: _silsilaPurple, fontSize: 16, fontWeight: FontWeight.w900)),
+          Text(silsilaText('اختار طريقة دخولك'), textAlign: TextAlign.center, style: TextStyle(color: _silsilaPurple, fontSize: 16, fontWeight: FontWeight.w900)),
           const SizedBox(height: 10),
           Row(children: [
             _accountTypeButton('مورد', Icons.inventory_2_outlined),
@@ -524,12 +525,12 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text('تسجيل دخول النشاط', style: TextStyle(color: _silsilaPurple, fontSize: 15, fontWeight: FontWeight.w900)),
+                Text(silsilaText('تسجيل دخول النشاط'), style: TextStyle(color: _silsilaPurple, fontSize: 15, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 10),
                 SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'مستخدم رئيسي للنشاط', label: Text('مستخدم رئيسي'), icon: Icon(Icons.admin_panel_settings_outlined)),
-                    ButtonSegment(value: 'مستخدم فرعي للنشاط', label: Text('مستخدم فرعي'), icon: Icon(Icons.person_outline)),
+                  segments: [
+                    ButtonSegment(value: 'مستخدم رئيسي للنشاط', label: Text(silsilaText('مستخدم رئيسي')), icon: Icon(Icons.admin_panel_settings_outlined)),
+                    ButtonSegment(value: 'مستخدم فرعي للنشاط', label: Text(silsilaText('مستخدم فرعي')), icon: Icon(Icons.person_outline)),
                   ],
                   selected: {_activityUserType},
                   showSelectedIcon: false,
@@ -565,8 +566,8 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                   controlAffinity: ListTileControlAffinity.leading,
                   value: _rememberPassword,
                   activeColor: _silsilaPurple,
-                  title: const Text('تذكر بيانات الدخول', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                  subtitle: const Text('استخدم مدير كلمات المرور في المتصفح لحفظها بأمان', style: TextStyle(fontSize: 11)),
+                  title: Text(silsilaText('تذكر بيانات الدخول'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  subtitle: Text(silsilaText('استخدم مدير كلمات المرور في المتصفح لحفظها بأمان'), style: TextStyle(fontSize: 11)),
                   onChanged: (value) => setState(() => _rememberPassword = value ?? false),
                 ),
                 if (_error != null) ...[
@@ -585,25 +586,25 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                     style: FilledButton.styleFrom(backgroundColor: _silsilaPurple, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))),
                     child: _busy
                         ? const SizedBox(width: 21, height: 21, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.login_rounded), SizedBox(width: 8), Text('دخول', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900))]),
+                        : Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.login_rounded), SizedBox(width: 8), Text(silsilaText('دخول'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900))]),
                   ),
                 ),
                 TextButton(
                   onPressed: _openPasswordRecovery,
-                  child: const Text('نسيت كلمة المرور؟'),
+                  child: Text(silsilaText('نسيت كلمة المرور؟')),
                 ),
                 const Divider(height: 22),
                 OutlinedButton.icon(
                   onPressed: () => _openRegisterDialog(newActivity: false),
                   icon: const Icon(Icons.person_add_alt_1_rounded),
-                  label: const Text('إنشاء مستخدم جديد'),
+                  label: Text(silsilaText('إنشاء مستخدم جديد')),
                   style: OutlinedButton.styleFrom(foregroundColor: _silsilaPurple, side: const BorderSide(color: _silsilaPurple), padding: const EdgeInsets.symmetric(vertical: 13)),
                 ),
                 const SizedBox(height: 8),
                 FilledButton.icon(
                   onPressed: () => _openRegisterDialog(newActivity: true),
                   icon: const Icon(Icons.add_business_rounded),
-                  label: const Text('إنشاء نشاط جديد'),
+                  label: Text(silsilaText('إنشاء نشاط جديد')),
                   style: FilledButton.styleFrom(backgroundColor: _silsilaOrange, foregroundColor: _silsilaPurple, padding: const EdgeInsets.symmetric(vertical: 13)),
                 ),
               ],
@@ -638,23 +639,22 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                 errorBuilder: (_, __, ___) => const Icon(Icons.hub_rounded, color: _silsilaOrange, size: 44),
               ),
               const SizedBox(width: 15),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('سلسلة Silsila', style: TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.w900, letterSpacing: 0.2)),
+                    Text(silsilaText('سلسلة Silsila'), style: TextStyle(color: Colors.white, fontSize: 27, fontWeight: FontWeight.w900, letterSpacing: 0.2)),
                     SizedBox(height: 5),
-                    Text('بنربط السوق ببعضه', style: TextStyle(color: _silsilaOrange, fontSize: 15, fontWeight: FontWeight.w800)),
+                    Text(silsilaText('بنربط السوق ببعضه'), style: TextStyle(color: _silsilaOrange, fontSize: 15, fontWeight: FontWeight.w800)),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 21),
-          const Text('منصة واحدة تربط التجارة والإدارة', style: TextStyle(color: Colors.white, fontSize: 21, height: 1.45, fontWeight: FontWeight.w900)),
+          Text(silsilaText('منصة واحدة تربط التجارة والإدارة'), style: TextStyle(color: Colors.white, fontSize: 21, height: 1.45, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          const Text(
-            'نظام سلسلة لإدارة النشاط ومتابعة العمليات، من بيانات الشركة والحسابات إلى المخازن والعملاء والموردين.',
+          Text(silsilaText('نظام سلسلة لإدارة النشاط ومتابعة العمليات، من بيانات الشركة والحسابات إلى المخازن والعملاء والموردين.'),
             style: TextStyle(color: Color(0xFFEDE4F6), height: 1.8, fontSize: 13),
           ),
           const SizedBox(height: 18),
@@ -716,11 +716,11 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(color: _palePurple, borderRadius: BorderRadius.circular(16)),
-          child: const Row(
+          child: Row(
             children: [
               Icon(Icons.lightbulb_outline_rounded, color: _silsilaPurple, size: 23),
               SizedBox(width: 10),
-              Expanded(child: Text('رؤيتنا: سوق متصل، معلومات أوضح، وخطوات أسهل لكل شريك.', style: TextStyle(color: _silsilaPurple, fontWeight: FontWeight.w800, height: 1.6, fontSize: 12))),
+              Expanded(child: Text(silsilaText('رؤيتنا: سوق متصل، معلومات أوضح، وخطوات أسهل لكل شريك.'), style: TextStyle(color: _silsilaPurple, fontWeight: FontWeight.w800, height: 1.6, fontSize: 12))),
             ],
           ),
         ),
@@ -733,7 +733,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     if (_signedIn) return ErpDashboardScreen(initialPage: _newActivityPending ? 'بيانات الشركة' : null);
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
       child: Scaffold(
         backgroundColor: _pageBackground,
         body: SafeArea(
@@ -773,16 +773,16 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                                 children: [
                                   const Icon(Icons.circle, color: _silsilaOrange, size: 9),
                                   const SizedBox(width: 7),
-                                  const Text('نظام إدارة سلسلة', style: TextStyle(color: _silsilaPurple, fontWeight: FontWeight.w900, fontSize: 13)),
+                                  Text(silsilaText('نظام إدارة سلسلة'), style: TextStyle(color: _silsilaPurple, fontWeight: FontWeight.w900, fontSize: 13)),
                                   const Spacer(),
-                                  Text('SILSILA • MANAGEMENT PORTAL', style: TextStyle(color: _silsilaPurple.withValues(alpha: 0.62), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.1)),
+                                  Text(silsilaText('SILSILA • MANAGEMENT PORTAL'), style: TextStyle(color: _silsilaPurple.withValues(alpha: 0.62), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.1)),
                                 ],
                               ),
                               const SizedBox(height: 17),
                               content,
                               const SizedBox(height: 22),
-                              const Center(
-                                child: Text('سلسلة Silsila  •  بنربط السوق ببعضه', style: TextStyle(color: Color(0xFF8A7D95), fontSize: 11, fontWeight: FontWeight.w700)),
+                              Center(
+                                child: Text(silsilaText('سلسلة Silsila  •  بنربط السوق ببعضه'), style: TextStyle(color: Color(0xFF8A7D95), fontSize: 11, fontWeight: FontWeight.w700)),
                               ),
                             ],
                           ),
