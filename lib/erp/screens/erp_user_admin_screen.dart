@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -67,8 +66,6 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
   String? _selectedTemplateId;
   String _selectedPageKey = 'إدارة البرنامج|بيانات أساسية|بيانات الشركة';
-  final Set<String> _chosenPages = {};
-  final Map<String,bool> _expanded = {};
   static const _typeNames = <String,String>{
     'types':'أنواع المستخدمين','users':'المستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
   };
