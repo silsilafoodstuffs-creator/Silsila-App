@@ -89,18 +89,50 @@ class _ErpFiscalPeriodsScreenState extends State<ErpFiscalPeriodsScreen> {
     }
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewPeriods() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة الفترات المالية'),
+      content: SizedBox(width: 700, child: _rows.isEmpty ? const Text('لا توجد فترات مالية محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _rows.map((r) => ListTile(
+          dense: true, title: Text(_s(r['period_name'])),
+          subtitle: Text('${_s(r['start_date'])} إلى ${_s(r['end_date'])} • ${r['is_closed'] == true ? 'مقفلة' : 'مفتوحة'}'),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text('الفترات المالية', style: TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 6),
-      const Text('منع التداخل بين الفترات، وعدم السماح بإقفال فترة تحتوي على قيود مسودة.',
-        style: TextStyle(color: Colors.black54, height: 1.5)),
-      const SizedBox(height: 12),
+      Card(color: const Color(0xFF3E007D), child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('الفترات المالية', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+          const Text('منع تداخل الفترات والتحقق من المسودات قبل الإقفال.', style: TextStyle(color: Colors.white70, height: 1.5)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : () { _name.clear(); setState(() { _error = null; _message = 'نموذج فترة مالية جديدة جاهز.'; }); }),
+            _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _create),
+            _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewPeriods),
+            _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewPeriods),
+            _quickTask('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF137C8B), () => setState(() => _message = 'استيراد الفترات من Excel غير مفعّل؛ أنشئ الفترات للتحقق من عدم التداخل.')),
+            _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _previewPeriods),
+          ])),
+        ]),
+      )),
+      const SizedBox(height: 10),
       TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
       const SizedBox(height: 8),
-      FilledButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh), label: const Text('تحميل الفترات')),
       if (_loading || _saving) const LinearProgressIndicator(),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
