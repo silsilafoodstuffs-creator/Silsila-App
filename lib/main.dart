@@ -517,7 +517,7 @@ class EntryOptionsScreen extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (_) => Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: Scaffold(
             appBar: AppBar(title: Text(silsilaText('سلسلة Silsila'))),
             body: page,
@@ -530,7 +530,7 @@ class EntryOptionsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(title: Text(silsilaText('ابدأ مع سلسلة'))),
         body: ListView(
@@ -955,7 +955,7 @@ class _MainShellState extends State<MainShell> {
       context,
       MaterialPageRoute(
         builder: (_) => Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: Scaffold(
             appBar: AppBar(title: Text(silsilaText('الإشعارات'))),
             body: NotificationsScreen(),
@@ -1250,7 +1250,7 @@ class _MainShellState extends State<MainShell> {
       context,
       MaterialPageRoute(
         builder: (_) => Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: Scaffold(
             appBar: AppBar(title: Text(title)),
             body: page,
@@ -1272,12 +1272,12 @@ class _MainShellState extends State<MainShell> {
     ];
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
       child: Scaffold(
         drawer: Drawer(
           child: SafeArea(
             child: Directionality(
-              textDirection: TextDirection.rtl,
+              textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
               child: morePage(),
             ),
           ),
@@ -2461,7 +2461,7 @@ class _MainShellState extends State<MainShell> {
       context,
       MaterialPageRoute<bool>(
         builder: (_) => Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: Scaffold(
             appBar: AppBar(title: Text(type == 'buy' ? 'عايز أشتري' : 'عايز أبيع')),
             body: MarketPostScreen(initialType: type, availableProducts: allProducts),
@@ -2794,7 +2794,7 @@ class _MainShellState extends State<MainShell> {
       context,
       MaterialPageRoute(
         builder: (_) => const Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: WelcomeScreen(),
         ),
       ),
@@ -6085,7 +6085,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: Scaffold(
             appBar: AppBar(title: Text(title)),
             body: page,
@@ -6150,7 +6150,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(title: Text(silsilaText('تسجيل الدخول')), centerTitle: true),
         body: SafeArea(
@@ -8325,7 +8325,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: Scaffold(
             appBar: AppBar(title: Text(silsilaText('عناويني المحفوظة'))),
             body: AddressBookScreen(),
