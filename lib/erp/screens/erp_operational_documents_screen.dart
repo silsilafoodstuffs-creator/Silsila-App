@@ -1124,7 +1124,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 onPressed: _saving || _loading ? null : _openItemPicker,
                 icon: const Icon(Icons.search_rounded),
                 label: const Text('اختيار عدة أصناف — F11'),
-              ),              const SizedBox(height: 8),
+              ),
+              if (!(widget.kind == ErpOperationalKind.sales && _documentType == 'invoice')) ...[
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 value: _itemId, isExpanded: true,
                 decoration: const InputDecoration(labelText: 'الصنف', border: OutlineInputBorder()),
@@ -1147,6 +1149,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               OutlinedButton.icon(onPressed: _saving ? null : _applyPriceList, icon: const Icon(Icons.price_check_outlined), label: const Text('جلب سعر القائمة للطرف والكمية')),
               const SizedBox(height: 8),
               FilledButton.icon(onPressed: _saving ? null : _addLine, icon: const Icon(Icons.playlist_add), label: const Text('إضافة البند')),
+              ],
             ],
           ))),
         if (_selectedDocumentId != null && _pendingLines.isNotEmpty) ...[
@@ -1241,7 +1244,17 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                         DataCell(IconButton(
                           tooltip: 'حذف من المعاينة',
                           icon: const Icon(Icons.delete_outline, color: Colors.red),
-                          onPressed: _saving ? null : () => setState(() => _pendingLines.removeAt(index)),
+                          onPressed: _saving ? null : () => setState(() {
+                            _pendingLines.removeAt(index);
+                            if (_pendingGross <= 0) {
+                              _invoiceDiscountAmount.text = '0';
+                              _invoiceDiscountPercent.text = '0';
+                            } else {
+                              final percent = double.tryParse(_invoiceDiscountPercent.text.trim()) ?? 0;
+                              _invoiceDiscountAmount.text = (_pendingGross * percent / 100).toStringAsFixed(2);
+                            }
+                            _recalculatePendingTax();
+                          }),
                         )),
                       ]);
                     }),
