@@ -5320,6 +5320,7 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
+  final emailController = TextEditingController();
   final phoneController = TextEditingController();
   final whatsappController = TextEditingController();
   final addressController = TextEditingController();
@@ -5355,6 +5356,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     nameController.dispose();
+    emailController.dispose();
     phoneController.dispose();
     whatsappController.dispose();
     addressController.dispose();
@@ -5381,10 +5383,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => busy = true);
     try {
       final response = await client.auth.signUp(
-        phone: normalizedPhone,
+        email: emailController.text.trim().toLowerCase(),
         password: passwordController.text,
         data: {
           'full_name': nameController.text.trim(),
+          'contact_phone': normalizedPhone,
           'account_type': accountType,
           'activity_type': activity,
           'customer_type': customerType,
@@ -5402,15 +5405,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (mounted && response.user != null && response.session == null) {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => Directionality(
-              textDirection: TextDirection.rtl,
-              child: OtpVerificationScreen(
-                phone: normalizedPhone,
-              ),
-            ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إنشاء الحساب. راجع بريدك الإلكتروني لتأكيد الحساب قبل تسجيل الدخول.'),
           ),
         );
       } else if (mounted && response.session != null) {
@@ -5423,7 +5420,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'لم يكتمل إنشاء الحساب. راجع إعدادات مصادقة الهاتف في Supabase.',
+              'لم يكتمل إنشاء الحساب. راجع البريد الإلكتروني وكلمة المرور.',
             ),
           ),
         );
@@ -5433,7 +5430,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'تعذر التسجيل. راجع إعدادات مصادقة الهاتف في Supabase.',
+              'تعذر التسجيل. تحقق من البريد الإلكتروني وكلمة المرور وإعدادات البريد في Supabase.',
             ),
           ),
         );
@@ -5524,6 +5521,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   delegateTypes,
                   (v) => delegateType = v,
                 ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                decoration: const InputDecoration(
+                  labelText: 'البريد الإلكتروني',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+                validator: (v) {
+                  final value = v?.trim() ?? '';
+                  return value.contains('@') && value.contains('.')
+                      ? null
+                      : 'أدخل بريدًا إلكترونيًا صحيحًا';
+                },
+              ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: nameController,
