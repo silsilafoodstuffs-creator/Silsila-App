@@ -182,6 +182,42 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     }
   }
 
+  Future<void> _seedStandardTemplate() async {
+    final companyId = (widget.companyId ?? '').trim();
+    if (_db == null || companyId.isEmpty) {
+      setState(() => _error = 'اختر شركة نشطة وسجّل الدخول أولاً.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('إنشاء مراكز التكلفة القياسية'),
+        content: const Text('سيضيف البرنامج هيكلًا مناسبًا لتوزيع المواد الغذائية بالجملة، مع الحفاظ على المراكز الموجودة وعدم استبدالها.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('إنشاء الهيكل')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() { _loading = true; _error = null; _message = null; });
+    try {
+      final result = await _db!.rpc('erp_seed_standard_cost_centers', params: {'p_company_id': companyId});
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _message = 'تم إنشاء الهيكل القياسي. عدد المراكز الجديدة: ${result ?? 0}.';
+      });
+      await _load();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'تعذر إنشاء الهيكل القياسي. تأكد من تطبيق supabase/erp_cost_centers_standard_template.sql ثم أعد المحاولة. التفاصيل: $error';
+      });
+    }
+  }
+
   String _branchLabel(String? id) {
     if (id == null || id.isEmpty) return 'بدون فرع';
     for (final row in _branches) {
@@ -203,6 +239,8 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           Text('تصنيف المصروفات والإيرادات حسب مركز وفرع النشاط.', style: TextStyle(color: Colors.black54)),
         ])),
         IconButton(tooltip: 'تحديث', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
+        OutlinedButton.icon(onPressed: _loading ? null : _seedStandardTemplate, icon: const Icon(Icons.account_tree_outlined), label: const Text('إنشاء الهيكل القياسي')),
+        const SizedBox(width: 8),
         FilledButton.icon(onPressed: () => _edit(), icon: const Icon(Icons.add), label: const Text('إضافة مركز')),
       ]),
       const SizedBox(height: 12),
