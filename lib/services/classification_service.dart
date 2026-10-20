@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'activity_service.dart';
+
 class ClassificationService {
   ClassificationService({SupabaseClient? client})
       : _client = client ?? _defaultClient;
@@ -9,32 +11,11 @@ class ClassificationService {
   static SupabaseClient? get _defaultClient {
     try {
       return Supabase.instance.client;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  static const List<String> defaultActivityTypes = [
-    'مواد غذائية',
-    'لوازم بناء وتشطيبات',
-    'أجهزة وإلكترونيات',
-    'أثاث وتجهيزات',
-    'سيارات ومعدات',
-    'ملابس وأقمشة',
-    'أدوات منزلية',
-    'أدوات كهربائية',
-    'أدوات مكتبية',
-    'مستلزمات طبية',
-    'مستحضرات تجميل',
-    'زراعة ومستلزماتها',
-    'قطع غيار',
-    'مستلزمات مطاعم وفنادق',
-    'ورقيات وتعبئة وتغليف',
-    'منظفات ومطهرات',
-    'مستلزمات حيوانات',
-    'خدمات وشحن ونقل',
-    'أنشطة أخرى',
-  ];
+    } catch (_)  static final List<String> defaultActivityTypes = List<String>.unmodifiable(
+    ActivityService.fallbackActivities
+        .map((activity) => activity['name']!)
+        .toList(growable: false),
+  );
 
   static const List<String> defaultCustomerTypes = [
     'سوبر ماركت',
