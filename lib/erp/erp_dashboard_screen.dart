@@ -822,17 +822,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   bool _sameRecord(Map<String, String> a, Map<String, String> b) => a.length == b.length && a.entries.every((entry) => b[entry.key] == entry.value);
 
-  String _currentPageCsv() {
-    final rows = _rows;
-    if (rows.isEmpty) return '';
-    final keys = rows.first.keys.toList();
-    String cell(String value) => '"${value.replaceAll('"', '""')}"';
-    return [
-      '\uFEFF${keys.map(cell).join(',')}',
-      ...rows.map((row) => keys.map((key) => cell(row[key] ?? '')).join(',')),
-    ].join('\\r\\n');
-  }
-
   Future<void> _importExcel() async {
     final companyId = _appManagementCompanyId;
     if (companyId == null || companyId.trim().isEmpty) {
