@@ -32,8 +32,8 @@ void main() {
     await tester.tap(find.text('ابدأ الآن'));
     await tester.pumpAndSettle();
 
-    expect(find.text('البريد الإلكتروني'), findsOneWidget);
-    expect(find.text('كلمة المرور'), findsOneWidget);
+    expect(find.text('البريد الإلكتروني المسجل'), findsOneWidget);
+    expect(find.text('اكتب كلمة المرور الخاصة بك'), findsOneWidget);
     expect(find.text('رقم الهاتف المسجل'), findsNothing);
     expect(find.text('إرسال رمز التحقق'), findsNothing);
   });
