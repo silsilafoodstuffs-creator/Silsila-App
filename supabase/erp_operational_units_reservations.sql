@@ -268,6 +268,51 @@ $$;
 revoke all on function public.erp_add_operational_document_line_v2(uuid,text,uuid,numeric,numeric,numeric,numeric,uuid) from public, anon;
 grant execute on function public.erp_add_operational_document_line_v2(uuid,text,uuid,numeric,numeric,numeric,numeric,uuid) to authenticated;
 
+-- Batch insertion is atomic: if any selected line fails validation or reservation,
+-- PostgreSQL rolls back the entire picker confirmation rather than saving half the rows.
+create or replace function public.erp_add_operational_document_lines_v2(
+  p_document_id uuid,
+  p_kind text,
+  p_lines jsonb
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+set row_security = off
+as $
+declare
+  v_line jsonb;
+  v_count integer := 0;
+begin
+  if p_lines is null or jsonb_typeof(p_lines) <> 'array' or jsonb_array_length(p_lines) = 0 then
+    raise exception 'اختر صنفًا واحدًا على الأقل.';
+  end if;
+  if jsonb_array_length(p_lines) > 500 then
+    raise exception 'لا يمكن إضافة أكثر من 500 سطر دفعة واحدة.';
+  end if;
+
+  for v_line in select value from jsonb_array_elements(p_lines)
+  loop
+    perform public.erp_add_operational_document_line_v2(
+      p_document_id,
+      p_kind,
+      (v_line->>'item_id')::uuid,
+      (v_line->>'quantity')::numeric,
+      (v_line->>'unit_price')::numeric,
+      coalesce((v_line->>'discount')::numeric, 0),
+      coalesce((v_line->>'tax')::numeric, 0),
+      nullif(v_line->>'unit_id','')::uuid
+    );
+    v_count := v_count + 1;
+  end loop;
+  return v_count;
+end;
+$;
+
+revoke all on function public.erp_add_operational_document_lines_v2(uuid,text,jsonb) from public, anon;
+grant execute on function public.erp_add_operational_document_lines_v2(uuid,text,jsonb) to authenticated;
+
 -- Use base-unit quantities in the immutable stock ledger after unit conversion.
 create or replace function public.erp_post_sales_document(p_document_id uuid)
 returns uuid
