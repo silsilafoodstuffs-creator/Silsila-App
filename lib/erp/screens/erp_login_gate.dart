@@ -433,12 +433,12 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     );
   }
 
-  Widget _informationColumn() {
+  Widget _informationColumn({bool includeHeader = true}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _brandHeader(),
-        const SizedBox(height: 13),
+        if (includeHeader) _brandHeader(),
+        if (includeHeader) const SizedBox(height: 13),
         _infoPanel(
           icon: Icons.apartment_rounded,
           title: 'عن الشركة',
@@ -518,7 +518,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                               const SizedBox(height: 16),
                               _loginForm(),
                               const SizedBox(height: 18),
-                              _informationColumn().childrenSkipHeader(),
+                              _informationColumn(includeHeader: false),
                             ],
                           );
                     return Align(
@@ -581,6 +581,3 @@ class _BrandPill extends StatelessWidget {
   }
 }
 
-extension on Column {
-  List<Widget> childrenSkipHeader() => children.length > 1 ? children.skip(1).toList() : const <Widget>[];
-}
