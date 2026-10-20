@@ -196,13 +196,16 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
             color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900,
           )),
           const SizedBox(height: 8),
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            _reportAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), _loading ? () {} : _load),
-            _reportAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), _previewReport),
-            _reportAction('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printReportPdf),
-            _reportAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importReportExcel),
-            _reportAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printReportPdf),
-          ]),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              _reportAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), _loading ? null : _load),
+              _reportAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), _previewReport),
+              _reportAction('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printReportPdf),
+              _reportAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importReportExcel),
+              _reportAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printReportPdf),
+            ]),
+          ),
           if (_message != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_message!, style: const TextStyle(color: Color(0xFF16834A)))),
           const SizedBox(height: 6),
           const Text(
