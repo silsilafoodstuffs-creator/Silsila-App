@@ -235,7 +235,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       for(final key in selected){
         if(existing.contains(key))continue;
         final parts=key.split('|');
-        _rules.add({'menu_name':parts[0],'submenu_name':parts[1],'page_name':parts[2],for(final field in _userAdminActionFields.values)field:false});
+        _rules.add({'menu_name':parts[0],'submenu_name':parts[1],'page_name':parts[2],if(!template)'user_id':parentId,for(final field in _userAdminActionFields.values)field:false});
       }
     });
     setState(()=>_message='تم جلب القوائم المحددة. اضغط حفظ لتثبيتها.');
