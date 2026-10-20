@@ -419,7 +419,165 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
   }
 
-  Future<void> _openItemPicker() async {
+  Future<void> _openCampaignPicker(String campaignType) async {
+    if (widget.kind != ErpOperationalKind.sales || _company.text.trim().isEmpty || _partyId == null) {
+      setState(() => _error = 'اختر العميل وحمّل بيانات الشركة قبل جلب العروض.');
+      return;
+    }
+    setState(() { _loading = true; _error = null; _message = null; });
+    try {
+      final campaigns = await _repo.fetchSalesCampaigns(companyId: _company.text.trim(), campaignType: campaignType);
+      if (!mounted) return;
+      setState(() => _loading = false);
+      if (campaigns.isEmpty) {
+        setState(() => _message = 'لا توجد عروض متاحة حاليًا من هذا النوع.');
+        return;
+      }
+      final heading = campaignType == 'customer_magazine' ? 'مجلات عروض العملاء المتاحة'
+          : campaignType == 'promotion' ? 'عروض الترويج المتاحة' : 'عروض الرواكد المتاحة';
+      final selected = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (dialogContext) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text(heading, style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900)),
+            content: SizedBox(width: 680, child: ListView.separated(
+              shrinkWrap: true, itemCount: campaigns.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final c = campaigns[index];
+                final owner = _s(c['owner_label']);
+                return ListTile(
+                  leading: const Icon(Icons.local_offer_outlined, color: Color(0xFF3E007D)),
+                  title: Text(_s(c['title']), style: const TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: Text('الفترة: ' + _s(c['start_date']) + ' إلى ' + _s(c['end_date']) +
+                    (owner.isEmpty ? '' : '\n' + (campaignType == 'promotion' ? 'المورد: ' : 'مسؤول الشراء: ') + owner)),
+                  trailing: const Icon(Icons.chevron_left),
+                  onTap: () => Navigator.pop(dialogContext, c),
+                );
+              },
+            )),
+            actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء'))],
+          ),
+        ),
+      );
+      if (selected == null || !mounted) return;
+      setState(() { _loading = true; _error = null; });
+      final lines = await _repo.fetchSalesCampaignItems(companyId: _company.text.trim(), campaignId: _s(selected['id']));
+      final sourceItems = <Map<String, dynamic>>[];
+      for (final line in lines) {
+        final base = _items.where((item) => _s(item['id']) == _s(line['item_id']));
+        if (base.isNotEmpty) sourceItems.add({...base.first, ...line, 'id': _s(base.first['id']), 'offer_title': _s(selected['title']), 'offer_type': campaignType});
+      }
+      if (!mounted) return;
+      setState(() => _loading = false);
+      if (sourceItems.isEmpty) {
+        setState(() => _error = 'العرض المحدد لا يحتوي على أصناف نشطة مرتبطة بقاعدة بيانات الأصناف.');
+        return;
+      }
+      await _openItemPicker(sourceItems: sourceItems, sourceTitle: _s(selected['title']));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() { _loading = false; _error = 'تعذر تحميل العروض وأصنافها: ' + error.toString(); });
+    }
+  }
+
+  Future<void> _openCustomerShortages() async {
+    if (widget.kind != ErpOperationalKind.sales || _company.text.trim().isEmpty || _partyId == null) {
+      setState(() => _error = 'اختر العميل وحمّل بيانات الشركة قبل جلب نواقص العميل.');
+      return;
+    }
+    DateTime from = DateTime(DateTime.now().year, DateTime.now().month, 1);
+    DateTime to = DateTime.now();
+    var loading = false;
+    String? loadError;
+    var shortages = <Map<String, dynamic>>[];
+    Future<void> reload(void Function(void Function()) refresh) async {
+      refresh(() { loading = true; loadError = null; });
+      try {
+        final rows = await _repo.fetchCustomerShortages(companyId: _company.text.trim(), customerId: _partyId!, from: from, to: to);
+        final result = <Map<String, dynamic>>[];
+        for (final row in rows) {
+          final item = _items.where((v) => _s(v['id']) == _s(row['item_id']));
+          if (item.isNotEmpty) result.add({...row, ...item.first});
+        }
+        refresh(() { shortages = result; loading = false; });
+      } catch (e) {
+        refresh(() { loading = false; loadError = 'تعذر تحميل النواقص: ' + e.toString(); });
+      }
+    }
+    await showDialog<void>(
+      context: context, barrierDismissible: false,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: StatefulBuilder(builder: (context, refresh) {
+          Future<void> pickDate(bool isFrom) async {
+            final d = await showDatePicker(context: dialogContext, initialDate: isFrom ? from : to, firstDate: DateTime(2000), lastDate: DateTime(2100));
+            if (d == null) return;
+            if (isFrom) { from = d; if (from.isAfter(to)) to = from; }
+            else { to = d; if (to.isBefore(from)) from = to; }
+            await reload(refresh);
+          }
+          if (!loading && shortages.isEmpty && loadError == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) { if (dialogContext.mounted) reload(refresh); });
+          }
+          return AlertDialog(
+            title: const Text('نواقص العميل المفتوحة', style: TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900)),
+            content: SizedBox(width: 1050, height: 560, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Wrap(spacing: 8, children: [
+                OutlinedButton.icon(onPressed: () => pickDate(true), icon: const Icon(Icons.date_range), label: Text('من: ' + from.toIso8601String().substring(0, 10))),
+                OutlinedButton.icon(onPressed: () => pickDate(false), icon: const Icon(Icons.event), label: Text('إلى: ' + to.toIso8601String().substring(0, 10))),
+                FilledButton.tonalIcon(onPressed: () => reload(refresh), icon: const Icon(Icons.refresh), label: const Text('تحديث')),
+              ]),
+              const SizedBox(height: 8),
+              if (loadError != null) Text(loadError!, style: const TextStyle(color: Colors.red)),
+              if (loading) const LinearProgressIndicator(),
+              if (!loading) Expanded(child: shortages.isEmpty ? const Center(child: Text('لا توجد نواقص مفتوحة في الفترة المحددة.')) :
+                SingleChildScrollView(child: DataTable(
+                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                  columns: const [DataColumn(label: Text('م. تنازلي')), DataColumn(label: Text('تاريخ')), DataColumn(label: Text('رقم الفاتورة')), DataColumn(label: Text('كود الصنف')), DataColumn(label: Text('الصنف')), DataColumn(label: Text('مطلوب')), DataColumn(label: Text('منفذ')), DataColumn(label: Text('متبقي')), DataColumn(label: Text('إجراءات'))],
+                  rows: List<DataRow>.generate(shortages.length, (index) {
+                    final row = shortages[index];
+                    final remaining = (_n(row['requested_quantity']) - _n(row['fulfilled_quantity'])).clamp(0, double.infinity);
+                    return DataRow(cells: [
+                      DataCell(Text((shortages.length - index).toString())),
+                      DataCell(Text(_s(row['source_date']))),
+                      DataCell(Text(_s(row['source_document_number']))),
+                      DataCell(Text(_s(row['item_code']))),
+                      DataCell(Text(_s(row['item_name']))),
+                      DataCell(Text(_money(row['requested_quantity']))),
+                      DataCell(Text(_money(row['fulfilled_quantity']))),
+                      DataCell(Text(_money(remaining))),
+                      DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                        IconButton(tooltip: 'جلب الصنف', onPressed: remaining <= 0 ? null : () async {
+                          Navigator.pop(dialogContext);
+                          await _openItemPicker(sourceItems: [{...row, 'id': _s(row['item_id']), 'offer_price': _n(row['sale_price']), 'min_quantity': remaining, 'max_quantity': remaining, 'offer_title': 'نواقص العميل'}], sourceTitle: 'نواقص العميل');
+                        }, icon: const Icon(Icons.playlist_add, color: Color(0xFF3E007D))),
+                        IconButton(tooltip: 'حذف النقص', onPressed: () async {
+                          final yes = await showDialog<bool>(context: dialogContext, builder: (c) => AlertDialog(
+                            title: const Text('تأكيد حذف النقص'),
+                            content: Text('هل تريد حذف نقص الصنف «' + _s(row['item_name']) + '»؟ لا يمكن التراجع عن الحذف.'),
+                            actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('نعم، حذف'))],
+                          ));
+                          if (yes != true) return;
+                          try {
+                            await _repo.deleteCustomerShortage(companyId: _company.text.trim(), shortageId: _s(row['id']));
+                            await reload(refresh);
+                          } catch (e) { refresh(() => loadError = 'تعذر حذف النقص: ' + e.toString()); }
+                        }, icon: const Icon(Icons.delete_outline, color: Colors.red)),
+                      ])),
+                    ]);
+                  }),
+                )),
+            ])),
+            actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+          );
+        }),
+      ),
+    );
+  }
+
+  Future<void> _openItemPicker({List<Map<String, dynamic>>? sourceItems, String? sourceTitle}) async {
     if (_saving || _loading) return;
     var selectedDoc = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
     if (selectedDoc.isEmpty || _s(selectedDoc.first['status']) != 'draft') {
