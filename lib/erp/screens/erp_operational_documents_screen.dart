@@ -490,6 +490,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     DateTime from = DateTime(DateTime.now().year, DateTime.now().month, 1);
     DateTime to = DateTime.now();
     var loading = false;
+    var didInitialLoad = false;
     String? loadError;
     var shortages = <Map<String, dynamic>>[];
     Future<void> reload(void Function(void Function()) refresh) async {
@@ -518,7 +519,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             else { to = d; if (to.isBefore(from)) from = to; }
             await reload(refresh);
           }
-          if (!loading && shortages.isEmpty && loadError == null) {
+          if (!didInitialLoad && !loading && shortages.isEmpty && loadError == null) {
+            didInitialLoad = true;
             WidgetsBinding.instance.addPostFrameCallback((_) { if (dialogContext.mounted) reload(refresh); });
           }
           return AlertDialog(
