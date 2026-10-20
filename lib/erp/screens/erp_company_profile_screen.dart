@@ -5,7 +5,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/erp_app_asset_storage.dart';
 import '../services/erp_company_settings_repository.dart';
 
 const _companyPurple = Color(0xFF3E007D);
@@ -151,7 +150,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       });
       if (_logoStoragePath != null) {
         try {
-          final url = await ErpAppAssetStorage(client: _db).createSignedImageUrl(storagePath: _logoStoragePath!);
+          final url = await _db!.storage.from('erp-company-assets').createSignedUrl(_logoStoragePath!, 900);
           if (mounted) setState(() => _logoPreviewUrl = url);
         } catch (_) {}
       }
