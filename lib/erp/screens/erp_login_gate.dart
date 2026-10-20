@@ -6,7 +6,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../erp_dashboard_screen.dart';
 
 const _erpPurple = Color(0xFF3E007D);
-const _erpOrange = Color(0xFFFFA015);
 
 /// Keeps the ERP available only to a real Supabase-authenticated session.
 class ErpLoginGate extends StatefulWidget {
