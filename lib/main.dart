@@ -4589,11 +4589,15 @@ class _OffersScreenState extends State<OffersScreen> {
   final supplierService = SupplierOfferService();
   final Set<String> selectedProductIds = <String>{};
   final Map<String, TextEditingController> offerPrices = <String, TextEditingController>{};
+  final Map<String, TextEditingController> minimumQuantities = <String, TextEditingController>{};
   final Map<int, Future<List<Map<String, dynamic>>>> _offerItemsCache = {};
 
   @override
   void dispose() {
     for (final controller in offerPrices.values) {
+      controller.dispose();
+    }
+    for (final controller in minimumQuantities.values) {
       controller.dispose();
     }
     super.dispose();
@@ -4739,6 +4743,7 @@ class _OffersScreenState extends State<OffersScreen> {
                   ]),
                   ...visibleOfferProducts.map((p) {
                     offerPrices.putIfAbsent(p.cartKey, () => TextEditingController(text: p.price.toStringAsFixed(2)));
+                    minimumQuantities.putIfAbsent(p.cartKey, () => TextEditingController(text: p.minQuantity.toString()));
                     return CheckboxListTile(
                       dense: true,
                       value: selectedProductIds.contains(p.cartKey),
@@ -4754,9 +4759,14 @@ class _OffersScreenState extends State<OffersScreen> {
                             : Icon(p.icon, color: purple),
                       ),
                       title: Text(p.name),
-                      subtitle: Row(children: [
-                        Expanded(child: Text('السعر الحالي: ${p.price.toStringAsFixed(2)} ج.م')),
-                        SizedBox(width: 100, child: TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض'))),
+                      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('السعر الحالي: ${p.price.toStringAsFixed(2)} ج.م'),
+                        const SizedBox(height: 5),
+                        Row(children: [
+                          Expanded(child: TextField(controller: offerPrices[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'سعر العرض'))),
+                          const SizedBox(width: 8),
+                          Expanded(child: TextField(controller: minimumQuantities[p.cartKey], keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, labelText: 'أقل كمية'))),
+                        ]),
                       ]),
                       onChanged: (v) => setDialogState(() {
                         if (v == true) { selectedProductIds.add(p.cartKey); } else { selectedProductIds.remove(p.cartKey); }
@@ -4805,11 +4815,16 @@ class _OffersScreenState extends State<OffersScreen> {
             if (price == null || !price.isFinite || price < 0) {
               throw ArgumentError('سعر العرض غير صحيح للصنف ${p.name}');
             }
+            final minimumQuantity = double.tryParse(minimumQuantities[p.cartKey]?.text.trim() ?? '');
+            if (minimumQuantity == null || !minimumQuantity.isFinite || minimumQuantity <= 0) {
+              throw ArgumentError('أقل كمية غير صحيحة للصنف ${p.name}');
+            }
             selectedItems.add({
               'product_id': p.id,
               'product_name': p.name,
               'original_price': p.price,
               'offer_price': price,
+              'min_quantity': minimumQuantity,
             });
           }
           await supplierService.createOfferWithItems(
@@ -5114,21 +5129,31 @@ class _OffersScreenState extends State<OffersScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if ((offer['image_url'] ?? '').toString().trim().isNotEmpty)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(9),
-                      child: Image.network(
-                        (offer['image_url'] ?? '').toString(),
-                        height: 120,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
-                    ),
                   Row(children: [
-                    const Icon(Icons.local_offer, color: orange),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold))),
+                    Container(
+                      width: 58,
+                      height: 58,
+                      decoration: BoxDecoration(
+                        color: Color(magazineValue | 0xFF000000),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: (offer['image_url'] ?? '').toString().trim().isNotEmpty
+                          ? Image.network(
+                              (offer['image_url'] ?? '').toString(),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(Icons.menu_book_rounded, color: Colors.white, size: 28),
+                            )
+                          : const Icon(Icons.menu_book_rounded, color: Colors.white, size: 28),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('مجلة العروض', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                        Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+                      ],
+                    )),
                     if (discount is num && discount > 0)
                       Chip(label: Text('خصم ${discount.toStringAsFixed(0)}%')),
                   ]),
@@ -5156,12 +5181,16 @@ class _OffersScreenState extends State<OffersScreen> {
                                   contentPadding: EdgeInsets.zero,
                                   leading: const Icon(Icons.inventory_2_outlined, color: purple),
                                   title: Text((item['product_name'] ?? '').toString()),
-                                  subtitle: Row(children: [
-                                    if (oldPrice != null)
-                                      Text('${oldPrice} ج.م', style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 11, color: Colors.black54)),
-                                    const SizedBox(width: 8),
-                                    if (newPrice != null)
-                                      Text('${newPrice} ج.م', style: const TextStyle(fontWeight: FontWeight.bold, color: orange)),
+                                  subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Row(children: [
+                                      if (oldPrice != null)
+                                        Text('${oldPrice} ج.م', style: const TextStyle(decoration: TextDecoration.lineThrough, fontSize: 11, color: Colors.black54)),
+                                      const SizedBox(width: 8),
+                                      if (newPrice != null)
+                                        Text('${newPrice} ج.م', style: const TextStyle(fontWeight: FontWeight.bold, color: orange)),
+                                    ]),
+                                    if (item['min_quantity'] != null)
+                                      Text('أقل كمية: ${item['min_quantity']}', style: const TextStyle(fontSize: 11, color: Colors.black54)),
                                   ]),
                                 );
                               }),
