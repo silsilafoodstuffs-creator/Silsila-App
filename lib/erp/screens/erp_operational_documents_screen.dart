@@ -875,7 +875,340 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   @override
+
+  Widget _invoiceCard(String title, IconData icon, Widget child) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: Color(0xFFE8E1F0))),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Icon(icon, color: const Color(0xFF3E007D), size: 20),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title, style: const TextStyle(color: Color(0xFF3E007D), fontSize: 15, fontWeight: FontWeight.w900))),
+          ]),
+          const SizedBox(height: 12),
+          child,
+        ]),
+      ),
+    );
+  }
+
+  Widget _invoiceMetric(String label, String value, {bool strong = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: strong ? const Color(0xFFF5EFFB) : const Color(0xFFFAF8FC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE8E1F0)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(color: strong ? const Color(0xFF3E007D) : const Color(0xFF241735), fontWeight: FontWeight.w900, fontSize: strong ? 16 : 13)),
+      ]),
+    );
+  }
+
+  Widget _buildSalesInvoiceScreen(BuildContext context) {
+    final matches = _rows.where((row) => _s(row['id']) == _selectedDocumentId);
+    final doc = matches.isEmpty ? <String, dynamic>{} : matches.first;
+    final hasDraft = doc.isNotEmpty && _s(doc['status']) == 'draft';
+    final status = doc.isEmpty ? 'فاتورة جديدة' : hasDraft ? 'مسودة' : _s(doc['status']) == 'posted' ? 'معتمدة / مرحلة' : _s(doc['status']);
+    final parties = _parties.where((row) => _s(row['id']) == _partyId);
+    final party = parties.isEmpty ? <String, dynamic>{} : parties.first;
+    final gross = _pendingGross;
+    final lineDiscounts = _pendingLineDiscounts;
+    final invoiceDiscount = _invoiceDiscountValue.clamp(0, (gross - lineDiscounts).clamp(0, double.infinity));
+    final taxTotal = _isTaxInvoice ? _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['tax'])) : 0.0;
+    final net = (gross - lineDiscounts - invoiceDiscount + taxTotal).clamp(0, double.infinity);
+    final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' + _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
+    InputDecoration field(String label, {Widget? suffix}) => InputDecoration(
+      labelText: label, suffixIcon: suffix, isDense: true, filled: true, fillColor: const Color(0xFFFCFBFE),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 13),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFF3E007D), width: 1.5)),
+    );
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            if (event.logicalKey == LogicalKeyboardKey.f2 || event.logicalKey == LogicalKeyboardKey.f11) {
+              _openItemPicker();
+              return KeyEventResult.handled;
+            }
+            if (event.logicalKey == LogicalKeyboardKey.f5 ||
+                (HardwareKeyboard.instance.isControlPressed && event.logicalKey == LogicalKeyboardKey.keyS)) {
+              if (hasDraft && _pendingLines.isNotEmpty) { _savePendingLines(); }
+              else if (doc.isEmpty) { _createDraft(); }
+              return KeyEventResult.handled;
+            }
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(begin: Alignment.centerRight, end: Alignment.centerLeft, colors: [Color(0xFF3E007D), Color(0xFF54209A)]),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [BoxShadow(color: Color(0x183E007D), blurRadius: 16, offset: Offset(0, 5))],
+            ),
+            child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 12, runSpacing: 12, children: [
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 44, height: 44, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(12)),
+                  child: const Icon(Icons.receipt_long_rounded, color: Color(0xFFFFA015), size: 26)),
+                const SizedBox(width: 12),
+                const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('فاتورة بيع', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22)),
+                  SizedBox(height: 3),
+                  Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFFE9DDF8), fontSize: 12)),
+                ]),
+              ]),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                Chip(avatar: const Icon(Icons.circle, size: 9, color: Color(0xFFFFA015)), label: Text(status), backgroundColor: Colors.white, side: BorderSide.none),
+                OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh_rounded), label: const Text('تحديث')),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735)),
+                  onPressed: _saving ? null : () => setState(() {
+                    _selectedDocumentId = null; _pendingLines = []; _lines = []; _documentNumber.clear(); _notes.clear();
+                    _invoiceDiscountAmount.text = '0'; _invoiceDiscountPercent.text = '0'; _isTaxInvoice = false; _error = null; _message = null;
+                  }),
+                  icon: const Icon(Icons.add_rounded), label: const Text('فاتورة جديدة'),
+                ),
+              ]),
+            ]),
+          ),
+          const SizedBox(height: 12),
+          if (_loading) const LinearProgressIndicator(minHeight: 3),
+          if (_error != null) _notice(_error!, Colors.red),
+          if (_message != null) _notice(_message!, Colors.green),
+          _invoiceCard('بيانات الفاتورة', Icons.description_outlined, LayoutBuilder(builder: (context, constraints) {
+            final count = constraints.maxWidth > 850 ? 4 : 2;
+            final width = (constraints.maxWidth - (count - 1) * 10) / count;
+            return Wrap(spacing: 10, runSpacing: 10, children: [
+              SizedBox(width: width, child: TextField(controller: _documentNumber, decoration: field('رقم الفاتورة *'))),
+              SizedBox(width: width, child: InkWell(
+                onTap: _saving ? null : () async {
+                  final chosen = await showDatePicker(context: context, initialDate: _documentDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                  if (chosen != null && mounted) setState(() => _documentDate = chosen);
+                },
+                child: InputDecorator(decoration: field('تاريخ الفاتورة', suffix: const Icon(Icons.calendar_month_outlined)),
+                  child: Text(dateText, style: const TextStyle(fontWeight: FontWeight.w800))),
+              )),
+              SizedBox(width: width, child: _invoiceMetric('المسلسل الآلي', doc.isEmpty ? 'يصدر بعد الحفظ' : _s(doc['auto_number']))),
+              SizedBox(width: width, child: DropdownButtonFormField<String>(
+                value: _documentType, isExpanded: true, decoration: field('نوع المستند'),
+                items: const [DropdownMenuItem(value: 'invoice', child: Text('فاتورة بيع')), DropdownMenuItem(value: 'return', child: Text('مرتجع بيع'))],
+                onChanged: hasDraft ? null : (value) => setState(() => _documentType = value ?? 'invoice'),
+              )),
+            ]);
+          })),
+          const SizedBox(height: 10),
+          _invoiceCard('بيانات العميل والبيع', Icons.storefront_outlined, LayoutBuilder(builder: (context, constraints) {
+            final count = constraints.maxWidth > 850 ? 4 : 2;
+            final width = (constraints.maxWidth - (count - 1) * 10) / count;
+            return Wrap(spacing: 10, runSpacing: 10, children: [
+              SizedBox(width: width, child: TextField(
+                controller: _partyCode, decoration: field('كود العميل', suffix: const Icon(Icons.search_rounded)),
+                onChanged: (code) {
+                  final normalized = code.trim().toLowerCase();
+                  final found = _parties.where((p) => _s(p['party_code']).trim().toLowerCase() == normalized);
+                  if (normalized.isEmpty || found.isEmpty) {
+                    setState(() {
+                      _partyId = null; _salesRepId = null; _warehouses = List<Map<String, dynamic>>.from(_allWarehouses);
+                      if (!_warehouses.any((w) => _s(w['id']) == _warehouseId)) _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
+                    });
+                  } else if (found.length == 1 && _partyId != _s(found.first['id'])) {
+                    final selected = found.first;
+                    setState(() {
+                      _partyId = _s(selected['id']);
+                      final rep = _s(selected['sales_rep_id']);
+                      _salesRepId = rep.isNotEmpty && _representatives.any((r) => _s(r['id']) == rep) ? rep : null;
+                      _warehouses = []; _warehouseId = null;
+                    });
+                    _applyCustomerWarehouseRules(_s(selected['id']));
+                  }
+                },
+                onSubmitted: (code) {
+                  final found = _parties.where((p) => _s(p['party_code']).trim().toLowerCase() == code.trim().toLowerCase());
+                  if (found.isEmpty) { setState(() => _error = 'كود العميل غير موجود أو العميل غير نشط.'); }
+                  else { _onPartyChanged(_s(found.first['id'])); }
+                },
+              )),
+              SizedBox(width: width, child: DropdownButtonFormField<String>(
+                value: _parties.any((p) => _s(p['id']) == _partyId) ? _partyId : null, isExpanded: true, decoration: field('اسم العميل'),
+                items: _parties.map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_partyLabel(_s(p['id'])), overflow: TextOverflow.ellipsis))).toList(),
+                onChanged: _onPartyChanged,
+              )),
+              SizedBox(width: width, child: DropdownButtonFormField<String>(
+                value: _warehouses.any((w) => _s(w['id']) == _warehouseId) ? _warehouseId : null, isExpanded: true, decoration: field('المخزن المسموح للعميل'),
+                items: _warehouses.map((w) => DropdownMenuItem<String>(value: _s(w['id']), child: Text(_warehouseLabel(_s(w['id'])), overflow: TextOverflow.ellipsis))).toList(),
+                onChanged: _warehouses.isEmpty || hasDraft ? null : (value) => setState(() => _warehouseId = value),
+              )),
+              SizedBox(width: width, child: DropdownButtonFormField<String>(
+                value: _representatives.any((r) => _s(r['id']) == _salesRepId) ? _salesRepId : null, isExpanded: true, decoration: field('مندوب المبيعات'),
+                items: _representatives.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_s(r['rep_code']) + ' — ' + _s(r['rep_name']), overflow: TextOverflow.ellipsis))).toList(),
+                onChanged: _canChangeSalesRep && !hasDraft ? (value) => setState(() => _salesRepId = value) : null,
+              )),
+              SizedBox(width: width, child: _invoiceMetric('هاتف العميل', _s(party['phone']).isEmpty ? 'غير مسجل' : _s(party['phone']))),
+              SizedBox(width: width, child: _invoiceMetric('عنوان العميل', _s(party['address']).isEmpty ? 'غير مسجل' : _s(party['address']))),
+              SizedBox(width: width, child: _invoiceMetric('الرصيد الحالي', _money(party['current_balance'] ?? party['balance']) + ' ج.م')),
+              SizedBox(width: width, child: _invoiceMetric('حد الائتمان', _money(party['credit_limit']) + ' ج.م')),
+            ]);
+          })),
+          const SizedBox(height: 10),
+          _invoiceCard('تفاصيل الأصناف', Icons.inventory_2_outlined, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              FilledButton.icon(onPressed: _saving || _loading || !hasDraft ? null : _openItemPicker, icon: const Icon(Icons.playlist_add_rounded), label: const Text('اختيار أصناف  F2 / F11')),
+              if (_pendingLines.isNotEmpty) FilledButton.icon(
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735)),
+                onPressed: _saving || _loading || !hasDraft ? null : _savePendingLines,
+                icon: const Icon(Icons.check_circle_outline), label: const Text('حفظ الأصناف المحددة')),
+            ]),
+            const SizedBox(height: 10),
+            if (_pendingLines.isEmpty && _lines.isEmpty)
+              Container(padding: const EdgeInsets.all(28), decoration: BoxDecoration(color: const Color(0xFFFAF8FC), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE8E1F0))),
+                child: const Column(children: [
+                  Icon(Icons.inventory_2_outlined, size: 34, color: Color(0xFF9B8BAE)),
+                  SizedBox(height: 8), Text('لم تتم إضافة أصناف بعد', style: TextStyle(fontWeight: FontWeight.w800)),
+                  SizedBox(height: 4), Text('افتح نافذة اختيار الأصناف باستخدام F2 أو F11.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                ])),
+            if (_pendingLines.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
+              headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+              headingTextStyle: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 12),
+              dataRowMinHeight: 52, dataRowMaxHeight: 62, columnSpacing: 16,
+              columns: const [DataColumn(label: Text('م.')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الصنف')), DataColumn(label: Text('الوحدة')), DataColumn(label: Text('الكمية')), DataColumn(label: Text('سعر الوحدة')), DataColumn(label: Text('الخصم')), DataColumn(label: Text('خصم %')), DataColumn(label: Text('الضريبة')), DataColumn(label: Text('الإجمالي')), DataColumn(label: Text(''))],
+              rows: List<DataRow>.generate(_pendingLines.length, (index) {
+                final line = _pendingLines[index];
+                final lineGross = _n(line['quantity']) * _n(line['unit_price']);
+                final total = (lineGross - _n(line['discount']) - _invoiceDiscountForLine(index) + _n(line['tax'])).clamp(0, double.infinity);
+                final units = _unitsByItem[_s(line['item_id'])] ?? [];
+                return DataRow(cells: [
+                  DataCell(Text((index + 1).toString())),
+                  DataCell(Text(_s(line['item_code']))),
+                  DataCell(SizedBox(width: 170, child: Text(_s(line['item_name']), maxLines: 2, overflow: TextOverflow.ellipsis))),
+                  DataCell(SizedBox(width: 110, child: DropdownButtonFormField<String>(
+                    value: units.any((u) => _s(u['id']) == _s(line['unit_id'])) ? _s(line['unit_id']) : (units.isNotEmpty ? _s(units.first['id']) : null),
+                    isDense: true, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5)),
+                    items: units.map((u) => DropdownMenuItem<String>(value: _s(u['id']), child: Text(_s(u['unit_name']).isEmpty ? _s(u['unit_code']) : _s(u['unit_name']), overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: units.isEmpty ? null : (value) { if (value != null) _updatePendingLine(index, unitId: value); },
+                  ))),
+                  DataCell(SizedBox(width: 78, child: TextFormField(key: ValueKey('sale-qty-' + index.toString() + _s(line['item_id'])), initialValue: _money(line['quantity']), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8)), onChanged: (v) => _updatePendingLine(index, quantity: double.tryParse(v) ?? 0)))),
+                  DataCell(Text(_money(line['unit_price']))),
+                  DataCell(SizedBox(width: 82, child: TextFormField(key: ValueKey('sale-disc-' + index.toString() + _s(line['item_id'])), initialValue: _money(line['discount']), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8)), onChanged: (v) => _updatePendingLine(index, discountAmount: double.tryParse(v) ?? 0)))),
+                  DataCell(SizedBox(width: 75, child: TextFormField(key: ValueKey('sale-discpct-' + index.toString() + _s(line['item_id'])), initialValue: _money(line['discount_percent']), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8)), onChanged: (v) => _updatePendingLine(index, discountPercent: double.tryParse(v) ?? 0)))),
+                  DataCell(Text(_isTaxInvoice ? _money(line['tax']) : '—')),
+                  DataCell(Text(_money(total), style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900))),
+                  DataCell(IconButton(tooltip: 'حذف من المعاينة', icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: _saving ? null : () => setState(() {
+                    _pendingLines.removeAt(index);
+                    if (_pendingGross <= 0) { _invoiceDiscountAmount.text = '0'; _invoiceDiscountPercent.text = '0'; }
+                    else { final p = double.tryParse(_invoiceDiscountPercent.text) ?? 0; _invoiceDiscountAmount.text = (_pendingGross * p / 100).toStringAsFixed(2); }
+                    _recalculatePendingTax();
+                  }))),
+                ]);
+              }),
+            )),
+            if (_lines.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              const Text('بنود محفوظة في الفاتورة', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
+              ..._lines.map((line) => ListTile(
+                dense: true, leading: const Icon(Icons.check_circle_outline, color: Color(0xFF2E7D32)),
+                title: Text(_itemLabel(_s(line['item_id']))),
+                subtitle: Text('الكمية: ' + _s(line['quantity']) + ' ' + _s(line['unit_code']) + ' • سعر الوحدة: ' + _money(line['unit_price']) + ' • الخصم: ' + _money(line['discount_amount'])),
+                trailing: Text(_money(line['line_total']) + ' ج.م', style: const TextStyle(fontWeight: FontWeight.w900)),
+              )),
+            ],
+            CheckboxListTile(value: _isTaxInvoice, dense: true, contentPadding: EdgeInsets.zero, activeColor: const Color(0xFF3E007D),
+              title: const Text('فاتورة ضريبية'), subtitle: const Text('غير ضريبية افتراضيًا؛ تُحسب الضريبة وفق بيانات الصنف عند التفعيل.'),
+              onChanged: hasDraft ? (v) => setState(() { _isTaxInvoice = v ?? false; _recalculatePendingTax(); }) : null),
+          ])),
+          const SizedBox(height: 10),
+          _invoiceCard('الخصم والملاحظات', Icons.tune_rounded, LayoutBuilder(builder: (context, constraints) {
+            final count = constraints.maxWidth > 700 ? 3 : 1;
+            final width = (constraints.maxWidth - (count - 1) * 10) / count;
+            return Wrap(spacing: 10, runSpacing: 10, children: [
+              SizedBox(width: width, child: TextField(controller: _invoiceDiscountAmount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: field('خصم الفاتورة بالقيمة'), onChanged: (v) {
+                final amount = double.tryParse(v) ?? 0; _invoiceDiscountPercent.text = gross <= 0 ? '0' : (amount * 100 / gross).toStringAsFixed(2); setState(_recalculatePendingTax);
+              })),
+              SizedBox(width: width, child: TextField(controller: _invoiceDiscountPercent, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: field('خصم الفاتورة %'), onChanged: (v) {
+                final percent = (double.tryParse(v) ?? 0).clamp(0, 100); _invoiceDiscountAmount.text = (gross * percent / 100).toStringAsFixed(2); setState(_recalculatePendingTax);
+              })),
+              SizedBox(width: width, child: TextField(controller: _notes, decoration: field('ملاحظات / بيان الفاتورة'))),
+            ]);
+          })),
+          const SizedBox(height: 10),
+          _invoiceCard('ملخص الحسابات', Icons.calculate_outlined, LayoutBuilder(builder: (context, constraints) {
+            final count = constraints.maxWidth > 800 ? 5 : 2;
+            final width = (constraints.maxWidth - (count - 1) * 10) / count;
+            return Wrap(spacing: 10, runSpacing: 10, children: [
+              SizedBox(width: width, child: _invoiceMetric('إجمالي الأصناف', _money(gross) + ' ج.م')),
+              SizedBox(width: width, child: _invoiceMetric('خصم الأصناف', _money(lineDiscounts) + ' ج.م')),
+              SizedBox(width: width, child: _invoiceMetric('خصم الفاتورة', _money(invoiceDiscount) + ' ج.م')),
+              SizedBox(width: width, child: _invoiceMetric('الضريبة', _money(taxTotal) + ' ج.م')),
+              SizedBox(width: width, child: _invoiceMetric('صافي الفاتورة', _money(net) + ' ج.م', strong: true)),
+            ]);
+          })),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            FilledButton.icon(onPressed: _saving || _loading || hasDraft || doc.isNotEmpty ? null : _createDraft, icon: const Icon(Icons.save_outlined), label: const Text('حفظ المسودة')),
+            FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735)),
+              onPressed: _saving || _loading || !hasDraft || _pendingLines.isEmpty ? null : _savePendingLines, icon: const Icon(Icons.playlist_add_check), label: const Text('حفظ الأصناف')),
+            FilledButton.icon(onPressed: _saving || _loading || !hasDraft ? null : () => _post(doc), icon: const Icon(Icons.verified_outlined), label: const Text('اعتماد وترحيل')),
+            OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.history_rounded), label: const Text('الفواتير السابقة')),
+            OutlinedButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ErpOperationalAccountMappingsScreen(initialCompanyId: _company.text.trim()))), icon: const Icon(Icons.account_tree_outlined), label: const Text('خريطة الحسابات')),
+          ]),
+          const SizedBox(height: 10),
+          _invoiceCard('إعدادات الاتصال والفواتير السابقة', Icons.settings_suggest_outlined, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            TextField(controller: _company, decoration: field('معرّف الشركة (UUID)')),
+            const SizedBox(height: 8),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              _invoiceMetric('عدد الفواتير', _rows.length.toString()),
+              _invoiceMetric('المسودات', _rows.where((r) => _s(r['status']) == 'draft').length.toString()),
+              _invoiceMetric('المعتمدة / المرحلة', _rows.where((r) => _s(r['status']) == 'posted').length.toString()),
+            ]),
+            if (_rows.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              ..._rows.map((row) => Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                decoration: BoxDecoration(color: _s(row['id']) == _selectedDocumentId ? const Color(0xFFF5EFFB) : Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE8E1F0))),
+                child: ListTile(
+                  dense: true, leading: const Icon(Icons.receipt_outlined, color: Color(0xFF3E007D)),
+                  title: Text(_s(row['document_number']) + ' • مسلسل ' + _s(row['auto_number']), style: const TextStyle(fontWeight: FontWeight.w800)),
+                  subtitle: Text(_s(row['document_date']) + ' • ' + _s(row['status']) + ' • ' + _money(row['grand_total']) + ' ج.م'),
+                  trailing: const Icon(Icons.chevron_left_rounded),
+                  onTap: () async {
+                    setState(() {
+                      _selectedDocumentId = _s(row['id']); _lines = []; _pendingLines = []; _documentType = _s(row['document_type']);
+                      _partyId = _s(row['customer_id']); final p = _parties.where((item) => _s(item['id']) == _partyId);
+                      _partyCode.text = p.isEmpty ? '' : _s(p.first['party_code']);
+                      _warehouseId = _s(row['warehouse_id']); _documentNumber.text = _s(row['document_number']); _notes.text = _s(row['notes']);
+                      _documentDate = DateTime.tryParse(_s(row['document_date'])) ?? _documentDate;
+                      _salesRepId = _s(row['sales_rep_id']).isEmpty ? null : _s(row['sales_rep_id']); _isTaxInvoice = row['is_tax_invoice'] == true;
+                    });
+                    await _loadLines(_s(row['id'])); await _applyCustomerWarehouseRules(_partyId);
+                  },
+                ),
+              )),
+            ],
+          ])),
+          const SizedBox(height: 8),
+          const Text('اختصارات: F2 / F11 اختيار الأصناف • F5 أو Ctrl+S حفظ المسودة أو الأصناف المحددة • Esc لإغلاق نافذة الاختيار.',
+            style: TextStyle(color: Colors.black54, fontSize: 12)),
+        ]),
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
+    if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice') {
+      return _buildSalesInvoiceScreen(context);
+    }
     final draftCount = _rows.where((r) => _s(r['status']) == 'draft').length;
     return Directionality(textDirection: TextDirection.rtl, child: Focus(
       autofocus: true,
