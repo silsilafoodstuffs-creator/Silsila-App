@@ -66,6 +66,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   String? _error, _message, _selectedId, _selectedUserId;
   List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
   String? _selectedTemplateId;
+  String _selectedPageKey = 'إدارة البرنامج|بيانات أساسية|بيانات الشركة';
   final Set<String> _chosenPages = {};
   final Map<String,bool> _expanded = {};
   static const _typeNames = <String,String>{
@@ -120,7 +121,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
   Future<void> _loadUserRules() async {
     if(_selectedUserId==null)return;
-    try { final result=await _db!.from('erp_user_permission_matrix').select().eq('company_id',_company).eq('user_id',_selectedUserId!);
+    try { final result=await _db!.from('erp_user_permission_matrix').select().eq('company_id',_company);
       if(mounted)setState(()=>_rules=(result as List).map((x)=>Map<String,dynamic>.from(x)).toList());
     } catch(e){if(mounted)setState(()=>_error='تعذر تحميل صلاحيات المستخدم: $e');}
   }
@@ -145,13 +146,15 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     if(_saving)return;
     setState(()=>_saving=true);
     try {
-      if(_isType||_isUser||_isTemplate){
-        for(final row in _rows){
+      if(_isType||_isUser||_isTemplate||_isPermissions){
+        final masterRows=_isPermissions?_users:_rows;
+        final targetTable=_isPermissions?'erp_users':_table;
+        for(final row in masterRows){
           final payload=<String,dynamic>{};
           if(_isType)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':row['show_at_login']==true});
-          if(_isUser)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id']});
+          if(_isUser||_isPermissions)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id']});
           if(_isTemplate)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true});
-          if(_s(row['id']).isNotEmpty)await _db!.from(_table).update(payload).eq('company_id',_company).eq('id',row['id']);
+          if(_s(row['id']).isNotEmpty)await _db!.from(targetTable).update(payload).eq('company_id',_company).eq('id',row['id']);
         }
         if(_isTemplate && _selectedId!=null){
           for(final rule in _rules){
@@ -160,15 +163,14 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             await _db!.from('erp_permission_template_rules').upsert(payload,onConflict:'template_id,menu_name,submenu_name,page_name');
           }
         }
-      } else {
-        final table='erp_user_permission_matrix';
-        final parentKey='user_id';
-        final parentId=_selectedUserId;
-        if(parentId==null)throw StateError('اختر قالبًا أو مستخدمًا أولًا.');
-        for(final rule in _rules){
-          final payload=<String,dynamic>{'company_id':_company,parentKey:parentId,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};
-          for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;
-          await _db!.from(table).upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');
+        if(_isPermissions){
+          for(final rule in _rules){
+            final uid=_s(rule['user_id']);
+            if(uid.isEmpty)continue;
+            final payload=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};
+            for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;
+            await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');
+          }
         }
       }
       if(mounted)setState(()=>_message='تم حفظ التغييرات في قاعدة البيانات.');
@@ -347,40 +349,115 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     ));
   }
 
+  List<Map<String,String>> get _permissionPages => [
+    for(final menu in _userAdminTree.entries)
+      for(final sub in menu.value.entries)
+        for(final page in sub.value)
+          {'key':'${menu.key}|${sub.key}|${page}','label':'${menu.key} › ${sub.key} › ${page}'}
+  ];
+
+  Map<String,dynamic>? _userRuleFor(String userId) {
+    for(final rule in _rules){
+      if(_s(rule['user_id'])==userId &&
+        '${rule['menu_name']}|${rule['submenu_name']}|${rule['page_name']}'==_selectedPageKey) return rule;
+    }
+    return null;
+  }
+
+  void _setUserPermission(Map<String,dynamic> user,String field,bool value) {
+    final uid=_s(user['id']);
+    var rule=_userRuleFor(uid);
+    if(rule==null){
+      final parts=_selectedPageKey.split('|');
+      rule={'company_id':_company,'user_id':uid,'menu_name':parts[0],'submenu_name':parts[1],'page_name':parts[2],
+        for(final name in _userAdminActionFields.values)name:false};
+      _rules.add(rule);
+    }
+    setState(()=>rule![field]=value);
+  }
+
   Widget _ruleGrid(){
-    final templateMode=_isTemplate;
-    final parentId=templateMode?_selectedId:_selectedUserId;
+    if(_isPermissions)return _permissionUsersGrid();
+    final parentId=_selectedId;
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Row(children:[
-        Expanded(child:DropdownButtonFormField<String>(key:ValueKey('permission-parent-$parentId-$templateMode'),value:parentId,decoration:InputDecoration(isDense:true,labelText:templateMode?'القالب المحدد':'المستخدم المحدد'),
-          items:(templateMode?_rows:_users).map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text(_s(r['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
-          onChanged:(v)async{setState(()=>templateMode?_selectedId=v:_selectedUserId=v);if(v!=null){if(templateMode)await _loadRules();else await _loadUserRules();}},
+        Expanded(child:DropdownButtonFormField<String>(
+          key:ValueKey('permission-parent-$parentId-template'),
+          value:parentId,
+          decoration:const InputDecoration(isDense:true,labelText:'القالب المحدد'),
+          items:_rows.map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text(_s(r['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
+          onChanged:(v)async{setState(()=>_selectedId=v);if(v!=null)await _loadRules();},
         )),
         const SizedBox(width:8),
-        OutlinedButton.icon(onPressed:parentId==null?null:()=>_openMenuPicker(parentId:parentId,template:templateMode),icon:const Icon(Icons.account_tree_outlined),label:const Text('جلب قوائم (F1)')),
-        if(_isPermissions)const SizedBox(width:8),
-        if(_isPermissions)OutlinedButton.icon(onPressed:_openUserPicker,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
-        if(_isPermissions)const SizedBox(width:8),
-        if(_isPermissions)SizedBox(width:180,child:DropdownButtonFormField<String>(
+        OutlinedButton.icon(onPressed:parentId==null?null:()=>_openMenuPicker(parentId:parentId,template:true),icon:const Icon(Icons.account_tree_outlined),label:const Text('جلب قوائم (F1)')),
+      ]),
+      const SizedBox(height:8),
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
+        headingRowHeight:50,dataRowMinHeight:38,dataRowMaxHeight:44,horizontalMargin:7,columnSpacing:8,
+        columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:80,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
+        rows:_rules.map((rule)=>DataRow(cells:[
+          DataCell(SizedBox(width:250,child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis))),
+          for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:(v)=>setState(()=>rule[field]=v==true),visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
+        ])).toList(),
+      )),
+    ]);
+  }
+
+  Widget _permissionUsersGrid(){
+    final pages=_permissionPages;
+    final pageValue=pages.any((p)=>p['key']==_selectedPageKey)?_selectedPageKey:(pages.isEmpty?null:pages.first['key']);
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.start,children:[
+        SizedBox(width:340,child:DropdownButtonFormField<String>(
+          key:ValueKey('permission-page-$pageValue'),
+          value:pageValue,
+          isExpanded:true,
+          decoration:const InputDecoration(labelText:'القائمة / الشاشة المطلوب تحديد صلاحياتها',isDense:true),
+          items:pages.map((p)=>DropdownMenuItem(value:p['key'],child:Text(p['label']!,overflow:TextOverflow.ellipsis))).toList(),
+          onChanged:(v)=>setState(()=>_selectedPageKey=v??_selectedPageKey),
+        )),
+        OutlinedButton.icon(onPressed:_openUserPicker,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
+        SizedBox(width:190,child:DropdownButtonFormField<String>(
           key:ValueKey('template-select-$_selectedTemplateId'),
           value:_templates.any((t)=>_s(t['id'])==_selectedTemplateId)?_selectedTemplateId:null,
           decoration:const InputDecoration(labelText:'قالب صلاحيات',isDense:true),
           items:_templates.where((t)=>t['is_active']==true).map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
           onChanged:(v)=>setState(()=>_selectedTemplateId=v),
         )),
-        if(_isPermissions)OutlinedButton.icon(onPressed:_selectedUserId==null||_selectedTemplateId==null?null:_applyTemplate,icon:const Icon(Icons.playlist_add_check),label:const Text('تطبيق القالب')),
+        OutlinedButton.icon(onPressed:_selectedUserId==null||_selectedTemplateId==null?null:_applyTemplate,icon:const Icon(Icons.playlist_add_check),label:const Text('تطبيق القالب')),
       ]),
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-        headingRowHeight:50,dataRowMinHeight:38,dataRowMaxHeight:44,horizontalMargin:7,columnSpacing:8,
-        columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:80,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
-        rows:_rules.map((rule){
-          final key='${rule['menu_name']}|${rule['submenu_name']}|${rule['page_name']}';
-          return DataRow(cells:[
-            DataCell(SizedBox(width:250,child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis))),
-            for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:(v)=>setState(()=>rule[field]=v==true),visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
+        headingRowHeight:48,dataRowMinHeight:42,dataRowMaxHeight:48,horizontalMargin:7,columnSpacing:9,
+        columns:[
+          const DataColumn(label:Text('م')),
+          const DataColumn(label:Text('كود المستخدم')),
+          const DataColumn(label:Text('اسم المستخدم عربي')),
+          const DataColumn(label:Text('اسم المستخدم إنجليزي')),
+          const DataColumn(label:Text('نوع المستخدم')),
+          const DataColumn(label:Text('الصورة')),
+          const DataColumn(label:Text('نشط')),
+          for(final action in _userAdminActions)DataColumn(label:SizedBox(width:82,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800)))),
+        ],
+        rows:List.generate(_users.length,(i){
+          final user=_users[i];final uid=_s(user['id']);final rule=_userRuleFor(uid);
+          return DataRow(selected:uid==_selectedUserId,onSelectChanged:(v)=>setState(()=>_selectedUserId=v==true?uid:null),cells:[
+            DataCell(Text('${i+1}')),
+            DataCell(Text(_s(user['user_code']))),
+            DataCell(_textCell(user,'name_ar')),
+            DataCell(_textCell(user,'name_en')),
+            DataCell(SizedBox(width:150,child:DropdownButtonFormField<String>(
+              key:ValueKey('${uid}-permission-type-${user['user_type_id']}'),
+              value:_types.any((t)=>_s(t['id'])==_s(user['user_type_id']))?_s(user['user_type_id']):null,
+              isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),
+              items:_types.map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
+              onChanged:_editMode?(v)=>setState(()=>user['user_type_id']=v):null,
+            ))),
+            DataCell(_imageCell(user)),
+            DataCell(Checkbox(value:user['is_active']==true,onChanged:_editMode?(v)=>setState(()=>user['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+            for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule?[field]==true,onChanged:(v)=>_setUserPermission(user,field,v==true),visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
           ]);
-        }).toList(),
+        }),
       )),
     ]);
   }
