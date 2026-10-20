@@ -151,7 +151,6 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
           dense: true, leading: const Icon(Icons.receipt_long_outlined, color: Color(0xFF3E007D)),
           title: Text('سند ${_s(v['voucher_number'])} • ${_typeLabel(_s(v['voucher_type']))} • ${_money(v['amount'])} ج.م'),
           subtitle: Text('${_s(v['description'])} • ${_s(v['status'])}'),
-          trailing: _s(v['status']) == 'draft' ? IconButton(tooltip:'ترحيل',icon:const Icon(Icons.publish_outlined),onPressed:()=>Navigator.pop(ctx)) : null,
         )).toList()))),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
     ));
