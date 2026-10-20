@@ -434,6 +434,12 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     if (picked == null || picked.isEmpty || !mounted) return;
     setState(() { _saving = true; _error = null; _message = null; });
     try {
+      final selectedPartyId = _s(widget.kind == ErpOperationalKind.purchase
+          ? selectedDoc.first['supplier_id']
+          : selectedDoc.first['customer_id']);
+      if (selectedPartyId.isEmpty) {
+        throw StateError('المستند لا يحتوي على مورد أو عميل صالح للتسعير.');
+      }
       final pricedLines = <Map<String, Object?>>[];
       for (final line in picked) {
         final itemId = _s(line['item_id']);
@@ -444,7 +450,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           itemId: itemId,
           kind: widget.kind == ErpOperationalKind.purchase ? 'purchase' : 'sale',
           quantity: quantity * factor,
-          partyId: _partyId,
+          partyId: selectedPartyId,
         );
         if (resolved == null) {
           throw StateError('لم يتمكن النظام من تحديد سياسة التسعير للصنف $itemId.');
