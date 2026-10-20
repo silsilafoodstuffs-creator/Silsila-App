@@ -124,10 +124,10 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       final header = await db.from('erp_sales_campaigns').insert({
         'company_id':company, 'campaign_type':_campaignType, 'title':_name.text.trim(),
         'start_date':_date(_from), 'end_date':_date(_to), 'owner_party_id':singleCustomer,
-        'owner_label':_customerScope == 'كل العملاء' ? 'كل العملاء' : 'عملاء محددون',
+        'owner_label':_selectedCustomers.isEmpty ? 'كل العملاء' : 'عملاء محددون',
         'is_active':true,
-        'target_customer_ids':_customerScope == 'كل العملاء' ? [] : _selectedCustomers.toList(),
-        'target_warehouse_ids':_warehouseScope == 'كل المخازن' ? [] : _selectedWarehouses.toList(),
+        'target_customer_ids':_selectedCustomers.toList(),
+        'target_warehouse_ids':_selectedWarehouses.toList(),
         'target_branch_ids':_selectedBranches.toList(),
         'target_governorates':_governorates.toList(), 'target_districts':_districts.toList(),
         'target_areas':_areas.toList(), 'target_centers':_centers.toList(), 'target_customer_types':_customerTypes.toList(),
