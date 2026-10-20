@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/hr_attendance_rules_screen.dart';
 import 'screens/erp_app_assets_screen.dart';
@@ -890,6 +893,32 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
 
+  Future<void> _printCurrentPagePdf() async {
+    if (_rows.isEmpty) {
+      _showActionMessage('لا توجد بيانات للطباعة من شاشة $_page');
+      return;
+    }
+    try {
+      final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final keys = _rows.first.keys.where((key) => key != '_مرجع داخلي').toList();
+      final document = pw.Document();
+      document.addPage(pw.MultiPage(
+        theme: pw.ThemeData.withFont(base: font, bold: font),
+        build: (_) => [
+          pw.Text('Silsila • $_module • $_page', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 10),
+          pw.TableHelper.fromTextArray(
+            headers: keys,
+            data: _rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList(),
+          ),
+        ],
+      ));
+      await Printing.layoutPdf(onLayout: (_) async => document.save());
+    } catch (error) {
+      if (mounted) _showActionMessage('تعذرت الطباعة أو إنشاء PDF: $error');
+    }
+  }
+
   void _showPrintPreview({required bool pdf}) {
     final rows = _rows;
     showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
@@ -929,9 +958,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (!reports) _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
       if (!reports) _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _deleteCurrentRecord),
       _recordAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), () => _showPrintPreview(pdf: false)),
-      _recordAction('طباعة', Icons.print_outlined, _pink, () => _showPrintPreview(pdf: false)),
+      _recordAction('طباعة', Icons.print_outlined, _pink, _printCurrentPagePdf),
       _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
-      _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), () => _showPrintPreview(pdf: true)),
+      _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printCurrentPagePdf),
     ]);
   }
 
