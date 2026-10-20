@@ -424,7 +424,29 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _openUserPicker() async {
-    final selected=await showDialog<String>(context:context,builder:(c)=>AlertDialog(title:const Text('جلب مستخدمين'),content:SizedBox(width:500,child:ListView(shrinkWrap:true,children:_users.map((u)=>ListTile(title:Text(_s(u['name_ar'])),subtitle:Text(_s(u['name_en'])),selected:_s(u['id'])==_selectedUserId,onTap:()=>Navigator.pop(c,_s(u['id']))).toList())),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('إغلاق'))]));
-    if(selected!=null){setState(()=>_selectedUserId=selected);await _loadUserRules();}
-  }
-}
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('جلب مستخدمين'),
+        content: SizedBox(
+          width: 500,
+          child: ListView(
+            shrinkWrap: true,
+            children: _users.map((user) => ListTile(
+              title: Text(_s(user['name_ar'])),
+              subtitle: Text(_s(user['name_en'])),
+              selected: _s(user['id']) == _selectedUserId,
+              onTap: () => Navigator.pop(dialogContext, _s(user['id'])),
+            )).toList(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق')),
+        ],
+      ),
+    );
+    if (selected != null) {
+      setState(() => _selectedUserId = selected);
+      await _loadUserRules();
+    }
+  }}
