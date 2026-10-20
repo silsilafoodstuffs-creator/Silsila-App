@@ -538,6 +538,28 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
     }
   }
 
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
+    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
+    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
+      onPressed: action, icon: Icon(icon, size: 17),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
+  );
+
+  Future<void> _previewEntries() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة قيود اليومية'),
+      content: SizedBox(width: 760, child: _entries.isEmpty ? const Text('لا توجد قيود محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _entries.take(100).map((entry) => ListTile(
+          dense: true, leading: const Icon(Icons.receipt_long_outlined, color: Color(0xFF3E007D)),
+          title: Text('قيد ${_str(entry, 'entry_number')} — ${_str(entry, 'description')}'),
+          subtitle: Text('التاريخ: ${_str(entry, 'entry_date')} • الحالة: ${_str(entry, 'status')}'),
+          onTap: () { Navigator.pop(ctx); _showEntryDetails(entry); },
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -545,18 +567,25 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(children: [
-            const Expanded(
-              child: Text('قيود اليومية', style: TextStyle(
-                fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF3E007D),
-              )),
-            ),
-            FilledButton.icon(
-              onPressed: _loading ? null : _createDraft,
-              icon: const Icon(Icons.add),
-              label: const Text('قيد جديد'),
-            ),
-          ]),
+          Card(color: const Color(0xFF3E007D), child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              const Text('قيود اليومية', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+              const SizedBox(height: 8),
+              SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+                _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : _createDraft),
+                _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewEntries),
+                _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewEntries),
+                _quickTask('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF137C8B), () => setState(() => _error = 'استيراد قيود اليومية من Excel غير مفعّل؛ أنشئ المسودة من شاشة القيد للتحقق من التوازن.')),
+                _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _previewEntries),
+              ])),
+            ]),
+          )),
+          const SizedBox(height: 8),
+          const Text('إدارة مسودات القيود اليومية. الترحيل يخضع لفحوصات قاعدة البيانات وسياسات الصلاحيات.',
+            style: TextStyle(color: Colors.black54, height: 1.5)),
+          const SizedBox(height: 12),
           const SizedBox(height: 8),
           const Text(
             'إدارة مسودات القيود اليومية. الترحيل يخضع لفحوصات قاعدة البيانات وسياسات الصلاحيات.',
