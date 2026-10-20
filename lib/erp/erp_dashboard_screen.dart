@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as excel;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/hr_attendance_rules_screen.dart';
 import 'screens/erp_app_assets_screen.dart';
@@ -838,6 +840,75 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     _showActionMessage('تم تجهيز ملف CSV متوافق مع Excel ونسخ محتواه للحافظة. استخدم لصق في Excel ثم احفظه بصيغة XLSX.');
   }
 
+  Future<void> _importExcel() async {
+    final companyId = _appManagementCompanyId;
+    if (companyId == null || companyId.trim().isEmpty) {
+      _showActionMessage('لا يمكن الاستيراد قبل ربط المستخدم بشركة نشطة.');
+      return;
+    }
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['xlsx'],
+        withData: true,
+      );
+      if (picked == null || picked.files.isEmpty) return;
+      final bytes = picked.files.single.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        _showActionMessage('تعذر قراءة الملف. اختر ملف Excel بصيغة XLSX.');
+        return;
+      }
+      final workbook = excel.Excel.decodeBytes(bytes);
+      final sheets = workbook.tables.values.where((sheet) => sheet.rows.isNotEmpty).toList();
+      if (sheets.isEmpty) {
+        _showActionMessage('ملف Excel لا يحتوي على صفوف قابلة للاستيراد.');
+        return;
+      }
+      final rows = sheets.first.rows;
+      final headers = rows.first.map((cell) => cell?.value?.toString().trim() ?? '').toList();
+      if (headers.every((header) => header.isEmpty)) {
+        _showActionMessage('يجب أن يحتوي الصف الأول على أسماء الأعمدة.');
+        return;
+      }
+      final imported = <Map<String, String>>[];
+      for (final row in rows.skip(1)) {
+        final record = <String, String>{};
+        for (var i = 0; i < headers.length && i < row.length; i++) {
+          if (headers[i].isNotEmpty && headers[i] != '_مرجع داخلي') {
+            record[headers[i]] = row[i]?.value?.toString() ?? '';
+          }
+        }
+        if (record.values.any((value) => value.trim().isNotEmpty)) imported.add(record);
+      }
+      if (imported.isEmpty) {
+        _showActionMessage('لم يتم العثور على سجلات بعد صف العناوين.');
+        return;
+      }
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('تأكيد استيراد Excel'),
+          content: Text('سيتم استيراد ${imported.length} سجلًا إلى شاشة «$_page». ستُحدّث السجلات التي تتطابق مفاتيحها. هل تريد المتابعة؟'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('استيراد')),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+      var savedCount = 0;
+      for (final record in imported) {
+        await _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: record);
+        savedCount++;
+      }
+      await _loadWorkspacePage(_page);
+      if (mounted) _showActionMessage('تم استيراد $savedCount سجلًا من ملف Excel إلى شاشة «$_page».');
+    } catch (error) {
+      if (mounted) _showActionMessage('تعذر استيراد ملف Excel: $error');
+    }
+  }
+
+
   void _showPrintPreview({required bool pdf}) {
     final rows = _rows;
     showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
@@ -868,15 +939,20 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ),
   );
 
-  Widget _recordToolbar({bool includeAdd = true}) => Wrap(spacing: 7, runSpacing: 7, children: [
-    if (includeAdd) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
-    _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
-    _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _deleteCurrentRecord),
-    _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
-    _recordAction('طباعة', Icons.print_outlined, _pink, () => _showPrintPreview(pdf: false)),
-    _recordAction('تصدير Excel', Icons.table_view_outlined, const Color(0xFF16834A), _exportExcel),
-    _recordAction('تصدير PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), () => _showPrintPreview(pdf: true)),
-  ]);
+  Widget _recordToolbar({bool includeAdd = true}) {
+    final reports = _group == 'تقارير';
+    return Wrap(spacing: 7, runSpacing: 7, children: [
+      _recordAction('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), () => _loadWorkspacePage(_page)),
+      if (!reports && includeAdd) _recordAction('إضافة', Icons.add_rounded, const Color(0xFF18865A), _openAddDialog),
+      if (!reports) _recordAction('حفظ', Icons.save_outlined, _purple, _saveCurrentPage),
+      if (!reports) _recordAction('تعديل', Icons.edit_outlined, _orange, _editCurrentRecord),
+      if (!reports) _recordAction('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _deleteCurrentRecord),
+      _recordAction('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), () => _showPrintPreview(pdf: false)),
+      _recordAction('طباعة', Icons.print_outlined, _pink, () => _showPrintPreview(pdf: false)),
+      _recordAction('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _importExcel),
+      _recordAction('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), () => _showPrintPreview(pdf: true)),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
