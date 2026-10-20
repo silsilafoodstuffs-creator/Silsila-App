@@ -278,7 +278,7 @@ class TraderMarketService {
     if (!const {'view', 'accept', 'reject'}.contains(interactionType)) return false;
     final rows = await _requireClient
         .from('trader_market_post_interactions')
-        .select('id')
+        .select('interaction_type')
         .eq('post_id', id)
         .eq('user_id', _userId)
         .eq('interaction_type', interactionType)
