@@ -134,3 +134,6 @@ using (
   )
 );
 grant select, insert, update on public.erp_sales_fulfillment_documents to authenticated;
+
+-- Remove the earlier per-kind uniqueness constraint after the global number constraint is installed.
+alter table public.erp_sales_fulfillment_documents drop constraint if exists erp_sales_fulfillment_documen_company_id_kind_manual_number_key;
