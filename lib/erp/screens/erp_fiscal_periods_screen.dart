@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_quick_task_button.dart';
 import '../services/erp_fiscal_period_repository.dart';
 
 class ErpFiscalPeriodsScreen extends StatefulWidget {
@@ -89,13 +90,8 @@ class _ErpFiscalPeriodsScreenState extends State<ErpFiscalPeriodsScreen> {
     }
   }
 
-  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) => Padding(
-    padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
-    child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: color, foregroundColor: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10), visualDensity: VisualDensity.compact),
-      onPressed: action, icon: Icon(icon, size: 17),
-      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-  );
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
+      ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   Future<void> _previewPeriods() async {
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
