@@ -272,6 +272,20 @@ class TraderMarketService {
     }
   }
 
+  Future<bool> hasInteraction(String postId, String interactionType) async {
+    final id = int.tryParse(postId.trim());
+    if (id == null || id <= 0) return false;
+    if (!const {'view', 'accept', 'reject'}.contains(interactionType)) return false;
+    final rows = await _requireClient
+        .from('trader_market_post_interactions')
+        .select('id')
+        .eq('post_id', id)
+        .eq('user_id', _userId)
+        .eq('interaction_type', interactionType)
+        .limit(1);
+    return rows is List && rows.isNotEmpty;
+  }
+
   /// إحصاءات المشاهدة والقبول والرفض لمنشور واحد.
   Future<Map<String, int>> getInteractionCounts(String postId) async {
     final id = int.tryParse(postId.trim());
