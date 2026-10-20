@@ -449,4 +449,5 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       setState(() => _selectedUserId = selected);
       await _loadUserRules();
     }
-  }}
+  }
+}
