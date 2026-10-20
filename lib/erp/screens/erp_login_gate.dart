@@ -20,6 +20,7 @@ class ErpLoginGate extends StatefulWidget {
 }
 
 class _ErpLoginGateState extends State<ErpLoginGate> {
+  final _email = TextEditingController();
   final _phone = TextEditingController();
   final _password = TextEditingController();
   StreamSubscription<AuthState>? _authSubscription;
@@ -68,6 +69,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _email.dispose();
     _phone.dispose();
     _password.dispose();
     super.dispose();
@@ -86,8 +88,9 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   }
 
   Future<void> _login() async {
-    if (_phone.text.trim().isEmpty || _password.text.isEmpty) {
-      setState(() => _error = 'اكتب رقم الهاتف وكلمة المرور أولًا.');
+    final email = _email.text.trim().toLowerCase();
+    if (email.isEmpty || !email.contains('@') || _password.text.isEmpty) {
+      setState(() => _error = 'اكتب البريد الإلكتروني الصحيح وكلمة المرور أولًا.');
       return;
     }
     setState(() {
@@ -97,7 +100,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     try {
       final client = Supabase.instance.client;
       await client.auth.signInWithPassword(
-        phone: _normalizePhone(_phone.text),
+        email: email,
         password: _password.text,
       );
       if (!mounted) return;
@@ -110,12 +113,11 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
       setState(() => _error = 'تعذر تسجيل الدخول: ${error.message}');
     } catch (_) {
       if (!mounted) return;
-      setState(() => _error = 'تعذر تسجيل الدخول. تحقق من الاتصال ورقم الهاتف وكلمة المرور.');
+      setState(() => _error = 'تعذر تسجيل الدخول. تحقق من البريد الإلكتروني وكلمة المرور.');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
-
 
   String _asciiDigits(String value) => value.replaceAllMapped(RegExp(r'[٠-٩۰-۹]'), (match) {
     final code = match.group(0)!.codeUnitAt(0);
@@ -274,84 +276,27 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   }
 
   Future<void> _openPasswordRecovery() async {
-    final phone = TextEditingController(text: _phone.text.trim());
-    final code = TextEditingController();
-    final password = TextEditingController();
-    final confirmation = TextEditingController();
-    var codeSent = false, busy = false, obscure = true, obscureConfirm = true;
-    var error = '';
+    final email = _email.text.trim().toLowerCase();
+    if (email.isEmpty || !email.contains('@')) {
+      setState(() => _error = 'اكتب البريد الإلكتروني المسجل أولًا لاستعادة كلمة المرور.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) => Directionality(
-          textDirection: TextDirection.rtl,
-          child: StatefulBuilder(
-            builder: (context, refresh) => AlertDialog(
-              title: const Text('استعادة كلمة المرور'),
-              content: SizedBox(
-                width: 420,
-                child: SingleChildScrollView(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الهاتف المسجل', prefixIcon: Icon(Icons.phone_android))),
-                    if (codeSent) ...[
-                      const SizedBox(height: 10),
-                      TextField(controller: code, keyboardType: TextInputType.number, maxLength: 6, decoration: const InputDecoration(labelText: 'رمز التحقق')),
-                      const SizedBox(height: 10),
-                      TextField(controller: password, obscureText: obscure, decoration: InputDecoration(labelText: 'كلمة المرور الجديدة', suffixIcon: IconButton(onPressed: () => refresh(() => obscure = !obscure), icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined)))),
-                      const SizedBox(height: 10),
-                      TextField(controller: confirmation, obscureText: obscureConfirm, decoration: InputDecoration(labelText: 'تأكيد كلمة المرور الجديدة', suffixIcon: IconButton(onPressed: () => refresh(() => obscureConfirm = !obscureConfirm), icon: Icon(obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined)))),
-                    ],
-                    if (error.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      Align(alignment: Alignment.centerRight, child: Text(error, style: const TextStyle(color: Color(0xFFB42318), height: 1.5))),
-                    ],
-                  ]),
-                ),
-              ),
-              actions: [
-                TextButton(onPressed: busy ? null : () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
-                FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: _silsilaPurple),
-                  onPressed: busy ? null : () async {
-                    if (phone.text.trim().isEmpty) { refresh(() => error = 'أدخل رقم الهاتف المسجل.'); return; }
-                    final token = _asciiDigits(code.text.trim());
-                    if (codeSent) {
-                      final validation = _validateNewPassword(password.text);
-                      if (token.length != 6 || int.tryParse(token) == null) { refresh(() => error = 'أدخل رمز التحقق المكوّن من 6 أرقام.'); return; }
-                      if (validation != null || password.text != confirmation.text) { refresh(() => error = validation ?? 'كلمتا المرور غير متطابقتين.'); return; }
-                    }
-                    refresh(() { busy = true; error = ''; });
-                    try {
-                      final client = Supabase.instance.client;
-                      if (!codeSent) {
-                        await client.auth.signInWithOtp(phone: _normalizePhone(_asciiDigits(phone.text)), shouldCreateUser: false);
-                        refresh(() { codeSent = true; busy = false; });
-                      } else {
-                        if (mounted) setState(() => _recoveryInProgress = true);
-                        await client.auth.verifyOTP(phone: _normalizePhone(_asciiDigits(phone.text)), token: token, type: OtpType.sms);
-                        await client.auth.updateUser(UserAttributes(password: password.text));
-                        if (mounted) setState(() { _recoveryInProgress = false; _signedIn = client.auth.currentSession != null; _phone.text = phone.text; });
-                        if (dialogContext.mounted) Navigator.pop(dialogContext);
-                      }
-                    } on AuthException catch (e) {
-                      if (mounted && _recoveryInProgress) setState(() => _recoveryInProgress = false);
-                      refresh(() { error = e.message; busy = false; });
-                    } catch (_) {
-                      if (mounted && _recoveryInProgress) setState(() => _recoveryInProgress = false);
-                      refresh(() { error = 'تعذر إكمال العملية. تحقق من الرمز وإعدادات رسائل الهاتف.'; busy = false; });
-                    } finally {
-                      if (dialogContext.mounted && busy) refresh(() => busy = false);
-                    }
-                  },
-                  child: busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : Text(codeSent ? 'تأكيد الرمز وتحديث كلمة المرور' : 'إرسال رمز التحقق'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      await Supabase.instance.client.auth.resetPasswordForEmail(email);
+      if (!mounted) return;
+      setState(() => _error = 'إذا كان البريد مسجلًا، فستصلك رسالة لاستعادة كلمة المرور.');
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _error = 'تعذّر إرسال رسالة الاستعادة: ${error.message}');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'تعذّر إرسال رسالة الاستعادة. حاول مرة أخرى.');
     } finally {
-      phone.dispose(); code.dispose(); password.dispose(); confirmation.dispose();
+      if (mounted) setState(() => _busy = false);
     }
   }
 
@@ -513,11 +458,11 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                 ),
                 const SizedBox(height: 12),
                 TextField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   autofillHints: _rememberPassword ? const [AutofillHints.telephoneNumber] : const [],
-                  decoration: const InputDecoration(labelText: 'اكتب هنا رقمك المسجل لدينا', prefixIcon: Icon(Icons.phone_android), border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'اكتب هنا رقمك المسجل لدينا', prefixIcon: Icon(Icons.email_outlined), border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 11),
                 TextField(
