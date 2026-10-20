@@ -175,6 +175,13 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _delete() async {
+    if(_isPermissions){
+      if(_selectedUserId==null){setState(()=>_error='اختر مستخدمًا أولًا.');return;}
+      final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('مسح صلاحيات المستخدم'),content:const Text('سيتم حذف مصفوفة صلاحيات المستخدم المحدد فقط، ولن يتم حذف حسابه. هل تريد المتابعة؟'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نعم، امسح الصلاحيات'))]));
+      if(ok!=true)return;
+      try{await _db!.from('erp_user_permission_matrix').delete().eq('company_id',_company).eq('user_id',_selectedUserId!);await _loadUserRules();if(mounted)setState(()=>_message='تم مسح صلاحيات المستخدم المحدد.');}catch(e){if(mounted)setState(()=>_error='تعذر مسح الصلاحيات: $e');}
+      return;
+    }
     if(_selectedId==null){setState(()=>_error='حدد سجلًا من الجدول أولًا.');return;}
     final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('تأكيد الحذف'),content:const Text('هل تريد حذف السجل المحدد؟'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نعم، احذف'))]));
     if(ok!=true)return;
@@ -346,6 +353,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         )),
         const SizedBox(width:8),
         OutlinedButton.icon(onPressed:parentId==null?null:()=>_openMenuPicker(parentId:parentId,template:templateMode),icon:const Icon(Icons.account_tree_outlined),label:const Text('جلب قوائم (F1)')),
+        if(_isPermissions)const SizedBox(width:8),
+        if(_isPermissions)OutlinedButton.icon(onPressed:_openUserPicker,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
       ]),
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
@@ -381,7 +390,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if(_isPermissions)Padding(padding:const EdgeInsets.all(8),child:Text('حدد المستخدم ثم عيّن صلاحيات كل شاشة باستخدام أعمدة المهام التسعة. زر جلب المستخدمين يتيح الاختيار من القائمة.',style:TextStyle(color:Colors.grey.shade700))),
       Expanded(child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         if(_isPermissions) _ruleGrid() else if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
-        if(_isPermissions)Align(alignment:AlignmentDirectional.centerStart,child:Padding(padding:const EdgeInsets.only(top:8),child:OutlinedButton.icon(onPressed:()=>_openUserPicker(),icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')))),
+
       ]))))),
     ])));
   }
