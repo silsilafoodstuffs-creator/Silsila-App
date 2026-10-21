@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Enrich existing Silsila ERP catalog records with actual product-pack photos.
 
+Matching changes are validated in dry-run mode before any database writes.
+
 Images are downloaded as bytes and written to PostgreSQL bytea (image_data); image_url
 is cleared. This script intentionally does NOT publish marketplace products or invent
 supplier IDs/prices. Open Food Facts is an opt-in open-data source, not Amazon data.
