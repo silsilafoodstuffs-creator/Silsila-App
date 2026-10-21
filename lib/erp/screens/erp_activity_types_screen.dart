@@ -13,7 +13,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   final _service = ErpWorkspaceRecordsService();
   final List<Map<String, String>> _rows = [];
   String? _selected;
-  bool _loading = false, _saving = false;
+  bool _loading = false, _saving = false, _editing = false;
   String? _message;
   String? _resolvedCompanyId;
   String? get _companyId => (_resolvedCompanyId?.trim().isNotEmpty == true) ? _resolvedCompanyId!.trim() : ((widget.companyId?.trim().isNotEmpty == true) ? widget.companyId!.trim() : null);
@@ -122,12 +122,14 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
 
   void _edit(Map<String,String> r) {
     setState(() {
+        _editing = true;
         _selected = r['كود النشاط'];
     });
   }
 
 
   Future<void> _save() async {
+    if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا قبل تغيير البيانات.'); return; }
     if ((_companyId ?? '').isEmpty) { setState(() => _message = 'لا توجد شركة نشطة للحفظ.'); return; }
     final index = _rows.indexWhere((r) => r['كود النشاط'] == _selected);
     if (index < 0) { setState(() => _message = 'حدد صفًا أو اضغط إضافة لإنشاء صف جديد.'); return; }
@@ -149,7 +151,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         ..remove('_مرجع داخلي');
       await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: payload);
       await _load();
-      if (mounted) setState(() => _message = 'تم حفظ النشاط في قاعدة البيانات.');
+      if (mounted) setState(() { _editing = false; _message = 'تم حفظ النشاط في قاعدة البيانات.'; });
     } catch (e) {
       if (mounted) setState(() => _message = 'تعذر الحفظ: ${e.toString()}');
     } finally {
@@ -158,6 +160,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   }
 
   Future<void> _delete() async {
+    if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا قبل حذف البيانات.'); return; }
     final row = _rows.where((r) => r['كود النشاط'] == _selected).firstOrNull;
     if (row == null) { setState(() => _message = 'حدد النشاط المطلوب حذفه أولاً.'); return; }
     final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: const Text('تأكيد الحذف'), content: Text('حذف النشاط: ' + (row['اسم النشاط عربي'] ?? '')), actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('نعم، حذف'))]));
@@ -196,10 +199,10 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('أنواع الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
       Container(color: Colors.white, padding: const EdgeInsets.all(8), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
         _task('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-        _task('إضافة', Icons.add_circle_outline, Colors.green, _new),
-        _task('حفظ', Icons.save_outlined, const Color(0xFF3E007D), _saving ? null : _save),
-        _task('تعديل', Icons.edit_outlined, Colors.orange, _selected == null ? null : () { final r = _rows.where((x) => x['كود النشاط'] == _selected).firstOrNull; if (r != null) _edit(r); }),
-        _task('حذف', Icons.delete_outline, Colors.red, _delete),
+        _task('إضافة', Icons.add_circle_outline, Colors.green, _editing ? null : _new),
+        _task('حفظ', Icons.save_outlined, const Color(0xFF3E007D), _saving || !_editing ? null : _save),
+        _task('تعديل', Icons.edit_outlined, Colors.orange, _saving || _selected == null ? null : () { final r = _rows.where((x) => x['كود النشاط'] == _selected).firstOrNull; if (r != null) _edit(r); }),
+        _task('حذف', Icons.delete_outline, Colors.red, _editing ? _delete : null),
         _task('معاينة', Icons.visibility_outlined, Colors.teal, _preview),
         _task('طباعة', Icons.print_outlined, Colors.blueGrey, () => setState(() => _message = 'تم تجهيز معاينة الطباعة؛ استخدم نافذة المعاينة.')),
         _task('استيراد Excel', Icons.file_upload_outlined, Colors.green.shade800, () => setState(() => _message = 'استيراد Excel لم يُفعّل في هذه الشاشة بعد.')),
@@ -209,10 +212,10 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       const SizedBox(height: 8),
       Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 34, dataRowMinHeight: 38, dataRowMaxHeight: 42, horizontalMargin: 8, columnSpacing: 14, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م (ترتيب السطر)')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط')), DataColumn(label: Text('نشط / غير نشط'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(selected: _rows[i]['كود النشاط'] == _selected, onSelectChanged: (_) => setState(() => _selected = _rows[i]['كود النشاط']), cells: [
-          DataCell(SizedBox(width: 38, child: TextFormField(initialValue: _rows[i]['ترتيب السطر'] ?? (i + 1).toString(), key: ValueKey('activity-order-$i'), decoration: const InputDecoration(isDense:true,border:InputBorder.none), onChanged: (v) => _rows[i]['ترتيب السطر'] = v))),
-          DataCell(SizedBox(width: 130, child: TextFormField(initialValue: _rows[i]['كود النشاط'] ?? '', key: ValueKey('activity-code-$i'), decoration: const InputDecoration(isDense:true,border:InputBorder.none), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) { _rows[i]['كود النشاط'] = v; _selected = v; }))),
-          DataCell(SizedBox(width: 270, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i'), decoration: const InputDecoration(isDense:true,border:InputBorder.none), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
-          DataCell(Checkbox(value: (_rows[i]['نشط'] ?? 'true') == 'true', visualDensity: VisualDensity.compact, onChanged: (v) => setState(() => _rows[i]['نشط'] = (v ?? false).toString()))),
+          DataCell(SizedBox(width: 38, child: TextFormField(initialValue: _rows[i]['ترتيب السطر'] ?? (i + 1).toString(), key: ValueKey('activity-order-$i'), enabled: _editing, decoration: const InputDecoration(isDense:true,border:InputBorder.none), onChanged: (v) => _rows[i]['ترتيب السطر'] = v))),
+          DataCell(SizedBox(width: 130, child: TextFormField(initialValue: _rows[i]['كود النشاط'] ?? '', key: ValueKey('activity-code-$i'), enabled: _editing, decoration: const InputDecoration(isDense:true,border:InputBorder.none), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) { _rows[i]['كود النشاط'] = v; _selected = v; }))),
+          DataCell(SizedBox(width: 270, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i'), enabled: _editing, decoration: const InputDecoration(isDense:true,border:InputBorder.none), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
+          DataCell(Checkbox(value: (_rows[i]['نشط'] ?? 'true') == 'true', visualDensity: VisualDensity.compact, onChanged: _editing ? (v) => setState(() => _rows[i]['نشط'] = (v ?? false).toString()) : null)),
         ]),
       ]))),
       if (_loading) const LinearProgressIndicator(minHeight: 2),
