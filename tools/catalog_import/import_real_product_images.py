@@ -20,7 +20,7 @@ from typing import Any
 BASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 COMPANY_ID = os.environ.get("SILSILA_ERP_COMPANY_ID", "")
-OFF_API = "https://world.openfoodfacts.org/cgi/search.pl"
+OFF_API = "https://search.openfoodfacts.org/search"
 USER_AGENT = "SilsilaCatalogEnricher/1.0 (catalog administrator)"
 MIN_BYTES = 12_000
 MIN_SIDE = 300
@@ -175,12 +175,15 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
     seen: set[str] = set()
     for term in searches:
         params = urllib.parse.urlencode({
-            "search_terms": term,
+            "q": term,
             "page_size": "12",
-            "json": "1",
+            "page": "1",
+            "langs": "en,ar",
             "fields": "code,product_name,product_name_en,brands,image_front_url,image_front_small_url,image_url,countries_tags",
         })
         try:
+            # The legacy /cgi/search.pl endpoint has been returning widespread
+            # HTTP 503s. Use the official Search-a-licious full-text search API.
             data = request_json(f"{OFF_API}?{params}")
         except urllib.error.HTTPError as exc:
             print(f"  SOURCE HTTP ERROR for query {term!r}: HTTP {exc.code} {exc.reason}")
@@ -189,10 +192,9 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
             print(f"  SOURCE REQUEST ERROR for query {term!r}: {type(exc).__name__}: {exc}")
             continue
         finally:
-            # OFF documents a 10 search-requests/minute/IP limit. Wait even on
-            # errors so failed requests do not accidentally exceed the limit.
+            # Search API is rate limited; wait even on errors.
             time.sleep(7.2)
-        products = data.get("products", [])
+        products = data.get("hits", data.get("products", []))
         if not products:
             print(f"  SOURCE returned 0 results for query {term!r} (status OK)")
         for product in products:
