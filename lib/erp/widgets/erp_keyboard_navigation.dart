@@ -10,6 +10,15 @@ class ErpKeyboardNavigation extends StatelessWidget {
 
   final Widget child;
 
+  /// Actions registered by the currently visible ERP data-entry screen.
+  static VoidCallback? onF12Add;
+  static VoidCallback? onF8Save;
+
+  static void registerActions({VoidCallback? add, VoidCallback? save}) {
+    onF12Add = add;
+    onF8Save = save;
+  }
+
   @override
   Widget build(BuildContext context) {
     return FocusTraversalGroup(
@@ -19,6 +28,15 @@ class ErpKeyboardNavigation extends StatelessWidget {
           if (event is! KeyDownEvent) return KeyEventResult.ignored;
           final primary = FocusManager.instance.primaryFocus;
           final focusedWidget = primary?.context?.widget;
+
+          if (event.logicalKey == LogicalKeyboardKey.f12) {
+            final action = onF12Add;
+            if (action != null) { action(); return KeyEventResult.handled; }
+          }
+          if (event.logicalKey == LogicalKeyboardKey.f8) {
+            final action = onF8Save;
+            if (action != null) { action(); return KeyEventResult.handled; }
+          }
 
           if (event.logicalKey == LogicalKeyboardKey.enter &&
               focusedWidget is EditableText &&
