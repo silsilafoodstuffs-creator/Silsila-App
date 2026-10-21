@@ -1,3 +1,4 @@
+import '../widgets/erp_keyboard_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1804,6 +1805,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   @override
   Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: _createDraft, save: _savePendingLines);
     if (widget.kind == ErpOperationalKind.sales) {
       return _buildSalesInvoiceScreen(context);
     }
