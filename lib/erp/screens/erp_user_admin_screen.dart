@@ -79,6 +79,19 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   @override void dispose() { super.dispose(); }
   String _s(dynamic v) => (v??'').toString();
 
+  String _nextUniqueName(String base, {String field = 'name_ar'}) {
+    final used = _rows
+        .map((row) => _s(row[field]))
+        .where((value) => value.isNotEmpty)
+        .toSet();
+    if (!used.contains(base)) return base;
+    var suffix = 2;
+    while (used.contains('$base $suffix')) {
+      suffix++;
+    }
+    return '$base $suffix';
+  }
+
   // Always keep the user-types grid visible even if database reads/writes are
   // blocked by company membership or RLS. These rows are preview-only until saved.
   List<Map<String, dynamic>> _localDefaultUserTypes() {
@@ -278,16 +291,16 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     try {
       final payload = <String, dynamic>{'company_id': _company, 'is_active': true};
       if (_isType) {
-        payload.addAll({'name_ar': 'نوع مستخدم جديد', 'name_en': 'New user type', 'show_at_login': false});
+        payload.addAll({'name_ar': _nextUniqueName('نوع مستخدم جديد'), 'name_en': _nextUniqueName('New user type', field: 'name_en'), 'show_at_login': false});
       } else if (_isUser) {
         payload.addAll({
-          'name_ar': 'مستخدم جديد',
-          'name_en': 'New user',
+          'name_ar': _nextUniqueName('مستخدم جديد'),
+          'name_en': _nextUniqueName('New user', field: 'name_en'),
           'user_type_id': _types.isEmpty ? null : _types.first['id'],
           'has_sub_warehouse': false,
         });
       } else {
-        payload.addAll({'name_ar': 'قالب صلاحيات جديد', 'name_en': 'New permission template'});
+        payload.addAll({'name_ar': _nextUniqueName('قالب صلاحيات جديد'), 'name_en': _nextUniqueName('New permission template', field: 'name_en')});
       }
       final result = await _db!.from(_table).insert(payload).select().single();
       if (!mounted) return;
