@@ -25,7 +25,7 @@ permissions:
 jobs:
   enrich:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 360
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
