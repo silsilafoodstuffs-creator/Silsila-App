@@ -30,12 +30,13 @@ Inspect the matched product names, image sizes and provenance before applying ch
 SILSILA_IMAGE_IMPORT_DRY_RUN=0 python tools/catalog_import/import_real_product_images.py
 ```
 
-On PowerShell:
+On PowerShell, set the variable with the correct name:
 ```powershell
-$env:SUPABASE_IMAGE_IMPORT_DRY_RUN = "0"
+$env:SILSILA_IMAGE_IMPORT_DRY_RUN = "0"
+python tools/catalog_import/import_real_product_images.py
 ```
 
-Use the actual variable name `SILSILA_IMAGE_IMPORT_DRY_RUN` (not the example alias above) and run the Python command. Keep the service key in a secure environment only.
+Keep the service key in a secure environment only.
 
 ## Safety and matching
 
