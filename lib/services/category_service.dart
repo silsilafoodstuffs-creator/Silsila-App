@@ -308,7 +308,7 @@ class CategoryService {
 
   String _toPostgresBytea(Uint8List bytes) {
     final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return r'\\x' + hex;
+    return r'\x' + hex;
   }
 
   void _validateImageUrl(String value) {
