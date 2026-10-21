@@ -78,6 +78,28 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     } finally { if (mounted) setState(() => _loading = false); }
   }
 
+  Future<void> _migrateImages() async {
+    if (_db == null) {
+      setState(() => _error = 'اتصال قاعدة البيانات غير متاح.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final response = await _db!.functions.invoke('migrate-catalog-images', body: <String, dynamic>{});
+      if (response.status < 200 || response.status >= 300) {
+        throw StateError('فشل نقل الصور (HTTP ${response.status}).');
+      }
+      final data = response.data;
+      final migrated = data is Map ? (data['total_migrated'] ?? 0) : 0;
+      await _load();
+      if (mounted) setState(() => _message = 'تم حفظ ${migrated} صورة كبيانات فعلية داخل قاعدة البيانات. أعد فتح الشاشات التي تعرض الصور.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر نقل الصور إلى قاعدة البيانات: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   void _syncControllers() {
     final keep = <String>{};
     for (final row in _all.where((r) => _rowLevel(r) == _level)) {
@@ -275,6 +297,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       Container(color:_catCanvas,padding:const EdgeInsets.symmetric(horizontal:3,vertical:3),
         child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
           _task('تحديث',Icons.refresh,_loading?null:_load),
+          _task('نقل الصور للقاعدة',Icons.cloud_download_outlined,_saving || _loading ? null : _migrateImages),
           _task('إضافة جديد',Icons.add,_saving ? null : _add),
           _task('حفظ',Icons.save,_saving || !_editing ? null:_save),
           _task('تعديل',Icons.edit,_saving || _editing ? null:()=>setState(()=>_editing=true)),
