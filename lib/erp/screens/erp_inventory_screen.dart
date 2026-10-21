@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_inventory_repository.dart';
 
 class ErpInventoryScreen extends StatefulWidget {
@@ -191,6 +192,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: _newMovement, save: _save);
     final totalItems = _balances.length;
     final negative = _balances.where((r) => _n(r['quantity_on_hand']) < 0).length;
     return Directionality(
