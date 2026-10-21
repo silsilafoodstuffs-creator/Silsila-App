@@ -47,8 +47,6 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
     super.didUpdateWidget(oldWidget);
     if (oldWidget.companyId != widget.companyId) _load();
   }
-  @override
-
   Future<void> _load() async {
     if (_db == null || (widget.companyId ?? '').isEmpty) { if (mounted) setState(() => _loading = false); return; }
     setState(() { _loading = true; _error = null; });
