@@ -257,20 +257,60 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _add() async {
-    if(_saving)return;
-    setState(()=>_editMode=true);
+    if (_saving) return;
+    if (_isType && _rows.any((row) => row['_local_default'] == true)) {
+      setState(() => _error = 'لا يمكن الإضافة قبل اتصال قاعدة البيانات وتحميل الأنواع المحفوظة؛ الصفوف الحالية للمعاينة فقط.');
+      return;
+    }
+    if (_isPermissions) {
+      setState(() {
+        _editMode = true;
+        _message = 'اختر المستخدم ثم عدّل مربعات الصلاحيات في الجدول.';
+        _error = null;
+      });
+      return;
+    }
+    if (_company.isEmpty || _db == null) {
+      setState(() => _error = 'حدد الشركة وتأكد من الاتصال بقاعدة البيانات قبل الإضافة.');
+      return;
+    }
+    setState(() { _editMode = true; _error = null; });
     try {
-      if(_isPermissions){setState(()=>_message='اختر المستخدم ثم عدّل مربعات الصلاحيات في الجدول.');return;}
-      final payload=<String,dynamic>{'company_id':_company,'is_active':true};
-      if(_isType){payload.addAll({'name_ar':'نوع مستخدم جديد','name_en':'New user type','show_at_login':false});}
-      else if(_isUser){payload.addAll({'name_ar':'مستخدم جديد','name_en':'New user','user_type_id':_types.isEmpty?null:_types.first['id'],'has_sub_warehouse':false});}
-      else {payload.addAll({'name_ar':'قالب صلاحيات جديد','name_en':'New permission template'});}
-      final row=await _db!.from(_table).insert(payload).select().single();
-      if(!mounted)return;
-      setState(()=>_message='تم إنشاء سجل جديد. أكمل بياناته ثم اضغط حفظ.');
-      await _load();
-      if(mounted)setState(()=>_selectedId=_s(row['id']));
-    } catch(e){if(mounted)setState(()=>_error='تعذر إضافة السجل: $e');}
+      final payload = <String, dynamic>{'company_id': _company, 'is_active': true};
+      if (_isType) {
+        payload.addAll({'name_ar': 'نوع مستخدم جديد', 'name_en': 'New user type', 'show_at_login': false});
+      } else if (_isUser) {
+        payload.addAll({
+          'name_ar': 'مستخدم جديد',
+          'name_en': 'New user',
+          'user_type_id': _types.isEmpty ? null : _types.first['id'],
+          'has_sub_warehouse': false,
+        });
+      } else {
+        payload.addAll({'name_ar': 'قالب صلاحيات جديد', 'name_en': 'New permission template'});
+      }
+      final result = await _db!.from(_table).insert(payload).select().single();
+      if (!mounted) return;
+      final row = Map<String, dynamic>.from(result);
+      setState(() {
+        // Keep the current in-memory edits in every previous row. Reloading here
+        // would overwrite unsaved text/checkbox changes with the database snapshot.
+        _rows.add(row);
+        if (_isType) {
+          _types = _rows;
+        } else if (_isUser) {
+          _users = _rows;
+          _selectedUserId = _s(row['id']);
+        } else {
+          _templates = _rows;
+        }
+        _selectedId = _s(row['id']);
+        _message = 'تم إنشاء سجل جديد دون إعادة تحميل الجريد. أكمل بياناته ثم اضغط حفظ.';
+        _error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر إضافة السجل: $e');
+    }
   }
 
   Future<void> _save() async {
