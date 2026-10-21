@@ -344,8 +344,8 @@ class SilsilaApp extends StatelessWidget {
           filled: true,
           fillColor: Colors.white,
           isDense: true,
-          constraints: const BoxConstraints(minHeight: 34, maxHeight: 40),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          constraints: const BoxConstraints(minHeight: 54, maxHeight: 58),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           disabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
             borderSide: const BorderSide(color: Color(0xFFD8CDE3)),
@@ -372,9 +372,9 @@ class SilsilaApp extends StatelessWidget {
           ),
         ),
         dataTableTheme: const DataTableThemeData(
-          headingRowHeight: 34,
-          dataRowMinHeight: 34,
-          dataRowMaxHeight: 38,
+          headingRowHeight: 57,
+          dataRowMinHeight: 57,
+          dataRowMaxHeight: 57,
           headingTextStyle: TextStyle(
             color: Color(0xFF241735),
             fontSize: 12,
@@ -392,7 +392,7 @@ class SilsilaApp extends StatelessWidget {
           iconColor: purple,
           selectedColor: purple,
           selectedTileColor: orange.withValues(alpha: 0.16),
-          minVerticalPadding: 8,
+          minVerticalPadding: 9.5,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -416,7 +416,7 @@ class SilsilaApp extends StatelessWidget {
         dividerTheme: const DividerThemeData(
           color: Color(0xFFE8DDF2),
           thickness: 1,
-          space: 1,
+          space: 19,
         ),
         iconTheme: const IconThemeData(color: purple),
         textSelectionTheme: TextSelectionThemeData(
