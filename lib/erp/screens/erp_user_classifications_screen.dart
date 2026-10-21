@@ -190,7 +190,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
     if (_types.isEmpty) return const Padding(padding: EdgeInsets.all(22), child: Text('لا توجد أنواع مستخدمين نشطة.'));
     return DataTable(
       headingRowColor: WidgetStateProperty.all(const Color(0xFFEDE4F8)),
-      dataRowMinHeight: 34, dataRowMaxHeight: 38, headingRowHeight: 34,
+      dataRowMinHeight: 57, dataRowMaxHeight: 57, headingRowHeight: 57,
       columnSpacing: 14, horizontalMargin: 10,
       columns: const [
         DataColumn(label: Text('م')),
