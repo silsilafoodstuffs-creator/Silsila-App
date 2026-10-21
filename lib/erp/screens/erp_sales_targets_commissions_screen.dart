@@ -294,8 +294,8 @@ Future<void> _previewSalesTargets() async {
     final demo=_db==null || (widget.companyId ?? '').isEmpty;
     return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_p,Color(0xFF7443A6)]),borderRadius:BorderRadius.circular(20)),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        const Row(children:[
-          Icon(Icons.track_changes_rounded,color:_o,size:30),const SizedBox(width:10),
+        Row(children:[
+          const Icon(Icons.track_changes_rounded,color:_o,size:30),const SizedBox(width:10),
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text(_sectionTitle,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
             SizedBox(height:5),Text('أهداف شهرية • نسب ثابتة ومتدرجة • اعتماد قبل الصرف',style:TextStyle(color:Color(0xFFEFE5F8),fontSize:12)),
