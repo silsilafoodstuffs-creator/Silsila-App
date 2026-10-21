@@ -86,7 +86,7 @@ const Map<String, Map<String, List<String>>> _modules = {
     'تقارير': ['المبيعات اليومية', 'ربحية المبيعات', 'مبيعات حسب الفرع', 'أداء المندوبين', 'الطلبات المتأخرة', 'تحقيق أهداف العملاء', 'تقرير العمولات المستحقة', 'أرصدة العملاء', 'أعمار الديون', 'أفضل العملاء', 'العملاء المتوقفون', 'تصفية المندوبين', 'تحصيلات يومية', 'تكلفة خطوط السير'],
   },
   'الموارد البشرية والرواتب': {
-    'بيانات أساسية': ['هيكل الشركة', 'الإدارات والأقسام', 'الوظائف والدرجات', 'ملف الموظف', 'العقود', 'أنواع الإجازات', 'قواعد الورديات والحضور والانصراف', 'أجهزة البصمة وربط الحضور', 'مكونات الراتب', 'الاستحقاقات والاستقطاعات', 'سياسات العمولة'],
+    'بيانات أساسية': ['الهيكل الوظيفي', 'الإدارات والأقسام', 'الوظائف والدرجات', 'ملف الموظف', 'العقود', 'أنواع الإجازات', 'قواعد الورديات والحضور والانصراف', 'أجهزة البصمة وربط الحضور', 'مكونات الراتب', 'الاستحقاقات والاستقطاعات', 'سياسات العمولة'],
     'حركات': ['الحضور والانصراف', 'الإجازات والأذونات', 'الجزاءات والمكافآت', 'السلف', 'تقييم الأداء', 'مسير الرواتب', 'صرف الرواتب', 'عمولات المبيعات', 'تسوية سلفة'],
     'تقارير': ['كشف العاملين', 'الحضور والغياب', 'رصيد الإجازات', 'انتهاء العقود', 'ملخص الرواتب', 'مفردات المرتب', 'عمولات المندوبين'],
   },
@@ -620,6 +620,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   List<Map<String, String>> _sampleRows(String page) {
+    if (page == 'الهيكل الوظيفي') {
+      return [
+        {'م': '1', 'كود الهيكل': 'ORG-001', 'المسمى الوظيفي': 'المدير العام', 'الإدارة / القسم': 'الإدارة العامة', 'يتبع إلى': '—', 'المستوى الإداري': 'إدارة عليا', 'الحالة': 'نموذج تجريبي'},
+        {'م': '2', 'كود الهيكل': 'ORG-002', 'المسمى الوظيفي': 'مدير المبيعات', 'الإدارة / القسم': 'المبيعات', 'يتبع إلى': 'المدير العام', 'المستوى الإداري': 'إدارة وسطى', 'الحالة': 'نموذج تجريبي'},
+        {'م': '3', 'كود الهيكل': 'ORG-003', 'المسمى الوظيفي': 'مدير المخازن', 'الإدارة / القسم': 'المخازن', 'يتبع إلى': 'المدير العام', 'المستوى الإداري': 'إدارة وسطى', 'الحالة': 'نموذج تجريبي'},
+        {'م': '4', 'كود الهيكل': 'ORG-004', 'المسمى الوظيفي': 'مسؤول الحسابات', 'الإدارة / القسم': 'الحسابات المالية', 'يتبع إلى': 'المدير العام', 'المستوى الإداري': 'وظيفة تنفيذية', 'الحالة': 'نموذج تجريبي'},
+      ];
+    }
     if (page == 'شجرة الحسابات') {
       return [
         {'الكود': '1', 'اسم الحساب': 'الأصول', 'المستوى': 'رئيسي', 'الطبيعة': 'مدين', 'الحالة': 'نشط'},
@@ -1104,6 +1112,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                         _group = moduleEntry.value.keys.first;
                         _page = moduleEntry.value[_group]!.first;
                         _search = '';
+                        _expandedModules.add(name);
+                        for (final groupName in moduleEntry.value.keys) {
+                          _expandedGroups.add('$name::$groupName');
+                        }
                       }),
                     ),
                   )),
@@ -1116,6 +1128,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                         _expandedGroups.removeWhere((key) => key.startsWith('$name::'));
                       } else {
                         _expandedModules.add(name);
+                        for (final groupName in moduleEntry.value.keys) {
+                          _expandedGroups.add('$name::$groupName');
+                        }
                       }
                     }),
                     icon: Icon(moduleOpen ? Icons.expand_more_rounded : Icons.chevron_left_rounded, color: moduleOpen ? Colors.white : _orange, size: 24),
@@ -2164,11 +2179,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   );
 
   Widget _workspace() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    Wrap(spacing: 8, runSpacing: 8, children: _modules[_module]!.keys.map((g) {
-      final selected = g == _group;
-      return ChoiceChip(label: Text(g), selected: selected, selectedColor: _purple, labelStyle: TextStyle(color: selected ? Colors.white : _purple, fontWeight: FontWeight.w700), onSelected: (_) { final targetPage = _modules[_module]![g]!.first; setState(() { _group = g; _page = targetPage; _search = ''; }); _loadWorkspacePage(targetPage); });
-    }).toList()),
-    const SizedBox(height: 18),
     Container(padding: const EdgeInsets.all(18), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       LayoutBuilder(builder: (context, constraints) {
         final titleBlock = Row(children: [
@@ -2194,13 +2204,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           toolbar,
         ]);
       }),
-      const SizedBox(height: 18),
-      Wrap(spacing: 8, runSpacing: 8, children: _pages.map((p) => ActionChip(
-        label: Text(p, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
-        backgroundColor: p == _page ? const Color(0xFF6E2BA6) : _purple,
-        side: BorderSide(color: p == _page ? _orange : const Color(0xFF6E2BA6), width: p == _page ? 2 : 1),
-        onPressed: () { setState(() { _page = p; _selectedRecord = null; }); _loadWorkspacePage(p); },
-      )).toList()),
       const SizedBox(height: 16),
       if (_group == 'تقارير') Padding(padding: EdgeInsets.only(bottom: 12), child: Text(silsilaText('نموذج تقارير تجريبي؛ ستظهر المؤشرات الفعلية بعد ربط مصادر البيانات واعتماد المعادلات المحاسبية.'), style: TextStyle(color: Colors.black54, height: 1.6))),
       if (_rows.isEmpty) Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد نتائج مطابقة.'), textAlign: TextAlign.center))
