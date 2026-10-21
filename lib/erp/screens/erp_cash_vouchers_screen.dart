@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_cash_vouchers_repository.dart';
 
 class ErpCashVouchersScreen extends StatefulWidget {
@@ -153,7 +154,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Column(
+  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(add: _createDraft, save: _createDraft, child: Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Card(color: const Color(0xFF3E007D), child: Padding(
@@ -260,5 +261,5 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
     margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(color: color.withValues(alpha: .09), borderRadius: BorderRadius.circular(10)),
     child: Text(text, style: TextStyle(color: color)),
-  );
+  ));
 }
