@@ -166,6 +166,10 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   void _newMovement() {
+    if ([_quantity.text, _notes.text, _batch.text].any((value) => value.trim().isNotEmpty)) {
+      setState(() => _success = 'تم الاحتفاظ ببيانات الحركة الحالية. احفظ الحركة الحالية أولًا قبل بدء حركة جديدة.');
+      return;
+    }
     setState(() {
       _quantity.clear();
       _cost.text = '0';
