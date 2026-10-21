@@ -610,7 +610,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final Set<String> _cloudLoadedWorkspacePages = <String>{};
   final Set<String> _workspacePageLoadsInProgress = <String>{};
 
-  List<String> get _pages => _modules[_module]![_group]!;
   List<Map<String, String>> get _rows {
     final rows = _cloudLoadedWorkspacePages.contains(_page)
         ? (_saved[_page] ?? <Map<String, String>>[])
