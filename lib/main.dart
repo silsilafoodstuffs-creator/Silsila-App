@@ -3194,10 +3194,27 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
             final rawId = product['id'];
             final id = rawId?.toString().trim();
             final active = product['is_active'] == true || product['is_available'] == true;
+            final productImageBytes = _decodeDatabaseBytea(product['image_data']);
             return Card(
               color: Colors.white,
               child: ListTile(
-                leading: const Icon(Icons.inventory_2_outlined, color: purple),
+                leading: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 54,
+                    height: 54,
+                    child: productImageBytes == null
+                        ? const ColoredBox(
+                            color: Color(0xFFF5EFFB),
+                            child: Icon(Icons.inventory_2_outlined, color: purple),
+                          )
+                        : Image.memory(
+                            productImageBytes,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: purple),
+                          ),
+                  ),
+                ),
                 title: Text((product['name'] ?? '').toString()),
                 subtitle: Text('${product['category'] ?? 'بدون قسم'} • ${product['price'] ?? 0} ج.م / ${product['unit'] ?? 'وحدة'}'
                     '\nالحد الأدنى: ${product['min_quantity'] ?? product['minimum_quantity'] ?? 1}'
