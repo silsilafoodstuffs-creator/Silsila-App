@@ -44,7 +44,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   }
 
   String _s(dynamic v) => (v ?? '').toString();
-  String get _levelName => ['رئيسية','فرعية','ثانوية'][_level];
   List<Map<String,dynamic>> get _parents => _all.where((r) => r['parent_id'] == null && r['is_active'] == true).toList();
   List<Map<String,dynamic>> get _secondaryParents => _all.where((r) => r['parent_id'] != null && _parentOf(r) != null && _parentOf(r)!['parent_id'] == null && r['is_active'] == true).toList();
   Map<String,dynamic>? _parentOf(Map<String,dynamic> row) {
@@ -96,7 +95,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   int _rowLevel(Map<String,dynamic> row) {
     if (row['parent_id'] == null) return 0;
     final p = _parentOf(row);
-    if (p == null || p!['parent_id'] == null) return 1;
+    if (p == null || p['parent_id'] == null) return 1;
     return 2;
   }
 
@@ -214,12 +213,13 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     Map<String, dynamic>? row;
     for (final candidate in _all) { if (_s(candidate['id']) == id) { row = candidate; break; } }
     if (row == null) return;
+    final selectedRow = row;
     final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
-      title: const Text('تأكيد الحذف'), content: Text('حذف الفئة «${_s(row['group_name'])}»؟'),
+      title: const Text('تأكيد الحذف'), content: Text('حذف الفئة «${_s(selectedRow['group_name'])}»؟'),
       actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نعم'))]));
     if (yes != true) return;
     try {
-      if (row['_draft'] != true) await _db!.from('erp_item_groups').delete().eq('id',id).eq('company_id',_company!);
+      if (selectedRow['_draft'] != true) await _db!.from('erp_item_groups').delete().eq('id',id).eq('company_id',_company!);
       setState(() { _all.removeWhere((r)=>_s(r['id'])==id); _selectedId=null; _syncControllers(); _message='تم حذف الفئة.'; });
     } catch(e) { setState(()=>_error='تعذر حذف الفئة: $e'); }
   }
