@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_fiscal_period_repository.dart';
 
 class ErpFiscalPeriodsScreen extends StatefulWidget {
@@ -54,6 +55,21 @@ class _ErpFiscalPeriodsScreenState extends State<ErpFiscalPeriodsScreen> {
     setState(() { if (start) { _start = selected; } else { _end = selected; } });
   }
 
+  void _newPeriod() {
+    if (_saving || _loading) return;
+    if (_name.text.trim().isNotEmpty) {
+      setState(() {
+        _error = 'احفظ الفترة المالية الحالية باستخدام F8 قبل بدء فترة جديدة؛ لم يتم مسح أي بيانات.';
+        _message = null;
+      });
+      return;
+    }
+    setState(() {
+      _error = null;
+      _message = 'نموذج فترة مالية جديدة جاهز. أدخل الاسم ثم اضغط F8 للحفظ.';
+    });
+  }
+
   Future<void> _create() async {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
@@ -106,7 +122,7 @@ class _ErpFiscalPeriodsScreenState extends State<ErpFiscalPeriodsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Column(
+  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(add: _newPeriod, save: _create, child: Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Card(color: const Color(0xFF3E007D), child: Padding(
@@ -117,7 +133,7 @@ class _ErpFiscalPeriodsScreenState extends State<ErpFiscalPeriodsScreen> {
           const SizedBox(height: 8),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : () { _name.clear(); setState(() { _error = null; _message = 'نموذج فترة مالية جديدة جاهز.'; }); }),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving || _loading ? null : _newPeriod),
             _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _create),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewPeriods),
             _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewPeriods),
@@ -157,7 +173,7 @@ class _ErpFiscalPeriodsScreenState extends State<ErpFiscalPeriodsScreen> {
           : const Chip(label: Text('مغلقة')),
       ))),
     ],
-  ));
+  )));
 
   Widget _notice(String text, Color color) => Container(
     margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(10),
