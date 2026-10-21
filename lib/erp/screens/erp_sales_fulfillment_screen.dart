@@ -387,8 +387,15 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
               const SizedBox(height: 8),
               SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
                 _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-                _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : () {
-                  setState(() { _selectedInvoiceIds.clear(); _selectedPreparationIds.clear(); _message = 'اختر الفواتير أو أذون التجهيز لإضافة إذن جديد.'; _error = null; });
+                _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading || _saving ? null : () {
+                  if (_selectedInvoiceIds.isNotEmpty || _selectedPreparationIds.isNotEmpty) {
+                    setState(() {
+                      _error = 'تم الاحتفاظ بالفواتير وأذون التجهيز المحددة. احفظ الإذن الحالي أولًا قبل إنشاء إذن جديد.';
+                      _message = null;
+                    });
+                    return;
+                  }
+                  setState(() { _message = 'اختر الفواتير أو أذون التجهيز لإضافة إذن جديد.'; _error = null; });
                   if (!_isPreparation && _sourceMode == 'preparation') { _pickPreparations(); } else { _pickInvoices(); }
                 }),
                 _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _save),

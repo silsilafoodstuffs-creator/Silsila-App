@@ -209,8 +209,19 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   void _newCurrentRecord() {
-    final currentFields = _view == 'warehouses' ? [_warehouseCode.text, _warehouseName.text, _address.text] : _view == 'groups' ? [_groupCode.text, _groupName.text] : [_itemCode.text, _itemName.text, _barcode.text];
-    final hasSelection = (_view == 'warehouses' && _branchId != null) || (_view == 'groups' && _parentGroupId != null) || (_view == 'items' && _pickedItemImage != null);
+    final currentFields = _view == 'warehouses'
+        ? [_warehouseCode.text, _warehouseName.text, _address.text]
+        : _view == 'groups'
+            ? [_groupCode.text, _groupName.text]
+            : [_itemCode.text, _itemName.text, _barcode.text,
+                _unit.text == 'وحدة' ? '' : _unit.text,
+                _purchasePrice.text == '0' ? '' : _purchasePrice.text,
+                _salePrice.text == '0' ? '' : _salePrice.text,
+                _taxRate.text == '0' ? '' : _taxRate.text,
+                _reorder.text == '0' ? '' : _reorder.text];
+    final hasSelection = (_view == 'warehouses' && _branchId != null) ||
+        (_view == 'groups' && _parentGroupId != null) ||
+        (_view == 'items' && (_itemGroupId != null || _pickedItemImage != null));
     if (currentFields.any((value) => value.trim().isNotEmpty) || hasSelection) {
       setState(() => _message = 'تم الاحتفاظ بالبيانات الحالية كما هي. احفظ السجل الحالي أولًا قبل بدء سجل جديد.');
       return;
