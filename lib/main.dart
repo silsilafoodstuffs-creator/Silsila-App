@@ -273,6 +273,15 @@ class SilsilaApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Tajawal',
         scaffoldBackgroundColor: canvas,
+        // Keep preview/read-only values legible throughout the ERP and customer app.
+        disabledColor: const Color(0xFF51465D),
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Color(0xFF241735), fontSize: 13, fontWeight: FontWeight.w500),
+          bodyMedium: TextStyle(color: Color(0xFF241735), fontSize: 12, fontWeight: FontWeight.w500),
+          bodySmall: TextStyle(color: Color(0xFF51465D), fontSize: 11, fontWeight: FontWeight.w500),
+          titleMedium: TextStyle(color: Color(0xFF241735), fontSize: 13, fontWeight: FontWeight.w600),
+          labelLarge: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
         colorScheme: ColorScheme.fromSeed(
           seedColor: purple,
           primary: purple,
@@ -288,7 +297,7 @@ class SilsilaApp extends StatelessWidget {
             shadowColor: orange.withValues(alpha: 0.30),
             animationDuration: const Duration(milliseconds: 180),
             overlayColor: orange.withValues(alpha: 0.18),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(13),
             ),
@@ -302,7 +311,7 @@ class SilsilaApp extends StatelessWidget {
             shadowColor: orange.withValues(alpha: 0.24),
             animationDuration: const Duration(milliseconds: 180),
             overlayColor: orange.withValues(alpha: 0.18),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(13),
             ),
@@ -334,13 +343,19 @@ class SilsilaApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          isDense: true,
+          constraints: const BoxConstraints(minHeight: 34, maxHeight: 40),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(6),
+            borderSide: const BorderSide(color: Color(0xFFD8CDE3)),
+          ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(6),
             borderSide: const BorderSide(color: Color(0xFFE5DDED)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(6),
             borderSide: const BorderSide(color: Color(0xFFE5DDED)),
           ),
           focusedBorder: OutlineInputBorder(
