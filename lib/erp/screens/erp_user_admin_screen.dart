@@ -108,7 +108,15 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   Future<void> _load() async {
     if (!mounted) return;
     if (_db == null) {
-      setState(() { _loading = false; _error = 'الاتصال بقاعدة البيانات غير متاح.'; });
+      setState(() {
+        _loading = false;
+        _error = 'الاتصال بقاعدة البيانات غير متاح.';
+        if (_isType) {
+          _types = _localDefaultUserTypes();
+          _rows = List<Map<String, dynamic>>.from(_types);
+          _message = 'الجريد ظاهر بالأنواع الافتراضية للمعاينة، لكن قاعدة البيانات غير متاحة حاليًا.';
+        }
+      });
       return;
     }
     setState(() { _loading = true; _error = null; _message = null; });
