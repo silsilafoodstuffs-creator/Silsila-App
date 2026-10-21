@@ -134,7 +134,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   }
 
 
-  Widget _textField(TextEditingController controller,String label,{String? hint,double minHeight=42}) => SizedBox(
+  Widget _textField(TextEditingController controller,String label,{String? hint,double minHeight=57}) => SizedBox(
     height: minHeight,
     child: TextField(
       controller: controller,
@@ -221,7 +221,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
       OutlinedButton.icon(onPressed:_editing?_pickLogo:null,icon:const Icon(Icons.upload_file_rounded,size:18),label:Text(silsilaText('اختيار صورة'))),
       if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red)),
       const SizedBox(width:10),
-      SizedBox(width:240,child:_labeledField('لغة البرنامج',DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:42),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:7),border:OutlineInputBorder()),items:[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null){setState(()=>_language=v);SilsilaLanguage.setLanguage(v);}}:null),labelWidth:82)),
+      SizedBox(width:240,child:_labeledField('لغة البرنامج',DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:57,maxHeight:57),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:7),border:OutlineInputBorder()),items:[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null){setState(()=>_language=v);SilsilaLanguage.setLanguage(v);}}:null),labelWidth:82)),
     ])))),
     _section('ألوان وهوية البرنامج',Icons.palette_outlined,Column(children:[
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1050,child:Row(children:[
@@ -241,7 +241,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
         Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),decoration:BoxDecoration(color:const Color(0xFFF7F5FA),borderRadius:BorderRadius.circular(8)),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1250,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Padding(padding:const EdgeInsets.only(bottom:4),child:Text('${i+1}. ${_labels[i]}',style:TextStyle(fontSize:13,color:_parseColor(_colors[i].text,_settingsPurple),fontWeight:FontWeight.w800))),
           Row(children:[
-            SizedBox(width:245,child:_labeledField('نوع الخط',DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:42,maxHeight:42),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:7),border:OutlineInputBorder()),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:_editing?(v){if(v!=null)setState(()=>_fonts[i]=v);}:null),labelWidth:70)),
+            SizedBox(width:245,child:_labeledField('نوع الخط',DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:57,maxHeight:57),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:7),border:OutlineInputBorder()),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:_editing?(v){if(v!=null)setState(()=>_fonts[i]=v);}:null),labelWidth:70)),
             const SizedBox(width:8),SizedBox(width:135,child:_compactTextField(_sizes[i],'الحجم',labelWidth:42)),
             const SizedBox(width:8),SizedBox(width:260,child:_colorField(_colors[i],'لون الخط',labelWidth:65)),
             const SizedBox(width:8),FilterChip(label:Text(silsilaText('سميك')),selected:_bold[i],visualDensity:VisualDensity.compact,onSelected:_editing?(v)=>setState(()=>_bold[i]=v):null),
