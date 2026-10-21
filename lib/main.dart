@@ -1488,6 +1488,9 @@ class _MainShellState extends State<MainShell> {
             : selectedEntity == 'عملاء'
                 ? const <String>['الكل', 'منصة', 'جملة جملة', 'جملة', 'توزيع', 'تصدير', 'سلسلة محلات', 'ماركت', 'ميني ماركت', 'كشك', 'تموين', 'مسجد/كنيسة/جمعية', 'عطارة وعلافة', 'صيدلية', 'منظفات', 'جيم/بلايستيشن', 'مستشفى/صيدلية', 'جيش/شرطة']
                 : const <String>['الكل', 'شحن دولي', 'جميع المحافظات', 'قاهرة كبرى', 'شركة محدودة', 'أخرى'];
+    final categoryBrowseNames = browseSubcategory == 'الكل'
+        ? visibleCategoryNames.where((c) => c != 'الكل').toList()
+        : visibleCategoryNames.where((c) => c == browseSubcategory).toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
@@ -1737,15 +1740,15 @@ class _MainShellState extends State<MainShell> {
         ),
         const SizedBox(height: 13),
         if (selectedEntity == 'فئات') ...[
-          _sectionTitle('فئات الأصناف', visibleCategoryNames.length - 1),
+          _sectionTitle('فئات الأصناف', categoryBrowseNames.length),
           const SizedBox(height: 8),
-          if (visibleCategoryNames.where((c) => c != 'الكل').isEmpty)
+          if (categoryBrowseNames.isEmpty)
             Padding(
               padding: EdgeInsets.all(20),
               child: Text(silsilaText('لا توجد فئات مسجلة حتى الآن.'), textAlign: TextAlign.center),
             ),
           if (listViewMode) ...[
-          ...visibleCategoryNames.where((c) => c != 'الكل').map((category) {
+          ...categoryBrowseNames.map((category) {
             final expanded = expandedCatalogCategories.contains(category);
             final productsInCategory = visible.where((p) => p.category == category).toList();
             return Card(
@@ -1784,7 +1787,7 @@ class _MainShellState extends State<MainShell> {
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: visibleCategoryNames.where((c) => c != 'الكل').length,
+              itemCount: categoryBrowseNames.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 8,
@@ -1792,7 +1795,7 @@ class _MainShellState extends State<MainShell> {
                 childAspectRatio: 2.5,
               ),
               itemBuilder: (context, index) {
-                final category = visibleCategoryNames.where((c) => c != 'الكل').elementAt(index);
+                final category = categoryBrowseNames.elementAt(index);
                 final productsInCategory = visible.where((p) => p.category == category).toList();
                 return Card(
                   margin: EdgeInsets.zero,
