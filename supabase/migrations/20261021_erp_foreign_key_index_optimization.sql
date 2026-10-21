@@ -1,0 +1,24 @@
+-- Cover foreign keys flagged by Supabase's performance advisor.
+-- These indexes improve joins and parent-row update/delete checks as ERP data grows.
+create index if not exists erp_customer_shortages_customer_id_idx on public.erp_customer_shortages (customer_id);
+create index if not exists erp_customer_shortages_item_id_idx on public.erp_customer_shortages (item_id);
+create index if not exists erp_customer_shortages_source_document_id_idx on public.erp_customer_shortages (source_document_id);
+create index if not exists erp_parties_default_warehouse_id_idx on public.erp_parties (default_warehouse_id);
+create index if not exists erp_party_warehouses_party_id_idx on public.erp_party_warehouses (party_id);
+create index if not exists erp_party_warehouses_warehouse_id_idx on public.erp_party_warehouses (warehouse_id);
+create index if not exists erp_permission_template_rules_company_id_idx on public.erp_permission_template_rules (company_id);
+create index if not exists erp_purchase_lines_unit_id_idx on public.erp_purchase_lines (unit_id);
+create index if not exists erp_sales_campaign_items_item_id_idx on public.erp_sales_campaign_items (item_id);
+create index if not exists erp_sales_campaigns_owner_party_id_idx on public.erp_sales_campaigns (owner_party_id);
+create index if not exists erp_sales_documents_sales_rep_id_idx on public.erp_sales_documents (sales_rep_id);
+create index if not exists erp_sales_fulfillment_documents_created_by_idx on public.erp_sales_fulfillment_documents (created_by);
+create index if not exists erp_sales_fulfillment_documents_invoice_id_idx on public.erp_sales_fulfillment_documents (invoice_id);
+create index if not exists erp_sales_lines_unit_id_idx on public.erp_sales_lines (unit_id);
+create index if not exists erp_stock_reservations_branch_id_idx on public.erp_stock_reservations (branch_id);
+create index if not exists erp_stock_reservations_item_id_idx on public.erp_stock_reservations (item_id);
+create index if not exists erp_stock_reservations_warehouse_id_idx on public.erp_stock_reservations (warehouse_id);
+create index if not exists erp_user_branch_warehouse_access_branch_id_idx on public.erp_user_branch_warehouse_access (branch_id);
+create index if not exists erp_user_branch_warehouse_access_company_id_idx on public.erp_user_branch_warehouse_access (company_id);
+create index if not exists erp_user_branch_warehouse_access_warehouse_id_idx on public.erp_user_branch_warehouse_access (warehouse_id);
+create index if not exists erp_users_auth_user_id_idx on public.erp_users (auth_user_id);
+create index if not exists erp_users_user_type_id_idx on public.erp_users (user_type_id);
