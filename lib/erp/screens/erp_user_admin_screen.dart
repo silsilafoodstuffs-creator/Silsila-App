@@ -65,6 +65,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   bool _loading = false, _saving = false, _editMode = true;
   String? _error, _message, _selectedId, _selectedUserId;
   List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
+  List<Map<String,dynamic>> _branches = [], _warehouses = [];
   String? _selectedTemplateId;
   String? _activeCompanyId;
   String _selectedPageKey = 'إدارة البرنامج|بيانات أساسية|بيانات الشركة';
@@ -155,6 +156,16 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         // Load users directly; avoid a fragile PostgREST embedded foreign-key relationship.
         final result = await _db!.from('erp_users').select().eq('company_id', _company).order('user_code');
         userList = (result as List).map((x) => Map<String,dynamic>.from(x)).toList();
+        if (_isUser) {
+          try {
+            final b = await _db!.from('erp_branches').select().eq('company_id', _company).eq('is_active', true).order('branch_name');
+            _branches = (b as List).map((x) => Map<String,dynamic>.from(x)).toList();
+          } catch (_) { _branches = []; }
+          try {
+            final w = await _db!.from('erp_warehouses').select().eq('company_id', _company).eq('is_active', true).order('warehouse_name');
+            _warehouses = (w as List).map((x) => Map<String,dynamic>.from(x)).toList();
+          } catch (_) { _warehouses = []; }
+        }
       }
       if (_isTemplate || _isPermissions) {
         final result = await _db!.from('erp_permission_templates').select().eq('company_id', _company).order('template_code');
@@ -200,7 +211,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if(_isPermissions){setState(()=>_message='اختر المستخدم ثم عدّل مربعات الصلاحيات في الجدول.');return;}
       final payload=<String,dynamic>{'company_id':_company,'is_active':true};
       if(_isType){payload.addAll({'name_ar':'نوع مستخدم جديد','name_en':'New user type','show_at_login':false});}
-      else if(_isUser){payload.addAll({'name_ar':'مستخدم جديد','name_en':'New user','user_type_id':_types.isEmpty?null:_types.first['id']});}
+      else if(_isUser){payload.addAll({'name_ar':'مستخدم جديد','name_en':'New user','user_type_id':_types.isEmpty?null:_types.first['id'],'has_sub_warehouse':false});}
       else {payload.addAll({'name_ar':'قالب صلاحيات جديد','name_en':'New permission template'});}
       final row=await _db!.from(_table).insert(payload).select().single();
       if(!mounted)return;
@@ -220,9 +231,16 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         for(final row in masterRows){
           final payload=<String,dynamic>{};
           if(_isType)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':(!['ادمن','موظف'].contains(_s(row['name_ar'])))&&row['show_at_login']==true});
-          if(_isUser||_isPermissions)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id']});
+          if(_isUser||_isPermissions)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],if(_isUser)'has_sub_warehouse':row['has_sub_warehouse']==true});
           if(_isTemplate)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true});
-          if(_s(row['id']).isNotEmpty)await _db!.from(targetTable).update(payload).eq('company_id',_company).eq('id',row['id']);
+          if(_s(row['id']).isNotEmpty) {
+            await _db!.from(targetTable).update(payload).eq('company_id',_company).eq('id',row['id']);
+            final password = _s(row['_password_draft']);
+            if (_isUser && password.isNotEmpty) {
+              await _db!.rpc('set_erp_user_password', params: {'p_user_id': row['id'], 'p_password': password});
+              row['_password_draft'] = '';
+            }
+          }
         }
         if(_isTemplate && _selectedId!=null){
           for(final rule in _rules){
@@ -390,6 +408,59 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     onChanged:(v)=>row[field]=v,
   ));
 
+  Future<void> _openBranchWarehousePicker(String userId) async {
+    if (_branches.isEmpty || _warehouses.isEmpty) {
+      if(mounted)setState(()=>_error='لا توجد فروع أو مخازن نشطة متاحة. أضف الفروع والمخازن أولًا ثم أعد المحاولة.');
+      return;
+    }
+    try {
+      final existing = await _db!.from('erp_user_branch_warehouse_access').select().eq('company_id',_company).eq('user_id',userId);
+      final current = (existing as List).map((x)=>Map<String,dynamic>.from(x)).toList();
+      final selected = <String>{for(final x in current.where((x)=>x['is_allowed']==true)) '${x['branch_id']}|${x['warehouse_id']}'};
+      String? primary = current.where((x)=>x['is_default']==true).map((x)=>'${x['branch_id']}|${x['warehouse_id']}').firstOrNull;
+      final picked = await showDialog<Map<String,dynamic>>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(context,setDialogState)=>AlertDialog(
+        title:const Text('الفروع والمخازن المسموح بها'),
+        content:SizedBox(width:650,height:460,child:Column(children:[
+          const Text('حدد الفروع والمخازن المسموح بها، ثم اختر مخزنًا افتراضيًا واحدًا لاستخدامه تلقائيًا في الحركات.',style:TextStyle(fontSize:12)),
+          Expanded(child:ListView(children:[
+            for(final branch in _branches) ...[
+              Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Text(_s(branch['branch_name']),style:const TextStyle(fontWeight:FontWeight.w800,color:_userAdminPurple))),
+              for(final warehouse in _warehouses.where((w)=>w['branch_id']==branch['id']))
+                Builder(builder:(context){
+                  final key='${branch['id']}|${warehouse['id']}';
+                  final enabled=selected.contains(key);
+                  return Row(children:[
+                    Checkbox(value:enabled,onChanged:(v)=>setDialogState((){
+                      if(v==true)selected.add(key);else{selected.remove(key);if(primary==key)primary=null;}
+                    })),
+                    Expanded(child:Text(_s(warehouse['warehouse_name']))),
+                    Radio<String>(value:key,groupValue:primary,onChanged:enabled?(v)=>setDialogState(()=>primary=v):null),
+                    const Text('افتراضي',style:TextStyle(fontSize:11)),
+                  ]);
+                }),
+            ]
+          ])),
+        ])),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إلغاء')),
+          FilledButton(onPressed:(){
+            if(primary!=null&&!selected.contains(primary)){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('المخزن الافتراضي يجب أن يكون ضمن المخازن المسموح بها.')));return;}
+            Navigator.pop(dialogContext,{'allowed':selected.toList(),'default':primary});
+          },child:const Text('حفظ الاختيارات')),
+        ],
+      )));
+      if(picked==null)return;
+      final keys=(picked['allowed'] as List).cast<String>();
+      final defaultKey=picked['default'] as String?;
+      await _db!.from('erp_user_branch_warehouse_access').delete().eq('company_id',_company).eq('user_id',userId);
+      for(final key in keys){
+        final parts=key.split('|');
+        await _db!.from('erp_user_branch_warehouse_access').insert({'company_id':_company,'user_id':userId,'branch_id':parts[0],'warehouse_id':parts[1],'is_allowed':true,'is_default':key==defaultKey});
+      }
+      if(mounted)setState(()=>_message='تم حفظ صلاحيات الفروع والمخازن والمخزن الافتراضي.');
+    }catch(e){if(mounted)setState(()=>_error='تعذر حفظ صلاحيات الفروع والمخازن: $e');}
+  }
+
   Widget _masterGrid(){
     final codeField=_isType?'type_code':_isUser?'user_code':'template_code';
     return SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
@@ -397,9 +468,9 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
       columns:[
         const DataColumn(label:Text('م')),DataColumn(label:Text(_isType?'كود النوع':_isUser?'كود المستخدم':'كود القالب')),
-        const DataColumn(label:Text('اسم عربي')),const DataColumn(label:Text('اسم إنجليزي')),
+        if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isUser)const DataColumn(label:Text('اسم المستخدم')),if(_isUser)const DataColumn(label:Text('كلمة المرور')),
         if(_isUser)const DataColumn(label:Text('نوع المستخدم')),
-        const DataColumn(label:Text('الصورة')),const DataColumn(label:Text('نشط')),
+        if(!_isUser)const DataColumn(label:Text('الصورة')),const DataColumn(label:Text('نشط')),if(_isUser)const DataColumn(label:Text('له خزينة فرعية')),if(_isUser)const DataColumn(label:Text('الفروع والمخازن')),
         if(_isType)const DataColumn(label:Text('يظهر للدخول')),
         if(_isTemplate)const DataColumn(label:Text('قوائم وصلاحيات')),
       ],
@@ -407,15 +478,19 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         final row=_rows[i];final id=_s(row['id']);
         return DataRow(selected:id==_selectedId,onSelectChanged:(v)async{setState(()=>_selectedId=v==true?id:null);if(v==true&&_isTemplate)await _loadRules();},cells:[
           DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]))),
-          DataCell(_textCell(row,'name_ar')),DataCell(_textCell(row,'name_en')),
+          if(!_isUser)DataCell(_textCell(row,'name_ar')),if(!_isUser)DataCell(_textCell(row,'name_en')),
+          if(_isUser)DataCell(_textCell(row,'name_ar',width:165)),
+          if(_isUser)DataCell(SizedBox(width:185,child:Row(children:[Expanded(child:TextFormField(initialValue:_s(row['_password_draft']),obscureText:row['_password_visible']!=true,decoration:const InputDecoration(hintText:'كلمة مرور جديدة',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_draft']=v)),IconButton(tooltip:'إظهار/إخفاء كلمة المرور',visualDensity:VisualDensity.compact,onPressed:()=>setState(()=>row['_password_visible']=row['_password_visible']!=true),icon:Icon(row['_password_visible']==true?Icons.visibility_off:Icons.visibility,size:18))]))),
           if(_isUser)DataCell(SizedBox(width:155,child:DropdownButtonFormField<String>(
             key:ValueKey('${id}-type-${row['user_type_id']}'),value:_types.any((t)=>_s(t['id'])==_s(row['user_type_id']))?_s(row['user_type_id']):null,isExpanded:true,
             decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),
             items:_types.map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
             onChanged:_editMode?(v)=>setState(()=>row['user_type_id']=v):null,
           ))),
-          DataCell(_imageCell(row)),
+          if(!_isUser)DataCell(_imageCell(row)),
           DataCell(Checkbox(value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+          if(_isUser)DataCell(Checkbox(value:row['has_sub_warehouse']==true,onChanged:_editMode?(v)=>setState(()=>row['has_sub_warehouse']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+          if(_isUser)DataCell(OutlinedButton.icon(onPressed:()=>_openBranchWarehousePicker(id),icon:const Icon(Icons.add_location_alt_outlined,size:16),label:const Text('+ فروع'))),
           if(_isType)DataCell(Checkbox(value:!['ادمن','موظف'].contains(_s(row['name_ar']))&&row['show_at_login']==true,onChanged:_editMode&&!['ادمن','موظف'].contains(_s(row['name_ar']))?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
           if(_isTemplate)DataCell(OutlinedButton.icon(onPressed:()async{setState(()=>_selectedId=id);await _loadRules();await _openMenuPicker(parentId:id,template:true);},icon:const Icon(Icons.drive_file_move_outlined,size:16),label:const Text('جلب قوائم'))),
         ]);
@@ -542,6 +617,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       if(event is KeyDownEvent && event.logicalKey==LogicalKeyboardKey.f1){
         if(_isTemplate && _selectedId!=null){_openMenuPicker(parentId:_selectedId!,template:true);return KeyEventResult.handled;}
         if(_isPermissions && _selectedUserId!=null){_openMenuPicker(parentId:_selectedUserId!,template:false);return KeyEventResult.handled;}
+        if(_isUser && _selectedId!=null){_openBranchWarehousePicker(_selectedId!);return KeyEventResult.handled;}
       }
       return KeyEventResult.ignored;
     },child:Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
