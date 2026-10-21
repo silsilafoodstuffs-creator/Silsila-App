@@ -32,7 +32,11 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   @override
   void didUpdateWidget(covariant ErpActivityTypesScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.companyId != widget.companyId) _load();
+    if (oldWidget.companyId != widget.companyId) {
+      _resolvedCompanyId = null;
+      _rows.clear();
+      _load();
+    }
   }
   @override
   void dispose() { _code.dispose(); _ar.dispose(); _en.dispose(); super.dispose(); }
@@ -62,9 +66,12 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         }
       }
       if (companyId == null || companyId.trim().isEmpty) {
-        if (mounted) setState(() => _message = userId == null
-            ? 'سجّل الدخول إلى النظام لعرض أنواع الأنشطة وحفظها.'
-            : 'لا توجد شركة نشطة مرتبطة بالمستخدم الحالي.');
+        if (mounted) setState(() {
+          _rows.clear();
+          _message = userId == null
+              ? 'سجّل الدخول إلى النظام لعرض أنواع الأنشطة وحفظها.'
+              : 'لا توجد شركة نشطة مرتبطة بالمستخدم الحالي.';
+        });
         return;
       }
       _resolvedCompanyId = companyId;
