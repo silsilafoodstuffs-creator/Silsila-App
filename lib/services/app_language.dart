@@ -265,7 +265,6 @@ class SilsilaLanguageToggle extends StatelessWidget {
     elevation: 4,
     shape: const CircleBorder(),
     child: IconButton(
-      tooltip: SilsilaLanguage.isEnglish ? 'Switch to Arabic' : 'Switch to English',
       onPressed: () => SilsilaLanguage.setLanguage(SilsilaLanguage.isEnglish ? 'ar' : 'en'),
       icon: Text(
         SilsilaLanguage.isEnglish ? 'ع' : 'EN',
