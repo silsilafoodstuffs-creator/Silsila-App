@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _currencyPurple = Color(0xFF3E007D);
@@ -93,7 +94,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Directionality(textDirection:TextDirection.rtl,child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(add: _startNew, save: _save, child: Directionality(textDirection:TextDirection.rtl,child:Padding(padding:const EdgeInsets.all(18),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Card(color:_currencyPurple,child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       const Row(children:[Icon(Icons.currency_exchange_rounded,color:_currencyOrange,size:28),SizedBox(width:10),Expanded(child:Text('دليل العملات',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)))]),
       const SizedBox(height:8),
@@ -116,5 +117,5 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
     ]))),
     const SizedBox(height:12),
     Expanded(child:_loading?const Center(child:CircularProgressIndicator()):_rows.isEmpty?Center(child:Text(_error??'لا توجد عملات مسجلة حتى الآن. أضف أول عملة من النموذج أعلاه.',textAlign:TextAlign.center)):SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(headingRowColor:WidgetStateProperty.all(const Color(0xFFF3EFF8)),columns:const[DataColumn(label:Text('م')),DataColumn(label:Text('كود')),DataColumn(label:Text('اسم العملة عربي')),DataColumn(label:Text('مختصر العملة إنجليزي')),DataColumn(label:Text('الحالة')),DataColumn(label:Text('الإجراءات'))],rows:[for(var i=0;i<_rows.length;i++) DataRow(cells:[DataCell(Text('${i+1}')),DataCell(Text((_rows[i]['currency_code']??'').toString())),DataCell(Text((_rows[i]['currency_name_ar']??'').toString())),DataCell(Text((_rows[i]['currency_symbol']??'').toString())),DataCell(Text(_rows[i]['is_active']==true?'نشطة':'موقوفة')),DataCell(Row(mainAxisSize:MainAxisSize.min,children:[IconButton(tooltip:'تعديل',onPressed:()=>_edit(_rows[i]),icon:const Icon(Icons.edit_outlined,color:_currencyPurple)),IconButton(tooltip:'تفعيل أو إيقاف',onPressed:_editing?()=>_toggleActive(_rows[i]):null,icon:Icon(_rows[i]['is_active']==true?Icons.toggle_on_rounded:Icons.toggle_off_rounded,color:_currencyOrange,size:28))]))])]))),
-  ])));
+  ]))));
 }
