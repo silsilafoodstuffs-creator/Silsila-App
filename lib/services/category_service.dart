@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CategoryService {
@@ -95,6 +97,8 @@ class CategoryService {
     int? parentId,
     String? icon,
     String? imageUrl,
+    Uint8List? imageData,
+    String? imageMimeType,
     String? activityType,
     int sortOrder = 0,
   }) async {
@@ -114,7 +118,17 @@ class CategoryService {
 
     final cleanIcon = _emptyToNull(icon);
     final cleanActivity = _emptyToNull(activityType);
-    final cleanImageUrl = _emptyToNull(imageUrl);
+    final cleanImageUrl = imageData == null ? _emptyToNull(imageUrl) : null;
+    final cleanImageMimeType = _emptyToNull(imageMimeType);
+    if (imageData != null && imageData.isEmpty) {
+      throw ArgumentError('ملف صورة القسم فارغ.');
+    }
+    if (imageData != null && imageData.length > 5 * 1024 * 1024) {
+      throw ArgumentError('حجم صورة القسم يجب ألا يتجاوز 5 ميجابايت.');
+    }
+    if (imageData != null && cleanImageMimeType == null) {
+      throw ArgumentError('نوع ملف الصورة مطلوب.');
+    }
 
     if (cleanIcon != null && cleanIcon.length > 80) {
       throw ArgumentError('اسم أيقونة القسم طويل أكثر من اللازم.');
@@ -135,6 +149,8 @@ class CategoryService {
           'parent_id': parentId,
           'icon': cleanIcon,
           'image_url': cleanImageUrl,
+          'image_data': imageData == null ? null : _toPostgresBytea(imageData),
+          'image_mime_type': cleanImageMimeType,
           'activity_type': cleanActivity,
           'sort_order': sortOrder,
           'is_active': true,
@@ -152,6 +168,8 @@ class CategoryService {
     int? parentId,
     String? icon,
     String? imageUrl,
+    Uint8List? imageData,
+    String? imageMimeType,
     String? activityType,
     int? sortOrder,
     bool? isActive,
@@ -190,7 +208,17 @@ class CategoryService {
       updates['icon'] = cleanIcon;
     }
 
-    if (imageUrl != null) {
+    if (imageData != null) {
+      if (imageData.isEmpty) throw ArgumentError('ملف صورة القسم فارغ.');
+      if (imageData.length > 5 * 1024 * 1024) {
+        throw ArgumentError('حجم صورة القسم يجب ألا يتجاوز 5 ميجابايت.');
+      }
+      final mime = _emptyToNull(imageMimeType);
+      if (mime == null) throw ArgumentError('نوع ملف الصورة مطلوب.');
+      updates['image_data'] = _toPostgresBytea(imageData);
+      updates['image_mime_type'] = mime;
+      updates['image_url'] = null;
+    } else if (imageUrl != null) {
       final cleanImageUrl = _emptyToNull(imageUrl);
 
       if (cleanImageUrl != null) {
@@ -276,6 +304,11 @@ class CategoryService {
     final cleaned = value?.trim();
 
     return cleaned == null || cleaned.isEmpty ? null : cleaned;
+  }
+
+  String _toPostgresBytea(Uint8List bytes) {
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return r'\\x' + hex;
   }
 
   void _validateImageUrl(String value) {
