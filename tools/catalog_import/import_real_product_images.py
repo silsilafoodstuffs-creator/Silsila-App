@@ -157,9 +157,16 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
         })
         try:
             data = request_json(f"{OFF_API}?{params}")
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError):
+        except urllib.error.HTTPError as exc:
+            print(f"  SOURCE HTTP ERROR for query {term!r}: HTTP {exc.code} {exc.reason}")
             continue
-        for product in data.get("products", []):
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            print(f"  SOURCE REQUEST ERROR for query {term!r}: {type(exc).__name__}: {exc}")
+            continue
+        products = data.get("products", [])
+        if not products:
+            print(f"  SOURCE returned 0 results for query {term!r} (status OK)")
+        for product in products:
             code = str(product.get("code") or "")
             if code and code not in seen:
                 seen.add(code)
