@@ -133,27 +133,30 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   Future<void> _save() async {
     if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا قبل تغيير البيانات.'); return; }
     if ((_companyId ?? '').isEmpty) { setState(() => _message = 'لا توجد شركة نشطة للحفظ.'); return; }
-    final index = _rows.indexWhere((r) => r['كود النشاط'] == _selected);
-    if (index < 0) { setState(() => _message = 'حدد صفًا أو اضغط إضافة لإنشاء صف جديد.'); return; }
-    final row = _rows[index];
-    final code = (row['كود النشاط'] ?? '').trim();
-    final ar = (row['اسم النشاط عربي'] ?? '').trim();
-    if (code.isEmpty || ar.isEmpty || code.startsWith('NEW-')) {
-      setState(() => _message = 'أدخل كود النشاط واسم النشاط داخل صف الجدول أولًا.');
-      return;
-    }
-    if (_rows.any((r) => r['كود النشاط'] == code && r != row && r['_مرجع داخلي'] != row['_مرجع داخلي'])) {
-      setState(() => _message = 'كود النشاط مستخدم بالفعل.');
-      return;
+    final rowsToSave = _rows.where((r) => (r['اسم النشاط عربي'] ?? '').trim().isNotEmpty || r['_مسودة'] == 'true').toList();
+    if (rowsToSave.isEmpty) { setState(() => _message = 'أضف صفًا وأدخل بياناته قبل الحفظ.'); return; }
+    for (final row in rowsToSave) {
+      final code = (row['كود النشاط'] ?? '').trim();
+      final ar = (row['اسم النشاط عربي'] ?? '').trim();
+      if (code.isEmpty || ar.isEmpty || code.startsWith('NEW-')) {
+        setState(() { _selected = row['كود النشاط']; _message = 'أكمل كود النشاط واسمه العربي في كل صف جديد قبل الحفظ.'; });
+        return;
+      }
+      if (_rows.any((r) => r['كود النشاط'] == code && !identical(r, row) && r['_مرجع داخلي'] != row['_مرجع داخلي'])) {
+        setState(() { _selected = code; _message = 'كود النشاط $code مستخدم بالفعل.'; });
+        return;
+      }
     }
     setState(() => _saving = true);
     try {
-      final payload = Map<String,String>.from(row)
-        ..remove('_مسودة')
-        ..remove('_مرجع داخلي');
-      await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: payload);
+      for (final row in rowsToSave) {
+        final payload = Map<String,String>.from(row)
+          ..remove('_مسودة')
+          ..remove('_مرجع داخلي');
+        await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: payload);
+      }
       await _load();
-      if (mounted) setState(() { _editing = false; _message = 'تم حفظ النشاط في قاعدة البيانات.'; });
+      if (mounted) setState(() { _editing = false; _message = 'تم حفظ جميع صفوف أنواع الأنشطة في قاعدة البيانات.'; });
     } catch (e) {
       if (mounted) setState(() => _message = 'تعذر الحفظ: ${e.toString()}');
     } finally {
