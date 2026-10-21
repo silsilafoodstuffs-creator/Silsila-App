@@ -75,9 +75,16 @@ drop policy if exists erp_einvoice_settings_select_finance on public.erp_einvoic
 create policy erp_einvoice_settings_select_finance on public.erp_einvoice_settings for select to authenticated
 using (public.erp_user_has_company_role(company_id,array['owner','admin','accountant']::text[]));
 drop policy if exists erp_einvoice_settings_write_finance on public.erp_einvoice_settings;
-create policy erp_einvoice_settings_write_finance on public.erp_einvoice_settings for all to authenticated
+drop policy if exists erp_einvoice_settings_insert_finance on public.erp_einvoice_settings;
+create policy erp_einvoice_settings_insert_finance on public.erp_einvoice_settings for insert to authenticated
+with check (public.erp_user_has_company_role(company_id,array['owner','admin','accountant']::text[]));
+drop policy if exists erp_einvoice_settings_update_finance on public.erp_einvoice_settings;
+create policy erp_einvoice_settings_update_finance on public.erp_einvoice_settings for update to authenticated
 using (public.erp_user_has_company_role(company_id,array['owner','admin','accountant']::text[]))
 with check (public.erp_user_has_company_role(company_id,array['owner','admin','accountant']::text[]));
+drop policy if exists erp_einvoice_settings_delete_admin on public.erp_einvoice_settings;
+create policy erp_einvoice_settings_delete_admin on public.erp_einvoice_settings for delete to authenticated
+using (public.erp_user_has_company_role(company_id,array['owner','admin']::text[]));
 
 drop policy if exists erp_einvoice_operations_member_access on public.erp_einvoice_operations;
 drop policy if exists erp_einvoice_operations_select_member on public.erp_einvoice_operations;

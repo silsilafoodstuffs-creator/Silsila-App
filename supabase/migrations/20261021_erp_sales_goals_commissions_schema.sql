@@ -246,3 +246,23 @@ from (values
 ('أسوان','Aswan'),('البحر الأحمر','Red Sea'),('الوادي الجديد','New Valley')
 ) as x(gov,name_en)
 where not exists (select 1 from public.erp_geo_areas g where g.parent_id is null and g.governorate=x.gov and g.area_kind='governorate');
+
+
+-- Existing representative table may predate this schema, so ensure RLS and policies explicitly.
+alter table public.erp_sales_representatives enable row level security;
+drop policy if exists erp_sales_representatives_select_member on public.erp_sales_representatives;
+drop policy if exists erp_sales_representatives_insert_operator on public.erp_sales_representatives;
+drop policy if exists erp_sales_representatives_update_operator on public.erp_sales_representatives;
+drop policy if exists erp_sales_representatives_delete_admin on public.erp_sales_representatives;
+drop policy if exists erp_sales_reps_select_company on public.erp_sales_representatives;
+drop policy if exists erp_sales_reps_write_manager on public.erp_sales_representatives;
+create policy erp_sales_representatives_select_member on public.erp_sales_representatives
+for select to authenticated using (public.erp_user_can_access_company(company_id));
+create policy erp_sales_representatives_insert_manager on public.erp_sales_representatives
+for insert to authenticated with check (public.erp_user_has_company_role(company_id,array['owner','admin','manager','accountant']::text[]));
+create policy erp_sales_representatives_update_manager on public.erp_sales_representatives
+for update to authenticated
+using (public.erp_user_has_company_role(company_id,array['owner','admin','manager','accountant']::text[]))
+with check (public.erp_user_has_company_role(company_id,array['owner','admin','manager','accountant']::text[]));
+create policy erp_sales_representatives_delete_admin on public.erp_sales_representatives
+for delete to authenticated using (public.erp_user_has_company_role(company_id,array['owner','admin']::text[]));
