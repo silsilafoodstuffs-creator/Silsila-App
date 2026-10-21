@@ -15,9 +15,9 @@ select
     when i.item_name ilike 'جبنة%' and i.item_name ilike '%نصف كيلو%' then 'علبة جبنة نصف كيلو'
     else 'وحدة داخلية'
   end,
-  substring(i.base_unit from '\\(([0-9]+)')::numeric,
+  substring(i.base_unit from '\(([0-9]+)')::numeric,
   false,
   true
 from public.erp_items i
-where i.base_unit ~ '\\([0-9]+'
+where i.base_unit ~ '\([0-9]+'
 on conflict (item_id,unit_code) do nothing;
