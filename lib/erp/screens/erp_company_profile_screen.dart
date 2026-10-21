@@ -105,7 +105,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       });
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _isEditing = false; _error = null; });
     try {
       final row = await _db!
           .from('erp_companies')
