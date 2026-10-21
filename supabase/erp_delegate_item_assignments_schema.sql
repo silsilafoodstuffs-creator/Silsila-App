@@ -76,7 +76,7 @@ drop policy if exists erp_delegate_item_assignments_insert_manager
 create policy erp_delegate_item_assignments_insert_manager
 on public.erp_delegate_item_assignments for insert to authenticated
 with check (
-  (assigned_by is null or assigned_by = auth.uid())
+  (assigned_by is null or assigned_by = (select auth.uid()))
   and public.erp_user_has_company_role(company_id, array['owner','admin','manager']::text[])
 );
 
@@ -86,7 +86,7 @@ create policy erp_delegate_item_assignments_update_manager
 on public.erp_delegate_item_assignments for update to authenticated
 using (public.erp_user_has_company_role(company_id, array['owner','admin','manager']::text[]))
 with check (
-  (assigned_by is null or assigned_by = auth.uid())
+  (assigned_by is null or assigned_by = (select auth.uid()))
   and public.erp_user_has_company_role(company_id, array['owner','admin','manager']::text[])
 );
 
