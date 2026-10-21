@@ -1834,29 +1834,6 @@ class _MainShellState extends State<MainShell> {
             ),
           ],
 
-        ] else if (selectedEntity == 'فئات') ...[
-          _sectionTitle('الأصناف', visible.length),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 42,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: visibleCategoryNames.map((category) {
-                final selected = selectedCategory == category;
-                return Padding(
-                  padding: const EdgeInsetsDirectional.only(end: 7),
-                  child: ChoiceChip(
-                    label: Text(category),
-                    selected: selected,
-                    selectedColor: orange.withValues(alpha: .25),
-                    onSelected: (_) => setState(() => selectedCategory = category),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 10),
-          _productResults(visible),
         ] else if (selectedEntity == 'موردين') ...[
           _sectionTitle(
             'الموردون',
