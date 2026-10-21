@@ -128,11 +128,12 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         final result = await _db!.from('erp_user_types').select().eq('company_id', _company).order('type_code');
         typeList = (result as List).map((x) => Map<String, dynamic>.from(x)).toList();
         const defaults = <Map<String, dynamic>>[
-          {'name_ar':'مورد','name_en':'Supplier','show_at_login':true},
-          {'name_ar':'عميل','name_en':'Customer','show_at_login':true},
-          {'name_ar':'شركة شحن','name_en':'Shipping Company','show_at_login':true},
           {'name_ar':'ادمن','name_en':'Admin','show_at_login':false},
           {'name_ar':'موظف','name_en':'Employee','show_at_login':false},
+          {'name_ar':'مورد','name_en':'Supplier','show_at_login':true},
+          {'name_ar':'عميل','name_en':'Customer','show_at_login':true},
+          {'name_ar':'مندوب','name_en':'Delegate','show_at_login':true},
+          {'name_ar':'شركة شحن','name_en':'Shipping Company','show_at_login':true},
         ];
         // Seed each required type in Supabase if missing; keep existing IDs and user links.
         for (final type in defaults) {
@@ -143,14 +144,13 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             });
           }
         }
-        // The requested initial catalog contains five types. Hide the old legacy
-        // delegate type from this catalog without deleting a type that users may reference.
+        // Always show the complete six-type catalog. The delegate type is a
+        // first-class type and must not be filtered out of the grid.
         typeList = (await _db!.from('erp_user_types').select()
             .eq('company_id', _company).order('type_code') as List)
-            .map((x) => Map<String,dynamic>.from(x))
-            .where((row) => _s(row['name_ar']) != 'مندوب')
+            .map((x) => Map<String, dynamic>.from(x))
             .toList();
-        const priority = {'مورد':0,'عميل':1,'شركة شحن':2,'ادمن':3,'موظف':4};
+        const priority = {'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
         typeList.sort((a,b) => (priority[_s(a['name_ar'])] ?? 99).compareTo(priority[_s(b['name_ar'])] ?? 99));
       }
       if (_isUser || _isPermissions) {
@@ -184,7 +184,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         _loading=false; _error=null;
         if (_isUser && userList.isEmpty) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
         if (_isType && typeList.any((r)=>r['_local_default']==true)) _message='أنواع المستخدمين الافتراضية معروضة في الجدول، لكن تعذر حفظها في قاعدة البيانات بسبب الصلاحيات أو سياسات RLS. يمكنك مراجعة السياسات ثم الضغط على تحديث.';
-        if (_isType && typeList.isEmpty) _message='لا توجد أنواع مستخدمين مسجلة حتى الآن. استخدم إضافة لإنشاء نوع جديد.';
+        if (_isType && typeList.length < 6) _message='عدد أنواع المستخدمين أقل من 6؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
       });
       if (_isTemplate && _selectedId!=null) await _loadRules();
       if (_isPermissions) await _loadUserRules();
