@@ -131,6 +131,21 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
     if name:
         searches.append(" ".join(part for part in (brand, name) if part))
         searches.append(name)
+        search_terms = {
+            "أرز": "rice", "بسمتي": "basmati rice", "مكرونة": "pasta", "زيت": "cooking oil",
+            "سمن": "ghee", "سكر": "sugar", "دقيق": "flour", "عدس": "lentils",
+            "فول": "fava beans", "حمص": "chickpeas", "شاي": "tea", "قهوة": "coffee",
+            "عصير": "juice", "جبن": "cheese", "لبن": "milk", "زبادي": "yogurt",
+            "مياه": "water", "مشروب غازي": "soft drink", "بسكويت": "biscuits",
+            "شوكولاتة": "chocolate", "شيكولاتة": "chocolate", "منظف": "cleaner",
+            "مسحوق": "laundry detergent", "مناديل": "tissue", "مجمد": "frozen food",
+            "تمر": "dates", "عسل": "honey", "مربى": "jam", "كاتشب": "ketchup",
+            "مايونيز": "mayonnaise", "بهارات": "spices", "توابل": "seasoning",
+            "مكسرات": "nuts", "شيبسي": "potato chips", "رقائق": "chips",
+        }
+        english = " ".join(term for arabic, term in search_terms.items() if arabic in name)
+        if english:
+            searches.append(" ".join(part for part in (brand, english) if part))
     found: list[dict[str, Any]] = []
     seen: set[str] = set()
     for term in searches:
