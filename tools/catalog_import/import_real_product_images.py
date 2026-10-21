@@ -160,7 +160,7 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
         searches.append(" ".join(part for part in (brand, name) if part))
         searches.append(name)
         search_terms = {
-            "أرز": "rice", "بسمتي": "basmati rice", "مكرونة": "pasta", "زيت": "cooking oil",
+            "أرز": "rice", "أبيض": "white", "عريض": "short grain", "بسمتي": "basmati rice", "مكرونة": "pasta", "زيت": "cooking oil",
             "سمن": "ghee", "سكر": "sugar", "دقيق": "flour", "عدس": "lentils",
             "فول": "fava beans", "حمص": "chickpeas", "شاي": "tea", "قهوة": "coffee",
             "عصير": "juice", "جبن": "cheese", "لبن": "milk", "زبادي": "yogurt",
