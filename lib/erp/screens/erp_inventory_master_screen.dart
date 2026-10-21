@@ -209,6 +209,11 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   void _newCurrentRecord() {
+    final currentFields = _view == 'warehouses' ? [_warehouseCode.text, _warehouseName.text, _address.text] : _view == 'groups' ? [_groupCode.text, _groupName.text] : [_itemCode.text, _itemName.text, _barcode.text];
+    if (currentFields.any((value) => value.trim().isNotEmpty)) {
+      setState(() => _message = 'تم الاحتفاظ بالبيانات الحالية كما هي. احفظ السجل الحالي أولًا قبل بدء سجل جديد.');
+      return;
+    }
     setState(() {
       _error = null; _message = 'نموذج إضافة جديد جاهز.';
       if (_view == 'warehouses') { _warehouseCode.clear(); _warehouseName.clear(); _address.clear(); _branchId = null; }
