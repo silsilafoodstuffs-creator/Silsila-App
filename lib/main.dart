@@ -887,7 +887,8 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int tab = 3;
-  String selectedEntity = 'الفئات';
+  String selectedEntity = 'فئات';
+  String browseSubcategory = 'الكل';
   bool listViewMode = true;
   bool showProductImages = true;
   final Set<String> expandedCatalogCategories = <String>{};
@@ -1479,14 +1480,14 @@ class _MainShellState extends State<MainShell> {
       return categoryMatch && searchMatch;
     }).toList();
 
-    final entities = [
-      ('الفئات', Icons.category_outlined),
-      ('الأصناف', Icons.inventory_2_outlined),
-      ('الموردين', Icons.storefront_outlined),
-      ('العملاء', Icons.people_alt_outlined),
-      ('المناديب', Icons.badge_outlined),
-      ('شركات الشحن', Icons.local_shipping_outlined),
-    ];
+    const entities = <String>['فئات', 'موردين', 'عملاء', 'شركات شحن'];
+    final browseSubcategories = selectedEntity == 'فئات'
+        ? <String>['الكل', ...visibleCategoryNames.where((c) => c != 'الكل')]
+        : selectedEntity == 'موردين'
+            ? const <String>['الكل', 'شركة إنتاج', 'جملة جملة', 'جملة', 'توزيع', 'منصة']
+            : selectedEntity == 'عملاء'
+                ? const <String>['الكل', 'منصة', 'جملة جملة', 'جملة', 'توزيع', 'تصدير', 'سلسلة محلات', 'ماركت', 'ميني ماركت', 'كشك', 'تموين', 'مسجد/كنيسة/جمعية', 'عطارة وعلافة', 'صيدلية', 'منظفات', 'جيم/بلايستيشن', 'مستشفى/صيدلية', 'جيش/شرطة']
+                : const <String>['الكل', 'شحن دولي', 'جميع المحافظات', 'قاهرة كبرى', 'شركة محدودة', 'أخرى'];
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 18),
@@ -1609,43 +1610,76 @@ class _MainShellState extends State<MainShell> {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 43,
+          height: 34,
+          child: Row(
+            children: entities.map((entity) {
+              final selected = selectedEntity == entity;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 5),
+                  child: ChoiceChip(
+                    label: Center(child: Text(entity, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    selected: selected,
+                    showCheckmark: false,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 2),
+                    labelStyle: TextStyle(
+                      fontSize: 10.5,
+                      height: 1.0,
+                      color: selected ? Colors.white : purple,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    backgroundColor: Colors.white,
+                    selectedColor: purple,
+                    side: BorderSide(color: purple.withValues(alpha: .15)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                    onSelected: (_) => setState(() {
+                      selectedEntity = entity;
+                      selectedCategory = 'الكل';
+                      browseSubcategory = 'الكل';
+                    }),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 5),
+        SizedBox(
+          height: 31,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            children: entities.map((entity) {
-              final selected = selectedEntity == entity.$1;
+            children: browseSubcategories.map((category) {
+              final selected = browseSubcategory == category;
               return Padding(
-                padding: const EdgeInsetsDirectional.only(end: 7),
+                padding: const EdgeInsetsDirectional.only(end: 5),
                 child: ChoiceChip(
-                  avatar: Icon(
-                    entity.$2,
-                    size: 17,
-                    color: selected ? Colors.white : purple,
-                  ),
-                  label: Text(entity.$1),
+                  label: Text(category, maxLines: 1),
                   selected: selected,
                   showCheckmark: false,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
                   labelStyle: TextStyle(
-                    fontSize: 12,
+                    fontSize: 10,
                     color: selected ? Colors.white : purple,
                     fontWeight: FontWeight.w600,
                   ),
                   backgroundColor: Colors.white,
-                  selectedColor: purple,
-                  side: BorderSide(color: purple.withValues(alpha: .15)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  selectedColor: orange,
+                  side: BorderSide(color: purple.withValues(alpha: .12)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   onSelected: (_) => setState(() {
-                    selectedEntity = entity.$1;
-                    if (selectedEntity == 'الفئات') selectedCategory = 'الكل';
+                    browseSubcategory = category;
+                    if (selectedEntity == 'فئات') selectedCategory = category;
                   }),
                 ),
               );
             }).toList(),
           ),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 7),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
@@ -1702,7 +1736,7 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
         const SizedBox(height: 13),
-        if (selectedEntity == 'الفئات') ...[
+        if (selectedEntity == 'فئات') ...[
           _sectionTitle('فئات الأصناف', visibleCategoryNames.length - 1),
           const SizedBox(height: 8),
           if (visibleCategoryNames.where((c) => c != 'الكل').isEmpty)
@@ -1797,7 +1831,7 @@ class _MainShellState extends State<MainShell> {
             ),
           ],
 
-        ] else if (selectedEntity == 'الأصناف') ...[
+        ] else if (selectedEntity == 'فئات') ...[
           _sectionTitle('الأصناف', visible.length),
           const SizedBox(height: 8),
           SizedBox(
@@ -1820,7 +1854,7 @@ class _MainShellState extends State<MainShell> {
           ),
           const SizedBox(height: 10),
           _productResults(visible),
-        ] else if (selectedEntity == 'الموردين') ...[
+        ] else if (selectedEntity == 'موردين') ...[
           _sectionTitle(
             'الموردون',
             database == null
@@ -1841,10 +1875,18 @@ class _MainShellState extends State<MainShell> {
             const LinearProgressIndicator(minHeight: 2),
           const SizedBox(height: 6),
           if (liveSuppliers.isNotEmpty)
-            ...liveSuppliers.where((supplier) {
+            ...(liveSuppliers.where((supplier) {
               final name = (supplier['full_name'] ?? '').toString().toLowerCase();
-              return search.isEmpty || name.contains(search.toLowerCase());
-            }).map(supplierDirectoryTile)
+              final classification = (supplier['classification_name'] ??
+                  supplier['classification'] ?? supplier['category'] ?? '').toString();
+              final classificationMatch = browseSubcategory == 'الكل' ||
+                  classification == browseSubcategory;
+              return classificationMatch &&
+                  (search.isEmpty || name.contains(search.toLowerCase()));
+            }).toList()
+              ..sort((a, b) => (a['full_name'] ?? '').toString().toLowerCase()
+                  .compareTo((b['full_name'] ?? '').toString().toLowerCase())))
+                .map(supplierDirectoryTile)
           else if (database == null)
             ...suppliers.where((name) =>
                 search.isEmpty || name.toLowerCase().contains(search.toLowerCase()))
@@ -1871,9 +1913,9 @@ class _MainShellState extends State<MainShell> {
             child: Column(
               children: [
                 Icon(
-                  selectedEntity == 'العملاء'
+                  selectedEntity == 'عملاء'
                       ? Icons.people_alt_outlined
-                      : selectedEntity == 'المناديب'
+                      : selectedEntity == 'مندوبين'
                           ? Icons.badge_outlined
                           : Icons.local_shipping_outlined,
                   size: 42,
