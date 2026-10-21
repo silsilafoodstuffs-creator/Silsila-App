@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -3028,23 +3029,6 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     }
   }
 
-  Future<String> _uploadProductImage(XFile file) async {
-    final client = database;
-    final user = client?.auth.currentUser;
-    if (client == null || user == null) throw StateError('سجّل الدخول أولًا لرفع صورة المنتج.');
-    final extension = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : 'jpg';
-    final path = '${user.id}/${DateTime.now().millisecondsSinceEpoch}.$extension';
-    await client.storage.from('products').uploadBinary(
-      path,
-      await file.readAsBytes(),
-      fileOptions: FileOptions(
-        contentType: 'image/$extension',
-        upsert: false,
-      ),
-    );
-    return client.storage.from('products').getPublicUrl(path);
-  }
-
   Future<void> addProduct() async {
     final name = TextEditingController();
     final category = TextEditingController(text: 'زيوت');
@@ -3056,7 +3040,6 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     final brand = TextEditingController();
     final packageCount = TextEditingController(text: '1');
     final smallUnit = TextEditingController(text: 'علبة');
-    final imageUrl = TextEditingController();
     final offerPrice = TextEditingController();
     selectedProductImage = null;
     bool trackStock = false;
@@ -3099,7 +3082,6 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
               ),
               if (selectedProductImage != null)
                 Text('الصورة المختارة: ${selectedProductImage!.name}', maxLines: 1, overflow: TextOverflow.ellipsis),
-              TextField(controller: imageUrl, keyboardType: TextInputType.url, decoration: const InputDecoration(labelText: 'أو رابط صورة المنتج (اختياري)')),
               TextField(controller: minimum, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الحد الأدنى للكمية')),
               TextField(controller: stock, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الكمية المتاحة')),
               CheckboxListTile(
@@ -3128,9 +3110,23 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
             (offerPrice.text.trim().isNotEmpty && parsedOfferPrice == null)) {
           throw ArgumentError('أدخل سعرًا وحدًا أدنى صحيحين.');
         }
-        final uploadedImageUrl = selectedProductImage != null
-            ? await _uploadProductImage(selectedProductImage!)
-            : (imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim());
+        final pickedImage = selectedProductImage;
+        final imageBytes = pickedImage == null ? null : await pickedImage.readAsBytes();
+        if (imageBytes != null && imageBytes.length > 5 * 1024 * 1024) {
+          throw ArgumentError('حجم صورة المنتج يجب ألا يتجاوز 5 ميجابايت.');
+        }
+        final extension = pickedImage?.name.contains('.') == true
+            ? pickedImage!.name.split('.').last.toLowerCase()
+            : '';
+        final imageMimeType = switch (extension) {
+          'png' => 'image/png',
+          'webp' => 'image/webp',
+          'jpg' || 'jpeg' => 'image/jpeg',
+          _ => imageBytes == null ? null : '',
+        };
+        if (imageBytes != null && (imageMimeType == null || imageMimeType.isEmpty)) {
+          throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
+        }
         await service.createProduct(
           name: name.text,
           category: category.text,
@@ -3143,7 +3139,8 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
           brand: brand.text,
           packageCount: parsedPackageCount,
           smallUnit: smallUnit.text,
-          imageUrl: uploadedImageUrl,
+          imageData: imageBytes,
+          imageMimeType: imageMimeType,
           offerPrice: parsedOfferPrice,
         );
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('تم نشر المنتج.'))));
@@ -3162,7 +3159,6 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
     brand.dispose();
     packageCount.dispose();
     smallUnit.dispose();
-    imageUrl.dispose();
     offerPrice.dispose();
   }
 
