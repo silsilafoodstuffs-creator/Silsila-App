@@ -371,6 +371,21 @@ class SilsilaApp extends StatelessWidget {
             borderSide: const BorderSide(color: Color(0xFFB3261E), width: 1.8),
           ),
         ),
+        dataTableTheme: const DataTableThemeData(
+          headingRowHeight: 34,
+          dataRowMinHeight: 34,
+          dataRowMaxHeight: 38,
+          headingTextStyle: TextStyle(
+            color: Color(0xFF241735),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+          dataTextStyle: TextStyle(
+            color: Color(0xFF241735),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         // Shared Silsila visual language: crisp surfaces, warm interactive states,
         // and accessible contrast across customer and ERP screens.
         listTileTheme: ListTileThemeData(
