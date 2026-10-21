@@ -42,7 +42,13 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
   }
 
   void _clear() { _editingId = null; _editing = false; _code.clear(); _name.clear(); _symbol.clear(); }
-  void _startNew() { setState(() { _clear(); _editing = true; _error = null; }); }
+  void _startNew() {
+    if ([_code.text, _name.text, _symbol.text].any((value) => value.trim().isNotEmpty)) {
+      setState(() => _error = 'تم الاحتفاظ بالبيانات الحالية. احفظ العملة الحالية أولًا قبل بدء عملة جديدة.');
+      return;
+    }
+    setState(() { _clear(); _editing = true; _error = null; });
+  }
   void _edit(Map<String,dynamic> row) { setState(() { _editing = true; _editingId = row['id'].toString(); _code.text = (row['currency_code'] ?? '').toString(); _name.text = (row['currency_name_ar'] ?? '').toString(); _symbol.text = (row['currency_symbol'] ?? '').toString(); _error = null; }); }
 
   Future<void> _save() async {
