@@ -1911,9 +1911,9 @@ class _MainShellState extends State<MainShell> {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  selectedEntity == 'العملاء'
+                  selectedEntity == 'عملاء'
                       ? 'تصفح حسابات العملاء وتصنيفاتهم عند توفر بيانات الدليل.'
-                      : selectedEntity == 'المناديب'
+                      : selectedEntity == 'مندوبين'
                           ? 'اعرض المناديب وتصنيفاتهم ومناطق التغطية.'
                           : 'اعرض شركات الشحن وخدمات التوصيل ومناطق الخدمة.',
                   textAlign: TextAlign.center,
@@ -1926,9 +1926,9 @@ class _MainShellState extends State<MainShell> {
                     SimpleListPage(
                       title: selectedEntity,
                       details: 'يمكن إدارة بيانات هذا القسم من خلال حسابات سلسلة والبيانات المعتمدة.',
-                      icon: selectedEntity == 'العملاء'
+                      icon: selectedEntity == 'عملاء'
                           ? Icons.people_alt_outlined
-                          : selectedEntity == 'المناديب'
+                          : selectedEntity == 'مندوبين'
                               ? Icons.badge_outlined
                               : Icons.local_shipping_outlined,
                     ),
