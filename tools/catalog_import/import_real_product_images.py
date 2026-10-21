@@ -106,7 +106,7 @@ def normalized(value: str) -> str:
     # Normalize common Arabic letter variants so source names like "ارز" and
     # ERP names like "أرز" compare consistently.
     value = value.casefold().translate(str.maketrans({
-        "أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا", "ى": "ي", "ة": "ه",
+        "أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا", "ى": "ي", "ة": None,
     }))
     value = re.sub(r"[\u064b-\u065f\u0670]", "", value)
     return re.sub(r"[^a-z0-9\u0600-\u06ff]+", " ", value).strip()
@@ -116,6 +116,27 @@ ARABIC_SEARCH_TERMS = {
     "أرز أبيض مصري": "egyptian white rice",
     "أرز مصري عريض": "egyptian short grain rice",
     "أرز بسمتي": "basmati rice",
+    "تمر جاف": "dried dates",
+    "تمر معبأ": "packaged dates",
+    "توست حبوب كاملة": "wholegrain toast",
+    "توست أبيض": "white toast",
+    "توفي كراميل": "caramel toffee",
+    "تونة قطع": "tuna chunks",
+    "جبنة مطبوخة مثلثات": "processed triangle cheese",
+    "جبنة شيدر شرائح": "sliced cheddar cheese",
+    "جبنة رومي": "romi cheese",
+    "جبنة قابلة للدهن": "spreadable cheese",
+    "جبنة موتزاريلا": "mozzarella cheese",
+    "جبنة فيتا": "feta cheese",
+    "جوز هند مبشور": "desiccated coconut",
+    "جيلاتين حلويات": "dessert gelatin",
+    "حبوب إفطار بالشوكولاتة": "chocolate breakfast cereal",
+    "حلاوة طحينية": "tahini halva",
+    "حلوى جيلي": "jelly candy",
+    "حمص جاف": "dried chickpeas",
+    "خضار مشكل مجمد": "frozen mixed vegetables",
+    "خل تفاح": "apple cider vinegar",
+    "خل أبيض": "white vinegar",
     "بسكويت سادة": "plain biscuits",
     "بسكويت مالح": "salted biscuits",
     "بسلة مجمدة": "frozen peas",
@@ -320,6 +341,7 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
         "pasta": {"sauce", "seasoning"},
         "milk": {"chocolate", "soap", "shampoo"},
         "water": {"flavor", "flavoured", "flavored"},
+        "lupini": {"garlic", "rosemary", "snacking", "snack", "seasoning", "flavored", "flavoured"},
     }
     best = None
     best_score = 0.0
@@ -370,6 +392,47 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
         if image:
             best, best_score = (candidate, image[0], image[1]), score
     return best
+
+GROUP_ITEM_HINTS = {
+    "FOOD-GHEE": ["سمن", "ghee"],
+    "FOOD-OILS": ["زيت", "oil", "خل"],
+    "FOOD-PASTA": ["مكرونة", "pasta", "نودلز"],
+    "FOOD-LEGUMES": ["عدس", "فول", "حمص", "فاصوليا", "لوبيا", "ترمس", "lentils", "beans", "chickpeas", "lupini"],
+    "FOOD-HOT-DRINKS": ["شاي", "قهوة", "tea", "coffee"],
+    "FOOD-SOFT-DRINKS": ["مشروب", "مياه", "soda", "water"],
+    "FOOD-CHEESE": ["جبن", "جبنة", "cheese"],
+    "FOOD-DAIRY": ["لبن", "زبادي", "milk", "yogurt"],
+    "FOOD-JUICES": ["عصير", "juice"],
+    "FOOD-SNACKS": ["مقرمشات", "شيبسي", "بسكويت", "chips", "snack", "biscuit"],
+    "FOOD-CANNED": ["معلبة", "معلبات", "تونة", "canned", "tuna"],
+    "FOOD-CHOCOLATE": ["شوكولاتة", "شيكولاتة", "chocolate"],
+    "FOOD-CANDY": ["حلويات", "حلوى", "توفي", "candy", "jelly", "toffee"],
+    "FOOD-FROZEN": ["مجمد", "frozen"],
+    "FOOD-RICE": ["أرز", "برغل", "rice", "bulgur"],
+    "FOOD-BAKERY": ["توست", "خبز", "بقسماط", "toast", "bread", "breadcrumbs"],
+    "FOOD-DATES": ["تمر", "dates"],
+    "FOOD-JAMS": ["مربى", "عسل", "jam", "honey", "spread"],
+    "FOOD-SPICES": ["بهارات", "توابل", "spices", "seasoning"],
+    "FOOD-BAKING": ["بيكنج بودر", "جيلاتين", "baking powder", "gelatin"],
+    "FOOD-NUTRITION": ["إفطار", "جرانولا", "شوفان", "cereal", "granola", "oats"],
+    "FOOD-NUTS": ["مكسرات", "جوز هند", "nuts", "coconut"],
+    "FOOD-PICKLES": ["مخلل", "زيتون", "pickles", "olives"],
+    "FOOD-SAUCE": ["صلصة", "كاتشب", "مايونيز", "sauce", "ketchup", "mayonnaise"],
+    "FOOD-FLOUR-SUGAR": ["دقيق", "سكر", "flour", "sugar"],
+    "JUICE-JUHAINA": ["جهينه", "juhayna"],
+    "JUICE-BETTY": ["بيتي", "betty"],
+    "BISCUIT-LAMBADA": ["بسكويت", "lambada", "biscuit"],
+    "CHEESE-RHODES": ["جبن", "جبنة", "rhodes", "cheese"],
+}
+
+
+def group_image_matches_item(group_code: str, item_name: str, product: dict[str, Any]) -> bool:
+    hints = GROUP_ITEM_HINTS.get(group_code)
+    if not hints:
+        return False
+    haystack = normalized(" ".join((item_name, str(product.get("product_name") or ""), str(product.get("product_name_en") or ""), str(product.get("brands") or ""))))
+    return any(normalized(hint) in haystack for hint in hints)
+
 
 def main() -> int:
     if not BASE_URL or not SERVICE_KEY or not COMPANY_ID:
@@ -428,7 +491,7 @@ def main() -> int:
     }
     items = rest("GET", "erp_items", urllib.parse.urlencode({
         "company_id": f"eq.{COMPANY_ID}",
-        "select": "id,item_code,item_name,barcode,brand_name,group_id,image_data,image_url",
+        "select": "id,item_code,item_name,barcode,brand_name,group_id,image_data,image_url,source_url",
         "order": "item_name.asc",
         "limit": "500",
     }))
@@ -447,6 +510,12 @@ def main() -> int:
     items = items[:MAX_ITEMS]
     print(f"ERP groups: {len(groups)}; items checked: {len(items)} (food groups prioritized)")
     refreshed_groups: set[str] = set()
+    # Keep one source product image assigned to only one ERP item.
+    used_source_codes: set[str] = set()
+    for row in items:
+        source_match = re.search(r"/product/([^/?#]+)", str(row.get("source_url") or ""))
+        if source_match:
+            used_source_codes.add(source_match.group(1))
     updated = 0
     for index, item in enumerate(items, 1):
         # Existing photos smaller than the quality threshold are considered placeholders.
@@ -455,6 +524,7 @@ def main() -> int:
             continue
         item_name = str(item.get("item_name") or "(unnamed)")
         candidates = off_candidates(item)
+        candidates = [candidate for candidate in candidates if str(candidate.get("code") or "") not in used_source_codes]
         print(f"[{index}/{len(items)}] Checking: {item_name} | barcode={'yes' if item.get('barcode') else 'no'} | brand={'yes' if item.get('brand_name') else 'no'} | source candidates={len(candidates)}")
         match = choose_image(item, candidates)
         if not match:
@@ -471,6 +541,9 @@ def main() -> int:
             print(f"  NO MATCH: {item_name} (no candidate passed identity, image-size, and image-quality checks){suffix}")
             continue
         product, image_bytes, mime = match
+        product_code = str(product.get("code") or "")
+        if product_code:
+            used_source_codes.add(product_code)
         image_value = "\\x" + image_bytes.hex()
         source_page = "https://world.openfoodfacts.org/product/" + urllib.parse.quote(str(product.get("code") or ""))
         if not DRY_RUN:
@@ -484,9 +557,11 @@ def main() -> int:
         updated += 1
         print(f"[{index}/{len(items)}] {item.get('item_name')} <- {product.get('product_name') or product.get('product_name_en')} ({len(image_bytes)} bytes){' [dry-run]' if DRY_RUN else ''}")
         group_id = item.get("group_id")
-        if group_id and group_id not in refreshed_groups:
+        group = group_by_id.get(group_id) if group_id else None
+        group_code = str((group or {}).get("group_code") or "")
+        representative = group_image_matches_item(group_code, item_name, product)
+        if group_id and group_id not in refreshed_groups and representative:
             refreshed_groups.add(group_id)
-            group = group_by_id.get(group_id)
             if group and (len(str(group.get("image_data") or "")) <= 25_000):
                 if not DRY_RUN:
                     rest("PATCH", "erp_item_groups", urllib.parse.urlencode({"id": f"eq.{group_id}", "company_id": f"eq.{COMPANY_ID}"}), {
