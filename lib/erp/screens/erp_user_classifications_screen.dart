@@ -17,7 +17,7 @@ class ErpUserClassificationsScreen extends StatefulWidget {
 class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScreen> {
   SupabaseClient? _db;
   String? _company;
-  bool _loading = false, _saving = false, _editing = true;
+  bool _loading = false, _saving = false, _editing = false;
   String? _error, _message, _selectedId;
   int _activeTab = 0;
   List<Map<String, dynamic>> _types = [];
@@ -113,10 +113,11 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
       'classification_code': null, 'name_ar': '', 'name_en': '',
       'is_active': true, 'show_in_app': true, '_draft': true,
     };
-    setState(() { _rows = [..._rows, draft]; _selectedId = _s(draft['id']); _syncControllers(); });
+    setState(() { _editing = true; _rows = [..._rows, draft]; _selectedId = _s(draft['id']); _syncControllers(); });
   }
 
   Future<void> _save() async {
+    if (!_editing) { setState(() => _error = 'اضغط «تعديل» أو «إضافة» أولًا قبل تغيير التصنيفات.'); return; }
     if (_db == null || _company == null || _typeId.isEmpty) return;
     setState(() { _saving = true; _error = null; _message = null; });
     try {
@@ -146,6 +147,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
         row['name_ar'] = ar;
         row['name_en'] = en;
       }
+      if (mounted) setState(() => _editing = false);
       await _load();
       if (mounted) setState(() => _message = 'تم حفظ التصنيفات في قاعدة البيانات.');
     } catch (e) {
@@ -156,6 +158,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
   }
 
   Future<void> _delete() async {
+    if (!_editing) { setState(() => _error = 'اضغط «تعديل» أولًا قبل حذف التصنيفات.'); return; }
     final id = _selectedId;
     if (id == null) { setState(() => _error = 'حدد تصنيفًا من الجريد أولًا.'); return; }
     Map<String, dynamic>? row;
@@ -234,8 +237,8 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
         child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
           _task('تحديث', Icons.refresh, _loading ? null : _load),
           _task('إضافة', Icons.add, _saving ? null : _add),
-          _task('حفظ', Icons.save, _saving ? null : _save),
-          _task('تعديل', Icons.edit, () => setState(() => _editing = !_editing)),
+          _task('حفظ', Icons.save, _saving || !_editing ? null : _save),
+          _task('تعديل', Icons.edit, _saving || _editing ? null : () => setState(() => _editing = true)),
           _task('حذف', Icons.delete, _saving ? null : _delete),
           _task('معاينة', Icons.preview, () => showDialog<void>(context: context, builder: (c) => AlertDialog(
             title: const Text('معاينة التصنيفات'), content: Text('عدد السجلات: ${_rows.length}'),
