@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _taxPurple = Color(0xFF3E007D);
@@ -150,6 +151,7 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(save: _saveSettings);
     final config = _view == 'إعدادات الربط الضريبي' || _view == 'بيانات الممول والتوقيع الإلكتروني';
     final logs = <String>{'سجل عمليات التكامل','متابعة حالات الإرسال','إشعارات منظومة الضرائب','تقارير الفاتورة الإلكترونية','طلبات حزم المستندات','تنزيل حزم المستندات'}.contains(_view);
     return Directionality(textDirection: TextDirection.rtl, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
