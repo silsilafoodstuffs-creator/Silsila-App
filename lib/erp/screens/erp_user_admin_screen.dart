@@ -218,7 +218,10 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         // User codes are prefixed strings (USR-1, USR-2, ...); sort by the
         // numeric suffix so USR-10 does not appear before USR-2.
         int codeNumber(Map<String, dynamic> row) {
-          final match = RegExp(r'-(\\d+)
+          final match = RegExp(r'-(\d+)$').firstMatch((row['user_code'] ?? '').toString());
+          return int.tryParse(match?.group(1) ?? '') ?? 0;
+        }
+        userList.sort((a, b) => codeNumber(a).compareTo(codeNumber(b)));
         if (_isUser) {
           try {
             final b = await _db!.from('erp_branches').select().eq('company_id', _company).eq('is_active', true).order('branch_name');
