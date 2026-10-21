@@ -112,8 +112,31 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     }
   }
 
-  void _new() { setState(() { _editing = null; _selected = null; _code.clear(); _ar.clear(); _en.clear(); _image = null; _active = true; _message = 'أدخل بيانات النشاط ثم اضغط حفظ.'; }); }
-  void _edit(Map<String,String> r) { setState(() { _editing = r['_مرجع داخلي']; _selected = r['كود النشاط']; _code.text = r['كود النشاط'] ?? ''; _ar.text = r['اسم النشاط عربي'] ?? ''; _en.text = r['اسم النشاط إنجليزي'] ?? ''; _image = r['صورة النشاط']; _active = (r['نشط'] ?? 'true') == 'true'; }); }
+  void _new() {
+    final code = 'NEW-${DateTime.now().millisecondsSinceEpoch}';
+    final row = <String,String>{
+      'ترتيب السطر': (_rows.length + 1).toString(),
+      'كود النشاط': code,
+      'اسم النشاط عربي': '',
+      'اسم النشاط إنجليزي': '',
+      'صورة النشاط': '',
+      'نشط': 'true',
+      '_مسودة': 'true',
+    };
+    setState(() {
+      _rows.add(row);
+      _selected = code;
+      _editing = code;
+      _message = 'أكمل كود النشاط واسم النشاط داخل صف الجدول، ثم اضغط حفظ.';
+    });
+  }
+
+  void _edit(Map<String,String> r) {
+    setState(() {
+      _editing = r['_مرجع داخلي'] ?? r['كود النشاط'];
+      _selected = r['كود النشاط'];
+    });
+  }
 
   Future<void> _pick(ImageSource source) async {
     try {
@@ -126,20 +149,33 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   }
 
   Future<void> _save() async {
-    final code = _code.text.trim(), ar = _ar.text.trim();
     if ((_companyId ?? '').isEmpty) { setState(() => _message = 'لا توجد شركة نشطة للحفظ.'); return; }
-    if (code.isEmpty || ar.isEmpty) { setState(() => _message = 'كود النشاط والاسم العربي مطلوبان.'); return; }
-    if (_rows.any((r) => r['كود النشاط'] == code && r['_مرجع داخلي'] != _editing)) { setState(() => _message = 'كود النشاط مستخدم بالفعل.'); return; }
+    final index = _rows.indexWhere((r) => r['كود النشاط'] == _selected);
+    if (index < 0) { setState(() => _message = 'حدد صفًا أو اضغط إضافة لإنشاء صف جديد.'); return; }
+    final row = _rows[index];
+    final code = (row['كود النشاط'] ?? '').trim();
+    final ar = (row['اسم النشاط عربي'] ?? '').trim();
+    if (code.isEmpty || ar.isEmpty || code.startsWith('NEW-')) {
+      setState(() => _message = 'أدخل كود النشاط واسم النشاط داخل صف الجدول أولًا.');
+      return;
+    }
+    if (_rows.any((r) => r['كود النشاط'] == code && r != row && r['_مرجع داخلي'] != row['_مرجع داخلي'])) {
+      setState(() => _message = 'كود النشاط مستخدم بالفعل.');
+      return;
+    }
     setState(() => _saving = true);
     try {
-      final old = _rows.where((r) => r['_مرجع داخلي'] == _editing).firstOrNull;
-      final row = <String,String>{'ترتيب السطر': old?['ترتيب السطر'] ?? (_rows.length + 1).toString(), 'كود النشاط': code, 'اسم النشاط عربي': ar, 'اسم النشاط إنجليزي': _en.text.trim(), 'صورة النشاط': _image ?? '', 'نشط': _active.toString()};
-      if ((_editing ?? '').isNotEmpty) row['_مرجع داخلي'] = _editing!;
-      await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: row);
+      final payload = Map<String,String>.from(row)
+        ..remove('_مسودة')
+        ..remove('_مرجع داخلي');
+      await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: payload);
       await _load();
       if (mounted) setState(() => _message = 'تم حفظ النشاط في قاعدة البيانات.');
-    } catch (e) { if (mounted) setState(() => _message = 'تعذر الحفظ: ' + e.toString()); }
-    finally { if (mounted) setState(() => _saving = false); }
+    } catch (e) {
+      if (mounted) setState(() => _message = 'تعذر الحفظ: ${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _delete() async {
@@ -193,20 +229,13 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         _task('طباعة PDF', Icons.picture_as_pdf_outlined, Colors.red, () => setState(() => _message = 'تصدير PDF لم يُفعّل في هذه الشاشة بعد.')),
       ]))),
       if (_message != null) Container(color: const Color(0xFFF7F2FC), padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(fontSize: 11, color: Color(0xFF3E007D)))),
-      Container(color: Colors.white, padding: const EdgeInsets.all(9), child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-        _field('كود النشاط', _code, 120), _field('اسم النشاط عربي', _ar, 200), _field('اسم النشاط إنجليزي', _en, 180),
-        OutlinedButton.icon(onPressed: () => _pick(ImageSource.gallery), icon: const Icon(Icons.photo_library_outlined, size: 17), label: const Text('استيراد صورة')),
-        OutlinedButton.icon(onPressed: () => _pick(ImageSource.camera), icon: const Icon(Icons.camera_alt_outlined, size: 17), label: const Text('تصوير')),
-        if ((_image ?? '').startsWith('data:image')) ClipRRect(borderRadius: BorderRadius.circular(4), child: Image.memory(base64Decode(_image!.split(',').last), width: 38, height: 32, fit: BoxFit.cover)),
-        Row(mainAxisSize: MainAxisSize.min, children: [const Text('نشط', style: TextStyle(fontSize: 12)), Switch.adaptive(value: _active, onChanged: (v) => setState(() => _active = v))]),
-      ])),
       const SizedBox(height: 8),
       Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 34, dataRowMinHeight: 38, dataRowMaxHeight: 42, horizontalMargin: 8, columnSpacing: 14, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م (ترتيب السطر)')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط')), DataColumn(label: Text('نشط / غير نشط'))], rows: [
-        for (var i = 0; i < _rows.length; i++) DataRow(selected: _rows[i]['كود النشاط'] == _selected, onSelectChanged: (_) { setState(() => _selected = _rows[i]['كود النشاط']); _edit(_rows[i]); }, cells: [
-          DataCell(SizedBox(width: 24, child: Text(_rows[i]['ترتيب السطر'] ?? (i + 1).toString(), style: const TextStyle(fontSize: 12)))),
-          DataCell(SizedBox(width: 110, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontSize: 12)))),
-          DataCell(SizedBox(width: 230, child: Text(_rows[i]['اسم النشاط عربي'] ?? '', style: const TextStyle(fontSize: 12)))),
-          DataCell(Checkbox(value: (_rows[i]['نشط'] ?? 'true') == 'true', visualDensity: VisualDensity.compact, onChanged: (v) async { final row = Map<String,String>.from(_rows[i])..['نشط'] = (v ?? false).toString(); try { await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: row); await _load(); } catch (e) { if (mounted) setState(() => _message = 'تعذر تحديث الحالة: ' + e.toString()); } })),
+        for (var i = 0; i < _rows.length; i++) DataRow(selected: _rows[i]['كود النشاط'] == _selected, onSelectChanged: (_) => setState(() => _selected = _rows[i]['كود النشاط']), cells: [
+          DataCell(SizedBox(width: 38, child: TextFormField(initialValue: _rows[i]['ترتيب السطر'] ?? (i + 1).toString(), key: ValueKey('${_rows[i]['كود النشاط']}-order'), decoration: const InputDecoration(isDense:true,border:InputBorder.none), onChanged: (v) => _rows[i]['ترتيب السطر'] = v))),
+          DataCell(SizedBox(width: 130, child: TextFormField(initialValue: _rows[i]['كود النشاط'] ?? '', key: ValueKey('${_rows[i]['كود النشاط']}-code'), decoration: const InputDecoration(isDense:true,border:InputBorder.none), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) { _rows[i]['كود النشاط'] = v; _selected = v; }))),
+          DataCell(SizedBox(width: 270, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('${_rows[i]['كود النشاط']}-ar'), decoration: const InputDecoration(isDense:true,border:InputBorder.none), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
+          DataCell(Checkbox(value: (_rows[i]['نشط'] ?? 'true') == 'true', visualDensity: VisualDensity.compact, onChanged: (v) => setState(() => _rows[i]['نشط'] = (v ?? false).toString()))),
         ]),
       ]))),
       if (_loading) const LinearProgressIndicator(minHeight: 2),
