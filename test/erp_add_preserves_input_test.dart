@@ -11,7 +11,7 @@ Finder field(String label) => find.byWidgetPredicate(
 void main() {
   testWidgets('adding a price list does not clear an unsaved code or name', (tester) async {
     await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: ErpPriceListsScreen()),
+      home: Scaffold(body: SingleChildScrollView(child: ErpPriceListsScreen())),
     ));
     await tester.pumpAndSettle();
 
@@ -27,7 +27,7 @@ void main() {
 
   testWidgets('adding a payroll run does not clear an unsaved run code', (tester) async {
     await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: ErpPayrollScreen()),
+      home: Scaffold(body: SingleChildScrollView(child: ErpPayrollScreen())),
     ));
     await tester.pumpAndSettle();
 
@@ -41,7 +41,7 @@ void main() {
 
   testWidgets('adding an inventory movement preserves a manually entered unit cost', (tester) async {
     await tester.pumpWidget(const MaterialApp(
-      home: Scaffold(body: ErpInventoryScreen()),
+      home: Scaffold(body: SingleChildScrollView(child: ErpInventoryScreen())),
     ));
     await tester.pumpAndSettle();
 
