@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_inventory_master_repository.dart';
 
 class ErpInventoryMasterScreen extends StatefulWidget {
@@ -52,7 +53,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     _company.text = widget.initialCompanyId ?? '';
     _view = widget.initialView;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _company.text.trim().isNotEmpty) _load();
+      if (mounted) _load();
     });
   }
   @override
@@ -66,7 +67,30 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
 
   Future<void> _load({bool clearMessage = true}) async {
-    if (_company.text.trim().isEmpty) { setState(() => _error = 'أدخل معرّف الشركة أولًا.'); return; }
+    if (!mounted) return;
+    if (_company.text.trim().isEmpty) {
+      try {
+        final client = Supabase.instance.client;
+        final userId = client.auth.currentUser?.id;
+        if (userId != null) {
+          final memberships = await client.from('erp_company_members')
+              .select('company_id')
+              .eq('user_id', userId)
+              .eq('is_active', true)
+              .order('created_at')
+              .limit(1);
+          if ((memberships as List).isNotEmpty) {
+            _company.text = (memberships.first['company_id'] ?? '').toString();
+          }
+        }
+      } catch (_) {
+        // The user-facing error below explains the missing company context.
+      }
+    }
+    if (_company.text.trim().isEmpty) {
+      setState(() => _error = 'لم يتم العثور على شركة نشطة لحسابك. افتح بيانات الشركة أو تحقق من عضوية الشركة.');
+      return;
+    }
     setState(() { _loading = true; _error = null; if (clearMessage) _message = null; });
     try {
       final values = await Future.wait([
