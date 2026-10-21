@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Enrich existing Silsila ERP catalog records with actual product-pack photos.
 
-Matching changes are validated in dry-run mode before any database writes.
+Matching changes were validated in dry-run mode; the next controlled run writes only accepted matches.
 
 Images are downloaded as bytes and written to PostgreSQL bytea (image_data); image_url
 is cleared. This script intentionally does NOT publish marketplace products or invent
