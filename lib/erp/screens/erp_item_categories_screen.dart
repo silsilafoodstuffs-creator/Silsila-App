@@ -283,7 +283,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       Expanded(child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(scrollDirection:Axis.horizontal,
         child:SingleChildScrollView(child:DataTable(
           headingRowColor:WidgetStateProperty.all(const Color(0xFFEDE4F8)),
-          dataRowMinHeight:42,dataRowMaxHeight:54,headingRowHeight:42,columnSpacing:13,horizontalMargin:10,
+          dataRowMinHeight:57,dataRowMaxHeight:57,headingRowHeight:57,columnSpacing:13,horizontalMargin:10,
           columns:[
             const DataColumn(label:Text('م')),
             const DataColumn(label:Text('كود الفئة')),
