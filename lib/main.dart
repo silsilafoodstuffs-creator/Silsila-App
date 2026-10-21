@@ -1858,8 +1858,8 @@ class _MainShellState extends State<MainShell> {
           if (liveSuppliers.isNotEmpty)
             ...(liveSuppliers.where((supplier) {
               final name = (supplier['full_name'] ?? '').toString().toLowerCase();
-              final classification = (supplier['classification_name'] ??
-                  supplier['classification'] ?? supplier['category'] ?? '').toString();
+              final classification = (supplier['supplier_type'] ??
+                  supplier['classification_name'] ?? supplier['classification'] ?? '').toString();
               final classificationMatch = browseSubcategory == 'الكل' ||
                   classification == browseSubcategory;
               return classificationMatch &&
@@ -1869,8 +1869,8 @@ class _MainShellState extends State<MainShell> {
                   .compareTo((b['full_name'] ?? '').toString().toLowerCase())))
                 .map(supplierDirectoryTile)
           else if (database == null)
-            ...suppliers.where((name) =>
-                search.isEmpty || name.toLowerCase().contains(search.toLowerCase()))
+            ...(suppliers.where((name) =>
+                search.isEmpty || name.toLowerCase().contains(search.toLowerCase())).toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase())))
                 .map(supplierTile)
           else if (!loadingLiveSuppliers)
             Padding(
