@@ -171,7 +171,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   }
   Widget _colorField(TextEditingController c,String label,{double labelWidth=94})=>_labeledField(label,Row(children:[
     Expanded(child:_textField(c,label,hint:'#3E007D')),const SizedBox(width:5),
-    InkWell(onTap:()=>_pickColor(c,label),child:Container(width:38,height:38,decoration:BoxDecoration(color:_parseColor(c.text,_settingsPurple),borderRadius:BorderRadius.circular(8),border:Border.all(color:Colors.black26)),child:const Icon(Icons.palette_outlined,size:19,color:Colors.white))),
+    InkWell(onTap:()=>_pickColor(c,label),child:Container(width:42,height:42,decoration:BoxDecoration(color:_parseColor(c.text,_settingsPurple),borderRadius:BorderRadius.circular(8),border:Border.all(color:Colors.black26)),child:const Icon(Icons.palette_outlined,size:19,color:Colors.white))),
   ]),labelWidth:labelWidth);
   Widget _section(String title,IconData icon,Widget child)=>Card(child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Icon(icon,color:_settingsPurple),const SizedBox(width:8),Text(silsilaText(title),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w800,color:_settingsPurple))]),const SizedBox(height:14),child])));
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
@@ -235,7 +235,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
         Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),decoration:BoxDecoration(color:const Color(0xFFF7F5FA),borderRadius:BorderRadius.circular(8)),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1250,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Padding(padding:const EdgeInsets.only(bottom:4),child:Text('${i+1}. ${_labels[i]}',style:TextStyle(fontSize:13,color:_parseColor(_colors[i].text,_settingsPurple),fontWeight:FontWeight.w800))),
           Row(children:[
-            SizedBox(width:245,child:_labeledField('نوع الخط',DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:38),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:5),border:OutlineInputBorder()),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_fonts[i]=v);}),labelWidth:70)),
+            SizedBox(width:245,child:_labeledField('نوع الخط',DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:42,maxHeight:42),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:7),border:OutlineInputBorder()),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_fonts[i]=v);}),labelWidth:70)),
             const SizedBox(width:8),SizedBox(width:135,child:_compactTextField(_sizes[i],'الحجم',labelWidth:42)),
             const SizedBox(width:8),SizedBox(width:260,child:_colorField(_colors[i],'لون الخط',labelWidth:65)),
             const SizedBox(width:8),FilterChip(label:Text(silsilaText('سميك')),selected:_bold[i],visualDensity:VisualDensity.compact,onSelected:(v)=>setState(()=>_bold[i]=v)),
