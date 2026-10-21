@@ -146,6 +146,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
             _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving || _editing ? null : _newParty),
+            _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _saving || _editing ? null : () => setState(() { _editing = true; _message = 'تم تفعيل وضع التعديل. احفظ التغييرات بعد الانتهاء.'; })),
             _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading || !_editing ? null : _create),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewParties),
           ])),
