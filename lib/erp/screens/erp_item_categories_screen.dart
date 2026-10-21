@@ -259,7 +259,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       Container(color:_catCanvas,padding:const EdgeInsets.symmetric(horizontal:3,vertical:3),
         child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
           _task('تحديث',Icons.refresh,_loading?null:_load),
-          _task('إضافة جديد',Icons.add,_saving || _editing ? null : _add),
+          _task('إضافة جديد',Icons.add,_saving ? null : _add),
           _task('حفظ',Icons.save,_saving || !_editing ? null:_save),
           _task('تعديل',Icons.edit,_saving || _editing ? null:()=>setState(()=>_editing=true)),
           _task('حذف',Icons.delete,_saving?null:_delete),
