@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_workspace_records_service.dart';
 
@@ -13,15 +11,9 @@ class ErpActivityTypesScreen extends StatefulWidget {
 
 class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   final _service = ErpWorkspaceRecordsService();
-  final _picker = ImagePicker();
-  final _code = TextEditingController();
-  final _ar = TextEditingController();
-  final _en = TextEditingController();
   final List<Map<String, String>> _rows = [];
   String? _selected;
-  String? _editing;
-  String? _image;
-  bool _active = true, _loading = false, _saving = false;
+  bool _loading = false, _saving = false;
   String? _message;
   String? _resolvedCompanyId;
   String? get _companyId => (_resolvedCompanyId?.trim().isNotEmpty == true) ? _resolvedCompanyId!.trim() : ((widget.companyId?.trim().isNotEmpty == true) ? widget.companyId!.trim() : null);
@@ -38,8 +30,6 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       _load();
     }
   }
-  @override
-  void dispose() { _code.dispose(); _ar.dispose(); _en.dispose(); super.dispose(); }
 
   Future<void> _load() async {
     if (!mounted) return;
@@ -126,27 +116,16 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     setState(() {
       _rows.add(row);
       _selected = code;
-      _editing = code;
       _message = 'أكمل كود النشاط واسم النشاط داخل صف الجدول، ثم اضغط حفظ.';
     });
   }
 
   void _edit(Map<String,String> r) {
     setState(() {
-      _editing = r['_مرجع داخلي'] ?? r['كود النشاط'];
-      _selected = r['كود النشاط'];
+        _selected = r['كود النشاط'];
     });
   }
 
-  Future<void> _pick(ImageSource source) async {
-    try {
-      final file = await _picker.pickImage(source: source, imageQuality: 75, maxWidth: 800);
-      if (file == null) return;
-      final bytes = await file.readAsBytes();
-      if (!mounted) return;
-      setState(() { _image = 'data:image/jpeg;base64,' + base64Encode(bytes); _message = 'تم اختيار صورة النشاط.'; });
-    } catch (e) { if (mounted) setState(() => _message = 'تعذر فتح الكاميرا أو الصور: ' + e.toString()); }
-  }
 
   Future<void> _save() async {
     if ((_companyId ?? '').isEmpty) { setState(() => _message = 'لا توجد شركة نشطة للحفظ.'); return; }
@@ -188,8 +167,6 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   }
 
   Widget _task(String text, IconData icon, Color color, VoidCallback? action) => Padding(padding: const EdgeInsetsDirectional.only(end: 5), child: FilledButton.tonalIcon(onPressed: action, style: FilledButton.styleFrom(foregroundColor: color, backgroundColor: color.withValues(alpha: .10), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)), icon: Icon(icon, size: 16), label: Text(text, style: const TextStyle(fontSize: 12))));
-  Widget _field(String label, TextEditingController c, double width) => SizedBox(width: width, child: TextField(controller: c, style: const TextStyle(fontSize: 12), decoration: InputDecoration(labelText: label, isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9), border: const OutlineInputBorder())));
-
   Future<void> _preview() async {
     await showDialog<void>(
       context: context,
