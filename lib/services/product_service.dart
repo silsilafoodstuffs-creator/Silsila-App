@@ -25,7 +25,7 @@ class ProductService {
       'id, supplier_id, name, category, category_id, '
       'description, price, unit, min_quantity, minimum_quantity, '
       'activity_type, is_active, image_url, subcategory, brand, '
-      'package_count, small_unit, offer_price, created_at';
+      'package_count, small_unit, offer_price, image_data, image_mime_type, created_at';
 
   /// جلب المنتجات النشطة مع إمكانية التصفية.
   Future<List<Map<String, dynamic>>> getProducts({
