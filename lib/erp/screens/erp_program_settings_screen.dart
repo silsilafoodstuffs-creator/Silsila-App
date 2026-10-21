@@ -33,7 +33,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   final List<String> _levels = ['heading_1','heading_2','heading_3','heading_4','heading_5'];
   String _language = 'ar';
   String? _logoBase64, _logoMime;
-  bool _loading = true, _saving = false;
+  bool _loading = true, _saving = false, _editing = false;
   String? _error, _message;
   // Kufam and Tajawal are bundled. Romman requires its licensed font asset for distinct rendering.
   static const _fontOptions = ['Tajawal','Kufam','Romman','Almarai','Noto Sans Arabic','Arial','Roboto'];
@@ -55,7 +55,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   Future<void> _load() async {
     final company = (widget.companyId ?? '').trim();
     if(!mounted) return;
-    setState(() { _loading = true; _error = null; _message = null; });
+    setState(() { _loading = true; _editing = false; _error = null; _message = null; });
     if(company.isEmpty || _db == null) { setState(() { _loading=false; _error='اختر الشركة أولًا وتأكد من تسجيل الدخول والاتصال بقاعدة البيانات.'; }); return; }
     try {
       final row = await _db!.from('erp_program_settings').select().eq('company_id',company).maybeSingle();
@@ -89,6 +89,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   }
 
   Future<void> _pickLogo() async {
+    if (!_editing) return;
     try {
       final result = await FilePicker.platform.pickFiles(type:FileType.image,allowMultiple:false,withData:true);
       if(result == null || result.files.isEmpty) return;
@@ -103,6 +104,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   }
 
   Future<void> _save() async {
+    if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا لتفعيل تغيير الإعدادات.'); return; }
     final company = (widget.companyId ?? '').trim();
     if(company.isEmpty || _db == null) { setState(()=>_error='لا توجد شركة محددة أو اتصال بقاعدة البيانات.'); return; }
     if(_name.text.trim().isEmpty) { setState(()=>_error='اسم البرنامج مطلوب.'); return; }
@@ -126,7 +128,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
         'updated_by':_db!.auth.currentUser?.id,
       },onConflict:'company_id');
       if(!mounted) return;
-      setState(() { _saving=false; _message='تم حفظ إعدادات البرنامج في قاعدة البيانات.'; });
+      setState(() { _saving=false; _editing=false; _message='تم حفظ إعدادات البرنامج في قاعدة البيانات.'; });
     } catch(e) { if(!mounted) return; setState(() { _saving=false; _error='تعذر حفظ الإعدادات: $e'; }); }
   }
 
@@ -135,6 +137,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
     height: minHeight,
     child: TextField(
       controller: controller,
+      enabled: _editing,
       maxLines: 1,
       textAlignVertical: TextAlignVertical.center,
       onChanged: (_) => setState(() {}),
@@ -154,6 +157,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   ]);
   Widget _compactTextField(TextEditingController c,String label,{String? hint,double labelWidth=94})=>_labeledField(label,_textField(c,label,hint:hint),labelWidth:labelWidth);
   Future<void> _pickColor(TextEditingController controller,String label) async {
+    if (!_editing) return;
     var hsv=HSVColor.fromColor(_parseColor(controller.text,_settingsPurple));
     final result=await showDialog<Color>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,ds)=>AlertDialog(
       title:Text('${silsilaText('اختيار اللون')} — ${silsilaText(label)}'),
@@ -201,7 +205,8 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
         _quickTask('تحديث',Icons.refresh_rounded,Colors.blue,_loading?null:_load),
-        _quickTask('حفظ',Icons.save_outlined,const Color(0xFF168447),_saving?null:_save),
+        _quickTask('تعديل',Icons.edit_outlined,const Color(0xFFEF9B13),_loading || _saving || _editing ? null : () => setState(() { _editing = true; _message = 'تم تفعيل وضع تعديل إعدادات البرنامج.'; })),
+        _quickTask('حفظ',Icons.save_outlined,const Color(0xFF168447),_saving || !_editing?null:_save),
         _quickTask('معاينة',Icons.visibility_outlined,const Color(0xFF6841A5),_previewSettings),
       ])),
     ]))),
@@ -212,10 +217,10 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
       const SizedBox(width:10),
       Container(width:48,height:44,decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(8),border:Border.all(color:Colors.black12)),child:_logoBase64==null?const Icon(Icons.image_outlined,color:_settingsPurple):ClipRRect(borderRadius:BorderRadius.circular(8),child:Image.memory(base64Decode(_logoBase64!),fit:BoxFit.contain))),
       const SizedBox(width:6),
-      OutlinedButton.icon(onPressed:_pickLogo,icon:const Icon(Icons.upload_file_rounded,size:18),label:Text(silsilaText('اختيار صورة'))),
-      if(_logoBase64!=null)IconButton(onPressed:()=>setState(()=>_logoBase64=null),icon:const Icon(Icons.delete_outline,color:Colors.red)),
+      OutlinedButton.icon(onPressed:_editing?_pickLogo:null,icon:const Icon(Icons.upload_file_rounded,size:18),label:Text(silsilaText('اختيار صورة'))),
+      if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red)),
       const SizedBox(width:10),
-      SizedBox(width:240,child:_labeledField('لغة البرنامج',DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:42),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:7),border:OutlineInputBorder()),items:[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:(v){if(v!=null){setState(()=>_language=v);SilsilaLanguage.setLanguage(v);}}),labelWidth:82)),
+      SizedBox(width:240,child:_labeledField('لغة البرنامج',DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:42),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:7),border:OutlineInputBorder()),items:[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null){setState(()=>_language=v);SilsilaLanguage.setLanguage(v);}}:null),labelWidth:82)),
     ])))),
     _section('ألوان وهوية البرنامج',Icons.palette_outlined,Column(children:[
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1050,child:Row(children:[
@@ -235,12 +240,12 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
         Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),decoration:BoxDecoration(color:const Color(0xFFF7F5FA),borderRadius:BorderRadius.circular(8)),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1250,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Padding(padding:const EdgeInsets.only(bottom:4),child:Text('${i+1}. ${_labels[i]}',style:TextStyle(fontSize:13,color:_parseColor(_colors[i].text,_settingsPurple),fontWeight:FontWeight.w800))),
           Row(children:[
-            SizedBox(width:245,child:_labeledField('نوع الخط',DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:42,maxHeight:42),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:7),border:OutlineInputBorder()),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_fonts[i]=v);}),labelWidth:70)),
+            SizedBox(width:245,child:_labeledField('نوع الخط',DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:42,maxHeight:42),contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:7),border:OutlineInputBorder()),items:_fontOptions.map((font)=>DropdownMenuItem(value:font,child:Text(font,overflow:TextOverflow.ellipsis))).toList(),onChanged:_editing?(v){if(v!=null)setState(()=>_fonts[i]=v);}:null),labelWidth:70)),
             const SizedBox(width:8),SizedBox(width:135,child:_compactTextField(_sizes[i],'الحجم',labelWidth:42)),
             const SizedBox(width:8),SizedBox(width:260,child:_colorField(_colors[i],'لون الخط',labelWidth:65)),
-            const SizedBox(width:8),FilterChip(label:Text(silsilaText('سميك')),selected:_bold[i],visualDensity:VisualDensity.compact,onSelected:(v)=>setState(()=>_bold[i]=v)),
-            const SizedBox(width:4),FilterChip(label:Text(silsilaText('مائل')),selected:_italic[i],visualDensity:VisualDensity.compact,onSelected:(v)=>setState(()=>_italic[i]=v)),
-            const SizedBox(width:4),FilterChip(label:Text(silsilaText('تحته سطر')),selected:_underline[i],visualDensity:VisualDensity.compact,onSelected:(v)=>setState(()=>_underline[i]=v)),
+            const SizedBox(width:8),FilterChip(label:Text(silsilaText('سميك')),selected:_bold[i],visualDensity:VisualDensity.compact,onSelected:_editing?(v)=>setState(()=>_bold[i]=v):null),
+            const SizedBox(width:4),FilterChip(label:Text(silsilaText('مائل')),selected:_italic[i],visualDensity:VisualDensity.compact,onSelected:_editing?(v)=>setState(()=>_italic[i]=v):null),
+            const SizedBox(width:4),FilterChip(label:Text(silsilaText('تحته سطر')),selected:_underline[i],visualDensity:VisualDensity.compact,onSelected:_editing?(v)=>setState(()=>_underline[i]=v):null),
           ]),
         ])))),
         if(i<4) const SizedBox(height:8),
@@ -248,6 +253,6 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
     ])),
     if(_error!=null)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Text(_error!,style:const TextStyle(color:Colors.red,fontWeight:FontWeight.w600))),
     if(_message!=null)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Text(_message!,style:const TextStyle(color:Colors.green,fontWeight:FontWeight.w600))),
-    const SizedBox(height:8),Align(alignment:AlignmentDirectional.centerStart,child:FilledButton.icon(onPressed:_saving?null:_save,icon:Icon(_saving?Icons.hourglass_top_rounded:Icons.save_rounded),label:Text(_saving?'جارٍ الحفظ...':'حفظ إعدادات البرنامج'))),
+    const SizedBox(height:8),Align(alignment:AlignmentDirectional.centerStart,child:FilledButton.icon(onPressed:_saving || !_editing?null:_save,icon:Icon(_saving?Icons.hourglass_top_rounded:Icons.save_rounded),label:Text(_saving?'جارٍ الحفظ...':'حفظ إعدادات البرنامج'))),
   ]))));
 }
