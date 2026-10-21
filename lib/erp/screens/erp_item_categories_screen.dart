@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -245,7 +246,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Directionality(textDirection:TextDirection.rtl,child:Column(
+  Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: _add, save: _save);
+    return Directionality(textDirection:TextDirection.rtl,child:Column(
     crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Container(color:Colors.white,padding:const EdgeInsets.symmetric(horizontal:14,vertical:9),
         child:const Row(children:[Icon(Icons.account_tree_outlined,color:_catPurple,size:25),SizedBox(width:9),
@@ -334,4 +337,5 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         )))),
     ],
   ));
+  }
 }
