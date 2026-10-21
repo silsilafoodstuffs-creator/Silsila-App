@@ -1130,19 +1130,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       leading: Icon(_iconFor(name), color: _orange, size: 20),
                       title: Text(name, style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: moduleOpen || selectedModule ? FontWeight.w800 : FontWeight.w500)),
                       onTap: () {
-                        final firstGroup = moduleEntry.value.keys.first;
-                        final firstPage = moduleEntry.value[firstGroup]!.first;
                         setState(() {
                           _module = name;
-                          _group = firstGroup;
-                          _page = firstPage;
-                          _search = '';
-                          _expandedModules.add(name);
-                          for (final groupName in moduleEntry.value.keys) {
-                            _expandedGroups.add('$name::$groupName');
+                          if (_expandedModules.contains(name)) {
+                            _expandedModules.remove(name);
+                            _expandedGroups.removeWhere((key) => key.startsWith('$name::'));
+                          } else {
+                            _expandedModules.add(name);
+                            _expandedGroups.removeWhere((key) => key.startsWith('$name::'));
                           }
                         });
-                        _loadWorkspacePage(firstPage);
                       },
                     ),
                   )),
@@ -1154,10 +1151,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                         _expandedModules.remove(name);
                         _expandedGroups.removeWhere((key) => key.startsWith('$name::'));
                       } else {
+                        _module = name;
                         _expandedModules.add(name);
-                        for (final groupName in moduleEntry.value.keys) {
-                          _expandedGroups.add('$name::$groupName');
-                        }
+                        _expandedGroups.removeWhere((key) => key.startsWith('$name::'));
                       }
                     }),
                     icon: Icon(moduleOpen ? Icons.expand_more_rounded : Icons.chevron_left_rounded, color: moduleOpen ? Colors.white : _orange, size: 24),
@@ -1170,7 +1166,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                   final groupOpen = _expandedGroups.contains(groupKey);
                   final selectedGroup = selectedModule && _group == groupEntry.key;
                   return Container(
-                    color: Colors.white,
+                    color: const Color(0xFFF1E8FA),
                     child: Padding(
                     padding: const EdgeInsetsDirectional.only(start: 13, end: 8),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1194,14 +1190,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                             hoverColor: const Color(0xFFFFA015),
                             title: Text(groupEntry.key, style: const TextStyle(color: Color(0xFF3E007D), fontSize: 11, fontWeight: FontWeight.w800)),
                             onTap: () {
-                              final targetPage = groupEntry.value.first;
                               setState(() {
                                 _module = name;
                                 _group = groupEntry.key;
-                                _page = targetPage;
-                                _search = '';
+                                if (groupOpen) {
+                                  _expandedGroups.remove(groupKey);
+                                } else {
+                                  _expandedModules.add(name);
+                                  _expandedGroups.add(groupKey);
+                                }
                               });
-                              _loadWorkspacePage(targetPage);
                             },
                           ),
                         )),
