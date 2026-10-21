@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 
@@ -159,7 +158,10 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
   Future<void> _delete() async {
     final id = _selectedId;
     if (id == null) { setState(() => _error = 'حدد تصنيفًا من الجريد أولًا.'); return; }
-    final row = _rows.where((r) => _s(r['id']) == id).firstOrNull;
+    Map<String, dynamic>? row;
+    for (final candidate in _rows) {
+      if (_s(candidate['id']) == id) { row = candidate; break; }
+    }
     if (row == null) return;
     final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
       title: const Text('تأكيد الحذف'), content: Text('هل تريد حذف التصنيف «${_s(row['name_ar'])}»؟'),
