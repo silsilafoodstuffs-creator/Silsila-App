@@ -205,7 +205,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('أنواع الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
       Container(color: Colors.white, padding: const EdgeInsets.all(8), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
         _task('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-        _task('إضافة', Icons.add_circle_outline, Colors.green, _editing ? null : _new),
+        _task('إضافة', Icons.add_circle_outline, Colors.green, _saving ? null : _new),
         _task('حفظ', Icons.save_outlined, const Color(0xFF3E007D), _saving || !_editing ? null : _save),
         _task('تعديل', Icons.edit_outlined, Colors.orange, _saving || _selected == null ? null : () { final r = _rows.where((x) => x['كود النشاط'] == _selected).firstOrNull; if (r != null) _edit(r); }),
         _task('حذف', Icons.delete_outline, Colors.red, _editing ? _delete : null),
