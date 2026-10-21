@@ -75,6 +75,7 @@ class ErpWorkspaceRecordsService {
   static String _recordKey(Map<String, String> row) {
     const preferredKeys = [
       'الكود',
+      'كود النشاط',
       'الرقم',
       'رقم المستند',
       'رقم الحساب',
