@@ -65,6 +65,12 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
+  Uint8List? _decodeBytea(dynamic value) {
+    final raw = _s(value);
+    if (!raw.startsWith(r'\\x') || raw.length <= 2 || (raw.length - 2).isOdd) return null;
+    try { return Uint8List.fromList(List<int>.generate((raw.length - 2) ~/ 2, (i) => int.parse(raw.substring(2 + i * 2, 4 + i * 2), radix: 16))); }
+    catch (_) { return null; }
+  }
 
   Future<void> _load({bool clearMessage = true}) async {
     if (!mounted) return;
@@ -455,8 +461,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         ))),
         Text('الأصناف المسجلة • ' + _items.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
         ..._items.map((i) => Card(child: ListTile(
-          leading: _s(i['image_url']).isNotEmpty
-              ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(_s(i['image_url']), width: 48, height: 48, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D))))
+          leading: _decodeBytea(i['image_data']) != null
+              ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(_decodeBytea(i['image_data'])!, width: 48, height: 48, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D))))
               : const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
           title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
           subtitle: Text(_groupLabel(_s(i['group_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
