@@ -191,6 +191,29 @@ def main() -> int:
     groups = rest("GET", "erp_item_groups", urllib.parse.urlencode({
         "company_id": f"eq.{COMPANY_ID}", "select": "id,group_code,group_name,image_data",
     }))
+    categories = rest("GET", "categories", urllib.parse.urlencode({
+        "select": "id,name,image_data", "is_active": "eq.true", "limit": "500",
+    }))
+    category_aliases = {
+        "FOOD-GHEE": ["سمنات", "سمن"],
+        "FOOD-OILS": ["زيوت", "زيت"],
+        "FOOD-PASTA": ["مكرونات", "مكرونة ونودلز", "مكرونة"],
+        "FOOD-LEGUMES": ["بقوليات", "بقوليات وحبوب"],
+        "FOOD-HOT-DRINKS": ["مشروبات ساخنة", "شاي وقهوة وكاكاو"],
+        "FOOD-SOFT-DRINKS": ["مشروبات غازية", "مشروبات غازية ومياه"],
+        "FOOD-CHEESE": ["جبن"],
+        "FOOD-DAIRY": ["ألبان"],
+        "FOOD-JUICES": ["عصائر"],
+        "FOOD-SNACKS": ["مقرمشات", "مقرمشات وسناكس"],
+        "FOOD-CANNED": ["معلبات"],
+        "FOOD-CHOCOLATE": ["شيكولاتة"],
+        "FOOD-CANDY": ["حلويات"],
+        "FOOD-FROZEN": ["مجمدات", "أغذية مجمدة"],
+        "HOME-CLEANING": ["منظفات"],
+        "HOME-LAUNDRY": ["منظفات"],
+        "HOME-PAPER": ["ورقيات"],
+        "PERSONAL-CARE": ["عناية شخصية"],
+    }
     items = rest("GET", "erp_items", urllib.parse.urlencode({
         "company_id": f"eq.{COMPANY_ID}",
         "select": "id,item_code,item_name,barcode,brand_name,group_id,image_data,image_url",
@@ -232,6 +255,20 @@ def main() -> int:
                     rest("PATCH", "erp_item_groups", urllib.parse.urlencode({"id": f"eq.{group_id}", "company_id": f"eq.{COMPANY_ID}"}), {
                         "image_data": image_value, "image_mime_type": mime, "image_url": None,
                     })
+                # Use a real pack shot as a representative category photo only
+                # where the category name maps explicitly to this ERP group.
+                aliases = category_aliases.get(str(group.get("group_code") or ""), [])
+                normalized_aliases = {normalized(alias) for alias in aliases}
+                for category in categories:
+                    if normalized(str(category.get("name") or "")) not in normalized_aliases:
+                        continue
+                    if len(str(category.get("image_data") or "")) > 25_000:
+                        continue
+                    if not DRY_RUN:
+                        rest("PATCH", "categories", urllib.parse.urlencode({"id": f"eq.{category['id']}"}), {
+                            "image_data": image_value, "image_mime_type": mime, "image_url": None,
+                        })
+                    print(f"  category photo: {category.get('name')}{' [dry-run]' if DRY_RUN else ''}")
         time.sleep(0.2)
     print(f"Image candidates accepted: {updated}; writes performed: {0 if DRY_RUN else updated}.")
     print("No match means no change. Review source licensing and product identity before enabling these images in customer-facing listings.")
