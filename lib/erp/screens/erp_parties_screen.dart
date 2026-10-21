@@ -70,6 +70,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   }
 
   Future<void> _create() async {
+    if (!_editing) { setState(() => _error = 'اضغط «إضافة» أو «تعديل» أولًا قبل الحفظ.'); return; }
     final credit = double.tryParse(_creditLimit.text.trim()) ?? -1;
     final opening = double.tryParse(_openingBalance.text.trim()) ?? 0;
     if (_code.text.trim().isEmpty || _name.text.trim().isEmpty || credit < 0) {
