@@ -22,6 +22,19 @@ from (values
   ('erp_app_assets','table'),
   ('erp_app_role_permissions','table'),
   ('erp_company_members','table'),
+  ('erp_currencies','table'),
+  ('erp_geo_areas','table'),
+  ('erp_sales_representatives','table'),
+  ('erp_customer_monthly_goals','table'),
+  ('erp_commission_plans','table'),
+  ('erp_commission_tiers','table'),
+  ('erp_commission_runs','table'),
+  ('erp_einvoice_settings','table'),
+  ('erp_einvoice_operations','table'),
+  ('erp_hr_shifts','table'),
+  ('erp_hr_shift_assignments','table'),
+  ('erp_hr_fingerprint_devices','table'),
+  ('erp_hr_attendance_events','table'),
   ('erp_accounts','table'),
   ('erp_parties','table'),
   ('erp_branches','table'),
@@ -78,7 +91,10 @@ from (values
   ('erp_guard_cash_voucher_update','function'),
   ('erp_record_inventory_movement','function'),
   ('erp_transfer_inventory_between_warehouses','function'),
-  ('erp_validate_delegate_item_assignment','function')
+  ('erp_validate_delegate_item_assignment','function'),
+  ('erp_validate_hr_company_links','function'),
+  ('erp_validate_hr_attendance_links','function'),
+  ('erp_validate_sales_target_links','function')
 ) as x(object_name, object_type)
 order by x.object_type, x.object_name;
 
@@ -125,6 +141,9 @@ where n.nspname = 'public'
     'erp_guard_cash_voucher_update',
     'erp_validate_master_data_links',
     'erp_resolve_item_price',
-    'erp_create_price_list'
+    'erp_create_price_list',
+    'erp_validate_hr_company_links',
+    'erp_validate_hr_attendance_links',
+    'erp_validate_sales_target_links'
   )
 order by p.proname;
