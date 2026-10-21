@@ -1,9 +1,5 @@
 name: Enrich Silsila catalog images
 on:
-  push:
-    branches: [main]
-    paths:
-      - "tools/catalog_import/import_real_product_images.py"
   workflow_dispatch:
     inputs:
       apply_images:
