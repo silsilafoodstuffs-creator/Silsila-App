@@ -186,7 +186,14 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
         "مكسرات": "nuts", "شيبسي": "potato chips", "رقائق": "chips",
     }
     english_terms = " ".join(english for arabic, english in arabic_terms.items() if arabic in raw_name)
-    search_target = normalized(" ".join((target, english_terms)))
+    # For unbranded Arabic-only records, score the English category terms
+    # separately; mixing Arabic and English tokens makes a correct candidate
+    # score artificially low. Keep brand/name scoring when a Latin name exists.
+    has_latin_name = bool(re.search(r"[a-zA-Z]", raw_name))
+    if not barcode and not raw_brand and not has_latin_name and english_terms:
+        search_target = normalized(english_terms)
+    else:
+        search_target = normalized(" ".join((target, english_terms)))
     best = None
     best_score = 0.0
     for candidate in candidates:
@@ -204,7 +211,7 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
                 score += 0.25
             if not brand and not (set(normalized(english_terms).split()) & set(product_title.split())):
                 score = min(score, 0.25)
-        threshold = 0.72 if not barcode and not raw_brand else 0.42
+        threshold = 0.48 if not barcode and not raw_brand and not has_latin_name else 0.42
         if score < threshold or score <= best_score:
             continue
         image_url = candidate.get("image_front_url") or candidate.get("image_url")
