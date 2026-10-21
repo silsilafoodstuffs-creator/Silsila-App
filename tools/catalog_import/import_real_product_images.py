@@ -20,6 +20,7 @@ from typing import Any
 BASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 COMPANY_ID = os.environ.get("SILSILA_ERP_COMPANY_ID", "")
+# Full-text endpoint; the legacy CGI search is known to return widespread 503s.
 OFF_API = "https://search.openfoodfacts.org/search"
 USER_AGENT = "SilsilaCatalogEnricher/1.0 (catalog administrator)"
 MIN_BYTES = 12_000
