@@ -255,11 +255,11 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
         ));
       }),
     ],
-  ));
+  )));
 
   Widget _notice(String text, Color color) => Container(
     margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(color: color.withValues(alpha: .09), borderRadius: BorderRadius.circular(10)),
     child: Text(text, style: TextStyle(color: color)),
-  ));
+  );
 }
