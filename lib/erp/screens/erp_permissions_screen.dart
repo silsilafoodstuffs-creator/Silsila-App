@@ -474,7 +474,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       if(!mounted)return;setState((){_saving=false;_message=_scope=='__all__'?'تم حفظ الصلاحيات لجميع المستخدمين النشطين.':'تم حفظ صلاحيات المستخدم المحدد فقط.';});
     }catch(e){if(!mounted)return;setState((){_saving=false;_error='تعذر حفظ الصلاحيات: '+e.toString();});}
   }
-  Widget _row(String key,String label,{bool nested=false})=>Container(margin:EdgeInsetsDirectional.only(start:nested?12:0,bottom:5),padding:const EdgeInsets.symmetric(horizontal:6,vertical:5),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:Colors.black12),borderRadius:BorderRadius.circular(8)),child:Row(children:[
+  Widget _row(String key,String label,{bool nested=false})=>Container(margin:EdgeInsetsDirectional.only(start:nested?12:0,bottom:19),padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:Colors.black12),borderRadius:BorderRadius.circular(8)),child:Row(children:[
     Expanded(flex:3,child:Text(label,style:TextStyle(fontSize:11,fontWeight:nested?FontWeight.w600:FontWeight.w800))),
     for(final a in _actions)Expanded(flex:1,child:Center(child:Checkbox(value:_cell(key,a),onChanged:_saving?null:(v)=>_setCell(key,a,v??false),activeColor:_permPurple,visualDensity:VisualDensity.compact))),
   ]));
