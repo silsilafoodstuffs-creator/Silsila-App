@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_cashboxes_repository.dart';
 
 class ErpCashboxesScreen extends StatefulWidget {
@@ -121,6 +122,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: _create, save: _create);
     final visible = _rows.where((r) => widget.initialBankOnly ? r['is_bank_account'] == true : true).toList();
     return Directionality(textDirection: TextDirection.rtl, child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
