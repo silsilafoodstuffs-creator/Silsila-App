@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/foundation.dart';
@@ -173,6 +174,15 @@ const categories = [
   'أصناف أخرى',
 ];
 
+Uint8List? _decodeDatabaseBytea(dynamic value) {
+  final raw = (value ?? '').toString();
+  if (!raw.startsWith(r'\\x') || raw.length <= 2 || (raw.length - 2).isOdd) return null;
+  try {
+    return Uint8List.fromList(List<int>.generate((raw.length - 2) ~/ 2,
+      (i) => int.parse(raw.substring(2 + i * 2, 4 + i * 2), radix: 16)));
+  } catch (_) { return null; }
+}
+
 class Product {
   const Product(
     this.name,
@@ -184,6 +194,7 @@ class Product {
     this.supplierId,
     this.minQuantity = 1,
     this.imageUrl,
+    this.imageBytes,
     this.subcategory,
     this.brand,
     this.packageCount = 1,
@@ -200,6 +211,7 @@ class Product {
   final String? supplierId;
   final int minQuantity;
   final String? imageUrl;
+  final Uint8List? imageBytes;
   final String? subcategory;
   final String? brand;
   final int packageCount;
@@ -939,7 +951,7 @@ class _MainShellState extends State<MainShell> {
   final supplierService = SupplierService();
   final categoryService = CategoryService();
   List<String> liveCategoryNames = [];
-  final Map<String, String> liveCategoryImages = <String, String>{};
+  final Map<String, Uint8List> liveCategoryImages = <String, Uint8List>{};
   List<Product> liveProducts = [];
   List<Map<String, dynamic>> liveSuppliers = [];
   bool loadingLiveSuppliers = false;
@@ -1114,12 +1126,10 @@ class _MainShellState extends State<MainShell> {
             .toList();
         liveCategoryImages
           ..clear()
-          ..addEntries(rootRows.where((row) =>
-              (row['image_url'] ?? '').toString().trim().isNotEmpty)
-            .map((row) => MapEntry(
+          ..addEntries(rootRows.map((row) => MapEntry(
               (row['name'] ?? '').toString(),
-              (row['image_url'] ?? '').toString().trim(),
-            )));
+              _decodeDatabaseBytea(row['image_data']),
+            )).where((entry) => entry.value != null).map((entry) => MapEntry(entry.key, entry.value!)));
         if (!visibleCategoryNames.contains(selectedCategory)) {
           selectedCategory = 'الكل';
         }
@@ -1242,7 +1252,8 @@ class _MainShellState extends State<MainShell> {
           id: (id == null || id.isEmpty) ? null : id,
           supplierId: row['supplier_id']?.toString(),
           minQuantity: minQuantity < 1 ? 1 : minQuantity,
-          imageUrl: (row['image_url'] ?? '').toString().trim().isEmpty ? null : row['image_url'].toString(),
+          imageUrl: null,
+          imageBytes: _decodeDatabaseBytea(row['image_data']),
           subcategory: (row['subcategory'] ?? '').toString().trim().isEmpty ? null : row['subcategory'].toString(),
           brand: (row['brand'] ?? '').toString().trim().isEmpty ? null : row['brand'].toString(),
           packageCount: (row['package_count'] is num ? (row['package_count'] as num).toInt() : int.tryParse((row['package_count'] ?? '1').toString()) ?? 1).clamp(1, 100000).toInt(),
@@ -1286,27 +1297,18 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _categoryArtwork(String category, {double size = 44}) {
-    final url = liveCategoryImages[category]?.trim() ?? '';
+    final bytes = liveCategoryImages[category];
     return ClipRRect(
       borderRadius: BorderRadius.circular(9),
       child: SizedBox(
-        width: size,
-        height: size,
-        child: url.isEmpty
-            ? Container(
-                color: const Color(0xFFF5EFFB),
-                alignment: Alignment.center,
-                child: Icon(_iconForCategory(category), color: purple, size: size * .52),
-              )
-            : Image.network(
-                url,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFFF5EFFB),
+        width: size, height: size,
+        child: bytes == null
+            ? Container(color: const Color(0xFFF5EFFB), alignment: Alignment.center,
+                child: Icon(_iconForCategory(category), color: purple, size: size * .52))
+            : Image.memory(bytes, fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Container(color: const Color(0xFFF5EFFB),
                   alignment: Alignment.center,
-                  child: Icon(_iconForCategory(category), color: purple, size: size * .52),
-                ),
-              ),
+                  child: Icon(_iconForCategory(category), color: purple, size: size * .52))),
       ),
     );
   }
@@ -2263,12 +2265,9 @@ class _MainShellState extends State<MainShell> {
                   color: orange.withValues(alpha: .12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: product.imageUrl != null
-                    ? Image.network(
-                        product.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(product.icon, size: 31, color: purple),
-                      )
+                child: product.imageBytes != null
+                    ? Image.memory(product.imageBytes!, fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(product.icon, size: 31, color: purple))
                     : Icon(product.icon, size: 31, color: purple),
               ),
           ],
