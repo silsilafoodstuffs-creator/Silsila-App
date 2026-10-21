@@ -1107,16 +1107,21 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       selectedTileColor: const Color(0xFF7040A0),
                       leading: Icon(_iconFor(name), color: _orange, size: 20),
                       title: Text(name, style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: moduleOpen || selectedModule ? FontWeight.w800 : FontWeight.w500)),
-                      onTap: () => setState(() {
-                        _module = name;
-                        _group = moduleEntry.value.keys.first;
-                        _page = moduleEntry.value[_group]!.first;
-                        _search = '';
-                        _expandedModules.add(name);
-                        for (final groupName in moduleEntry.value.keys) {
-                          _expandedGroups.add('$name::$groupName');
-                        }
-                      }),
+                      onTap: () {
+                        final firstGroup = moduleEntry.value.keys.first;
+                        final firstPage = moduleEntry.value[firstGroup]!.first;
+                        setState(() {
+                          _module = name;
+                          _group = firstGroup;
+                          _page = firstPage;
+                          _search = '';
+                          _expandedModules.add(name);
+                          for (final groupName in moduleEntry.value.keys) {
+                            _expandedGroups.add('$name::$groupName');
+                          }
+                        });
+                        _loadWorkspacePage(firstPage);
+                      },
                     ),
                   )),
                   IconButton(
@@ -1166,12 +1171,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                             selectedTileColor: const Color(0xFFFFA015),
                             hoverColor: const Color(0xFFFFA015),
                             title: Text(groupEntry.key, style: const TextStyle(color: Color(0xFF3E007D), fontSize: 11, fontWeight: FontWeight.w800)),
-                            onTap: () => setState(() {
-                              _module = name;
-                              _group = groupEntry.key;
-                              _page = groupEntry.value.first;
-                              _search = '';
-                            }),
+                            onTap: () {
+                              final targetPage = groupEntry.value.first;
+                              setState(() {
+                                _module = name;
+                                _group = groupEntry.key;
+                                _page = targetPage;
+                                _search = '';
+                              });
+                              _loadWorkspacePage(targetPage);
+                            },
                           ),
                         )),
                         IconButton(
@@ -1201,14 +1210,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                             minLeadingWidth: 12,
                             leading: Icon(page == _page && selectedModule ? Icons.radio_button_checked_rounded : Icons.circle_outlined, color: const Color(0xFF3E007D), size: 11),
                             title: Text(page, style: TextStyle(color: const Color(0xFF3E007D), fontSize: 10.5, fontWeight: page == _page && selectedModule ? FontWeight.w800 : FontWeight.normal)),
-                            onTap: () => setState(() {
-                              _module = name;
-                              _group = groupEntry.key;
-                              _page = page;
-                              _search = '';
-                              _expandedModules.add(name);
-                              _expandedGroups.add(groupKey);
-                            }),
+                            onTap: () {
+                              setState(() {
+                                _module = name;
+                                _group = groupEntry.key;
+                                _page = page;
+                                _search = '';
+                                _expandedModules.add(name);
+                                _expandedGroups.add(groupKey);
+                              });
+                              _loadWorkspacePage(page);
+                            },
                           ),
                         )),
                     ]),
