@@ -342,6 +342,7 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
         "milk": {"chocolate", "soap", "shampoo"},
         "water": {"flavor", "flavoured", "flavored"},
         "lupini": {"garlic", "rosemary", "snacking", "snack", "seasoning", "flavored", "flavoured"},
+        "gelatin": {"strawberry", "banana", "orange", "lemon", "mango", "flavored", "flavoured"},
     }
     best = None
     best_score = 0.0
@@ -395,7 +396,7 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
 
 GROUP_ITEM_HINTS = {
     "FOOD-GHEE": ["سمن", "ghee"],
-    "FOOD-OILS": ["زيت", "oil", "خل"],
+    "FOOD-OILS": ["زيت", "oil"],
     "FOOD-PASTA": ["مكرونة", "pasta", "نودلز"],
     "FOOD-LEGUMES": ["عدس", "فول", "حمص", "فاصوليا", "لوبيا", "ترمس", "lentils", "beans", "chickpeas", "lupini"],
     "FOOD-HOT-DRINKS": ["شاي", "قهوة", "tea", "coffee"],
@@ -496,9 +497,15 @@ def main() -> int:
         "limit": "500",
     }))
     group_by_id = {g["id"]: g for g in groups}
+    # Seed the duplicate guard from the entire ERP catalog before slicing the
+    # next batch, so an image already used by an earlier batch cannot be reused.
+    used_source_codes: set[str] = set()
+    for row in items:
+        source_match = re.search(r"/product/([^/?#]+)", str(row.get("source_url") or ""))
+        if source_match:
+            used_source_codes.add(source_match.group(1))
     # The alphabetic first page was dominated by household goods. Inspect the
-    # full ERP catalog, then prioritize food groups so the first validation batch
-    # actually exercises the Egyptian grocery catalog.
+    # full ERP catalog, then prioritize food groups and records without real photos.
     def item_priority(row: dict[str, Any]) -> tuple[int, int, str]:
         group = group_by_id.get(row.get("group_id"), {})
         group_code = str(group.get("group_code") or "")
@@ -510,12 +517,6 @@ def main() -> int:
     items = items[:MAX_ITEMS]
     print(f"ERP groups: {len(groups)}; items checked: {len(items)} (food groups prioritized)")
     refreshed_groups: set[str] = set()
-    # Keep one source product image assigned to only one ERP item.
-    used_source_codes: set[str] = set()
-    for row in items:
-        source_match = re.search(r"/product/([^/?#]+)", str(row.get("source_url") or ""))
-        if source_match:
-            used_source_codes.add(source_match.group(1))
     updated = 0
     for index, item in enumerate(items, 1):
         # Existing photos smaller than the quality threshold are considered placeholders.
