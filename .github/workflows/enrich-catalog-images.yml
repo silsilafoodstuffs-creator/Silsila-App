@@ -1,0 +1,52 @@
+name: Enrich Silsila catalog images
+on:
+  workflow_dispatch:
+    inputs:
+      apply_images:
+        description: "Write matched binary images to Supabase (otherwise dry-run only)"
+        required: true
+        type: boolean
+        default: false
+      item_limit:
+        description: "Maximum ERP items to inspect (1-250)"
+        required: true
+        type: choice
+        options:
+          - "10"
+          - "25"
+          - "50"
+          - "100"
+          - "250"
+        default: "10"
+
+permissions:
+  contents: read
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run image matching and optional database import
+        env:
+          SUPABASE_URL: https://teitsopmhruczplwlwgn.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SILSILA_ERP_COMPANY_ID: 47278c99-7743-4dd4-9ce6-d11f28e02504
+          SILSILA_IMAGE_IMPORT_LIMIT: ${{ inputs.item_limit }}
+          SILSILA_IMAGE_IMPORT_DRY_RUN: ${{ inputs.apply_images && '0' || '1' }}
+        run: |
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::Repository secret SUPABASE_SERVICE_ROLE_KEY is not configured."
+            echo "Add it in Settings > Secrets and variables > Actions, then rerun this workflow."
+            exit 1
+          fi
+          python -m py_compile tools/catalog_import/import_real_product_images.py
+          python tools/catalog_import/import_real_product_images.py
