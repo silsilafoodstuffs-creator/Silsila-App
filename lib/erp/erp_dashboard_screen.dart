@@ -2291,17 +2291,81 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _screenHeading(String title,String subtitle)=>Padding(padding:const EdgeInsets.only(bottom:14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:_purple,fontSize:22,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(subtitle,style:const TextStyle(color:Colors.black54,height:1.5))]));
   Widget _fieldBox(String label,TextEditingController controller)=>SizedBox(width:220,child:TextField(controller:controller,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:label,border:const OutlineInputBorder())));
 
-  Widget _about() => Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Text(silsilaText('عن البرنامج'), style: TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
-    SizedBox(height: 12),
-    Text(silsilaText('تم إنشاء هذا البرنامج بواسطة شركة سلسلة للبرمجيات — أ. محمد عبد العاطي.'), style: TextStyle(fontWeight: FontWeight.w700, height: 1.7)),
-    Text(silsilaText('موبايل: 01121237271'), style: TextStyle(height: 1.7)),
-    Text('البريد الإلكتروني: attymanatty@gmail.com', style: TextStyle(height: 1.7)),
-    SizedBox(height: 6),
-    Text(silsilaText('خبرة في جوانب تجارة وتوزيع المواد الغذائية لمدة تقارب 20 عامًا، والمشاركة في تطوير كبرى التجار والشركات بنظام الفروع وإعادة هيكلتها وتطويرها في مختلف الأقسام.'), style: TextStyle(height: 1.8)),
-    SizedBox(height: 8),
-    Text(silsilaText('المنظومة مصممة للتوسع إلى إدارة مالية ومخزنية وتشغيلية موحدة متعددة الفروع.'), style: TextStyle(color: _purple, height: 1.7)),
-  ]));
+  Future<void> _leaveCurrentUser({required bool switchUser}) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(switchUser ? 'استبدال المستخدم' : 'تسجيل الخروج'),
+        content: Text(switchUser
+            ? 'سيتم إنهاء جلسة المستخدم الحالي والعودة إلى شاشة الدخول لتسجيل مستخدم آخر. هل تريد المتابعة؟'
+            : 'هل تريد تسجيل الخروج من برنامج سلسلة؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: _purple),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(switchUser ? 'استبدال المستخدم' : 'تسجيل الخروج'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await Supabase.instance.client.auth.signOut();
+      // ErpLoginGate listens to Supabase auth changes and displays the login
+      // form again, allowing the next person to sign in with a different account.
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر إنهاء جلسة الدخول: $error')),
+      );
+    }
+  }
+
+  Widget _about() => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFECE7F2))),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Expanded(
+        child: SingleChildScrollView(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(silsilaText('عن البرنامج'), style: const TextStyle(color: _purple, fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 12),
+            Text(silsilaText('تم إنشاء هذا البرنامج بواسطة شركة سلسلة للبرمجيات — أ. محمد عبد العاطي.'), style: const TextStyle(fontWeight: FontWeight.w700, height: 1.7)),
+            const Text('موبايل: 01121237271', style: TextStyle(height: 1.7)),
+            const Text('البريد الإلكتروني: attymanatty@gmail.com', style: TextStyle(height: 1.7)),
+            const SizedBox(height: 6),
+            Text(silsilaText('خبرة في جوانب تجارة وتوزيع المواد الغذائية لمدة تقارب 20 عامًا، والمشاركة في تطوير كبرى التجار والشركات بنظام الفروع وإعادة هيكلتها وتطويرها في مختلف الأقسام.'), style: const TextStyle(height: 1.8)),
+            const SizedBox(height: 8),
+            Text(silsilaText('المنظومة مصممة للتوسع إلى إدارة مالية ومخزنية وتشغيلية موحدة متعددة الفروع.'), style: const TextStyle(color: _purple, height: 1.7)),
+          ]),
+        ),
+      ),
+      const Divider(height: 24),
+      Wrap(
+        alignment: WrapAlignment.end,
+        spacing: 12,
+        runSpacing: 10,
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => _leaveCurrentUser(switchUser: true),
+            icon: const Icon(Icons.switch_account_rounded),
+            label: const Text('استبدال مستخدم'),
+            style: OutlinedButton.styleFrom(foregroundColor: _purple, side: const BorderSide(color: _purple), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+          ),
+          FilledButton.icon(
+            onPressed: () => _leaveCurrentUser(switchUser: false),
+            icon: const Icon(Icons.logout_rounded),
+            label: const Text('تسجيل خروج'),
+            style: FilledButton.styleFrom(backgroundColor: _purple, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
+          ),
+        ],
+      ),
+    ]),
+  );
 
 }
 
