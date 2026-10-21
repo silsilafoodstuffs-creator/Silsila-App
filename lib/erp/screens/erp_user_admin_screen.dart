@@ -62,7 +62,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   SupabaseClient? _db;
   final _picker = ImagePicker();
   late String _view;
-  bool _loading = false, _saving = false, _editMode = true;
+  bool _loading = false, _saving = false, _editMode = false;
   String? _error, _message, _selectedId, _selectedUserId;
   List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
   List<Map<String,dynamic>> _branches = [], _warehouses = [];
@@ -207,6 +207,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
 
   Future<void> _add() async {
     if(_saving)return;
+    setState(()=>_editMode=true);
     try {
       if(_isPermissions){setState(()=>_message='اختر المستخدم ثم عدّل مربعات الصلاحيات في الجدول.');return;}
       final payload=<String,dynamic>{'company_id':_company,'is_active':true};
@@ -222,6 +223,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _save() async {
+    if(!_editMode){setState(()=>_error='اضغط «تعديل» أو «إضافة» أولًا قبل تغيير البيانات.');return;}
     if(_saving)return;
     setState(()=>_saving=true);
     try {
@@ -260,12 +262,14 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         }
       }
       if(mounted)setState(()=>_message='تم حفظ التغييرات في قاعدة البيانات.');
+      if(mounted)setState(()=>_editMode=false);
       await _load();
     } catch(e){if(mounted)setState(()=>_error='تعذر الحفظ: $e');}
     finally{if(mounted)setState(()=>_saving=false);}
   }
 
   Future<void> _delete() async {
+    if(!_editMode){setState(()=>_error='اضغط «تعديل» أولًا قبل حذف البيانات.');return;}
     if(_isPermissions){
       if(_selectedUserId==null){setState(()=>_error='اختر مستخدمًا أولًا.');return;}
       final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('مسح صلاحيات المستخدم'),content:const Text('سيتم حذف مصفوفة صلاحيات المستخدم المحدد فقط، ولن يتم حذف حسابه. هل تريد المتابعة؟'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نعم، امسح الصلاحيات'))]));
@@ -381,7 +385,7 @@ Widget _toolbar() => Container(
       _taskButton('تحديث', Icons.refresh_rounded, _loading ? null : _load),
       _taskButton('إضافة', Icons.add_circle_outline_rounded, _saving ? null : _add),
       _taskButton('حفظ', Icons.save_outlined, _saving ? null : _save),
-      _taskButton('تعديل', Icons.edit_outlined, () => setState(() => _editMode = !_editMode)),
+      _taskButton('تعديل', Icons.edit_outlined, _saving || _editMode ? null : () => setState(() => _editMode = true)),
       _taskButton('حذف', Icons.delete_outline_rounded, _saving ? null : _delete),
       _taskButton('معاينة', Icons.preview_outlined, _preview),
       _taskButton('طباعة', Icons.print_outlined, _printPdf),
@@ -546,7 +550,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:80,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
         rows:_rules.map((rule)=>DataRow(cells:[
           DataCell(SizedBox(width:250,child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis))),
-          for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:(v)=>setState(()=>rule[field]=v==true),visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
+          for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:_editMode?(v)=>setState(()=>rule[field]=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
         ])).toList(),
       )),
     ]);
