@@ -142,6 +142,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
       if (!mounted) return;
       _quantity.clear();
       _notes.clear();
+      _batch.clear();
       setState(() { _saving = false; _success = 'تم تسجيل الحركة المخزنية.'; });
       await _load();
     } catch (e) {
