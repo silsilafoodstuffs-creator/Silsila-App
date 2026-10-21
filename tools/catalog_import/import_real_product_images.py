@@ -318,10 +318,22 @@ def main() -> int:
         "company_id": f"eq.{COMPANY_ID}",
         "select": "id,item_code,item_name,barcode,brand_name,group_id,image_data,image_url",
         "order": "item_name.asc",
-        "limit": str(MAX_ITEMS),
+        "limit": "500",
     }))
-    print(f"ERP groups: {len(groups)}; items checked: {len(items)}")
     group_by_id = {g["id"]: g for g in groups}
+    # The alphabetic first page was dominated by household goods. Inspect the
+    # full ERP catalog, then prioritize food groups so the first validation batch
+    # actually exercises the Egyptian grocery catalog.
+    def item_priority(row: dict[str, Any]) -> tuple[int, int, str]:
+        group = group_by_id.get(row.get("group_id"), {})
+        group_code = str(group.get("group_code") or "")
+        image_size = len(str(row.get("image_data") or ""))
+        has_good_image = image_size > 25_000
+        return (0 if group_code.startswith("FOOD-") else 1, 1 if has_good_image else 0, str(row.get("item_name") or ""))
+
+    items.sort(key=item_priority)
+    items = items[:MAX_ITEMS]
+    print(f"ERP groups: {len(groups)}; items checked: {len(items)} (food groups prioritized)")
     refreshed_groups: set[str] = set()
     updated = 0
     for index, item in enumerate(items, 1):
@@ -334,7 +346,17 @@ def main() -> int:
         print(f"[{index}/{len(items)}] Checking: {item_name} | barcode={'yes' if item.get('barcode') else 'no'} | brand={'yes' if item.get('brand_name') else 'no'} | source candidates={len(candidates)}")
         match = choose_image(item, candidates)
         if not match:
-            print(f"  NO MATCH: {item_name} (no candidate passed identity, image-size, and image-quality checks)")
+            # Surface a small set of candidate titles to make matching failures
+            # actionable without flooding workflow logs or relaxing identity checks.
+            diagnostic = []
+            for candidate in candidates:
+                title = " ".join(str(candidate.get(k) or "") for k in ("product_name", "product_name_en")).strip()
+                if title and (candidate.get("image_front_url") or candidate.get("image_url")):
+                    diagnostic.append(title[:100])
+                if len(diagnostic) >= 4:
+                    break
+            suffix = f"; image-bearing candidates={diagnostic}" if diagnostic else ""
+            print(f"  NO MATCH: {item_name} (no candidate passed identity, image-size, and image-quality checks){suffix}")
             continue
         product, image_bytes, mime = match
         image_value = "\\x" + image_bytes.hex()
