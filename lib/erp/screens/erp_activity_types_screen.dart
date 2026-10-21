@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_workspace_records_service.dart';
 
 class ErpActivityTypesScreen extends StatefulWidget {
@@ -114,6 +115,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       '_مسودة': 'true',
     };
     setState(() {
+      _editing = true;
       _rows.add(row);
       _selected = code;
       _message = 'أكمل كود النشاط واسم النشاط داخل صف الجدول، ثم اضغط حفظ.';
@@ -195,6 +197,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: _new, save: _save);
     return Directionality(textDirection: TextDirection.rtl, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('أنواع الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
       Container(color: Colors.white, padding: const EdgeInsets.all(8), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
