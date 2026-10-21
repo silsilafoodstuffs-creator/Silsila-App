@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_operational_accounting_repository.dart';
 
 class ErpOperationalAccountMappingsScreen extends StatefulWidget {
@@ -99,7 +100,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   }
 
   @override
-  Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Column(
+  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(save: _save, child: Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Card(color: const Color(0xFF3E007D), child: Padding(
@@ -144,7 +145,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       const SizedBox(height: 8),
       const Text('تنبيه: اختر حسابات تحليلية نشطة وغير متطابقة للأدوار المحاسبية المختلفة. اختبر الخريطة على بيانات مراجعة قبل استخدامها في قيود رسمية.', style: TextStyle(color: Colors.black54, height: 1.5)),
     ],
-  ));
+  )));
 
   Widget _notice(String text, Color color) => Container(
     margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(10),

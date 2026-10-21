@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _permPurple = Color(0xFF3E007D);
@@ -510,7 +511,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
     ));
   }
 
-Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+Widget build(BuildContext context)=>ErpKeyboardActionRegistrar(save: _save, child: Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Card(color:_permPurple,child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       const Row(children:[Icon(Icons.admin_panel_settings_outlined,color:Color(0xFFFFA015),size:27),SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('إدارة الصلاحيات',style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)),Text('قوالب أو تحديد يدوي حسب المستخدم والقائمة',style:TextStyle(fontSize:12,color:Colors.white70))]))]),
       const SizedBox(height:8),
@@ -622,5 +623,5 @@ Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.r
         ]))),
       ]))),
     ])),
-  ]));
+  ])));
 }

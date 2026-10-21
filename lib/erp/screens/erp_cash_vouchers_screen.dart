@@ -15,6 +15,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
   final _repo = ErpCashVouchersRepository();
   final _company = TextEditingController();
   final _number = TextEditingController();
+  final _numberFocus = FocusNode();
   final _amount = TextEditingController();
   final _description = TextEditingController();
   List<Map<String, dynamic>> _cashboxes = [];
@@ -42,7 +43,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
   }
   @override
   void dispose() {
-    _company.dispose(); _number.dispose(); _amount.dispose(); _description.dispose(); super.dispose();
+    _company.dispose(); _numberFocus.dispose(); _number.dispose(); _amount.dispose(); _description.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
@@ -72,6 +73,24 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر تحميل سندات الخزائن: $e'; });
     }
+  }
+
+  void _newVoucher() {
+    if (_saving || _loading) return;
+    final hasUnsavedInput = [_number.text, _amount.text, _description.text]
+        .any((value) => value.trim().isNotEmpty);
+    if (hasUnsavedInput) {
+      setState(() {
+        _error = 'احفظ مسودة السند الحالية باستخدام F8 قبل بدء سند جديد؛ لم يتم مسح أي بيانات.';
+        _message = null;
+      });
+      return;
+    }
+    setState(() {
+      _error = null;
+      _message = 'نموذج سند جديد جاهز. أدخل البيانات ثم اضغط F8 للحفظ.';
+    });
+    _numberFocus.requestFocus();
   }
 
   Future<void> _createDraft() async {
@@ -154,7 +173,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(add: _createDraft, save: _createDraft, child: Directionality(textDirection: TextDirection.rtl, child: Column(
+  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(add: _newVoucher, save: _createDraft, child: Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Card(color: const Color(0xFF3E007D), child: Padding(
@@ -165,10 +184,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
           const SizedBox(height: 8),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : () {
-              _number.clear(); _amount.clear(); _description.clear();
-              setState(() { _error = null; _message = 'نموذج سند جديد جاهز.'; });
-            }),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving || _loading ? null : _newVoucher),
             _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _createDraft),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewVouchers),
             _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewVouchers),
@@ -200,7 +216,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
             onChanged: (v) => setState(() => _type = v ?? _type),
           ),
           const SizedBox(height: 8),
-          TextField(controller: _number, decoration: const InputDecoration(labelText: 'رقم السند *', border: OutlineInputBorder())),
+          TextField(controller: _number, focusNode: _numberFocus, decoration: const InputDecoration(labelText: 'رقم السند *', border: OutlineInputBorder())),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             value: _sourceId, isExpanded: true,

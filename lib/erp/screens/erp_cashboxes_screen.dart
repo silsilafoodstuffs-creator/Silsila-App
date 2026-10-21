@@ -15,6 +15,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   final _repo = ErpCashboxesRepository();
   final _company = TextEditingController();
   final _code = TextEditingController();
+  final _codeFocus = FocusNode();
   final _name = TextEditingController();
   final _bankName = TextEditingController();
   final _maskedNumber = TextEditingController();
@@ -40,7 +41,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   }
   @override
   void dispose() {
-    _company.dispose(); _code.dispose(); _name.dispose(); _bankName.dispose(); _maskedNumber.dispose(); super.dispose();
+    _company.dispose(); _codeFocus.dispose(); _code.dispose(); _name.dispose(); _bankName.dispose(); _maskedNumber.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
 
@@ -64,6 +65,24 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر تحميل الخزائن والحسابات البنكية: $e'; });
     }
+  }
+
+  void _newCashbox() {
+    if (_saving || _loading) return;
+    final hasUnsavedInput = [_code.text, _name.text, _bankName.text, _maskedNumber.text]
+        .any((value) => value.trim().isNotEmpty);
+    if (hasUnsavedInput) {
+      setState(() {
+        _error = 'احفظ البيانات الحالية باستخدام F8 قبل بدء سجل جديد؛ لم يتم مسح أي بيانات.';
+        _message = null;
+      });
+      return;
+    }
+    setState(() {
+      _error = null;
+      _message = 'نموذج جديد جاهز. أدخل البيانات ثم اضغط F8 للحفظ.';
+    });
+    _codeFocus.requestFocus();
   }
 
   Future<void> _create() async {
@@ -122,7 +141,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ErpKeyboardNavigation.registerActions(add: _create, save: _create);
+    ErpKeyboardNavigation.registerActions(add: _newCashbox, save: _create);
     final visible = _rows.where((r) => widget.initialBankOnly ? r['is_bank_account'] == true : true).toList();
     return Directionality(textDirection: TextDirection.rtl, child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -136,7 +155,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
             const SizedBox(height: 8),
             SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
               _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-              _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : () { _code.clear(); _name.clear(); _bankName.clear(); _maskedNumber.clear(); setState(() => _message = 'نموذج جديد جاهز.'); }),
+              _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : _newCashbox),
               _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving ? null : _create),
               _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), () => _previewRecords(widget.initialBankOnly ? 'معاينة الحسابات البنكية' : 'معاينة الخزائن')),
             ])),
@@ -154,7 +173,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('إضافة خزينة / بنك', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            TextField(controller: _code, decoration: const InputDecoration(labelText: 'الكود *')),
+            TextField(controller: _code, focusNode: _codeFocus, decoration: const InputDecoration(labelText: 'الكود *')),
             TextField(controller: _name, decoration: const InputDecoration(labelText: 'الاسم *')),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(

@@ -30,6 +30,7 @@ class ErpKeyboardNavigation extends StatelessWidget {
     return FocusTraversalGroup(
       policy: WidgetOrderTraversalPolicy(),
       child: Focus(
+        autofocus: true,
         onKeyEvent: (node, event) {
           if (event is! KeyDownEvent) return KeyEventResult.ignored;
           final primary = FocusManager.instance.primaryFocus;
