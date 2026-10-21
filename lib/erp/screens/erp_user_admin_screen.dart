@@ -78,6 +78,26 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   @override void didUpdateWidget(covariant ErpUserAdminScreen oldWidget) { super.didUpdateWidget(oldWidget); if(oldWidget.companyId!=widget.companyId || oldWidget.initialView!=widget.initialView){_activeCompanyId=widget.companyId;_view=widget.initialView;_load();} }
   @override void dispose() { super.dispose(); }
   String _s(dynamic v) => (v??'').toString();
+
+  // Always keep the user-types grid visible even if database reads/writes are
+  // blocked by company membership or RLS. These rows are preview-only until saved.
+  List<Map<String, dynamic>> _localDefaultUserTypes() {
+    const defaults = <Map<String, dynamic>>[
+      {'name_ar':'ادمن','name_en':'Admin','show_at_login':false},
+      {'name_ar':'موظف','name_en':'Employee','show_at_login':false},
+      {'name_ar':'مورد','name_en':'Supplier','show_at_login':true},
+      {'name_ar':'عميل','name_en':'Customer','show_at_login':true},
+      {'name_ar':'مندوب','name_en':'Delegate','show_at_login':true},
+      {'name_ar':'شركة شحن','name_en':'Shipping Company','show_at_login':true},
+    ];
+    return List<Map<String, dynamic>>.generate(defaults.length, (i) => {
+      'id': 'local-default-user-type-$i',
+      'type_code': i + 1,
+      ...defaults[i],
+      'is_active': true,
+      '_local_default': true,
+    });
+  }
   String get _company => (_activeCompanyId ?? widget.companyId ?? '').trim();
   bool get _isType => _view=='types';
   bool get _isUser => _view=='users';
@@ -159,6 +179,11 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         if (seedWarning && typeList.length < defaults.length && mounted) {
           setState(() => _message = 'تم تحميل الأنواع الموجودة، لكن تعذر إنشاء بعض الأنواع الناقصة. راجع صلاحيات المالك/المدير وسياسات قاعدة البيانات.');
         }
+        if (typeList.isEmpty) {
+          typeList = _localDefaultUserTypes();
+          if (mounted) setState(() => _message =
+            'تعذر جلب أنواع المستخدمين المحفوظة من قاعدة البيانات؛ يعرض الجدول الأنواع الافتراضية للمعاينة. راجع عضوية الشركة وسياسات RLS ثم اضغط تحديث.');
+        }
         const priority = {'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
         typeList.sort((a,b) => (priority[_s(a['name_ar'])] ?? 99).compareTo(priority[_s(b['name_ar'])] ?? 99));
       }
@@ -198,7 +223,15 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if (_isTemplate && _selectedId!=null) await _loadRules();
       if (_isPermissions) await _loadUserRules();
     } catch(e) {
-      if (mounted) setState(() { _loading=false; _error='تعذر تحميل بيانات الشاشة: $e'; });
+      if (mounted) setState(() {
+        _loading=false;
+        _error='تعذر تحميل بيانات الشاشة: $e';
+        if (_isType) {
+          _types = _localDefaultUserTypes();
+          _rows = List<Map<String, dynamic>>.from(_types);
+          _message = 'تم إظهار الأنواع الافتراضية في الجريد للمعاينة. تعذر الوصول إلى بيانات قاعدة البيانات؛ لا تُعتبر هذه الصفوف محفوظة حتى تنجح المزامنة.';
+        }
+      });
     }
   }
 
@@ -233,6 +266,10 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _save() async {
+    if (_isType && _rows.any((row) => row['_local_default'] == true)) {
+      setState(() => _error = 'الأنواع الظاهرة حاليًا بيانات افتراضية للمعاينة فقط وليست محفوظة. أصلح صلاحيات/سياسات قاعدة البيانات ثم اضغط تحديث قبل الحفظ.');
+      return;
+    }
     if(!_editMode){setState(()=>_error='اضغط «تعديل» أو «إضافة» أولًا قبل تغيير البيانات.');return;}
     if(_saving)return;
     setState(()=>_saving=true);
@@ -288,6 +325,10 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       return;
     }
     if(_selectedId==null){setState(()=>_error='حدد سجلًا من الجدول أولًا.');return;}
+    if (_isType && _rows.any((row) => _s(row['id']) == _selectedId && row['_local_default'] == true)) {
+      setState(() => _error = 'لا يمكن حذف صف افتراضي للمعاينة؛ لم يُحفظ هذا الصف في قاعدة البيانات.');
+      return;
+    }
     final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('تأكيد الحذف'),content:const Text('هل تريد حذف السجل المحدد؟'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نعم، احذف'))]));
     if(ok!=true)return;
     try{await _db!.from(_table).delete().eq('company_id',_company).eq('id',_selectedId!);setState(()=>_selectedId=null);await _load();if(mounted)setState(()=>_message='تم حذف السجل المحدد.');}
