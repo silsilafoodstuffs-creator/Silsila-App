@@ -42,6 +42,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   String? _logoStoragePath;
   String? _logoPreviewUrl;
   bool _uploadingLogo = false;
+  bool _isEditing = false;
   List<Map<String, String>> _currencyOptions = [
     {'code': 'EGP', 'name': 'جنيه مصري'}, {'code': 'USD', 'name': 'دولار أمريكي'},
     {'code': 'SAR', 'name': 'ريال سعودي'}, {'code': 'AED', 'name': 'درهم إماراتي'},
@@ -319,6 +320,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       if (!mounted) return;
       setState(() {
         _saving = false;
+        _isEditing = false;
         final savedMessage = widget.companyId == null && _company == null
             ? 'تم إنشاء الشركة وحفظ بياناتها وربط حسابك بها كمالك.'
             : 'تم حفظ بيانات الشركة في قاعدة البيانات.';
@@ -483,6 +485,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     ));
     if (confirmed != true || !mounted) return;
     setState(() {
+      _isEditing = true;
       _activeCompanyId = null; _company = null; _logoStoragePath = null; _logoPreviewUrl = null;
       for (final controller in [_legalName, _tradeName, _taxNumber, _commercialRegister, _companyCode, _taxOffice, _phone, _email, _address]) { controller.clear(); }
       _currency.text = 'EGP'; _error = null; _message = 'أدخل بيانات الشركة الجديدة ثم اضغط حفظ.';
@@ -491,7 +494,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
 
   void _editCompany() {
     if (_loading || _saving) return;
-    setState(() => _message = 'حقول بيانات الشركة متاحة للتعديل. احفظ التغييرات بعد الانتهاء.');
+    setState(() { _isEditing = true; _message = 'تم تفعيل وضع التعديل. احفظ التغييرات بعد الانتهاء.'; });
     FocusScope.of(context).requestFocus(FocusNode());
   }
 
@@ -581,12 +584,12 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
             _quickTask('تحديث', Icons.refresh, _companyPurple, _loading ? null : _load),
             _quickTask('إضافة', Icons.add_circle_outline, _companyPurple, _saving ? null : _newCompany),
-            _quickTask('حفظ', Icons.save_outlined, _companyPurple, _saving || _loading ? null : _save),
+            _quickTask('حفظ', Icons.save_outlined, _saving || _loading || !_isEditing ? null : _save),
             _quickTask('تعديل', Icons.edit_outlined, _companyPurple, _loading || _saving ? null : _editCompany),
             _quickTask('حذف', Icons.delete_outline, _companyPurple, _loading || _saving ? null : _deleteCompany),
             _quickTask('معاينة', Icons.visibility_outlined, _companyPurple, _loading || _saving ? null : _printCompany),
             _quickTask('طباعة', Icons.print_outlined, _companyPurple, _loading || _saving ? null : _printCompany),
-            _quickTask('استيراد Excel', Icons.file_upload_outlined, _companyPurple, _loading || _saving ? null : _importCompanyExcel),
+            _quickTask('استيراد Excel', Icons.file_upload_outlined, _companyPurple, _loading || _saving || !_isEditing ? null : _importCompanyExcel),
             _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, _companyPurple, _loading || _saving ? null : _exportCompany),
           ])),
         ),
@@ -647,8 +650,8 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                       const Text('صورة المنشأة / الشعار', style: TextStyle(color: _companyPurple, fontWeight: FontWeight.w800)),
                       const SizedBox(height: 8),
                       Wrap(spacing: 8, runSpacing: 8, children: [
-                        OutlinedButton.icon(onPressed: _uploadingLogo ? null : () => _chooseCompanyImage(ImageSource.gallery), icon: const Icon(Icons.photo_library_outlined, size: 18), label: const Text('استيراد صورة')),
-                        OutlinedButton.icon(onPressed: _uploadingLogo ? null : () => _chooseCompanyImage(ImageSource.camera), icon: const Icon(Icons.camera_alt_outlined, size: 18), label: const Text('الكاميرا')),
+                        OutlinedButton.icon(onPressed: _uploadingLogo || !_isEditing ? null : () => _chooseCompanyImage(ImageSource.gallery), icon: const Icon(Icons.photo_library_outlined, size: 18), label: const Text('استيراد صورة')),
+                        OutlinedButton.icon(onPressed: _uploadingLogo || !_isEditing ? null : () => _chooseCompanyImage(ImageSource.camera), icon: const Icon(Icons.camera_alt_outlined, size: 18), label: const Text('الكاميرا')),
                       ]),
                       if (_uploadingLogo) const LinearProgressIndicator(minHeight: 3),
                     ])),
@@ -656,7 +659,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                 ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
-                  onPressed: _saving || _loading ? null : _save,
+                  onPressed: _saving || _loading || !_isEditing ? null : _save,
                   icon: _saving ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.save_outlined),
                   label: Text(_saving ? 'جارٍ الحفظ...' : ((_activeCompanyId ?? widget.companyId) == null ? 'إنشاء الشركة وحفظ البيانات' : 'حفظ بيانات الشركة')),
                   style: FilledButton.styleFrom(backgroundColor: _companyPurple, padding: const EdgeInsets.symmetric(vertical: 14)),
@@ -685,7 +688,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
               items: _currencyOptions.map((item) => DropdownMenuItem<String>(
                 value: item['code'], child: Text('${item['name']} (${item['code']})', overflow: TextOverflow.ellipsis))).toList(),
-              onChanged: (value) { if (value != null) setState(() => _currency.text = value); },
+              onChanged: _isEditing ? (value) { if (value != null) setState(() => _currency.text = value); } : null,
             )),
           ]);
         }),
@@ -719,6 +722,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
                 Expanded(
                   child: TextField(
                     controller: controller,
+                    enabled: _isEditing,
                     keyboardType: keyboard,
                     maxLines: maxLines,
                     minLines: maxLines > 1 ? maxLines : 1,
