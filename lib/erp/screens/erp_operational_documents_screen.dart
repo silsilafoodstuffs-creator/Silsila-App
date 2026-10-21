@@ -1072,7 +1072,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                                 SizedBox(width: 40, child: IconButton(
                                   tooltip: 'حذف من المعاينة',
                                   padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  constraints: const BoxConstraints(minWidth: 32, minHeight: 54),
                                   onPressed: () { quantities[id]!.clear(); refresh(() {}); },
                                   icon: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 20),
                                 )),
@@ -1678,7 +1678,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             if (_pendingLines.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
               headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
               headingTextStyle: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 12),
-              dataRowMinHeight: 52, dataRowMaxHeight: 62, columnSpacing: 16,
+              dataRowMinHeight: 57, dataRowMaxHeight: 57, columnSpacing: 16,
               columns: const [DataColumn(label: Text('م.')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الصنف')), DataColumn(label: Text('الوحدة')), DataColumn(label: Text('الكمية')), DataColumn(label: Text('سعر الوحدة')), DataColumn(label: Text('الخصم')), DataColumn(label: Text('خصم %')), DataColumn(label: Text('الضريبة')), DataColumn(label: Text('الإجمالي')), DataColumn(label: Text(''))],
               rows: List<DataRow>.generate(_pendingLines.length, (index) {
                 final line = _pendingLines[index];
