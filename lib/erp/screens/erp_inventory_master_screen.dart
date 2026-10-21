@@ -210,7 +210,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
 
   void _newCurrentRecord() {
     final currentFields = _view == 'warehouses' ? [_warehouseCode.text, _warehouseName.text, _address.text] : _view == 'groups' ? [_groupCode.text, _groupName.text] : [_itemCode.text, _itemName.text, _barcode.text];
-    if (currentFields.any((value) => value.trim().isNotEmpty)) {
+    final hasSelection = (_view == 'warehouses' && _branchId != null) || (_view == 'groups' && _parentGroupId != null) || (_view == 'items' && _pickedItemImage != null);
+    if (currentFields.any((value) => value.trim().isNotEmpty) || hasSelection) {
       setState(() => _message = 'تم الاحتفاظ بالبيانات الحالية كما هي. احفظ السجل الحالي أولًا قبل بدء سجل جديد.');
       return;
     }
