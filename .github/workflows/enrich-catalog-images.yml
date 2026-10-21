@@ -1,9 +1,5 @@
 name: Enrich Silsila catalog images
 on:
-  push:
-    branches: [main]
-    paths:
-      - "tools/catalog_import/import_real_product_images.py"
   workflow_dispatch:
     inputs:
       apply_images:
@@ -44,8 +40,8 @@ jobs:
           SUPABASE_URL: https://teitsopmhruczplwlwgn.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SILSILA_ERP_COMPANY_ID: 47278c99-7743-4dd4-9ce6-d11f28e02504
-          SILSILA_IMAGE_IMPORT_LIMIT: '25'
-          SILSILA_IMAGE_IMPORT_DRY_RUN: '0'
+          SILSILA_IMAGE_IMPORT_LIMIT: ${{ inputs.item_limit || '10' }}
+          SILSILA_IMAGE_IMPORT_DRY_RUN: ${{ inputs.apply_images == true && '0' || '1' }}
         run: |
           if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
             echo "::error::Repository secret SUPABASE_SERVICE_ROLE_KEY is not configured."
