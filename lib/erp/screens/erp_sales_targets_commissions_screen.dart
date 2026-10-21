@@ -14,8 +14,15 @@ class ErpSalesTargetsCommissionsScreen extends StatefulWidget {
   State<ErpSalesTargetsCommissionsScreen> createState() => _ErpSalesTargetsCommissionsScreenState();
 }
 
-class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommissionsScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabs;
+class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommissionsScreen> {
+  String get _sectionTitle {
+    switch (widget.initialTabIndex.clamp(0, 3).toInt()) {
+      case 1: return 'المندوبون وعمولات المبيعات';
+      case 2: return 'خطط العمولة';
+      case 3: return 'مسودات العمولات';
+      default: return 'أهداف العملاء الشهرية';
+    }
+  }
   SupabaseClient? _db;
   bool _loading = true;
   String? _error;
@@ -24,20 +31,15 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, initialIndex: widget.initialTabIndex.clamp(0, 3).toInt(), vsync: this);
     try { _db = Supabase.instance.client; } catch (_) {}
     _load();
   }
   @override
   void didUpdateWidget(covariant ErpSalesTargetsCommissionsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialTabIndex != widget.initialTabIndex) {
-      _tabs.index = widget.initialTabIndex.clamp(0, 3).toInt();
-    }
     if (oldWidget.companyId != widget.companyId) _load();
   }
   @override
-  void dispose() { _tabs.dispose(); super.dispose(); }
 
   Future<void> _load() async {
     if (_db == null || (widget.companyId ?? '').isEmpty) { if (mounted) setState(() => _loading = false); return; }
@@ -281,7 +283,7 @@ Future<void> _previewSalesTargets() async {
       Text('خطط عمولة: ${_plans.length}'),
       Text('مسودات عمولات: ${_runs.length}'),
       const SizedBox(height: 8),
-      const Text('استخدم التبويبات لمراجعة التفاصيل وتعديل الأهداف أو إعدادات العمولة.'),
+      const Text('انتقل بين الأهداف والمندوبين وخطط العمولة من القائمة الجانبية.'),
     ])),
     actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
   ));
@@ -295,7 +297,7 @@ Future<void> _previewSalesTargets() async {
         const Row(children:[
           Icon(Icons.track_changes_rounded,color:_o,size:30),const SizedBox(width:10),
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text('أهداف العملاء وعمولات المبيعات',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
+            Text(_sectionTitle,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
             SizedBox(height:5),Text('أهداف شهرية • نسب ثابتة ومتدرجة • اعتماد قبل الصرف',style:TextStyle(color:Color(0xFFEFE5F8),fontSize:12)),
           ])),
         ]),
@@ -315,12 +317,9 @@ Future<void> _previewSalesTargets() async {
         _stat('أهداف الشهر',demo?'4':_goals.where((g)=>g['goal_month']?.toString().startsWith(_monthKey)==true).length.toString(),Icons.flag,_pink),
       ]);}),
       const SizedBox(height:12),
-      Container(decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14)),child:TabBar(isScrollable:true,controller:_tabs,labelColor:_p,unselectedLabelColor:Colors.black54,indicatorColor:_o,tabs:const[
-        Tab(icon:Icon(Icons.flag),text:'أهداف العملاء'),Tab(icon:Icon(Icons.badge),text:'المندوبون والعمولات'),Tab(icon:Icon(Icons.stacked_bar_chart),text:'خطط العمولة'),Tab(icon:Icon(Icons.fact_check),text:'مسودات العمولات'),
-      ])),
       const SizedBox(height:10),
       if(_loading)const Padding(padding:EdgeInsets.all(28),child:Center(child:CircularProgressIndicator()))
-      else SizedBox(height:590,child:TabBarView(controller:_tabs,children:[_customersView(demo),_repsView(demo),_plansView(demo),_runsView(demo)])),
+      else SizedBox(height:590,child:switch(widget.initialTabIndex.clamp(0, 3).toInt()) { 1 => _repsView(demo), 2 => _plansView(demo), 3 => _runsView(demo), _ => _customersView(demo) }),
     ]));
   }
 
