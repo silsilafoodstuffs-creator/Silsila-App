@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../widgets/erp_quick_task_button.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -616,6 +617,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   }
 
   @override Widget build(BuildContext context){
+    ErpKeyboardNavigation.registerActions(add: _add, save: _save);
     final title=_typeNames[_view]??'المستخدمين';
     return Focus(autofocus:true,onKeyEvent:(node,event){
       if(event is KeyDownEvent && event.logicalKey==LogicalKeyboardKey.f1){
