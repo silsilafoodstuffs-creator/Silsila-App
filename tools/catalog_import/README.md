@@ -51,3 +51,17 @@ Keep the service key in a secure environment only.
 ## Known limitation
 
 Open Food Facts coverage for Egyptian wholesale packs is incomplete. This is an enrichment pipeline, not a claim that every current Silsila item has been verified or that the entire Amazon Egypt supermarket catalog has been imported. A second phase should add a licensed Egyptian source, validate category hierarchy and pack sizes, and publish products only through the existing supplier approval/workflow.
+
+
+## Run from GitHub Actions
+
+A manual workflow is available at **Actions → Enrich Silsila catalog images**:
+https://github.com/silsilafoodstuffs-creator/Silsila-App/actions/workflows/enrich-catalog-images.yml
+
+1. Add the repository Actions secret `SUPABASE_SERVICE_ROLE_KEY` under Settings → Secrets and variables → Actions. Never place the key in code or Flutter.
+2. Run the workflow first with `apply_images = false` and a small item limit. This is a dry run and does not write to Supabase.
+3. Inspect logs for exact matched item names and image sizes.
+4. Only if the matches are correct and image reuse is permitted, rerun with `apply_images = true`. Start with 10 items before expanding.
+5. Check the Supabase image byte sizes and open the images in the app/ERP. A successful write alone does not prove a correct match.
+
+The workflow has not run automatically: it is manual by design to avoid modifying production catalog images without a human review.
