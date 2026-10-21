@@ -135,21 +135,30 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           {'name_ar':'مندوب','name_en':'Delegate','show_at_login':true},
           {'name_ar':'شركة شحن','name_en':'Shipping Company','show_at_login':true},
         ];
-        // Seed each required type in Supabase if missing; keep existing IDs and user links.
+        // Repair missing defaults one at a time. A denied/duplicate insert must
+        // not abort the whole screen load or hide already-saved rows.
+        var seedWarning = false;
         for (final type in defaults) {
           final exists = typeList.any((row) => _s(row['name_ar']) == type['name_ar']);
           if (!exists) {
-            await _db!.from('erp_user_types').insert(<String,dynamic>{
-              ...type, 'company_id':_company, 'is_active':true,
-            });
+            try {
+              await _db!.from('erp_user_types').insert(<String,dynamic>{
+                ...type, 'company_id':_company, 'is_active':true,
+              });
+            } catch (_) {
+              seedWarning = true;
+            }
           }
         }
-        // Always show the complete six-type catalog. The delegate type is a
-        // first-class type and must not be filtered out of the grid.
+        // Always show all saved types, including Delegate; never filter a type
+        // from the grid because it is legacy or not shown at login.
         typeList = (await _db!.from('erp_user_types').select()
             .eq('company_id', _company).order('type_code') as List)
             .map((x) => Map<String, dynamic>.from(x))
             .toList();
+        if (seedWarning && typeList.length < defaults.length && mounted) {
+          setState(() => _message = 'تم تحميل الأنواع الموجودة، لكن تعذر إنشاء بعض الأنواع الناقصة. راجع صلاحيات المالك/المدير وسياسات قاعدة البيانات.');
+        }
         const priority = {'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
         typeList.sort((a,b) => (priority[_s(a['name_ar'])] ?? 99).compareTo(priority[_s(b['name_ar'])] ?? 99));
       }
