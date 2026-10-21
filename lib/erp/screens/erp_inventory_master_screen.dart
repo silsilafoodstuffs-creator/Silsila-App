@@ -67,8 +67,9 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
   Uint8List? _decodeBytea(dynamic value) {
     final raw = _s(value);
-    if (!raw.startsWith(r'\\x') || raw.length <= 2 || (raw.length - 2).isOdd) return null;
-    try { return Uint8List.fromList(List<int>.generate((raw.length - 2) ~/ 2, (i) => int.parse(raw.substring(2 + i * 2, 4 + i * 2), radix: 16))); }
+    final prefixLength = raw.startsWith(r'\\x') ? 3 : raw.startsWith(r'\x') ? 2 : 0;
+    if (prefixLength == 0 || raw.length <= prefixLength || (raw.length - prefixLength).isOdd) return null;
+    try { return Uint8List.fromList(List<int>.generate((raw.length - prefixLength) ~/ 2, (i) => int.parse(raw.substring(prefixLength + i * 2, prefixLength + 2 + i * 2), radix: 16))); }
     catch (_) { return null; }
   }
 
