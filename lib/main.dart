@@ -912,6 +912,10 @@ class _MainShellState extends State<MainShell> {
   List<Product> liveProducts = [];
   List<Map<String, dynamic>> liveSuppliers = [];
   bool loadingLiveSuppliers = false;
+  List<Map<String, dynamic>> liveCustomers = [];
+  bool loadingLiveCustomers = false;
+  List<Map<String, dynamic>> liveShippingCompanies = [];
+  bool loadingLiveShippingCompanies = false;
   bool isAdmin = false;
   bool isApprovedSupplier = false;
   int unreadNotifications = 0;
@@ -938,6 +942,8 @@ class _MainShellState extends State<MainShell> {
     super.initState();
     loadLiveProducts();
     loadLiveSuppliers();
+    loadLiveCustomers();
+    loadLiveShippingCompanies();
     loadLiveCategories();
     loadCurrentRole();
     loadFavoriteKeys();
@@ -1121,6 +1127,39 @@ class _MainShellState extends State<MainShell> {
       setState(() => liveSuppliers = []);
     } finally {
       if (mounted) setState(() => loadingLiveSuppliers = false);
+    }
+  }
+
+  Future<void> loadLiveCustomers() async {
+    if (database == null) return;
+    if (mounted) setState(() => loadingLiveCustomers = true);
+    try {
+      final rows = await database!
+          .from('customer_directory')
+          .select('id,full_name,activity_type,customer_type,governorate,district')
+          .eq('activity_type', activity)
+          .order('full_name', ascending: true)
+          .limit(100);
+      if (!mounted) return;
+      setState(() => liveCustomers = List<Map<String, dynamic>>.from(rows));
+    } catch (_) {
+      if (mounted) setState(() => liveCustomers = []);
+    } finally {
+      if (mounted) setState(() => loadingLiveCustomers = false);
+    }
+  }
+
+  Future<void> loadLiveShippingCompanies() async {
+    if (database == null) return;
+    if (mounted) setState(() => loadingLiveShippingCompanies = true);
+    try {
+      final rows = await DeliveryService().getShippingCompanies(limit: 100);
+      if (!mounted) return;
+      setState(() => liveShippingCompanies = rows);
+    } catch (_) {
+      if (mounted) setState(() => liveShippingCompanies = []);
+    } finally {
+      if (mounted) setState(() => loadingLiveShippingCompanies = false);
     }
   }
 
@@ -1600,6 +1639,8 @@ class _MainShellState extends State<MainShell> {
                     });
                     loadLiveProducts();
                     loadLiveSuppliers();
+                    loadLiveCustomers();
+                    loadLiveShippingCompanies();
                     loadLiveCategories();
                   },
                 ),
@@ -1881,65 +1922,52 @@ class _MainShellState extends State<MainShell> {
                 ),
               ),
             ),
+        ] else if (selectedEntity == 'عملاء') ...[
+          _sectionTitle('العملاء', liveCustomers.where((customer) {
+            final name = (customer['full_name'] ?? '').toString().toLowerCase();
+            final type = (customer['customer_type'] ?? '').toString();
+            return (browseSubcategory == 'الكل' || type == browseSubcategory) &&
+                (search.isEmpty || name.contains(search.toLowerCase()));
+          }).length),
+          if (loadingLiveCustomers) const LinearProgressIndicator(minHeight: 2),
+          const SizedBox(height: 6),
+          ...liveCustomers.where((customer) {
+            final name = (customer['full_name'] ?? '').toString().toLowerCase();
+            final type = (customer['customer_type'] ?? '').toString();
+            return (browseSubcategory == 'الكل' || type == browseSubcategory) &&
+                (search.isEmpty || name.contains(search.toLowerCase()));
+          }).map((customer) {
+            final location = [customer['governorate'], customer['district']]
+                .where((v) => v != null && v.toString().trim().isNotEmpty).join(' • ');
+            return Card(color: Colors.white, child: ListTile(
+              leading: const CircleAvatar(backgroundColor: Color(0xFFEFE6F8), child: Icon(Icons.person_outline, color: purple)),
+              title: Text((customer['full_name'] ?? 'عميل سلسلة').toString()),
+              subtitle: Text([customer['customer_type'], location].where((v) => v != null && v.toString().trim().isNotEmpty).join(' • ')),
+            ));
+          }),
+          if (!loadingLiveCustomers && liveCustomers.isEmpty)
+            const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('لا توجد حسابات عملاء معتمدة منشورة حاليًا.'))),
         ] else ...[
-          _sectionTitle(selectedEntity, 0),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: purple.withValues(alpha: .10)),
-            ),
-            child: Column(
-              children: [
-                Icon(
-                  selectedEntity == 'عملاء'
-                      ? Icons.people_alt_outlined
-                      : selectedEntity == 'مندوبين'
-                          ? Icons.badge_outlined
-                          : Icons.local_shipping_outlined,
-                  size: 42,
-                  color: purple,
-                ),
-                const SizedBox(height: 9),
-                Text(
-                  'قسم $selectedEntity',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  selectedEntity == 'عملاء'
-                      ? 'تصفح حسابات العملاء وتصنيفاتهم عند توفر بيانات الدليل.'
-                      : selectedEntity == 'مندوبين'
-                          ? 'اعرض المناديب وتصنيفاتهم ومناطق التغطية.'
-                          : 'اعرض شركات الشحن وخدمات التوصيل ومناطق الخدمة.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.black54, height: 1.5),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => openPage(
-                    selectedEntity,
-                    SimpleListPage(
-                      title: selectedEntity,
-                      details: 'يمكن إدارة بيانات هذا القسم من خلال حسابات سلسلة والبيانات المعتمدة.',
-                      icon: selectedEntity == 'عملاء'
-                          ? Icons.people_alt_outlined
-                          : selectedEntity == 'مندوبين'
-                              ? Icons.badge_outlined
-                              : Icons.local_shipping_outlined,
-                    ),
-                  ),
-                  icon: const Icon(Icons.open_in_new),
-                  label: Text(silsilaText('فتح القسم')),
-                ),
-              ],
-            ),
-          ),
+          _sectionTitle('شركات الشحن', liveShippingCompanies.where((company) {
+            final name = (company['name'] ?? '').toString().toLowerCase();
+            final type = (company['category'] ?? company['classification'] ?? '').toString();
+            return (browseSubcategory == 'الكل' || type == browseSubcategory) &&
+                (search.isEmpty || name.contains(search.toLowerCase()));
+          }).length),
+          if (loadingLiveShippingCompanies) const LinearProgressIndicator(minHeight: 2),
+          const SizedBox(height: 6),
+          ...liveShippingCompanies.where((company) {
+            final name = (company['name'] ?? '').toString().toLowerCase();
+            final type = (company['category'] ?? company['classification'] ?? '').toString();
+            return (browseSubcategory == 'الكل' || type == browseSubcategory) &&
+                (search.isEmpty || name.contains(search.toLowerCase()));
+          }).map((company) => Card(color: Colors.white, child: ListTile(
+            leading: const CircleAvatar(backgroundColor: Color(0xFFEFE6F8), child: Icon(Icons.local_shipping_outlined, color: purple)),
+            title: Text((company['name'] ?? 'شركة شحن').toString()),
+            subtitle: Text((company['category'] ?? company['classification'] ?? 'شركة شحن معتمدة على سلسلة').toString()),
+          ))),
+          if (!loadingLiveShippingCompanies && liveShippingCompanies.isEmpty)
+            const Padding(padding: EdgeInsets.all(24), child: Center(child: Text('لا توجد شركات شحن نشطة مسجلة حاليًا.'))),
         ],
       ],
     );
