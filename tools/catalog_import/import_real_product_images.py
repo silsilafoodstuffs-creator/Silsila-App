@@ -273,9 +273,12 @@ def main() -> int:
         old = str(item.get("image_data") or "")
         if len(old) > 25_000:
             continue
+        item_name = str(item.get("item_name") or "(unnamed)")
         candidates = off_candidates(item)
+        print(f"[{index}/{len(items)}] Checking: {item_name} | barcode={'yes' if item.get('barcode') else 'no'} | brand={'yes' if item.get('brand_name') else 'no'} | source candidates={len(candidates)}")
         match = choose_image(item, candidates)
         if not match:
+            print(f"  NO MATCH: {item_name} (no candidate passed identity, image-size, and image-quality checks)")
             continue
         product, image_bytes, mime = match
         image_value = "\\x" + image_bytes.hex()
