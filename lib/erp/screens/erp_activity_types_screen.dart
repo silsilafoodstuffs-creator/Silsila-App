@@ -24,7 +24,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
   bool _active = true, _loading = false, _saving = false;
   String? _message;
   String? _resolvedCompanyId;
-  String? get _companyId => (widget.companyId?.trim().isNotEmpty == true) ? widget.companyId!.trim() : _resolvedCompanyId;
+  String? get _companyId => (_resolvedCompanyId?.trim().isNotEmpty == true) ? _resolvedCompanyId!.trim() : ((widget.companyId?.trim().isNotEmpty == true) ? widget.companyId!.trim() : null);
   static const _pageKey = 'أنواع الأنشطة';
 
   @override
