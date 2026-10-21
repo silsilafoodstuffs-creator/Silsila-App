@@ -7,6 +7,7 @@ import 'package:excel/excel.dart' as excel;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'screens/hr_attendance_rules_screen.dart';
 import 'screens/erp_app_assets_screen.dart';
 import 'screens/erp_app_advertisements_screen.dart';
@@ -2291,6 +2292,40 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _screenHeading(String title,String subtitle)=>Padding(padding:const EdgeInsets.only(bottom:14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:_purple,fontSize:22,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text(subtitle,style:const TextStyle(color:Colors.black54,height:1.5))]));
   Widget _fieldBox(String label,TextEditingController controller)=>SizedBox(width:220,child:TextField(controller:controller,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:label,border:const OutlineInputBorder())));
 
+  Future<void> _openAboutLink(String value) async {
+    final uri = Uri.parse(value);
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تعذر فتح الرابط. تأكد من وجود التطبيق أو المتصفح المناسب.')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر فتح الرابط على هذا الجهاز.')),
+      );
+    }
+  }
+
+  Widget _aboutContactButton({
+    required String label,
+    required IconData icon,
+    required String url,
+    Color color = _purple,
+  }) => OutlinedButton.icon(
+    onPressed: () => _openAboutLink(url),
+    icon: Icon(icon, size: 19),
+    label: Text(label),
+    style: OutlinedButton.styleFrom(
+      foregroundColor: color,
+      side: BorderSide(color: color.withValues(alpha: 0.55)),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+  );
+
   Future<void> _leaveCurrentUser({required bool switchUser}) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -2341,6 +2376,30 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Text(silsilaText('خبرة في جوانب تجارة وتوزيع المواد الغذائية لمدة تقارب 20 عامًا، والمشاركة في تطوير كبرى التجار والشركات بنظام الفروع وإعادة هيكلتها وتطويرها في مختلف الأقسام.'), style: const TextStyle(height: 1.8)),
             const SizedBox(height: 8),
             Text(silsilaText('المنظومة مصممة للتوسع إلى إدارة مالية ومخزنية وتشغيلية موحدة متعددة الفروع.'), style: const TextStyle(color: _purple, height: 1.7)),
+            const SizedBox(height: 20),
+            const Divider(),
+            Text(silsilaText('تواصل سريع مع سلسلة'), style: const TextStyle(color: _purple, fontSize: 16, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 9,
+              runSpacing: 9,
+              children: [
+                _aboutContactButton(label: 'اتصال أرضي', icon: Icons.call, url: 'tel:0222784248', color: const Color(0xFF176B3A)),
+                _aboutContactButton(label: 'اتصال موبايل', icon: Icons.phone_android, url: 'tel:01019617100', color: const Color(0xFF176B3A)),
+                _aboutContactButton(label: 'واتساب', icon: Icons.chat, url: 'https://wa.me/201019617100', color: const Color(0xFF128C7E)),
+                _aboutContactButton(label: 'رسالة SMS', icon: Icons.sms_outlined, url: 'sms:01019617100', color: const Color(0xFF176B3A)),
+                _aboutContactButton(label: 'تيك توك', icon: Icons.music_note, url: 'https://www.tiktok.com/search?q=Silsila', color: Colors.black87),
+                _aboutContactButton(label: 'فيسبوك', icon: Icons.facebook, url: 'https://www.facebook.com/search/top?q=Silsila', color: const Color(0xFF1877F2)),
+                _aboutContactButton(label: 'إنستجرام', icon: Icons.camera_alt_outlined, url: 'https://www.instagram.com/explore/search/keyword/?q=Silsila', color: const Color(0xFFC13584)),
+                _aboutContactButton(label: 'لينكد إن', icon: Icons.business_center_outlined, url: 'https://www.linkedin.com/search/results/companies/?keywords=Silsila', color: const Color(0xFF0A66C2)),
+                _aboutContactButton(label: 'ماسنجر', icon: Icons.message_outlined, url: 'https://www.messenger.com/', color: const Color(0xFF0866FF)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              silsilaText('ملاحظة: أزرار الشبكات الاجتماعية تفتح البحث عن سلسلة حاليًا؛ اربط الصفحات الرسمية مباشرة بعد تأكيد روابطها.'),
+              style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5),
+            ),
           ]),
         ),
       ),
