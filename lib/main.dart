@@ -2027,56 +2027,6 @@ class _MainShellState extends State<MainShell> {
         ],
       );
 
-  Widget _productResults(List<Product> visible) {
-    if (visible.isEmpty) {
-      final hasQuery = search.trim().isNotEmpty || selectedCategory != 'الكل';
-      final message = database != null && liveProducts.isEmpty
-          ? (productLoadMessage ?? 'لا توجد منتجات منشورة حاليًا من الموردين المعتمدين.')
-          : hasQuery
-              ? 'لا توجد أصناف مطابقة للبحث الحالي.'
-              : 'لا توجد منتجات لعرضها حاليًا.';
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.inventory_2_outlined, size: 42, color: purple),
-              const SizedBox(height: 8),
-              Text(message, textAlign: TextAlign.center),
-              if (database != null && liveProducts.isEmpty) ...[
-                const SizedBox(height: 6),
-                Text(silsilaText('ستظهر المنتجات هنا بعد أن ينشر المورد المعتمد الأصناف ويحدد أسعارها ووحداتها.'),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54, fontSize: 12),
-                ),
-              ],
-            ],
-          ),
-        ),
-      );
-    }
-    if (listViewMode) {
-      return Column(
-        children: visible.map(_catalogListProduct).toList(),
-      );
-    }
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: visible.length,
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 9,
-        mainAxisSpacing: 9,
-        childAspectRatio: showProductImages ? .70 : 1.18,
-      ),
-      itemBuilder: (_, i) => showProductImages
-          ? productCard(visible[i])
-          : _compactProductCard(visible[i]),
-    );
-  }
-
   Widget _catalogSubcategoryTree(String category, List<Product> items) {
     final subcategories = <String, List<Product>>{};
     for (final product in items) {
