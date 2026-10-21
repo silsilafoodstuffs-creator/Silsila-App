@@ -586,7 +586,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
             _quickTask('تحديث', Icons.refresh, _companyPurple, _loading ? null : _load),
             _quickTask('إضافة', Icons.add_circle_outline, _companyPurple, _saving ? null : _newCompany),
-            _quickTask('حفظ', Icons.save_outlined, _saving || _loading || !_isEditing ? null : _save),
+            _quickTask('حفظ', Icons.save_outlined, _companyPurple, _saving || _loading || !_isEditing ? null : _save),
             _quickTask('تعديل', Icons.edit_outlined, _companyPurple, _loading || _saving ? null : _editCompany),
             _quickTask('حذف', Icons.delete_outline, _companyPurple, _loading || _saving ? null : _deleteCompany),
             _quickTask('معاينة', Icons.visibility_outlined, _companyPurple, _loading || _saving ? null : _printCompany),
