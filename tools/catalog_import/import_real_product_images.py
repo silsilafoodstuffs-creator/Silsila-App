@@ -155,21 +155,42 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
 
 def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tuple[dict[str, Any], bytes, str] | None:
     barcode = str(item.get("barcode") or "").strip()
-    target = normalized(" ".join(str(item.get(k) or "") for k in ("brand_name", "item_name")))
+    raw_name = str(item.get("item_name") or "")
+    raw_brand = str(item.get("brand_name") or "")
+    target = normalized(" ".join((raw_brand, raw_name)))
+    arabic_terms = {
+        "أرز": "rice", "بسمتي": "basmati", "مكرونة": "pasta", "زيت": "cooking oil",
+        "سمن": "ghee", "سكر": "sugar", "دقيق": "flour", "عدس": "lentils",
+        "فول": "fava beans", "حمص": "chickpeas", "شاي": "tea", "قهوة": "coffee",
+        "عصير": "juice", "جبن": "cheese", "لبن": "milk", "زبادي": "yogurt",
+        "مياه": "water", "مشروب غازي": "soft drink", "بسكويت": "biscuits",
+        "شوكولاتة": "chocolate", "شيكولاتة": "chocolate", "منظف": "cleaner",
+        "مسحوق": "laundry detergent", "مناديل": "tissue", "مجمد": "frozen food",
+        "تمر": "dates", "عسل": "honey", "مربى": "jam", "كاتشب": "ketchup",
+        "مايونيز": "mayonnaise", "بهارات": "spices", "توابل": "seasoning",
+        "مكسرات": "nuts", "شيبسي": "potato chips", "رقائق": "chips",
+    }
+    english_terms = " ".join(english for arabic, english in arabic_terms.items() if arabic in raw_name)
+    search_target = normalized(" ".join((target, english_terms)))
     best = None
     best_score = 0.0
     for candidate in candidates:
         code = str(candidate.get("code") or "")
-        title = normalized(" ".join(str(candidate.get(k) or "") for k in ("product_name", "product_name_en", "brands")))
+        product_title = normalized(" ".join(str(candidate.get(k) or "") for k in ("product_name", "product_name_en")))
+        brands = normalized(str(candidate.get("brands") or ""))
+        title = normalized(" ".join((product_title, brands)))
         if barcode and code == barcode:
             score = 1.0
         else:
-            a, b = set(target.split()), set(title.split())
+            a, b = set(search_target.split()), set(title.split())
             score = len(a & b) / max(1, len(a | b))
-            brand = normalized(str(item.get("brand_name") or ""))
-            if brand and brand in title:
-                score += 0.18
-        if score < 0.42 or score <= best_score:
+            brand = normalized(raw_brand)
+            if brand and brand in brands:
+                score += 0.25
+            if not brand and not (set(normalized(english_terms).split()) & set(product_title.split())):
+                score = min(score, 0.25)
+        threshold = 0.72 if not barcode and not raw_brand else 0.42
+        if score < threshold or score <= best_score:
             continue
         image_url = candidate.get("image_front_url") or candidate.get("image_url")
         if not image_url:
