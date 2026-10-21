@@ -188,6 +188,10 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             print(f"  SOURCE REQUEST ERROR for query {term!r}: {type(exc).__name__}: {exc}")
             continue
+        finally:
+            # OFF documents a 10 search-requests/minute/IP limit. Wait even on
+            # errors so failed requests do not accidentally exceed the limit.
+            time.sleep(7.2)
         products = data.get("products", [])
         if not products:
             print(f"  SOURCE returned 0 results for query {term!r} (status OK)")
@@ -196,7 +200,6 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
             if code and code not in seen:
                 seen.add(code)
                 found.append(product)
-        time.sleep(4.2)  # public API read limit: at most 15 requests/minute
     return found
 
 
