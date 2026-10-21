@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/app_language.dart';
 
@@ -198,7 +199,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Directionality(textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,child:Padding(padding:const EdgeInsets.all(18),child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(save: _save, child: Directionality(textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,child:Padding(padding:const EdgeInsets.all(18),child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Card(color:_settingsPurple,child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Row(children:[Icon(Icons.tune_rounded,color:Color(0xFFFFA015),size:28),SizedBox(width:10),Expanded(child:Text(silsilaText('إعدادات البرنامج'),style:TextStyle(fontSize:21,fontWeight:FontWeight.w900,color:Colors.white)))]),
       Text(silsilaText('إدارة الاسم واللغة والهوية البصرية وخطوط العناوين بشكل موحد.'),style:TextStyle(color:Colors.white70)),
@@ -254,5 +255,5 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
     if(_error!=null)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Text(_error!,style:const TextStyle(color:Colors.red,fontWeight:FontWeight.w600))),
     if(_message!=null)Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Text(_message!,style:const TextStyle(color:Colors.green,fontWeight:FontWeight.w600))),
     const SizedBox(height:8),Align(alignment:AlignmentDirectional.centerStart,child:FilledButton.icon(onPressed:_saving || !_editing?null:_save,icon:Icon(_saving?Icons.hourglass_top_rounded:Icons.save_rounded),label:Text(_saving?'جارٍ الحفظ...':'حفظ إعدادات البرنامج'))),
-  ]))));
+  ])))));
 }
