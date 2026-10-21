@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_journal_repository.dart';
 
 class ErpJournalEntriesScreen extends StatefulWidget {
@@ -558,6 +559,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: () => _createDraft());
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(
