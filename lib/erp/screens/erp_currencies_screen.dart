@@ -18,7 +18,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
   final _symbol = TextEditingController();
   SupabaseClient? _db;
   List<Map<String, dynamic>> _rows = [];
-  bool _loading = true, _saving = false;
+  bool _loading = true, _saving = false, _editing = false;
   String? _error, _editingId;
 
   @override
@@ -40,10 +40,12 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
     } catch (e) { if (!mounted) return; setState(() { _loading = false; _error = 'تعذر تحميل العملات. تأكد من تطبيق ملف SQL الخاص بالعملات. $e'; }); }
   }
 
-  void _clear() { _editingId = null; _code.clear(); _name.clear(); _symbol.clear(); }
-  void _edit(Map<String,dynamic> row) { setState(() { _editingId = row['id'].toString(); _code.text = (row['currency_code'] ?? '').toString(); _name.text = (row['currency_name_ar'] ?? '').toString(); _symbol.text = (row['currency_symbol'] ?? '').toString(); _error = null; }); }
+  void _clear() { _editingId = null; _editing = false; _code.clear(); _name.clear(); _symbol.clear(); }
+  void _startNew() { setState(() { _clear(); _editing = true; _error = null; }); }
+  void _edit(Map<String,dynamic> row) { setState(() { _editing = true; _editingId = row['id'].toString(); _code.text = (row['currency_code'] ?? '').toString(); _name.text = (row['currency_name_ar'] ?? '').toString(); _symbol.text = (row['currency_symbol'] ?? '').toString(); _error = null; }); }
 
   Future<void> _save() async {
+    if (!_editing) { setState(() => _error = 'اضغط «تعديل» أو «إضافة جديد» أولًا قبل تغيير البيانات.'); return; }
     final company = (widget.companyId ?? '').trim();
     final code = _code.text.trim().toUpperCase(), name = _name.text.trim(), symbol = _symbol.text.trim();
     if (company.isEmpty || _db == null) { setState(() => _error = 'لا توجد شركة محددة أو اتصال بقاعدة البيانات.'); return; }
@@ -61,6 +63,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
   }
 
   Future<void> _toggleActive(Map<String,dynamic> row) async {
+    if (!_editing) { setState(() => _error = 'اضغط «تعديل» أولًا قبل تغيير حالة العملة.'); return; }
     final company = (widget.companyId ?? '').trim(), next = row['is_active'] != true;
     final yes = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: Text(next ? 'تفعيل العملة' : 'إيقاف العملة'),
@@ -72,7 +75,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
     catch(e) { if(mounted) setState(()=>_error='تعذر تحديث حالة العملة: $e'); }
   }
 
-  Widget _input(TextEditingController c, String label) => TextField(controller:c, style:const TextStyle(fontSize:14), decoration:InputDecoration(labelText:label,isDense:true,constraints:const BoxConstraints(minHeight:52),contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12),border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))));
+  Widget _input(TextEditingController c, String label) => TextField(controller:c, enabled:_editing, style:const TextStyle(fontSize:14), decoration:InputDecoration(labelText:label,isDense:true,constraints:const BoxConstraints(minHeight:52),contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12),border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))));
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
@@ -96,9 +99,9 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
         _quickTask('تحديث',Icons.refresh_rounded,Colors.blue,_loading?null:_load),
-        _quickTask(_editingId==null?'إضافة':'حفظ',_editingId==null?Icons.add_circle_outline:Icons.save_outlined,const Color(0xFF168447),_saving?null:_save),
-        _quickTask('تعديل',Icons.edit_outlined,const Color(0xFFEF9B13),_rows.isEmpty?null:()=>_edit(_rows.first)),
-        _quickTask('تفعيل/إيقاف',Icons.toggle_on_outlined,const Color(0xFFEF9B13),_rows.isEmpty?null:()=>_toggleActive(_rows.first)),
+        _quickTask(_editing?'حفظ':'إضافة جديد',_editing?Icons.save_outlined:Icons.add_circle_outline,const Color(0xFF168447),_saving?null:(_editing?_save:_startNew)),
+        _quickTask('تعديل',Icons.edit_outlined,const Color(0xFFEF9B13),_saving || _editing || _rows.isEmpty?null:()=>_edit(_rows.first)),
+        _quickTask('تفعيل/إيقاف',Icons.toggle_on_outlined,const Color(0xFFEF9B13),_editing && _rows.isNotEmpty?()=>_toggleActive(_rows.first):null),
         _quickTask('معاينة',Icons.visibility_outlined,const Color(0xFF6841A5),_previewCurrencies),
         _quickTask('طباعة',Icons.print_outlined,const Color(0xFF4056A1),_previewCurrencies),
         _quickTask('استيراد Excel',Icons.file_upload_outlined,const Color(0xFF137C8B),()=>setState(()=>_error='استيراد العملات من Excel غير مفعّل بعد؛ يمكنك إضافة العملات من النموذج.')),
@@ -108,10 +111,10 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
     const SizedBox(height:16),
     Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(children:[
       Row(children:[Expanded(flex:2,child:_input(_code,'كود')),const SizedBox(width:10),Expanded(flex:3,child:_input(_name,'اسم العملة عربي')),const SizedBox(width:10),Expanded(flex:2,child:_input(_symbol,'مختصر العملة إنجليزي'))]),
-      const SizedBox(height:12),Row(children:[FilledButton.icon(onPressed:_saving?null:_save,icon:Icon(_editingId==null?Icons.add_rounded:Icons.save_rounded),label:Text(_saving?'جارٍ الحفظ...':_editingId==null?'إضافة عملة':'حفظ التعديل')),const SizedBox(width:8),OutlinedButton.icon(onPressed: () { setState(() { _clear(); _error = null; }); },icon:const Icon(Icons.clear_rounded),label:const Text('تفريغ'))]),
+      const SizedBox(height:12),Row(children:[FilledButton.icon(onPressed:_saving || !_editing?null:_save,icon:Icon(_editingId==null?Icons.add_rounded:Icons.save_rounded),label:Text(_saving?'جارٍ الحفظ...':_editingId==null?'إضافة عملة':'حفظ التعديل')),const SizedBox(width:8),OutlinedButton.icon(onPressed: () { setState(() { _clear(); _error = null; }); },icon:const Icon(Icons.clear_rounded),label:const Text('تفريغ'))]),
       if(_error!=null) ...[const SizedBox(height:10),Align(alignment:Alignment.centerRight,child:Text(_error!,style:const TextStyle(color:Colors.red)))],
     ]))),
     const SizedBox(height:12),
-    Expanded(child:_loading?const Center(child:CircularProgressIndicator()):_rows.isEmpty?Center(child:Text(_error??'لا توجد عملات مسجلة حتى الآن. أضف أول عملة من النموذج أعلاه.',textAlign:TextAlign.center)):SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(headingRowColor:WidgetStateProperty.all(const Color(0xFFF3EFF8)),columns:const[DataColumn(label:Text('م')),DataColumn(label:Text('كود')),DataColumn(label:Text('اسم العملة عربي')),DataColumn(label:Text('مختصر العملة إنجليزي')),DataColumn(label:Text('الحالة')),DataColumn(label:Text('الإجراءات'))],rows:[for(var i=0;i<_rows.length;i++) DataRow(cells:[DataCell(Text('${i+1}')),DataCell(Text((_rows[i]['currency_code']??'').toString())),DataCell(Text((_rows[i]['currency_name_ar']??'').toString())),DataCell(Text((_rows[i]['currency_symbol']??'').toString())),DataCell(Text(_rows[i]['is_active']==true?'نشطة':'موقوفة')),DataCell(Row(mainAxisSize:MainAxisSize.min,children:[IconButton(tooltip:'تعديل',onPressed:()=>_edit(_rows[i]),icon:const Icon(Icons.edit_outlined,color:_currencyPurple)),IconButton(tooltip:'تفعيل أو إيقاف',onPressed:()=>_toggleActive(_rows[i]),icon:Icon(_rows[i]['is_active']==true?Icons.toggle_on_rounded:Icons.toggle_off_rounded,color:_currencyOrange,size:28))]))])]))),
+    Expanded(child:_loading?const Center(child:CircularProgressIndicator()):_rows.isEmpty?Center(child:Text(_error??'لا توجد عملات مسجلة حتى الآن. أضف أول عملة من النموذج أعلاه.',textAlign:TextAlign.center)):SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(headingRowColor:WidgetStateProperty.all(const Color(0xFFF3EFF8)),columns:const[DataColumn(label:Text('م')),DataColumn(label:Text('كود')),DataColumn(label:Text('اسم العملة عربي')),DataColumn(label:Text('مختصر العملة إنجليزي')),DataColumn(label:Text('الحالة')),DataColumn(label:Text('الإجراءات'))],rows:[for(var i=0;i<_rows.length;i++) DataRow(cells:[DataCell(Text('${i+1}')),DataCell(Text((_rows[i]['currency_code']??'').toString())),DataCell(Text((_rows[i]['currency_name_ar']??'').toString())),DataCell(Text((_rows[i]['currency_symbol']??'').toString())),DataCell(Text(_rows[i]['is_active']==true?'نشطة':'موقوفة')),DataCell(Row(mainAxisSize:MainAxisSize.min,children:[IconButton(tooltip:'تعديل',onPressed:()=>_edit(_rows[i]),icon:const Icon(Icons.edit_outlined,color:_currencyPurple)),IconButton(tooltip:'تفعيل أو إيقاف',onPressed:_editing?()=>_toggleActive(_rows[i]):null,icon:Icon(_rows[i]['is_active']==true?Icons.toggle_on_rounded:Icons.toggle_off_rounded,color:_currencyOrange,size:28))]))])]))),
   ])));
 }
