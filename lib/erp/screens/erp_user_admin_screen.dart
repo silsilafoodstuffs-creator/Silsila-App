@@ -91,17 +91,33 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     }
     setState(() { _loading = true; _error = null; _message = null; });
     try {
-      // The dashboard may create this screen before its asynchronous company lookup completes.
-      // Resolve the active company from the signed-in user's membership instead of leaving the grid blank.
-      if (_company.isEmpty) {
-        final userId = _db!.auth.currentUser?.id;
-        if (userId != null) {
-          final memberships = await _db!.from('erp_company_members').select('company_id').eq('user_id', userId).eq('is_active', true).order('created_at');
-          final ids = (memberships as List).map((row) => (row['company_id'] ?? '').toString()).where((id) => id.isNotEmpty).toList();
-          if (ids.isNotEmpty) _activeCompanyId = ids.first;
+      // Resolve the signed-in user's active company even when the dashboard supplied a stale
+      // company ID. A stale non-empty ID must not leave this screen with an empty types grid.
+      final userId = _db!.auth.currentUser?.id;
+      if (userId != null) {
+        try {
+          final memberships = await _db!
+              .from('erp_company_members')
+              .select('company_id')
+              .eq('user_id', userId)
+              .eq('is_active', true)
+              .order('created_at');
+          final ids = (memberships as List)
+              .map((row) => (row['company_id'] ?? '').toString())
+              .where((id) => id.isNotEmpty)
+              .toList();
+          if (ids.isNotEmpty && !ids.contains(_company)) {
+            _activeCompanyId = ids.first;
+          } else if (_company.isEmpty && ids.isNotEmpty) {
+            _activeCompanyId = ids.first;
+          }
+        } catch (_) {
+          // Continue with the company ID supplied by the parent if membership lookup is unavailable.
         }
       }
-      if (_company.isEmpty) throw StateError('لم يتم العثور على شركة نشطة مرتبطة بالمستخدم الحالي.');
+      if (_company.isEmpty) {
+        throw StateError('لم يتم العثور على شركة نشطة مرتبطة بالمستخدم الحالي.');
+      }
       List<Map<String, dynamic>> typeList = [];
       List<Map<String, dynamic>> userList = [];
       List<Map<String, dynamic>> templateList = [];
@@ -154,7 +170,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         if (_selectedTemplateId==null && templateList.isNotEmpty) _selectedTemplateId=_s(templateList.first['id']);
         _loading=false; _error=null;
         if (_isUser && userList.isEmpty) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
-        if (_isType && typeList.any((r)=>r['_local_default']==true)) _message='الأنواع المتفق عليها معروضة، لكن قاعدة البيانات منعت حفظها. راجع صلاحيات INSERT وسياسات RLS.';
+        if (_isType && typeList.any((r)=>r['_local_default']==true)) _message='أنواع المستخدمين الافتراضية معروضة في الجدول، لكن تعذر حفظها في قاعدة البيانات بسبب الصلاحيات أو سياسات RLS. يمكنك مراجعة السياسات ثم الضغط على تحديث.';
+        if (_isType && typeList.isEmpty) _message='لا توجد أنواع مستخدمين مسجلة حتى الآن. استخدم إضافة لإنشاء نوع جديد.';
       });
       if (_isTemplate && _selectedId!=null) await _loadRules();
       if (_isPermissions) await _loadUserRules();
