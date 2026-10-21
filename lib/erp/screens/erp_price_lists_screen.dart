@@ -118,6 +118,21 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
       if (mounted) setState(() => _error = 'تعذر تحميل بنود القائمة: $e');
     }
   }
+  void _newPriceList() {
+    if (_saving || _loading) return;
+    if ([_code.text, _name.text, _notes.text].any((value) => value.trim().isNotEmpty)) {
+      setState(() {
+        _error = 'احفظ قائمة الأسعار الحالية باستخدام زر حفظ أو F8 قبل بدء قائمة جديدة؛ لم يتم مسح أي بيانات.';
+        _message = null;
+      });
+      return;
+    }
+    setState(() {
+      _error = null;
+      _message = 'نموذج قائمة أسعار جديدة جاهز. أدخل البيانات ثم اضغط F8 للحفظ.';
+    });
+  }
+
   Future<void> _createList() async {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
@@ -214,7 +229,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
           const SizedBox(height: 8),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : () { _code.clear(); _name.clear(); _notes.clear(); setState(() => _message = 'نموذج قائمة أسعار جديدة جاهز.'); }),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving || _loading ? null : _newPriceList),
             _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _createList),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewLists),
             _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewLists),

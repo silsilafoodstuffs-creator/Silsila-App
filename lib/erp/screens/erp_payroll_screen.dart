@@ -99,6 +99,21 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
     setState(() { if (start) { _periodStart = selected; } else { _periodEnd = selected; } });
   }
 
+  void _newPayrollRun() {
+    if (_saving || _loading) return;
+    if (_runCode.text.trim().isNotEmpty) {
+      setState(() {
+        _error = 'احفظ مسير الرواتب الحالي باستخدام زر حفظ أو F8 قبل بدء مسير جديد؛ لم يتم مسح أي بيانات.';
+        _message = null;
+      });
+      return;
+    }
+    setState(() {
+      _error = null;
+      _message = 'نموذج مسير جديد جاهز. أدخل الكود ثم اضغط F8 للحفظ.';
+    });
+  }
+
   Future<void> _createRun() async {
     if (_expenseAccountId == null || _payableAccountId == null || _deductionsAccountId == null) {
       setState(() => _error = 'يلزم تحميل واختيار ثلاثة حسابات محاسبية صالحة.');
@@ -208,7 +223,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
             const SizedBox(height: 8),
             SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
               _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-              _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : () { _runCode.clear(); setState(() => _message = 'نموذج مسير جديد جاهز.'); }),
+              _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving || _loading ? null : _newPayrollRun),
               _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _createRun),
               _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewRuns),
               _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewRuns),
