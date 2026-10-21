@@ -665,6 +665,18 @@ where s.carton_unit is not null and s.carton_unit <> ''
 on conflict (item_id,unit_code) do update set
  unit_name=excluded.unit_name, conversion_factor=excluded.conversion_factor, is_base_unit=false, is_active=true;
 
+-- Ensure older pre-existing ERP groups also have PNG artwork.
+update public.erp_item_groups
+set image_url='https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/' ||
+ case
+  when group_code ilike '%JUICE%' or group_name ilike '%عصير%' then '1f34a'
+  when group_code ilike '%CHEESE%' or group_name ilike '%جبن%' then '1f9c0'
+  when group_code ilike '%BISCUIT%' or group_name ilike '%بسكويت%' then '1f36a'
+  else '1f6d2'
+ end || '.png'
+where company_id='47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid
+  and (image_url is null or image_url='');
+
 -- Add PNG illustrations to the 50 existing starter items without changing prices or stock.
 update public.erp_items i set image_url =
  'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/' ||
