@@ -176,6 +176,19 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         final ar = (_ar[id]?.text ?? _s(row['group_name'])).trim();
         final en = (_en[id]?.text ?? _s(row['group_name_en'])).trim();
         if (ar.isEmpty) { if (row['_draft'] == true) continue; throw StateError('اسم الفئة العربية مطلوب للكود ${row['group_code']}.'); }
+        if (_level == 1 && (_s(row['parent_id']).isEmpty || !_parents.any((p) => _s(p['id']) == _s(row['parent_id'])))) {
+          throw StateError('اختر الفئة الرئيسية للفئة الفرعية ${row['group_code']}.');
+        }
+        if (_level == 2) {
+          final selectedParent = _parentOf(row);
+          if (selectedParent == null || selectedParent['parent_id'] == null) {
+            throw StateError('اختر الفئة الفرعية للفئة الثانوية ${row['group_code']}.');
+          }
+          final mainId = _s(row['_main_parent_id']);
+          if (mainId.isNotEmpty && _s(selectedParent['parent_id']) != mainId) {
+            throw StateError('الفئة الفرعية المختارة لا تتبع الفئة الرئيسية المحددة.');
+          }
+        }
         final imageUrl = await _uploadImage(row);
         final payload = <String,dynamic>{
           'company_id':_company, 'group_code':_s(row['group_code']), 'group_name':ar,
@@ -198,7 +211,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   Future<void> _delete() async {
     final id = _selectedId;
     if (id == null) { setState(() => _error = 'حدد فئة من الجريد أولًا.'); return; }
-    final row = _all.where((r) => _s(r['id']) == id).firstOrNull;
+    Map<String, dynamic>? row;
+    for (final candidate in _all) { if (_s(candidate['id']) == id) { row = candidate; break; } }
     if (row == null) return;
     final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
       title: const Text('تأكيد الحذف'), content: Text('حذف الفئة «${_s(row['group_name'])}»؟'),
@@ -215,7 +229,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
   Widget _parentTabs() {
     if (_level == 0) return const SizedBox.shrink();
-    final parents = _level == 1 ? _parents : _secondaryParents;
+    final parents = _parents;
     return SizedBox(height:40, child: ListView(scrollDirection:Axis.horizontal, children:[
       Padding(padding:const EdgeInsetsDirectional.only(start:6,top:3,bottom:3),
         child:ChoiceChip(label:const Text('الكل'),selected:_parentFilter==null,selectedColor:_catPurple,
