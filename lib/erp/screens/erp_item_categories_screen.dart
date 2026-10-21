@@ -19,7 +19,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   SupabaseClient? _db;
   final _picker = ImagePicker();
   String? _company, _error, _message, _selectedId;
-  bool _loading = false, _saving = false, _editing = true;
+  bool _loading = false, _saving = false, _editing = false;
   int _level = 0;
   String? _parentFilter;
   List<Map<String,dynamic>> _all = [];
@@ -136,7 +136,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       'group_code':'$prefix${next.toString().padLeft(4,'0')}', 'group_name':'','group_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'_draft':true,
     };
-    setState(() { _all.add(draft); _selectedId = _s(draft['id']); _syncControllers(); });
+    setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _syncControllers(); });
   }
 
   Future<void> _pickImage(Map<String,dynamic> row) async {
@@ -167,6 +167,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   }
 
   Future<void> _save() async {
+    if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا قبل حفظ أي تغييرات.'); return; }
     if (_db == null || _company == null) return;
     setState(() { _saving = true; _error = null; _message = null; });
     try {
@@ -202,12 +203,13 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
       }
       await _load();
-      if (mounted) setState(() => _message = 'تم حفظ فئات الأصناف في قاعدة البيانات.');
+      if (mounted) setState(() { _editing = false; _message = 'تم حفظ فئات الأصناف في قاعدة البيانات.'; });
     } catch (e) { if (mounted) setState(() => _error = 'تعذر حفظ الفئات: $e'); }
     finally { if (mounted) setState(() => _saving = false); }
   }
 
   Future<void> _delete() async {
+    if (!_editing) { setState(() => _error = 'اضغط «تعديل» أولًا قبل حذف الفئات.'); return; }
     final id = _selectedId;
     if (id == null) { setState(() => _error = 'حدد فئة من الجريد أولًا.'); return; }
     Map<String, dynamic>? row;
@@ -254,9 +256,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       Container(color:_catCanvas,padding:const EdgeInsets.symmetric(horizontal:3,vertical:3),
         child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
           _task('تحديث',Icons.refresh,_loading?null:_load),
-          _task('إضافة جديد',Icons.add,_saving?null:_add),
-          _task('حفظ',Icons.save,_saving?null:_save),
-          _task('تعديل',Icons.edit,()=>setState(()=>_editing=!_editing)),
+          _task('إضافة جديد',Icons.add,_saving || _editing ? null : _add),
+          _task('حفظ',Icons.save,_saving || !_editing ? null:_save),
+          _task('تعديل',Icons.edit,_saving || _editing ? null:()=>setState(()=>_editing=true)),
           _task('حذف',Icons.delete,_saving?null:_delete),
           _task('معاينة',Icons.preview,()=>showDialog<void>(context:context,builder:(c)=>AlertDialog(
             title:const Text('معاينة الفئات'),content:Text('عدد الفئات المعروضة: ${_visibleRows.length}'),
