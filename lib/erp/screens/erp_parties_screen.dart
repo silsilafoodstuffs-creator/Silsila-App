@@ -31,6 +31,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   List<Map<String, dynamic>> _rows = [];
   bool _loading = false;
   bool _saving = false;
+  bool _editing = false;
   String? _error;
   String? _message;
 
@@ -56,7 +57,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
 
   Future<void> _load({bool clearMessage = true}) async {
     if (_company.text.trim().isEmpty) { setState(() => _error = 'أدخل معرّف الشركة أولًا.'); return; }
-    setState(() { _loading = true; _error = null; if (clearMessage) _message = null; });
+    setState(() { _loading = true; _editing = false; _error = null; if (clearMessage) _message = null; });
     try {
       final rows = await _repo.fetchParties(_company.text, kind: _filter);
       if (!mounted) return;
@@ -93,6 +94,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   }
 
   Future<void> _toggle(Map<String, dynamic> row) async {
+    if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا قبل تغيير حالة الطرف.'); return; }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       await _repo.setActive(_s(row['id']), row['is_active'] != true);
@@ -112,7 +114,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     _code.clear(); _name.clear(); _phone.clear(); _whatsapp.clear(); _email.clear(); _address.clear();
     _governorate.clear(); _district.clear(); _center.clear(); _area.clear(); _customerType.clear();
     _creditLimit.text = '0'; _openingBalance.text = '0';
-    setState(() { _error = null; _message = 'نموذج إضافة طرف جديد جاهز.'; });
+    setState(() { _editing = true; _error = null; _message = 'نموذج إضافة طرف جديد جاهز.'; });
   }
 
   Future<void> _previewParties() async {
@@ -143,14 +145,14 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
           const SizedBox(height: 8),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _newParty),
-            _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _create),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving || _editing ? null : _newParty),
+            _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading || !_editing ? null : _create),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewParties),
           ])),
         ]),
       )),
       const SizedBox(height: 10),
-      TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
+      TextField(controller: _company, enabled: _editing, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
       const SizedBox(height: 8),
       Row(children: [
         Expanded(child: DropdownButtonFormField<String>(
@@ -181,48 +183,48 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
               DropdownMenuItem(value: 'supplier', child: Text('مورد')),
               DropdownMenuItem(value: 'both', child: Text('مورد وعميل')),
             ],
-            onChanged: (v) => setState(() => _kind = v ?? _kind),
+            onChanged: _editing ? (v) => setState(() => _kind = v ?? _kind) : null,
           ),
           const SizedBox(height: 8),
-          TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود الطرف *', border: OutlineInputBorder())),
+          TextField(controller: _code, enabled: _editing, decoration: const InputDecoration(labelText: 'كود الطرف *', border: OutlineInputBorder())),
           const SizedBox(height: 8),
-          TextField(controller: _name, decoration: const InputDecoration(labelText: 'الاسم التجاري / الشخص *', border: OutlineInputBorder())),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'الهاتف', border: OutlineInputBorder()))),
-            const SizedBox(width: 6),
-            Expanded(child: TextField(controller: _whatsapp, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'واتساب', border: OutlineInputBorder()))),
-          ]),
-          const SizedBox(height: 8),
-          TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'البريد الإلكتروني', border: OutlineInputBorder())),
-          const SizedBox(height: 8),
-          TextField(controller: _address, decoration: const InputDecoration(labelText: 'العنوان', border: OutlineInputBorder())),
+          TextField(controller: _name, enabled: _editing, decoration: const InputDecoration(labelText: 'الاسم التجاري / الشخص *', border: OutlineInputBorder())),
           const SizedBox(height: 8),
           Row(children: [
-            Expanded(child: TextField(controller: _governorate, decoration: const InputDecoration(labelText: 'المحافظة', border: OutlineInputBorder()))),
+            Expanded(child: TextField(controller: _phone, enabled: _editing, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'الهاتف', border: OutlineInputBorder()))),
             const SizedBox(width: 6),
-            Expanded(child: TextField(controller: _center, decoration: const InputDecoration(labelText: 'المركز', border: OutlineInputBorder()))),
+            Expanded(child: TextField(controller: _whatsapp, enabled: _editing, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'واتساب', border: OutlineInputBorder()))),
+          ]),
+          const SizedBox(height: 8),
+          TextField(controller: _email, enabled: _editing, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'البريد الإلكتروني', border: OutlineInputBorder())),
+          const SizedBox(height: 8),
+          TextField(controller: _address, enabled: _editing, decoration: const InputDecoration(labelText: 'العنوان', border: OutlineInputBorder())),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: TextField(controller: _governorate, enabled: _editing, decoration: const InputDecoration(labelText: 'المحافظة', border: OutlineInputBorder()))),
+            const SizedBox(width: 6),
+            Expanded(child: TextField(controller: _center, enabled: _editing, decoration: const InputDecoration(labelText: 'المركز', border: OutlineInputBorder()))),
           ]),
           const SizedBox(height: 8),
           Row(children: [
-            Expanded(child: TextField(controller: _district, decoration: const InputDecoration(labelText: 'الحي / المركز المحلي', border: OutlineInputBorder()))),
+            Expanded(child: TextField(controller: _district, enabled: _editing, decoration: const InputDecoration(labelText: 'الحي / المركز المحلي', border: OutlineInputBorder()))),
             const SizedBox(width: 6),
-            Expanded(child: TextField(controller: _area, decoration: const InputDecoration(labelText: 'المنطقة', border: OutlineInputBorder()))),
+            Expanded(child: TextField(controller: _area, enabled: _editing, decoration: const InputDecoration(labelText: 'المنطقة', border: OutlineInputBorder()))),
           ]),
           const SizedBox(height: 8),
-          TextField(controller: _customerType, decoration: const InputDecoration(labelText: 'تصنيف العميل (مثال: سوبر ماركت / بقالة / تاجر نصف جملة)', border: OutlineInputBorder())),
+          TextField(controller: _customerType, enabled: _editing, decoration: const InputDecoration(labelText: 'تصنيف العميل (مثال: سوبر ماركت / بقالة / تاجر نصف جملة)', border: OutlineInputBorder())),
           const SizedBox(height: 8),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 6),
             child: Text('تنبيه محاسبي: الرصيد الافتتاحي في بطاقة الطرف لا ينشئ قيد أستاذ عام. لا تستخدمه كرصيد معتمد قبل إدخال قيد افتتاحي متوازن ومراجعته.', style: TextStyle(color: Color(0xFF9A5700), fontSize: 12, height: 1.5)),
           ),
           Row(children: [
-            Expanded(child: TextField(controller: _creditLimit, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'حد الائتمان', border: OutlineInputBorder()))),
+            Expanded(child: TextField(controller: _creditLimit, enabled: _editing, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'حد الائتمان', border: OutlineInputBorder()))),
             const SizedBox(width: 6),
-            Expanded(child: TextField(controller: _openingBalance, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'رصيد افتتاحي', border: OutlineInputBorder()))),
+            Expanded(child: TextField(controller: _openingBalance, enabled: _editing, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'رصيد افتتاحي', border: OutlineInputBorder()))),
           ]),
           const SizedBox(height: 8),
-          FilledButton.icon(onPressed: _saving ? null : _create, icon: const Icon(Icons.person_add_alt_1), label: const Text('حفظ الطرف')),
+          FilledButton.icon(onPressed: _saving || !_editing ? null : _create, icon: const Icon(Icons.person_add_alt_1), label: const Text('حفظ الطرف')),
         ],
       ))),
       const SizedBox(height: 10),
@@ -232,7 +234,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
         title: Text(_s(r['party_code']) + ' — ' + _s(r['party_name'])),
         subtitle: Text(_kindLabel(_s(r['party_kind'])) + ' • ' + _s(r['phone']) + '\nحد الائتمان: ' + _n(r['credit_limit']).toStringAsFixed(2) + ' ج.م'),
         isThreeLine: true,
-        trailing: IconButton(onPressed: _saving ? null : () => _toggle(r), icon: Icon(r['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline), tooltip: r['is_active'] == true ? 'تعطيل' : 'تنشيط'),
+        trailing: IconButton(onPressed: _saving || !_editing ? null : () => _toggle(r), icon: Icon(r['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline), tooltip: r['is_active'] == true ? 'تعطيل' : 'تنشيط'),
       ))),
     ],
   ));
