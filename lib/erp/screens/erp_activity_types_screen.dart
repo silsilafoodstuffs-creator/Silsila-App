@@ -75,7 +75,27 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         return;
       }
       _resolvedCompanyId = companyId;
-      final data = await _service.listPage(companyId: companyId, pageKey: _pageKey);
+      var data = await _service.listPage(companyId: companyId, pageKey: _pageKey);
+      // Seed the seven starter activity types in the database, without duplicating
+      // or overwriting any records the company has already customized.
+      const defaults = <Map<String, String>>[
+        {'ترتيب السطر': '1', 'كود النشاط': 'ACT001', 'اسم النشاط عربي': 'مواد غذائية', 'نشط': 'true'},
+        {'ترتيب السطر': '2', 'كود النشاط': 'ACT002', 'اسم النشاط عربي': 'لوازم بناء', 'نشط': 'true'},
+        {'ترتيب السطر': '3', 'كود النشاط': 'ACT003', 'اسم النشاط عربي': 'ملابس واكسسوارات', 'نشط': 'true'},
+        {'ترتيب السطر': '4', 'كود النشاط': 'ACT004', 'اسم النشاط عربي': 'أجهزة وإلكترونيات', 'نشط': 'true'},
+        {'ترتيب السطر': '5', 'كود النشاط': 'ACT005', 'اسم النشاط عربي': 'سيارات ومعدات', 'نشط': 'true'},
+        {'ترتيب السطر': '6', 'كود النشاط': 'ACT006', 'اسم النشاط عربي': 'خدمات شحن ونقل', 'نشط': 'true'},
+        {'ترتيب السطر': '7', 'كود النشاط': 'ACT007', 'اسم النشاط عربي': 'أثاث وديكورات', 'نشط': 'true'},
+      ];
+      final existingCodes = data.map((r) => r['كود النشاط']).toSet();
+      for (final starter in defaults) {
+        if (!existingCodes.contains(starter['كود النشاط'])) {
+          await _service.saveRecord(companyId: companyId, pageKey: _pageKey, record: starter);
+        }
+      }
+      if (defaults.any((r) => !existingCodes.contains(r['كود النشاط']))) {
+        data = await _service.listPage(companyId: companyId, pageKey: _pageKey);
+      }
       if (!mounted) return;
       setState(() {
         _rows
@@ -181,13 +201,11 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         Row(mainAxisSize: MainAxisSize.min, children: [const Text('نشط', style: TextStyle(fontSize: 12)), Switch.adaptive(value: _active, onChanged: (v) => setState(() => _active = v))]),
       ])),
       const SizedBox(height: 8),
-      Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 34, dataRowMinHeight: 38, dataRowMaxHeight: 42, horizontalMargin: 8, columnSpacing: 14, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('صورة النشاط')), DataColumn(label: Text('نشط'))], rows: [
+      Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 34, dataRowMinHeight: 38, dataRowMaxHeight: 42, horizontalMargin: 8, columnSpacing: 14, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م (ترتيب السطر)')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط')), DataColumn(label: Text('نشط / غير نشط'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(selected: _rows[i]['كود النشاط'] == _selected, onSelectChanged: (_) { setState(() => _selected = _rows[i]['كود النشاط']); _edit(_rows[i]); }, cells: [
           DataCell(SizedBox(width: 24, child: Text(_rows[i]['ترتيب السطر'] ?? (i + 1).toString(), style: const TextStyle(fontSize: 12)))),
-          DataCell(SizedBox(width: 100, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontSize: 12)))),
-          DataCell(SizedBox(width: 180, child: Text(_rows[i]['اسم النشاط عربي'] ?? '', style: const TextStyle(fontSize: 12)))),
-          DataCell(SizedBox(width: 170, child: Text(_rows[i]['اسم النشاط إنجليزي'] ?? '', style: const TextStyle(fontSize: 12)))),
-          DataCell(SizedBox(width: 70, child: Row(children: [if ((_rows[i]['صورة النشاط'] ?? '').startsWith('data:image')) Image.memory(base64Decode(_rows[i]['صورة النشاط']!.split(',').last), width: 30, height: 28, fit: BoxFit.cover) else const Icon(Icons.image_outlined, size: 20), IconButton(tooltip: 'استيراد أو تصوير', visualDensity: VisualDensity.compact, icon: const Icon(Icons.add_a_photo_outlined, size: 16), onPressed: () { _edit(_rows[i]); showModalBottomSheet<void>(context: context, builder: (c) => SafeArea(child: Wrap(children: [ListTile(title: const Text('استيراد صورة'), leading: const Icon(Icons.photo_library), onTap: () { Navigator.pop(c); _pick(ImageSource.gallery); }), ListTile(title: const Text('التصوير بالكاميرا'), leading: const Icon(Icons.camera_alt), onTap: () { Navigator.pop(c); _pick(ImageSource.camera); })]))); })]))),
+          DataCell(SizedBox(width: 110, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontSize: 12)))),
+          DataCell(SizedBox(width: 230, child: Text(_rows[i]['اسم النشاط عربي'] ?? '', style: const TextStyle(fontSize: 12)))),
           DataCell(Checkbox(value: (_rows[i]['نشط'] ?? 'true') == 'true', visualDensity: VisualDensity.compact, onChanged: (v) async { final row = Map<String,String>.from(_rows[i])..['نشط'] = (v ?? false).toString(); try { await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: row); await _load(); } catch (e) { if (mounted) setState(() => _message = 'تعذر تحديث الحالة: ' + e.toString()); } })),
         ]),
       ]))),
