@@ -183,9 +183,12 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           final exists = typeList.any((row) => _s(row['name_ar']) == type['name_ar']);
           if (!exists) {
             try {
-              await _db!.from('erp_user_types').insert(<String,dynamic>{
+              // Idempotent seed: another tab/session may have created this type
+              // after the initial read. Ignore the unique (company_id, name_ar)
+              // conflict instead of surfacing a failed request in database logs.
+              await _db!.from('erp_user_types').upsert(<String,dynamic>{
                 ...type, 'company_id':_company, 'is_active':true,
-              });
+              }, onConflict: 'company_id,name_ar', ignoreDuplicates: true);
             } catch (_) {
               seedWarning = true;
             }
