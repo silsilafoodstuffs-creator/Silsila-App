@@ -103,8 +103,117 @@ def rest(method: str, table: str, query: str = "", payload: Any = None) -> Any:
 
 
 def normalized(value: str) -> str:
-    return re.sub(r"[^a-z0-9\u0600-\u06ff]+", " ", value.casefold()).strip()
+    # Normalize common Arabic letter variants so source names like "ارز" and
+    # ERP names like "أرز" compare consistently.
+    value = value.casefold().translate(str.maketrans({
+        "أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا", "ى": "ي", "ة": "ه",
+    }))
+    value = re.sub(r"[\u064b-\u065f\u0670]", "", value)
+    return re.sub(r"[^a-z0-9\u0600-\u06ff]+", " ", value).strip()
 
+
+ARABIC_SEARCH_TERMS = {
+    "أرز أبيض مصري": "egyptian white rice",
+    "أرز مصري عريض": "egyptian short grain rice",
+    "أرز بسمتي": "basmati rice",
+    "بسكويت سادة": "plain biscuits",
+    "بسكويت مالح": "salted biscuits",
+    "بسلة مجمدة": "frozen peas",
+    "بسلة معلبة": "canned peas",
+    "بطاطس نصف مقلية مجمدة": "frozen french fries",
+    "بطاطس نصف مقلية": "french fries",
+    "بقسماط مطحون": "breadcrumbs",
+    "ذرة فشار": "popcorn",
+    "عصير جهينه": "juhayna juice",
+    "عصير بيتي": "betty juice",
+    "أرز": "rice",
+    "بسمتي": "basmati rice",
+    "مكرونة": "pasta",
+    "زيت": "cooking oil",
+    "سمن": "ghee",
+    "سكر": "sugar",
+    "دقيق": "flour",
+    "عدس": "lentils",
+    "فول": "fava beans",
+    "حمص": "chickpeas",
+    "فاصوليا": "white beans",
+    "لوبيا": "black-eyed peas",
+    "ترمس": "lupini beans",
+    "بسلة": "peas",
+    "مجمدة": "frozen",
+    "معلبة": "canned",
+    "بطاطس": "potato",
+    "فشار": "popcorn",
+    "ذرة": "corn",
+    "شوفان": "oats",
+    "برغل": "bulgur",
+    "بقسماط": "breadcrumbs",
+    "مطحون": "ground",
+    "سادة": "plain",
+    "مالح": "salted",
+    "شاي": "tea",
+    "قهوة": "coffee",
+    "عصير": "juice",
+    "جهينه": "juhayna",
+    "بيتي": "betty",
+    "مانجا": "mango",
+    "كوكتيل": "cocktail",
+    "جوافة": "guava",
+    "برتقال": "orange",
+    "أناناس": "pineapple",
+    "تفاح": "apple",
+    "جبن": "cheese",
+    "لبن": "milk",
+    "زبادي": "yogurt",
+    "مياه": "water",
+    "مشروب غازي": "soft drink",
+    "بسكويت": "biscuits",
+    "شوكولاتة": "chocolate",
+    "شيكولاتة": "chocolate",
+    "منظف": "cleaner",
+    "مسحوق": "laundry detergent",
+    "مناديل": "tissue",
+    "مجمد": "frozen food",
+    "تمر": "dates",
+    "عسل": "honey",
+    "مربى": "jam",
+    "كاتشب": "ketchup",
+    "مايونيز": "mayonnaise",
+    "بهارات مشكلة": "mixed spices",
+    "بهارات": "spices",
+    "توابل": "seasoning",
+    "مكسرات": "nuts",
+    "شيبسي": "potato chips",
+    "رقائق": "chips",
+}
+
+
+def english_terms_for_name(name: str) -> str:
+    matches = [(arabic, english) for arabic, english in ARABIC_SEARCH_TERMS.items() if arabic in name]
+    # Prefer the most specific phrase, avoiding conflicting requirements such
+    # as "potato + french fries" or "rice + white + Egyptian" being assembled
+    # from overlapping fragments when a complete phrase exists.
+    selected: list[tuple[str, str]] = []
+    for arabic, english in sorted(matches, key=lambda pair: len(pair[0]), reverse=True):
+        if any(arabic in chosen_arabic for chosen_arabic, _ in selected):
+            continue
+        selected.append((arabic, english))
+    terms: list[str] = []
+    for _, english in selected:
+        for token in normalized(english).split():
+            if token not in terms:
+                terms.append(token)
+    return " ".join(terms)
+
+
+def arabic_identity_tokens(name: str) -> set[str]:
+    ignored = {"جم", "جرام", "كجم", "كيلو", "مل", "مللي", "لتر", "عبوة", "حبه", "حبات"}
+    return {
+        token for token in normalized(name).split()
+        if re.search(r"[\u0600-\u06ff]", token)
+        and token not in ignored
+        and not token.isdigit()
+    }
 
 def download_image(url: str) -> tuple[bytes, str] | None:
     if not url.startswith("https://"):
@@ -159,21 +268,12 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
     if name:
         searches.append(" ".join(part for part in (brand, name) if part))
         searches.append(name)
-        search_terms = {
-            "أرز": "rice", "أبيض": "white", "عريض": "short grain", "بسمتي": "basmati rice", "مكرونة": "pasta", "زيت": "cooking oil",
-            "سمن": "ghee", "سكر": "sugar", "دقيق": "flour", "عدس": "lentils",
-            "فول": "fava beans", "حمص": "chickpeas", "شاي": "tea", "قهوة": "coffee",
-            "عصير": "juice", "جبن": "cheese", "لبن": "milk", "زبادي": "yogurt",
-            "مياه": "water", "مشروب غازي": "soft drink", "بسكويت": "biscuits",
-            "شوكولاتة": "chocolate", "شيكولاتة": "chocolate", "منظف": "cleaner",
-            "مسحوق": "laundry detergent", "مناديل": "tissue", "مجمد": "frozen food",
-            "تمر": "dates", "عسل": "honey", "مربى": "jam", "كاتشب": "ketchup",
-            "مايونيز": "mayonnaise", "بهارات": "spices", "توابل": "seasoning",
-            "مكسرات": "nuts", "شيبسي": "potato chips", "رقائق": "chips",
-        }
-        english = " ".join(term for arabic, term in search_terms.items() if arabic in name)
+        english = english_terms_for_name(name)
         if english:
             searches.append(" ".join(part for part in (brand, english) if part))
+    # Avoid querying the same Arabic name twice; this also respects the public
+    # search API's rate limit and makes the validation loop faster.
+    searches = list(dict.fromkeys(term.strip() for term in searches if term.strip()))
     found: list[dict[str, Any]] = []
     seen: set[str] = set()
     for term in searches:
@@ -185,8 +285,6 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
             "fields": "code,product_name,product_name_en,brands,image_front_url,image_front_small_url,image_url,countries_tags",
         })
         try:
-            # The legacy /cgi/search.pl endpoint has been returning widespread
-            # HTTP 503s. Use the official Search-a-licious full-text search API.
             data = request_json(f"{OFF_API}?{params}")
         except urllib.error.HTTPError as exc:
             print(f"  SOURCE HTTP ERROR for query {term!r}: HTTP {exc.code} {exc.reason}")
@@ -195,7 +293,6 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
             print(f"  SOURCE REQUEST ERROR for query {term!r}: {type(exc).__name__}: {exc}")
             continue
         finally:
-            # Search API is rate limited; wait even on errors.
             time.sleep(7.2)
         products = data.get("hits", data.get("products", []))
         if not products:
@@ -207,34 +304,16 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
                 found.append(product)
     return found
 
-
 def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tuple[dict[str, Any], bytes, str] | None:
     barcode = str(item.get("barcode") or "").strip()
     raw_name = str(item.get("item_name") or "")
     raw_brand = str(item.get("brand_name") or "")
-    target = normalized(" ".join((raw_brand, raw_name)))
-    arabic_terms = {
-        "أرز": "rice", "بسمتي": "basmati rice", "مكرونة": "pasta", "زيت": "cooking oil",
-        "سمن": "ghee", "سكر": "sugar", "دقيق": "flour", "عدس": "lentils",
-        "فول": "fava beans", "حمص": "chickpeas", "شاي": "tea", "قهوة": "coffee",
-        "عصير": "juice", "جبن": "cheese", "لبن": "milk", "زبادي": "yogurt",
-        "مياه": "water", "مشروب غازي": "soft drink", "بسكويت": "biscuits",
-        "شوكولاتة": "chocolate", "شيكولاتة": "chocolate", "منظف": "cleaner",
-        "مسحوق": "laundry detergent", "مناديل": "tissue", "مجمد": "frozen food",
-        "تمر": "dates", "عسل": "honey", "مربى": "jam", "كاتشب": "ketchup",
-        "مايونيز": "mayonnaise", "بهارات": "spices", "توابل": "seasoning",
-        "مكسرات": "nuts", "شيبسي": "potato chips", "رقائق": "chips",
-    }
-    english_terms = " ".join(english for arabic, english in arabic_terms.items() if arabic in raw_name)
-    # Generic Arabic-only names must be matched by category-token coverage, not
-    # Jaccard similarity: "rice" versus "rice basmati brand 1kg" otherwise scores
-    # only 0.25 and rejects every useful result. Keep this path conservative.
+    english_terms = english_terms_for_name(raw_name)
+    target = normalized(" ".join((raw_brand, raw_name, english_terms)))
     has_latin_name = bool(re.search(r"[a-zA-Z]", raw_name))
-    generic_mode = not barcode and not raw_brand and not has_latin_name and bool(english_terms)
-    if generic_mode:
-        search_target = normalized(english_terms)
-    else:
-        search_target = normalized(" ".join((target, english_terms)))
+    generic_mode = not barcode and not raw_brand and not has_latin_name
+    required = set(normalized(english_terms).split())
+    identity_arabic = arabic_identity_tokens(raw_name)
     exclusions = {
         "rice": {"cake", "cakes", "noodle", "noodles", "cracker", "crackers", "flour", "milk", "drink"},
         "basmati": {"flavor", "flavoured", "flavored"},
@@ -249,19 +328,32 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
         product_title = normalized(" ".join(str(candidate.get(k) or "") for k in ("product_name", "product_name_en")))
         brands = normalized(str(candidate.get("brands") or ""))
         title = normalized(" ".join((product_title, brands)))
+        title_tokens = set(title.split())
+        product_tokens = set(product_title.split())
+        arabic_candidate = arabic_identity_tokens(product_title)
         if barcode and code == barcode:
             score = 1.0
         elif generic_mode:
-            required = set(search_target.split())
-            product_tokens = set(product_title.split())
-            # A generic ingredient must appear in the product name itself, not
-            # only in the brand field; reject obvious unrelated lookalikes.
-            blocked = set().union(*(exclusions.get(term, set()) for term in required))
-            if not required or not required.issubset(product_tokens) or product_tokens & blocked:
+            # Require every distinguishing English term (e.g. "salted biscuits"
+            # or "Egyptian white rice"), or a full Arabic identity match. This
+            # prevents reusing one generic package for different variants.
+            english_match = bool(required) and required.issubset(title_tokens)
+            arabic_match = bool(identity_arabic) and identity_arabic.issubset(arabic_candidate)
+            if not english_match and not arabic_match:
                 continue
-            score = len(required & product_tokens) / max(1, len(required))
+            blocked = set().union(*(exclusions.get(term, set()) for term in required))
+            if product_tokens & blocked:
+                continue
+            # If the ERP name says Egyptian, don't accept a package with no
+            # Egyptian indication in its title/country metadata.
+            if "مصري" in raw_name:
+                countries = " ".join(str(x) for x in candidate.get("countries_tags", []) or [])
+                if not ({"egyptian", "egypt"} & title_tokens or "egypt" in countries.casefold()):
+                    if not arabic_match or "مصري" not in arabic_candidate:
+                        continue
+            score = 1.0 if arabic_match else len(required & title_tokens) / max(1, len(required))
         else:
-            a, b = set(search_target.split()), set(title.split())
+            a, b = set(target.split()), set(title.split())
             score = len(a & b) / max(1, len(a | b))
             brand = normalized(raw_brand)
             if brand and brand in brands:
@@ -296,6 +388,26 @@ def main() -> int:
     }))
     category_aliases = {
         "FOOD-GHEE": ["سمنات", "سمن"],
+        "FOOD-RICE": ["أرز وحبوب"],
+        "FOOD-FLOUR-SUGAR": ["دقيق وسكر"],
+        "FOOD-BAKERY": ["مخبوزات"],
+        "FOOD-BAKING": ["مكملات حلويات"],
+        "FOOD-DATES": ["تمر"],
+        "FOOD-JAMS": ["مربى وعسل"],
+        "FOOD-NUTS": ["مكسرات وفواكه مجففة"],
+        "FOOD-NUTRITION": ["إفطار وحبوب إفطار", "مكملات طعام"],
+        "FOOD-PICKLES": ["مخللات وزيتون"],
+        "FOOD-SAUCE": ["صلصات وتوابل"],
+        "FOOD-SPICES": ["بهارات وتوابل"],
+        "JUICE-BETTY": ["عصائر"],
+        "JUICE-JUHAINA": ["عصائر"],
+        "BISCUIT-LAMBADA": ["مقرمشات"],
+        "CHEESE-RHODES": ["جبن"],
+        "HOME-AIR": ["منظفات"],
+        "HOME-KITCHEN": ["خردوات"],
+        "HOME-TOOLS": ["خردوات"],
+        "BABY-CARE": ["مستلزمات أطفال"],
+        "PET-FOOD": ["أصناف أخرى"],
         "FOOD-OILS": ["زيوت", "زيت"],
         "FOOD-PASTA": ["مكرونات", "مكرونة ونودلز", "مكرونة"],
         "FOOD-LEGUMES": ["بقوليات", "بقوليات وحبوب"],
