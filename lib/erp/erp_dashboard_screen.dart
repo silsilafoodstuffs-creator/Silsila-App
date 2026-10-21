@@ -701,28 +701,41 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   void _openAddDialog() {
+    final isOrgChart = _page == 'الهيكل الوظيفي';
     final code = TextEditingController();
     final name = TextEditingController();
     final details = TextEditingController();
+    final parent = TextEditingController();
+    final level = TextEditingController();
     showDialog<void>(
       context: context,
       builder: (dctx) => AlertDialog(
         title: Text('إضافة سجل — $_page'),
         content: SizedBox(width: 430, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: code, decoration: const InputDecoration(labelText: 'الكود / الرقم المرجعي')),
+          TextField(controller: code, decoration: InputDecoration(labelText: isOrgChart ? 'كود الهيكل' : 'الكود / الرقم المرجعي')),
           const SizedBox(height: 12),
-          TextField(controller: name, decoration: const InputDecoration(labelText: 'الاسم / البيان')),
+          TextField(controller: name, decoration: InputDecoration(labelText: isOrgChart ? 'المسمى الوظيفي' : 'الاسم / البيان')),
           const SizedBox(height: 12),
-          TextField(controller: details, maxLines: 3, decoration: const InputDecoration(labelText: 'الوصف أو ملاحظات')),
+          TextField(controller: details, maxLines: isOrgChart ? 1 : 3, decoration: InputDecoration(labelText: isOrgChart ? 'الإدارة / القسم' : 'الوصف أو ملاحظات')),
+          if (isOrgChart) ...[
+            const SizedBox(height: 12),
+            TextField(controller: parent, decoration: const InputDecoration(labelText: 'يتبع إلى')),
+            const SizedBox(height: 12),
+            TextField(controller: level, decoration: const InputDecoration(labelText: 'المستوى الإداري')),
+          ],
         ]))),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dctx), child: Text(silsilaText('إلغاء'))),
           FilledButton(onPressed: () async {
             if (name.text.trim().isEmpty) return;
             final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
-            rows.insert(0, {'الكود': code.text.trim().isEmpty ? 'NEW-${rows.length + 1}' : code.text.trim(), 'الاسم': name.text.trim(), 'الوصف': details.text.trim(), 'الحالة': 'مسودة'});
+            final generatedCode = code.text.trim().isEmpty ? 'NEW-${rows.length + 1}' : code.text.trim();
+            final Map<String, String> row = isOrgChart
+                ? {'م': '${rows.length + 1}', 'كود الهيكل': generatedCode, 'المسمى الوظيفي': name.text.trim(), 'الإدارة / القسم': details.text.trim(), 'يتبع إلى': parent.text.trim().isEmpty ? '—' : parent.text.trim(), 'المستوى الإداري': level.text.trim().isEmpty ? 'غير محدد' : level.text.trim(), 'الحالة': 'نشط'}
+                : {'الكود': generatedCode, 'الاسم': name.text.trim(), 'الوصف': details.text.trim(), 'الحالة': 'مسودة'};
+            rows.insert(0, row);
             final newRecord = Map<String, String>.from(rows.first);
-            newRecord['_مرجع داخلي'] = newRecord['الكود'] ?? newRecord['الاسم'] ?? newRecord.values.first;
+            newRecord['_مرجع داخلي'] = isOrgChart ? (newRecord['كود الهيكل'] ?? generatedCode) : (newRecord['الكود'] ?? newRecord['الاسم'] ?? newRecord.values.first);
             rows[0] = newRecord;
             setState(() {
               _saved[_page] = rows;
@@ -744,7 +757,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           }, child: Text(silsilaText('حفظ السجل'))),
         ],
       ),
-    ).then((_) { code.dispose(); name.dispose(); details.dispose(); });
+    ).then((_) { code.dispose(); name.dispose(); details.dispose(); parent.dispose(); level.dispose(); });
   }
 
   void _showActionMessage(String message) {
