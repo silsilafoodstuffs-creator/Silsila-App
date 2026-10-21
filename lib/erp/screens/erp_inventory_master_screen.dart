@@ -171,29 +171,22 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
 
-      String? imageUrl;
       final image = _pickedItemImage;
       final imageBytes = _pickedItemImageBytes;
-      if (image != null && imageBytes != null) {
-        final extension = image.name.contains('.') ? image.name.split('.').last.toLowerCase() : 'jpg';
-        final contentType = switch (extension) {
-          'png' => 'image/png',
-          'webp' => 'image/webp',
-          'jpeg' || 'jpg' => 'image/jpeg',
-          _ => '',
-        };
-        if (contentType.isEmpty) throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
-        imageUrl = await _repo.uploadItemImage(
-          companyId: _company.text.trim(),
-          itemCode: _itemCode.text,
-          fileName: image.name,
-          contentType: contentType,
-          bytes: imageBytes,
-        );
+      final extension = image?.name.contains('.') == true ? image!.name.split('.').last.toLowerCase() : 'jpg';
+      final contentType = switch (extension) {
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'jpeg' || 'jpg' => 'image/jpeg',
+        _ => '',
+      };
+      if (imageBytes != null && imageBytes.isNotEmpty && contentType.isEmpty) {
+        throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
       }
       await _repo.createItem(companyId: _company.text, code: _itemCode.text, name: _itemName.text,
         barcode: _barcode.text, groupId: _itemGroupId, unit: _unit.text, purchasePrice: purchase,
-        salePrice: sale, taxRate: taxRate, reorderLevel: reorder, expiryTracking: _expiry, imageUrl: imageUrl);
+        salePrice: sale, taxRate: taxRate, reorderLevel: reorder, expiryTracking: _expiry,
+        imageBytes: imageBytes, imageMimeType: imageBytes == null ? null : contentType);
       if (!mounted) return;
       _itemCode.clear(); _itemName.clear(); _barcode.clear(); _pickedItemImage = null; _pickedItemImageBytes = null; _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
       setState(() { _saving = false; _message = 'تمت إضافة الصنف.'; });
