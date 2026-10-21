@@ -2226,57 +2226,6 @@ class _MainShellState extends State<MainShell> {
     ),
   );
 
-  Widget _compactProductCard(Product product) {
-    final key = product.id == null ? product.name : 'product:${product.id}';
-    final favorite = favorites.contains(key);
-    return Card(
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.inventory_2_outlined, color: purple, size: 19),
-                const Spacer(),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  onPressed: () => toggleProductFavorite(product),
-                  icon: Icon(
-                    favorite ? Icons.favorite : Icons.favorite_border,
-                    color: favorite ? pink : purple,
-                    size: 18,
-                  ),
-                ),
-              ],
-            ),
-            Text(
-              product.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${product.price.toStringAsFixed(0)} ج.م',
-              style: const TextStyle(color: purple, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 5),
-            SizedBox(
-              height: 32,
-              child: FilledButton(
-                onPressed: () => addToCart(product),
-                child: Text(silsilaText('أضف للسلة'), style: TextStyle(fontSize: 11)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget favoritesPage() => ListView(
         padding: const EdgeInsets.all(16),
         children: [
