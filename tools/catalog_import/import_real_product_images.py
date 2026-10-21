@@ -212,7 +212,7 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
     raw_brand = str(item.get("brand_name") or "")
     target = normalized(" ".join((raw_brand, raw_name)))
     arabic_terms = {
-        "أرز": "rice", "بسمتي": "basmati", "مكرونة": "pasta", "زيت": "cooking oil",
+        "أرز": "rice", "بسمتي": "basmati rice", "مكرونة": "pasta", "زيت": "cooking oil",
         "سمن": "ghee", "سكر": "sugar", "دقيق": "flour", "عدس": "lentils",
         "فول": "fava beans", "حمص": "chickpeas", "شاي": "tea", "قهوة": "coffee",
         "عصير": "juice", "جبن": "cheese", "لبن": "milk", "زبادي": "yogurt",
@@ -224,14 +224,22 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
         "مكسرات": "nuts", "شيبسي": "potato chips", "رقائق": "chips",
     }
     english_terms = " ".join(english for arabic, english in arabic_terms.items() if arabic in raw_name)
-    # For unbranded Arabic-only records, score the English category terms
-    # separately; mixing Arabic and English tokens makes a correct candidate
-    # score artificially low. Keep brand/name scoring when a Latin name exists.
+    # Generic Arabic-only names must be matched by category-token coverage, not
+    # Jaccard similarity: "rice" versus "rice basmati brand 1kg" otherwise scores
+    # only 0.25 and rejects every useful result. Keep this path conservative.
     has_latin_name = bool(re.search(r"[a-zA-Z]", raw_name))
-    if not barcode and not raw_brand and not has_latin_name and english_terms:
+    generic_mode = not barcode and not raw_brand and not has_latin_name and bool(english_terms)
+    if generic_mode:
         search_target = normalized(english_terms)
     else:
         search_target = normalized(" ".join((target, english_terms)))
+    exclusions = {
+        "rice": {"cake", "cakes", "noodle", "noodles", "cracker", "crackers", "flour", "milk", "drink"},
+        "basmati": {"flavor", "flavoured", "flavored"},
+        "pasta": {"sauce", "seasoning"},
+        "milk": {"chocolate", "soap", "shampoo"},
+        "water": {"flavor", "flavoured", "flavored"},
+    }
     best = None
     best_score = 0.0
     for candidate in candidates:
@@ -241,15 +249,24 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
         title = normalized(" ".join((product_title, brands)))
         if barcode and code == barcode:
             score = 1.0
+        elif generic_mode:
+            required = set(search_target.split())
+            product_tokens = set(product_title.split())
+            # A generic ingredient must appear in the product name itself, not
+            # only in the brand field; reject obvious unrelated lookalikes.
+            blocked = set().union(*(exclusions.get(term, set()) for term in required))
+            if not required or not required.issubset(product_tokens) or product_tokens & blocked:
+                continue
+            score = len(required & product_tokens) / max(1, len(required))
         else:
             a, b = set(search_target.split()), set(title.split())
             score = len(a & b) / max(1, len(a | b))
             brand = normalized(raw_brand)
             if brand and brand in brands:
                 score += 0.25
-            if not brand and not (set(normalized(english_terms).split()) & set(product_title.split())):
+            if not brand and english_terms and not (set(normalized(english_terms).split()) & set(product_title.split())):
                 score = min(score, 0.25)
-        threshold = 0.48 if not barcode and not raw_brand and not has_latin_name else 0.42
+        threshold = 0.95 if generic_mode else (0.48 if not barcode and not raw_brand and not has_latin_name else 0.42)
         if score < threshold or score <= best_score:
             continue
         image_url = candidate.get("image_front_url") or candidate.get("image_url")
@@ -259,7 +276,6 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
         if image:
             best, best_score = (candidate, image[0], image[1]), score
     return best
-
 
 def main() -> int:
     if not BASE_URL or not SERVICE_KEY or not COMPANY_ID:
