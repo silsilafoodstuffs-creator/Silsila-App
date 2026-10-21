@@ -19,8 +19,14 @@ class ErpKeyboardNavigation extends StatelessWidget {
     onF8Save = save;
   }
 
+  static void clearActions() {
+    onF12Add = null;
+    onF8Save = null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    clearActions();
     return FocusTraversalGroup(
       policy: WidgetOrderTraversalPolicy(),
       child: Focus(
