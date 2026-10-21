@@ -23,6 +23,14 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
       default: return 'أهداف العملاء الشهرية';
     }
   }
+  String get _sectionSubtitle {
+    switch (widget.initialTabIndex.clamp(0, 3).toInt()) {
+      case 1: return 'بيانات المندوبين ونسب العمولات المستحقة';
+      case 2: return 'تعريف خطط العمولة وشرائح الاستحقاق';
+      case 3: return 'مراجعة مسودات العمولات قبل الاعتماد';
+      default: return 'تحديد أهداف شهرية للعملاء ومتابعة تحقيقها';
+    }
+  }
   SupabaseClient? _db;
   bool _loading = true;
   String? _error;
@@ -298,7 +306,7 @@ Future<void> _previewSalesTargets() async {
           const Icon(Icons.track_changes_rounded,color:_o,size:30),const SizedBox(width:10),
           Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
             Text(_sectionTitle,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
-            SizedBox(height:5),Text('أهداف شهرية • نسب ثابتة ومتدرجة • اعتماد قبل الصرف',style:TextStyle(color:Color(0xFFEFE5F8),fontSize:12)),
+            SizedBox(height:5),Text(_sectionSubtitle,style:const TextStyle(color:Color(0xFFEFE5F8),fontSize:12)),
           ])),
         ]),
         const SizedBox(height:8),
