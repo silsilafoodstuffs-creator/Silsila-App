@@ -84,9 +84,9 @@ begin
   from sales d join public.erp_sales_lines l on l.document_id=d.id
   join public.erp_items i on i.id=l.item_id and i.company_id=p_company_id
  ),
- days as (select generate_series(current_date-6,current_date,interval '1 day')::date day),
+ days as (select generate_series(current_date-6,current_date,interval '1 day')::date as calendar_day),
  daily as (
-  select d.document_date day,
+  select d.document_date as calendar_day,
    coalesce(sum(case when d.document_type='return' then -d.grand_total else d.grand_total end),0) sales,
    coalesce(sum(case when d.document_type='return' then -d.paid_total else d.paid_total end),0) collections
   from public.erp_sales_documents d
@@ -113,8 +113,8 @@ begin
   'month_start',p_month_start,'month_end_exclusive',p_month_end,
   'sales',st.sales,'collections',st.collections,'receivables',st.receivables,
   'purchases',pt.total,'gross_profit_estimate',mt.gross_profit,'inventory_value_estimate',it.value,
-  'daily_sales',coalesce((select jsonb_agg(coalesce(d.sales,0) order by days.day) from days left join daily d on d.day=days.day),'[]'::jsonb),
-  'daily_collections',coalesce((select jsonb_agg(coalesce(d.collections,0) order by days.day) from days left join daily d on d.day=days.day),'[]'::jsonb),
+  'daily_sales',coalesce((select jsonb_agg(coalesce(d.sales,0) order by days.calendar_day) from days left join daily d on d.calendar_day=days.calendar_day),'[]'::jsonb),
+  'daily_collections',coalesce((select jsonb_agg(coalesce(d.collections,0) order by days.calendar_day) from days left join daily d on d.calendar_day=days.calendar_day),'[]'::jsonb),
   'inventory_group_labels',coalesce((select jsonb_agg(group_name order by value desc) from inventory_by_group),'[]'::jsonb),
   'inventory_group_values',coalesce((select jsonb_agg(value order by value desc) from inventory_by_group),'[]'::jsonb)
  ) into v_result from sales_totals st cross join purchase_totals pt cross join margin_totals mt cross join inventory_total it;
