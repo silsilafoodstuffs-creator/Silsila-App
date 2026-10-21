@@ -1802,8 +1802,9 @@ class _MainShellState extends State<MainShell> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
                     onTap: () => setState(() {
-                      selectedEntity = 'الأصناف';
+                      selectedEntity = 'فئات';
                       selectedCategory = category;
+                      browseSubcategory = category;
                     }),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
