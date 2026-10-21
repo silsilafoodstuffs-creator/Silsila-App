@@ -324,11 +324,17 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                 onTap:()=>setState(()=>_selectedId=id)))),
               DataCell(Checkbox(value:row['is_active']==true,activeColor:_catPurple,onChanged:_editing?(v)=>setState(()=>row['is_active']=v==true):null)),
               DataCell(Checkbox(value:row['show_in_app']==true,activeColor:_catOrange,onChanged:_editing?(v)=>setState(()=>row['show_in_app']=v==true):null)),
-              DataCell(SizedBox(width:135,child:Row(children:[
-                if(_imageBytes[id]!=null) const Icon(Icons.image,color:_catPurple,size:18)
-                else if(_s(row['image_url']).isNotEmpty) const Icon(Icons.check_circle,color:Colors.green,size:18)
-                else const Icon(Icons.image_outlined,color:Colors.black38,size:18),
-                const SizedBox(width:3),Expanded(child:TextButton.icon(
+              DataCell(SizedBox(width:150,child:Row(children:[
+                ClipRRect(borderRadius:BorderRadius.circular(6),child:Container(
+                  width:38,height:38,color:const Color(0xFFF5EFFB),
+                  child:_imageBytes[id]!=null
+                    ? Image.memory(_imageBytes[id]!,fit:BoxFit.contain)
+                    : _s(row['image_url']).isNotEmpty
+                      ? Image.network(_s(row['image_url']),fit:BoxFit.contain,
+                          errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,color:_catPurple,size:20))
+                      : const Icon(Icons.image_outlined,color:Colors.black38,size:20),
+                )),
+                const SizedBox(width:5),Expanded(child:TextButton.icon(
                   onPressed:_editing?()=>_pickImage(row):null,icon:const Icon(Icons.add_a_photo_outlined,size:15),
                   label:const Text('اختيار/تصوير',style:TextStyle(fontSize:10)),))
               ]))),
