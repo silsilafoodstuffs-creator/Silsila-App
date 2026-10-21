@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupplierProductService {
@@ -95,6 +96,8 @@ class SupplierProductService {
     num minQuantity = 1,
     int? categoryId,
     String? imageUrl,
+    Uint8List? imageData,
+    String? imageMimeType,
     num stockQuantity = 0,
     bool trackInventory = false,
     String? subcategory,
@@ -137,11 +140,13 @@ class SupplierProductService {
       );
     }
 
-    final cleanImageUrl = _clean(imageUrl);
-
-    if (cleanImageUrl != null) {
-      _validateImageUrl(cleanImageUrl);
+    final cleanImageUrl = imageData == null ? _clean(imageUrl) : null;
+    if (imageData != null) {
+      if (imageData.isEmpty) throw ArgumentError('ملف صورة المنتج فارغ.');
+      if (imageData.length > 5 * 1024 * 1024) throw ArgumentError('حجم صورة المنتج يجب ألا يتجاوز 5 ميجابايت.');
+      if (_clean(imageMimeType) == null) throw ArgumentError('نوع ملف صورة المنتج مطلوب.');
     }
+    if (cleanImageUrl != null) _validateImageUrl(cleanImageUrl);
 
     final result = await _requireClient
         .from('products')
@@ -156,6 +161,8 @@ class SupplierProductService {
           'min_quantity': minQuantity,
           'minimum_quantity': minQuantity,
           'image_url': cleanImageUrl,
+          'image_data': imageData == null ? null : _byteaHex(imageData),
+          'image_mime_type': imageData == null ? null : _clean(imageMimeType),
           'stock_quantity': stockQuantity,
           'track_inventory': trackInventory,
           'subcategory': _clean(subcategory),
@@ -183,6 +190,8 @@ class SupplierProductService {
     num? minQuantity,
     int? categoryId,
     String? imageUrl,
+    Uint8List? imageData,
+    String? imageMimeType,
     num? stockQuantity,
     bool? trackInventory,
     bool? isActive,
@@ -250,13 +259,17 @@ class SupplierProductService {
       updates['category_id'] = categoryId;
     }
 
-    if (imageUrl != null) {
+    if (imageData != null) {
+      if (imageData.isEmpty) throw ArgumentError('ملف صورة المنتج فارغ.');
+      if (imageData.length > 5 * 1024 * 1024) throw ArgumentError('حجم صورة المنتج يجب ألا يتجاوز 5 ميجابايت.');
+      final mime = _clean(imageMimeType);
+      if (mime == null) throw ArgumentError('نوع ملف صورة المنتج مطلوب.');
+      updates['image_data'] = _byteaHex(imageData);
+      updates['image_mime_type'] = mime;
+      updates['image_url'] = null;
+    } else if (imageUrl != null) {
       final cleanImageUrl = _clean(imageUrl);
-
-      if (cleanImageUrl != null) {
-        _validateImageUrl(cleanImageUrl);
-      }
-
+      if (cleanImageUrl != null) _validateImageUrl(cleanImageUrl);
       updates['image_url'] = cleanImageUrl;
     }
 
@@ -389,6 +402,9 @@ class SupplierProductService {
 
     return cleaned;
   }
+
+  String _byteaHex(Uint8List bytes) =>
+      '\\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
   void _validateImageUrl(String value) {
     final uri = Uri.tryParse(value);
