@@ -141,7 +141,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
             ..['classification_code'] = inserted['classification_code']
             ..remove('_draft');
         } else {
-          await _db!.from('erp_user_classifications').update(payload).eq('id', id).eq('company_id', _company);
+          await _db!.from('erp_user_classifications').update(payload).eq('id', id).eq('company_id', _company!);
         }
         row['name_ar'] = ar;
         row['name_en'] = en;
@@ -163,14 +163,15 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
       if (_s(candidate['id']) == id) { row = candidate; break; }
     }
     if (row == null) return;
+    final selectedRow = row;
     final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
-      title: const Text('تأكيد الحذف'), content: Text('هل تريد حذف التصنيف «${_s(row['name_ar'])}»؟'),
+      title: const Text('تأكيد الحذف'), content: Text('هل تريد حذف التصنيف «${_s(selectedRow['name_ar'])}»؟'),
       actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('لا')),
         FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('نعم، حذف'))],
     ));
     if (yes != true) return;
     try {
-      if (row['_draft'] != true) await _db!.from('erp_user_classifications').delete().eq('id', id).eq('company_id', _company!);
+      if (selectedRow['_draft'] != true) await _db!.from('erp_user_classifications').delete().eq('id', id).eq('company_id', _company!);
       setState(() { _rows.removeWhere((r) => _s(r['id']) == id); _selectedId = null; _syncControllers(); });
       setState(() => _message = 'تم حذف التصنيف.');
     } catch (e) { setState(() => _error = 'تعذر الحذف: $e'); }
