@@ -67,7 +67,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       if (company.isEmpty) throw StateError('لم يتم تحديد الشركة الحالية.');
       _company = company;
       final result = await _db!.from('erp_item_groups')
-        .select('id,company_id,group_code,group_name,group_name_en,parent_id,is_active,show_in_app,image_url')
+        .select('id,company_id,group_code,group_name,group_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type')
         .eq('company_id', company).order('group_code').limit(3000);
       _all = (result as List).map((e) => Map<String,dynamic>.from(e)).toList();
       _syncControllers();
@@ -135,7 +135,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final draft = <String,dynamic>{
       'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company,
       'group_code':'$prefix${next.toString().padLeft(4,'0')}', 'group_name':'','group_name_en':'',
-      'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'_draft':true,
+      'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
     setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _syncControllers(); });
   }
@@ -156,15 +156,27 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     } catch (e) { setState(() => _error = 'تعذر اختيار صورة الفئة: $e'); }
   }
 
-  Future<String?> _uploadImage(Map<String,dynamic> row) async {
-    final id = _s(row['id']);
-    final bytes = _imageBytes[id];
-    if (bytes == null || bytes.isEmpty) return _s(row['image_url']).isEmpty ? null : _s(row['image_url']);
-    final ext = _imageNames[id]?.split('.').last.toLowerCase() ?? 'jpg';
-    final contentType = ext == 'png' ? 'image/png' : ext == 'webp' ? 'image/webp' : 'image/jpeg';
-    final path = 'erp/$_company/categories/${_s(row['group_code'])}_${DateTime.now().microsecondsSinceEpoch}.$ext';
-    await _db!.storage.from('products').uploadBinary(path, bytes, fileOptions: FileOptions(contentType: contentType, upsert: false));
-    return _db!.storage.from('products').getPublicUrl(path);
+  String _byteaHex(Uint8List bytes) =>
+      '\\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+  Uint8List? _decodeBytea(dynamic value) {
+    final raw = _s(value);
+    if (!raw.startsWith(r'\\x') || raw.length <= 2 || (raw.length - 2).isOdd) return null;
+    try {
+      return Uint8List.fromList(List<int>.generate(
+        (raw.length - 2) ~/ 2,
+        (i) => int.parse(raw.substring(2 + i * 2, 4 + i * 2), radix: 16),
+      ));
+    } catch (_) { return null; }
+  }
+
+  String? _imageMime(Map<String,dynamic> row) {
+    final name = (_imageNames[_s(row['id'])] ?? '').toLowerCase();
+    if (name.endsWith('.png')) return 'image/png';
+    if (name.endsWith('.webp')) return 'image/webp';
+    if (name.endsWith('.jpg') || name.endsWith('.jpeg')) return 'image/jpeg';
+    final existing = _s(row['image_mime_type']);
+    return existing.isEmpty ? null : existing;
   }
 
   Future<void> _save() async {
@@ -190,11 +202,14 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
             throw StateError('الفئة الفرعية المختارة لا تتبع الفئة الرئيسية المحددة.');
           }
         }
-        final imageUrl = await _uploadImage(row);
+        final selectedBytes = _imageBytes[id];
         final payload = <String,dynamic>{
           'company_id':_company, 'group_code':_s(row['group_code']), 'group_name':ar,
           'group_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
-          'show_in_app':row['show_in_app'] == true, 'image_url':imageUrl,
+          'show_in_app':row['show_in_app'] == true, 'image_url':null,
+          if (selectedBytes != null && selectedBytes.isNotEmpty) ...{
+            'image_data':_byteaHex(selectedBytes), 'image_mime_type':_imageMime(row),
+          },
         };
         if (row['_draft'] == true) {
           final inserted = await _db!.from('erp_item_groups').insert(payload).select().single();
@@ -329,8 +344,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                   width:38,height:38,color:const Color(0xFFF5EFFB),
                   child:_imageBytes[id]!=null
                     ? Image.memory(_imageBytes[id]!,fit:BoxFit.contain)
-                    : _s(row['image_url']).isNotEmpty
-                      ? Image.network(_s(row['image_url']),fit:BoxFit.contain,
+                    : _decodeBytea(row['image_data']) != null
+                      ? Image.memory(_decodeBytea(row['image_data'])!,fit:BoxFit.contain,
                           errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,color:_catPurple,size:20))
                       : const Icon(Icons.image_outlined,color:Colors.black38,size:20),
                 )),
