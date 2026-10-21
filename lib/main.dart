@@ -939,6 +939,7 @@ class _MainShellState extends State<MainShell> {
   final supplierService = SupplierService();
   final categoryService = CategoryService();
   List<String> liveCategoryNames = [];
+  final Map<String, String> liveCategoryImages = <String, String>{};
   List<Product> liveProducts = [];
   List<Map<String, dynamic>> liveSuppliers = [];
   bool loadingLiveSuppliers = false;
@@ -1105,12 +1106,20 @@ class _MainShellState extends State<MainShell> {
       final rows = await categoryService.getCategories(activityType: activity);
       if (!mounted) return;
       setState(() {
-        liveCategoryNames = rows
-            .where((row) => row['parent_id'] == null)
+        final rootRows = rows.where((row) => row['parent_id'] == null).toList();
+        liveCategoryNames = rootRows
             .map((row) => (row['name'] ?? '').toString())
             .where((name) => name.trim().isNotEmpty)
             .toSet()
             .toList();
+        liveCategoryImages
+          ..clear()
+          ..addEntries(rootRows.where((row) =>
+              (row['image_url'] ?? '').toString().trim().isNotEmpty)
+            .map((row) => MapEntry(
+              (row['name'] ?? '').toString(),
+              (row['image_url'] ?? '').toString().trim(),
+            )));
         if (!visibleCategoryNames.contains(selectedCategory)) {
           selectedCategory = 'الكل';
         }
@@ -1274,6 +1283,32 @@ class _MainShellState extends State<MainShell> {
       return Icons.local_cafe;
     }
     return Icons.shopping_basket;
+  }
+
+  Widget _categoryArtwork(String category, {double size = 44}) {
+    final url = liveCategoryImages[category]?.trim() ?? '';
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(9),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: url.isEmpty
+            ? Container(
+                color: const Color(0xFFF5EFFB),
+                alignment: Alignment.center,
+                child: Icon(_iconForCategory(category), color: purple, size: size * .52),
+              )
+            : Image.network(
+                url,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Container(
+                  color: const Color(0xFFF5EFFB),
+                  alignment: Alignment.center,
+                  child: Icon(_iconForCategory(category), color: purple, size: size * .52),
+                ),
+              ),
+      ),
+    );
   }
 
   Product? productForCartKey(String key) {
@@ -1828,7 +1863,7 @@ class _MainShellState extends State<MainShell> {
                 children: [
                   ListTile(
                     dense: true,
-                    leading: Icon(_iconForCategory(category), color: purple),
+                    leading: _categoryArtwork(category, size: 46),
                     title: Text(category, style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text('${productsInCategory.length} صنف'),
                     trailing: Icon(expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down, color: purple),
@@ -1881,7 +1916,7 @@ class _MainShellState extends State<MainShell> {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       child: Row(
                         children: [
-                          Icon(_iconForCategory(category), color: purple, size: 22),
+                          _categoryArtwork(category, size: 42),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Column(
