@@ -478,7 +478,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   Widget _masterGrid(){
     final codeField=_isType?'type_code':_isUser?'user_code':'template_code';
     return SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-      headingRowHeight: 34,dataRowMinHeight: 34,dataRowMaxHeight: 38,horizontalMargin:8,columnSpacing:12,
+      headingRowHeight: 57,dataRowMinHeight: 57,dataRowMaxHeight: 57,horizontalMargin:8,columnSpacing:12,
       headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
       columns:[
         const DataColumn(label:Text('م')),DataColumn(label:Text(_isType?'كود النوع':_isUser?'كود المستخدم':'كود القالب')),
@@ -556,7 +556,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       ]),
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-        headingRowHeight: 34,dataRowMinHeight: 34,dataRowMaxHeight: 38,horizontalMargin:7,columnSpacing:8,
+        headingRowHeight: 57,dataRowMinHeight: 57,dataRowMaxHeight: 57,horizontalMargin:7,columnSpacing:8,
         columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:80,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
         rows:_rules.map((rule)=>DataRow(cells:[
           DataCell(SizedBox(width:250,child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis))),
@@ -591,7 +591,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       ]),
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-        headingRowHeight: 34,dataRowMinHeight: 34,dataRowMaxHeight: 38,horizontalMargin:7,columnSpacing:9,
+        headingRowHeight: 57,dataRowMinHeight: 57,dataRowMaxHeight: 57,horizontalMargin:7,columnSpacing:9,
         columns:[
           const DataColumn(label:Text('م')),
           const DataColumn(label:Text('كود المستخدم')),
