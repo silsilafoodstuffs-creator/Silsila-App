@@ -81,14 +81,6 @@ on conflict(source_name,source_url,business_name) do update set
   public_address=excluded.public_address,
   verification_status='needs_review',
   verification_notes=excluded.verification_notes,
-  updated_at=now();(source_name,source_url,business_name) do update set
-  lead_kind=excluded.lead_kind,
-  business_classification=excluded.business_classification,
-  governorate=excluded.governorate,
-  district=excluded.district,
-  public_address=excluded.public_address,
-  verification_status='needs_review',
-  verification_notes=excluded.verification_notes,
   updated_at=now();
 
 comment on table public.erp_public_lead_staging is 'Publicly listed prospective business leads; verify source details and commercial suitability before importing as ERP parties.';
