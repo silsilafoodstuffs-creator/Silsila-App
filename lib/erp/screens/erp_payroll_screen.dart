@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_payroll_repository.dart';
 
 class ErpPayrollScreen extends StatefulWidget {
@@ -193,6 +194,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: _addLine, save: _createRun);
     final selected = _runs.where((r) => _s(r['id']) == _selectedRunId).toList();
     final selectedRun = selected.isEmpty ? null : selected.first;
     return Directionality(textDirection: TextDirection.rtl, child: Column(
