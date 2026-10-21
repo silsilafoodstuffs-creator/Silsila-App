@@ -1,5 +1,10 @@
 name: Enrich Silsila catalog images
 on:
+  # Temporary safe validation run on importer changes; the script defaults to DRY RUN.
+  push:
+    branches: [main]
+    paths:
+      - "tools/catalog_import/import_real_product_images.py"
   workflow_dispatch:
     inputs:
       apply_images:
