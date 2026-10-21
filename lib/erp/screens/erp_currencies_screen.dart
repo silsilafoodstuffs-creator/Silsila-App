@@ -82,7 +82,7 @@ class _ErpCurrenciesScreenState extends State<ErpCurrenciesScreen> {
     catch(e) { if(mounted) setState(()=>_error='تعذر تحديث حالة العملة: $e'); }
   }
 
-  Widget _input(TextEditingController c, String label) => TextField(controller:c, enabled:_editing, style:const TextStyle(fontSize:14), decoration:InputDecoration(labelText:label,isDense:true,constraints:const BoxConstraints(minHeight:52),contentPadding:const EdgeInsets.symmetric(horizontal:12,vertical:12),border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))));
+  Widget _input(TextEditingController c, String label) => TextField(controller:c, enabled:_editing, style:const TextStyle(fontSize:14), decoration:InputDecoration(labelText:label,isDense:true,constraints:const BoxConstraints(minHeight:34,maxHeight:40),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:4),border:OutlineInputBorder(borderRadius:BorderRadius.circular(10))));
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
