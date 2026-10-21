@@ -47,7 +47,7 @@ returns trigger
 language plpgsql
 security invoker
 set search_path = public
-as $
+as $$
 declare
   v_source_branch uuid;
 begin
