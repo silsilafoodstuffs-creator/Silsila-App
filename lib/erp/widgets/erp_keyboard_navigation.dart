@@ -77,3 +77,17 @@ class ErpKeyboardNavigation extends StatelessWidget {
     );
   }
 }
+
+/// Registers the current screen's add/save actions with the shared keyboard handler.
+class ErpKeyboardActionRegistrar extends StatelessWidget {
+  const ErpKeyboardActionRegistrar({super.key, required this.child, this.add, this.save});
+  final Widget child;
+  final VoidCallback? add;
+  final VoidCallback? save;
+
+  @override
+  Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: add, save: save);
+    return child;
+  }
+}
