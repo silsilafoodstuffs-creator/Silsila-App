@@ -52,9 +52,34 @@ GROUP_HINTS = {
 
 
 def request_json(url: str) -> dict[str, Any]:
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=25) as response:
-        return json.loads(response.read().decode("utf-8"))
+    # Public data APIs can temporarily return 429/5xx. Retry a small number of
+    # times with backoff so transient outages do not immediately discard a query.
+    retryable = {429, 500, 502, 503, 504}
+    for attempt in range(4):
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=25) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            if exc.code not in retryable or attempt == 3:
+                raise
+            retry_after = exc.headers.get("Retry-After", "")
+            try:
+                delay = min(60, max(5, int(retry_after))) if retry_after else 8 * (attempt + 1)
+            except ValueError:
+                delay = 8 * (attempt + 1)
+            print(f"  SOURCE retry {attempt + 1}/3 after HTTP {exc.code}; waiting {delay}s")
+            time.sleep(delay)
+        except (urllib.error.URLError, TimeoutError):
+            if attempt == 3:
+                raise
+            delay = 8 * (attempt + 1)
+            print(f"  SOURCE retry {attempt + 1}/3 after connection failure; waiting {delay}s")
+            time.sleep(delay)
+    raise RuntimeError("Source request exhausted retries")
 
 
 def rest(method: str, table: str, query: str = "", payload: Any = None) -> Any:
