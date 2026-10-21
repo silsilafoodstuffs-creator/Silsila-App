@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_parties_repository.dart';
 
 class ErpPartiesScreen extends StatefulWidget {
@@ -111,10 +112,26 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   void _newParty() {
-    _code.clear(); _name.clear(); _phone.clear(); _whatsapp.clear(); _email.clear(); _address.clear();
-    _governorate.clear(); _district.clear(); _center.clear(); _area.clear(); _customerType.clear();
-    _creditLimit.text = '0'; _openingBalance.text = '0';
-    setState(() { _editing = true; _error = null; _message = 'نموذج إضافة طرف جديد جاهز.'; });
+    final hasUnsavedInput = [
+      _code.text, _name.text, _phone.text, _whatsapp.text, _email.text,
+      _address.text, _governorate.text, _district.text, _center.text,
+      _area.text, _customerType.text,
+    ].any((value) => value.trim().isNotEmpty);
+    if (hasUnsavedInput) {
+      setState(() {
+        _editing = true;
+        _error = null;
+        _message = 'تم الاحتفاظ بالبيانات الحالية كما هي. احفظ الطرف الحالي أولًا قبل بدء طرف جديد.';
+      });
+      return;
+    }
+    _creditLimit.text = '0';
+    _openingBalance.text = '0';
+    setState(() {
+      _editing = true;
+      _error = null;
+      _message = 'نموذج إضافة طرف جديد جاهز؛ لن يتم مسح أي بيانات مدخلة.';
+    });
   }
 
   Future<void> _previewParties() async {
@@ -134,7 +151,9 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Column(
+  Widget build(BuildContext context) {
+    ErpKeyboardNavigation.registerActions(add: _newParty, save: _create);
+    return Directionality(textDirection: TextDirection.rtl, child: Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Card(color: const Color(0xFF3E007D), child: Padding(
@@ -239,6 +258,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       ))),
     ],
   ));
+  }
 
   Widget _notice(String text, Color color) => Container(
     margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(10),
