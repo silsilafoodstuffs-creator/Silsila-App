@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_keyboard_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 
@@ -224,7 +225,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
   }
 
   @override
-  Widget build(BuildContext context) => Directionality(
+  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(add: _add, save: _save, child: Directionality(
     textDirection: TextDirection.rtl,
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(color: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -259,5 +260,5 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: Padding(
           padding: const EdgeInsets.all(8), child: _grid())))),
     ]),
-  );
+  ));
 }
