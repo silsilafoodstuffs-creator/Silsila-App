@@ -20,7 +20,7 @@ from typing import Any
 BASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 COMPANY_ID = os.environ.get("SILSILA_ERP_COMPANY_ID", "")
-OFF_API = "https://world.openfoodfacts.org/api/v2/search"
+OFF_API = "https://world.openfoodfacts.org/cgi/search.pl"
 USER_AGENT = "SilsilaCatalogEnricher/1.0 (catalog administrator)"
 MIN_BYTES = 12_000
 MIN_SIDE = 300
@@ -137,6 +137,7 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
         params = urllib.parse.urlencode({
             "search_terms": term,
             "page_size": "12",
+            "json": "1",
             "fields": "code,product_name,product_name_en,brands,image_front_url,image_front_small_url,image_url,countries_tags",
         })
         try:
