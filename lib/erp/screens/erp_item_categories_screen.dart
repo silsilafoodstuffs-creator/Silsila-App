@@ -229,7 +229,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         final payload = <String,dynamic>{
           'company_id':_company, 'group_code':_s(row['group_code']), 'group_name':ar,
           'group_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
-          'show_in_app':row['show_in_app'] == true, 'image_url':null,
+          'show_in_app':row['show_in_app'] == true, 'image_url':selectedBytes != null ? null : row['image_url'],
           if (selectedBytes != null && selectedBytes.isNotEmpty) ...{
             'image_data':_byteaHex(selectedBytes), 'image_mime_type':_imageMime(row),
           },
