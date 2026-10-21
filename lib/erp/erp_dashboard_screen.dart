@@ -618,6 +618,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return rows.where((r) => r.values.any((v) => v.toLowerCase().contains(_search.toLowerCase()))).toList();
   }
 
+  List<String> get _gridKeys {
+    if (_rows.isNotEmpty) {
+      return _rows.first.keys.where((key) => key != '_مرجع داخلي').toList();
+    }
+    if (_page == 'الهيكل الوظيفي') {
+      return const ['م', 'كود الهيكل', 'المسمى الوظيفي', 'الإدارة / القسم', 'يتبع إلى', 'المستوى الإداري', 'الحالة'];
+    }
+    return const [];
+  }
+
   List<Map<String, String>> _sampleRows(String page) {
     if (page == 'الهيكل الوظيفي') {
       return [
@@ -2217,8 +2227,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       }),
       const SizedBox(height: 16),
       if (_group == 'تقارير') Padding(padding: EdgeInsets.only(bottom: 12), child: Text(silsilaText('نموذج تقارير تجريبي؛ ستظهر المؤشرات الفعلية بعد ربط مصادر البيانات واعتماد المعادلات المحاسبية.'), style: TextStyle(color: Colors.black54, height: 1.6))),
-      if (_rows.isEmpty) Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد نتائج مطابقة.'), textAlign: TextAlign.center))
-      else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _rows.first.keys.where((k) => k != '_مرجع داخلي').map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _rows.first.keys.where((k) => k != '_مرجع داخلي').map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
+      if (_rows.isEmpty && _page != 'الهيكل الوظيفي') Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد نتائج مطابقة.'), textAlign: TextAlign.center))
+       else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _gridKeys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _gridKeys.map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
       const SizedBox(height: 12),
       Text('عدد السجلات المعروضة: ${_rows.length} • تحقق من حالة الحفظ بجوار كل عملية', style: const TextStyle(color: Colors.black45, fontSize: 11)),
     ])),
