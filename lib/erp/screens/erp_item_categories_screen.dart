@@ -80,9 +80,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         {'code':'ACT007','name':'أثاث وديكورات'},
       ];
       if (!_activities.any((a) => a['code'] == _selectedActivityCode)) _selectedActivityCode = _activities.first['code']!;
-      final result = await _db!.from('erp_item_groups')
-        .select('id,company_id,activity_code,group_code,group_name,group_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type')
-        .eq('company_id', company).eq('activity_code', _selectedActivityCode).order('group_code').limit(3000);
+      final result = await _db!.from('erp_item_categories')
+        .select('id,company_id,activity_code,category_code,category_name,category_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type')
+        .eq('company_id', company).eq('activity_code', _selectedActivityCode).order('category_code').limit(3000);
       _all = (result as List).map((e) => Map<String,dynamic>.from(e)).toList();
       _expandedIds.addAll(_all.map((r) => _s(r['id'])));
       _syncControllers();
@@ -121,8 +121,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       final id = _s(row['id']); keep.add(id);
       _ar.putIfAbsent(id, () => TextEditingController());
       _en.putIfAbsent(id, () => TextEditingController());
-      _ar[id]!.text = _s(row['group_name']);
-      _en[id]!.text = _s(row['group_name_en']);
+      _ar[id]!.text = _s(row['category_name']);
+      _en[id]!.text = _s(row['category_name_en']);
     }
     for (final id in _ar.keys.where((id) => !keep.contains(id)).toList()) {
       _ar.remove(id)?.dispose(); _en.remove(id)?.dispose();
@@ -145,7 +145,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       final parent = _parentOf(r);
       return parent != null && _s(parent['parent_id']) == _parentFilter;
     }).toList();
-    rows.sort((a,b) => _s(a['group_code']).compareTo(_s(b['group_code'])));
+    rows.sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
     return rows;
   }
 
@@ -161,11 +161,11 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = _level == 1 ? 'أضف فئة رئيسية أولًا.' : 'أضف فئة فرعية أولًا.');
       return;
     }
-    final codeNumbers = _all.map((r) => int.tryParse(_s(r['group_code']).replaceFirst(RegExp(r'^[A-Za-z_-]+'),'')) ?? 0).toList();
+    final codeNumbers = _all.map((r) => int.tryParse(_s(r['category_code']).replaceFirst(RegExp(r'^[A-Za-z_-]+'),'')) ?? 0).toList();
     final next = (codeNumbers.isEmpty ? 0 : codeNumbers.reduce((a,b) => a>b?a:b)) + 1;
     final draft = <String,dynamic>{
       'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company, 'activity_code':_selectedActivityCode,
-      'group_code':'CAT${next.toString().padLeft(4,'0')}', 'group_name':'','group_name_en':'',
+      'category_code':'CAT${next.toString().padLeft(4,'0')}', 'category_name':'','category_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
     setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
@@ -218,21 +218,21 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     try {
       for (final row in _all.toList()) {
         final id = _s(row['id']);
-        final ar = (_ar[id]?.text ?? _s(row['group_name'])).trim();
-        final en = (_en[id]?.text ?? _s(row['group_name_en'])).trim();
-        if (ar.isEmpty) { if (row['_draft'] == true) continue; throw StateError('اسم الفئة العربية مطلوب للكود ${row['group_code']}.'); }
+        final ar = (_ar[id]?.text ?? _s(row['category_name'])).trim();
+        final en = (_en[id]?.text ?? _s(row['category_name_en'])).trim();
+        if (ar.isEmpty) { if (row['_draft'] == true) continue; throw StateError('اسم الفئة العربية مطلوب للكود ${row['category_code']}.'); }
         final normalizedName = ar.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
         final duplicate = _all.any((other) => _s(other['id']) != id &&
-          (_ar[_s(other['id'])]?.text ?? _s(other['group_name'])).toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim() == normalizedName);
+          (_ar[_s(other['id'])]?.text ?? _s(other['category_name'])).toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim() == normalizedName);
         if (duplicate) throw StateError('اسم الفئة «$ar» مستخدم بالفعل في مستوى فئة آخر أو داخل المستوى نفسه.');
         final rowLevel = _rowLevel(row);
         if (rowLevel == 1 && (_s(row['parent_id']).isEmpty || !_parents.any((p) => _s(p['id']) == _s(row['parent_id'])))) {
-          throw StateError('اختر الفئة الرئيسية للفئة الفرعية ${row['group_code']}.');
+          throw StateError('اختر الفئة الرئيسية للفئة الفرعية ${row['category_code']}.');
         }
         if (rowLevel == 2) {
           final selectedParent = _parentOf(row);
           if (selectedParent == null || selectedParent['parent_id'] == null) {
-            throw StateError('اختر الفئة الفرعية للفئة الثانوية ${row['group_code']}.');
+            throw StateError('اختر الفئة الفرعية للفئة الثانوية ${row['category_code']}.');
           }
           final mainId = _s(row['_main_parent_id']);
           if (mainId.isNotEmpty && _s(selectedParent['parent_id']) != mainId) {
@@ -241,8 +241,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
         final selectedBytes = _imageBytes[id];
         final payload = <String,dynamic>{
-          'company_id':_company, 'activity_code':_selectedActivityCode, 'group_code':_s(row['group_code']), 'group_name':ar,
-          'group_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
+          'company_id':_company, 'activity_code':_selectedActivityCode, 'category_code':_s(row['category_code']), 'category_name':ar,
+          'category_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
           'show_in_app':row['show_in_app'] == true, 'image_url':selectedBytes != null ? null : row['image_url'],
           if (selectedBytes != null && selectedBytes.isNotEmpty) ...{
             'image_data':_byteaHex(selectedBytes), 'image_mime_type':_imageMime(row),
@@ -250,12 +250,12 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         };
         if (row['_draft'] == true) {
           final oldDraftId = id;
-          final inserted = await _db!.from('erp_item_groups').insert(payload).select().single();
+          final inserted = await _db!.from('erp_item_categories').insert(payload).select().single();
           final newId = _s(inserted['id']);
           row..['id']=newId..remove('_draft');
           for (final child in _all.where((candidate) => _s(candidate['parent_id']) == oldDraftId)) { child['parent_id'] = newId; }
         } else {
-          await _db!.from('erp_item_groups').update(payload).eq('id',id).eq('company_id',_company!);
+          await _db!.from('erp_item_categories').update(payload).eq('id',id).eq('company_id',_company!);
         }
       }
       await _load();
@@ -273,11 +273,11 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     if (row == null) return;
     final selectedRow = row;
     final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
-      title: const Text('تأكيد الحذف'), content: Text('حذف الفئة «${_s(selectedRow['group_name'])}»؟'),
+      title: const Text('تأكيد الحذف'), content: Text('حذف الفئة «${_s(selectedRow['category_name'])}»؟'),
       actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نعم'))]));
     if (yes != true) return;
     try {
-      if (selectedRow['_draft'] != true) await _db!.from('erp_item_groups').delete().eq('id',id).eq('company_id',_company!);
+      if (selectedRow['_draft'] != true) await _db!.from('erp_item_categories').delete().eq('id',id).eq('company_id',_company!);
       setState(() { _all.removeWhere((r)=>_s(r['id'])==id); _selectedId=null; _syncControllers(); _message='تم حذف الفئة.'; });
     } catch(e) { setState(()=>_error='تعذر حذف الفئة: $e'); }
   }
@@ -287,14 +287,14 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
   List<Map<String,dynamic>> _childrenOf(Map<String,dynamic> parent) =>
       _all.where((r) => _s(r['parent_id']) == _s(parent['id'])).toList()
-        ..sort((a,b) => _s(a['group_code']).compareTo(_s(b['group_code'])));
+        ..sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
 
   Widget _treeNode(Map<String,dynamic> row, int depth) {
     final id = _s(row['id']);
     final children = _childrenOf(row);
     final expanded = _expandedIds.contains(id);
-    final ar = _ar.putIfAbsent(id, () => TextEditingController(text: _s(row['group_name'])));
-    final en = _en.putIfAbsent(id, () => TextEditingController(text: _s(row['group_name_en'])));
+    final ar = _ar.putIfAbsent(id, () => TextEditingController(text: _s(row['category_name'])));
+    final en = _en.putIfAbsent(id, () => TextEditingController(text: _s(row['category_name_en'])));
     final level = _rowLevel(row);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(margin: EdgeInsetsDirectional.only(start: depth * 24, bottom: 5),
@@ -305,7 +305,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           IconButton(visualDensity: VisualDensity.compact, onPressed: children.isEmpty ? null : () => setState(() {
             if (expanded) { _expandedIds.remove(id); } else { _expandedIds.add(id); }
           }), icon: Icon(children.isEmpty ? Icons.circle_outlined : expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _catPurple)),
-          SizedBox(width: 84, child: Text(_s(row['group_code']), style: const TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
+          SizedBox(width: 84, child: Text(_s(row['category_code']), style: const TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
           Expanded(flex: 3, child: TextField(controller: ar, enabled: _editing,
             decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة عربي'),
             onTap: () => setState(() => _selectedId = id))),
@@ -374,7 +374,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           ? const Center(child: Text('لا توجد فئات رئيسية. اضغط «إضافة جديد» لبدء إنشاء شجرة الفئات.'))
           : ListView(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               children: (_all.where((r) => r['parent_id'] == null).toList()
-                ..sort((a,b) => _s(a['group_code']).compareTo(_s(b['group_code']))))
+                ..sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code']))))
                 .map((root) => _treeNode(root, 0)).toList())),
     ],
   ));
