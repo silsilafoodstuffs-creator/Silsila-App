@@ -897,12 +897,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
                       const Text('نوع الصور', style: TextStyle(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.w600)),
                       Row(mainAxisSize: MainAxisSize.min, children: [
-                        Checkbox(value: _imageKind == 'category', activeColor: _purple, visualDensity: VisualDensity.compact,
+                        Checkbox(shape:const CircleBorder(),value: _imageKind == 'category', activeColor: _purple, visualDensity: VisualDensity.compact,
                           onChanged: _loading ? null : (checked) { if (checked == true) setState(() { _imageKind = 'category'; for (final image in _images) { image['save_as'] = 'category'; image.remove('file_name'); } }); }),
                         const Icon(Icons.category_outlined, color: _purple, size: 20),
                         const SizedBox(width: 3), const Text('فئة', style: TextStyle(fontSize: 12)),
                         const SizedBox(width: 8),
-                        Checkbox(value: _imageKind == 'product', activeColor: _purple, visualDensity: VisualDensity.compact,
+                        Checkbox(shape:const CircleBorder(),value: _imageKind == 'product', activeColor: _purple, visualDensity: VisualDensity.compact,
                           onChanged: _loading ? null : (checked) { if (checked == true) setState(() { _imageKind = 'product'; for (final image in _images) { image['save_as'] = 'product'; image.remove('file_name'); } }); }),
                         const Icon(Icons.inventory_2_outlined, color: _purple, size: 20),
                         const SizedBox(width: 3), const Text('صنف', style: TextStyle(fontSize: 12)),
@@ -1027,7 +1027,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       return KeyEventResult.ignored;
                     },
                     child:TextField(controller:_rowController(item,key,initial:initial),keyboardType:type,
-                    inputFormatters: (type == TextInputType.number || type == const TextInputType.numberWithOptions(decimal:true)) ? [FilteringTextInputFormatter.allow(RegExp(r'^\\d*\\.?\\d{0,3}'))] : null,
+                    inputFormatters: (type == TextInputType.number || type == const TextInputType.numberWithOptions(decimal:true)) ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,3}'))] : null,
                     onChanged:(v)=>item[key]=v,decoration:InputDecoration(hintText:label,labelText:null,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:7)))));
                 }
                 Widget dropdown(String key,String label,String value,List<String> options,{double width=145}) {
@@ -1093,10 +1093,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   ? SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                       const SizedBox(width:6),
                       SizedBox(width:92, child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Row(children: [Checkbox(value: mode == 'new', activeColor: _purple, visualDensity: VisualDensity.compact,
+                        Row(children: [Checkbox(shape:const CircleBorder(),value: mode == 'new', activeColor: _purple, visualDensity: VisualDensity.compact,
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, onChanged: _loading ? null : (v) { if (v == true) setState(() => item['entity_mode'] = 'new'); }),
                           const Expanded(child: Text('كود جديد', style: TextStyle(fontSize: 11)))]),
-                        Row(children: [Checkbox(value: mode == 'old', activeColor: _purple, visualDensity: VisualDensity.compact,
+                        Row(children: [Checkbox(shape:const CircleBorder(),value: mode == 'old', activeColor: _purple, visualDensity: VisualDensity.compact,
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, onChanged: _loading ? null : (v) { if (v == true) setState(() => item['entity_mode'] = 'old'); }),
                           const Expanded(child: Text('كود قديم', style: TextStyle(fontSize: 11)))]),
                       ])),
@@ -1110,10 +1110,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   : SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                       const SizedBox(width:6),
                       SizedBox(width:92, child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Row(children: [Checkbox(value: mode == 'new', activeColor: _purple, visualDensity: VisualDensity.compact,
+                        Row(children: [Checkbox(shape:const CircleBorder(),value: mode == 'new', activeColor: _purple, visualDensity: VisualDensity.compact,
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, onChanged: _loading ? null : (v) { if (v == true) setState(() => item['entity_mode'] = 'new'); }),
                           const Expanded(child: Text('كود جديد', style: TextStyle(fontSize: 11)))]),
-                        Row(children: [Checkbox(value: mode == 'old', activeColor: _purple, visualDensity: VisualDensity.compact,
+                        Row(children: [Checkbox(shape:const CircleBorder(),value: mode == 'old', activeColor: _purple, visualDensity: VisualDensity.compact,
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap, onChanged: _loading ? null : (v) { if (v == true) setState(() => item['entity_mode'] = 'old'); }),
                           const Expanded(child: Text('كود قديم', style: TextStyle(fontSize: 11)))]),
                       ])),
