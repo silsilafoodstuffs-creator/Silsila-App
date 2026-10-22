@@ -123,8 +123,8 @@ class ProductService {
       activityCode = activityRow?['code']?.toString();
     }
 
-    var groupQuery = db.from('erp_item_groups')
-        .select('id,parent_id,group_name,group_name_en,activity_code,image_data,image_mime_type')
+    var groupQuery = db.from('erp_item_categories')
+        .select('id,parent_id,group_name:category_name,group_name_en:category_name_en,activity_code,image_data,image_mime_type')
         .eq('is_active', true)
         .eq('show_in_app', true);
     if (activityCode != null && activityCode.isNotEmpty) {
@@ -156,10 +156,10 @@ class ProductService {
     }
 
     var itemQuery = db.from('erp_items')
-        .select('id,group_id,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_data,image_mime_type,brand_name,package_description')
+        .select('id,group_id:category_id,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_data,image_mime_type,brand_name,package_description')
         .eq('is_active', true)
         .eq('show_in_app', true)
-        .inFilter('group_id', groupIds);
+        .inFilter('category_id', groupIds);
     if (search != null) itemQuery = itemQuery.ilike('item_name', '%${_escapeLike(search)}%');
     final itemRows = await itemQuery.order('item_name').limit(500);
     final results = <Map<String, dynamic>>[];
