@@ -8,6 +8,8 @@ create table if not exists public.erp_cost_centers (
   parent_id uuid references public.erp_cost_centers(id) on delete restrict,
   center_code text not null,
   center_name text not null,
+  center_name_ar text not null default '',
+  center_name_en text null,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -16,6 +18,12 @@ create table if not exists public.erp_cost_centers (
   check (length(trim(center_name)) > 0),
   check (parent_id is null or parent_id <> id)
 );
+
+alter table public.erp_cost_centers add column if not exists center_name_ar text;
+alter table public.erp_cost_centers add column if not exists center_name_en text;
+update public.erp_cost_centers set center_name_ar = center_name where center_name_ar is null or btrim(center_name_ar) = '';
+alter table public.erp_cost_centers alter column center_name_ar set default '';
+alter table public.erp_cost_centers alter column center_name_ar set not null;
 
 create index if not exists erp_cost_centers_company_idx
   on public.erp_cost_centers(company_id, center_code);
