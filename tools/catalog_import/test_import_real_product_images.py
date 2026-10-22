@@ -134,6 +134,17 @@ class CatalogImageMatchingTests(unittest.TestCase):
         self.assertTrue(IMPORTER.has_real_size_image(good))
         self.assertFalse(IMPORTER.has_real_size_image(small))
 
+    def test_iced_tea_beverage_does_not_match_loose_tea_pack(self):
+        self.assertFalse(
+            IMPORTER.image_variant_matches("شاي ناعم 250 جم", "Fuze Tea Peach")
+        )
+        self.assertTrue(
+            IMPORTER.image_variant_matches("شاي ناعم 250 جم", "Loose black tea 250g")
+        )
+        self.assertTrue(
+            IMPORTER.image_variant_matches("شاي أسود 40 فتلة", "Black tea bags 40")
+        )
+
     def test_sweet_potato_chips_do_not_match_regular_potato_chips(self):
         self.assertFalse(
             IMPORTER.image_variant_matches("رقائق بطاطس ملح", "sweet potato chips")
