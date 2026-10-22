@@ -928,11 +928,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   final value=candidate?.toString().trim()??'';
                   if(_looksLikeEntityName(value)){productName=value;break;}
                 }
-                if(productName.isEmpty)productName=suggested.replaceAll('_',' ');
                 final productUnit=_excelValue(item,['main_unit','unit','unit_name','major_unit']);
-                if(productUnit.isNotEmpty&&!productName.toLowerCase().contains(productUnit.toLowerCase()))productName=productName+' '+productUnit;
+                if(productName.isNotEmpty&&productUnit.isNotEmpty&&!productName.toLowerCase().contains(productUnit.toLowerCase()))productName=productName+' '+productUnit;
                 final productCount=_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']);
-                if(productCount.isNotEmpty&&!RegExp(r'(^|[^0-9])'+RegExp.escape(productCount)+r'([^0-9]|$)').hasMatch(productName))productName=productName+' عدد داخلي '+productCount;
+                if(productName.isNotEmpty&&productCount.isNotEmpty&&!RegExp(r'(^|[^0-9])'+RegExp.escape(productCount)+r'([^0-9]|$)').hasMatch(productName))productName=productName+' عدد داخلي '+productCount;
                 final common=SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                   SizedBox(width:42,child:Checkbox(value:selected,activeColor:_purple,onChanged:_loading?null:(v)=>_toggle(url,v))),
                   SizedBox(width:38,child:Text((index+1).toString(),textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w800))),
