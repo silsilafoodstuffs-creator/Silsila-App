@@ -4,6 +4,7 @@ import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../services/erp_workspace_records_service.dart';
 
 const _catPurple = Color(0xFF3E007D);
 const _catOrange = Color(0xFFFFA015);
@@ -19,6 +20,9 @@ class ErpItemCategoriesScreen extends StatefulWidget {
 class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   SupabaseClient? _db;
   final _picker = ImagePicker();
+  final _workspaceRecords = ErpWorkspaceRecordsService();
+  List<Map<String,String>> _activities = <Map<String,String>>[];
+  String _selectedActivityCode = 'ACT001';
   String? _company, _error, _message, _selectedId;
   bool _loading = false, _saving = false, _editing = false;
   int _level = 0;
@@ -67,9 +71,20 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       }
       if (company.isEmpty) throw StateError('لم يتم تحديد الشركة الحالية.');
       _company = company;
+      final activityRows = await _workspaceRecords.listPage(companyId: company, pageKey: 'أنواع الأنشطة');
+      _activities = activityRows.where((r) => (r['نشط'] ?? 'true').toLowerCase() != 'false')
+        .map((r) => <String,String>{'code': r['كود النشاط'] ?? '', 'name': r['اسم النشاط عربي'] ?? ''})
+        .where((r) => r['code']!.isNotEmpty && r['name']!.isNotEmpty).toList();
+      if (_activities.isEmpty) _activities = <Map<String,String>>[
+        {'code':'ACT001','name':'مواد غذائية'}, {'code':'ACT002','name':'لوازم بناء'},
+        {'code':'ACT003','name':'ملابس واكسسوارات'}, {'code':'ACT004','name':'أجهزة وإلكترونيات'},
+        {'code':'ACT005','name':'سيارات ومعدات'}, {'code':'ACT006','name':'خدمات شحن ونقل'},
+        {'code':'ACT007','name':'أثاث وديكورات'},
+      ];
+      if (!_activities.any((a) => a['code'] == _selectedActivityCode)) _selectedActivityCode = _activities.first['code']!;
       final result = await _db!.from('erp_item_groups')
-        .select('id,company_id,group_code,group_name,group_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type')
-        .eq('company_id', company).order('group_code').limit(3000);
+        .select('id,company_id,activity_code,group_code,group_name,group_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type')
+        .eq('company_id', company).eq('activity_code', _selectedActivityCode).order('group_code').limit(3000);
       _all = (result as List).map((e) => Map<String,dynamic>.from(e)).toList();
       _expandedIds.addAll(_all.map((r) => _s(r['id'])));
       _syncControllers();
@@ -156,7 +171,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final codeNumbers = _all.map((r) => int.tryParse(_s(r['group_code']).replaceFirst(RegExp(r'^[A-Za-z_-]+'),'')) ?? 0).toList();
     final next = (codeNumbers.isEmpty ? 0 : codeNumbers.reduce((a,b) => a>b?a:b)) + 1;
     final draft = <String,dynamic>{
-      'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company,
+      'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company, 'activity_code':_selectedActivityCode,
       'group_code':'CAT${next.toString().padLeft(4,'0')}', 'group_name':'','group_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
@@ -217,10 +232,11 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         final duplicate = _all.any((other) => _s(other['id']) != id &&
           (_ar[_s(other['id'])]?.text ?? _s(other['group_name'])).toLowerCase().replaceAll(RegExp(r'\\s+'), ' ').trim() == normalizedName);
         if (duplicate) throw StateError('اسم الفئة «$ar» مستخدم بالفعل في مستوى فئة آخر أو داخل المستوى نفسه.');
-        if (_level == 1 && (_s(row['parent_id']).isEmpty || !_parents.any((p) => _s(p['id']) == _s(row['parent_id'])))) {
+        final rowLevel = _rowLevel(row);
+        if (rowLevel == 1 && (_s(row['parent_id']).isEmpty || !_parents.any((p) => _s(p['id']) == _s(row['parent_id'])))) {
           throw StateError('اختر الفئة الرئيسية للفئة الفرعية ${row['group_code']}.');
         }
-        if (_level == 2) {
+        if (rowLevel == 2) {
           final selectedParent = _parentOf(row);
           if (selectedParent == null || selectedParent['parent_id'] == null) {
             throw StateError('اختر الفئة الفرعية للفئة الثانوية ${row['group_code']}.');
@@ -232,7 +248,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
         final selectedBytes = _imageBytes[id];
         final payload = <String,dynamic>{
-          'company_id':_company, 'group_code':_s(row['group_code']), 'group_name':ar,
+          'company_id':_company, 'activity_code':_selectedActivityCode, 'group_code':_s(row['group_code']), 'group_name':ar,
           'group_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
           'show_in_app':row['show_in_app'] == true, 'image_url':selectedBytes != null ? null : row['image_url'],
           if (selectedBytes != null && selectedBytes.isNotEmpty) ...{
@@ -240,8 +256,11 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           },
         };
         if (row['_draft'] == true) {
+          final oldDraftId = id;
           final inserted = await _db!.from('erp_item_groups').insert(payload).select().single();
-          row..['id']=inserted['id']..remove('_draft');
+          final newId = _s(inserted['id']);
+          row..['id']=newId..remove('_draft');
+          for (final child in _all.where((candidate) => _s(candidate['parent_id']) == oldDraftId)) { child['parent_id'] = newId; }
         } else {
           await _db!.from('erp_item_groups').update(payload).eq('id',id).eq('company_id',_company!);
         }
@@ -358,6 +377,13 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           _task('طباعة',Icons.print,null),
           _task('PDF',Icons.picture_as_pdf,null),
         ]))),
+      Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 3), child: Row(children: [
+        const SizedBox(width: 72, child: Text('النشاط', style: TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
+        Expanded(child: DropdownButtonFormField<String>(value: _selectedActivityCode, isExpanded: true,
+          decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
+          items: _activities.map((a) => DropdownMenuItem<String>(value: a['code'], child: Text('${a['code']} - ${a['name']}', overflow: TextOverflow.ellipsis))).toList(),
+          onChanged: _editing || _loading ? null : (value) { if (value == null) return; setState(() { _selectedActivityCode = value; _parentFilter = null; _selectedId = null; }); _load(); })),
+      ])),
       if(_error!=null) Padding(padding:const EdgeInsets.all(7),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
       if(_message!=null) Padding(padding:const EdgeInsets.all(7),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:12))),
       Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), child: Row(children: const [
