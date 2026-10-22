@@ -389,17 +389,7 @@ class SilsilaTheme {
         ),
       ),
 
-      // Selection controls
-      checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
-              ? purple
-              : null,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(5),
-        ),
-      ),
+      // Selection controls use the circular checkbox theme defined above.
 
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith(
