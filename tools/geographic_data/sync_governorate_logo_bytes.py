@@ -20,7 +20,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://teitsopmhruczplwlwgn.supa
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 COMPANY_ID = os.environ.get("SILSILA_COMPANY_ID", "47278c99-7743-4dd4-9ce6-d11f28e02504")
 MAX_DOWNLOAD_BYTES = 8 * 1024 * 1024
-USER_AGENT = "SilsilaERP-GeographicAssets/1.0"
+USER_AGENT = "SilsilaERP-GeographicAssets/1.0 (contact: silsila.foodstuffs@gmail.com)"
 
 
 def request_bytes(url: str) -> tuple[bytes, str]:
@@ -153,7 +153,7 @@ def main() -> int:
             patch_row(code, png, sha)
             print(f"SAVED {code} {name}: {len(png)} bytes PNG sha256={sha}")
             saved += 1
-            time.sleep(2.0)
+            time.sleep(5.0)
         except (HTTPError, URLError, OSError, ValueError, RuntimeError) as exc:
             failures.append((code, f"{name}: {type(exc).__name__}: {exc}"))
             print(f"FAILED {code} {name}: {type(exc).__name__}: {exc}", file=sys.stderr)
