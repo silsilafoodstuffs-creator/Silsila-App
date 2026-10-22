@@ -106,7 +106,6 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       if (!mounted) return;
       setState(() {
         _warehouses = values[0]; _items = values[1]; _branches = values[2]; _categories = values[3];
-        if (!_categories.any((g) => _s(g['id']) == _parentGroupId)) _parentGroupId = null;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
