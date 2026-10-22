@@ -341,7 +341,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     try {
       final now = DateTime.now();
       String two(int value) => value.toString().padLeft(2, '0');
-      final timestamp = '${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}${two(now.second)}';
+      final timestamp = '${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}${two(now.second)}_${now.millisecond.toString().padLeft(3, '0')}';
       final excel = Excel.createExcel();
       final sheet = excel['بيانات الأصناف'];
       final headers = <String>[
@@ -544,7 +544,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   OutlinedButton.icon(
                     onPressed: _loading || _selected.isEmpty ? null : _exportProductDataExcel,
                     icon: const Icon(Icons.table_view_outlined),
-                    label: Text('بيانات الأصناف Excel (${_selected.length})'),
+                    label: Text('تصدير بيانات الأصناف إلى Excel (${_selected.length})'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _purple,
                       side: const BorderSide(color: _purple),
