@@ -137,19 +137,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     return candidate;
   }
 
-  String _extension(String mime, String url) {
-    final path = Uri.tryParse(url)?.path.toLowerCase() ?? '';
-    for (final ext in ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']) {
-      if (path.endsWith(ext)) return ext == '.jpeg' ? '.jpg' : ext;
-    }
-    return switch (mime.toLowerCase()) {
-      'image/png' => '.png',
-      'image/webp' => '.webp',
-      'image/gif' => '.gif',
-      'image/avif' => '.avif',
-      _ => '.jpg',
-    };
-  }
 
   /// Converts an image to PNG and removes a near-uniform background connected
   /// to the image edges. This is a lightweight cut-out, not an AI segmentation model.
@@ -253,7 +240,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         fileExtension: 'zip',
         mimeType: MimeType.zip,
       );
-      if (mounted) setState(() => _status = 'تم حفظ ${archive.length} صورة بصيغة PNG داخل ملف ZIP بخلفيات شفافة عند إمكانية تمييزها.');
+      if (mounted) setState(() => _status = 'تم حفظ ${archive.files.length} صورة بصيغة PNG داخل ملف ZIP بخلفيات شفافة عند إمكانية تمييزها.');
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -288,7 +275,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         fileExtension: 'png',
         mimeType: MimeType.png,
       );
-      if (mounted) setState(() => _status = 'تم حفظ الصورة بصيغة PNG بخلفية شفافة (عند إمكانية تمييز الخلفية).');
+      if (mounted) setState(() => _status = 'تم حفظ الصورة بصيغة PNG بخلفية شفافة عند إمكانية تمييز الخلفية الموحدة.');
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -324,7 +311,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('جامع صور الأصناف', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _purple)),
                     SizedBox(height: 4),
-                    Text('استخراج الصور المتاحة من صفحة عامة ثم تحديدها وتنزيلها', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text('استخراج الصور، إزالة الخلفية الموحدة، وحفظها PNG منفردة أو كلها في ZIP', style: TextStyle(color: Colors.black54, fontSize: 12)),
                   ])),
                 ]),
                 const SizedBox(height: 18),
@@ -382,7 +369,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 ],
                 const SizedBox(height: 10),
                 const Text(
-                  'ملاحظة: بعض المواقع تعرض الصور بواسطة JavaScript أو تمنع الطلبات الآلية؛ في هذه الحالة قد لا تظهر كل الصور. استخدم الصور وفق حقوق الموقع.',
+                  'ملاحظة: بعض المواقع تعرض الصور بواسطة JavaScript أو تمنع الطلبات الآلية؛ في هذه الحالة قد لا تظهر كل الصور. إزالة الخلفية تعمل أفضل مع الخلفيات الموحدة (مثل الأبيض)، وقد تحتاج الصور ذات الخلفيات المعقدة إلى معالجة إضافية. استخدم الصور وفق حقوق الموقع.',
                   style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5),
                 ),
               ]),
