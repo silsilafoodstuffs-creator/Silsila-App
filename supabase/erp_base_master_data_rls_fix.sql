@@ -4,13 +4,13 @@ begin;
 
 -- Remove broad public-client grants from ERP financial/master-data tables.
 revoke all on public.erp_branches, public.erp_fiscal_periods, public.erp_accounts,
-  public.erp_cashboxes, public.erp_warehouses, public.erp_item_groups,
+  public.erp_cashboxes, public.erp_warehouses, public.erp_item_categories,
   public.erp_items, public.erp_parties, public.erp_journal_entries,
   public.erp_journal_lines from anon, authenticated;
 
 grant select, insert, update, delete on public.erp_branches,
   public.erp_fiscal_periods, public.erp_accounts, public.erp_cashboxes,
-  public.erp_warehouses, public.erp_item_groups, public.erp_items,
+  public.erp_warehouses, public.erp_item_categories, public.erp_items,
   public.erp_parties, public.erp_journal_entries, public.erp_journal_lines
 to authenticated;
 
@@ -21,7 +21,7 @@ declare
 begin
   foreach t in array array[
     'erp_branches','erp_accounts','erp_cashboxes',
-    'erp_warehouses','erp_item_groups','erp_items','erp_parties'
+    'erp_warehouses','erp_item_categories','erp_items','erp_parties'
   ]
   loop
     execute format('drop policy if exists %I on public.%I', t || '_select_member', t);
