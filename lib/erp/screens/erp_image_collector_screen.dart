@@ -32,6 +32,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   String _imageKind = 'product';
   List<Map<String, dynamic>> _categoryOptions = <Map<String, dynamic>>[];
   bool _categoryOptionsLoaded = false;
+  int _previouslyImportedCount = 0;
+  int _duplicateCount = 0;
+  final Set<String> _downloadingUrls = <String>{};
 
   @override
   void initState() {
@@ -340,6 +343,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       setState(() {
         _pageUrl = result['page']?.toString() ?? parsed.toString();
         _images = images;
+        _previouslyImportedCount = previouslyImportedCount;
+        _duplicateCount = duplicateCount;
         // Select every newly collected image by default so the collector is
         // ready to save the complete result without requiring a manual step.
         _selected
@@ -348,8 +353,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         _status = images.isEmpty
             ? (candidates.isEmpty
                 ? 'لم يتم العثور على صور ظاهرة في HTML. قد تعتمد الصفحة على JavaScript أو تمنع الوصول.'
-                : 'لا توجد صور جديدة: تم إخفاء $previouslyImportedCount صورة محفوظة سابقًا و$duplicateCount تكرارًا من الصفحة.')
-            : 'ظهرت ${images.length} صورة جديدة فقط؛ تم إخفاء $previouslyImportedCount صورة سبق حفظها و$duplicateCount تكرارًا داخل الصفحة.';
+                : 'لا توجد صور جديدة في هذه الصفحة.')
+            : '';
       });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -801,17 +806,18 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     // It must not clear the URL, change selection, mark the source as imported,
     // or remove any other image from the current collection.
     if (_loading || image['downloaded_to_device'] == true) return;
+    final url = image['url'].toString();
+    _downloadingUrls.add(url);
     setState(() {
-      _loading = true;
       _error = null;
       _status = 'جارٍ تجهيز صورة الصف المحدد للتنزيل...';
     });
     try {
-      final url = image['url'].toString();
       final result = await _invoke({'action': 'download', 'url': url});
       final encoded = result['base64']?.toString();
       if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
       final sourceBytes = Uint8List.fromList(base64Decode(encoded));
+      await Future<void>.delayed(Duration.zero);
       final bytes = _processTransparentPng(sourceBytes);
       final imageIndex = _images.indexOf(image);
       final baseName = _imageBaseName(image, imageIndex < 0 ? 0 : imageIndex);
@@ -835,8 +841,23 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
-      if (mounted) setState(() => _loading = false);
+      _downloadingUrls.remove(url);
+      if (mounted) setState(() {});
     }
+  }
+
+  Future<void> _showImagePreview(String url) async {
+    await showDialog<void>(context: context, builder: (dialogContext) => Dialog(
+      insetPadding: const EdgeInsets.all(18),
+      child: SizedBox(width: 900, height: MediaQuery.of(context).size.height * .82,
+        child: Stack(children: [
+          Positioned.fill(child: InteractiveViewer(minScale: .5, maxScale: 5, child: Center(
+            child: Image.network(url, fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, size: 64),
+              loadingBuilder: (context, child, progress) => progress == null ? child : const Center(child: CircularProgressIndicator()))))),
+          PositionedDirectional(top: 6, start: 6, child: IconButton(onPressed: () => Navigator.pop(dialogContext), icon: const Icon(Icons.close))),
+        ])),
+    ));
   }
 
   @override
@@ -937,7 +958,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 ),
                 if (_pageUrl != null) ...[
                   const SizedBox(height: 10),
-                  Text('المصدر: $_pageUrl', textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis),
                 ],
                 if (_status.isNotEmpty) ...[
                   const SizedBox(height: 10),
@@ -964,7 +984,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           Row(children: [
             const Text('الصور المستخرجة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(width: 8),
-            Text('${_images.length} صورة (${_selected.length} محدد)', style: const TextStyle(fontSize: 10, color: Colors.black54)),
+            Expanded(child: Text('${_images.length + _previouslyImportedCount} صورة $_previouslyImportedCount قديمة ${_images.length} جديدة (${_selected.length} محدد ${_images.length - _selected.length} غير محدد)', style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis)),
             const SizedBox(width: 8),
             Expanded(child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
@@ -1007,6 +1027,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       return KeyEventResult.ignored;
                     },
                     child:TextField(controller:_rowController(item,key,initial:initial),keyboardType:type,
+                    inputFormatters: (type == TextInputType.number || type == const TextInputType.numberWithOptions(decimal:true)) ? [FilteringTextInputFormatter.allow(RegExp(r'^\\d*\\.?\\d{0,3}'))] : null,
                     onChanged:(v)=>item[key]=v,decoration:InputDecoration(hintText:label,labelText:null,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:7)))));
                 }
                 Widget dropdown(String key,String label,String value,List<String> options,{double width=145}) {
@@ -1027,10 +1048,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 final productCount=_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']);
                 if(productName.isNotEmpty&&productCount.isNotEmpty&&!RegExp(r'(^|[^0-9])'+RegExp.escape(productCount)+r'([^0-9]|$)').hasMatch(productName))productName=productName+' عدد داخلي '+productCount;
                 final common=SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-                  SizedBox(width:42,child:Checkbox(value:selected,activeColor:_purple,onChanged:_loading?null:(v)=>_toggle(url,v))),
+                  SizedBox(width:42,child:Checkbox(shape:const CircleBorder(),value:selected,activeColor:_purple,onChanged:_loading?null:(v)=>_toggle(url,v))),
                   SizedBox(width:38,child:Text((index+1).toString(),textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w800))),
-                  Container(width:58,height:52,padding:const EdgeInsets.all(3),decoration:BoxDecoration(color:const Color(0xFFF7F4F9),borderRadius:BorderRadius.circular(8),border:Border.all(color:const Color(0xFFE7E0EE))),
-                    child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined),loadingBuilder:(c,ch,p)=>p==null?ch:const Center(child:CircularProgressIndicator(strokeWidth:2)))),
                   const SizedBox(width:8),field('file_name','اسم الصورة',width:185,initial:suggested),const SizedBox(width:8),
                   dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:140),const SizedBox(width:8),
                   Tooltip(
@@ -1038,18 +1057,18 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         ? 'تم تنزيل هذه الصورة إلى الجهاز'
                         : 'تنزيل ملف PNG لهذا الصف فقط؛ لن تتغير بقية الصفوف أو رابط الصفحة',
                     child: FilledButton.icon(
-                      onPressed: _loading || item['downloaded_to_device'] == true
+                      onPressed: _loading || _downloadingUrls.contains(url) || item['downloaded_to_device'] == true
                           ? null
                           : () => _saveOne(item),
                       icon: Icon(
                         item['downloaded_to_device'] == true
                             ? Icons.check_circle_outline_rounded
-                            : Icons.download_for_offline_outlined,
+                            : _downloadingUrls.contains(url) ? Icons.hourglass_top_rounded : Icons.download_for_offline_outlined,
                         size: 18,
                       ),
                       label: Text(item['downloaded_to_device'] == true
                           ? 'تم التنزيل'
-                          : 'تنزيل على الجهاز'),
+                          : _downloadingUrls.contains(url) ? 'جارٍ التنزيل' : 'تنزيل على الجهاز'),
                       style: FilledButton.styleFrom(
                         backgroundColor: item['downloaded_to_device'] == true
                             ? const Color(0xFFE8F5E9)
@@ -1063,7 +1082,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         disabledForegroundColor: item['downloaded_to_device'] == true
                             ? const Color(0xFF1B5E20)
                             : Colors.black45,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
                         textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                       ),
@@ -1103,31 +1122,35 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       field('item_name_ar','اسم الصنف عربي',width:185,initial:productName),const SizedBox(width:8),
                       field('item_name_en','اسم الصنف إنجليزي',width:165,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:8),
                       dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:120),const SizedBox(width:8),
-                      field('internal_count','عدد داخلي',width:88,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:TextInputType.number),const SizedBox(width:8),
+                      field('internal_count','عدد داخلي',width:74,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
                       dropdown('minor_unit','وحدة صغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:120),const SizedBox(width:8),
-                      field('sale_price','سعر الصنف',width:110,initial:_excelValue(item,['sale_price','price','price_value']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
-                      field('pricing_area','مساحة تسعير',width:100,initial:_excelValue(item,['pricing_area','price_area']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
-                      field('tax_rate','ضريبة %',width:80,initial:_excelValue(item,['tax_rate','tax_percent','vat']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
+                      field('sale_price','سعر الصنف',width:92,initial:_excelValue(item,['sale_price','price','price_value']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
+                      field('pricing_area','مساحة تسعير',width:78,initial:_excelValue(item,['pricing_area','price_area']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
+                      field('tax_rate','ضريبة',width:58,initial:_excelValue(item,['tax_rate','tax_percent','vat']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
                       FilledButton.icon(onPressed:_loading?null:()=>_saveRowProduct(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
                     ]));
                 final categoryEditor = kind == 'product' && mode == 'new'
                     ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
                         const SizedBox(width: 10),
-                        _categoryChoice(item, 'category_root_id', 'الفئة الرئيسية', _categoriesForParent(null)),
+                        _categoryChoice(item, 'category_root_id', 'فئة رئيسية', _categoriesForParent(null)),
                         const SizedBox(width: 8),
-                        _categoryChoice(item, 'category_sub_id', 'الفئة الفرعية', _categoriesForParent(item['category_root_id']?.toString()), enabled: item['category_root_id'] != null),
+                        _categoryChoice(item, 'category_sub_id', 'فئة فرعية', _categoriesForParent(item['category_root_id']?.toString()), enabled: item['category_root_id'] != null),
                         const SizedBox(width: 8),
-                        _categoryChoice(item, 'category_secondary_id', 'الفئة الثانوية', _categoriesForParent(item['category_sub_id']?.toString()), enabled: item['category_sub_id'] != null),
+                        _categoryChoice(item, 'category_secondary_id', 'فئة ثانوية', _categoriesForParent(item['category_sub_id']?.toString()), enabled: item['category_sub_id'] != null),
                         const SizedBox(width: 10),
                       ]))
                     : const SizedBox.shrink();
                 return Container(margin:const EdgeInsets.only(bottom:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
-                  child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-                    Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),child:common),
-                    const Divider(height:1), Padding(padding:const EdgeInsets.symmetric(vertical:3),child:editor),
-                    if (kind == 'product' && mode == 'new') ...[
-                      const Divider(height:1), Padding(padding:const EdgeInsets.symmetric(vertical:3),child:categoryEditor),
-                    ],
+                  child:Row(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                    SizedBox(width:180, height:245, child: Padding(padding:const EdgeInsets.all(8),child:Material(color:const Color(0xFFF7F4F9),borderRadius:BorderRadius.circular(10),child:InkWell(borderRadius:BorderRadius.circular(10),onTap:()=>_showImagePreview(url),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,size:40),loadingBuilder:(c,ch,p)=>p==null?ch:const Center(child:CircularProgressIndicator(strokeWidth:2)))))))),
+                    const VerticalDivider(width:1),
+                    Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                      Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),child:common),
+                      const Divider(height:1), Padding(padding:const EdgeInsets.symmetric(vertical:3),child:editor),
+                      if (kind == 'product' && mode == 'new') ...[
+                        const Divider(height:1), Padding(padding:const EdgeInsets.symmetric(vertical:3),child:categoryEditor),
+                      ],
+                    ])),
                   ]));
               },
             )),
