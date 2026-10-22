@@ -181,6 +181,9 @@ jobs:
           print("Permanent signing configuration prepared")
           PY
 
+      - name: Test catalog image matching
+        run: python3 -m unittest tools/catalog_import/test_import_real_product_images.py -v
+
       - name: Check code
         run: flutter analyze lib test --no-fatal-infos
 
