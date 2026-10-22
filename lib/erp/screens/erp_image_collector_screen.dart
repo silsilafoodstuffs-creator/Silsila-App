@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:image/image.dart' as img;
 
 import 'package:archive/archive.dart';
 import 'package:excel/excel.dart' hide Border;
@@ -389,6 +390,51 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     return '';
   }
 
+
+  /// Remove near-white edge-connected background and export a compressed transparent PNG.
+  Uint8List _processTransparentPng(Uint8List source) {
+    final decoded = img.decodeImage(source);
+    if (decoded == null) throw Exception('تعذر فك ترميز الصورة الأصلية.');
+    final width = decoded.width, height = decoded.height;
+    final visited = Uint8List(width * height);
+    final queue = <int>[];
+    bool isBackground(int x, int y) {
+      final p = decoded.getPixel(x, y);
+      final r = p.r.toInt(), g = p.g.toInt(), b = p.b.toInt();
+      final hi = [r, g, b].reduce((a, b) => a > b ? a : b);
+      final lo = [r, g, b].reduce((a, b) => a < b ? a : b);
+      return r >= 232 && g >= 232 && b >= 232 && hi - lo <= 30;
+    }
+    void enqueue(int x, int y) {
+      if (x < 0 || y < 0 || x >= width || y >= height) return;
+      final i = y * width + x;
+      if (visited[i] != 0 || !isBackground(x, y)) return;
+      visited[i] = 1;
+      queue.add(i);
+    }
+    for (var x = 0; x < width; x++) {
+      enqueue(x, 0);
+      if (height > 1) enqueue(x, height - 1);
+    }
+    for (var y = 1; y < height - 1; y++) {
+      enqueue(0, y);
+      if (width > 1) enqueue(width - 1, y);
+    }
+    for (var head = 0; head < queue.length; head++) {
+      final i = queue[head], x = i % width, y = i ~/ width;
+      decoded.setPixelRgba(x, y, 0, 0, 0, 0);
+      enqueue(x - 1, y); enqueue(x + 1, y);
+      enqueue(x, y - 1); enqueue(x, y + 1);
+    }
+    final longest = width > height ? width : height;
+    final scale = 4096 / longest;
+    final targetWidth = (width * scale).round().clamp(1, 4096);
+    final targetHeight = (height * scale).round().clamp(1, 4096);
+    final resized = img.copyResize(decoded, width: targetWidth, height: targetHeight,
+      interpolation: img.Interpolation.cubic);
+    return Uint8List.fromList(img.encodePng(resized, level: 9));
+  }
+
   Uint8List _buildProductDataExcel(List<Map<String, dynamic>> selectedImages) {
       final excel = Excel.createExcel();
       final sheet = excel['بيانات الأصناف'];
@@ -468,17 +514,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         final downloaded = await _invoke({'action': 'download', 'url': url});
         final encoded = downloaded['base64']?.toString();
         if (encoded == null || encoded.isEmpty) continue;
-        final bytes = Uint8List.fromList(base64Decode(encoded));
-        final mime = (downloaded['mime'] ?? '').toString().toLowerCase();
-        final extension = mime == 'image/jpeg' || mime == 'image/jpg'
-            ? '.jpg'
-            : mime == 'image/webp'
-                ? '.webp'
-                : mime == 'image/gif'
-                    ? '.gif'
-                    : mime == 'image/avif'
-                        ? '.avif'
-                        : '.png';
+        final sourceBytes = Uint8List.fromList(base64Decode(encoded));
+        final bytes = _processTransparentPng(sourceBytes);
+        const extension = '.png';
         final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
         final fileName = _uniqueFileName(title, extension, usedFileNames);
         archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
@@ -530,7 +568,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       final result = await _invoke({'action': 'download', 'url': url});
       final encoded = result['base64']?.toString();
       if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
-      final bytes = Uint8List.fromList(base64Decode(encoded));
+      final sourceBytes = Uint8List.fromList(base64Decode(encoded));
+      final bytes = _processTransparentPng(sourceBytes);
       final imageIndex = _images.indexOf(image);
       final baseName = _imageBaseName(image, imageIndex < 0 ? 0 : imageIndex);
       final matchingIndexes = _images.asMap().entries
@@ -539,11 +578,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           .toList();
       final occurrence = matchingIndexes.indexOf(imageIndex);
       final uniqueBaseName = occurrence > 0 ? '${baseName}_${occurrence + 1}' : baseName;
-      final extension = _extensionForMime(result['mime']?.toString(), url);
       await FileSaver.instance.saveFile(
         name: uniqueBaseName,
         bytes: bytes,
-        fileExtension: extension.replaceFirst('.', ''),
+        fileExtension: 'png',
       );
       await _markImported({_imageKey(url)});
       if (mounted) {
