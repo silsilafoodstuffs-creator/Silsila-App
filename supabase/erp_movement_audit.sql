@@ -269,14 +269,14 @@ begin
     null::date,
     i.item_name,
     'خطأ',
-    'ITEM_GROUP_COMPANY_MISMATCH',
+    'ITEM_CATEGORY_COMPANY_MISMATCH',
     'فئة الصنف لا تتبع الشركة نفسها أو أنها غير موجودة.',
-    'groups'
+    'categories'
   from public.erp_items i
-  left join public.erp_item_groups g on g.id = i.group_id
+  left join public.erp_item_categories g on g.id = i.category_id
   where i.company_id = p_company_id
     and (p_area = 'كل الحركات' or p_area = 'الأصناف')
-    and i.group_id is not null
+    and i.category_id is not null
     and (g.id is null or g.company_id <> i.company_id)
 
   union all
@@ -951,15 +951,15 @@ begin
     'item-group:' || g.id::text || ':parent',
     'فئات الأصناف',
     g.id,
-    g.group_code,
+    g.category_code,
     null::date,
-    g.group_name,
+    g.category_name,
     'خطأ',
-    'ITEM_GROUP_PARENT_INVALID',
-    'المجموعة الرئيسية غير موجودة أو لا تتبع الشركة نفسها.',
-    'groups'
-  from public.erp_item_groups g
-  left join public.erp_item_groups p on p.id = g.parent_id
+    'ITEM_CATEGORY_PARENT_INVALID',
+    'الفئة الرئيسية غير موجودة أو لا تتبع الشركة نفسها.',
+    'categories'
+  from public.erp_item_categories g
+  left join public.erp_item_categories p on p.id = g.parent_id
   where g.company_id = p_company_id
     and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'فئات الأصناف')
     and g.parent_id is not null
@@ -969,25 +969,25 @@ begin
 
   (with recursive group_walk(start_id, current_id, company_id, path, has_cycle) as (
     select g.id, g.id, g.company_id, array[g.id]::uuid[], false
-    from public.erp_item_groups g where g.company_id = p_company_id
+    from public.erp_item_categories g where g.company_id = p_company_id
     union all
     select w.start_id, child.id, w.company_id, w.path || child.id, child.id = any(w.path)
     from group_walk w
-    join public.erp_item_groups child on child.parent_id = w.current_id and child.company_id = w.company_id
+    join public.erp_item_categories child on child.parent_id = w.current_id and child.company_id = w.company_id
     where not w.has_cycle
   )
   select
     'item-group:' || g.id::text || ':cycle',
     'فئات الأصناف',
     g.id,
-    g.group_code,
+    g.category_code,
     null::date,
-    g.group_name,
+    g.category_name,
     'خطأ',
-    'ITEM_GROUP_HIERARCHY_CYCLE',
+    'ITEM_CATEGORY_HIERARCHY_CYCLE',
     'توجد علاقة دائرية في شجرة فئات الأصناف.',
-    'groups'
-  from public.erp_item_groups g
+    'categories'
+  from public.erp_item_categories g
   where g.company_id = p_company_id
     and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'فئات الأصناف')
     and g.id in (select start_id from group_walk where has_cycle))
