@@ -225,6 +225,9 @@ declare
   v_purchase_types text[];
   v_price_kinds text[];
   v_party_kinds text[];
+  v_movement_types text[];
+  v_asset_types text[];
+  v_voucher_types text[];
   v_batch integer := 0;
   v_remaining boolean := false;
 begin
@@ -244,6 +247,14 @@ begin
   elsif 'دليل العملاء'=any(v_pages) then v_party_kinds := array['customer']::text[];
   elsif 'دليل الموردين'=any(v_pages) then v_party_kinds := array['supplier']::text[];
   else v_party_kinds := '{}'::text[]; end if;
+  select coalesce(array_agg(distinct case p when 'إذن إضافة' then 'purchase_receipt' when 'إذن صرف' then 'sales_issue' when 'تحويل مخزني' then 'transfer_in' when 'تسوية جرد' then 'adjustment' when 'جرد فعلي' then 'adjustment' end) filter (where p in ('إذن إضافة','إذن صرف','تحويل مخزني','تسوية جرد','جرد فعلي')), '{}'::text[]) into v_movement_types from unnest(v_pages) p;
+  if 'تحويل مخزني'=any(v_pages) then v_movement_types := array_append(v_movement_types,'transfer_out'); end if;
+  if 'إذن صرف'=any(v_pages) then v_movement_types := v_movement_types || array['waste']::text[]; end if;
+  select coalesce(array_agg(distinct case p when 'إدارة الشعار والصور' then 'app_logo' when 'إدارة صور الأصناف والفئات' then 'item' when 'إدارة صور الموردين والعملاء' then 'supplier' end) filter (where p in ('إدارة الشعار والصور','إدارة صور الأصناف والفئات','إدارة صور الموردين والعملاء')), '{}'::text[]) into v_asset_types from unnest(v_pages) p;
+  if 'إدارة الشعار والصور'=any(v_pages) then v_asset_types := v_asset_types || array['splash','app_icon']::text[]; end if;
+  if 'إدارة صور الأصناف والفئات'=any(v_pages) then v_asset_types := v_asset_types || array['category']::text[]; end if;
+  if 'إدارة صور الموردين والعملاء'=any(v_pages) then v_asset_types := v_asset_types || array['customer','shipping_company']::text[]; end if;
+  select coalesce(array_agg(distinct case p when 'سندات القبض' then 'receipt' when 'سندات الصرف' then 'payment' end) filter (where p in ('سندات القبض','سندات الصرف')), '{}'::text[]) into v_voucher_types from unnest(v_pages) p;
 
   -- Delete dependent rows first. Any unselected dependent rows cause a safe transaction
   -- rollback; the server backup remains available for recovery.
