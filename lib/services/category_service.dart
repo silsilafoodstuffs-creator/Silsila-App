@@ -36,7 +36,7 @@ class CategoryService {
 
     final activity = _emptyToNull(activityType);
 
-    // Prefer the ERP's item-group tree: this is the live master catalogue edited
+    // Prefer the ERP's canonical item-category tree: this is the live master catalogue edited
     // from the desktop program, including binary images stored in PostgreSQL.
     try {
       String? activityCode;
@@ -59,7 +59,7 @@ class CategoryService {
         categoriesQuery = categoriesQuery.eq('activity_code', activityCode);
       }
       final categoryRows = await categoriesQuery.order('category_name').limit(limit);
-      final groups = (categoryRows as List).map((raw) {
+      final categories = (categoryRows as List).map((raw) {
         final row = Map<String, dynamic>.from(raw as Map);
         return <String, dynamic>{
           ...row,
@@ -70,10 +70,10 @@ class CategoryService {
           'icon': null,
         };
       }).toList(growable: false);
-      if (groups.isNotEmpty) return groups;
+      if (categories.isNotEmpty) return categories;
     } catch (_) {
       // Preserve compatibility with the legacy app catalogue if the ERP tree
-      // is not available yet or this activity has no ERP groups.
+      // is not available yet or this activity has no item categories.
     }
 
     var query = _requireClient.from('categories').select();
