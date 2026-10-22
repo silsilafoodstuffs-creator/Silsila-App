@@ -56,28 +56,55 @@ function decodeEntities(s: string): string {
 
 function pageImages(html: string, base: URL) {
   const found = new Map<string, { url: string; alt: string }>();
-  const add = (raw: string, alt = "") => {
+  const blocked = /(?:^|[\\/_\\-. ])(?:logo|site[-_ ]?logo|brand[-_ ]?logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|icon|social|payment|footer|menu|navigation|nav)(?:$|[\\/_\\-. ])/i;
+  const tracking = new Set(["fbclid", "gclid", "dclid", "msclkid", "ref", "source", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "campaign", "tracking", "width", "height", "w", "h", "quality", "q", "fit", "crop", "auto", "format", "fm", "resize"]);
+  const normalize = (u: URL) => {
+    const path = u.pathname
+      .replace(/[-_](?:\\d{2,4}x\\d{2,4}|\\d{2,4}w|thumb(?:nail)?|small|medium|large)(?=\\.[a-z0-9]+$)/i, "")
+      .replace(/\\/(?:thumb|thumbnail|small|medium|large|resized)\\//i, "/");
+    const params = [...u.searchParams.entries()]
+      .filter(([k]) => !tracking.has(k.toLowerCase()))
+      .sort(([a, av], [b, bv]) => a.toLowerCase().localeCompare(b.toLowerCase()) || av.localeCompare(bv));
+    return u.origin.toLowerCase() + path + (params.length ? "?" + new URLSearchParams(params).toString() : "");
+  };
+  const add = (raw: string, alt = "", hint = "", width = 0, height = 0) => {
     const clean = decodeEntities(raw.trim());
     if (!clean || clean.startsWith("data:") || clean.startsWith("blob:")) return;
     try {
       const u = safeUrl(new URL(clean, base).toString());
-      if (!/\.(svg)(?:$|\?)/i.test(u.href)) found.set(u.href, { url: u.href, alt: alt.slice(0, 180) });
+      const context = (u.pathname + " " + u.search + " " + alt + " " + hint).toLowerCase();
+      if (/\\.svg(?:$|\\?)/i.test(u.href) || blocked.test(context)) return;
+      if ((width > 0 && width < 90) || (height > 0 && height < 70)) return;
+      const key = normalize(u);
+      if (!found.has(key)) found.set(key, { url: u.href, alt: alt.slice(0, 180) });
     } catch { /* skip unsafe or malformed candidates */ }
   };
-  for (const m of html.matchAll(/<meta\b[^>]*(?:property|name)=["'](?:og:image|twitter:image)["'][^>]*>/gi)) {
-    const tag = m[0]; const content = tag.match(/content=["']([^"']+)["']/i)?.[1]; if (content) add(content);
-  }
-  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
+  for (const m of html.matchAll(/<img\\b[^>]*>/gi)) {
     const tag = m[0];
-    const alt = tag.match(/\balt=["']([^"']*)["']/i)?.[1] ?? "";
-    let src = tag.match(/\b(?:src|data-src|data-original|data-lazy-src)=["']([^"']+)["']/i)?.[1];
-    const srcset = tag.match(/\bsrcset=["']([^"']+)["']/i)?.[1];
+    const alt = decodeEntities(tag.match(/\\balt=["']([^"']*)["']/i)?.[1] ?? "");
+    const title = decodeEntities(tag.match(/\\btitle=["']([^"']*)["']/i)?.[1] ?? "");
+    const hint = [
+      tag.match(/\\bclass=["']([^"']*)["']/i)?.[1] ?? "",
+      tag.match(/\\bid=["']([^"']*)["']/i)?.[1] ?? "",
+      tag.match(/\\bitemprop=["']([^"']*)["']/i)?.[1] ?? "",
+    ].join(" ");
+    const width = Number(tag.match(/\\bwidth=["']?(\\d+)/i)?.[1] ?? 0);
+    const height = Number(tag.match(/\\bheight=["']?(\\d+)/i)?.[1] ?? 0);
+    const srcset = tag.match(/\\b(?:srcset|data-srcset)=["']([^"']+)["']/i)?.[1];
+    const src = tag.match(/\\b(?:src|data-src|data-original|data-lazy-src|data-image)=["']([^"']+)["']/i)?.[1];
     if (srcset) {
-      const first = srcset.split(",").map(x => x.trim().split(/\s+/)[0]).filter(Boolean).pop();
-      if (first) add(first, alt);
+      const choices = srcset.split(",").map(x => {
+        const parts = x.trim().split(/\\s+/);
+        const descriptor = parts[1] ?? "1x";
+        const value = descriptor.endsWith("w") ? Number.parseInt(descriptor, 10) : Number.parseFloat(descriptor) * 1000;
+        return { url: parts[0], value: Number.isFinite(value) ? value : 0 };
+      }).filter(x => x.url).sort((a, b) => b.value - a.value);
+      if (choices.length) add(choices[0].url, alt || title, hint, width, height);
     }
-    if (src) add(src, alt);
+    if (src) add(src, alt || title, hint, width, height);
   }
+  // Open Graph images are deliberately not collected: they commonly represent
+  // the site logo, page banner, or social preview rather than an individual item.
   return [...found.values()].slice(0, 160);
 }
 
