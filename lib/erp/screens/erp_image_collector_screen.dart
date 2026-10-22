@@ -575,7 +575,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   ]);
         sheet.appendRow([
           IntCellValue(i + 1),
-          TextCellValue(kind == 'category' ? 'فئة / مجموعة' : kind == 'brand' ? 'ماركة / براند' : 'صنف / منتج'),
+          TextCellValue(kind == 'category' ? 'فئة' : kind == 'brand' ? 'ماركة / براند' : 'صنف / منتج'),
           TextCellValue(name),
           TextCellValue(_excelValue(item, ['product_name_en', 'english_name', 'name_en'])),
           TextCellValue(_excelValue(item, ['barcode', 'gtin', 'ean', 'upc'])),
