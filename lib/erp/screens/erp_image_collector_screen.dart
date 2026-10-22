@@ -419,8 +419,18 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         final encoded = downloaded['base64']?.toString();
         if (encoded == null || encoded.isEmpty) continue;
         final bytes = Uint8List.fromList(base64Decode(encoded));
+        final mime = (downloaded['mime'] ?? '').toString().toLowerCase();
+        final extension = mime == 'image/jpeg' || mime == 'image/jpg'
+            ? '.jpg'
+            : mime == 'image/webp'
+                ? '.webp'
+                : mime == 'image/gif'
+                    ? '.gif'
+                    : mime == 'image/avif'
+                        ? '.avif'
+                        : '.png';
         final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
-        final fileName = _uniqueFileName(title, '.png', usedFileNames);
+        final fileName = _uniqueFileName(title, extension, usedFileNames);
         archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
         savedImageKeys.add(_imageKey(url));
         if (mounted) setState(() => _status = 'تم تجهيز $index من ${_selected.length} صورة...');
