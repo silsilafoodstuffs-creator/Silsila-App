@@ -1,0 +1,41 @@
+name: Sync Geographic Governorate Images
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/geographic_data/**'
+      - '.github/workflows/sync-geographic-assets.yml'
+      - 'supabase/erp_geographic_data_schema.sql'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: silsila-geographic-assets-\${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync-governorate-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install image processing dependencies
+        run: python -m pip install --upgrade pip pillow cairosvg
+
+      - name: Store governorate image bytes in Supabase
+        env:
+          SUPABASE_URL: https://teitsopmhruczplwlwgn.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: \${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SILSILA_COMPANY_ID: 47278c99-7743-4dd4-9ce6-d11f28e02504
+        run: python tools/geographic_data/sync_governorate_logo_bytes.py
