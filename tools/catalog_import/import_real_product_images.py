@@ -246,13 +246,25 @@ def download_image(url: str) -> tuple[bytes, str] | None:
         with urllib.request.urlopen(req, timeout=25) as response:
             data = response.read(MAX_BYTES + 1)
             mime = response.headers.get_content_type().lower()
-    except (urllib.error.URLError, TimeoutError):
+    except (urllib.error.URLError, TimeoutError) as exc:
+        print(f"  IMAGE DOWNLOAD FAILED: {type(exc).__name__}")
         return None
-    if len(data) < MIN_BYTES or len(data) > MAX_BYTES or mime not in {"image/jpeg", "image/png", "image/webp"}:
+    if len(data) < MIN_BYTES:
+        print(f"  IMAGE REJECTED: too small ({len(data)} bytes; minimum {MIN_BYTES})")
+        return None
+    if len(data) > MAX_BYTES:
+        print(f"  IMAGE REJECTED: too large ({len(data)} bytes; maximum {MAX_BYTES})")
+        return None
+    if mime not in {"image/jpeg", "image/png", "image/webp"}:
+        print(f"  IMAGE REJECTED: unsupported MIME {mime}")
         return None
     # Validate common image headers and dimensions without third-party dependencies.
     width, height = image_dimensions(data, mime)
-    if not width or not height or min(width, height) < MIN_SIDE:
+    if not width or not height:
+        print(f"  IMAGE REJECTED: could not read dimensions ({mime}, {len(data)} bytes)")
+        return None
+    if min(width, height) < MIN_SIDE:
+        print(f"  IMAGE REJECTED: dimensions {width}x{height} below {MIN_SIDE}px")
         return None
     return data, mime
 
@@ -278,6 +290,14 @@ def image_dimensions(data: bytes, mime: str) -> tuple[int, int]:
             kind = data[12:16]
             if kind == b"VP8X" and len(data) >= 30:
                 return 1 + int.from_bytes(data[24:27], "little"), 1 + int.from_bytes(data[27:30], "little")
+            if kind == b"VP8L" and len(data) >= 25 and data[20] == 0x2F:
+                width = 1 + (data[21] | ((data[22] & 0x3F) << 8))
+                height = 1 + ((data[22] >> 6) | (data[23] << 2) | ((data[24] & 0x0F) << 10))
+                return width, height
+            if kind == b"VP8 " and len(data) >= 30 and data[23:26] == b"\\x9d\\x01\\x2a":
+                width = int.from_bytes(data[26:28], "little") & 0x3FFF
+                height = int.from_bytes(data[28:30], "little") & 0x3FFF
+                return width, height
     except (IndexError, ValueError):
         pass
     return 0, 0
