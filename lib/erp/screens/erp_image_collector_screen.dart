@@ -467,7 +467,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     final candidates = switch (kind) {
       'category' => [
           image['category_name'], image['category_name'], image['category'],
-          image['group'], image['subcategory_name'], image['context_name'],
+          image['category'], image['subcategory_name'], image['context_name'],
           image['product_name'], image['title'], image['name'], image['alt'],
         ],
       'brand' => [
@@ -634,8 +634,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         final raw=await db.from('erp_item_categories').select('id,parent_id,category_code:category_code,category_name:category_name,category_name_en:category_name_en').eq('company_id',company).eq('category_code',code).maybeSingle();
         if(raw==null)throw Exception('كود الفئة غير موجود في الشركة الحالية.');
         final rows=await db.from('erp_item_categories').select('id,parent_id,category_code:category_code,category_name:category_name').eq('company_id',company).limit(3000);
-        final groups=(rows as List).map((e)=>Map<String,dynamic>.from(e)).toList();
-        Map<String,dynamic>? byId(dynamic id){for(final g in groups){if(id!=null&&g['id'].toString()==id.toString())return g;}return null;}
+        final categories=(rows as List).map((e)=>Map<String,dynamic>.from(e)).toList();
+        Map<String,dynamic>? byId(dynamic id){for(final g in categories){if(id!=null&&g['id'].toString()==id.toString())return g;}return null;}
         final found=Map<String,dynamic>.from(raw);final parent=byId(found['parent_id']);final grand=byId(parent?['parent_id']);
         final Map<String,dynamic>? root=found['parent_id']==null?found:(parent?['parent_id']==null?parent:grand);
         final Map<String,dynamic>? sub=found['parent_id']==null?null:(parent?['parent_id']==null?found:parent);
@@ -664,11 +664,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
 
   Future<Map<String,dynamic>> _ensureRowCategory(SupabaseClient db,String company,List<Map<String,dynamic>> groups,String name,String? parent,String prefix) async{
     final normalized=name.trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase();
-    for(final g in groups){if((g['parent_id']?.toString()??'')==(parent??'')&&(g['category_name']??'').toString().trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase()==normalized)return g;}
-    var max=0;for(final g in groups){final m=RegExp('^'+prefix+r'(\d+)$',caseSensitive:false).firstMatch((g['category_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}
+    for(final g in categories){if((g['parent_id']?.toString()??'')==(parent??'')&&(g['category_name']??'').toString().trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase()==normalized)return g;}
+    var max=0;for(final g in categories){final m=RegExp('^'+prefix+r'(\d+)$',caseSensitive:false).firstMatch((g['category_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}
     final code=prefix+(max+1).toString().padLeft(4,'0');
     final row=await db.from('erp_item_categories').insert({'company_id':company,'parent_id':parent,'category_code':code,'category_name':name.trim(),'category_name_en':'','is_active':true,'show_in_app':true,'image_url':null}).select('id,parent_id,category_code:category_code,category_name:category_name').single();
-    final created=Map<String,dynamic>.from(row);groups.add(created);return created;
+    final created=Map<String,dynamic>.from(row);categories.add(created);return created;
   }
 
   Future<void> _finishSavedRow(Map<String,dynamic> item,String message) async{
@@ -692,8 +692,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     setState(()=>_loading=true);
     try{
       final raw=await db.from('erp_item_categories').select('id,parent_id,category_code:category_code,category_name:category_name,category_name_en:category_name_en').eq('company_id',company).limit(3000);
-      final groups=(raw as List).map((e)=>Map<String,dynamic>.from(e)).toList();
-      Map<String,dynamic>? byId(dynamic id){for(final g in groups){if(id!=null&&g['id'].toString()==id.toString())return g;}return null;}
+      final categories=(raw as List).map((e)=>Map<String,dynamic>.from(e)).toList();
+      Map<String,dynamic>? byId(dynamic id){for(final g in categories){if(id!=null&&g['id'].toString()==id.toString())return g;}return null;}
       late Map<String,dynamic> target;
       if(mode=='old'){
         final root=byId(item['category_root_id']),sub=byId(item['category_sub_id']),third=byId(item['category_secondary_id']);
@@ -702,9 +702,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         if(third!=null&&thirdName.isNotEmpty)await db.from('erp_item_categories').update({'category_name':thirdName}).eq('id',third['id'].toString()).eq('company_id',company);
         target=byId(item['category_target_id'])!;
       }else{
-        final root=await _ensureRowCategory(db,company,groups,main,null,'C');Map<String,dynamic>? sub,third;
-        if(subName.isNotEmpty)sub=await _ensureRowCategory(db,company,groups,subName,root['id'].toString(),'S');
-        if(thirdName.isNotEmpty){if(sub==null)throw Exception('الفئة الثانوية تتطلب فئة فرعية.');third=await _ensureRowCategory(db,company,groups,thirdName,sub['id'].toString(),'T');}
+        final root=await _ensureRowCategory(db,company,categories,main,null,'C');Map<String,dynamic>? sub,third;
+        if(subName.isNotEmpty)sub=await _ensureRowCategory(db,company,categories,subName,root['id'].toString(),'S');
+        if(thirdName.isNotEmpty){if(sub==null)throw Exception('الفئة الثانوية تتطلب فئة فرعية.');third=await _ensureRowCategory(db,company,categories,thirdName,sub['id'].toString(),'T');}
         target=third??sub??root;
       }
       final downloaded=await _invoke({'action':'download','url':item['url'].toString()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
