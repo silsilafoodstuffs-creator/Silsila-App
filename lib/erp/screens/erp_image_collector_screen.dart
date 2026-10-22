@@ -314,7 +314,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       final result = await _invoke({'action': 'download', 'url': url});
       final encoded = result['base64']?.toString();
       if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
-      final bytes = _toTransparentPng(Uint8List.fromList(base64Decode(encoded)));
+      final bytes = Uint8List.fromList(base64Decode(encoded));
       final imageIndex = _images.indexOf(image);
       final baseName = _imageBaseName(image, imageIndex < 0 ? 0 : imageIndex);
       final matchingIndexes = _images.asMap().entries
