@@ -134,7 +134,13 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       if (companyId.isEmpty) throw StateError('لا توجد شركة نشطة.');
       if (code.text.trim().isEmpty || name.text.trim().isEmpty) {
         throw ArgumentError('كود الفرع واسم الفرع مطلوبان.');
-      if (!RegExp(r'^[A-Za-z0-9-]+ = <String, Object?>{
+      }
+      final cleanCode = code.text.trim();
+      const allowedCodeChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
+      if (cleanCode.isEmpty || cleanCode.split('').any((ch) => !allowedCodeChars.contains(ch))) {
+        throw ArgumentError('كود الفرع يجب أن يتكون من حروف إنجليزية وأرقام وشرطة فقط.');
+      }
+      final payload = <String, Object?>{
         'company_id': companyId,
         'branch_code': code.text.trim(),
         'branch_name': name.text.trim(),
