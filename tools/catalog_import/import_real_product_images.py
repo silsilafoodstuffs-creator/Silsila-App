@@ -34,7 +34,7 @@ MAX_ITEMS = int(os.environ.get("SILSILA_IMAGE_IMPORT_LIMIT", "250"))
 DRY_RUN = os.environ.get("SILSILA_IMAGE_IMPORT_DRY_RUN", "1") != "0"
 
 # Only match categories that exist in the ERP tree. We don't create fake records.
-GROUP_HINTS = {
+CATEGORY_HINTS = {
     "FOOD-GHEE": ["ghee", "سمن"],
     "FOOD-OILS": ["oil", "زيت"],
     "FOOD-PASTA": ["pasta", "noodle", "مكرونة"],
@@ -629,7 +629,7 @@ def choose_image(
         print("  REJECTION COUNTS: " + ", ".join(f"{key}={value}" for key, value in rejects.items()))
     return best
 
-GROUP_ITEM_HINTS = {
+CATEGORY_ITEM_HINTS = {
     "FOOD-GHEE": ["سمن", "ghee"],
     "FOOD-OILS": ["زيت", "oil"],
     "FOOD-PASTA": ["مكرونة", "pasta", "نودلز"],
@@ -663,7 +663,7 @@ GROUP_ITEM_HINTS = {
 
 
 def category_image_matches_item(category_code: str, item_name: str, product: dict[str, Any]) -> bool:
-    hints = GROUP_ITEM_HINTS.get(category_code)
+    hints = CATEGORY_ITEM_HINTS.get(category_code)
     if not hints:
         return False
     item_text = normalized(item_name)
@@ -691,7 +691,7 @@ def main() -> int:
     else:
         print("DRY RUN: no database changes will be made. Set SILSILA_IMAGE_IMPORT_DRY_RUN=0 to write.")
 
-    categorys = rest("GET", "erp_item_categories", urllib.parse.urlencode({
+    categories = rest("GET", "erp_item_categories", urllib.parse.urlencode({
         "company_id": f"eq.{COMPANY_ID}", "select": "id,category_code,category_name,image_data",
     }))
     categories = rest("GET", "categories", urllib.parse.urlencode({
@@ -743,7 +743,7 @@ def main() -> int:
         "order": "item_name.asc",
         "limit": "500",
     }))
-    category_by_id = {g["id"]: g for g in categorys}
+    category_by_id = {g["id"]: g for g in categories}
     # Seed both guards from the entire ERP catalog before slicing the next
     # batch. Source-code uniqueness alone is insufficient because two records
     # may use different product codes but serve identical image bytes.
@@ -761,7 +761,7 @@ def main() -> int:
             if digest:
                 used_image_digests.add(digest)
     # The alphabetic first page was dominated by household goods. Inspect the
-    # full ERP catalog, then prioritize food categorys and records without real photos.
+    # full ERP catalog, then prioritize food categories and records without real photos.
     def item_priority(row: dict[str, Any]) -> tuple[int, int, str]:
         category = category_by_id.get(row.get("category_id"), {})
         category_code = str(category.get("category_code") or "")
@@ -771,8 +771,8 @@ def main() -> int:
 
     items.sort(key=item_priority)
     items = items[:MAX_ITEMS]
-    print(f"ERP categorys: {len(categorys)}; items checked: {len(items)} (food categorys prioritized)")
-    refreshed_categorys: set[str] = set()
+    print(f"ERP categories: {len(categories)}; items checked: {len(items)} (food categories prioritized)")
+    refreshed_categories: set[str] = set()
     updated = 0
     for index, item in enumerate(items, 1):
         # Existing photos smaller than the quality threshold are considered placeholders.
@@ -818,8 +818,8 @@ def main() -> int:
         category = category_by_id.get(category_id) if category_id else None
         category_code = str((category or {}).get("category_code") or "")
         representative = category_image_matches_item(category_code, item_name, product)
-        if category_id and category_id not in refreshed_categorys and representative:
-            refreshed_categorys.add(category_id)
+        if category_id and category_id not in refreshed_categories and representative:
+            refreshed_categories.add(category_id)
             if category and not has_real_size_image(category.get("image_data")):
                 if not DRY_RUN:
                     rest("PATCH", "erp_item_categories", urllib.parse.urlencode({"id": f"eq.{category_id}", "company_id": f"eq.{COMPANY_ID}"}), {
