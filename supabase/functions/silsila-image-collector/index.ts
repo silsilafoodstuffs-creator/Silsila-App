@@ -141,6 +141,59 @@ function productMetadata(html: string, base: URL) {
   return { byImage, normalizeImage };
 }
 
+function readableText(fragment: string): string {
+  return decodeEntities(fragment
+    .replace(/<script\\b[\\s\\S]*?<\\/script>/gi, " ")
+    .replace(/<style\\b[\\s\\S]*?<\\/style>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\\s+/g, " "))
+    .trim();
+}
+
+function usableEntityName(value: string): boolean {
+  const name = value.trim().replace(/\\s+/g, " ");
+  if (name.length < 2 || name.length > 120) return false;
+  if (!/[a-zA-Z\\u0600-\\u06FF]/.test(name)) return false;
+  if (/^(?:img|image|photo|dsc|pxl|pic)?[-_ .]*\\d+(?:[-_ .]+\\d+)*$/i.test(name)) return false;
+  if (/^[-_ .]+\\d+(?:[-_ .]+\\d+)*$/.test(name)) return false;
+  if (/^(?:image|product|item|category|view|details|read more|عرض|صورة|منتج)$/i.test(name)) return false;
+  return true;
+}
+
+// Many shops put the real item name in a nearby product-card heading rather
+// than in the image alt or URL. Recover that name from the image's HTML context.
+function contextualEntityName(html: string, imageIndex: number): string {
+  const start = Math.max(0, imageIndex - 2600);
+  const end = Math.min(html.length, imageIndex + 2600);
+  const fragment = html.slice(start, end);
+  const candidates: Array<{ name: string; score: number }> = [];
+  const rx = /<(h[1-6]|a|span|div|p)[^>]*(?:class|id)=["']([^"']*(?:product[-_ ]?(?:title|name)|woocommerce-loop-product__title|item[-_ ]?(?:title|name)|category[-_ ]?(?:title|name)|group[-_ ]?(?:title|name)|card-title|product-name|product-title)[^"']*)["'][^>]*>([\\s\\S]{1,500}?)<\\/\\1>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = rx.exec(fragment)) !== null) {
+    const name = readableText(match[3]);
+    if (!usableEntityName(name)) continue;
+    const selector = match[2].toLowerCase();
+    let score = 20 - Math.min(10, Math.abs((start + match.index) - imageIndex) / 260);
+    if (/product[-_ ]?(?:title|name)|woocommerce-loop-product__title|item[-_ ]?(?:title|name)|category[-_ ]?(?:title|name)|group[-_ ]?(?:title|name)/i.test(selector)) score += 20;
+    if (name.length > 80) score -= 8;
+    candidates.push({ name, score });
+  }
+  candidates.sort((a, b) => b.score - a.score);
+  if (candidates.length) return candidates[0].name;
+
+  // As a secondary fallback, use a descriptive linked title/aria-label.
+  const before = html.slice(Math.max(0, imageIndex - 1200), imageIndex);
+  const anchorOpen = before.lastIndexOf("<a");
+  const anchorClose = before.lastIndexOf("</a>");
+  if (anchorOpen > anchorClose) {
+    const attrs = before.slice(anchorOpen).match(/(?:title|aria-label)=["']([^"']+)["']/i)?.[1] ?? "";
+    const name = readableText(attrs);
+    if (usableEntityName(name)) return name;
+  }
+  return "";
+}
+
 function pageImages(html: string, base: URL) {
   const found = new Map<string, Record<string, unknown>>();
   const metadata = productMetadata(html, base);
@@ -155,7 +208,7 @@ function pageImages(html: string, base: URL) {
       .sort(([a, av], [b, bv]) => a.toLowerCase().localeCompare(b.toLowerCase()) || av.localeCompare(bv));
     return u.origin.toLowerCase() + path + (params.length ? "?" + new URLSearchParams(params).toString() : "");
   };
-  const add = (raw: string, alt = "", hint = "", width = 0, height = 0) => {
+  const add = (raw: string, alt = "", hint = "", width = 0, height = 0, contextName = "") => {
     const clean = decodeEntities(raw.trim());
     if (!clean || clean.startsWith("data:") || clean.startsWith("blob:")) return;
     try {
@@ -165,7 +218,18 @@ function pageImages(html: string, base: URL) {
       if ((width > 0 && width < 90) || (height > 0 && height < 70)) return;
       const key = normalize(u);
       const structured = metadata.byImage.get(metadata.normalizeImage(u.href)) ?? {};
-      if (!found.has(key)) found.set(key, { ...structured, url: u.href, alt: alt.slice(0, 180), product_name: String(structured.product_name ?? alt ?? "").slice(0, 180) });
+      if (!found.has(key)) {
+        const readableAlt = usableEntityName(alt) ? alt : "";
+        const entityName = String(structured.product_full_name ?? structured.product_name ?? "").trim() ||
+          (usableEntityName(contextName) ? contextName : "") || readableAlt;
+        found.set(key, {
+          ...structured,
+          url: u.href,
+          alt: alt.slice(0, 180),
+          context_name: contextName.slice(0, 180),
+          product_name: entityName.slice(0, 180),
+        });
+      }
     } catch { /* skip unsafe or malformed candidates */ }
   };
   for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
@@ -188,9 +252,9 @@ function pageImages(html: string, base: URL) {
         const value = descriptor.endsWith("w") ? Number.parseInt(descriptor, 10) : Number.parseFloat(descriptor) * 1000;
         return { url: parts[0], value: Number.isFinite(value) ? value : 0 };
       }).filter(x => x.url).sort((a, b) => b.value - a.value);
-      if (choices.length) add(choices[0].url, alt || title, hint, width, height);
+      if (choices.length) add(choices[0].url, alt || title, hint, width, height, contextName);
     }
-    if (src) add(src, alt || title, hint, width, height);
+    if (src) add(src, alt || title, hint, width, height, contextName);
   }
   // Open Graph images are deliberately not collected: they commonly represent
   // the site logo, page banner, or social preview rather than an individual item.
