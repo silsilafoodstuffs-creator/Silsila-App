@@ -177,8 +177,17 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     if (row == null) { setState(() => _message = 'حدد النشاط المطلوب حذفه أولاً.'); return; }
     final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: const Text('تأكيد الحذف'), content: Text('حذف النشاط: ' + (row['اسم النشاط عربي'] ?? '')), actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('نعم، حذف'))]));
     if (yes != true) return;
-    try { await _service.deleteRecord(companyId: _companyId!, pageKey: _pageKey, recordKey: row['_مرجع داخلي'] ?? row['كود النشاط']!); await _load(); _new(); }
-    catch (e) { if (mounted) setState(() => _message = 'تعذر الحذف: ' + e.toString()); }
+    try {
+      final code = (row['كود النشاط'] ?? '').trim();
+      await _service.deleteRecord(companyId: _companyId!, pageKey: _pageKey, recordKey: row['_مرجع داخلي'] ?? code);
+      if (code.isNotEmpty) {
+        await Supabase.instance.client.from('activity_types').delete().eq('code', code);
+      }
+      await _load();
+      _new();
+    } catch (e) {
+      if (mounted) setState(() => _message = 'تعذر الحذف: ' + e.toString());
+    }
   }
 
   Widget _task(String text, IconData icon, Color color, VoidCallback? action) => Padding(padding: const EdgeInsetsDirectional.only(end: 5), child: FilledButton.tonalIcon(onPressed: action, style: FilledButton.styleFrom(foregroundColor: color, backgroundColor: color.withValues(alpha: .10), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)), icon: Icon(icon, size: 16), label: Text(text, style: const TextStyle(fontSize: 12))));
