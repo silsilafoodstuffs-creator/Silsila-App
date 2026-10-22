@@ -64,6 +64,20 @@ function productMetadata(html: string, base: URL) {
       return u.href.toLowerCase();
     } catch { return ""; }
   };
+  const propertyValue = (obj: Record<string, unknown>, names: string[]): string => {
+    const raw = obj.additionalProperty;
+    const props = Array.isArray(raw) ? raw : raw ? [raw] : [];
+    for (const entry of props) {
+      if (!entry || typeof entry !== "object") continue;
+      const p = entry as Record<string, unknown>;
+      const label = String(p.name ?? p.propertyID ?? "").toLowerCase().replace(/[\\s_-]+/g, "");
+      if (names.some(name => label.includes(name))) {
+        const val = p.value ?? p.valueReference;
+        if (val !== undefined && val !== null && String(val).trim()) return String(val).trim();
+      }
+    }
+    return "";
+  };
   const walk = (value: unknown) => {
     if (Array.isArray(value)) { for (const item of value) walk(item); return; }
     if (!value || typeof value !== "object") return;
@@ -84,13 +98,25 @@ function productMetadata(html: string, base: URL) {
       const brand = brandRaw && typeof brandRaw === "object" ? String((brandRaw as Record<string, unknown>).name ?? "") : String(brandRaw ?? "");
       const weightRaw = obj.weight;
       const weight = weightRaw && typeof weightRaw === "object" ? String((weightRaw as Record<string, unknown>).value ?? "") + " " + String(((weightRaw as Record<string, unknown>).unitCode ?? (weightRaw as Record<string, unknown>).unitText) ?? "") : String(weightRaw ?? obj.size ?? "");
+      const productName = String(obj.name ?? "").trim();
+      const mainUnit = String(obj.unitText ?? obj.unit ?? propertyValue(obj, ["mainunit", "sellingunit", "unitname", "وحدةرئيسية", "وحدةالبيع"])).trim();
+      const subUnit = propertyValue(obj, ["minorunit", "subunit", "smallunit", "وحدةفرعية"]);
+      const internalCount = propertyValue(obj, [
+        "internalcount", "unitsperpack", "unitspackage", "packquantity",
+        "quantityperunit", "innerpack", "عددداخلي", "عددالوحدات", "العددالداخلي",
+      ]);
+      const fullNameParts = [productName];
+      if (weight.trim() && !productName.toLowerCase().includes(weight.trim().toLowerCase())) fullNameParts.push(weight.trim());
+      if (mainUnit && !productName.toLowerCase().includes(mainUnit.toLowerCase())) fullNameParts.push(mainUnit);
+      if (internalCount && !productName.includes(internalCount)) fullNameParts.push("عدد داخلي " + internalCount);
       const item = {
-        product_name: String(obj.name ?? ""),
+        product_name: productName,
+        product_full_name: fullNameParts.filter(Boolean).join(" ").trim(),
         barcode: String(obj.gtin13 ?? obj.gtin14 ?? obj.gtin12 ?? obj.gtin8 ?? obj.gtin ?? ""),
-        major_unit: String(obj.unitText ?? obj.unit ?? ""),
-        minor_unit: "",
-        internal_count: "",
-        other_units: "",
+        major_unit: mainUnit,
+        minor_unit: subUnit,
+        internal_count: internalCount,
+        other_units: propertyValue(obj, ["otherunits", "units", "وحداتأخرى"]),
         sale_price: String(offer.price ?? offer.lowPrice ?? ""),
         main_category: String(obj.category ?? ""),
         subcategory: "",
