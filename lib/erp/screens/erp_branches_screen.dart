@@ -16,6 +16,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
   SupabaseClient? _db;
   List<Map<String, dynamic>> _rows = [];
   List<Map<String, dynamic>> _geoRows = [];
+  final Set<String> _selectedBranchIds = <String>{};
   bool _loading = false;
   String? _error;
   String? _message;
@@ -57,6 +58,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       if (!mounted) return;
       setState(() {
         _rows = (result as List).whereType<Map<String, dynamic>>().toList(growable: false);
+        _selectedBranchIds.removeWhere((id) => !_rows.any((row) => _s(row['id']) == id));
         _geoRows = (geoResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
         _loading = false;
       });
@@ -172,6 +174,29 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     }
   }
 
+  Map<String, dynamic>? get _singleSelectedBranch {
+    if (_selectedBranchIds.length != 1) return null;
+    final id = _selectedBranchIds.single;
+    for (final row in _rows) {
+      if (_s(row['id']) == id) return row;
+    }
+    return null;
+  }
+
+  void _selectBranch(String id, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedBranchIds.add(id);
+      } else {
+        _selectedBranchIds.remove(id);
+      }
+      _error = null;
+      _message = _selectedBranchIds.length > 1
+          ? 'تم تحديد أكثر من فرع. اختر فرعًا واحدًا فقط لتنفيذ التعديل.'
+          : null;
+    });
+  }
+
   Future<void> _toggle(Map<String, dynamic> row) async {
     final companyId = (widget.companyId ?? '').trim();
     final id = _s(row['id']);
@@ -249,8 +274,8 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
             _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : () => _edit()),
-            _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _rows.isEmpty ? null : () => _edit(_rows.first)),
-            _quickTask('حذف', Icons.delete_outline, Colors.red, _rows.isEmpty ? null : () => _delete(_rows.first)),
+            _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _singleSelectedBranch == null ? null : () => _edit(_singleSelectedBranch)),
+            _quickTask('حذف', Icons.delete_outline, Colors.red, _singleSelectedBranch == null ? null : () => _delete(_singleSelectedBranch!)),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewDirectory),
           ])),
         ]),
@@ -266,6 +291,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       else
         Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
           columns: const [
+            DataColumn(label: Text('تحديد')),
             DataColumn(label: Text('كود الفرع')), DataColumn(label: Text('اسم الفرع عربي')),
             DataColumn(label: Text('اسم الفرع إنجليزي')), DataColumn(label: Text('المحافظة')),
             DataColumn(label: Text('الحي / المركز')), DataColumn(label: Text('المنطقة / القرية')),
@@ -275,7 +301,16 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
           ],
           rows: _rows.map((row) {
             final active = row['is_active'] == true;
-            return DataRow(cells: [
+            final branchId = _s(row['id']);
+            final selected = _selectedBranchIds.contains(branchId);
+            return DataRow(selected: selected, cells: [
+              DataCell(Checkbox(
+                shape: const CircleBorder(),
+                value: selected,
+                onChanged: (value) => _selectBranch(branchId, value == true),
+                activeColor: _branchPurple,
+                visualDensity: VisualDensity.compact,
+              )),
               DataCell(Text(_s(row['branch_code']))),
               DataCell(Text(_s(row['branch_name']))),
               DataCell(Text(_s(row['branch_name_en']))),
