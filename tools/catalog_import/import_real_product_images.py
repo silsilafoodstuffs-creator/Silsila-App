@@ -452,9 +452,16 @@ def image_variant_matches(item_name: str, product_title: str) -> bool:
     title_tokens = set(title.split())
     # A sweet-potato pack is not an image match for ordinary salted potato chips.
     # Ready-to-drink iced tea is not a loose-tea or tea-bag pack.
+    # Use substring checks for multilingual iced-tea terms: accents in French
+    # product titles are removed by normalized(), so "glacé" can become "glac".
+    # Substring checks are intentionally conservative for ready-to-drink beverages.
+    iced_tea_markers = (
+        "fuze", "iced", "glace", "glac", "infus", "drink", "beverage",
+        "bottle", "bouteille", "boisson", "bebida", "botella", "frio", "fria",
+        "peche", "peach",
+    )
     if "شاي" in item and (
-        {"fuze", "iced", "glace", "glac", "drink", "beverage", "bottle", "bouteille",
-         "boisson", "bebida", "botella", "frio", "fria"} & title_tokens
+        any(marker in title for marker in iced_tea_markers)
         or {"ready", "to", "drink"}.issubset(title_tokens)
     ):
         return False
