@@ -100,21 +100,21 @@ create table if not exists public.erp_warehouses (
   unique (company_id, warehouse_code)
 );
 
-create table if not exists public.erp_item_groups (
+create table if not exists public.erp_item_categories (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.erp_companies(id) on delete restrict,
-  parent_id uuid references public.erp_item_groups(id) on delete restrict,
-  group_code text not null,
-  group_name text not null,
+  parent_id uuid references public.erp_item_categories(id) on delete restrict,
+  category_code text not null,
+  category_name text not null,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  unique (company_id, group_code)
+  unique (company_id, category_code)
 );
 
 create table if not exists public.erp_items (
   id uuid primary key default gen_random_uuid(),
   company_id uuid not null references public.erp_companies(id) on delete restrict,
-  group_id uuid references public.erp_item_groups(id) on delete restrict,
+  category_id uuid references public.erp_item_categories(id) on delete restrict,
   item_code text not null,
   barcode text,
   item_name text not null,
@@ -184,7 +184,7 @@ create table if not exists public.erp_journal_lines (
 
 create index if not exists erp_branches_company_idx on public.erp_branches(company_id);
 create index if not exists erp_accounts_parent_idx on public.erp_accounts(parent_id);
-create index if not exists erp_items_group_idx on public.erp_items(group_id);
+create index if not exists erp_items_category_idx on public.erp_items(category_id);
 create index if not exists erp_parties_kind_idx on public.erp_parties(company_id, party_kind);
 create index if not exists erp_journal_date_idx on public.erp_journal_entries(company_id, entry_date);
 create index if not exists erp_journal_status_idx on public.erp_journal_entries(status);
@@ -197,7 +197,7 @@ declare
 begin
   foreach t in array array[
     'erp_companies','erp_branches','erp_fiscal_periods','erp_accounts',
-    'erp_cashboxes','erp_warehouses','erp_item_groups','erp_items',
+    'erp_cashboxes','erp_warehouses','erp_item_categories','erp_items',
     'erp_parties','erp_journal_entries','erp_journal_lines'
   ]
   loop
