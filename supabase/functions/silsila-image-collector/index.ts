@@ -241,6 +241,7 @@ function pageImages(html: string, base: URL) {
       tag.match(/\bid=["']([^"']*)["']/i)?.[1] ?? "",
       tag.match(/\bitemprop=["']([^"']*)["']/i)?.[1] ?? "",
     ].join(" ");
+    const contextName = contextualEntityName(html, m.index ?? 0);
     const width = Number(tag.match(/\bwidth=["']?(\d+)/i)?.[1] ?? 0);
     const height = Number(tag.match(/\bheight=["']?(\d+)/i)?.[1] ?? 0);
     const srcset = tag.match(/\b(?:srcset|data-srcset)=["']([^"']+)["']/i)?.[1];
