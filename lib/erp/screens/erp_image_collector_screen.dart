@@ -575,17 +575,37 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton.icon(
-                    onPressed: _loading ? null : _pasteClipboardUrl,
-                    icon: const Icon(Icons.content_paste_rounded),
-                    label: const Text('لصق الرابط المنسوخ مؤخرًا'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _purple,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : _pasteClipboardUrl,
+                      icon: const Icon(Icons.content_paste_rounded),
+                      label: const Text('لصق الرابط المنسوخ مؤخرًا'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _purple,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                      ),
                     ),
-                  ),
+                    OutlinedButton.icon(
+                      onPressed: _loading
+                          ? null
+                          : () {
+                              setState(() {
+                                _url.clear();
+                                _error = null;
+                                _status = 'تم مسح خانة رابط صفحة المنتجات يدويًا.';
+                              });
+                            },
+                      icon: const Icon(Icons.backspace_outlined),
+                      label: const Text('مسح الرابط'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Wrap(spacing: 10, runSpacing: 10, children: [
@@ -1090,17 +1110,37 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: OutlinedButton.icon(
-                    onPressed: _loading ? null : _pasteClipboardUrl,
-                    icon: const Icon(Icons.content_paste_rounded),
-                    label: const Text('لصق الرابط المنسوخ مؤخرًا'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _purple,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : _pasteClipboardUrl,
+                      icon: const Icon(Icons.content_paste_rounded),
+                      label: const Text('لصق الرابط المنسوخ مؤخرًا'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _purple,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                      ),
                     ),
-                  ),
+                    OutlinedButton.icon(
+                      onPressed: _loading
+                          ? null
+                          : () {
+                              setState(() {
+                                _url.clear();
+                                _error = null;
+                                _status = 'تم مسح خانة رابط صفحة المنتجات يدويًا.';
+                              });
+                            },
+                      icon: const Icon(Icons.backspace_outlined),
+                      label: const Text('مسح الرابط'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Wrap(spacing: 10, runSpacing: 10, children: [
