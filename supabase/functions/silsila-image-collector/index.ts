@@ -70,7 +70,7 @@ function productMetadata(html: string, base: URL) {
     for (const entry of props) {
       if (!entry || typeof entry !== "object") continue;
       const p = entry as Record<string, unknown>;
-      const label = String(p.name ?? p.propertyID ?? "").toLowerCase().replace(/[\\s_-]+/g, "");
+      const label = String(p.name ?? p.propertyID ?? "").toLowerCase().replace(/[\s_-]+/g, "");
       if (names.some(name => label.includes(name))) {
         const val = p.value ?? p.valueReference;
         if (val !== undefined && val !== null && String(val).trim()) return String(val).trim();
