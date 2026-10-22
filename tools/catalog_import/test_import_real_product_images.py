@@ -68,6 +68,28 @@ class CatalogImageMatchingTests(unittest.TestCase):
             IMPORTER.image_data_digest(value), IMPORTER.image_digest(raw)
         )
 
+    def test_egyptian_grocery_aliases_expand_search_without_relaxing_matching(self):
+        item = {"item_name": "أرز أبيض مصري", "barcode": "", "brand_name": ""}
+        requested_queries = []
+
+        def empty_search(url):
+            requested_queries.append(
+                IMPORTER.urllib.parse.parse_qs(IMPORTER.urllib.parse.urlparse(url).query)["q"][0]
+            )
+            return {"hits": []}
+
+        with patch.object(IMPORTER, "request_json", side_effect=empty_search), patch.object(
+            IMPORTER.time, "sleep"
+        ):
+            self.assertEqual(IMPORTER.off_candidates(item), [])
+
+        self.assertIn("Egyptian white rice", requested_queries)
+        self.assertIn("Calrose rice Egypt", requested_queries)
+        # Search expansion alone must not allow a contradictory candidate.
+        self.assertFalse(
+            IMPORTER.image_variant_matches("أرز أبيض مصري", "brown rice")
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
