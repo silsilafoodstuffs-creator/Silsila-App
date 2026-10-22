@@ -587,7 +587,11 @@ def main() -> int:
         source_match = re.search(r"/product/([^/?#]+)", str(row.get("source_url") or ""))
         if source_match:
             used_source_codes.add(source_match.group(1))
-            digest = image_data_digest(row.get("image_data"))
+        # Guard every existing real-size item image, not just rows whose source
+        # provenance URL is recognized. A copied image is still a duplicate.
+        stored_image = str(row.get("image_data") or "")
+        if len(stored_image) > 25_000:
+            digest = image_data_digest(stored_image)
             if digest:
                 used_image_digests.add(digest)
     # The alphabetic first page was dominated by household goods. Inspect the
