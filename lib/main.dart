@@ -953,7 +953,7 @@ class _MainShellState extends State<MainShell> {
   final Set<String> expandedCatalogCategories = <String>{};
   final Set<String> expandedCatalogSubcategories = <String>{};
   final Set<String> expandedCatalogBrands = <String>{};
-  String activity = 'مواد غذائية';
+  String activity = activityTypes.isNotEmpty ? activityTypes.first : 'مواد غذائية';
   String selectedCategory = 'الكل';
   String search = '';
   String accountName = 'تاجر سلسلة';
