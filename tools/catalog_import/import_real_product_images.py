@@ -294,7 +294,7 @@ def image_dimensions(data: bytes, mime: str) -> tuple[int, int]:
                 width = 1 + (data[21] | ((data[22] & 0x3F) << 8))
                 height = 1 + ((data[22] >> 6) | (data[23] << 2) | ((data[24] & 0x0F) << 10))
                 return width, height
-            if kind == b"VP8 " and len(data) >= 30 and data[23:26] == b"\\x9d\\x01\\x2a":
+            if kind == b"VP8 " and len(data) >= 30 and data[23:26] == b"\x9d\x01\x2a":
                 width = int.from_bytes(data[26:28], "little") & 0x3FFF
                 height = int.from_bytes(data[28:30], "little") & 0x3FFF
                 return width, height
