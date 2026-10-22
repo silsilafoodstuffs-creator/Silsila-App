@@ -123,14 +123,14 @@ class ProductService {
       activityCode = activityRow?['code']?.toString();
     }
 
-    var groupQuery = db.from('erp_item_categories')
-        .select('id,parent_id,group_name:category_name,group_name_en:category_name_en,activity_code,image_data,image_mime_type')
+    var categoryQuery = db.from('erp_item_categories')
+        .select('id,parent_id,category_name:category_name,category_name_en:category_name_en,activity_code,image_data,image_mime_type')
         .eq('is_active', true)
         .eq('show_in_app', true);
     if (activityCode != null && activityCode.isNotEmpty) {
-      groupQuery = groupQuery.eq('activity_code', activityCode);
+      categoryQuery = categoryQuery.eq('activity_code', activityCode);
     }
-    final groupRows = await groupQuery.order('category_name').limit(3000);
+    final groupRows = await categoryQuery.order('category_name').limit(3000);
     final groups = (groupRows as List)
         .map((raw) => Map<String, dynamic>.from(raw as Map))
         .toList(growable: false);
@@ -138,7 +138,7 @@ class ProductService {
     final groupsById = <String, Map<String, dynamic>>{
       for (final group in groups) (group['id'] ?? '').toString(): group,
     };
-    final groupIds = groups.map((g) => g['id'].toString()).toList(growable: false);
+    final categoryIds = groups.map((g) => g['id'].toString()).toList(growable: false);
 
     List<Map<String, dynamic>> groupPath(Map<String, dynamic> leaf) {
       final path = <Map<String, dynamic>>[leaf];
@@ -156,23 +156,23 @@ class ProductService {
     }
 
     var itemQuery = db.from('erp_items')
-        .select('id,group_id:category_id,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_data,image_mime_type,brand_name,package_description')
+        .select('id,category_id:category_id,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_data,image_mime_type,brand_name,package_description')
         .eq('is_active', true)
         .eq('show_in_app', true)
-        .inFilter('category_id', groupIds);
+        .inFilter('category_id', categoryIds);
     if (search != null) itemQuery = itemQuery.ilike('item_name', '%${_escapeLike(search)}%');
     final itemRows = await itemQuery.order('item_name').limit(500);
     final results = <Map<String, dynamic>>[];
     for (final raw in (itemRows as List)) {
       final item = Map<String, dynamic>.from(raw as Map);
-      final group = groupsById[(item['group_id'] ?? '').toString()];
+      final group = groupsById[(item['category_id'] ?? '').toString()];
       if (group == null) continue;
-      final groupName = (group['group_name'] ?? '').toString();
+      final groupName = (group['category_name'] ?? '').toString();
       final path = groupPath(group);
-      final rootName = (path.first['group_name'] ?? groupName).toString();
+      final rootName = (path.first['category_name'] ?? groupName).toString();
       if (category != null && category != rootName && category != groupName &&
-          !path.any((node) => (node['group_name'] ?? '').toString() == category)) continue;
-      final subcategoryName = path.length > 1 ? (path[1]['group_name'] ?? '').toString() : '';
+          !path.any((node) => (node['category_name'] ?? '').toString() == category)) continue;
+      final subcategoryName = path.length > 1 ? (path[1]['category_name'] ?? '').toString() : '';
       results.add(<String, dynamic>{
         'id': item['id'],
         'supplier_id': null,
