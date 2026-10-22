@@ -546,7 +546,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         ss(() {
           name.text=(row['item_name']??'').toString(); barcode.text=(row['barcode']??'').toString();
           brand.text=(row['brand_name']??'').toString(); minor.text=(row['base_unit']??'قطعة').toString();
-          thirdId=g?['id']?.toString(); subId=p?['id']?.toString(); mainId=root?['id']?.toString() ?? (p==null ? g?['id']?.toString() : null);
+          thirdId = g == null ? null : g['id'].toString();
+          subId = p == null ? null : p['id'].toString();
+          mainId = root != null ? root['id'].toString() : (p == null && g != null ? g['id'].toString() : null);
           final desc=(row['package_description']??'').toString().split('=');
           if(desc.length>1) { final parts=desc[1].trim().split(RegExp(r'\s+')); if(parts.isNotEmpty) count.text=parts.first; if(desc.first.trim().isNotEmpty) major.text=desc.first.trim(); }
           busy=false; message='تم العثور على الصنف ويمكن تعديل بياناته.'; ok=true;
