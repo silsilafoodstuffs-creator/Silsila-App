@@ -262,7 +262,7 @@ begin
   union all
 
   select
-    'item:' || i.id::text || ':group',
+    'item:' || i.id::text || ':category',
     'الأصناف',
     i.id,
     i.item_code,
@@ -948,7 +948,7 @@ begin
   union all
 
   select
-    'item-group:' || g.id::text || ':parent',
+    'item-category:' || g.id::text || ':parent',
     'فئات الأصناف',
     g.id,
     g.category_code,
@@ -967,17 +967,17 @@ begin
 
   union all
 
-  (with recursive group_walk(start_id, current_id, company_id, path, has_cycle) as (
+  (with recursive category_walk(start_id, current_id, company_id, path, has_cycle) as (
     select g.id, g.id, g.company_id, array[g.id]::uuid[], false
     from public.erp_item_categories g where g.company_id = p_company_id
     union all
     select w.start_id, child.id, w.company_id, w.path || child.id, child.id = any(w.path)
-    from group_walk w
+    from category_walk w
     join public.erp_item_categories child on child.parent_id = w.current_id and child.company_id = w.company_id
     where not w.has_cycle
   )
   select
-    'item-group:' || g.id::text || ':cycle',
+    'item-category:' || g.id::text || ':cycle',
     'فئات الأصناف',
     g.id,
     g.category_code,
@@ -990,7 +990,7 @@ begin
   from public.erp_item_categories g
   where g.company_id = p_company_id
     and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'فئات الأصناف')
-    and g.id in (select start_id from group_walk where has_cycle))
+    and g.id in (select start_id from category_walk where has_cycle))
 
   union all
 
