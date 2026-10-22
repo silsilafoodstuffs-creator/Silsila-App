@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -446,9 +447,9 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             TextField(controller: _unit, decoration: const InputDecoration(labelText: 'وحدة القياس')),
             const SizedBox(height: 8),
             Row(children: [
-              Expanded(child: TextField(controller: _purchasePrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'سعر الشراء'))),
+              Expanded(child: TextField(controller: _purchasePrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: [TextInputFormatter.withFunction((oldValue, newValue) => RegExp(r'^\d*\.?\d{0,3}$').hasMatch(newValue.text) ? newValue : oldValue)], decoration: const InputDecoration(labelText: 'سعر الشراء'))),
               const SizedBox(width: 6),
-              Expanded(child: TextField(controller: _salePrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'سعر البيع'))),
+              Expanded(child: TextField(controller: _salePrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: [TextInputFormatter.withFunction((oldValue, newValue) => RegExp(r'^\d*\.?\d{0,3}$').hasMatch(newValue.text) ? newValue : oldValue)], decoration: const InputDecoration(labelText: 'سعر البيع'))),
             ]),
             const SizedBox(height: 8),
             Row(children: [
