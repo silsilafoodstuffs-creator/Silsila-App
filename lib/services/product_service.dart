@@ -131,14 +131,14 @@ class ProductService {
       categoryQuery = categoryQuery.eq('activity_code', activityCode);
     }
     final categoryRows = await categoryQuery.order('category_name').limit(3000);
-    final groups = (categoryRows as List)
+    final categories = (categoryRows as List)
         .map((raw) => Map<String, dynamic>.from(raw as Map))
         .toList(growable: false);
-    if (groups.isEmpty) return const <Map<String, dynamic>>[];
+    if (categories.isEmpty) return const <Map<String, dynamic>>[];
     final categoriesById = <String, Map<String, dynamic>>{
-      for (final group in groups) (group['id'] ?? '').toString(): group,
+      for (final category in categories) (category['id'] ?? '').toString(): category,
     };
-    final categoryIds = groups.map((g) => g['id'].toString()).toList(growable: false);
+    final categoryIds = categories.map((g) => g['id'].toString()).toList(growable: false);
 
     List<Map<String, dynamic>> categoryPath(Map<String, dynamic> leaf) {
       final path = <Map<String, dynamic>>[leaf];
@@ -165,10 +165,10 @@ class ProductService {
     final results = <Map<String, dynamic>>[];
     for (final raw in (itemRows as List)) {
       final item = Map<String, dynamic>.from(raw as Map);
-      final group = categoriesById[(item['category_id'] ?? '').toString()];
-      if (group == null) continue;
-      final categoryName = (group['category_name'] ?? '').toString();
-      final path = categoryPath(group);
+      final category = categoriesById[(item['category_id'] ?? '').toString()];
+      if (category == null) continue;
+      final categoryName = (category['category_name'] ?? '').toString();
+      final path = categoryPath(category);
       final rootName = (path.first['category_name'] ?? categoryName).toString();
       if (category != null && category != rootName && category != categoryName &&
           !path.any((node) => (node['category_name'] ?? '').toString() == category)) continue;
