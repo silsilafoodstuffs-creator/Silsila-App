@@ -123,13 +123,14 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       // and ordering by geo_code puts EG-AREA rows before governorate roots.
       const pageSize = 1000;
       var offset = 0;
+      var useSharedCatalog = companyId.isEmpty;
       final allRows = <Map<String, dynamic>>[];
       while (true) {
-        final fields =
+        const fields =
             'id,company_id,parent_id,geo_code,name_ar,name_en,level,is_active,logo_bytes,'
             'logo_mime_type,source_name,source_url,latitude,longitude,admin_type';
-        List<dynamic> pageResult = <dynamic>[];
-        if (companyId.isNotEmpty) {
+        List<dynamic> pageResult;
+        if (!useSharedCatalog) {
           final scoped = await db!
               .from('erp_geographic_data')
               .select(fields)
@@ -137,22 +138,24 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
               .order('geo_code')
               .range(offset, offset + pageSize - 1);
           pageResult = scoped as List;
+          // Older deployments seeded the national directory under the original
+          // setup company. Fall back to the persisted master directory instead
+          // of silently rendering an empty grid for another active company.
+          if (offset == 0 && pageResult.isEmpty) {
+            useSharedCatalog = true;
+          }
+        } else {
+          pageResult = <dynamic>[];
         }
-        // The directory is master/reference data. Older deployments seeded it
-        // under the setup company, so an empty company-scoped result must not
-        // leave the entire grid blank.
-        if (pageResult.isEmpty && offset == 0) {
+        if (useSharedCatalog) {
           final shared = await db!
               .from('erp_geographic_data')
               .select(fields)
               .order('geo_code')
-              .range(0, pageSize - 1);
+              .range(offset, offset + pageSize - 1);
           pageResult = shared as List;
         }
         final page = pageResult
-            .map((item) => Map<String, dynamic>.from(item))
-            .toList();
-        final page = (result as List)
             .map((item) => Map<String, dynamic>.from(item))
             .toList();
         allRows.addAll(page);
