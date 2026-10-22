@@ -978,7 +978,7 @@ begin
   )
   select
     'item-group:' || g.id::text || ':cycle',
-    'مجموعات الأصناف',
+    'فئات الأصناف',
     g.id,
     g.group_code,
     null::date,
@@ -989,7 +989,7 @@ begin
     'groups'
   from public.erp_item_groups g
   where g.company_id = p_company_id
-    and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'مجموعات الأصناف')
+    and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'فئات الأصناف')
     and g.id in (select start_id from group_walk where has_cycle))
 
   union all
