@@ -127,13 +127,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     };
   }
 
-  Future<Uint8List> _downloadBytes(String url) async {
-    final result = await _invoke({'action': 'download', 'url': url});
-    final encoded = result['base64']?.toString();
-    if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
-    return Uint8List.fromList(base64Decode(encoded));
-  }
-
   Future<void> _saveZip() async {
     if (_selected.isEmpty) {
       setState(() => _error = 'حدد صورة واحدة على الأقل قبل التنزيل.');
@@ -162,7 +155,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if (archive.isEmpty) throw Exception('لم يمكن تنزيل أي صورة من الاختيارات.');
       final zipped = ZipEncoder().encode(archive);
       if (zipped == null || zipped.isEmpty) throw Exception('تعذر إنشاء ملف ZIP.');
-      await FileSaver.instance.saveAs(
+      await FileSaver.instance.saveFile(
         name: 'silsila_images_${DateTime.now().millisecondsSinceEpoch}',
         bytes: Uint8List.fromList(zipped),
         fileExtension: 'zip',
