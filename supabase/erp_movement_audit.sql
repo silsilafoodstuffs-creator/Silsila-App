@@ -270,7 +270,7 @@ begin
     i.item_name,
     'خطأ',
     'ITEM_GROUP_COMPANY_MISMATCH',
-    'مجموعة الصنف لا تتبع الشركة نفسها أو أنها غير موجودة.',
+    'فئة الصنف لا تتبع الشركة نفسها أو أنها غير موجودة.',
     'groups'
   from public.erp_items i
   left join public.erp_item_groups g on g.id = i.group_id
@@ -949,7 +949,7 @@ begin
 
   select
     'item-group:' || g.id::text || ':parent',
-    'مجموعات الأصناف',
+    'فئات الأصناف',
     g.id,
     g.group_code,
     null::date,
@@ -985,7 +985,7 @@ begin
     g.group_name,
     'خطأ',
     'ITEM_GROUP_HIERARCHY_CYCLE',
-    'توجد علاقة دائرية في شجرة مجموعات الأصناف.',
+    'توجد علاقة دائرية في شجرة فئات الأصناف.',
     'groups'
   from public.erp_item_groups g
   where g.company_id = p_company_id
