@@ -595,9 +595,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     final db=Supabase.instance.client;final company=await _activeCompanyId();final mode=(item['entity_mode']??'new').toString();
     final ar=_rowController(item,'item_name_ar',initial:_suggestedImageName(item,_images.indexOf(item))).text.trim();
     final en=_rowController(item,'item_name_en',initial:_excelValue(item,['product_name_en','english_name','name_en'])).text.trim();
-    final major=_rowController(item,'major_unit',initial:'كرتونة').text.trim(),minor=_rowController(item,'minor_unit',initial:'قطعة').text.trim();
-    final count=double.tryParse(_rowController(item,'internal_count',initial:'1').text.trim());
-    final price=double.tryParse(_rowController(item,'sale_price',initial:'0').text.trim()),area=double.tryParse(_rowController(item,'pricing_area',initial:'1').text.trim()),tax=double.tryParse(_rowController(item,'tax_rate',initial:'0').text.trim());
+    final major=_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text.trim(),minor=_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text.trim();
+    final count=double.tryParse(_rowController(item,'internal_count',initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit'])).text.trim());
+    final price=double.tryParse(_rowController(item,'sale_price',initial:_excelValue(item,['sale_price','price','price_value'])).text.trim()),area=double.tryParse(_rowController(item,'pricing_area',initial:_excelValue(item,['pricing_area','price_area'])).text.trim()),tax=double.tryParse(_rowController(item,'tax_rate',initial:_excelValue(item,['tax_rate','tax_percent','vat'])).text.trim());
     if(ar.isEmpty){setState(()=>_error='اسم الصنف العربي مطلوب.');return;}if(major.isEmpty||minor.isEmpty){setState(()=>_error='اختر الوحدة الكبرى والصغرى.');return;}
     if(count==null||count<=0){setState(()=>_error='العدد الداخلي يجب أن يكون أكبر من صفر.');return;}if(price==null||price<0){setState(()=>_error='سعر الصنف غير صحيح.');return;}
     if(area==null||area<0){setState(()=>_error='مساحة التسعير غير صحيحة.');return;}if(tax==null||tax<0||tax>100){setState(()=>_error='نسبة الضريبة يجب أن تكون بين 0 و100.');return;}
@@ -889,10 +889,20 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   final choices=options.contains(value)?options:<String>[value,...options];
                   return SizedBox(width:width,child:DropdownButtonFormField<String>(value:choices.firstWhere((v)=>v==value,orElse:()=>choices.first),isExpanded:true,
                     decoration:InputDecoration(labelText:label,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:9)),
-                    items:choices.map((v)=>DropdownMenuItem(value:v,child:Text(key=='entity_mode'?(v=='new'?'كود جديد':'كود قديم'):key=='save_as'?(v=='category'?'فئة':'صنف'):v,overflow:TextOverflow.ellipsis))).toList(),
+                    items:choices.map((v)=>DropdownMenuItem(value:v,child:Text(key=='entity_mode'?(v=='new'?'كود جديد':'كود قديم'):key=='save_as'?(v=='category'?'فئة':'صنف'):key=='major_unit'&&v.isEmpty?'اختر الوحدة الكبرى':key=='minor_unit'&&v.isEmpty?'اختر الوحدة الصغرى':v,overflow:TextOverflow.ellipsis))).toList(),
                     onChanged:_loading?null:(v){if(v==null)return;setState((){item[key]=v;if(key=='major_unit'||key=='minor_unit')_rowController(item,key).text=v;if(key=='save_as'){item.remove('entity_mode');item.remove('database_item_id');item.remove('category_target_id');}});}));
                 }
                 final suggested=_suggestedImageName(item,index);
+                var productName='';
+                for(final candidate in [item['product_full_name'],item['product_name'],item['product_title'],item['sku_name'],item['item_name'],item['context_name'],item['title'],item['name'],item['alt']]){
+                  final value=candidate?.toString().trim()??'';
+                  if(_looksLikeEntityName(value)){productName=value;break;}
+                }
+                if(productName.isEmpty)productName=suggested.replaceAll('_',' ');
+                final productUnit=_excelValue(item,['main_unit','unit','unit_name','major_unit']);
+                if(productUnit.isNotEmpty&&!productName.toLowerCase().contains(productUnit.toLowerCase()))productName=productName+' '+productUnit;
+                final productCount=_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']);
+                if(productCount.isNotEmpty&&!RegExp(r'(^|[^0-9])'+RegExp.escape(productCount)+r'([^0-9]|$)').hasMatch(productName))productName=productName+' عدد داخلي '+productCount;
                 final common=SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                   SizedBox(width:42,child:Checkbox(value:selected,activeColor:_purple,onChanged:_loading?null:(v)=>_toggle(url,v))),
                   SizedBox(width:38,child:Text((index+1).toString(),textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w800))),
@@ -914,14 +924,14 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   : SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                       const SizedBox(width:10),dropdown('entity_mode','نوع الكود',mode,const ['new','old'],width:135),const SizedBox(width:8),
                       if(mode=='old')...[field('legacy_code','كود الصنف القديم',width:155),const SizedBox(width:5),OutlinedButton.icon(onPressed:_loading?null:()=>_lookupRowCode(item),icon:const Icon(Icons.search),label:const Text('بحث')),const SizedBox(width:8)],
-                      field('item_name_ar','اسم الصنف عربي',width:210,initial:suggested),const SizedBox(width:8),
+                      field('item_name_ar','اسم الصنف عربي',width:210,initial:productName),const SizedBox(width:8),
                       field('item_name_en','اسم الصنف إنجليزي',width:190,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:8),
-                      dropdown('major_unit','الوحدة الكبرى',_rowController(item,'major_unit',initial:'كرتونة').text,const ['كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:145),const SizedBox(width:8),
-                      field('internal_count','عدد داخلي',width:100,initial:'1',type:TextInputType.number),const SizedBox(width:8),
-                      dropdown('minor_unit','الوحدة الصغرى',_rowController(item,'minor_unit',initial:'قطعة').text,const ['قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:145),const SizedBox(width:8),
-                      field('sale_price','سعر الصنف',width:110,initial:'0',type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
-                      field('pricing_area','مساحة تسعير',width:120,initial:'1',type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
-                      field('tax_rate','نسبة ضريبة %',width:115,initial:'0',type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
+                      dropdown('major_unit','الوحدة الكبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:145),const SizedBox(width:8),
+                      field('internal_count','عدد داخلي',width:100,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:TextInputType.number),const SizedBox(width:8),
+                      dropdown('minor_unit','الوحدة الصغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:145),const SizedBox(width:8),
+                      field('sale_price','سعر الصنف',width:110,initial:_excelValue(item,['sale_price','price','price_value']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
+                      field('pricing_area','مساحة تسعير',width:120,initial:_excelValue(item,['pricing_area','price_area']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
+                      field('tax_rate','نسبة ضريبة %',width:115,initial:_excelValue(item,['tax_rate','tax_percent','vat']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
                       FilledButton.icon(onPressed:_loading?null:()=>_saveRowProduct(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
                     ]));
                 return Container(margin:const EdgeInsets.only(bottom:10),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
