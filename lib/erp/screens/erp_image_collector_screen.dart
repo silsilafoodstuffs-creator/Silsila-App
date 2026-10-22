@@ -300,7 +300,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           ]),
           const SizedBox(height: 10),
           if (_images.isEmpty)
-            Expanded(
+            SizedBox(
+              height: 220,
               child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.image_search_outlined, size: 54, color: _purple.withValues(alpha: .35)),
                 const SizedBox(height: 10),
@@ -308,8 +309,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
               ])),
             )
           else
-            Expanded(
-              child: GridView.builder(
+            GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.only(bottom: 18),
                 gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                   maxCrossAxisExtent: 205,
@@ -379,7 +381,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   );
                 },
               ),
-            ),
         ],
       ),
     );
