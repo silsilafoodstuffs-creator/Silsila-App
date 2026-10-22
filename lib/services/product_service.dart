@@ -130,7 +130,7 @@ class ProductService {
     if (activityCode != null && activityCode.isNotEmpty) {
       groupQuery = groupQuery.eq('activity_code', activityCode);
     }
-    final groupRows = await groupQuery.order('group_name').limit(3000);
+    final groupRows = await groupQuery.order('category_name').limit(3000);
     final groups = (groupRows as List)
         .map((raw) => Map<String, dynamic>.from(raw as Map))
         .toList(growable: false);
