@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
-const TABLES = ["categories", "erp_item_categories", "erp_item_groups", "erp_items", "products"] as const;
+const TABLES = ["categories", "erp_item_categories", "erp_items", "products"] as const;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 Deno.serve(async (req: Request) => {
