@@ -464,6 +464,8 @@ def choose_image(
     identity_arabic = arabic_identity_tokens(raw_name)
     exclusions = {
         "rice": {"cake", "cakes", "noodle", "noodles", "cracker", "crackers", "flour", "milk", "drink"},
+        # Corn tortillas contain both "corn" and "flour" but are not corn flour.
+        "flour": {"tortilla", "tortillas", "wrap", "wraps", "flatbread"},
         "basmati": {"flavor", "flavoured", "flavored"},
         "pasta": {"sauce", "seasoning"},
         "milk": {"chocolate", "soap", "shampoo"},
