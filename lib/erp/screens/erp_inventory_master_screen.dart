@@ -246,14 +246,14 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
 
   void _newCurrentRecord() {
     final currentFields = _view == 'warehouses'
-        ? [_warehouseCode.text, _warehouseName.text, _address.text]
+        ? [_warehouseCode.text, _warehouseName.text, _warehouseNameEn.text, _warehouseLocation.text, _warehousePhone.text, _warehouseLandline.text, _address.text]
         : [_itemCode.text, _itemName.text, _barcode.text,
                 _unit.text == 'وحدة' ? '' : _unit.text,
                 _purchasePrice.text == '0' ? '' : _purchasePrice.text,
                 _salePrice.text == '0' ? '' : _salePrice.text,
                 _taxRate.text == '0' ? '' : _taxRate.text,
                 _reorder.text == '0' ? '' : _reorder.text];
-    final hasSelection = (_view == 'warehouses' && _branchId != null) ||
+    final hasSelection = (_view == 'warehouses' && (_branchId != null || _parentWarehouseId != null || _governorateId != null || _districtId != null || _areaId != null)) ||
         (_view == 'items' && (_itemCategoryId != null || _pickedItemImage != null));
     if (currentFields.any((value) => value.trim().isNotEmpty) || hasSelection) {
       setState(() => _message = 'تم الاحتفاظ بالبيانات الحالية كما هي. احفظ السجل الحالي أولًا قبل بدء سجل جديد.');
@@ -261,7 +261,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     }
     setState(() {
       _error = null; _message = 'نموذج إضافة جديد جاهز.';
-      if (_view == 'warehouses') { _warehouseCode.clear(); _warehouseName.clear(); _address.clear(); _branchId = null; }
+      if (_view == 'warehouses') { _warehouseCode.clear(); _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseLocation.clear(); _warehousePhone.clear(); _warehouseLandline.clear(); _address.clear(); _branchId = null; _parentWarehouseId = null; _governorateId = null; _districtId = null; _areaId = null; }
       else {
         _itemCode.clear(); _itemName.clear(); _barcode.clear(); _unit.text = 'وحدة';
         _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
