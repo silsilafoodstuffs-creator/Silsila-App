@@ -215,6 +215,8 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     }
   }
 
+  String _geoName(dynamic id) { final rows = _geoRows.where((g) => _s(g['id']) == _s(id)); return rows.isEmpty ? '' : _s(rows.first['name_ar']); }
+
   Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
@@ -258,26 +260,35 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       else if (_rows.isEmpty)
         const Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد.')))
       else
-        ..._rows.map((row) {
-          final active = row['is_active'] == true;
-          final main = row['is_main'] == true;
-          return Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: BorderSide(color: main ? _branchPurple : Colors.grey.shade300)),
-            child: ListTile(
-              leading: CircleAvatar(backgroundColor: _branchPurple.withValues(alpha: .09), child: Icon(main ? Icons.star : Icons.account_tree_outlined, color: _branchPurple)),
-              title: Text('${_s(row['branch_code'])} — ${_s(row['branch_name'])}', style: const TextStyle(fontWeight: FontWeight.w800)),
-              subtitle: Text('${main ? 'الفرع الرئيسي • ' : ''}${active ? 'نشط' : 'موقوف'} • ${_s(row['phone']).isEmpty ? 'لا يوجد هاتف' : _s(row['phone'])}\n${_s(row['address'])}', maxLines: 2, overflow: TextOverflow.ellipsis),
-              isThreeLine: true,
-              trailing: Wrap(spacing: 0, children: [
+        Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
+          columns: const [
+            DataColumn(label: Text('كود الفرع')), DataColumn(label: Text('اسم الفرع عربي')),
+            DataColumn(label: Text('اسم الفرع إنجليزي')), DataColumn(label: Text('المحافظة')),
+            DataColumn(label: Text('الحي / المركز')), DataColumn(label: Text('المنطقة / القرية')),
+            DataColumn(label: Text('العنوان والموقع')), DataColumn(label: Text('موبايل 1 / 2')),
+            DataColumn(label: Text('أرضي 1 / 2')), DataColumn(label: Text('نشط')),
+            DataColumn(label: Text('إجراءات')),
+          ],
+          rows: _rows.map((row) {
+            final active = row['is_active'] == true;
+            return DataRow(cells: [
+              DataCell(Text(_s(row['branch_code']))),
+              DataCell(Text(_s(row['branch_name']))),
+              DataCell(Text(_s(row['branch_name_en']))),
+              DataCell(Text(_geoName(row['governorate_id']))),
+              DataCell(Text(_geoName(row['district_id']))),
+              DataCell(Text(_geoName(row['area_id']))),
+              DataCell(SizedBox(width: 180, child: Text('${_s(row['address'])} ${_s(row['location'])}', maxLines: 2, overflow: TextOverflow.ellipsis))),
+              DataCell(Text('${_s(row['phone'])} / ${_s(row['phone2'])}')),
+              DataCell(Text('${_s(row['landline1'])} / ${_s(row['landline2'])}')),
+              DataCell(Checkbox(shape: const CircleBorder(), value: active, onChanged: (_) => _toggle(row))),
+              DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                 IconButton(tooltip: 'تعديل', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _branchPurple)),
-                IconButton(tooltip: active ? 'إيقاف' : 'تفعيل', onPressed: () => _toggle(row), icon: Icon(active ? Icons.pause_circle_outline : Icons.play_circle_outline, color: active ? Colors.orange : Colors.green)),
-                IconButton(tooltip: 'حذف', onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
-              ]),
-            ),
-          );
-        }),
+                IconButton(tooltip: 'حذف', onPressed: () => _delete(row), icon: const Icon(Icons.delete_forever, color: Colors.red)),
+              ])),
+            ]);
+          }).toList(),
+        )))),
     ]),
   );
 
