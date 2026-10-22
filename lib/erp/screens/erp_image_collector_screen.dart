@@ -431,8 +431,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     }
     final longest = width > height ? width : height;
     final scale = 4096 / longest;
-    final targetWidth = (width * scale).round().clamp(1, 4096);
-    final targetHeight = (height * scale).round().clamp(1, 4096);
+    final targetWidth = (width * scale).round().clamp(1, 4096).toInt();
+    final targetHeight = (height * scale).round().clamp(1, 4096).toInt();
     final resized = img.copyResize(decoded, width: targetWidth, height: targetHeight,
       interpolation: img.Interpolation.cubic);
     return Uint8List.fromList(img.encodePng(resized, level: 9));
