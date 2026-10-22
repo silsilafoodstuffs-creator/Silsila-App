@@ -434,21 +434,12 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
                 items: [const DropdownMenuItem<String>(value: null, child: Text('المنطقة / القرية')), ..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_editDistrictId ?? '')).map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']), overflow: TextOverflow.ellipsis)))],
                 onChanged: (v) => setState(() => _editAreaId = v),
               )) : Text(_geoName(row['area_id']))),
-              DataCell(editing ? Column(mainAxisSize: MainAxisSize.min, children: [
-                _inlineField('address', width: 180),
-                const SizedBox(height: 4),
-                _inlineField('location', width: 180),
-              ]) : SizedBox(width: 180, child: Text('${_s(row['address'])} ${_s(row['location'])}', maxLines: 2, overflow: TextOverflow.ellipsis))),
-              DataCell(editing ? Column(mainAxisSize: MainAxisSize.min, children: [
-                _inlineField('phone', width: 125, keyboardType: TextInputType.phone),
-                const SizedBox(height: 4),
-                _inlineField('phone2', width: 125, keyboardType: TextInputType.phone),
-              ]) : Text('${_s(row['phone'])} / ${_s(row['phone2'])}')),
-              DataCell(editing ? Column(mainAxisSize: MainAxisSize.min, children: [
-                _inlineField('landline1', width: 125, keyboardType: TextInputType.phone),
-                const SizedBox(height: 4),
-                _inlineField('landline2', width: 125, keyboardType: TextInputType.phone),
-              ]) : Text('${_s(row['landline1'])} / ${_s(row['landline2'])}')),
+              DataCell(editing ? _inlineField('address', width: 170) : SizedBox(width: 170, child: Text(_s(row['address']), maxLines: 1, overflow: TextOverflow.ellipsis))),
+              DataCell(editing ? _inlineField('location', width: 150) : SizedBox(width: 150, child: Text(_s(row['location']), maxLines: 1, overflow: TextOverflow.ellipsis))),
+              DataCell(editing ? _inlineField('phone', width: 115, keyboardType: TextInputType.phone) : Text(_s(row['phone']))),
+              DataCell(editing ? _inlineField('phone2', width: 115, keyboardType: TextInputType.phone) : Text(_s(row['phone2']))),
+              DataCell(editing ? _inlineField('landline1', width: 115, keyboardType: TextInputType.phone) : Text(_s(row['landline1']))),
+              DataCell(editing ? _inlineField('landline2', width: 115, keyboardType: TextInputType.phone) : Text(_s(row['landline2']))),
               DataCell(editing ? const Icon(Icons.lock_outline, color: Colors.grey, size: 18) : Checkbox(shape: const CircleBorder(), value: active, onChanged: (_) => _toggle(row))),
               DataCell(Row(mainAxisSize: MainAxisSize.min, children: editing ? [
                 IconButton(tooltip: 'حفظ الصف', onPressed: () => _saveInlineEdit(row), icon: const Icon(Icons.save_rounded, color: Colors.green)),
