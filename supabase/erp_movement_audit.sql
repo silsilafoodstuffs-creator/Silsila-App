@@ -961,7 +961,7 @@ begin
   from public.erp_item_groups g
   left join public.erp_item_groups p on p.id = g.parent_id
   where g.company_id = p_company_id
-    and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'مجموعات الأصناف')
+    and (p_area = 'كل الحركات' or p_area = 'الأصناف' or p_area = 'فئات الأصناف')
     and g.parent_id is not null
     and (p.id is null or p.company_id <> g.company_id)
 
