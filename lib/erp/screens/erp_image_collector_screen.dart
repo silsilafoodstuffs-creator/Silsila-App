@@ -27,6 +27,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   String? _error;
   String _status = '';
   final Set<String> _importedImageKeys = <String>{};
+  final Map<String, TextEditingController> _rowControllers = {};
   String? _importedScope;
   String _imageKind = 'product';
 
@@ -92,6 +93,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   @override
   void dispose() {
     _url.dispose();
+    for (final controller in _rowControllers.values) { controller.dispose(); }
     super.dispose();
   }
 
@@ -699,6 +701,996 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         );
       }));
     } finally { name.dispose(); }
+  }
+
+
+  TextEditingController _rowController(Map<String, dynamic> item, String field, {String initial = ''}) {
+    final key = (item['url'] ?? '').toString() + '::' + field;
+    return _rowControllers.putIfAbsent(key, () => TextEditingController(
+      text: (item[field]?.toString().isNotEmpty ?? false) ? item[field].toString() : initial,
+    ));
+  }
+
+  Future<void> _lookupRowCode(Map<String, dynamic> item) async {
+    if (_loading) return;
+    final client = Supabase.instance.client;
+    final kind = (item['save_as'] ?? 'product').toString();
+    final code = _rowController(item, 'legacy_code').text.trim();
+    if (code.isEmpty) { setState(() => _error = 'اكتب الكود القديم أولًا ثم اضغط بحث.'); return; }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final companyId = await _activeCompanyId();
+      if (kind == 'category') {
+        final raw = await client.from('erp_item_groups').select('id,company_id,parent_id,group_code,group_name,group_name_en,is_active,show_in_app')
+          .eq('company_id', companyId).eq('group_code', code).maybeSingle();
+        if (raw == null) throw Exception('كود الفئة غير موجود في قاعدة بيانات هذه الشركة.');
+        final allRaw = await client.from('erp_item_groups').select('id,parent_id,group_code,group_name,group_name_en,is_active')
+          .eq('company_id', companyId).limit(3000);
+        final groups = (allRaw as List).map((e) => Map<String, dynamic>.from(e)).toList();
+        Map<String, dynamic>? byId(dynamic id) {
+          if (id == null) return null;
+          for (final group in groups) { if (group['id'].toString() == id.toString()) return group; }
+          return null;
+        }
+        final found = Map<String, dynamic>.from(raw);
+        final parent = byId(found['parent_id']);
+        final grand = byId(parent?['parent_id']);
+        final Map<String,dynamic>? root = found['parent_id'] == null ? found : (parent?['parent_id'] == null ? parent : grand);
+        final Map<String,dynamic>? sub = found['parent_id'] == null ? null : (parent?['parent_id'] == null ? found : parent);
+        final Map<String,dynamic>? secondary = sub != null && found['id'].toString() != sub['id'].toString() ? found : null;
+        item['category_root_id'] = root?['id']?.toString();
+        item['category_sub_id'] = sub?['id']?.toString();
+        item['category_secondary_id'] = secondary?['id']?.toString();
+        item['category_target_id'] = found['id'].toString();
+        _rowController(item, 'category_main_name').text = (root?['group_name'] ?? '').toString();
+        _rowController(item, 'category_sub_name').text = (sub?['group_name'] ?? '').toString();
+        _rowController(item, 'category_secondary_name').text = (secondary?['group_name'] ?? '').toString();
+        item['entity_mode'] = 'old';
+        if (mounted) setState(() => _status = 'تم تحميل الفئة القديمة ' + code + ' وأسمائها. عدّل الحقول ثم اضغط تحديث بيانات.');
+      } else {
+        final raw = await client.from('erp_items').select('id,item_code,item_name,item_name_en,base_unit,group_id,sale_price,tax_rate,pricing_area,package_description')
+          .eq('company_id', companyId).eq('item_code', code).maybeSingle();
+        if (raw == null) throw Exception('كود الصنف غير موجود في قاعدة بيانات هذه الشركة.');
+        final row = Map<String, dynamic>.from(raw);
+        item['database_item_id'] = row['id'].toString();
+        item['database_item_code'] = code;
+        _rowController(item, 'item_name_ar').text = (row['item_name'] ?? '').toString();
+        _rowController(item, 'item_name_en').text = (row['item_name_en'] ?? '').toString();
+        _rowController(item, 'sale_price').text = (row['sale_price'] ?? 0).toString();
+        _rowController(item, 'pricing_area').text = (row['pricing_area'] ?? 1).toString();
+        _rowController(item, 'tax_rate').text = (row['tax_rate'] ?? 0).toString();
+        _rowController(item, 'minor_unit').text = (row['base_unit'] ?? 'قطعة').toString();
+        final desc = (row['package_description'] ?? '').toString().split('=');
+        if (desc.length > 1) {
+          _rowController(item, 'major_unit').text = desc.first.trim();
+          final parts = desc[1].trim().split(RegExp(r'\s+'));
+          if (parts.isNotEmpty) _rowController(item, 'internal_count').text = parts.first;
+        }
+        final unitRows = await client.from('erp_item_units').select('unit_name,conversion_factor,is_base_unit')
+          .eq('company_id', companyId).eq('item_id', row['id'].toString()).eq('is_active', true);
+        for (final unit in (unitRows as List).map((e) => Map<String,dynamic>.from(e))) {
+          if (unit['is_base_unit'] == true) {
+            _rowController(item, 'minor_unit').text = (unit['unit_name'] ?? 'قطعة').toString();
+          } else if ((double.tryParse((unit['conversion_factor'] ?? 1).toString()) ?? 1) > 1) {
+            _rowController(item, 'major_unit').text = (unit['unit_name'] ?? '').toString();
+            _rowController(item, 'internal_count').text = (unit['conversion_factor'] ?? 1).toString();
+          }
+        }
+        item['entity_mode'] = 'old';
+        if (mounted) setState(() => _status = 'تم تحميل الصنف القديم ' + code + '. يمكنك تعديل البيانات ثم الضغط على تحديث بيانات.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<Map<String, dynamic>> _upsertRowCategory({
+    required SupabaseClient client, required String companyId,
+    required List<Map<String, dynamic>> groups, required String name,
+    required String? parentId, required String prefix,
+  }) async {
+    final normalized = name.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+    for (final group in groups) {
+      final sameParent = (group['parent_id']?.toString() ?? '') == (parentId ?? '');
+      final existingName = (group['group_name'] ?? '').toString().trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+      if (sameParent && existingName == normalized) return group;
+    }
+    var maxCode = 0;
+    for (final group in groups) {
+      final value = (group['group_code'] ?? '').toString();
+      final match = RegExp('^' + prefix + r'(\d+)
+    if (_selected.isEmpty) {
+      setState(() => _error = 'حدد صورة واحدة على الأقل قبل التنزيل.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+      _status = 'جارٍ تنزيل الصور المحددة وتجهيز ملف ZIP والصورة وExcel...';
+    });
+    try {
+      final archive = Archive();
+      var index = 0;
+      final usedFileNames = <String>{};
+      final savedImageKeys = <String>{};
+      for (final image in _images.where((x) => _selected.contains(x['url'].toString()))) {
+        final imageIndex = _images.indexOf(image);
+        index++;
+        final url = image['url'].toString();
+        final downloaded = await _invoke({'action': 'download', 'url': url});
+        final encoded = downloaded['base64']?.toString();
+        if (encoded == null || encoded.isEmpty) continue;
+        final sourceBytes = Uint8List.fromList(base64Decode(encoded));
+        final bytes = _processTransparentPng(sourceBytes);
+        const extension = '.png';
+        final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
+        final fileName = _uniqueFileName(title, extension, usedFileNames);
+        archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
+        savedImageKeys.add(_imageKey(url));
+        if (mounted) setState(() => _status = 'تم تجهيز $index من ${_selected.length} صورة...');
+      }
+      if (archive.isEmpty) throw Exception('لم يمكن تنزيل أي صورة من الاختيارات.');
+      final selectedImages = _images
+          .where((item) => _selected.contains(item['url']?.toString() ?? ''))
+          .toList();
+      final excelBytes = _buildProductDataExcel(selectedImages);
+      archive.addFile(ArchiveFile('بيانات_الأصناف.xlsx', excelBytes.length, excelBytes));
+      final zipped = ZipEncoder().encode(archive);
+      if (zipped == null || zipped.isEmpty) throw Exception('تعذر إنشاء ملف ZIP.');
+      await FileSaver.instance.saveFile(
+        name: 'silsila_images_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: Uint8List.fromList(zipped),
+        fileExtension: 'zip',
+        mimeType: MimeType.zip,
+      );
+      await _markImported(savedImageKeys);
+      if (mounted) {
+        setState(() {
+          _url.clear();
+          // The ZIP contains every selected image. Remove the entire scan result,
+          // including unchecked images, so the next page starts with a clean grid.
+          _images = [];
+          _selected.clear();
+          _pageUrl = null;
+          _status = 'تم حفظ الصور وملف Excel داخل ZIP. تم مسح الرابط والصور من الشاشة؛ الصق الرابط التالي وابدأ السحب.';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _saveOne(Map<String, dynamic> image) async {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _status = 'جارٍ تنزيل الصورة...';
+    });
+    try {
+      final url = image['url'].toString();
+      final result = await _invoke({'action': 'download', 'url': url});
+      final encoded = result['base64']?.toString();
+      if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
+      final sourceBytes = Uint8List.fromList(base64Decode(encoded));
+      final bytes = _processTransparentPng(sourceBytes);
+      final imageIndex = _images.indexOf(image);
+      final baseName = _imageBaseName(image, imageIndex < 0 ? 0 : imageIndex);
+      final matchingIndexes = _images.asMap().entries
+          .where((entry) => _imageBaseName(entry.value, entry.key).toLowerCase() == baseName.toLowerCase())
+          .map((entry) => entry.key)
+          .toList();
+      final occurrence = matchingIndexes.indexOf(imageIndex);
+      final uniqueBaseName = occurrence > 0 ? '${baseName}_${occurrence + 1}' : baseName;
+      await FileSaver.instance.saveFile(
+        name: uniqueBaseName,
+        bytes: bytes,
+        fileExtension: 'png',
+      );
+      await _markImported({_imageKey(url)});
+      if (mounted) {
+        setState(() {
+          _url.clear();
+          // Remove the saved image and any unchecked images; retain only other
+          // selected images that have not yet been saved.
+          _images = _images.where((item) {
+            final itemUrl = item['url']?.toString() ?? '';
+            return itemUrl != url && _selected.contains(itemUrl);
+          }).toList();
+          _selected
+            ..clear()
+            ..addAll(_images.map((item) => item['url'].toString()));
+          if (_images.isEmpty) _pageUrl = null;
+          _status = 'تم حفظ الصورة. تم مسح الرابط والصور المحفوظة وغير المحددة من الشاشة؛ الصق الرابط التالي أو احفظ الصور المحددة المتبقية.';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allSelected = _images.isNotEmpty && _selected.length == _images.length;
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Card(
+            elevation: 0,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: _purple.withValues(alpha: .12)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(
+                    width: 46, height: 46,
+                    decoration: BoxDecoration(color: _purple.withValues(alpha: .08), borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.photo_library_outlined, color: _purple, size: 27),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('جامع صور الأصناف', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _purple)),
+                    SizedBox(height: 4),
+                    Text('استخراج الصور، تفريغ الخلفية الفاتحة، وتجهيز PNG حتى 4K مضغوط', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                  ])),
+                ]),
+                const SizedBox(height: 18),
+                Align(alignment: Alignment.centerRight, child: SizedBox(width: 300, child: DropdownButtonFormField<String>(value: _imageKind, decoration: const InputDecoration(labelText: 'نوع الصور الجاري تجهيزها', border: OutlineInputBorder(), isDense: true), items: const [DropdownMenuItem(value: 'product', child: Text('صور الأصناف والمنتجات')), DropdownMenuItem(value: 'category', child: Text('صور الفئات والمجموعات'))], onChanged: _loading ? null : (value) { if (value == null) return; setState(() { _imageKind = value; for (final image in _images) { image['save_as'] = value; image.remove('file_name'); } }); }))),
+                const SizedBox(height: 12),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Row(children: [
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : _pasteClipboardUrl,
+                      icon: const Icon(Icons.content_paste_rounded, size: 17),
+                      label: const Text('لصق الرابط المنسوخ'),
+                      style: OutlinedButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact),
+                    ),
+                    const SizedBox(width: 6),
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : () {
+                        setState(() { _url.clear(); _error = null; _status = 'تم مسح الرابط.'; });
+                      },
+                      icon: const Icon(Icons.backspace_outlined, size: 17),
+                      label: const Text('مسح الخانة'),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red, visualDensity: VisualDensity.compact),
+                    ),
+                    const Spacer(),
+                    const Directionality(textDirection: TextDirection.rtl,
+                      child: Text('رابط صفحة المنتجات', style: TextStyle(fontWeight: FontWeight.w700))),
+                  ]),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _url,
+                  keyboardType: TextInputType.url,
+                  textDirection: TextDirection.ltr,
+                  onSubmitted: (_) => _loading ? null : _scan(),
+                  decoration: InputDecoration(
+                    hintText: 'https://www.example.com/products',
+                    prefixIcon: const Icon(Icons.link),
+                    filled: true,
+                    fillColor: const Color(0xFFF8F5FB),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: [
+                  FilledButton.icon(
+                    onPressed: _loading ? null : _scan,
+                    icon: _loading ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.travel_explore),
+                    label: const Text('فحص الصفحة وجمع الصور'),
+                    style: FilledButton.styleFrom(backgroundColor: _purple, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13)),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _loading || _images.isEmpty ? null : _selectAll,
+                    icon: Icon(allSelected ? Icons.deselect : Icons.select_all),
+                    label: Text(allSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل (${_images.length})'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _loading || _selected.isEmpty ? null : _saveZip,
+                    icon: const Icon(Icons.folder_zip_outlined),
+                    label: Text('تصدير PNG وExcel مضغوط (${_selected.length})'),
+                    style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13)),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : _resetImportHistory,
+                    icon: const Icon(Icons.restart_alt_rounded),
+                    label: const Text('إعادة ضبط سجل السحب'),
+                  ),
+                  ]),
+                ),
+                if (_pageUrl != null) ...[
+                  const SizedBox(height: 10),
+                  Text('المصدر: $_pageUrl', textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+                if (_status.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(_status, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.red.withValues(alpha: .07), borderRadius: BorderRadius.circular(10)),
+                    child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                const Text(
+                  'ملاحظة: بعض المواقع تعرض الصور بواسطة JavaScript أو تمنع الطلبات الآلية؛ في هذه الحالة قد لا تظهر كل الصور. تفريغ الخلفية يستهدف الخلفيات الفاتحة المتصلة بحواف الصورة؛ راجع الصور قبل اعتمادها. تكبير الصورة لا يعيد تفاصيل غير موجودة في المصدر. استخدم الصور وفق حقوق الموقع.',
+                  style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5),
+                ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(children: [
+            const Expanded(child: Text('الصور المستخرجة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+            Text('${_images.length} صورة • محدد ${_selected.length}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          ]),
+          const SizedBox(height: 10),
+          if (_images.isEmpty)
+            SizedBox(
+              height: 220,
+              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.image_search_outlined, size: 54, color: _purple.withValues(alpha: .35)),
+                const SizedBox(height: 10),
+                const Text('ضع رابط صفحة ثم اضغط «تنفيذ وسحب الصور»', style: TextStyle(color: Colors.black54)),
+              ])),
+            )
+          else
+            
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 18),
+              itemCount: _images.length,
+              itemBuilder: (context, index) {
+                final item = _images[index];
+                final imageUrl = item['url'].toString();
+                final selected = _selected.contains(imageUrl);
+                final kind = (item['save_as'] ?? 'product').toString();
+                final mode = (item['entity_mode'] ?? 'new').toString();
+                Widget field(String key, String label, {double width = 190, String initial = '', TextInputType keyboardType = TextInputType.text}) {
+                  final controller = _rowController(item, key, initial: initial);
+                  return SizedBox(width: width, child: TextField(
+                    controller: controller, keyboardType: keyboardType, onChanged: (value) => item[key] = value,
+                    decoration: InputDecoration(labelText: label, isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                      border: const OutlineInputBorder()),
+                  ));
+                }
+                Widget dropdown(String key, String label, String value, List<String> options, {double width = 160}) {
+                  final choices = options.contains(value) ? options : <String>[value, ...options];
+                  return SizedBox(width: width, child: DropdownButtonFormField<String>(
+                    value: choices.contains(value) ? value : choices.first, isExpanded: true,
+                    decoration: InputDecoration(labelText: label, isDense: true, border: const OutlineInputBorder(),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10)),
+                    items: choices.map((option) => DropdownMenuItem(value: option, child: Text(option, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: _loading ? null : (value) {
+                      if (value == null) return;
+                      setState(() {
+                        item[key] = value;
+                        if (key == 'save_as') {
+                          item.remove('entity_mode'); item.remove('database_item_id'); item.remove('category_target_id');
+                        }
+                      });
+                    },
+                  ));
+                }
+                final initialName = _suggestedImageName(item, index);
+                final common = SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                  SizedBox(width: 44, child: Checkbox(value: selected, activeColor: _purple,
+                    onChanged: _loading ? null : (value) => _toggle(imageUrl, value))),
+                  SizedBox(width: 42, child: Text((index + 1).toString(), textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w800))),
+                  Container(width: 74, height: 70, padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(color: const Color(0xFFF7F4F9), borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE7E0EE))),
+                    child: Image.network(imageUrl, fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38),
+                      loadingBuilder: (context, child, progress) => progress == null ? child :
+                        const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))))),
+                  const SizedBox(width: 10),
+                  field('file_name', 'اسم الصورة', width: 210, initial: initialName),
+                  const SizedBox(width: 10),
+                  dropdown('save_as', 'نوع الصورة', kind, const ['product', 'category'], width: 145),
+                  const SizedBox(width: 10),
+                  FilledButton.tonalIcon(onPressed: _loading ? null : () => _saveOne(item),
+                    icon: const Icon(Icons.download_rounded, size: 18), label: const Text('تنزيل PNG'),
+                    style: FilledButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact)),
+                ]));
+                final editor = kind == 'category'
+                  ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                      const SizedBox(width: 12),
+                      dropdown('entity_mode', 'طريقة التكويد', mode, const ['new', 'old'], width: 150),
+                      const SizedBox(width: 8),
+                      if (mode == 'old') ...[
+                        field('legacy_code', 'كود الفئة القديم', width: 165), const SizedBox(width: 6),
+                        OutlinedButton.icon(onPressed: _loading ? null : () => _lookupRowCode(item),
+                          icon: const Icon(Icons.search, size: 18), label: const Text('بحث بالكود')),
+                        const SizedBox(width: 8),
+                      ],
+                      field('category_main_name', 'اسم فئة رئيسية', width: 190,
+                        initial: _excelValue(item, ['main_category','category_name','category'])),
+                      const SizedBox(width: 8),
+                      field('category_sub_name', 'اسم فئة فرعية', width: 190,
+                        initial: _excelValue(item, ['sub_category','subcategory','group_name'])),
+                      const SizedBox(width: 8),
+                      field('category_secondary_name', 'اسم فئة ثانوية', width: 190,
+                        initial: _excelValue(item, ['secondary_category','third_category'])),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(onPressed: _loading ? null : () => _saveRowCategory(item),
+                        icon: Icon(mode == 'old' ? Icons.save_outlined : Icons.add_circle_outline),
+                        label: Text(mode == 'old' ? 'تحديث بيانات' : 'تكويد جديد'),
+                        style: FilledButton.styleFrom(backgroundColor: _purple)),
+                      const SizedBox(width: 12),
+                    ]))
+                  : SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                      const SizedBox(width: 12),
+                      dropdown('entity_mode', 'طريقة التكويد', mode, const ['new', 'old'], width: 150),
+                      const SizedBox(width: 8),
+                      if (mode == 'old') ...[
+                        field('legacy_code', 'كود الصنف القديم', width: 165), const SizedBox(width: 6),
+                        OutlinedButton.icon(onPressed: _loading ? null : () => _lookupRowCode(item),
+                          icon: const Icon(Icons.search, size: 18), label: const Text('بحث بالكود')),
+                        const SizedBox(width: 8),
+                      ],
+                      field('item_name_ar', 'اسم الصنف عربي', width: 220, initial: initialName),
+                      const SizedBox(width: 8),
+                      field('item_name_en', 'اسم الصنف إنجليزي', width: 200,
+                        initial: _excelValue(item, ['product_name_en','english_name','name_en'])),
+                      const SizedBox(width: 8),
+                      dropdown('major_unit', 'الوحدة الكبرى',
+                        _rowController(item, 'major_unit', initial: _excelValue(item, ['major_unit','main_unit','unit']).isEmpty ? 'كرتونة' : _excelValue(item, ['major_unit','main_unit','unit'])).text,
+                        const ['كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'], width: 150),
+                      const SizedBox(width: 8),
+                      field('internal_count', 'عدد داخلي', width: 110,
+                        initial: _excelValue(item, ['internal_count','units_per_pack','pack_size']).isEmpty ? '1' : _excelValue(item, ['internal_count','units_per_pack','pack_size']),
+                        keyboardType: TextInputType.number),
+                      const SizedBox(width: 8),
+                      dropdown('minor_unit', 'الوحدة الصغرى',
+                        _rowController(item, 'minor_unit', initial: _excelValue(item, ['minor_unit','sub_unit','small_unit']).isEmpty ? 'قطعة' : _excelValue(item, ['minor_unit','sub_unit','small_unit'])).text,
+                        const ['قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'], width: 150),
+                      const SizedBox(width: 8),
+                      field('sale_price', 'سعر الصنف', width: 120,
+                        initial: _excelValue(item, ['sale_price','price','price_value']).isEmpty ? '0' : _excelValue(item, ['sale_price','price','price_value']),
+                        keyboardType: const TextInputType.numberWithOptions(decimal:true)),
+                      const SizedBox(width: 8),
+                      field('pricing_area', 'مساحة تسعير', width: 130,
+                        initial: _excelValue(item, ['pricing_area','price_area']).isEmpty ? '1' : _excelValue(item, ['pricing_area','price_area']),
+                        keyboardType: const TextInputType.numberWithOptions(decimal:true)),
+                      const SizedBox(width: 8),
+                      field('tax_rate', 'نسبة ضريبة %', width: 120,
+                        initial: _excelValue(item, ['tax_rate','tax_percent','vat']).isEmpty ? '0' : _excelValue(item, ['tax_rate','tax_percent','vat']),
+                        keyboardType: const TextInputType.numberWithOptions(decimal:true)),
+                      const SizedBox(width: 8),
+                      FilledButton.icon(onPressed: _loading ? null : () => _saveRowProduct(item),
+                        icon: Icon(mode == 'old' ? Icons.save_outlined : Icons.add_circle_outline),
+                        label: Text(mode == 'old' ? 'تحديث بيانات' : 'تكويد جديد'),
+                        style: FilledButton.styleFrom(backgroundColor: _purple)),
+                      const SizedBox(width: 12),
+                    ]));
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: selected ? _purple.withValues(alpha: .65) : const Color(0xFFE7E0EE), width: selected ? 1.5 : 1)),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9), child: common),
+                    const Divider(height: 1),
+                    Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: editor),
+                  ]),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+}, caseSensitive: false).firstMatch(value);
+      if (match != null) {
+        final n = int.tryParse(match.group(1)!) ?? 0;
+        if (n > maxCode) maxCode = n;
+      }
+    }
+    final code = prefix + (maxCode + 1).toString().padLeft(4, '0');
+    final inserted = await client.from('erp_item_groups').insert({
+      'company_id': companyId, 'parent_id': parentId, 'group_code': code,
+      'group_name': name.trim(), 'group_name_en': '', 'is_active': true, 'show_in_app': true, 'image_url': null,
+    }).select('id,company_id,parent_id,group_code,group_name,group_name_en,is_active').single();
+    final created = Map<String, dynamic>.from(inserted);
+    groups.add(created);
+    return created;
+  }
+
+  Future<void> _finishSavedRow(Map<String, dynamic> item, String message) async {
+    final url = item['url']?.toString() ?? '';
+    if (url.isNotEmpty) await _markImported({_imageKey(url)});
+    if (!mounted) return;
+    setState(() {
+      _url.clear();
+      _images = _images.where((other) => other['url']?.toString() != url && _selected.contains(other['url']?.toString() ?? '')).toList();
+      _selected..clear()..addAll(_images.map((other) => other['url'].toString()));
+      if (_images.isEmpty) _pageUrl = null;
+      _error = null;
+      _status = message + ' تم مسح الرابط والصورة المحفوظة وغير المحددة؛ بقيت الصور المحددة التي لم تُحفظ.';
+    });
+  }
+
+  Future<void> _saveRowCategory(Map<String, dynamic> item) async {
+    if (_loading) return;
+    final client = Supabase.instance.client;
+    final companyId = await _activeCompanyId();
+    final mode = (item['entity_mode'] ?? 'new').toString();
+    final mainName = _rowController(item, 'category_main_name').text.trim();
+    final subName = _rowController(item, 'category_sub_name').text.trim();
+    final secondaryName = _rowController(item, 'category_secondary_name').text.trim();
+    if (mainName.isEmpty) { setState(() => _error = 'اسم الفئة الرئيسية مطلوب.'); return; }
+    if (secondaryName.isNotEmpty && subName.isEmpty) { setState(() => _error = 'اكتب اسم الفئة الفرعية قبل الفئة الثانوية.'); return; }
+    if (mode == 'old' && (item['category_target_id'] == null || item['category_target_id'].toString().isEmpty)) {
+      setState(() => _error = 'ابحث عن الكود القديم أولًا ثم عدّل البيانات.'); return;
+    }
+    setState(() { _loading = true; _error = null; _status = 'جارٍ حفظ بيانات الفئة والصورة داخل قاعدة البيانات...'; });
+    try {
+      final allRaw = await client.from('erp_item_groups').select('id,company_id,parent_id,group_code,group_name,group_name_en,is_active,show_in_app')
+        .eq('company_id', companyId).limit(3000);
+      final groups = (allRaw as List).map((e) => Map<String,dynamic>.from(e)).toList();
+      Map<String,dynamic>? findGroup(dynamic id) {
+        if (id == null) return null;
+        for (final group in groups) { if (group['id'].toString() == id.toString()) return group; }
+        return null;
+      }
+      if (mode == 'old') {
+        final root = findGroup(item['category_root_id']);
+        final sub = findGroup(item['category_sub_id']);
+        final secondary = findGroup(item['category_secondary_id']);
+        if (root != null) await client.from('erp_item_groups').update({'group_name':mainName}).eq('id',root['id'].toString()).eq('company_id',companyId);
+        if (sub != null && subName.isNotEmpty) await client.from('erp_item_groups').update({'group_name':subName}).eq('id',sub['id'].toString()).eq('company_id',companyId);
+        if (secondary != null && secondaryName.isNotEmpty) await client.from('erp_item_groups').update({'group_name':secondaryName}).eq('id',secondary['id'].toString()).eq('company_id',companyId);
+        final targetId = (item['category_target_id'] ?? '').toString();
+        if (targetId.isEmpty) throw Exception('تعذر تحديد الفئة المراد تحديثها.');
+        final downloaded = await _invoke({'action':'download','url':item['url'].toString()});
+        final encoded = downloaded['base64']?.toString();
+        if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
+        final png = _processTransparentPng(Uint8List.fromList(base64Decode(encoded)));
+        await client.from('erp_item_groups').update({'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null})
+          .eq('id',targetId).eq('company_id',companyId);
+        await _finishSavedRow(item, 'تم تحديث الفئة القديمة ' + _rowController(item, 'legacy_code').text.trim() + ' وحفظ PNG داخل قاعدة البيانات.');
+      } else {
+        final root = await _upsertRowCategory(client:client, companyId:companyId, groups:groups, name:mainName, parentId:null, prefix:'C');
+        Map<String,dynamic>? sub;
+        Map<String,dynamic>? secondary;
+        if (subName.isNotEmpty) sub = await _upsertRowCategory(client:client, companyId:companyId, groups:groups, name:subName, parentId:root['id'].toString(), prefix:'S');
+        if (secondaryName.isNotEmpty) {
+          if (sub == null) throw Exception('الفئة الثانوية تتطلب فئة فرعية.');
+          secondary = await _upsertRowCategory(client:client, companyId:companyId, groups:groups, name:secondaryName, parentId:sub['id'].toString(), prefix:'T');
+        }
+        final target = secondary ?? sub ?? root;
+        final downloaded = await _invoke({'action':'download','url':item['url'].toString()});
+        final encoded = downloaded['base64']?.toString();
+        if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
+        final png = _processTransparentPng(Uint8List.fromList(base64Decode(encoded)));
+        await client.from('erp_item_groups').update({'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null})
+          .eq('id',target['id'].toString()).eq('company_id',companyId);
+        await _finishSavedRow(item, 'تم إنشاء/مطابقة شجرة الفئة وتكويدها بالصورة داخل قاعدة البيانات.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر حفظ الفئة: ' + e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _saveRowProduct(Map<String, dynamic> item) async {
+    if (_loading) return;
+    final client = Supabase.instance.client;
+    final companyId = await _activeCompanyId();
+    final mode = (item['entity_mode'] ?? 'new').toString();
+    final nameAr = _rowController(item, 'item_name_ar', initial:_suggestedImageName(item, _images.indexOf(item))).text.trim();
+    final nameEn = _rowController(item, 'item_name_en', initial:_excelValue(item, ['product_name_en','english_name','name_en'])).text.trim();
+    final major = _rowController(item, 'major_unit', initial:_excelValue(item, ['major_unit','main_unit','unit']).isEmpty ? 'كرتونة' : _excelValue(item, ['major_unit','main_unit','unit'])).text.trim();
+    final minor = _rowController(item, 'minor_unit', initial:_excelValue(item, ['minor_unit','sub_unit','small_unit']).isEmpty ? 'قطعة' : _excelValue(item, ['minor_unit','sub_unit','small_unit'])).text.trim();
+    final count = double.tryParse(_rowController(item, 'internal_count', initial:_excelValue(item, ['internal_count','units_per_pack','pack_size']).isEmpty ? '1' : _excelValue(item, ['internal_count','units_per_pack','pack_size'])).text.trim());
+    final price = double.tryParse(_rowController(item, 'sale_price', initial:_excelValue(item, ['sale_price','price','price_value']).isEmpty ? '0' : _excelValue(item, ['sale_price','price','price_value'])).text.trim());
+    final area = double.tryParse(_rowController(item, 'pricing_area', initial:_excelValue(item, ['pricing_area','price_area']).isEmpty ? '1' : _excelValue(item, ['pricing_area','price_area'])).text.trim());
+    final tax = double.tryParse(_rowController(item, 'tax_rate', initial:_excelValue(item, ['tax_rate','tax_percent','vat']).isEmpty ? '0' : _excelValue(item, ['tax_rate','tax_percent','vat'])).text.trim());
+    if (nameAr.isEmpty) { setState(() => _error = 'اسم الصنف العربي مطلوب.'); return; }
+    if (major.isEmpty || minor.isEmpty) { setState(() => _error = 'اختر الوحدة الكبرى والصغرى.'); return; }
+    if (count == null || count <= 0) { setState(() => _error = 'العدد الداخلي يجب أن يكون أكبر من صفر.'); return; }
+    if (price == null || price < 0) { setState(() => _error = 'سعر الصنف يجب أن يكون رقمًا غير سالب.'); return; }
+    if (area == null || area < 0) { setState(() => _error = 'مساحة التسعير يجب أن تكون رقمًا غير سالب.'); return; }
+    if (tax == null || tax < 0 || tax > 100) { setState(() => _error = 'نسبة الضريبة يجب أن تكون بين 0 و100.'); return; }
+    final code = _rowController(item, 'legacy_code').text.trim();
+    if (mode == 'old' && (item['database_item_id'] == null || code.isEmpty)) {
+      setState(() => _error = 'ابحث عن كود الصنف القديم أولًا.'); return;
+    }
+    setState(() { _loading = true; _error = null; _status = 'جارٍ حفظ بيانات الصنف والصورة داخل قاعدة البيانات...'; });
+    try {
+      var itemCode = code;
+      if (mode == 'new') {
+        final prior = await client.from('erp_items').select('item_code').eq('company_id',companyId).like('item_code','ITEM-%').limit(5000);
+        var maxCode = 0;
+        for (final row in (prior as List)) {
+          final match = RegExp(r'-(\d+)
+    if (_selected.isEmpty) {
+      setState(() => _error = 'حدد صورة واحدة على الأقل قبل التنزيل.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+      _status = 'جارٍ تنزيل الصور المحددة وتجهيز ملف ZIP والصورة وExcel...';
+    });
+    try {
+      final archive = Archive();
+      var index = 0;
+      final usedFileNames = <String>{};
+      final savedImageKeys = <String>{};
+      for (final image in _images.where((x) => _selected.contains(x['url'].toString()))) {
+        final imageIndex = _images.indexOf(image);
+        index++;
+        final url = image['url'].toString();
+        final downloaded = await _invoke({'action': 'download', 'url': url});
+        final encoded = downloaded['base64']?.toString();
+        if (encoded == null || encoded.isEmpty) continue;
+        final sourceBytes = Uint8List.fromList(base64Decode(encoded));
+        final bytes = _processTransparentPng(sourceBytes);
+        const extension = '.png';
+        final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
+        final fileName = _uniqueFileName(title, extension, usedFileNames);
+        archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
+        savedImageKeys.add(_imageKey(url));
+        if (mounted) setState(() => _status = 'تم تجهيز $index من ${_selected.length} صورة...');
+      }
+      if (archive.isEmpty) throw Exception('لم يمكن تنزيل أي صورة من الاختيارات.');
+      final selectedImages = _images
+          .where((item) => _selected.contains(item['url']?.toString() ?? ''))
+          .toList();
+      final excelBytes = _buildProductDataExcel(selectedImages);
+      archive.addFile(ArchiveFile('بيانات_الأصناف.xlsx', excelBytes.length, excelBytes));
+      final zipped = ZipEncoder().encode(archive);
+      if (zipped == null || zipped.isEmpty) throw Exception('تعذر إنشاء ملف ZIP.');
+      await FileSaver.instance.saveFile(
+        name: 'silsila_images_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: Uint8List.fromList(zipped),
+        fileExtension: 'zip',
+        mimeType: MimeType.zip,
+      );
+      await _markImported(savedImageKeys);
+      if (mounted) {
+        setState(() {
+          _url.clear();
+          // The ZIP contains every selected image. Remove the entire scan result,
+          // including unchecked images, so the next page starts with a clean grid.
+          _images = [];
+          _selected.clear();
+          _pageUrl = null;
+          _status = 'تم حفظ الصور وملف Excel داخل ZIP. تم مسح الرابط والصور من الشاشة؛ الصق الرابط التالي وابدأ السحب.';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _saveOne(Map<String, dynamic> image) async {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _status = 'جارٍ تنزيل الصورة...';
+    });
+    try {
+      final url = image['url'].toString();
+      final result = await _invoke({'action': 'download', 'url': url});
+      final encoded = result['base64']?.toString();
+      if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
+      final sourceBytes = Uint8List.fromList(base64Decode(encoded));
+      final bytes = _processTransparentPng(sourceBytes);
+      final imageIndex = _images.indexOf(image);
+      final baseName = _imageBaseName(image, imageIndex < 0 ? 0 : imageIndex);
+      final matchingIndexes = _images.asMap().entries
+          .where((entry) => _imageBaseName(entry.value, entry.key).toLowerCase() == baseName.toLowerCase())
+          .map((entry) => entry.key)
+          .toList();
+      final occurrence = matchingIndexes.indexOf(imageIndex);
+      final uniqueBaseName = occurrence > 0 ? '${baseName}_${occurrence + 1}' : baseName;
+      await FileSaver.instance.saveFile(
+        name: uniqueBaseName,
+        bytes: bytes,
+        fileExtension: 'png',
+      );
+      await _markImported({_imageKey(url)});
+      if (mounted) {
+        setState(() {
+          _url.clear();
+          // Remove the saved image and any unchecked images; retain only other
+          // selected images that have not yet been saved.
+          _images = _images.where((item) {
+            final itemUrl = item['url']?.toString() ?? '';
+            return itemUrl != url && _selected.contains(itemUrl);
+          }).toList();
+          _selected
+            ..clear()
+            ..addAll(_images.map((item) => item['url'].toString()));
+          if (_images.isEmpty) _pageUrl = null;
+          _status = 'تم حفظ الصورة. تم مسح الرابط والصور المحفوظة وغير المحددة من الشاشة؛ الصق الرابط التالي أو احفظ الصور المحددة المتبقية.';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final allSelected = _images.isNotEmpty && _selected.length == _images.length;
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Card(
+            elevation: 0,
+            color: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: _purple.withValues(alpha: .12)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(
+                    width: 46, height: 46,
+                    decoration: BoxDecoration(color: _purple.withValues(alpha: .08), borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.photo_library_outlined, color: _purple, size: 27),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('جامع صور الأصناف', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _purple)),
+                    SizedBox(height: 4),
+                    Text('استخراج الصور، تفريغ الخلفية الفاتحة، وتجهيز PNG حتى 4K مضغوط', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                  ])),
+                ]),
+                const SizedBox(height: 18),
+                Align(alignment: Alignment.centerRight, child: SizedBox(width: 300, child: DropdownButtonFormField<String>(value: _imageKind, decoration: const InputDecoration(labelText: 'نوع الصور الجاري تجهيزها', border: OutlineInputBorder(), isDense: true), items: const [DropdownMenuItem(value: 'product', child: Text('صور الأصناف والمنتجات')), DropdownMenuItem(value: 'category', child: Text('صور الفئات والمجموعات'))], onChanged: _loading ? null : (value) { if (value == null) return; setState(() { _imageKind = value; for (final image in _images) { image['save_as'] = value; image.remove('file_name'); } }); }))),
+                const SizedBox(height: 12),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Row(children: [
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : _pasteClipboardUrl,
+                      icon: const Icon(Icons.content_paste_rounded, size: 17),
+                      label: const Text('لصق الرابط المنسوخ'),
+                      style: OutlinedButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact),
+                    ),
+                    const SizedBox(width: 6),
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : () {
+                        setState(() { _url.clear(); _error = null; _status = 'تم مسح الرابط.'; });
+                      },
+                      icon: const Icon(Icons.backspace_outlined, size: 17),
+                      label: const Text('مسح الخانة'),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red, visualDensity: VisualDensity.compact),
+                    ),
+                    const Spacer(),
+                    const Directionality(textDirection: TextDirection.rtl,
+                      child: Text('رابط صفحة المنتجات', style: TextStyle(fontWeight: FontWeight.w700))),
+                  ]),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _url,
+                  keyboardType: TextInputType.url,
+                  textDirection: TextDirection.ltr,
+                  onSubmitted: (_) => _loading ? null : _scan(),
+                  decoration: InputDecoration(
+                    hintText: 'https://www.example.com/products',
+                    prefixIcon: const Icon(Icons.link),
+                    filled: true,
+                    fillColor: const Color(0xFFF8F5FB),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: [
+                  FilledButton.icon(
+                    onPressed: _loading ? null : _scan,
+                    icon: _loading ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.travel_explore),
+                    label: const Text('فحص الصفحة وجمع الصور'),
+                    style: FilledButton.styleFrom(backgroundColor: _purple, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13)),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _loading || _images.isEmpty ? null : _selectAll,
+                    icon: Icon(allSelected ? Icons.deselect : Icons.select_all),
+                    label: Text(allSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل (${_images.length})'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: _loading || _selected.isEmpty ? null : _saveZip,
+                    icon: const Icon(Icons.folder_zip_outlined),
+                    label: Text('تصدير PNG وExcel مضغوط (${_selected.length})'),
+                    style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13)),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : _resetImportHistory,
+                    icon: const Icon(Icons.restart_alt_rounded),
+                    label: const Text('إعادة ضبط سجل السحب'),
+                  ),
+                  ]),
+                ),
+                if (_pageUrl != null) ...[
+                  const SizedBox(height: 10),
+                  Text('المصدر: $_pageUrl', textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+                if (_status.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(_status, style: const TextStyle(fontSize: 12, color: Colors.black87)),
+                ],
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.red.withValues(alpha: .07), borderRadius: BorderRadius.circular(10)),
+                    child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                const Text(
+                  'ملاحظة: بعض المواقع تعرض الصور بواسطة JavaScript أو تمنع الطلبات الآلية؛ في هذه الحالة قد لا تظهر كل الصور. تفريغ الخلفية يستهدف الخلفيات الفاتحة المتصلة بحواف الصورة؛ راجع الصور قبل اعتمادها. تكبير الصورة لا يعيد تفاصيل غير موجودة في المصدر. استخدم الصور وفق حقوق الموقع.',
+                  style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5),
+                ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(children: [
+            const Expanded(child: Text('الصور المستخرجة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+            Text('${_images.length} صورة • محدد ${_selected.length}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          ]),
+          const SizedBox(height: 10),
+          if (_images.isEmpty)
+            SizedBox(
+              height: 220,
+              child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.image_search_outlined, size: 54, color: _purple.withValues(alpha: .35)),
+                const SizedBox(height: 10),
+                const Text('ضع رابط صفحة ثم اضغط «تنفيذ وسحب الصور»', style: TextStyle(color: Colors.black54)),
+              ])),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStatePropertyAll(_purple.withValues(alpha: .07)),
+                dataRowMinHeight: 86, dataRowMaxHeight: 104, columnSpacing: 16, horizontalMargin: 12,
+                columns: const [
+                  DataColumn(label: Text('اختيار')), DataColumn(label: Text('م')),
+                  DataColumn(label: Text('الصورة')), DataColumn(label: Text('اسم الصورة')),
+                  DataColumn(label: Text('نوع الصورة')), DataColumn(label: Text('بيانات / تكويد')),
+                  DataColumn(label: Text('تنزيل صورة')),
+                ],
+                rows: List<DataRow>.generate(_images.length, (index) {
+                  final item = _images[index];
+                  final imageUrl = item['url'].toString();
+                  final selected = _selected.contains(imageUrl);
+                  final kind = (item['save_as'] ?? 'product').toString();
+                  return DataRow(selected: selected, cells: [
+                    DataCell(Checkbox(value: selected, activeColor: _purple,
+                      onChanged: _loading ? null : (value) => _toggle(imageUrl, value))),
+                    DataCell(Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.w700))),
+                    DataCell(Container(width: 76, height: 72, padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: const Color(0xFFF7F4F9), borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE7E0EE))),
+                      child: Image.network(imageUrl, fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38),
+                        loadingBuilder: (context, child, progress) => progress == null ? child :
+                          const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+                      ))),
+                    DataCell(SizedBox(width: 210, child: TextFormField(
+                      key: ValueKey('filename_row_$index_${item['save_as'] ?? 'product'}'),
+                      initialValue: (item['file_name']?.toString().trim().isNotEmpty ?? false)
+                        ? item['file_name'].toString() : _suggestedImageName(item, index),
+                      decoration: const InputDecoration(hintText: 'اسم الصورة / الصنف', isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 10), border: OutlineInputBorder()),
+                      onChanged: (value) => item['file_name'] = value,
+                    ))),
+                    DataCell(SizedBox(width: 160, child: DropdownButtonFormField<String>(
+                      value: kind, isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'نوع الصورة', isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 9), border: OutlineInputBorder()),
+                      items: const [DropdownMenuItem(value: 'product', child: Text('صنف')),
+                        DropdownMenuItem(value: 'category', child: Text('فئة'))],
+                      onChanged: _loading ? null : (value) {
+                        if (value == null) return;
+                        setState(() { item['save_as'] = value; item.remove('file_name'); });
+                      },
+                    ))),
+                    DataCell(OutlinedButton.icon(
+                      onPressed: _loading ? null : () async {
+                        try {
+                          if (kind == 'category') { await _openCategoryEditor(item); }
+                          else { await _openProductEditor(item); }
+                        } catch (e) {
+                          if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+                        }
+                      },
+                      icon: const Icon(Icons.edit_note_rounded, size: 18),
+                      label: Text(kind == 'category' ? 'بيانات الفئة' : 'بيانات الصنف'),
+                      style: OutlinedButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact),
+                    )),
+                    DataCell(FilledButton.tonalIcon(onPressed: _loading ? null : () => _saveOne(item),
+                      icon: const Icon(Icons.download_rounded, size: 18), label: const Text('تنزيل PNG'),
+                      style: FilledButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact))),
+                  ]);
+                }),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+}).firstMatch((row['item_code'] ?? '').toString());
+          if (match != null) { final n = int.tryParse(match.group(1)!) ?? 0; if (n > maxCode) maxCode = n; }
+        }
+        itemCode = 'ITEM-' + (maxCode + 1).toString().padLeft(4,'0');
+      }
+      final downloaded = await _invoke({'action':'download','url':item['url'].toString()});
+      final encoded = downloaded['base64']?.toString();
+      if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
+      final png = _processTransparentPng(Uint8List.fromList(base64Decode(encoded)));
+      final values = <String,dynamic>{
+        'item_name':nameAr, 'item_name_en':nameEn, 'base_unit':minor,
+        'sale_price':price, 'tax_rate':tax, 'pricing_area':area,
+        'package_description':major + ' = ' + count.toString() + ' ' + minor,
+        'image_data':_byteaHex(png), 'image_mime_type':'image/png', 'image_url':null,
+        'source_name':'جامع صور سلسلة', 'source_url':item['url'].toString(), 'is_active':true,
+      };
+      String savedId;
+      if (mode == 'new') {
+        final inserted = await client.from('erp_items').insert({...values,'company_id':companyId,'item_code':itemCode,'purchase_price':0,'group_id':item['group_id']}).select('id').single();
+        savedId = inserted['id'].toString();
+      } else {
+        savedId = item['database_item_id'].toString();
+        await client.from('erp_items').update(values).eq('id',savedId).eq('company_id',companyId);
+      }
+      await client.from('erp_item_units').update({'is_base_unit':false}).eq('company_id',companyId).eq('item_id',savedId);
+      await client.from('erp_item_units').upsert([
+        {'company_id':companyId,'item_id':savedId,'unit_code':'MAJOR','unit_name':major,'conversion_factor':count,'is_base_unit':false,'is_active':true},
+        {'company_id':companyId,'item_id':savedId,'unit_code':'MINOR','unit_name':minor,'conversion_factor':1,'is_base_unit':true,'is_active':true},
+      ],onConflict:'item_id,unit_code');
+      final message = (mode == 'new' ? 'تم إنشاء الصنف ' : 'تم تحديث الصنف ') + itemCode + ' وحفظ الصورة PNG وبياناته داخل قاعدة البيانات.';
+      await _finishSavedRow(item, message);
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر حفظ الصنف: ' + e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Future<void> _saveZip() async {
