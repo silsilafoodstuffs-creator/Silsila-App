@@ -86,7 +86,7 @@ begin
     ('شجرة الحسابات','erp_accounts'),('الفترات المالية','erp_fiscal_periods'),
     ('مراكز التكلفة','erp_cost_centers'),('العملات','erp_currencies'),
     ('الخزائن الرئيسية والفرعية','erp_cashboxes'),('سندات القبض','erp_cash_vouchers'),('سندات الصرف','erp_cash_vouchers'),
-    ('دليل المخازن','erp_warehouses'),('فئات الأصناف','erp_item_groups'),('مجموعات الأصناف','erp_item_groups'),
+    ('دليل المخازن','erp_warehouses'),('فئات الأصناف','erp_item_groups'),
     ('دليل الأصناف','erp_items'),('دليل الأصناف','erp_item_units'),
     ('دليل الموردين','erp_parties'),('دليل الموردين','erp_party_contacts'),('دليل الموردين','erp_party_warehouses'),
     ('دليل العملاء','erp_parties'),('دليل العملاء','erp_party_contacts'),('دليل العملاء','erp_party_warehouses'),
