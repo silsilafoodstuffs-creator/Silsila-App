@@ -14,13 +14,13 @@ from public.categories
 union all
 
 select
-  'erp_item_groups',
+  'erp_item_categories',
   count(*),
   count(*) filter (where image_data is not null),
   count(*) filter (where image_data is not null and octet_length(image_data) < 5000),
   count(*) filter (where image_data is not null and octet_length(image_data) >= 12000),
   count(*) filter (where image_data is null and coalesce(image_url, '') <> '')
-from public.erp_item_groups
+from public.erp_item_categories
 
 union all
 
