@@ -662,8 +662,8 @@ GROUP_ITEM_HINTS = {
 }
 
 
-def group_image_matches_item(group_code: str, item_name: str, product: dict[str, Any]) -> bool:
-    hints = GROUP_ITEM_HINTS.get(group_code)
+def category_image_matches_item(category_code: str, item_name: str, product: dict[str, Any]) -> bool:
+    hints = GROUP_ITEM_HINTS.get(category_code)
     if not hints:
         return False
     item_text = normalized(item_name)
@@ -672,7 +672,7 @@ def group_image_matches_item(group_code: str, item_name: str, product: dict[str,
         str(product.get("product_name_en") or ""),
         str(product.get("brands") or ""),
     )))
-    # The ERP item itself must belong to this group, and the source product must
+    # The ERP item itself must belong to this category, and the source product must
     # independently confirm that same family. A broad word such as "spread"
     # in a halva title cannot classify halva as jam/honey.
     item_matches = any(normalized(hint) in item_text for hint in hints)
@@ -691,8 +691,8 @@ def main() -> int:
     else:
         print("DRY RUN: no database changes will be made. Set SILSILA_IMAGE_IMPORT_DRY_RUN=0 to write.")
 
-    groups = rest("GET", "erp_item_groups", urllib.parse.urlencode({
-        "company_id": f"eq.{COMPANY_ID}", "select": "id,group_code,group_name,image_data",
+    categorys = rest("GET", "erp_item_categories", urllib.parse.urlencode({
+        "company_id": f"eq.{COMPANY_ID}", "select": "id,category_code,category_name,image_data",
     }))
     categories = rest("GET", "categories", urllib.parse.urlencode({
         "select": "id,name,image_data", "is_active": "eq.true", "limit": "500",
@@ -739,11 +739,11 @@ def main() -> int:
     }
     items = rest("GET", "erp_items", urllib.parse.urlencode({
         "company_id": f"eq.{COMPANY_ID}",
-        "select": "id,item_code,item_name,barcode,brand_name,group_id,image_data,image_url,source_url",
+        "select": "id,item_code,item_name,barcode,brand_name,category_id,image_data,image_url,source_url",
         "order": "item_name.asc",
         "limit": "500",
     }))
-    group_by_id = {g["id"]: g for g in groups}
+    category_by_id = {g["id"]: g for g in categorys}
     # Seed both guards from the entire ERP catalog before slicing the next
     # batch. Source-code uniqueness alone is insufficient because two records
     # may use different product codes but serve identical image bytes.
@@ -752,7 +752,7 @@ def main() -> int:
     for row in items:
         source_match = re.search(r"/product/([^/?#]+)", str(row.get("source_url") or ""))
         if source_match:
-            used_source_codes.add(source_match.group(1))
+            used_source_codes.add(source_match.category(1))
         # Guard every existing real-size item image, not just rows whose source
         # provenance URL is recognized. A copied image is still a duplicate.
         stored_image = str(row.get("image_data") or "")
@@ -761,18 +761,18 @@ def main() -> int:
             if digest:
                 used_image_digests.add(digest)
     # The alphabetic first page was dominated by household goods. Inspect the
-    # full ERP catalog, then prioritize food groups and records without real photos.
+    # full ERP catalog, then prioritize food categorys and records without real photos.
     def item_priority(row: dict[str, Any]) -> tuple[int, int, str]:
-        group = group_by_id.get(row.get("group_id"), {})
-        group_code = str(group.get("group_code") or "")
+        category = category_by_id.get(row.get("category_id"), {})
+        category_code = str(category.get("category_code") or "")
         image_size = len(str(row.get("image_data") or ""))
         has_good_image = has_real_size_image(row.get("image_data"))
-        return (0 if group_code.startswith("FOOD-") else 1, 1 if has_good_image else 0, str(row.get("item_name") or ""))
+        return (0 if category_code.startswith("FOOD-") else 1, 1 if has_good_image else 0, str(row.get("item_name") or ""))
 
     items.sort(key=item_priority)
     items = items[:MAX_ITEMS]
-    print(f"ERP groups: {len(groups)}; items checked: {len(items)} (food groups prioritized)")
-    refreshed_groups: set[str] = set()
+    print(f"ERP categorys: {len(categorys)}; items checked: {len(items)} (food categorys prioritized)")
+    refreshed_categorys: set[str] = set()
     updated = 0
     for index, item in enumerate(items, 1):
         # Existing photos smaller than the quality threshold are considered placeholders.
@@ -814,20 +814,20 @@ def main() -> int:
             })
         updated += 1
         print(f"[{index}/{len(items)}] {item.get('item_name')} <- {product.get('product_name') or product.get('product_name_en')} ({len(image_bytes)} bytes){' [dry-run]' if DRY_RUN else ''}")
-        group_id = item.get("group_id")
-        group = group_by_id.get(group_id) if group_id else None
-        group_code = str((group or {}).get("group_code") or "")
-        representative = group_image_matches_item(group_code, item_name, product)
-        if group_id and group_id not in refreshed_groups and representative:
-            refreshed_groups.add(group_id)
-            if group and not has_real_size_image(group.get("image_data")):
+        category_id = item.get("category_id")
+        category = category_by_id.get(category_id) if category_id else None
+        category_code = str((category or {}).get("category_code") or "")
+        representative = category_image_matches_item(category_code, item_name, product)
+        if category_id and category_id not in refreshed_categorys and representative:
+            refreshed_categorys.add(category_id)
+            if category and not has_real_size_image(category.get("image_data")):
                 if not DRY_RUN:
-                    rest("PATCH", "erp_item_groups", urllib.parse.urlencode({"id": f"eq.{group_id}", "company_id": f"eq.{COMPANY_ID}"}), {
+                    rest("PATCH", "erp_item_categories", urllib.parse.urlencode({"id": f"eq.{category_id}", "company_id": f"eq.{COMPANY_ID}"}), {
                         "image_data": image_value, "image_mime_type": mime, "image_url": None,
                     })
                 # Use a real pack shot as a representative category photo only
-                # where the category name maps explicitly to this ERP group.
-                aliases = category_aliases.get(str(group.get("group_code") or ""), [])
+                # where the category name maps explicitly to this ERP category.
+                aliases = category_aliases.get(str(category.get("category_code") or ""), [])
                 normalized_aliases = {normalized(alias) for alias in aliases}
                 for category in categories:
                     if normalized(str(category.get("name") or "")) not in normalized_aliases:
