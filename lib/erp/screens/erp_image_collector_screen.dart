@@ -797,11 +797,14 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   }
 
   Future<void> _saveOne(Map<String, dynamic> image) async {
-    if (_loading) return;
+    // This action is deliberately scoped to one row: download its PNG only.
+    // It must not clear the URL, change selection, mark the source as imported,
+    // or remove any other image from the current collection.
+    if (_loading || image['downloaded_to_device'] == true) return;
     setState(() {
       _loading = true;
       _error = null;
-      _status = 'جارٍ تنزيل الصورة...';
+      _status = 'جارٍ تجهيز صورة الصف المحدد للتنزيل...';
     });
     try {
       final url = image['url'].toString();
@@ -823,21 +826,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         bytes: bytes,
         fileExtension: 'png',
       );
-      await _markImported({_imageKey(url)});
       if (mounted) {
         setState(() {
-          _url.clear();
-          // Remove the saved image and any unchecked images; retain only other
-          // selected images that have not yet been saved.
-          _images = _images.where((item) {
-            final itemUrl = item['url']?.toString() ?? '';
-            return itemUrl != url && _selected.contains(itemUrl);
-          }).toList();
-          _selected
-            ..clear()
-            ..addAll(_images.map((item) => item['url'].toString()));
-          if (_images.isEmpty) _pageUrl = null;
-          _status = 'تم حفظ الصورة. تم مسح الرابط والصور المحفوظة وغير المحددة من الشاشة؛ الصق الرابط التالي أو احفظ الصور المحددة المتبقية.';
+          image['downloaded_to_device'] = true;
+          _status = 'تم تنزيل صورة الصف رقم ${imageIndex + 1} إلى الجهاز باسم $uniqueBaseName.png. باقي الصفوف والرابط والتحديد لم تتغير.';
         });
       }
     } catch (e) {
@@ -1027,7 +1019,42 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined),loadingBuilder:(c,ch,p)=>p==null?ch:const Center(child:CircularProgressIndicator(strokeWidth:2)))),
                   const SizedBox(width:8),field('file_name','اسم الصورة',width:205,initial:suggested),const SizedBox(width:8),
                   dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:140),const SizedBox(width:8),
-                  FilledButton.tonalIcon(onPressed:_loading?null:()=>_saveOne(item),icon:const Icon(Icons.download_rounded,size:18),label:const Text('تنزيل صورة'),style:FilledButton.styleFrom(foregroundColor:_purple)),
+                  Tooltip(
+                    message: item['downloaded_to_device'] == true
+                        ? 'تم تنزيل هذه الصورة إلى الجهاز'
+                        : 'تنزيل ملف PNG لهذا الصف فقط؛ لن تتغير بقية الصفوف أو رابط الصفحة',
+                    child: FilledButton.icon(
+                      onPressed: _loading || item['downloaded_to_device'] == true
+                          ? null
+                          : () => _saveOne(item),
+                      icon: Icon(
+                        item['downloaded_to_device'] == true
+                            ? Icons.check_circle_outline_rounded
+                            : Icons.download_for_offline_outlined,
+                        size: 18,
+                      ),
+                      label: Text(item['downloaded_to_device'] == true
+                          ? 'تم التنزيل'
+                          : 'تنزيل على الجهاز'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: item['downloaded_to_device'] == true
+                            ? const Color(0xFFE8F5E9)
+                            : _purple,
+                        foregroundColor: item['downloaded_to_device'] == true
+                            ? const Color(0xFF1B5E20)
+                            : Colors.white,
+                        disabledBackgroundColor: item['downloaded_to_device'] == true
+                            ? const Color(0xFFE8F5E9)
+                            : const Color(0xFFE5DCEC),
+                        disabledForegroundColor: item['downloaded_to_device'] == true
+                            ? const Color(0xFF1B5E20)
+                            : Colors.black45,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+                        textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
+                  ),
                 ]));
                 final editor=kind=='category'
                   ? SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
