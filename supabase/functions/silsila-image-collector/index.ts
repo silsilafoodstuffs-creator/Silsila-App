@@ -86,7 +86,7 @@ function productMetadata(html: string, base: URL) {
       const weight = weightRaw && typeof weightRaw === "object" ? String((weightRaw as Record<string, unknown>).value ?? "") + " " + String(((weightRaw as Record<string, unknown>).unitCode ?? (weightRaw as Record<string, unknown>).unitText) ?? "") : String(weightRaw ?? obj.size ?? "");
       const item = {
         product_name: String(obj.name ?? ""),
-        barcode: String(obj.gtin13 ?? obj.gtin14 ?? obj.gtin12 ?? obj.gtin8 ?? obj.gtin ?? obj.sku ?? ""),
+        barcode: String(obj.gtin13 ?? obj.gtin14 ?? obj.gtin12 ?? obj.gtin8 ?? obj.gtin ?? ""),
         major_unit: String(obj.unitText ?? obj.unit ?? ""),
         minor_unit: "",
         internal_count: "",
