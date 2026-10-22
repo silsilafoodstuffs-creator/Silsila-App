@@ -9,7 +9,7 @@ import os
 import sys
 import time
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl
+from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl, unquote
 from urllib.request import Request, urlopen
 from datetime import datetime, timezone
 
@@ -85,7 +85,7 @@ def api_headers() -> dict[str, str]:
 
 def api_get_governorates() -> list[dict]:
     query = urlencode({
-        "select": "geo_code,name_ar,logo_url,logo_sha256",
+        "select": "geo_code,name_ar,logo_url,logo_source_url,logo_sha256",
         "company_id": f"eq.{COMPANY_ID}",
         "level": "eq.governorate",
         "order": "geo_code.asc",
@@ -96,6 +96,44 @@ def api_get_governorates() -> list[dict]:
     if not isinstance(result, list):
         raise RuntimeError("Supabase did not return a governorate array")
     return result
+
+
+def resolve_thumbnail_urls(rows: list[dict]) -> dict[str, str]:
+    """Resolve many Commons file titles in one API request, then download from upload.wikimedia.org CDN."""
+    titles_by_code: dict[str, str] = {}
+    for row in rows:
+        code = row.get("geo_code")
+        source_url = row.get("logo_source_url") or ""
+        parts = urlsplit(source_url)
+        if code and "commons.wikimedia.org" in parts.netloc and "/wiki/File:" in parts.path:
+            title = unquote(parts.path.split("/wiki/", 1)[1]).replace("_", " ")
+            titles_by_code[code] = title
+
+    if not titles_by_code:
+        return {}
+
+    params = urlencode({
+        "action": "query",
+        "titles": "|".join(titles_by_code.values()),
+        "prop": "imageinfo",
+        "iiprop": "url",
+        "iiurlwidth": "256",
+        "format": "json",
+    })
+    endpoint = "https://commons.wikimedia.org/w/api.php?" + params
+    req = Request(endpoint, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+    with urlopen(req, timeout=45) as response:
+        payload = json.loads(response.read().decode("utf-8"))
+
+    title_to_code = {title.casefold(): code for code, title in titles_by_code.items()}
+    resolved: dict[str, str] = {}
+    for page in payload.get("query", {}).get("pages", {}).values():
+        title = str(page.get("title", "")).replace("_", " ").casefold()
+        code = title_to_code.get(title)
+        imageinfo = page.get("imageinfo") or []
+        if code and imageinfo:
+            resolved[code] = imageinfo[0].get("thumburl") or imageinfo[0].get("url")
+    return resolved
 
 
 def patch_row(geo_code: str, png: bytes, sha: str) -> None:
@@ -135,10 +173,18 @@ def main() -> int:
     failures: list[tuple[str, str]] = []
     saved = 0
     skipped = 0
+    pending_rows = [row for row in rows if not row.get("logo_sha256")]
+    try:
+        resolved_urls = resolve_thumbnail_urls(pending_rows)
+        print(f"Resolved {len(resolved_urls)}/{len(pending_rows)} Commons thumbnails in one API request")
+    except (HTTPError, URLError, OSError, ValueError, RuntimeError) as exc:
+        print(f"WARNING: Commons thumbnail API unavailable; falling back to stored file URLs: {exc}", file=sys.stderr)
+        resolved_urls = {}
+
     for row in rows:
         code = row.get("geo_code") or "(missing-code)"
         name = row.get("name_ar") or code
-        url = row.get("logo_url")
+        url = resolved_urls.get(code) or row.get("logo_url")
         if row.get("logo_sha256"):
             print(f"SKIP {code} {name}: image bytes are already stored")
             skipped += 1
