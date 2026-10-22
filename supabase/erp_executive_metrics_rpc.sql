@@ -77,13 +77,13 @@ begin
     group by d.document_date
   ),
   inventory_by_group as (
-    select coalesce(g.group_name,'غير مصنف') as group_name,
+    select coalesce(g.category_name,'غير مصنف') as group_name,
       sum((m.quantity_in-m.quantity_out) * i.purchase_price) as value
     from public.erp_inventory_movements m
     join public.erp_items i on i.id = m.item_id and i.company_id = p_company_id
-    left join public.erp_item_groups g on g.id = i.group_id and g.company_id = p_company_id
+    left join public.erp_item_categories g on g.id = i.category_id and g.company_id = p_company_id
     where m.company_id = p_company_id
-    group by coalesce(g.group_name,'غير مصنف')
+    group by coalesce(g.category_name,'غير مصنف')
     order by sum((m.quantity_in-m.quantity_out) * i.purchase_price) desc
     limit 7
   ),
