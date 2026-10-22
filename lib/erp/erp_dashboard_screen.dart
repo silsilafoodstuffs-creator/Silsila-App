@@ -1340,15 +1340,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             const SizedBox(height: 10),
             Wrap(spacing: 5, runSpacing: 5, children: [
               _quick('فاتورة البيع', Icons.point_of_sale_rounded, () => _open('المبيعات والعملاء', 'حركات', 'فاتورة مبيعات')),
-              _quick('صلاحيات المستخدمين', Icons.admin_panel_settings_rounded, () => _open('إدارة البرنامج', 'بيانات أساسية', 'صلاحيات المستخدمين')),
-              _quick('قواعد الحضور والانصراف', Icons.access_time_filled_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
-              _quick('شجرة الحسابات', Icons.account_tree_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'شجرة الحسابات')),
-              _quick('الخزائن', Icons.account_balance_wallet_rounded, () => _open('الحسابات المالية', 'بيانات أساسية', 'الخزائن الرئيسية والفرعية')),
-              _quick('دليل الأصناف', Icons.inventory_2_rounded, () => _open('المخازن والفروع', 'بيانات أساسية', 'دليل الأصناف')),
-              _quick('دليل العملاء', Icons.groups_rounded, () => _open('المبيعات والعملاء', 'بيانات أساسية', 'دليل العملاء')),
-              _quick('ملف الموظف', Icons.badge_rounded, () => _open('الموارد البشرية والرواتب', 'بيانات أساسية', 'ملف الموظف')),
-              _quick('قواعد الورديات', Icons.schedule_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'قواعد الورديات والحضور والانصراف')),
-              _quick('أجهزة البصمة', Icons.fingerprint_rounded, () => _open('الموارد البشرية والرواتب', 'حركات', 'أجهزة البصمة وربط الحضور')),
+              _quick('جامع صور الأصناف', Icons.photo_library_outlined, () => _open('المخازن والفروع', 'حركات', 'جامع صور الأصناف')),
             ]),
           ]),
         ),
@@ -1596,7 +1588,21 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ],
       ),
     ])),
-    if (!compact) SizedBox(width: 190, child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'بحث سريع', prefixIcon: const Icon(Icons.search_rounded), isDense: true, filled: true, fillColor: _canvas, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
+    if (!compact) ...[
+      IconButton(
+        visualDensity: VisualDensity.compact,
+        tooltip: 'استبدال مستخدم',
+        onPressed: () => _leaveCurrentUser(switchUser: true),
+        icon: const Icon(Icons.switch_account_rounded, color: _purple),
+      ),
+      IconButton(
+        visualDensity: VisualDensity.compact,
+        tooltip: 'تسجيل الخروج',
+        onPressed: () => _leaveCurrentUser(switchUser: false),
+        icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+      ),
+      SizedBox(width: 190, child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'بحث سريع', prefixIcon: const Icon(Icons.search_rounded), isDense: true, filled: true, fillColor: _canvas, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
+    ],
     const SizedBox(width: 4),
     if (!compact) ...[
       IconButton(
@@ -2327,6 +2333,26 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ),
   );
 
+  Widget _aboutIconButton({
+    required String label,
+    required IconData icon,
+    required String url,
+    Color color = _purple,
+  }) => Padding(
+    padding: const EdgeInsetsDirectional.only(end: 8),
+    child: IconButton(
+      tooltip: label,
+      onPressed: () => _openAboutLink(url),
+      icon: Icon(icon, color: color, size: 25),
+      style: IconButton.styleFrom(
+        backgroundColor: color.withValues(alpha: 0.08),
+        side: BorderSide(color: color.withValues(alpha: 0.2)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        fixedSize: const Size(46, 46),
+      ),
+    ),
+  );
+
   Future<void> _leaveCurrentUser({required bool switchUser}) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -2379,50 +2405,32 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Text(silsilaText('المنظومة مصممة للتوسع إلى إدارة مالية ومخزنية وتشغيلية موحدة متعددة الفروع.'), style: const TextStyle(color: _purple, height: 1.7)),
             const SizedBox(height: 20),
             const Divider(),
-            Text(silsilaText('تواصل سريع مع سلسلة'), style: const TextStyle(color: _purple, fontSize: 16, fontWeight: FontWeight.w900)),
+            const Text('تواصل معنا', style: TextStyle(color: _purple, fontSize: 16, fontWeight: FontWeight.w900)),
             const SizedBox(height: 10),
-            Wrap(
-              spacing: 9,
-              runSpacing: 9,
-              children: [
-                _aboutContactButton(label: 'اتصال أرضي', icon: Icons.call, url: 'tel:0222784248', color: const Color(0xFF176B3A)),
-                _aboutContactButton(label: 'اتصال موبايل', icon: Icons.phone_android, url: 'tel:01019617100', color: const Color(0xFF176B3A)),
-                _aboutContactButton(label: 'واتساب', icon: Icons.chat, url: 'https://wa.me/201019617100', color: const Color(0xFF128C7E)),
-                _aboutContactButton(label: 'رسالة SMS', icon: Icons.sms_outlined, url: 'sms:01019617100', color: const Color(0xFF176B3A)),
-                _aboutContactButton(label: 'تيك توك', icon: Icons.music_note, url: 'https://www.tiktok.com/search?q=Silsila', color: Colors.black87),
-                _aboutContactButton(label: 'فيسبوك', icon: Icons.facebook, url: 'https://www.facebook.com/search/top?q=Silsila', color: const Color(0xFF1877F2)),
-                _aboutContactButton(label: 'إنستجرام', icon: Icons.camera_alt_outlined, url: 'https://www.instagram.com/explore/search/keyword/?q=Silsila', color: const Color(0xFFC13584)),
-                _aboutContactButton(label: 'لينكد إن', icon: Icons.business_center_outlined, url: 'https://www.linkedin.com/search/results/companies/?keywords=Silsila', color: const Color(0xFF0A66C2)),
-                _aboutContactButton(label: 'ماسنجر', icon: Icons.message_outlined, url: 'https://www.messenger.com/', color: const Color(0xFF0866FF)),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  _aboutIconButton(label: 'اتصال أرضي', icon: Icons.call, url: 'tel:0222784248', color: const Color(0xFF176B3A)),
+                  _aboutIconButton(label: 'اتصال موبايل', icon: Icons.phone_android, url: 'tel:01019617100', color: const Color(0xFF176B3A)),
+                  _aboutIconButton(label: 'واتساب', icon: Icons.chat, url: 'https://wa.me/201019617100', color: const Color(0xFF128C7E)),
+                  _aboutIconButton(label: 'رسالة SMS', icon: Icons.sms_outlined, url: 'sms:01019617100', color: const Color(0xFF176B3A)),
+                  _aboutIconButton(label: 'تيك توك', icon: Icons.music_note, url: 'https://www.tiktok.com/search?q=Silsila', color: Colors.black87),
+                  _aboutIconButton(label: 'فيسبوك', icon: Icons.facebook, url: 'https://www.facebook.com/search/top?q=Silsila', color: const Color(0xFF1877F2)),
+                  _aboutIconButton(label: 'إنستجرام', icon: Icons.camera_alt_outlined, url: 'https://www.instagram.com/explore/search/keyword/?q=Silsila', color: const Color(0xFFC13584)),
+                  _aboutIconButton(label: 'لينكد إن', icon: Icons.business_center_outlined, url: 'https://www.linkedin.com/search/results/companies/?keywords=Silsila', color: const Color(0xFF0A66C2)),
+                  _aboutIconButton(label: 'ماسنجر', icon: Icons.message_outlined, url: 'https://www.messenger.com/', color: const Color(0xFF0866FF)),
+                ],
+              ),
             ),
             const SizedBox(height: 8),
-            Text(
-              silsilaText('ملاحظة: أزرار الشبكات الاجتماعية تفتح البحث عن سلسلة حاليًا؛ اربط الصفحات الرسمية مباشرة بعد تأكيد روابطها.'),
+            const Text(
+              'روابط التواصل تفتح وسائل الاتصال أو صفحات البحث الحالية؛ يمكن استبدالها بالروابط الرسمية عند توفرها.',
               style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5),
             ),
           ]),
         ),
-      ),
-      const Divider(height: 24),
-      Wrap(
-        alignment: WrapAlignment.end,
-        spacing: 12,
-        runSpacing: 10,
-        children: [
-          OutlinedButton.icon(
-            onPressed: () => _leaveCurrentUser(switchUser: true),
-            icon: const Icon(Icons.switch_account_rounded),
-            label: const Text('استبدال مستخدم'),
-            style: OutlinedButton.styleFrom(foregroundColor: _purple, side: const BorderSide(color: _purple), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
-          ),
-          FilledButton.icon(
-            onPressed: () => _leaveCurrentUser(switchUser: false),
-            icon: const Icon(Icons.logout_rounded),
-            label: const Text('تسجيل خروج'),
-            style: FilledButton.styleFrom(backgroundColor: _purple, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14)),
-          ),
-        ],
       ),
     ]),
   );
