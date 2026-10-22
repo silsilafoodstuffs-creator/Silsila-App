@@ -27,7 +27,7 @@ class ErpAppAdvertisementsScreen extends StatefulWidget {
 
 class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen> {
   final _repository = ErpAppManagementService();
-  final _storage = ErpAppAssetStorage();
+  final _storage = ErpAppAssetStorage(bucket: 'silsila-public-ads');
   final _picker = ImagePicker();
   final Map<String, Future<String>> _urls = {};
   List<ErpAppAssetRecord> _assets = const [];
