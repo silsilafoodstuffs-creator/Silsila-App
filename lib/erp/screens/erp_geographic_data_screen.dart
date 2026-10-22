@@ -145,7 +145,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       String? resolvedCompanyId;
       const fields =
           'id,company_id,parent_id,geo_code,name_ar,name_en,level,is_active,'
-          'source_name,source_url,latitude,longitude,admin_type';
+          'latitude,longitude,admin_type';
 
       // Read only rows belonging to a company the signed-in user is linked to.
       // Try all active memberships in case the dashboard passed an old company id.
