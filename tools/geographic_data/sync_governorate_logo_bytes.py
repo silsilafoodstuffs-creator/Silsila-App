@@ -139,6 +139,10 @@ def main() -> int:
         code = row.get("geo_code") or "(missing-code)"
         name = row.get("name_ar") or code
         url = row.get("logo_url")
+        if row.get("logo_sha256"):
+            print(f"SKIP {code} {name}: image bytes are already stored")
+            skipped += 1
+            continue
         if not url:
             failures.append((code, f"{name}: missing logo_url"))
             continue
