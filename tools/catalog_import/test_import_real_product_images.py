@@ -40,23 +40,23 @@ class CatalogImageMatchingTests(unittest.TestCase):
             IMPORTER.image_variant_matches("بسكويت سادة", "بسكويت سادة")
         )
 
-    def test_halva_is_not_a_jam_or_honey_group_representative(self):
+    def test_halva_is_not_a_jam_or_honey_category_representative(self):
         halva = {
             "product_name": "Tahini halva spread",
             "product_name_en": "Tahini halva",
             "brands": "Example",
         }
         self.assertFalse(
-            IMPORTER.group_image_matches_item("FOOD-JAMS", "حلاوة طحينية", halva)
+            IMPORTER.category_image_matches_item("FOOD-JAMS", "حلاوة طحينية", halva)
         )
 
-    def test_group_representative_requires_item_and_source_to_match_group(self):
+    def test_category_representative_requires_item_and_source_to_match_category(self):
         jam = {"product_name": "Strawberry jam", "product_name_en": "Jam"}
         self.assertTrue(
-            IMPORTER.group_image_matches_item("FOOD-JAMS", "مربى فراولة", jam)
+            IMPORTER.category_image_matches_item("FOOD-JAMS", "مربى فراولة", jam)
         )
         self.assertFalse(
-            IMPORTER.group_image_matches_item("FOOD-JAMS", "حلاوة طحينية", jam)
+            IMPORTER.category_image_matches_item("FOOD-JAMS", "حلاوة طحينية", jam)
         )
 
     def test_duplicate_image_bytes_are_rejected_even_with_different_source_code(self):
