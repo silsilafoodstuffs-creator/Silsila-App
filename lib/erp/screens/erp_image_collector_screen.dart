@@ -339,14 +339,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     return '';
   }
 
-  Future<void> _exportProductDataExcel() async {
-    if (_loading || _selected.isEmpty) return;
-    setState(() {
-      _loading = true;
-      _error = null;
-      _status = 'جارٍ تجهيز ملف Excel لبيانات الصور المحددة...';
-    });
-    try {
+  Uint8List _buildProductDataExcel(List<Map<String, dynamic>> selectedImages) {
       final excel = Excel.createExcel();
       final sheet = excel['بيانات الأصناف'];
       sheet.appendRow([
@@ -367,9 +360,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         TextCellValue('الرابط الأصلي للصورة'),
         TextCellValue('رابط صفحة المصدر'),
       ]);
-      final selectedImages = _images
-          .where((item) => _selected.contains(item['url']?.toString() ?? ''))
-          .toList();
       for (var i = 0; i < selectedImages.length; i++) {
         final item = selectedImages[i];
         final kind = (item['save_as'] ?? 'product').toString();
@@ -403,19 +393,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if (bytes == null || bytes.isEmpty) {
         throw Exception('تعذر إنشاء ملف Excel من البيانات المحددة.');
       }
-      await FileSaver.instance.saveFile(
-        name: 'silsila_product_data_${DateTime.now().millisecondsSinceEpoch}',
-        bytes: Uint8List.fromList(bytes),
-        fileExtension: 'xlsx',
-      );
-      if (mounted) {
-        setState(() => _status = 'تم تصدير بيانات ${selectedImages.length} صورة إلى ملف Excel. الحقول غير المتاحة في بيانات المصدر ستظل فارغة.');
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
+      return Uint8List.fromList(bytes);
   }
 
   Future<void> _saveZip() async {
@@ -426,7 +404,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     setState(() {
       _loading = true;
       _error = null;
-      _status = 'جارٍ تنزيل الصور المحددة وتجهيز ملف ZIP...';
+      _status = 'جارٍ تنزيل الصور المحددة وتجهيز ملف ZIP والصورة وExcel...';
     });
     try {
       final archive = Archive();
@@ -448,6 +426,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         if (mounted) setState(() => _status = 'تم تجهيز $index من ${_selected.length} صورة...');
       }
       if (archive.isEmpty) throw Exception('لم يمكن تنزيل أي صورة من الاختيارات.');
+      final selectedImages = _images
+          .where((item) => _selected.contains(item['url']?.toString() ?? ''))
+          .toList();
+      final excelBytes = _buildProductDataExcel(selectedImages);
+      archive.addFile(ArchiveFile('بيانات_الأصناف.xlsx', excelBytes.length, excelBytes));
       final zipped = ZipEncoder().encode(archive);
       if (zipped == null || zipped.isEmpty) throw Exception('تعذر إنشاء ملف ZIP.');
       await FileSaver.instance.saveFile(
@@ -564,23 +547,13 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   FilledButton.icon(
                     onPressed: _loading || _selected.isEmpty ? null : _saveZip,
                     icon: const Icon(Icons.folder_zip_outlined),
-                    label: Text('حفظ المحدد PNG داخل ZIP (${_selected.length})'),
+                    label: Text('حفظ المحدد png / Excel في ملف Zip (${_selected.length})'),
                     style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13)),
                   ),
                   OutlinedButton.icon(
                     onPressed: _loading ? null : _resetImportHistory,
                     icon: const Icon(Icons.restart_alt_rounded),
                     label: const Text('بدء السحب من الصفر'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _loading || _selected.isEmpty ? null : _exportProductDataExcel,
-                    icon: const Icon(Icons.table_view_outlined),
-                    label: Text('تصدير بيانات الأصناف إلى Excel (${_selected.length})'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _purple,
-                      side: const BorderSide(color: _purple),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                    ),
                   ),
                 ]),
                 if (_pageUrl != null) ...[
