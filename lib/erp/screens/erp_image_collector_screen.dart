@@ -858,7 +858,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   Future<void> _showImagePreview(String url) async {
     await showDialog<void>(context: context, builder: (dialogContext) => Dialog(
       insetPadding: const EdgeInsets.all(18),
-      child: SizedBox(width: 900, height: MediaQuery.of(context).size.height * .82,
+      child: SizedBox(width: MediaQuery.of(context).size.width > 960 ? 900 : MediaQuery.of(context).size.width * .92, height: MediaQuery.of(context).size.height * .82,
         child: Stack(children: [
           Positioned.fill(child: InteractiveViewer(minScale: .5, maxScale: 5, child: Center(
             child: Image.network(url, fit: BoxFit.contain,
