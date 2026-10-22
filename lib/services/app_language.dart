@@ -139,7 +139,7 @@ String silsilaText(String value) {
     'قائمة الدخل': 'Income Statement',
     'الميزانية العمومية': 'Balance Sheet',
     'دليل المخازن': 'Warehouse Directory',
-    'مجموعات الأصناف': 'Product Groups',
+    'فئات الأصناف': 'Item Categories',
     'دليل الأصناف': 'Product Catalog',
     'الوحدات والتحويلات': 'Units & Conversions',
     'إذن إضافة': 'Stock Receipt',
