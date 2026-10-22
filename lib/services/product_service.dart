@@ -130,23 +130,23 @@ class ProductService {
     if (activityCode != null && activityCode.isNotEmpty) {
       categoryQuery = categoryQuery.eq('activity_code', activityCode);
     }
-    final groupRows = await categoryQuery.order('category_name').limit(3000);
-    final groups = (groupRows as List)
+    final categoryRows = await categoryQuery.order('category_name').limit(3000);
+    final groups = (categoryRows as List)
         .map((raw) => Map<String, dynamic>.from(raw as Map))
         .toList(growable: false);
     if (groups.isEmpty) return const <Map<String, dynamic>>[];
-    final groupsById = <String, Map<String, dynamic>>{
+    final categoriesById = <String, Map<String, dynamic>>{
       for (final group in groups) (group['id'] ?? '').toString(): group,
     };
     final categoryIds = groups.map((g) => g['id'].toString()).toList(growable: false);
 
-    List<Map<String, dynamic>> groupPath(Map<String, dynamic> leaf) {
+    List<Map<String, dynamic>> categoryPath(Map<String, dynamic> leaf) {
       final path = <Map<String, dynamic>>[leaf];
       var current = leaf;
       var parentId = current['parent_id']?.toString();
       var guard = 0;
       while (parentId != null && parentId.isNotEmpty && guard++ < 4) {
-        final parent = groupsById[parentId];
+        final parent = categoriesById[parentId];
         if (parent == null) break;
         path.insert(0, parent);
         current = parent;
@@ -165,12 +165,12 @@ class ProductService {
     final results = <Map<String, dynamic>>[];
     for (final raw in (itemRows as List)) {
       final item = Map<String, dynamic>.from(raw as Map);
-      final group = groupsById[(item['category_id'] ?? '').toString()];
+      final group = categoriesById[(item['category_id'] ?? '').toString()];
       if (group == null) continue;
-      final groupName = (group['category_name'] ?? '').toString();
-      final path = groupPath(group);
-      final rootName = (path.first['category_name'] ?? groupName).toString();
-      if (category != null && category != rootName && category != groupName &&
+      final categoryName = (group['category_name'] ?? '').toString();
+      final path = categoryPath(group);
+      final rootName = (path.first['category_name'] ?? categoryName).toString();
+      if (category != null && category != rootName && category != categoryName &&
           !path.any((node) => (node['category_name'] ?? '').toString() == category)) continue;
       final subcategoryName = path.length > 1 ? (path[1]['category_name'] ?? '').toString() : '';
       results.add(<String, dynamic>{
