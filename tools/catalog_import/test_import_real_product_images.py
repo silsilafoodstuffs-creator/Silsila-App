@@ -25,6 +25,20 @@ class CatalogImageMatchingTests(unittest.TestCase):
         self.assertTrue(
             IMPORTER.image_variant_matches("تمر معبأ", "Packaged dates")
         )
+        self.assertTrue(
+            IMPORTER.image_variant_matches("تمر معبأ", "تمر معبأ 1 كجم")
+        )
+
+    def test_explicit_arabic_variant_evidence_is_accepted_without_cross_variant_match(self):
+        self.assertTrue(
+            IMPORTER.image_variant_matches("بسلة مجمدة", "بسلة مجمدة 400 جم")
+        )
+        self.assertFalse(
+            IMPORTER.image_variant_matches("بسلة مجمدة", "بسلة معلبة 400 جم")
+        )
+        self.assertTrue(
+            IMPORTER.image_variant_matches("بسكويت سادة", "بسكويت سادة")
+        )
 
     def test_halva_is_not_a_jam_or_honey_group_representative(self):
         halva = {
