@@ -125,6 +125,34 @@ begin
         into v_rows
         from public.erp_workspace_records t
         where t.company_id = p_company_id and t.page_key = any(v_pages);
+    elsif v_table = 'erp_parties' then
+      if cardinality(v_party_kinds) > 0 then
+        select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_parties t where t.company_id=p_company_id and t.party_kind=any(v_party_kinds);
+      else
+        select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_parties t where t.company_id=p_company_id;
+      end if;
+    elsif v_table = 'erp_price_lists' then
+      if cardinality(v_price_kinds) > 0 then
+        select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_price_lists t where t.company_id=p_company_id and t.price_kind=any(v_price_kinds);
+      else
+        select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_price_lists t where t.company_id=p_company_id;
+      end if;
+    elsif v_table = 'erp_price_list_lines' and cardinality(v_price_kinds) > 0 then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_price_list_lines t join public.erp_price_lists l on l.id=t.price_list_id where t.company_id=p_company_id and l.company_id=p_company_id and l.price_kind=any(v_price_kinds);
+    elsif v_table in ('erp_party_contacts','erp_party_warehouses') and cardinality(v_party_kinds) > 0 then
+      execute format('select coalesce(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) from public.%I t join public.erp_parties p on p.id=t.party_id where t.company_id=$1 and p.company_id=$1 and p.party_kind=any($2)', v_table) into v_rows using p_company_id, v_party_kinds;
+    elsif v_table = 'erp_party_price_lists' and (cardinality(v_party_kinds) > 0 or cardinality(v_price_kinds) > 0) then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_party_price_lists t where t.company_id=p_company_id and ((cardinality(v_price_kinds)>0 and t.price_list_id in (select l.id from public.erp_price_lists l where l.company_id=p_company_id and l.price_kind=any(v_price_kinds))) or (cardinality(v_party_kinds)>0 and t.party_id in (select p.id from public.erp_parties p where p.company_id=p_company_id and p.party_kind=any(v_party_kinds))));
+    elsif v_table = 'erp_sales_documents' then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_sales_documents t where t.company_id=p_company_id and t.document_type=any(v_sales_types);
+    elsif v_table = 'erp_purchase_documents' then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_purchase_documents t where t.company_id=p_company_id and t.document_type=any(v_purchase_types);
+    elsif v_table = 'erp_sales_lines' then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_sales_lines t join public.erp_sales_documents d on d.id=t.document_id where d.company_id=p_company_id and d.document_type=any(v_sales_types);
+    elsif v_table = 'erp_purchase_lines' then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_purchase_lines t join public.erp_purchase_documents d on d.id=t.document_id where d.company_id=p_company_id and d.document_type=any(v_purchase_types);
+    elsif v_table = 'erp_sales_fulfillment_documents' then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_sales_fulfillment_documents t where t.company_id=p_company_id and (('إذن تجهيز'=any(v_pages) and t.kind='preparation') or (('إذن تسليم'=any(v_pages) or 'إذن تحميل'=any(v_pages)) and t.kind='delivery') or (cardinality(v_sales_types)>0 and t.invoice_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types))));
     elsif exists (
       select 1 from information_schema.columns
       where table_schema = 'public' and table_name = v_table and column_name = 'company_id'
