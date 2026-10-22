@@ -213,7 +213,7 @@ declare
 begin
   foreach t in array array[
     'erp_branches','erp_fiscal_periods','erp_accounts','erp_cashboxes','erp_cash_vouchers',
-    'erp_warehouses','erp_item_groups','erp_items','erp_parties',
+    'erp_warehouses','erp_item_categories','erp_items','erp_parties',
     'erp_attendance_records','erp_leave_requests'
   ]
   loop
@@ -439,7 +439,7 @@ using (exists (
 grant select, insert, update, delete on public.erp_company_members to authenticated;
 grant select, insert, update, delete on public.erp_companies, public.erp_branches,
   public.erp_fiscal_periods, public.erp_accounts, public.erp_cashboxes,
-  public.erp_warehouses, public.erp_item_groups, public.erp_items, public.erp_parties,
+  public.erp_warehouses, public.erp_item_categories, public.erp_items, public.erp_parties,
   public.erp_journal_entries, public.erp_journal_lines to authenticated;
 
 
