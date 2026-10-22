@@ -84,13 +84,13 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   Future<void> _pickProducts() async {
     final chosen = <String>{};
     final search = TextEditingController();
-    String? group = _categoryId;
+    String? category = _categoryId;
     await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) {
       final q = search.text.trim().toLowerCase();
-      final list = _items.where((i) => (group == null || _s(i['category_id']) == group) && (q.isEmpty || _s(i['item_name']).toLowerCase().contains(q) || _s(i['item_code']).toLowerCase().contains(q) || _s(i['barcode']).toLowerCase().contains(q))).toList();
+      final list = _items.where((i) => (category == null || _s(i['category_id']) == category) && (q.isEmpty || _s(i['item_name']).toLowerCase().contains(q) || _s(i['item_code']).toLowerCase().contains(q) || _s(i['barcode']).toLowerCase().contains(q))).toList();
       return AlertDialog(title: const Text('جلب الأصناف — اختيار متعدد'),
         content: SizedBox(width: 760, height: 560, child: Column(children: [
-          Row(children: [Expanded(child: TextField(controller: search, onChanged: (_) => refresh(() {}), decoration: const InputDecoration(labelText: 'بحث بالاسم أو الكود أو الباركود'))), const SizedBox(width: 8), DropdownButton<String?>(value: group, hint: const Text('كل الفئات'), items: [const DropdownMenuItem<String?>(value: null, child: Text('كل الفئات')), ..._categories.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text(_s(g['category_name']))))], onChanged: (v) => refresh(() => group = v))]),
+          Row(children: [Expanded(child: TextField(controller: search, onChanged: (_) => refresh(() {}), decoration: const InputDecoration(labelText: 'بحث بالاسم أو الكود أو الباركود'))), const SizedBox(width: 8), DropdownButton<String?>(value: category, hint: const Text('كل الفئات'), items: [const DropdownMenuItem<String?>(value: null, child: Text('كل الفئات')), ..._categories.map((g) => DropdownMenuItem<String?>(value: _s(g['id']), child: Text(_s(g['category_name']))))], onChanged: (v) => refresh(() => category = v))]),
           Align(alignment: Alignment.centerRight, child: Wrap(spacing: 8, children: [TextButton(onPressed: () => refresh(() => chosen.addAll(list.map((e) => _s(e['id'])))), child: const Text('تحديد الظاهر')), TextButton(onPressed: () => refresh(() => chosen.clear()), child: const Text('إلغاء التحديد'))])),
           Expanded(child: ListView(children: list.map((item) => CheckboxListTile(value: chosen.contains(_s(item['id'])), title: Text('${_s(item['item_code'])} — ${_s(item['item_name'])}', textDirection: TextDirection.rtl), subtitle: Text('سعر البيع: ${_s(item['sale_price'])} | الوحدة: ${_s(item['base_unit'])}'), onChanged: (v) => refresh(() { v == true ? chosen.add(_s(item['id'])) : chosen.remove(_s(item['id'])); }))).toList())),
         ])),
