@@ -1234,7 +1234,7 @@ class _MainShellState extends State<MainShell> {
     try {
       final rows = await productService.getProducts(
         activityType: activity,
-        limit: 100,
+        limit: 300,
       );
       Map<String, double> activeOfferPrices = <String, double>{};
       try {
