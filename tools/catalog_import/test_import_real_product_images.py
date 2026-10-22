@@ -138,6 +138,12 @@ class CatalogImageMatchingTests(unittest.TestCase):
         self.assertFalse(
             IMPORTER.image_variant_matches("شاي ناعم 250 جم", "Fuze Tea Peach")
         )
+        self.assertFalse(
+            IMPORTER.image_variant_matches(
+                "شاي أسود 40 فتلة",
+                "Thé infusé glacé, Thé noir parfum pêche blanche",
+            )
+        )
         self.assertTrue(
             IMPORTER.image_variant_matches("شاي ناعم 250 جم", "Loose black tea 250g")
         )
