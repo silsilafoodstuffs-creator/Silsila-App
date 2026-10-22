@@ -60,7 +60,7 @@ class ErpInventoryMasterRepository {
     }
     if (purchasePrice < 0 || salePrice < 0 || reorderLevel < 0 || taxRate < 0 || taxRate > 100) throw ArgumentError('الأسعار وحد إعادة الطلب لا تقبل القيم السالبة، ونسبة الضريبة من 0 إلى 100.');
     await _db.from('erp_items').insert({
-      'company_id': companyId.trim(), 'item_code': code.trim(), 'item_name': name.trim(), 'group_id': categoryId,
+      'company_id': companyId.trim(), 'item_code': code.trim(), 'item_name': name.trim(), 'category_id': categoryId,
       'barcode': _blank(barcode), 'base_unit': unit.trim(),
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking,
