@@ -26,9 +26,9 @@ COMPANY_ID = os.environ.get("SILSILA_ERP_COMPANY_ID", "")
 # Full-text endpoint; the legacy CGI search is known to return widespread 503s.
 OFF_API = "https://search.openfoodfacts.org/search"
 USER_AGENT = "SilsilaCatalogEnricher/1.0 (catalog administrator)"
-MIN_BYTES = 12_000
+MIN_BYTES = 8_000
 MIN_STORED_IMAGE_CHARS = 2 * MIN_BYTES + 2  # PostgreSQL bytea is returned as \\x + two hex chars per byte.
-MIN_SIDE = 300
+MIN_SIDE = 150
 MAX_BYTES = 4 * 1024 * 1024
 MAX_ITEMS = int(os.environ.get("SILSILA_IMAGE_IMPORT_LIMIT", "250"))
 DRY_RUN = os.environ.get("SILSILA_IMAGE_IMPORT_DRY_RUN", "1") != "0"
