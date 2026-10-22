@@ -635,11 +635,33 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('جامع صور الأصناف', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _purple)),
                     SizedBox(height: 4),
-                    Text('استخراج الصور، إزالة الخلفية الموحدة، وحفظها PNG منفردة أو كلها في ZIP', style: TextStyle(color: Colors.black54, fontSize: 12)),
+                    Text('استخراج الصور، تفريغ الخلفية الفاتحة، وتجهيز PNG حتى 4K مضغوط', style: TextStyle(color: Colors.black54, fontSize: 12)),
                   ])),
                 ]),
                 const SizedBox(height: 18),
-                const Text('رابط صفحة المنتجات', style: TextStyle(fontWeight: FontWeight.w700)),
+                Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: Row(children: [
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : _pasteClipboardUrl,
+                      icon: const Icon(Icons.content_paste_rounded, size: 17),
+                      label: const Text('لصق الرابط'),
+                      style: OutlinedButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact),
+                    ),
+                    const SizedBox(width: 6),
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : () {
+                        setState(() { _url.clear(); _error = null; _status = 'تم مسح الرابط.'; });
+                      },
+                      icon: const Icon(Icons.backspace_outlined, size: 17),
+                      label: const Text('مسح الرابط'),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red, visualDensity: VisualDensity.compact),
+                    ),
+                    const Spacer(),
+                    const Directionality(textDirection: TextDirection.rtl,
+                      child: Text('رابط صفحة المنتجات', style: TextStyle(fontWeight: FontWeight.w700))),
+                  ]),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _url,
@@ -654,41 +676,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: _loading ? null : _pasteClipboardUrl,
-                      icon: const Icon(Icons.content_paste_rounded),
-                      label: const Text('لصق الرابط المنسوخ مؤخرًا'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _purple,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: _loading
-                          ? null
-                          : () {
-                              setState(() {
-                                _url.clear();
-                                _error = null;
-                                _status = 'تم مسح خانة رابط صفحة المنتجات يدويًا.';
-                              });
-                            },
-                      icon: const Icon(Icons.backspace_outlined),
-                      label: const Text('مسح الرابط'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red.shade700,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 12),
-                Wrap(spacing: 10, runSpacing: 10, children: [
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(children: [
                   FilledButton.icon(
                     onPressed: _loading ? null : _scan,
                     icon: _loading ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.travel_explore),
@@ -709,9 +700,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   OutlinedButton.icon(
                     onPressed: _loading ? null : _resetImportHistory,
                     icon: const Icon(Icons.restart_alt_rounded),
-                    label: const Text('بدء السحب من الصفر'),
+                    label: const Text('إعادة ضبط سجل السحب'),
                   ),
-                ]),
+                  ]),
+                ),
                 if (_pageUrl != null) ...[
                   const SizedBox(height: 10),
                   Text('المصدر: $_pageUrl', textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -731,7 +723,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 ],
                 const SizedBox(height: 10),
                 const Text(
-                  'ملاحظة: بعض المواقع تعرض الصور بواسطة JavaScript أو تمنع الطلبات الآلية؛ في هذه الحالة قد لا تظهر كل الصور. إزالة الخلفية تعمل أفضل مع الخلفيات الموحدة (مثل الأبيض)، وقد تحتاج الصور ذات الخلفيات المعقدة إلى معالجة إضافية. استخدم الصور وفق حقوق الموقع.',
+                  'ملاحظة: بعض المواقع تعرض الصور بواسطة JavaScript أو تمنع الطلبات الآلية؛ في هذه الحالة قد لا تظهر كل الصور. تفريغ الخلفية يستهدف الخلفيات الفاتحة المتصلة بحواف الصورة؛ راجع الصور قبل اعتمادها. تكبير الصورة لا يعيد تفاصيل غير موجودة في المصدر. استخدم الصور وفق حقوق الموقع.',
                   style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5),
                 ),
               ]),
