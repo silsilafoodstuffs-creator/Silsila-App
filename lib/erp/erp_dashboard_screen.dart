@@ -2020,7 +2020,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         chart: _ExecutiveChartPainter(color: const Color(0xFF168A70), values: _executiveDailyCollections),
       ),
       if (showInventory) _executiveChartPanel(
-        title: 'قيمة المخزون حسب المجموعة',
+        title: 'قيمة المخزون حسب الفئة',
         caption: 'تقدير على تكلفة الشراء الحالية',
         color: _pink,
         value: _executiveMoney(_executiveInventoryValue),
