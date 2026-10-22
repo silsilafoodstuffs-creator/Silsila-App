@@ -93,20 +93,33 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     });
 
     try {
-      final result = await db!
-          .from('erp_geographic_data')
-          .select(
-            'id,parent_id,geo_code,name_ar,name_en,level,is_active,logo_url,'
-            'source_name,source_url,latitude,longitude',
-          )
-          .eq('company_id', companyId)
-          .order('geo_code');
+      // Supabase/PostgREST commonly caps a response at 1,000 rows.
+      // Fetch every page: the geographic tree currently contains more than 6,000 rows,
+      // and ordering by geo_code puts EG-AREA rows before governorate roots.
+      const pageSize = 1000;
+      var offset = 0;
+      final allRows = <Map<String, dynamic>>[];
+      while (true) {
+        final result = await db!
+            .from('erp_geographic_data')
+            .select(
+              'id,parent_id,geo_code,name_ar,name_en,level,is_active,logo_url,'
+              'source_name,source_url,latitude,longitude',
+            )
+            .eq('company_id', companyId)
+            .order('geo_code')
+            .range(offset, offset + pageSize - 1);
+        final page = (result as List)
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+        allRows.addAll(page);
+        if (page.length < pageSize) break;
+        offset += pageSize;
+      }
 
       if (!mounted) return;
       setState(() {
-        rows = (result as List)
-            .map((item) => Map<String, dynamic>.from(item))
-            .toList();
+        rows = allRows;
         _rebuildChildren();
         loading = false;
         error = null;
