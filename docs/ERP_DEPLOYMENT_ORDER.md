@@ -47,4 +47,4 @@
 
 ## فئات الأصناف حسب النشاط — 22 أكتوبر 2026
 
-تم تطبيق `supabase/migrations/20261022_erp_item_groups_activity_tree.sql` على مشروع Supabase والتحقق من وجود العمود `activity_code` والمشغّل `erp_item_groups_no_duplicate_names`. أُسندت الفئات الموجودة مبدئيًا إلى النشاط `ACT001`، وتُحمّل شاشة فئات الأصناف الفئات حسب النشاط المحدد. يمنع المشغّل تكرار اسم الفئة داخل النشاط نفسه عبر جميع مستويات الشجرة.
+تم تطبيق `supabase/migrations/20261022_erp_item_groups_activity_tree.sql` على مشروع Supabase والتحقق من وجود العمود `activity_code` والمشغّل `erp_item_groups_no_duplicate_names`. أُسندت الفئات الموجودة مبدئيًا إلى النشاط `ACT001`، وتُحمّل شاشة فئات الأصناف الفئات حسب النشاط المحدد. يمنع المشغّل تكرار اسم الفئة داخل النشاط نفسه عبر جميع مستويات الشجرة. كما طُبّقت الهجرة `20261022_erp_item_price_precision.sql` وجرى التحقق من أن `erp_items.purchase_price` و`erp_items.sale_price` و`erp_items.pricing_area` تقبل 3 منازل عشرية.
