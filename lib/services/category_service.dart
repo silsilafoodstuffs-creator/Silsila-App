@@ -34,23 +34,52 @@ class CategoryService {
   }) async {
     _validateLimit(limit);
 
-    var query = _requireClient.from('categories').select();
-
-    if (activeOnly) {
-      query = query.eq('is_active', true);
-    }
-
     final activity = _emptyToNull(activityType);
 
-    if (activity != null) {
-      query = query.eq('activity_type', activity);
+    // Prefer the ERP's item-group tree: this is the live master catalogue edited
+    // from the desktop program, including binary images stored in PostgreSQL.
+    try {
+      String? activityCode;
+      if (activity != null) {
+        final activityRow = await _requireClient
+            .from('activity_types')
+            .select('code,name')
+            .eq('name', activity)
+            .eq('is_active', true)
+            .maybeSingle();
+        activityCode = activityRow?['code']?.toString();
+      }
+      var groupsQuery = _requireClient
+          .from('erp_item_groups')
+          .select('id,parent_id,group_code,group_name,group_name_en,activity_code,is_active,show_in_app,image_data,image_mime_type');
+      if (activeOnly) {
+        groupsQuery = groupsQuery.eq('is_active', true).eq('show_in_app', true);
+      }
+      if (activityCode != null && activityCode.isNotEmpty) {
+        groupsQuery = groupsQuery.eq('activity_code', activityCode);
+      }
+      final groupRows = await groupsQuery.order('group_name').limit(limit);
+      final groups = (groupRows as List).map((raw) {
+        final row = Map<String, dynamic>.from(raw as Map);
+        return <String, dynamic>{
+          ...row,
+          'name': row['group_name'],
+          'name_en': row['group_name_en'],
+          'activity_type': activity,
+          'sort_order': row['group_code']?.toString() ?? '',
+          'icon': null,
+        };
+      }).toList(growable: false);
+      if (groups.isNotEmpty) return groups;
+    } catch (_) {
+      // Preserve compatibility with the legacy app catalogue if the ERP tree
+      // is not available yet or this activity has no ERP groups.
     }
 
-    final rows = await query
-        .order('sort_order')
-        .order('name')
-        .limit(limit);
-
+    var query = _requireClient.from('categories').select();
+    if (activeOnly) query = query.eq('is_active', true);
+    if (activity != null) query = query.eq('activity_type', activity);
+    final rows = await query.order('sort_order').order('name').limit(limit);
     return List<Map<String, dynamic>>.from(rows);
   }
 
