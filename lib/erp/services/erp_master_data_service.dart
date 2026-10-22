@@ -70,9 +70,9 @@ class ErpMasterDataService {
     bool activeOnly = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    var query = _db.from('erp_item_groups').select().eq('company_id', companyId);
+    var query = _db.from('erp_item_categories').select('*,group_code:category_code,group_name:category_name,group_name_en:category_name_en').eq('company_id', companyId);
     if (activeOnly) query = query.eq('is_active', true);
-    final rows = await query.order('group_name');
+    final rows = await query.order('category_name');
     return _maps(rows);
   }
 
@@ -85,19 +85,19 @@ class ErpMasterDataService {
     bool isActive = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    _require(code, 'كود المجموعة مطلوب.');
-    _require(name, 'اسم المجموعة مطلوب.');
+    _require(code, 'كود الفئة مطلوب.');
+    _require(name, 'اسم الفئة مطلوب.');
     final payload = <String, Object?>{
       'company_id': companyId,
       'parent_id': _nullable(parentId),
-      'group_code': code.trim(),
-      'group_name': name.trim(),
+      'category_code': code.trim(),
+      'category_name': name.trim(),
       'is_active': isActive,
     };
     if (id == null || id.trim().isEmpty) {
-      await _db.from('erp_item_groups').insert(payload);
+      await _db.from('erp_item_categories').insert(payload);
     } else {
-      await _db.from('erp_item_groups').update(payload)
+      await _db.from('erp_item_categories').update(payload)
           .eq('id', id).eq('company_id', companyId);
     }
   }
@@ -113,7 +113,7 @@ class ErpMasterDataService {
     var query = _db.from('erp_items').select().eq('company_id', companyId);
     if (activeOnly) query = query.eq('is_active', true);
     if (groupId != null && groupId.trim().isNotEmpty) {
-      query = query.eq('group_id', groupId);
+      query = query.eq('category_id', groupId);
     }
     if (search != null && search.trim().isNotEmpty) {
       final term = _escapeLike(search.trim());
@@ -145,7 +145,7 @@ class ErpMasterDataService {
     }
     final payload = <String, Object?>{
       'company_id': companyId,
-      'group_id': _nullable(groupId),
+      'category_id': _nullable(groupId),
       'item_code': code.trim(),
       'barcode': _nullable(barcode),
       'item_name': name.trim(),
