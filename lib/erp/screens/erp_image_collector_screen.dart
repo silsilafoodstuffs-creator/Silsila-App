@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:excel/excel.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -327,6 +328,70 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     return Uint8List.fromList(img.encodePng(image));
   }
 
+  Future<void> _exportProductDataExcel() async {
+    if (_selected.isEmpty) {
+      setState(() => _error = 'حدد صور الأصناف التي تريد تجهيز بياناتها في Excel أولًا.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+      _status = 'جارٍ تجهيز ملف Excel لبيانات الأصناف المحددة...';
+    });
+    try {
+      final now = DateTime.now();
+      String two(int value) => value.toString().padLeft(2, '0');
+      final timestamp = '\${now.year}\${two(now.month)}\${two(now.day)}_\${two(now.hour)}\${two(now.minute)}\${two(now.second)}';
+      final excel = Excel.createExcel();
+      final sheet = excel['بيانات الأصناف'];
+      final headers = <String>[
+        'م', 'الباركود إن وجد', 'اسم الصنف', 'وحدة القياس الكبرى',
+        'الوحدة الصغرى', 'العدد الداخلي', 'وحدات أخرى', 'سعر البيع',
+        'الفئة الرئيسية / المجموعة الرئيسية',
+        'الفئة الفرعية / المجموعة الفرعية',
+        'الفئة الثانوية / البراند', 'الوزن إن وجد',
+        'تاريخ ووقت تجهيز الملف', 'رابط الصورة المصدر',
+      ];
+      sheet.appendRow(headers.map((value) => TextCellValue(value)).toList());
+      final selectedImages = _images.where((item) => _selected.contains(item['url'].toString())).toList();
+      for (var i = 0; i < selectedImages.length; i++) {
+        final item = selectedImages[i];
+        final productName = (item['product_name'] ?? item['title'] ?? item['name'] ?? item['alt'] ?? '').toString().trim();
+        sheet.appendRow(<CellValue?>[
+          IntCellValue(i + 1),
+          TextCellValue((item['barcode'] ?? '').toString()),
+          TextCellValue(productName),
+          TextCellValue((item['major_unit'] ?? item['large_unit'] ?? '').toString()),
+          TextCellValue((item['minor_unit'] ?? item['small_unit'] ?? '').toString()),
+          TextCellValue((item['internal_count'] ?? '').toString()),
+          TextCellValue((item['other_units'] ?? '').toString()),
+          TextCellValue((item['sale_price'] ?? item['price'] ?? '').toString()),
+          TextCellValue((item['main_category'] ?? item['main_group'] ?? item['category'] ?? '').toString()),
+          TextCellValue((item['subcategory'] ?? item['sub_category'] ?? item['sub_group'] ?? '').toString()),
+          TextCellValue((item['secondary_category'] ?? item['brand'] ?? '').toString()),
+          TextCellValue((item['weight'] ?? '').toString()),
+          TextCellValue('\${now.year}-\${two(now.month)}-\${two(now.day)} \${two(now.hour)}:\${two(now.minute)}:\${two(now.second)}'),
+          TextCellValue(item['url'].toString()),
+        ]);
+      }
+      final bytes = excel.encode();
+      if (bytes == null || bytes.isEmpty) throw Exception('تعذر إنشاء ملف Excel.');
+      await FileSaver.instance.saveFile(
+        name: 'silsila_product_data_$timestamp',
+        bytes: Uint8List.fromList(bytes),
+        fileExtension: 'xlsx',
+        mimeType: MimeType.xlsx,
+      );
+      if (mounted) {
+        setState(() => _status = 'تم تجهيز ملف Excel مستقل يضم \${selectedImages.length} صنف. اسم الملف يتضمن تاريخ ووقت الحفظ، ولن يستبدل الملفات السابقة.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _saveZip() async {
     if (_selected.isEmpty) {
       setState(() => _error = 'حدد صورة واحدة على الأقل قبل التنزيل.');
@@ -475,6 +540,16 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     icon: const Icon(Icons.folder_zip_outlined),
                     label: Text('حفظ المحدد PNG داخل ZIP (${_selected.length})'),
                     style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13)),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _loading || _selected.isEmpty ? null : _exportProductDataExcel,
+                    icon: const Icon(Icons.table_view_outlined),
+                    label: Text('بيانات الأصناف Excel (\${_selected.length})'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _purple,
+                      side: const BorderSide(color: _purple),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    ),
                   ),
                 ]),
                 if (_pageUrl != null) ...[
