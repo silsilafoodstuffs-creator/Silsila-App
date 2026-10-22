@@ -121,9 +121,21 @@ def resolve_thumbnail_urls(rows: list[dict]) -> dict[str, str]:
         "format": "json",
     })
     endpoint = "https://commons.wikimedia.org/w/api.php?" + params
-    req = Request(endpoint, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
-    with urlopen(req, timeout=45) as response:
-        payload = json.loads(response.read().decode("utf-8"))
+    payload = None
+    for attempt in range(5):
+        req = Request(endpoint, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+        try:
+            with urlopen(req, timeout=45) as response:
+                payload = json.loads(response.read().decode("utf-8"))
+            break
+        except HTTPError as exc:
+            if exc.code not in (429, 500, 502, 503, 504) or attempt == 4:
+                raise
+            delay = min(10 * (attempt + 1), 60)
+            print(f"Commons API HTTP {exc.code}; waiting {delay}s before retry {attempt + 1}/4", file=sys.stderr)
+            time.sleep(delay)
+    if payload is None:
+        raise RuntimeError("Commons API returned no payload")
 
     title_to_code = {title.casefold(): code for code, title in titles_by_code.items()}
     resolved: dict[str, str] = {}
