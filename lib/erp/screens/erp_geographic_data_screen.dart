@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -26,6 +24,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   String? message;
   bool loading = false;
   bool _initialExpansionApplied = false;
+  String? _activeCompanyId;
 
   String s(dynamic value) => (value ?? '').toString();
 
@@ -101,7 +100,6 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   }
 
   Future<void> load() async {
-    final companyId = (widget.companyId ?? '').trim();
     if (db == null) {
       if (!mounted) return;
       setState(() {
@@ -118,63 +116,82 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     });
 
     try {
-      // Supabase/PostgREST commonly caps a response at 1,000 rows.
-      // Fetch every page: the geographic tree currently contains more than 6,000 rows,
-      // and ordering by geo_code puts EG-AREA rows before governorate roots.
+      // Resolve company context from the signed-in user's active memberships.
+      // A null/stale dashboard company id must not silently blank this screen.
+      final candidates = <String>[];
+      final suppliedCompanyId = (widget.companyId ?? '').trim();
+      if (suppliedCompanyId.isNotEmpty) candidates.add(suppliedCompanyId);
+      final userId = db!.auth.currentUser?.id;
+      if (userId != null && userId.isNotEmpty) {
+        final membershipResult = await db!
+            .from('erp_company_members')
+            .select('company_id')
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .order('created_at');
+        for (final item in (membershipResult as List)) {
+          final id = s((item as Map<String, dynamic>)['company_id']).trim();
+          if (id.isNotEmpty && !candidates.contains(id)) candidates.add(id);
+        }
+      }
+      if (candidates.isEmpty) {
+        throw StateError(
+          'لم يتم العثور على شركة نشطة مرتبطة بحساب الدخول. تحقق من عضوية المستخدم.',
+        );
+      }
+
       const pageSize = 1000;
-      var offset = 0;
-      var useSharedCatalog = companyId.isEmpty;
-      final allRows = <Map<String, dynamic>>[];
-      while (true) {
-        const fields =
-            'id,company_id,parent_id,geo_code,name_ar,name_en,level,is_active,logo_bytes,'
-            'logo_mime_type,source_name,source_url,latitude,longitude,admin_type';
-        List<dynamic> pageResult;
-        if (!useSharedCatalog) {
-          final scoped = await db!
+      List<Map<String, dynamic>> loadedRows = <Map<String, dynamic>>[];
+      String? resolvedCompanyId;
+      const fields =
+          'id,company_id,parent_id,geo_code,name_ar,name_en,level,is_active,'
+          'source_name,source_url,latitude,longitude,admin_type';
+
+      // Read only rows belonging to a company the signed-in user is linked to.
+      // Try all active memberships in case the dashboard passed an old company id.
+      for (final candidateId in candidates) {
+        final candidateRows = <Map<String, dynamic>>[];
+        var offset = 0;
+        while (true) {
+          final result = await db!
               .from('erp_geographic_data')
               .select(fields)
-              .eq('company_id', companyId)
+              .eq('company_id', candidateId)
               .order('geo_code')
               .range(offset, offset + pageSize - 1);
-          pageResult = scoped as List;
-          // Older deployments seeded the national directory under the original
-          // setup company. Fall back to the persisted master directory instead
-          // of silently rendering an empty grid for another active company.
-          if (offset == 0 && pageResult.isEmpty) {
-            useSharedCatalog = true;
-          }
-        } else {
-          pageResult = <dynamic>[];
+          final page = (result as List)
+              .map((item) => Map<String, dynamic>.from(item))
+              .toList();
+          candidateRows.addAll(page);
+          if (page.length < pageSize) break;
+          offset += pageSize;
         }
-        if (useSharedCatalog) {
-          final shared = await db!
-              .from('erp_geographic_data')
-              .select(fields)
-              .order('geo_code')
-              .range(offset, offset + pageSize - 1);
-          pageResult = shared as List;
+        if (candidateRows.isNotEmpty) {
+          loadedRows = candidateRows;
+          resolvedCompanyId = candidateId;
+          break;
         }
-        final page = pageResult
-            .map((item) => Map<String, dynamic>.from(item))
-            .toList();
-        allRows.addAll(page);
-        if (page.length < pageSize) break;
-        offset += pageSize;
+      }
+
+      if (loadedRows.isEmpty) {
+        throw StateError(
+          'لم تُرجع قاعدة البيانات سجلات لهذه الشركات. تحقق من صلاحيات القراءة وسياسات RLS لجدول erp_geographic_data.',
+        );
       }
 
       if (!mounted) return;
       setState(() {
-        rows = allRows;
+        _activeCompanyId = resolvedCompanyId;
+        rows = loadedRows;
         _rebuildChildren();
-        if (!_initialExpansionApplied && rows.isNotEmpty) {
-          _expandedIds.addAll(
+        _expandedIds
+          ..clear()
+          ..addAll(
             rows
                 .where((row) => s(row['level']) == 'governorate')
                 .map((row) => s(row['id'])),
           );
-          _initialExpansionApplied = true;
-        }
+        _initialExpansionApplied = true;
         loading = false;
         error = null;
       });
@@ -183,6 +200,8 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       setState(() {
         loading = false;
         error = 'تعذر تحميل البيانات الجغرافية: $e';
+        rows = <Map<String, dynamic>>[];
+        _children.clear();
       });
     }
   }
@@ -255,7 +274,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       if (code.text.trim().isEmpty || arabic.text.trim().isEmpty) {
         throw ArgumentError('الكود والاسم العربي مطلوبان.');
       }
-      final companyId = (widget.companyId ?? '').trim();
+      final companyId = (_activeCompanyId ?? widget.companyId ?? '').trim();
       final rowCompanyId = s(row?['company_id']).trim();
       final writeCompanyId = row == null ? companyId : rowCompanyId;
       if (writeCompanyId.isEmpty) {
@@ -355,44 +374,6 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         fallbackColor: color,
       );
 
-  Uint8List? _decodeLogoBytes(dynamic value) {
-    if (value is! String || value.isEmpty) return null;
-    var hex = value;
-    if (hex.startsWith(r'\x')) hex = hex.substring(2);
-    if (hex.isEmpty || hex.length.isOdd) return null;
-    try {
-      return Uint8List.fromList(List<int>.generate(
-        hex.length ~/ 2,
-        (index) => int.parse(hex.substring(index * 2, index * 2 + 2), radix: 16),
-      ));
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Widget _governorateLogo(Map<String, dynamic> row) {
-    final bytes = _decodeLogoBytes(row['logo_bytes']);
-    final fallback = const Icon(Icons.account_balance, color: Color(0xFF3E007D));
-    return Padding(
-      padding: const EdgeInsetsDirectional.only(end: 8),
-      child: CircleAvatar(
-        radius: 21,
-        backgroundColor: const Color(0xFFF5EFFB),
-        child: bytes != null
-            ? ClipOval(
-                child: Image.memory(
-                  bytes,
-                  width: 42,
-                  height: 42,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => fallback,
-                ),
-              )
-            : fallback,
-      ),
-    );
-  }
-
   Widget node(Map<String, dynamic> row, int depth) {
     final id = s(row['id']);
     final level = s(row['level']);
@@ -409,7 +390,6 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
             children: [
               Row(
                 children: [
-                  if (level == 'governorate') _governorateLogo(row),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
