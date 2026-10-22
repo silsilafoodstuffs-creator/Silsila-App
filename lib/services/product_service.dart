@@ -165,13 +165,17 @@ class ProductService {
     final results = <Map<String, dynamic>>[];
     for (final raw in (itemRows as List)) {
       final item = Map<String, dynamic>.from(raw as Map);
-      final category = categoriesById[(item['category_id'] ?? '').toString()];
-      if (category == null) continue;
-      final categoryName = (category['category_name'] ?? '').toString();
-      final path = categoryPath(category);
+      final itemCategory = categoriesById[(item['category_id'] ?? '').toString()];
+      if (itemCategory == null) continue;
+      final categoryName = (itemCategory['category_name'] ?? '').toString();
+      final path = categoryPath(itemCategory);
       final rootName = (path.first['category_name'] ?? categoryName).toString();
-      if (category != null && category != rootName && category != categoryName &&
-          !path.any((node) => (node['category_name'] ?? '').toString() == category)) continue;
+      if (category != null &&
+          category != rootName &&
+          category != categoryName &&
+          !path.any((node) => (node['category_name'] ?? '').toString() == category)) {
+        continue;
+      }
       final subcategoryName = path.length > 1 ? (path[1]['category_name'] ?? '').toString() : '';
       results.add(<String, dynamic>{
         'id': item['id'],
