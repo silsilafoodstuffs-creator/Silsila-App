@@ -308,7 +308,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     try {
       final now = DateTime.now();
       String two(int value) => value.toString().padLeft(2, '0');
-      final timestamp = '\${now.year}\${two(now.month)}\${two(now.day)}_\${two(now.hour)}\${two(now.minute)}\${two(now.second)}_\${now.millisecond.toString().padLeft(3, '0')}';
+      final timestamp = '${now.year}${two(now.month)}${two(now.day)}_${two(now.hour)}${two(now.minute)}${two(now.second)}_${now.millisecond.toString().padLeft(3, '0')}';
       final excel = Excel.createExcel();
       final sheet = excel['بيانات الأصناف'];
       final headers = <String>[
@@ -337,7 +337,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           TextCellValue((item['subcategory'] ?? item['sub_category'] ?? item['sub_group'] ?? '').toString()),
           TextCellValue((item['secondary_category'] ?? item['brand'] ?? '').toString()),
           TextCellValue((item['weight'] ?? '').toString()),
-          TextCellValue('\${now.year}-\${two(now.month)}-\${two(now.day)} \${two(now.hour)}:\${two(now.minute)}:\${two(now.second)}'),
+          TextCellValue('${now.year}-${two(now.month)}-${two(now.day)} ${two(now.hour)}:${two(now.minute)}:${two(now.second)}'),
           TextCellValue(item['url'].toString()),
         ]);
       }
@@ -349,7 +349,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         fileExtension: 'xlsx',
       );
       if (mounted) {
-        setState(() => _status = 'تم تجهيز ملف Excel مستقل يضم \${selectedImages.length} صنف. اسم الملف يتضمن تاريخ ووقت الحفظ، ولن يستبدل الملفات السابقة.');
+        setState(() => _status = 'تم تجهيز ملف Excel مستقل يضم ${selectedImages.length} صنف. اسم الملف يتضمن تاريخ ووقت الحفظ، ولن يستبدل الملفات السابقة.');
       }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -510,7 +510,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   OutlinedButton.icon(
                     onPressed: _loading || _selected.isEmpty ? null : _exportProductDataExcel,
                     icon: const Icon(Icons.table_view_outlined),
-                    label: Text('تصدير بيانات الأصناف إلى Excel (\${_selected.length})'),
+                    label: Text('تصدير بيانات الأصناف إلى Excel (${_selected.length})'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: _purple,
                       side: const BorderSide(color: _purple),
