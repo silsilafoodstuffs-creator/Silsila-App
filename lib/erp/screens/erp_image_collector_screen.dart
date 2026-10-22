@@ -114,18 +114,38 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     return name.isEmpty ? fallback : name;
   }
 
-  String _imageBaseName(Map<String, dynamic> image, int index) {
-    final productName = [
-      image['product_name'],
-      image['title'],
-      image['name'],
-      image['alt'],
-    ].map((value) => value?.toString().trim() ?? '').firstWhere(
-      (value) => value.isNotEmpty,
-      orElse: () => 'صورة_${(index + 1).toString().padLeft(3, '0')}',
-    );
-    return _safeName(productName, fallback: 'صورة_${(index + 1).toString().padLeft(3, '0')}');
+  String _suggestedImageName(Map<String, dynamic> image, int index) {
+    final kind = (image['save_as'] ?? 'product').toString();
+    final candidates = switch (kind) {
+      'category' => [
+          image['category_name'], image['group_name'], image['category'],
+          image['group'], image['title'], image['alt'], image['name'],
+        ],
+      'brand' => [
+          image['brand_name'], image['brand'], image['manufacturer'],
+          image['title'], image['alt'], image['name'],
+        ],
+      _ => [
+          image['product_name'], image['title'], image['name'], image['alt'],
+        ],
+    };
+    final suggested = candidates.map((value) => value?.toString().trim() ?? '')
+        .firstWhere((value) => value.isNotEmpty,
+            orElse: () => 'صورة_${(index + 1).toString().padLeft(3, '0')}');
+    return _safeName(suggested, fallback: 'صورة_${(index + 1).toString().padLeft(3, '0')}');
   }
+
+  String _imageBaseName(Map<String, dynamic> image, int index) {
+    final customName = image['file_name']?.toString().trim() ?? '';
+    return _safeName(customName.isNotEmpty ? customName : _suggestedImageName(image, index),
+        fallback: 'صورة_${(index + 1).toString().padLeft(3, '0')}');
+  }
+
+  String _nameTypeLabel(String kind) => switch (kind) {
+    'category' => 'فئة / مجموعة',
+    'brand' => 'ماركة / براند',
+    _ => 'منتج',
+  };
 
   String _uniqueFileName(String baseName, String extension, Set<String> usedNames) {
     var candidate = '$baseName$extension';
@@ -446,6 +466,41 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                           padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
                           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                             Text(alt.isEmpty ? 'صورة ${index + 1}' : alt, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 5),
+                            DropdownButtonFormField<String>(
+                              value: (item['save_as'] ?? 'product').toString(),
+                              isExpanded: true,
+                              decoration: const InputDecoration(
+                                labelText: 'نوع الصورة',
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+                                border: OutlineInputBorder(),
+                              ),
+                              items: const [
+                                DropdownMenuItem(value: 'product', child: Text('صنف / منتج')),
+                                DropdownMenuItem(value: 'category', child: Text('فئة / مجموعة')),
+                                DropdownMenuItem(value: 'brand', child: Text('ماركة / براند')),
+                              ],
+                              onChanged: _loading ? null : (value) {
+                                if (value == null) return;
+                                setState(() {
+                                  item['save_as'] = value;
+                                  item.remove('file_name');
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 5),
+                            TextFormField(
+                              key: ValueKey('filename_$index_${item['save_as'] ?? 'product'}'),
+                              initialValue: _suggestedImageName(item, index),
+                              decoration: const InputDecoration(
+                                labelText: 'اسم الملف المحفوظ',
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 8),
+                                border: OutlineInputBorder(),
+                              ),
+                              onChanged: (value) => item['file_name'] = value,
+                            ),
                             const SizedBox(height: 5),
                             Align(
                               alignment: Alignment.centerLeft,
