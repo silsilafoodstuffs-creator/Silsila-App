@@ -20,10 +20,10 @@ class ErpInventoryMasterRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
   Future<List<Map<String, dynamic>>> fetchCategories(String companyId) async {
-    final rows = await _db.from('erp_item_groups')
-      .select('id, group_code, group_name, parent_id, is_active')
-      .eq('company_id', companyId.trim()).order('group_code').limit(2000);
-    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    final rows = await _db.from('erp_item_categories')
+      .select('id, category_code, category_name, parent_id, is_active')
+      .eq('company_id', companyId.trim()).order('category_code').limit(2000);
+    return rows.map((r) { final item = Map<String, dynamic>.from(r); item['group_code'] = item['category_code']; item['group_name'] = item['category_name']; return item; }).toList();
   }
 
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
