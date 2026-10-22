@@ -524,7 +524,7 @@ declare
   v_branch uuid;
   v_warehouse uuid;
   v_rep uuid;
-  v_group uuid;
+  v_category uuid;
   v_customer uuid;
   v_supplier uuid;
   v_plan uuid;
@@ -551,27 +551,27 @@ begin
   select id into v_branch from public.erp_branches where company_id=v_company order by is_main desc, created_at limit 1;
   select id into v_warehouse from public.erp_warehouses where company_id=v_company order by created_at limit 1;
 
-  insert into public.erp_item_groups(company_id,group_code,group_name)
+  insert into public.erp_item_categories(company_id,category_code,category_name)
   values
   (v_company,'DEMO-OIL','زيوت وسمن - بيانات تجريبية'),
   (v_company,'DEMO-DRY','بقوليات ومكرونة - بيانات تجريبية'),
   (v_company,'DEMO-DRINK','مشروبات - بيانات تجريبية')
-  on conflict(company_id,group_code) do update set group_name=excluded.group_name;
+  on conflict(company_id,category_code) do update set category_name=excluded.category_name;
 
-  select id into v_group from public.erp_item_groups where company_id=v_company and group_code='DEMO-OIL';
-  insert into public.erp_items(company_id,group_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,image_url,source_name,is_demo_data)
+  select id into v_category from public.erp_item_categories where company_id=v_company and category_code='DEMO-OIL';
+  insert into public.erp_items(company_id,category_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,image_url,source_name,is_demo_data)
   values
-  (v_company,v_group,'DEMO-OIL-001','زيت خليط 1 لتر - عينة','زجاجة',48,54,24,'علامة تجريبية','12 زجاجة / كرتونة','https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=480','Silsila demo',true),
-  (v_company,v_group,'DEMO-OIL-002','سمن نباتي 1.5 كجم - عينة','عبوة',92,105,12,'علامة تجريبية','6 عبوات / كرتونة','https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=480','Silsila demo',true)
+  (v_company,v_category,'DEMO-OIL-001','زيت خليط 1 لتر - عينة','زجاجة',48,54,24,'علامة تجريبية','12 زجاجة / كرتونة','https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=480','Silsila demo',true),
+  (v_company,v_category,'DEMO-OIL-002','سمن نباتي 1.5 كجم - عينة','عبوة',92,105,12,'علامة تجريبية','6 عبوات / كرتونة','https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?w=480','Silsila demo',true)
   on conflict(company_id,item_code) do update set item_name=excluded.item_name, purchase_price=excluded.purchase_price, sale_price=excluded.sale_price, image_url=excluded.image_url, is_demo_data=true;
 
-  select id into v_group from public.erp_item_groups where company_id=v_company and group_code='DEMO-DRY';
-  insert into public.erp_items(company_id,group_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,image_url,source_name,is_demo_data)
+  select id into v_category from public.erp_item_categories where company_id=v_company and category_code='DEMO-DRY';
+  insert into public.erp_items(company_id,category_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,image_url,source_name,is_demo_data)
   values
-  (v_company,v_group,'DEMO-DRY-001','أرز معبأ 1 كجم - عينة','كيس',28,32,30,'علامة تجريبية','10 أكياس / شوال','https://images.unsplash.com/photo-1586201375761-83865001e31c?w=480','Silsila demo',true)
+  (v_company,v_category,'DEMO-DRY-001','أرز معبأ 1 كجم - عينة','كيس',28,32,30,'علامة تجريبية','10 أكياس / شوال','https://images.unsplash.com/photo-1586201375761-83865001e31c?w=480','Silsila demo',true)
   on conflict(company_id,item_code) do update set item_name=excluded.item_name, purchase_price=excluded.purchase_price, sale_price=excluded.sale_price, image_url=excluded.image_url, is_demo_data=true;
 
-  insert into public.erp_item_groups(company_id,group_code,group_name)
+  insert into public.erp_item_categories(company_id,category_code,category_name)
   values
   (v_company,'DEMO-PASTA','مكرونات ومخبوزات - تجريبي'),
   (v_company,'DEMO-DAIRY','ألبان وجبن - تجريبي'),
@@ -579,9 +579,9 @@ begin
   (v_company,'DEMO-SNACK','مقرمشات وحلويات - تجريبي'),
   (v_company,'DEMO-CLEAN','منظفات وورقيات - تجريبي'),
   (v_company,'DEMO-CAN','معلبات وبقوليات - تجريبي')
-  on conflict(company_id,group_code) do update set group_name=excluded.group_name;
+  on conflict(company_id,category_code) do update set category_name=excluded.category_name;
 
-  insert into public.erp_items(company_id,group_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,image_url,source_name,is_demo_data)
+  insert into public.erp_items(company_id,category_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,image_url,source_name,is_demo_data)
   select v_company,g.id,x.code,x.name,x.unit,x.buy,x.sell,x.reorder,x.brand,x.pack,x.image,'Silsila demo catalog',true
   from (values
     ('DEMO-PASTA','DEMO-PASTA-001','مكرونة 400 جم - عينة','كيس',11.5,13,48,'علامة تجريبية','20 كيس / كرتونة','https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=480'),
@@ -601,14 +601,14 @@ begin
     ('DEMO-CAN','DEMO-CAN-002','صلصة طماطم 300 جم - عينة','علبة',12,15,24,'علامة تجريبية','24 علبة / كرتونة','https://images.unsplash.com/photo-1547592180-85f173990554?w=480'),
     ('DEMO-CAN','DEMO-CAN-003','عدس أصفر 1 كجم - عينة','كيس',49,56,12,'علامة تجريبية','10 أكياس / شوال','https://images.unsplash.com/photo-1515543904379-3d757afe72e4?w=480'),
     ('DEMO-CAN','DEMO-CAN-004','سكر أبيض 1 كجم - عينة','كيس',29,33,30,'علامة تجريبية','10 أكياس / شوال','https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=480')
-  ) as x(group_code,code,name,unit,buy,sell,reorder,brand,pack,image)
-  join public.erp_item_groups g on g.company_id=v_company and g.group_code=x.group_code
+  ) as x(category_code,code,name,unit,buy,sell,reorder,brand,pack,image)
+  join public.erp_item_categories g on g.company_id=v_company and g.category_code=x.category_code
   on conflict(company_id,item_code) do update set
-    group_id=excluded.group_id,item_name=excluded.item_name,purchase_price=excluded.purchase_price,
+    category_id=excluded.category_id,item_name=excluded.item_name,purchase_price=excluded.purchase_price,
     sale_price=excluded.sale_price,image_url=excluded.image_url,is_demo_data=true;
 
   -- Recognizable Egyptian FMCG brand examples; prices are deliberately zero until a verified supplier quote is entered.
-  insert into public.erp_items(company_id,group_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,source_name,is_demo_data)
+  insert into public.erp_items(company_id,category_id,item_code,item_name,base_unit,purchase_price,sale_price,reorder_level,brand_name,package_description,source_name,is_demo_data)
   select v_company,g.id,x.code,x.name,x.unit,0,0,x.reorder,x.brand,x.pack,'Brand example only; price/source not verified',true
   from (values
     ('DEMO-OIL','DEMO-BRAND-OIL-001','زيت عافية 1 لتر - السعر غير محدد','زجاجة',24,'عافية','12 زجاجة / كرتونة'),
@@ -625,10 +625,10 @@ begin
     ('DEMO-SNACK','DEMO-BRAND-SNACK-001','مولتو إيديتا - السعر غير محدد','قطعة',48,'إيديتا','كرتونة؛ العدد يحدد من المورد'),
     ('DEMO-SNACK','DEMO-BRAND-SNACK-002','شيبسي 40 جم - السعر غير محدد','كيس',48,'شيبسي','كرتونة؛ العدد يحدد من المورد'),
     ('DEMO-SNACK','DEMO-BRAND-SNACK-003','بسكويت الشمعدان - السعر غير محدد','عبوة',24,'الشمعدان','كرتونة؛ العدد يحدد من المورد')
-  ) as x(group_code,code,name,unit,reorder,brand,pack)
-  join public.erp_item_groups g on g.company_id=v_company and g.group_code=x.group_code
+  ) as x(category_code,code,name,unit,reorder,brand,pack)
+  join public.erp_item_categories g on g.company_id=v_company and g.category_code=x.category_code
   on conflict(company_id,item_code) do update set
-    group_id=excluded.group_id,item_name=excluded.item_name,purchase_price=0,sale_price=0,
+    category_id=excluded.category_id,item_name=excluded.item_name,purchase_price=0,sale_price=0,
     brand_name=excluded.brand_name,package_description=excluded.package_description,
     source_name=excluded.source_name,is_demo_data=true;
 
