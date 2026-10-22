@@ -65,7 +65,7 @@ class ErpMasterDataService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> listItemCategorys({
+  Future<List<Map<String, dynamic>>> listItemCategories({
     required String companyId,
     bool activeOnly = true,
   }) async {
