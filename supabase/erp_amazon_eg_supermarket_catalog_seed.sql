@@ -48,7 +48,7 @@ on conflict (name) do update set
   icon=excluded.icon, image_url=excluded.image_url, is_active=true,
   activity_type='مواد غذائية';
 
-insert into public.erp_item_groups (company_id, parent_id, group_code, group_name, group_name_en, is_active, show_in_app, image_url)
+insert into public.erp_item_categories (company_id, parent_id, category_code, category_name, category_name_en, is_active, show_in_app, image_url)
 values ('47278c99-7743-4dd4-9ce6-d11f28e02504',null,'FOOD-GHEE','سمنات','Ghee',true,true,'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9c8.png'),
 ('47278c99-7743-4dd4-9ce6-d11f28e02504',null,'FOOD-OILS','زيوت','Cooking Oils',true,true,'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f6e2.png'),
 ('47278c99-7743-4dd4-9ce6-d11f28e02504',null,'FOOD-PASTA','مكرونة ونودلز','Pasta & Noodles',true,true,'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f35d.png'),
@@ -83,11 +83,11 @@ values ('47278c99-7743-4dd4-9ce6-d11f28e02504',null,'FOOD-GHEE','سمنات','Gh
 ('47278c99-7743-4dd4-9ce6-d11f28e02504',null,'HOME-AIR','معطرات جو','Air Fresheners',true,true,'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f343.png'),
 ('47278c99-7743-4dd4-9ce6-d11f28e02504',null,'HOME-TOOLS','أدوات تنظيف','Cleaning Tools',true,true,'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9f9.png'),
 ('47278c99-7743-4dd4-9ce6-d11f28e02504',null,'HOME-KITCHEN','مستلزمات مطبخ','Kitchen Consumables',true,true,'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9f4.png')
-on conflict (company_id, group_code) do update set
-  group_name=excluded.group_name, group_name_en=excluded.group_name_en,
+on conflict (company_id, category_code) do update set
+  category_name=excluded.category_name, category_name_en=excluded.category_name_en,
   is_active=true, show_in_app=true, image_url=excluded.image_url;
 
-with seed(group_code,item_code,item_name,base_unit,brand_name,package_description,source_url,emoji) as (
+with seed(category_code,item_code,item_name,base_unit,brand_name,package_description,source_url,emoji) as (
  values ('FOOD-RICE','RICE-001','أرز أبيض مصري','كجم','','العبوة الأساسية: كجم؛ كيس 1 كجم × 1؛ شيكارة 25 كجم × 25','https://www.amazon.eg/s?k=%D8%A3%D8%B1%D8%B2%20%D8%A3%D8%A8%D9%8A%D8%B6%20%D9%85%D8%B5%D8%B1%D9%8A&i=grocery','1f35a'),
 ('FOOD-RICE','RICE-002','أرز بسمتي','كجم','','العبوة الأساسية: كجم؛ كيس 1 كجم × 1؛ شيكارة 5 كجم × 5','https://www.amazon.eg/s?k=%D8%A3%D8%B1%D8%B2%20%D8%A8%D8%B3%D9%85%D8%AA%D9%8A&i=grocery','1f35a'),
 ('FOOD-RICE','RICE-003','أرز مصري عريض','كجم','','العبوة الأساسية: كجم؛ كيس 1 كجم × 1؛ شيكارة 25 كجم × 25','https://www.amazon.eg/s?k=%D8%A3%D8%B1%D8%B2%20%D9%85%D8%B5%D8%B1%D9%8A%20%D8%B9%D8%B1%D9%8A%D8%B6&i=grocery','1f35a'),
@@ -267,19 +267,19 @@ with seed(group_code,item_code,item_name,base_unit,brand_name,package_descriptio
 ('HOME-KITCHEN','KIT-002','أكواب ورقية','باكو','','العبوة الأساسية: باكو؛ كرتونة 20 باكو × 20','https://www.amazon.eg/s?k=%D8%A3%D9%83%D9%88%D8%A7%D8%A8%20%D9%88%D8%B1%D9%82%D9%8A%D8%A9&i=grocery','1f9f4'),
 ('HOME-KITCHEN','KIT-003','شفاطات مشروبات','باكو','','العبوة الأساسية: باكو؛ كرتونة 50 باكو × 50','https://www.amazon.eg/s?k=%D8%B4%D9%81%D8%A7%D8%B7%D8%A7%D8%AA%20%D9%85%D8%B4%D8%B1%D9%88%D8%A8%D8%A7%D8%AA&i=grocery','1f9f4')
 ), linked as (
- select s.*, g.id as group_id from seed s join public.erp_item_groups g
- on g.company_id='47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid and g.group_code=s.group_code
+ select s.*, g.id as category_id from seed s join public.erp_item_categories g
+ on g.company_id='47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid and g.category_code=s.category_code
 ), upserted as (
- insert into public.erp_items(company_id,group_id,item_code,item_name,base_unit,purchase_price,sale_price,
+ insert into public.erp_items(company_id,category_id,item_code,item_name,base_unit,purchase_price,sale_price,
   is_active,expiry_tracking,image_url,brand_name,package_description,source_name,source_url,is_demo_data)
- select '47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid, group_id, item_code, item_name, base_unit, 0, 0, true,
-  case when group_code in ('FOOD-DAIRY','FOOD-CHEESE','FOOD-JUICES','FOOD-FROZEN') then true else false end,
+ select '47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid, category_id, item_code, item_name, base_unit, 0, 0, true,
+  case when category_code in ('FOOD-DAIRY','FOOD-CHEESE','FOOD-JUICES','FOOD-FROZEN') then true else false end,
   'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/'||emoji||'.png',
   nullif(brand_name,''), package_description, 'Amazon.eg — تصنيف مرجعي للسوبر ماركت',
   source_url, false
  from linked
  on conflict (company_id,item_code) do update set
-  group_id=excluded.group_id, item_name=excluded.item_name, base_unit=excluded.base_unit,
+  category_id=excluded.category_id, item_name=excluded.item_name, base_unit=excluded.base_unit,
   image_url=excluded.image_url, package_description=excluded.package_description,
   source_name=excluded.source_name, source_url=excluded.source_url, is_active=true
  returning id, item_code, base_unit
@@ -291,7 +291,7 @@ where i.company_id='47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid and i.item_code 
 on conflict (item_id,unit_code) do update set
  unit_name=excluded.unit_name, conversion_factor=1, is_base_unit=true, is_active=true;
 
-with seed(group_code,item_code,pack_unit,pack_factor,carton_unit,carton_factor) as (
+with seed(category_code,item_code,pack_unit,pack_factor,carton_unit,carton_factor) as (
  values ('FOOD-RICE','RICE-001','كيس 1 كجم',1,'شيكارة 25 كجم',25),
 ('FOOD-RICE','RICE-002','كيس 1 كجم',1,'شيكارة 5 كجم',5),
 ('FOOD-RICE','RICE-003','كيس 1 كجم',1,'شيكارة 25 كجم',25),
@@ -665,13 +665,13 @@ where s.carton_unit is not null and s.carton_unit <> ''
 on conflict (item_id,unit_code) do update set
  unit_name=excluded.unit_name, conversion_factor=excluded.conversion_factor, is_base_unit=false, is_active=true;
 
--- Ensure older pre-existing ERP groups also have PNG artwork.
-update public.erp_item_groups
+-- Ensure older pre-existing ERP categorys also have PNG artwork.
+update public.erp_item_categories
 set image_url='https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/' ||
  case
-  when group_code ilike '%JUICE%' or group_name ilike '%عصير%' then '1f34a'
-  when group_code ilike '%CHEESE%' or group_name ilike '%جبن%' then '1f9c0'
-  when group_code ilike '%BISCUIT%' or group_name ilike '%بسكويت%' then '1f36a'
+  when category_code ilike '%JUICE%' or category_name ilike '%عصير%' then '1f34a'
+  when category_code ilike '%CHEESE%' or category_name ilike '%جبن%' then '1f9c0'
+  when category_code ilike '%BISCUIT%' or category_name ilike '%بسكويت%' then '1f36a'
   else '1f6d2'
  end || '.png'
 where company_id='47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid
