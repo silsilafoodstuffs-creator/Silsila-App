@@ -26,6 +26,18 @@ class SilsilaTheme {
       brightness: Brightness.light,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: silsilaCanvas,
+      checkboxTheme: CheckboxThemeData(
+        shape: const CircleBorder(),
+        side: const BorderSide(color: purple, width: 1.6),
+        checkColor: WidgetStateProperty.all(Colors.white),
+        fillColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.selected)) return purple;
+          if (states.contains(WidgetState.disabled)) return const Color(0xFFE8E1EF);
+          return Colors.white;
+        }),
+        splashRadius: 20,
+        visualDensity: VisualDensity.standard,
+      ),
       visualDensity: VisualDensity.standard,
       splashFactory: InkRipple.splashFactory,
 
