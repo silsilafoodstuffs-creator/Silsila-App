@@ -7,6 +7,11 @@ create table if not exists public.erp_item_categories (
  category_code text not null,
  category_name text not null,
  category_name_en text,
+ activity_code text,
+ show_in_app boolean not null default true,
+ image_url text,
+ image_data bytea,
+ image_mime_type text,
  is_active boolean not null default true,
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
@@ -16,8 +21,8 @@ alter table public.erp_items add column if not exists category_id uuid reference
 create index if not exists erp_item_categories_company_idx on public.erp_item_categories(company_id);
 create index if not exists erp_items_category_idx on public.erp_items(category_id);
 -- Keep IDs stable so item foreign keys can be migrated without losing references.
-insert into public.erp_item_categories(id, company_id, parent_id, category_code, category_name, is_active)
-select g.id, g.company_id, g.parent_id, g.group_code, g.group_name, g.is_active
+insert into public.erp_item_categories(id, company_id, parent_id, category_code, category_name, category_name_en, activity_code, show_in_app, image_url, image_data, image_mime_type, is_active)
+select g.id, g.company_id, g.parent_id, g.group_code, g.group_name, g.group_name_en, g.activity_code, coalesce(g.show_in_app,true), g.image_url, g.image_data, g.image_mime_type, g.is_active
 from public.erp_item_groups g
 on conflict (id) do nothing;
 update public.erp_items i set category_id = i.group_id
