@@ -19,13 +19,26 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
   bool _busy = false;
   String _status = '';
   static const List<String> _screens = <String>[
-    'بيانات الشركة','الفروع ومراكز التكلفة','أنواع الأنشطة','أنواع المستخدمين','تصنيفات المستخدمين',
-    'المستخدمين','قوالب صلاحيات المستخدمين','صلاحيات المستخدمين','إعدادات البرنامج','سجل العمليات',
-    'سياسات التسعير والخصومات','شجرة الحسابات','الفترات المالية','مراكز التكلفة','العملات',
-    'الخزائن الرئيسية والفرعية','دليل المخازن','فئات الأصناف','مجموعات الأصناف','دليل الأصناف',
-    'دليل الموردين','دليل العملاء','قوائم أسعار البيع','قوائم أسعار الموردين','عروض الأصناف',
-    'قاعدة العملاء المحتملين','الهيكل الوظيفي','الإدارات والأقسام','الوظائف والدرجات','ملف الموظف',
-    'الحملات التسويقية','قواعد العروض','قنوات التواصل','سجلات التكامل والطلبات',
+    'بيانات الشركة', 'الفروع ومراكز التكلفة', 'أنواع الأنشطة', 'أنواع المستخدمين',
+    'تصنيفات المستخدمين', 'المستخدمين', 'قوالب صلاحيات المستخدمين',
+    'صلاحيات المستخدمين', 'إعدادات البرنامج', 'سجل العمليات', 'إدارة الشعار والصور',
+    'إدارة صور الأصناف والفئات', 'إدارة صور الموردين والعملاء', 'إدارة صلاحيات التطبيقات',
+    'إدارة ألوان التطبيقات', 'سياسات التسعير والخصومات', 'شجرة الحسابات', 'الفترات المالية',
+    'مراكز التكلفة', 'العملات', 'الخزائن الرئيسية والفرعية', 'سندات القبض', 'سندات الصرف',
+    'دليل المخازن', 'فئات الأصناف', 'مجموعات الأصناف', 'دليل الأصناف', 'دليل الموردين',
+    'دليل العملاء', 'قوائم أسعار البيع', 'قوائم أسعار الموردين', 'عروض الأصناف',
+    'قاعدة العملاء المحتملين', 'الهيكل الوظيفي', 'الإدارات والأقسام', 'الوظائف والدرجات',
+    'ملف الموظف', 'الحضور والانصراف', 'الإجازات والأذونات', 'مسير الرواتب', 'صرف الرواتب',
+    'أهداف العملاء الشهرية', 'عمولات المندوبين', 'عمولات المبيعات', 'خطط العمولة',
+    'مسودات العمولات', 'تقرير العمولات المستحقة', 'توزيع الأصناف على المندوبين',
+    'عرض سعر', 'أمر بيع', 'فاتورة بيع', 'فاتورة مبيعات', 'مرتجع مبيعات', 'إذن تجهيز',
+    'إذن تسليم', 'أرصدة الأصناف', 'كارت الصنف', 'الجرد والفروق', 'إذن إضافة', 'إذن صرف',
+    'تحويل مخزني', 'تسوية جرد', 'جرد فعلي', 'أمر شراء', 'استلام مشتريات',
+    'فاتورة مشتريات', 'مرتجع مشتريات', 'خريطة الحسابات التشغيلية', 'قيود اليومية',
+    'قائمة اعتماد القيود', 'إقفال الفترة', 'إعدادات الفاتورة الإلكترونية',
+    'سجلات الفاتورة الإلكترونية', 'واجهة API والربط الخارجي', 'إدارة مفاتيح API',
+    'سجلات التكامل والطلبات', 'إعداد نقاط الربط', 'الحملات التسويقية', 'قواعد العروض',
+    'قنوات التواصل',
   ];
 
   SupabaseClient? get _db {
@@ -58,24 +71,20 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
     setState(() { _busy = true; _status = 'جاري تجهيز النسخة الاحتياطية من السيرفر...'; });
     try {
       final pages = _selected.toList()..sort();
-      final records = await db.from('erp_workspace_records').select('page_key,record_key,record_data,created_at,updated_at').eq('company_id', companyId).inFilter('page_key', pages);
-      final backupId = 'backup_${DateTime.now().toUtc().millisecondsSinceEpoch}';
-      final payload = <String, dynamic>{
-        'format':'silsila-selective-backup-v1',
-        'backup_id':backupId,
-        'created_at':DateTime.now().toUtc().toIso8601String(),
-        'company_id':companyId,
-        'selected_pages':pages,
-        'record_count':(records as List).length,
-        'records':records,
-      };
-      await db.from('erp_data_backups').insert({
-        'company_id':companyId,'backup_id':backupId,'backup_type':'selective_clear',
-        'selected_pages':pages,'record_count':records.length,'payload':payload,
-        'created_by':db.auth.currentUser!.id,
+      final prepared = await db.rpc('erp_prepare_selective_data_clear', params: {
+        'p_company_id': companyId,
+        'p_selected_pages': pages,
       });
+      if (prepared is! Map) {
+        throw StateError('لم يرجع السيرفر بيانات النسخة الاحتياطية بالشكل المتوقع.');
+      }
+      final payload = Map<String, dynamic>.from(prepared);
+      final backupId = payload['backup_id']?.toString() ?? '';
+      if (backupId.isEmpty || payload['tables'] is! Map) {
+        throw StateError('النسخة الاحتياطية على السيرفر غير مكتملة؛ تم إلغاء المسح.');
+      }
       if (!mounted) return;
-      setState(() => _status = 'نجحت النسخة الأولى على السيرفر. جاري الحفظ على الجهاز...');
+      setState(() => _status = 'تم حفظ نسخة السيرفر. جاري حفظ نسخة الجهاز...');
       final bytes = Uint8List.fromList(utf8.encode(const JsonEncoder.withIndent('  ').convert(payload)));
       final savedPath = await FileSaver.instance.saveFile(
         name: 'silsila_backup_${DateTime.now().toIso8601String().replaceAll(':', '-')}',
@@ -85,11 +94,18 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
         throw StateError('لم يؤكد النظام حفظ ملف النسخة الاحتياطية على الجهاز؛ تم إلغاء المسح.');
       }
       if (!mounted) return;
-      setState(() => _status = 'نجحت النسختان. جاري مسح السجلات المحددة...');
-      await db.from('erp_workspace_records').delete().eq('company_id', companyId).inFilter('page_key', pages);
+      setState(() => _status = 'نجحت النسختان. جاري مسح بيانات الشاشات المحددة...');
+      final cleared = await db.rpc('erp_complete_selective_data_clear', params: {
+        'p_company_id': companyId,
+        'p_backup_id': backupId,
+      });
+      final result = cleared is Map ? Map<String, dynamic>.from(cleared) : <String, dynamic>{};
+      if (result['success'] != true) {
+        throw StateError('لم يؤكد السيرفر اكتمال عملية المسح.');
+      }
       if (!mounted) return;
       setState(() {
-        _status = 'تم حفظ النسختين ثم مسح السجلات العامة المطابقة. عدد السجلات التي شملتها النسخة: ${records.length}.';
+        _status = 'اكتملت النسخة الاحتياطية على السيرفر والجهاز ثم مسح البيانات المحددة. عدد السجلات المحفوظة في النسخة: ${payload['record_count'] ?? 0}. رقم النسخة: $backupId.';
         _selected.clear();
       });
     } catch (e) {
