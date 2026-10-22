@@ -393,8 +393,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
 
   /// Remove near-white edge-connected background and export a compressed transparent PNG.
   Uint8List _processTransparentPng(Uint8List source) {
-    final decoded = img.decodeImage(source);
-    if (decoded == null) throw Exception('تعذر فك ترميز الصورة الأصلية.');
+    final sourceImage = img.decodeImage(source);
+    if (sourceImage == null) throw Exception('تعذر فك ترميز الصورة الأصلية.');
+    final decoded = img.Image.from(sourceImage, numChannels: 4);
     final width = decoded.width, height = decoded.height;
     final visited = Uint8List(width * height);
     final queue = <int>[];
