@@ -143,20 +143,20 @@ function productMetadata(html: string, base: URL) {
 
 function readableText(fragment: string): string {
   return decodeEntities(fragment
-    .replace(/<script\\b[\\s\\S]*?<\\/script>/gi, " ")
-    .replace(/<style\\b[\\s\\S]*?<\\/style>/gi, " ")
+    .replace(/<script\b[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]*>/g, " ")
     .replace(/&nbsp;/gi, " ")
-    .replace(/\\s+/g, " "))
+    .replace(/\s+/g, " "))
     .trim();
 }
 
 function usableEntityName(value: string): boolean {
-  const name = value.trim().replace(/\\s+/g, " ");
+  const name = value.trim().replace(/\s+/g, " ");
   if (name.length < 2 || name.length > 120) return false;
-  if (!/[a-zA-Z\\u0600-\\u06FF]/.test(name)) return false;
-  if (/^(?:img|image|photo|dsc|pxl|pic)?[-_ .]*\\d+(?:[-_ .]+\\d+)*$/i.test(name)) return false;
-  if (/^[-_ .]+\\d+(?:[-_ .]+\\d+)*$/.test(name)) return false;
+  if (!/[a-zA-Z\u0600-\u06FF]/.test(name)) return false;
+  if (/^(?:img|image|photo|dsc|pxl|pic)?[-_ .]*\d+(?:[-_ .]+\d+)*$/i.test(name)) return false;
+  if (/^[-_ .]+\d+(?:[-_ .]+\d+)*$/.test(name)) return false;
   if (/^(?:image|product|item|category|view|details|read more|عرض|صورة|منتج)$/i.test(name)) return false;
   return true;
 }
@@ -168,7 +168,7 @@ function contextualEntityName(html: string, imageIndex: number): string {
   const end = Math.min(html.length, imageIndex + 2600);
   const fragment = html.slice(start, end);
   const candidates: Array<{ name: string; score: number }> = [];
-  const rx = /<(h[1-6]|a|span|div|p)[^>]*(?:class|id)=["']([^"']*(?:product[-_ ]?(?:title|name)|woocommerce-loop-product__title|item[-_ ]?(?:title|name)|category[-_ ]?(?:title|name)|group[-_ ]?(?:title|name)|card-title|product-name|product-title)[^"']*)["'][^>]*>([\\s\\S]{1,500}?)<\\/\\1>/gi;
+  const rx = /<(h[1-6]|a|span|div|p)[^>]*(?:class|id)=["']([^"']*(?:product[-_ ]?(?:title|name)|woocommerce-loop-product__title|item[-_ ]?(?:title|name)|category[-_ ]?(?:title|name)|group[-_ ]?(?:title|name)|card-title|product-name|product-title)[^"']*)["'][^>]*>([\s\S]{1,500}?)<\/\1>/gi;
   let match: RegExpExecArray | null;
   while ((match = rx.exec(fragment)) !== null) {
     const name = readableText(match[3]);
