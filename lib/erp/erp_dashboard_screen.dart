@@ -1295,6 +1295,39 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: ListTile(dense: true, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), selected: _page == 'عن البرنامج', selectedTileColor: Colors.white.withValues(alpha: .14), leading: const Icon(Icons.info_outline_rounded, color: _orange, size: 20), title: Text(silsilaText('عن البرنامج'), style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800)), onTap: () => setState(() { _page = 'عن البرنامج'; _search = ''; }))),
           ],
         )),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 12, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _leaveCurrentUser(switchUser: true),
+                icon: const Icon(Icons.manage_accounts_rounded, size: 19),
+                label: Text(silsilaText('استبدال مستخدم')),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
+                  alignment: AlignmentDirectional.centerStart,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 6),
+              OutlinedButton.icon(
+                onPressed: () => _leaveCurrentUser(switchUser: false),
+                icon: const Icon(Icons.logout_rounded, size: 19),
+                label: Text(silsilaText('تسجيل الخروج')),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFFFC2BE),
+                  side: BorderSide(color: const Color(0xFFFFC2BE).withValues(alpha: 0.65)),
+                  alignment: AlignmentDirectional.centerStart,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+        ),
         const Divider(color: Colors.white24, height: 1),
         Padding(padding: EdgeInsets.all(14), child: Column(children: [
           Text(silsilaText('سلسلة للبرمجيات'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -1630,20 +1663,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       ),
     ])),
     if (!compact) ...[
-      IconButton(
-        visualDensity: VisualDensity.compact,
-        tooltip: 'استبدال مستخدم',
-        onPressed: () => _leaveCurrentUser(switchUser: true),
-        icon: const Icon(Icons.manage_accounts_rounded, color: _purple, size: 23),
-        style: IconButton.styleFrom(backgroundColor: const Color(0xFFF0E7FA), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)), fixedSize: const Size(38, 38)),
-      ),
-      IconButton(
-        visualDensity: VisualDensity.compact,
-        tooltip: 'تسجيل الخروج',
-        onPressed: () => _leaveCurrentUser(switchUser: false),
-        icon: const Icon(Icons.logout_outlined, color: Color(0xFFB42318), size: 22),
-        style: IconButton.styleFrom(backgroundColor: const Color(0xFFFFF0EF), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)), fixedSize: const Size(38, 38)),
-      ),
       SizedBox(width: 190, child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'بحث سريع', prefixIcon: const Icon(Icons.search_rounded), isDense: true, filled: true, fillColor: _canvas, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
     ],
     const SizedBox(width: 4),
