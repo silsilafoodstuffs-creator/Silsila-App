@@ -89,7 +89,138 @@ class ProductService {
     final response = await query
         .order('name', ascending: true)
         .limit(limit);
-    return _mapRows(response);
+    final marketplaceRows = _mapRows(response);
+    try {
+      final masterRows = await _getErpMasterProducts(
+        activityType: cleanActivityType,
+        category: cleanCategory,
+        search: cleanSearch,
+        enabled: supplierId == null && categoryId == null,
+      );
+      return _mergeMasterCatalog(marketplaceRows, masterRows, limit);
+    } catch (_) {
+      // Existing supplier listings remain available if ERP catalog access is
+      // temporarily unavailable or the shared-catalog migration is pending.
+      return marketplaceRows;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _getErpMasterProducts({
+    required String? activityType,
+    required String? category,
+    required String? search,
+    required bool enabled,
+  }) async {
+    if (!enabled) return const <Map<String, dynamic>>[];
+    final db = _requireClient;
+    String? activityCode;
+    if (activityType != null) {
+      final activityRow = await db.from('activity_types')
+          .select('code')
+          .eq('name', activityType)
+          .eq('is_active', true)
+          .maybeSingle();
+      activityCode = activityRow?['code']?.toString();
+    }
+
+    var groupQuery = db.from('erp_item_groups')
+        .select('id,parent_id,group_name,group_name_en,activity_code,image_data,image_mime_type')
+        .eq('is_active', true)
+        .eq('show_in_app', true);
+    if (activityCode != null && activityCode.isNotEmpty) {
+      groupQuery = groupQuery.eq('activity_code', activityCode);
+    }
+    final groupRows = await groupQuery.order('group_name').limit(3000);
+    final groups = (groupRows as List)
+        .map((raw) => Map<String, dynamic>.from(raw as Map))
+        .toList(growable: false);
+    if (groups.isEmpty) return const <Map<String, dynamic>>[];
+    final groupsById = <String, Map<String, dynamic>>{
+      for (final group in groups) (group['id'] ?? '').toString(): group,
+    };
+    final parentNames = <String, String>{
+      for (final group in groups)
+        if (group['id'] != null) group['id'].toString(): (group['group_name'] ?? '').toString(),
+    };
+    final groupIds = groups.map((g) => g['id'].toString()).toList(growable: false);
+
+    var itemQuery = db.from('erp_items')
+        .select('id,group_id,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_data,image_mime_type,brand_name,package_description')
+        .eq('is_active', true)
+        .eq('show_in_app', true)
+        .inFilter('group_id', groupIds);
+    if (search != null) itemQuery = itemQuery.ilike('item_name', '%${_escapeLike(search)}%');
+    final itemRows = await itemQuery.order('item_name').limit(200);
+    final results = <Map<String, dynamic>>[];
+    for (final raw in (itemRows as List)) {
+      final item = Map<String, dynamic>.from(raw as Map);
+      final group = groupsById[(item['group_id'] ?? '').toString()];
+      if (group == null) continue;
+      final groupName = (group['group_name'] ?? '').toString();
+      if (category != null && groupName != category) continue;
+      final parentId = (group['parent_id'] ?? '').toString();
+      results.add(<String, dynamic>{
+        'id': item['id'],
+        'supplier_id': null,
+        'name': item['item_name'],
+        'category': groupName,
+        'category_id': null,
+        'description': item['package_description'],
+        'price': item['sale_price'],
+        'unit': item['base_unit'] ?? 'وحدة',
+        'min_quantity': 1,
+        'minimum_quantity': 1,
+        'activity_type': activityType,
+        'is_active': item['is_active'],
+        'image_url': null,
+        'subcategory': parentNames[parentId],
+        'brand': item['brand_name'],
+        'package_count': 1,
+        'small_unit': null,
+        'offer_price': null,
+        'image_data': item['image_data'],
+        'image_mime_type': item['image_mime_type'],
+        '_erp_master_item': true,
+      });
+    }
+    return results;
+  }
+
+  List<Map<String, dynamic>> _mergeMasterCatalog(
+    List<Map<String, dynamic>> marketplaceRows,
+    List<Map<String, dynamic>> masterRows,
+    int limit,
+  ) {
+    final merged = <Map<String, dynamic>>[];
+    final marketplaceByName = <String, int>{};
+    String normalize(dynamic value) => (value ?? '').toString().trim().toLowerCase().replaceAll(RegExp(r'\\s+'), ' ');
+    for (final row in marketplaceRows) {
+      final copy = Map<String, dynamic>.from(row);
+      final key = normalize(copy['name']);
+      if (key.isNotEmpty) marketplaceByName[key] = merged.length;
+      merged.add(copy);
+    }
+    for (final master in masterRows) {
+      final key = normalize(master['name']);
+      if (key.isEmpty) continue;
+      final existingIndex = marketplaceByName[key];
+      if (existingIndex != null) {
+        final existing = merged[existingIndex];
+        if ((master['image_data'] ?? '').toString().isNotEmpty) {
+          existing['image_data'] = master['image_data'];
+          existing['image_mime_type'] = master['image_mime_type'];
+          existing['image_url'] = null;
+        }
+        if ((master['category'] ?? '').toString().isNotEmpty) existing['category'] = master['category'];
+        if ((master['brand'] ?? '').toString().isNotEmpty) existing['brand'] = master['brand'];
+        if ((master['subcategory'] ?? '').toString().isNotEmpty) existing['subcategory'] = master['subcategory'];
+        continue;
+      }
+      marketplaceByName[key] = merged.length;
+      merged.add(Map<String, dynamic>.from(master));
+    }
+    merged.sort((a, b) => (a['name'] ?? '').toString().compareTo((b['name'] ?? '').toString()));
+    return merged.take(limit).toList(growable: false);
   }
 
   /// جلب تفاصيل منتج نشط باستخدام رقمه.
