@@ -752,7 +752,7 @@ def main() -> int:
     for row in items:
         source_match = re.search(r"/product/([^/?#]+)", str(row.get("source_url") or ""))
         if source_match:
-            used_source_codes.add(source_match.category(1))
+            used_source_codes.add(source_match.group(1))
         # Guard every existing real-size item image, not just rows whose source
         # provenance URL is recognized. A copied image is still a duplicate.
         stored_image = str(row.get("image_data") or "")
