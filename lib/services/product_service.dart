@@ -138,11 +138,22 @@ class ProductService {
     final groupsById = <String, Map<String, dynamic>>{
       for (final group in groups) (group['id'] ?? '').toString(): group,
     };
-    final parentNames = <String, String>{
-      for (final group in groups)
-        if (group['id'] != null) group['id'].toString(): (group['group_name'] ?? '').toString(),
-    };
     final groupIds = groups.map((g) => g['id'].toString()).toList(growable: false);
+
+    List<Map<String, dynamic>> groupPath(Map<String, dynamic> leaf) {
+      final path = <Map<String, dynamic>>[leaf];
+      var current = leaf;
+      var parentId = current['parent_id']?.toString();
+      var guard = 0;
+      while (parentId != null && parentId.isNotEmpty && guard++ < 4) {
+        final parent = groupsById[parentId];
+        if (parent == null) break;
+        path.insert(0, parent);
+        current = parent;
+        parentId = current['parent_id']?.toString();
+      }
+      return path;
+    }
 
     var itemQuery = db.from('erp_items')
         .select('id,group_id,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_data,image_mime_type,brand_name,package_description')
@@ -157,13 +168,16 @@ class ProductService {
       final group = groupsById[(item['group_id'] ?? '').toString()];
       if (group == null) continue;
       final groupName = (group['group_name'] ?? '').toString();
-      if (category != null && groupName != category) continue;
-      final parentId = (group['parent_id'] ?? '').toString();
+      final path = groupPath(group);
+      final rootName = (path.first['group_name'] ?? groupName).toString();
+      if (category != null && category != rootName && category != groupName &&
+          !path.any((node) => (node['group_name'] ?? '').toString() == category)) continue;
+      final subcategoryName = path.length > 1 ? (path[1]['group_name'] ?? '').toString() : '';
       results.add(<String, dynamic>{
         'id': item['id'],
         'supplier_id': null,
         'name': item['item_name'],
-        'category': groupName,
+        'category': rootName,
         'category_id': null,
         'description': item['package_description'],
         'price': item['sale_price'],
@@ -173,7 +187,7 @@ class ProductService {
         'activity_type': activityType,
         'is_active': item['is_active'],
         'image_url': null,
-        'subcategory': parentNames[parentId],
+        'subcategory': subcategoryName.isEmpty ? null : subcategoryName,
         'brand': item['brand_name'],
         'package_count': 1,
         'small_unit': null,
@@ -193,7 +207,7 @@ class ProductService {
   ) {
     final merged = <Map<String, dynamic>>[];
     final marketplaceByName = <String, int>{};
-    String normalize(dynamic value) => (value ?? '').toString().trim().toLowerCase().replaceAll(RegExp(r'\\s+'), ' ');
+    String normalize(dynamic value) => (value ?? '').toString().trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
     for (final row in marketplaceRows) {
       final copy = Map<String, dynamic>.from(row);
       final key = normalize(copy['name']);
