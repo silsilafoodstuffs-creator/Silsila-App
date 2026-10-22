@@ -497,6 +497,11 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                     'المحافظات ثم المراكز والأقسام ثم القرى والشياخات والمناطق المحلية. افتح كل مستوى لعرض التابعين.',
                     style: TextStyle(color: Colors.white70),
                   ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'المصدر الأساسي: Open Admin Data (CC BY 4.0). تمت مراجعة الأسماء المحلية بمصدر مجتمعي؛ والتصنيف الريفي/الحضري لبعض الوحدات مبدئي ويحتاج اعتمادًا رسميًا.',
+                    style: TextStyle(color: Colors.white60, fontSize: 11),
+                  ),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
