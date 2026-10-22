@@ -422,19 +422,28 @@ def image_variant_matches(item_name: str, product_title: str) -> bool:
         (("بالشوكولاتة", "شوكولاتة"), {"chocolate"}, {"plain", "vanilla"}),
         (("قابلة للدهن",), {"spreadable"}, {"sliced", "block"}),
     ]
+    title_tokens = set(title.split())
     for arabic_markers, required, conflicts in variants:
         if any(normalized(marker) in item for marker in arabic_markers):
-            if not required.issubset(set(title.split())):
+            # The source may describe the same pack in Arabic or English.
+            # Require explicit evidence of the variant in either language.
+            arabic_variant = any(
+                set(normalized(marker).split()).issubset(title_tokens)
+                for marker in arabic_markers
+            )
+            if not required.issubset(title_tokens) and not arabic_variant:
                 return False
-            if set(title.split()) & conflicts:
+            if title_tokens & conflicts:
                 return False
-    # These two date products must never be treated as interchangeable even if
-    # the external source gives them similar generic titles.
+    # Dried and packaged dates are distinct variants; accept explicit evidence
+    # in either language, but never let one variant stand in for the other.
     if "تمر" in item or "dates" in item.split():
-        if any(marker in item for marker in ("جاف", "جافة", "مجفف")) and "dried" not in title.split():
-            return False
-        if any(marker in item for marker in ("معبأ", "معبأة")) and "packaged" not in title.split():
-            return False
+        if any(marker in item for marker in ("جاف", "جافة", "مجفف")):
+            if "dried" not in title_tokens and not ({"جاف", "جافة", "مجفف", "مجففة"} & title_tokens):
+                return False
+        if any(marker in item for marker in ("معبأ", "معبأة")):
+            if "packaged" not in title_tokens and not ({"معبأ", "معبأة", "مغلف", "مغلفة"} & title_tokens):
+                return False
     return True
 
 
