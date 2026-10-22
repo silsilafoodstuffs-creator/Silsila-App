@@ -161,7 +161,7 @@ class ProductService {
         .eq('show_in_app', true)
         .inFilter('group_id', groupIds);
     if (search != null) itemQuery = itemQuery.ilike('item_name', '%${_escapeLike(search)}%');
-    final itemRows = await itemQuery.order('item_name').limit(200);
+    final itemRows = await itemQuery.order('item_name').limit(500);
     final results = <Map<String, dynamic>>[];
     for (final raw in (itemRows as List)) {
       final item = Map<String, dynamic>.from(raw as Map);
@@ -284,8 +284,8 @@ class ProductService {
   }
 
   void _validateLimit(int limit) {
-    if (limit < 1 || limit > 200) {
-      throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
+    if (limit < 1 || limit > 500) {
+      throw ArgumentError('يجب أن يكون الحد بين 1 و500.');
     }
   }
 
