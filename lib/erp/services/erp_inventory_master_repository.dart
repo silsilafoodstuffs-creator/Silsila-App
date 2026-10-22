@@ -23,14 +23,14 @@ class ErpInventoryMasterRepository {
     final rows = await _db.from('erp_item_categories')
       .select('id, category_code, category_name, parent_id, is_active')
       .eq('company_id', companyId.trim()).order('category_code').limit(2000);
-    return rows.map((r) { final item = Map<String, dynamic>.from(r); item['group_code'] = item['category_code']; item['group_name'] = item['category_name']; return item; }).toList();
+    return rows.map((r) { final item = Map<String, dynamic>.from(r); item['category_code'] = item['category_code']; item['category_name'] = item['category_name']; return item; }).toList();
   }
 
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
     final rows = await _db.from('erp_items')
       .select('id, item_code, barcode, item_name, category_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_data, image_mime_type')
       .eq('company_id', companyId.trim()).order('item_code').limit(2000);
-    return rows.map((r) { final item = Map<String, dynamic>.from(r); item['group_id'] = item['category_id']; return item; }).toList();
+    return rows.map((r) { final item = Map<String, dynamic>.from(r); item['category_id'] = item['category_id']; return item; }).toList();
   }
   Future<List<Map<String, dynamic>>> fetchBranches(String companyId) async {
     final rows = await _db.from('erp_branches')
