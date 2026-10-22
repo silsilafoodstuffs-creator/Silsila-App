@@ -481,7 +481,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if (mounted) {
         setState(() {
           _url.clear();
-          _status = 'تم حفظ الصور وملف Excel داخل ZIP. تم مسح رابط الموقع؛ الصق الرابط التالي وابدأ السحب.';
+          // The ZIP contains every selected image. Remove the entire scan result,
+          // including unchecked images, so the next page starts with a clean grid.
+          _images = [];
+          _selected.clear();
+          _pageUrl = null;
+          _status = 'تم حفظ الصور وملف Excel داخل ZIP. تم مسح الرابط والصور من الشاشة؛ الصق الرابط التالي وابدأ السحب.';
         });
       }
     } catch (e) {
@@ -522,7 +527,17 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if (mounted) {
         setState(() {
           _url.clear();
-          _status = 'تم حفظ الصورة. تم مسح رابط الموقع؛ الصق الرابط التالي وابدأ السحب.';
+          // Remove the saved image and any unchecked images; retain only other
+          // selected images that have not yet been saved.
+          _images = _images.where((item) {
+            final itemUrl = item['url']?.toString() ?? '';
+            return itemUrl != url && _selected.contains(itemUrl);
+          }).toList();
+          _selected
+            ..clear()
+            ..addAll(_images.map((item) => item['url'].toString()));
+          if (_images.isEmpty) _pageUrl = null;
+          _status = 'تم حفظ الصورة. تم مسح الرابط والصور المحفوظة وغير المحددة من الشاشة؛ الصق الرابط التالي أو احفظ الصور المحددة المتبقية.';
         });
       }
     } catch (e) {
