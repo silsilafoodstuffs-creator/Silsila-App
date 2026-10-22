@@ -806,33 +806,56 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     final targetIndex = selectedIndex >= 0 ? selectedIndex : 0;
     final canPersistSelectedRecord = rows[targetIndex].containsKey('_مرجع داخلي');
     final controllers = <String, TextEditingController>{for (final entry in rows[targetIndex].entries) if (entry.key != '_مرجع داخلي') entry.key: TextEditingController(text: entry.value)};
+
+    void saveChanges(BuildContext dialogContext) {
+      final updated = <String, String>{for (final entry in controllers.entries) entry.key: entry.value.text.trim()};
+      final internalKey = rows[targetIndex]['_مرجع داخلي'];
+      if (internalKey != null) updated['_مرجع داخلي'] = internalKey;
+      rows[targetIndex] = updated;
+      setState(() { _saved[_page] = rows; _selectedRecord = updated; });
+      Navigator.pop(dialogContext);
+      final companyId = _appManagementCompanyId;
+      final originalCode = rows[targetIndex]['الكود'] ?? rows[targetIndex]['الاسم'] ?? '';
+      if (canPersistSelectedRecord && companyId != null && companyId.trim().isNotEmpty &&
+          !originalCode.startsWith('DEMO-') &&
+          !originalCode.contains('تجريبي') &&
+          !originalCode.contains('توضيحي')) {
+        _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: updated)
+          .then((_) { if (mounted) _showActionMessage('تم حفظ تعديل السجل في قاعدة البيانات.'); })
+          .catchError((Object error) { if (mounted) _showActionMessage('تم التعديل محليًا لكن فشل الحفظ الدائم: $error'); });
+      } else {
+        _showActionMessage('تم تعديل السجل محليًا؛ لا يُحفظ السجل التوضيحي في قاعدة البيانات.');
+      }
+    }
+
     showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
       title: Text('تعديل سجل — $_page'),
       content: SizedBox(width: 460, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: controllers.entries.map((entry) => Padding(
         padding: const EdgeInsets.only(bottom: 10), child: TextField(controller: entry.value, decoration: InputDecoration(labelText: entry.key)),
       )).toList()))),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(silsilaText('إلغاء'))),
-        FilledButton(onPressed: () {
-          final updated = <String, String>{for (final entry in controllers.entries) entry.key: entry.value.text.trim()};
-          final internalKey = rows[targetIndex]['_مرجع داخلي'];
-          if (internalKey != null) updated['_مرجع داخلي'] = internalKey;
-          rows[targetIndex] = updated;
-          setState(() { _saved[_page] = rows; _selectedRecord = updated; });
-          Navigator.pop(dialogContext);
-          final companyId = _appManagementCompanyId;
-          final originalCode = rows[targetIndex]['الكود'] ?? rows[targetIndex]['الاسم'] ?? '';
-          if (canPersistSelectedRecord && companyId != null && companyId.trim().isNotEmpty &&
-              !originalCode.startsWith('DEMO-') &&
-              !originalCode.contains('تجريبي') &&
-              !originalCode.contains('توضيحي')) {
-            _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: updated)
-              .then((_) { if (mounted) _showActionMessage('تم حفظ تعديل السجل في قاعدة البيانات.'); })
-              .catchError((Object error) { if (mounted) _showActionMessage('تم التعديل محليًا لكن فشل الحفظ الدائم: $error'); });
-          } else {
-            _showActionMessage('تم تعديل السجل محليًا؛ لا يُحفظ السجل التوضيحي في قاعدة البيانات.');
-          }
-        }, child: Text(silsilaText('حفظ التعديل'))),
+        TextButton(
+          onPressed: () async {
+            final wantsSave = await showDialog<bool>(
+              context: dialogContext,
+              builder: (confirmContext) => AlertDialog(
+                title: const Text('تأكيد الرجوع'),
+                content: const Text('هل ترغب في حفظ التعديلات؟'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(confirmContext, false), child: const Text('لا')),
+                  FilledButton(onPressed: () => Navigator.pop(confirmContext, true), child: const Text('نعم')),
+                ],
+              ),
+            );
+            if (wantsSave == true && dialogContext.mounted) {
+              saveChanges(dialogContext);
+            } else if (wantsSave == false && dialogContext.mounted) {
+              Navigator.pop(dialogContext);
+            }
+          },
+          child: Text(silsilaText('رجوع')),
+        ),
+        FilledButton(onPressed: () => saveChanges(dialogContext), child: Text(silsilaText('حفظ التعديل'))),
       ],
     )).then((_) { for (final controller in controllers.values) { controller.dispose(); } });
   }
