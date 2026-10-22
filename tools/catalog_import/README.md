@@ -1,6 +1,6 @@
 # Real product image enrichment
 
-This tool is the first controlled step in replacing 72×72 placeholder artwork in the ERP catalog with genuine product-pack photography. It **downloads image bytes and writes them into PostgreSQL `bytea` columns** (`erp_items.image_data`, and representative images to `erp_item_groups.image_data`); it does not save the image URL as the image itself. The source product page is retained separately for provenance.
+This tool is the first controlled step in replacing 72×72 placeholder artwork in the ERP catalog with genuine product-pack photography. It **downloads image bytes and writes them into PostgreSQL `bytea` columns** (`erp_items.image_data`, and representative images to `erp_item_categories.image_data`); it does not save the image URL as the image itself. The source product page is retained separately for provenance.
 
 ## Source and rights
 
@@ -42,8 +42,8 @@ Keep the service key in a secure environment only.
 
 - A SHA-256 fingerprint blocks reuse of identical image bytes for different ERP items, even when the source API returns different product codes or URLs.
 - Variant markers are enforced before a match is accepted. For example, `تمر جاف` requires evidence for dried dates and `تمر معبأ` requires evidence for packaged dates; uncertain matches remain unchanged.
-- Group representative photos require both the ERP item's own name and the source product title to match the same group. A halva title containing a broad word such as “spread” cannot qualify as a jam/honey representative.
-- The manual workflow runs offline unit tests before making any API requests. Tests cover date variants, group mismatch, duplicate image bytes and PostgreSQL bytea fingerprints.
+- Group representative photos require both the ERP item's own name and the source product title to match the same category. A halva title containing a broad word such as “spread” cannot qualify as a jam/honey representative.
+- The manual workflow runs offline unit tests before making any API requests. Tests cover date variants, category mismatch, duplicate image bytes and PostgreSQL bytea fingerprints.
 - Existing ERP item rows only; no synthetic product, supplier, inventory, price, or public marketplace listing is created.
 - Barcode matches are preferred. Name matches require a minimum similarity score.
 - Downloads must be HTTPS, be a recognized image format, exceed the minimum dimensions and size, and stay below 4 MB.
