@@ -95,18 +95,17 @@ begin
     ('عروض الأصناف','erp_sales_campaigns'),('عروض الأصناف','erp_sales_campaign_items'),('الحملات التسويقية','erp_sales_campaign_items'),('قواعد العروض','erp_sales_campaign_items'),
     ('قاعدة العملاء المحتملين','erp_public_lead_staging'),
     ('الهيكل الوظيفي','erp_workspace_records'),('الإدارات والأقسام','erp_workspace_records'),('الوظائف والدرجات','erp_workspace_records'),
-    ('ملف الموظف','erp_employees'),('مسير الرواتب','erp_employees'),('صرف الرواتب','erp_employees'),
+    ('ملف الموظف','erp_employees'),
     ('الحضور والانصراف','erp_attendance_records'),('الحضور والانصراف','erp_hr_attendance_events'),
-    ('الحضور والانصراف','erp_hr_fingerprint_devices'),('الحضور والانصراف','erp_hr_shifts'),('الحضور والانصراف','erp_hr_shift_assignments'),
+    ('أجهزة البصمة','erp_hr_fingerprint_devices'),('الورديات','erp_hr_shifts'),('توزيع الورديات','erp_hr_shift_assignments'),
     ('الإجازات والأذونات','erp_leave_requests'),
     ('مسير الرواتب','erp_payroll_runs'),('مسير الرواتب','erp_payroll_lines'),
     ('صرف الرواتب','erp_payroll_runs'),('صرف الرواتب','erp_payroll_lines'),
     ('أهداف العملاء الشهرية','erp_customer_monthly_goals'),
-    ('عمولات المندوبين','erp_commission_plans'),('عمولات المندوبين','erp_commission_tiers'),('عمولات المندوبين','erp_commission_runs'),
-    ('عمولات المبيعات','erp_commission_plans'),('عمولات المبيعات','erp_commission_tiers'),('عمولات المبيعات','erp_commission_runs'),
+    
     ('خطط العمولة','erp_commission_plans'),('خطط العمولة','erp_commission_tiers'),
     ('مسودات العمولات','erp_commission_runs'),('تقرير العمولات المستحقة','erp_commission_runs'),
-    ('توزيع الأصناف على المندوبين','erp_delegate_item_assignments'),('توزيع الأصناف على المندوبين','erp_sales_representatives'),('عمولات المندوبين','erp_sales_representatives'),('عمولات المبيعات','erp_sales_representatives'),
+    ('توزيع الأصناف على المندوبين','erp_delegate_item_assignments'),('توزيع الأصناف على المندوبين','erp_sales_representatives'),
     ('عرض سعر','erp_sales_documents'),('أمر بيع','erp_sales_documents'),('فاتورة بيع','erp_sales_documents'),
     ('فاتورة مبيعات','erp_sales_documents'),('مرتجع مبيعات','erp_sales_documents'),('فاتورة بيع','erp_sales_lines'),('أمر بيع','erp_sales_lines'),('عرض سعر','erp_sales_lines'),('مرتجع مبيعات','erp_sales_lines'),
     ('إذن تجهيز','erp_sales_fulfillment_documents'),('إذن تسليم','erp_sales_fulfillment_documents'),('إذن تجهيز','erp_stock_reservations'),('إذن تسليم','erp_stock_reservations'),
@@ -269,8 +268,8 @@ begin
     'erp_user_permissions','erp_app_activity_log','erp_app_assets','erp_app_role_permissions','erp_app_theme_settings',
     'erp_sales_campaigns','erp_customer_monthly_goals','erp_commission_plans','erp_operational_account_mappings',
     'erp_einvoice_operations','erp_einvoice_settings','erp_public_lead_staging','erp_hr_fingerprint_devices',
-    'erp_hr_shifts','erp_employees','erp_sales_representatives','erp_journal_entries','erp_users','erp_user_classifications',
-    'erp_user_types','erp_permission_templates','erp_parties','erp_item_units','erp_items','erp_item_groups',
+    'erp_hr_shifts','erp_employees','erp_journal_entries','erp_users','erp_user_classifications',
+    'erp_user_types','erp_permission_templates','erp_parties','erp_sales_representatives','erp_item_units','erp_items','erp_item_groups',
     'erp_price_lists','erp_warehouses','erp_cashboxes','erp_accounts','erp_fiscal_periods','erp_currencies',
     'erp_cost_centers','erp_branches','erp_company_settings','erp_program_settings'
   ];
@@ -321,7 +320,7 @@ begin
     elsif v_table = 'erp_customer_shortages' and cardinality(v_sales_types)>0 then
       delete from public.erp_customer_shortages t where t.company_id=p_company_id and (t.source_document_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types)) );
       get diagnostics v_deleted = row_count;
-    elsif v_table = 'erp_stock_reservations' and cardinality(v_sales_types)>0 and not (v_pages && array['أرصدة الأصناف','كارت الصنف','الجرد والفروق','إذن إضافة','إذن صرف','تحويل مخزني','تسوية جرد','جرد فعلي']::text[]) then
+    elsif v_table = 'erp_stock_reservations' and cardinality(v_sales_types)>0  then
       delete from public.erp_stock_reservations t where t.company_id=p_company_id and (t.sales_document_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types)) or t.sales_line_id in (select l.id from public.erp_sales_lines l join public.erp_sales_documents d on d.id=l.document_id where d.company_id=p_company_id and d.document_type=any(v_sales_types)));
       get diagnostics v_deleted = row_count;
     elsif v_table = 'erp_sales_fulfillment_documents' then
