@@ -106,8 +106,15 @@ create table if not exists public.erp_item_categories (
   parent_id uuid references public.erp_item_categories(id) on delete restrict,
   category_code text not null,
   category_name text not null,
+  category_name_en text not null default '',
+  activity_code text not null default 'ACT001',
+  show_in_app boolean not null default true,
+  image_url text,
+  image_data bytea,
+  image_mime_type text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
   unique (company_id, category_code)
 );
 
