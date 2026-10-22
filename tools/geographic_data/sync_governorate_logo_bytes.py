@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Download governorate emblems/flags and store normalized PNG bytes in Supabase bytea."""
+from __future__ import annotations
+
+import hashlib
+import io
+import json
+import os
+import sys
+import time
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+from datetime import datetime, timezone
+
+import cairosvg
+from PIL import Image
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://teitsopmhruczplwlwgn.supabase.co").rstrip("/")
+SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+COMPANY_ID = os.environ.get("SILSILA_COMPANY_ID", "47278c99-7743-4dd4-9ce6-d11f28e02504")
+MAX_DOWNLOAD_BYTES = 8 * 1024 * 1024
+USER_AGENT = "SilsilaERP-GeographicAssets/1.0"
+
+
+def request_bytes(url: str) -> tuple[bytes, str]:
+    req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "image/avif,image/webp,image/png,image/jpeg,image/svg+xml,*/*;q=0.8"})
+    with urlopen(req, timeout=35) as response:
+        data = response.read(MAX_DOWNLOAD_BYTES + 1)
+        content_type = response.headers.get_content_type().lower()
+    if not data or len(data) > MAX_DOWNLOAD_BYTES:
+        raise ValueError(f"Image is empty or exceeds {MAX_DOWNLOAD_BYTES} bytes")
+    if content_type in ("text/html", "application/xhtml+xml") or data.lstrip().lower().startswith((b"<!doctype html", b"<html")):
+        raise ValueError("The source returned HTML instead of an image")
+    return data, content_type
+
+
+def normalize_png(data: bytes, content_type: str) -> bytes:
+    looks_svg = content_type == "image/svg+xml" or b"<svg" in data[:2048].lower()
+    if looks_svg:
+        data = cairosvg.svg2png(bytestring=data, output_width=256)
+    with Image.open(io.BytesIO(data)) as image:
+        image.load()
+        image = image.convert("RGBA")
+        image.thumbnail((256, 256), Image.Resampling.LANCZOS)
+        out = io.BytesIO()
+        image.save(out, format="PNG", optimize=True)
+        return out.getvalue()
+
+
+def api_headers() -> dict[str, str]:
+    return {
+        "apikey": SERVICE_KEY,
+        "Authorization": f"Bearer {SERVICE_KEY}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Prefer": "return=minimal",
+        "User-Agent": USER_AGENT,
+    }
+
+
+def api_get_governorates() -> list[dict]:
+    query = urlencode({
+        "select": "geo_code,name_ar,logo_url,logo_sha256",
+        "company_id": f"eq.{COMPANY_ID}",
+        "level": "eq.governorate",
+        "order": "geo_code.asc",
+    })
+    req = Request(f"{SUPABASE_URL}/rest/v1/erp_geographic_data?{query}", headers=api_headers())
+    with urlopen(req, timeout=45) as response:
+        result = json.loads(response.read().decode("utf-8"))
+    if not isinstance(result, list):
+        raise RuntimeError("Supabase did not return a governorate array")
+    return result
+
+
+def patch_row(geo_code: str, png: bytes, sha: str) -> None:
+    query = urlencode({
+        "company_id": f"eq.{COMPANY_ID}",
+        "geo_code": f"eq.{geo_code}",
+        "level": "eq.governorate",
+    })
+    payload = {
+        # PostgreSQL bytea hex input representation, passed as JSON string.
+        "logo_bytes": "\\x" + png.hex(),
+        "logo_mime_type": "image/png",
+        "logo_sha256": sha,
+        "logo_bytes_updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    req = Request(
+        f"{SUPABASE_URL}/rest/v1/erp_geographic_data?{query}",
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+        headers={**api_headers(), "Content-Type": "application/json"},
+        method="PATCH",
+    )
+    with urlopen(req, timeout=60) as response:
+        if response.status not in (200, 204):
+            raise RuntimeError(f"Supabase update returned HTTP {response.status}")
+
+
+def main() -> int:
+    if not SERVICE_KEY:
+        print("ERROR: SUPABASE_SERVICE_ROLE_KEY secret is required.", file=sys.stderr)
+        return 2
+
+    rows = api_get_governorates()
+    if len(rows) != 27:
+        print(f"ERROR: expected 27 governorates, received {len(rows)}.", file=sys.stderr)
+        return 2
+
+    failures: list[tuple[str, str]] = []
+    saved = 0
+    skipped = 0
+    for row in rows:
+        code = row.get("geo_code") or "(missing-code)"
+        name = row.get("name_ar") or code
+        url = row.get("logo_url")
+        if not url:
+            failures.append((code, f"{name}: missing logo_url"))
+            continue
+        try:
+            original, content_type = request_bytes(url)
+            png = normalize_png(original, content_type)
+            sha = hashlib.sha256(png).hexdigest()
+            if row.get("logo_sha256") == sha:
+                print(f"SKIP {code} {name}: stored image hash is current")
+                skipped += 1
+                continue
+            patch_row(code, png, sha)
+            print(f"SAVED {code} {name}: {len(png)} bytes PNG sha256={sha}")
+            saved += 1
+            time.sleep(0.15)
+        except (HTTPError, URLError, OSError, ValueError, RuntimeError) as exc:
+            failures.append((code, f"{name}: {type(exc).__name__}: {exc}"))
+            print(f"FAILED {code} {name}: {type(exc).__name__}: {exc}", file=sys.stderr)
+
+    print(f"SUMMARY total={len(rows)} saved={saved} unchanged={skipped} failed={len(failures)}")
+    if failures:
+        for code, detail in failures:
+            print(f"UNRESOLVED {code}: {detail}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
