@@ -134,6 +134,36 @@ class CatalogImageMatchingTests(unittest.TestCase):
         self.assertTrue(IMPORTER.has_real_size_image(good))
         self.assertFalse(IMPORTER.has_real_size_image(small))
 
+    def test_remaining_food_aliases_expand_search_without_relaxing_identity(self):
+        requested_queries = []
+
+        def empty_search(url):
+            requested_queries.append(
+                IMPORTER.urllib.parse.parse_qs(IMPORTER.urllib.parse.urlparse(url).query)["q"][0]
+            )
+            return {"hits": []}
+
+        with patch.object(IMPORTER, "request_json", side_effect=empty_search), patch.object(
+            IMPORTER.time, "sleep"
+        ):
+            for name in ("لب سوري 200 جم", "قهوة مطحونة 250 جم", "مربى مشمش 400 جم"):
+                self.assertEqual(
+                    IMPORTER.off_candidates(
+                        {"item_name": name, "barcode": "", "brand_name": ""}
+                    ),
+                    [],
+                )
+
+        self.assertIn("sunflower seeds roasted", requested_queries)
+        self.assertIn("ground coffee pack", requested_queries)
+        self.assertIn("apricot jam jar", requested_queries)
+        self.assertFalse(
+            IMPORTER.image_variant_matches("لب سوري", "plain corn flakes")
+        )
+        self.assertFalse(
+            IMPORTER.image_variant_matches("مربى مشمش", "strawberry jam")
+        )
+
     def test_iced_tea_beverage_does_not_match_loose_tea_pack(self):
         self.assertFalse(
             IMPORTER.image_variant_matches("شاي ناعم 250 جم", "Fuze Tea Peach")
