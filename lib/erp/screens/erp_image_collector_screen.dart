@@ -6,6 +6,7 @@ import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ErpImageCollectorScreen extends StatefulWidget {
   const ErpImageCollectorScreen({super.key});
@@ -24,6 +25,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   String? _pageUrl;
   String? _error;
   String _status = '';
+  final Set<String> _importedImageKeys = <String>{};
+  String? _importedScope;
 
   @override
   void dispose() {
@@ -47,6 +50,57 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     throw Exception('استجابة غير مفهومة من خدمة جمع الصور.');
   }
 
+  String _sourceScope(String pageUrl) {
+    final uri = Uri.parse(pageUrl);
+    return uri.host.toLowerCase().replaceFirst(RegExp(r'^www\\.'), '');
+  }
+
+  String _imageKey(String rawUrl) {
+    final uri = Uri.parse(rawUrl);
+    const trackingKeys = <String>{
+      'fbclid', 'gclid', 'dclid', 'msclkid', 'ref', 'source',
+      'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+      'utm_id', 'campaign', 'tracking',
+    };
+    final kept = <String, List<String>>{};
+    final entries = uri.queryParametersAll.entries.toList()
+      ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
+    for (final entry in entries) {
+      if (!trackingKeys.contains(entry.key.toLowerCase())) {
+        kept[entry.key] = entry.value.toList()..sort();
+      }
+    }
+    final query = <String, String>{};
+    for (final entry in kept.entries) {
+      query[entry.key] = entry.value.join(',');
+    }
+    return uri.replace(
+      scheme: uri.scheme.toLowerCase(),
+      host: uri.host.toLowerCase(),
+      fragment: '',
+      queryParameters: query.isEmpty ? null : query,
+    ).toString();
+  }
+
+  String _prefsKey(String scope) => 'silsila_image_collector_imported_v1_$scope';
+
+  Future<void> _loadImportedForScope(String scope) async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_prefsKey(scope)) ?? <String>[];
+    _importedImageKeys
+      ..clear()
+      ..addAll(saved);
+    _importedScope = scope;
+  }
+
+  Future<void> _markImported(Iterable<String> keys) async {
+    final scope = _importedScope;
+    if (scope == null || keys.isEmpty) return;
+    _importedImageKeys.addAll(keys);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_prefsKey(scope), _importedImageKeys.toList()..sort());
+  }
+
   Future<void> _scan() async {
     final raw = _url.text.trim();
     if (raw.isEmpty) {
@@ -67,16 +121,38 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       _images = [];
     });
     try {
+      final scope = _sourceScope(parsed.toString());
+      if (_importedScope != scope) await _loadImportedForScope(scope);
       final result = await _invoke({'action': 'scan', 'url': parsed.toString()});
       final rawImages = (result['images'] as List? ?? const []);
-      final images = rawImages.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
+      final candidates = rawImages.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
+      final seen = <String>{};
+      final images = <Map<String, dynamic>>[];
+      var duplicateCount = 0;
+      var previouslyImportedCount = 0;
+      for (final image in candidates) {
+        final rawImageUrl = image['url']?.toString() ?? '';
+        if (rawImageUrl.isEmpty) continue;
+        final key = _imageKey(rawImageUrl);
+        if (!seen.add(key)) {
+          duplicateCount++;
+          continue;
+        }
+        if (_importedImageKeys.contains(key)) {
+          previouslyImportedCount++;
+          continue;
+        }
+        images.add(image);
+      }
       if (!mounted) return;
       setState(() {
         _pageUrl = result['page']?.toString() ?? parsed.toString();
         _images = images;
         _status = images.isEmpty
-            ? 'لم يتم العثور على صور ظاهرة في HTML. قد تكون الصفحة تعتمد على JavaScript أو تمنع الوصول.'
-            : 'تم العثور على ${images.length} صورة مرشحة. راجعها وحدد الصور المطلوبة.';
+            ? (candidates.isEmpty
+                ? 'لم يتم العثور على صور ظاهرة في HTML. قد تعتمد الصفحة على JavaScript أو تمنع الوصول.'
+                : 'لا توجد صور جديدة: تم إخفاء $previouslyImportedCount صورة محفوظة سابقًا و$duplicateCount تكرارًا من الصفحة.')
+            : 'ظهرت ${images.length} صورة جديدة فقط؛ تم إخفاء $previouslyImportedCount صورة سبق حفظها و$duplicateCount تكرارًا داخل الصفحة.';
       });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -232,6 +308,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       final archive = Archive();
       var index = 0;
       final usedFileNames = <String>{};
+      final savedImageKeys = <String>{};
       for (final image in _images.where((x) => _selected.contains(x['url'].toString()))) {
         final imageIndex = _images.indexOf(image);
         index++;
@@ -243,6 +320,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
         final fileName = _uniqueFileName(title, '.png', usedFileNames);
         archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
+        savedImageKeys.add(_imageKey(url));
         if (mounted) setState(() => _status = 'تم تجهيز $index من ${_selected.length} صورة...');
       }
       if (archive.isEmpty) throw Exception('لم يمكن تنزيل أي صورة من الاختيارات.');
@@ -254,7 +332,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         fileExtension: 'zip',
         mimeType: MimeType.zip,
       );
-      if (mounted) setState(() => _status = 'تم حفظ ${archive.files.length} صورة بصيغة PNG داخل ملف ZIP بخلفيات شفافة عند إمكانية تمييزها.');
+      await _markImported(savedImageKeys);
+      if (mounted) setState(() => _status = 'تم حفظ ${archive.files.length} صورة. ستُخفى هذه الصور تلقائيًا عند فحص الموقع نفسه مرة أخرى.');
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -289,7 +368,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         fileExtension: 'png',
         mimeType: MimeType.png,
       );
-      if (mounted) setState(() => _status = 'تم حفظ الصورة بصيغة PNG بخلفية شفافة عند إمكانية تمييز الخلفية الموحدة.');
+      await _markImported({_imageKey(url)});
+      if (mounted) setState(() => _status = 'تم حفظ الصورة؛ ستُخفى تلقائيًا عند فحص الموقع نفسه مرة أخرى.');
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
