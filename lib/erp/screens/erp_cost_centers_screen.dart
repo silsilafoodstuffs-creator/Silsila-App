@@ -85,7 +85,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       final n = int.tryParse(m?.group(1) ?? '') ?? 0;
       if (n > max) max = n;
     }
-    return 'CC-\${(max + 1).toString().padLeft(3, '0')}';
+    return 'CC-${(max + 1).toString().padLeft(3, '0')}';
   }
 
   void _addMain() {
@@ -158,7 +158,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   }
 
   String _branchName(dynamic id) {
-    for (final b in _branches) { if (_s(b['id']) == _s(id)) return '\${_s(b['branch_code'])} — \${_s(b['branch_name'])}'; }
+    for (final b in _branches) { if (_s(b['id']) == _s(id)) return '${_s(b['branch_code'])} — ${_s(b['branch_name'])}'; }
     return 'بدون فرع';
   }
 
@@ -166,7 +166,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     final id = _s(row['id']);
     final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('حذف مركز التكلفة'),
-      content: Text('هل تريد حذف «\${_ar(row)}»؟ قد تمنع قاعدة البيانات الحذف إذا ارتبط المركز بفروع فرعية أو بحركات مالية.'),
+      content: Text('هل تريد حذف «${_ar(row)}»؟ قد تمنع قاعدة البيانات الحذف إذا ارتبط المركز بفروع فرعية أو بحركات مالية.'),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
         FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف')),
@@ -207,7 +207,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
         headingRowHeight: 34, dataRowMinHeight: 30, dataRowMaxHeight: 36,
         columns: const [DataColumn(label: Text('الكود')), DataColumn(label: Text('الاسم العربي')), DataColumn(label: Text('الاسم الإنجليزي')), DataColumn(label: Text('النوع')), DataColumn(label: Text('الفرع')), DataColumn(label: Text('الحالة'))],
         rows: _tree.map((r) => DataRow(cells: [
-          DataCell(Text(_s(r['center_code']))), DataCell(Text('\${_child(r) ? '↳ ' : ''}\${_ar(r)}')),
+          DataCell(Text(_s(r['center_code']))), DataCell(Text('${_child(r) ? '↳ ' : ''}${_ar(r)}')),
           DataCell(Text(_s(r['center_name_en']))), DataCell(Text(_child(r) ? 'فرعي' : 'رئيسي')),
           DataCell(Text(_branchName(r['branch_id']))), DataCell(Text(r['is_active'] == true ? 'نشط' : 'غير نشط')),
         ])).toList(),
@@ -218,13 +218,13 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
 
   Future<void> _copyReport(String format) async {
     final lines = <String>[
-      'م\\tكود مركز التكلفة\\tاسم عربي\\tاسم إنجليزي\\tالنوع\\tالفرع\\tالحالة',
+      'م\tكود مركز التكلفة\tاسم عربي\tاسم إنجليزي\tالنوع\tالفرع\tالحالة',
       ..._tree.asMap().entries.map((e) {
         final r = e.value;
-        return '\${e.key + 1}\\t\${_s(r['center_code'])}\\t\${_ar(r)}\\t\${_s(r['center_name_en'])}\\t\${_child(r) ? 'فرعي' : 'رئيسي'}\\t\${_branchName(r['branch_id'])}\\t\${r['is_active'] == true ? 'نشط' : 'غير نشط'}';
+        return '${e.key + 1}\t${_s(r['center_code'])}\t${_ar(r)}\t${_s(r['center_name_en'])}\t${_child(r) ? 'فرعي' : 'رئيسي'}\t${_branchName(r['branch_id'])}\t${r['is_active'] == true ? 'نشط' : 'غير نشط'}';
       }),
     ];
-    await Clipboard.setData(ClipboardData(text: lines.join('\\n')));
+    await Clipboard.setData(ClipboardData(text: lines.join('\n')));
     if (mounted) setState(() => _message = 'تم نسخ بيانات الجدول إلى الحافظة. يمكنك لصقها في Excel ($format).');
   }
 
@@ -280,7 +280,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
                 cells: [
                   DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: selected, activeColor: _costPurple,
                     onChanged: draft ? null : (v) => setState(() { if (v == true) { _selectedIds.add(id); } else { _selectedIds.remove(id); } }))),
-                  DataCell(SizedBox(width: 25, child: Text('\${i + 1}', style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(width: 25, child: Text('${i + 1}', style: const TextStyle(fontSize: 12)))),
                   DataCell(SizedBox(width: 115, child: TextFormField(key: ValueKey('code-$id-$i'), initialValue: _s(r['center_code']),
                     onChanged: (v) => r['center_code'] = v, decoration: _dec('CC-001'), style: const TextStyle(fontSize: 12)))),
                   DataCell(SizedBox(width: 165, child: Padding(
@@ -301,7 +301,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
                     value: _branches.any((b) => _s(b['id']) == _s(r['branch_id'])) ? _s(r['branch_id']) : '',
                     items: [
                       const DropdownMenuItem(value: '', child: Text('بدون فرع', style: TextStyle(fontSize: 11))),
-                      ..._branches.map((b) => DropdownMenuItem(value: _s(b['id']), child: Text('\${_s(b['branch_code'])} — \${_s(b['branch_name'])}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)))),
+                      ..._branches.map((b) => DropdownMenuItem(value: _s(b['id']), child: Text('${_s(b['branch_code'])} — ${_s(b['branch_name'])}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)))),
                     ],
                     onChanged: (v) => setState(() => r['branch_id'] = v == null || v.isEmpty ? null : v),
                   )))),
