@@ -128,3 +128,24 @@ with unit_names as (
 insert into public.erp_item_unit_catalog(company_id,activity_code,unit_code,unit_name_ar,is_active)
 select company_id,'ACT001',unit_code,unit_name_ar,true from numbered
 on conflict(company_id,activity_code,unit_code) do update set unit_name_ar=excluded.unit_name_ar,is_active=true,updated_at=now();
+
+create or replace function public.erp_validate_warehouse_parent()
+returns trigger language plpgsql set search_path=public as $$
+declare parent_company uuid; cycle_found boolean;
+begin
+ if new.parent_warehouse_id is not null then
+  select company_id into parent_company from public.erp_warehouses where id=new.parent_warehouse_id;
+  if parent_company is distinct from new.company_id then raise exception 'المخزن الرئيسي يجب أن يتبع الشركة نفسها'; end if;
+  if new.parent_warehouse_id = new.id then raise exception 'لا يمكن ربط المخزن بنفسه'; end if;
+  with recursive descendants(id,path) as (
+   select new.id,array[new.id]::uuid[]
+   union all select child.id,d.path||child.id from descendants d
+   join public.erp_warehouses child on child.parent_warehouse_id=d.id where not child.id=any(d.path)
+  ) select exists(select 1 from descendants where id=new.parent_warehouse_id) into cycle_found;
+  if coalesce(cycle_found,false) then raise exception 'لا يمكن وضع المخزن تحت أحد مخازنه الفرعية'; end if;
+ end if;
+ return new;
+end $$;
+drop trigger if exists erp_warehouse_parent_guard on public.erp_warehouses;
+create trigger erp_warehouse_parent_guard before insert or update of company_id,parent_warehouse_id
+on public.erp_warehouses for each row execute function public.erp_validate_warehouse_parent();
