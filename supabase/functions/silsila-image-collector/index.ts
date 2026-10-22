@@ -17,10 +17,11 @@ function safeUrl(raw: string): URL {
   const u = new URL(raw);
   if (!["http:", "https:"].includes(u.protocol)) throw new Error("يسمح بروابط HTTP وHTTPS فقط.");
   const h = u.hostname.toLowerCase();
-  if (!h || h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") ||
-      h === "0.0.0.0" || h === "127.0.0.1" || h === "::1" ||
-      /^10\./.test(h) || /^192\.168\./.test(h) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(h) || /^169\.254\./.test(h)) {
+  // The collector accepts hostnames, not literal IP addresses. This avoids
+  // direct requests to loopback, private-network, and IPv6 link-local targets.
+  if (!h || h.startsWith("[") || /^[0-9.]+$/.test(h) ||
+      h === "localhost" || h.endsWith(".localhost") || h.endsWith(".local") ||
+      h.endsWith(".internal") || h.endsWith(".test")) {
     throw new Error("الرابط يشير إلى عنوان محلي أو غير مسموح.");
   }
   if (u.username || u.password) throw new Error("لا تستخدم رابطًا يحتوي على بيانات دخول.");
