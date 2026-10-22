@@ -399,7 +399,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     if (sourceImage == null) throw Exception('تعذر فك ترميز الصورة الأصلية.');
     final decoded = img.Image(width: sourceImage.width, height: sourceImage.height, numChannels: 4);
     img.compositeImage(decoded, sourceImage);
-    final width = decoded.width, height = decoded.height;
+    final int width = decoded.width;
+    final int height = decoded.height;
     final visited = Uint8List(width * height);
     final queue = <int>[];
     bool isBackground(int x, int y) {
@@ -411,7 +412,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     }
     void enqueue(int x, int y) {
       if (x < 0 || y < 0 || x >= width || y >= height) return;
-      final i = y * width + x;
+      final int i = y * width + x;
       if (visited[i] != 0 || !isBackground(x, y)) return;
       visited[i] = 1;
       queue.add(i);
@@ -425,7 +426,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if (width > 1) enqueue(width - 1, y);
     }
     for (var head = 0; head < queue.length; head++) {
-      final i = queue[head], x = i % width, y = i ~/ width;
+      final int i = queue[head];
+      final int x = (i % width).toInt();
+      final int y = (i ~/ width).toInt();
       decoded.setPixelRgba(x, y, 0, 0, 0, 0);
       enqueue(x - 1, y); enqueue(x + 1, y);
       enqueue(x, y - 1); enqueue(x, y + 1);
