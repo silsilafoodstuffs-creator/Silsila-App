@@ -260,13 +260,29 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           image['brand_name'], image['brand'], image['manufacturer'],
           image['title'], image['alt'], image['name'],
         ],
+      // Product filenames must use the actual product title first. An image
+      // alt tag or category name is not a reliable substitute for the SKU name.
       _ => [
-          image['product_name'], image['title'], image['name'], image['alt'],
+          image['product_full_name'], image['product_name'], image['name'],
+          image['title'], image['alt'],
         ],
     };
-    final suggested = candidates.map((value) => value?.toString().trim() ?? '')
+    var suggested = candidates.map((value) => value?.toString().trim() ?? '')
         .firstWhere((value) => value.isNotEmpty,
             orElse: () => 'صورة_${(index + 1).toString().padLeft(3, '0')}');
+    if (kind != 'category' && kind != 'brand') {
+      final unit = _excelValue(image, ['main_unit', 'unit', 'unit_name', 'major_unit']);
+      final innerCount = _excelValue(image, [
+        'internal_count', 'units_per_pack', 'pack_size', 'quantity_per_unit',
+      ]);
+      if (unit.isNotEmpty && !suggested.toLowerCase().contains(unit.toLowerCase())) {
+        suggested = '$suggested $unit';
+      }
+      if (innerCount.isNotEmpty &&
+          !RegExp(r'(^|[^0-9])' + RegExp.escape(innerCount) + r'([^0-9]|$)').hasMatch(suggested)) {
+        suggested = '$suggested عدد داخلي $innerCount';
+      }
+    }
     return _safeName(suggested, fallback: 'صورة_${(index + 1).toString().padLeft(3, '0')}');
   }
 
@@ -357,10 +373,13 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       for (var i = 0; i < selectedImages.length; i++) {
         final item = selectedImages[i];
         final kind = (item['save_as'] ?? 'product').toString();
-        final name = _excelValue(item, [
-          'product_name', 'category_name', 'group_name', 'brand_name',
-          'title', 'name', 'alt', 'file_name',
-        ]);
+        final name = kind == 'category'
+            ? _excelValue(item, ['category_name', 'group_name', 'category', 'title', 'alt', 'name'])
+            : kind == 'brand'
+                ? _excelValue(item, ['brand_name', 'brand', 'manufacturer', 'title', 'alt', 'name'])
+                : _excelValue(item, [
+                    'product_full_name', 'product_name', 'name', 'title', 'alt', 'file_name',
+                  ]);
         sheet.appendRow([
           IntCellValue(i + 1),
           TextCellValue(kind == 'category' ? 'فئة / مجموعة' : kind == 'brand' ? 'ماركة / براند' : 'صنف / منتج'),
