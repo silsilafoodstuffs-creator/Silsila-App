@@ -49,4 +49,5 @@ jobs:
             exit 1
           fi
           python -m py_compile tools/catalog_import/import_real_product_images.py
+          python -m unittest discover -s tools/catalog_import -p 'test_*.py' -v
           python tools/catalog_import/import_real_product_images.py
