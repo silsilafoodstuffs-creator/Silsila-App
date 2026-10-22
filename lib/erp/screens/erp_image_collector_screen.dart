@@ -649,11 +649,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         return AlertDialog(title:const Text('تكويد الفئة وربط الصورة'),
           content:SizedBox(width:650,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
             SegmentedButton<String>(segments:const [ButtonSegment(value:'main',label:Text('رئيسية')),ButtonSegment(value:'sub',label:Text('فرعية')),ButtonSegment(value:'secondary',label:Text('ثانوية'))],selected:{level},onSelectionChanged:(v)=>ss(() { level=v.first; selectedId=null; })),
-            if(level!='main')dd('الفئة الرئيسية',rootId,children(null),(v)=>ss(()=>{rootId=v,subId=null,selectedId=null})),
-            if(level=='secondary')dd('الفئة الفرعية',subId,children(rootId),(v)=>ss(()=>{subId=v,selectedId=null})),
-            RadioListTile<bool>(value:true,groupValue:create,title:const Text('إنشاء فئة جديدة'),onChanged:(v)=>ss(()=>{create=v??true,selectedId=null})),
-            RadioListTile<bool>(value:false,groupValue:create,title:const Text('ربط فئة موجودة'),onChanged:(v)=>ss(()=>{create=v??false,selectedId=null})),
-            if(!create)dd('الفئة المسجلة',selectedId,options,(v)=>ss(()=>{selectedId=v,name.text=byId(v)?['name'].toString():name.text})),
+            if(level!='main')dd('الفئة الرئيسية',rootId,children(null),(v)=>ss(() { rootId=v; subId=null; selectedId=null; })),
+            if(level=='secondary')dd('الفئة الفرعية',subId,children(rootId),(v)=>ss(() { subId=v; selectedId=null; })),
+            RadioListTile<bool>(value:true,groupValue:create,title:const Text('إنشاء فئة جديدة'),onChanged:(v)=>ss(() { create=v??true; selectedId=null; })),
+            RadioListTile<bool>(value:false,groupValue:create,title:const Text('ربط فئة موجودة'),onChanged:(v)=>ss(() { create=v??false; selectedId=null; })),
+            if(!create)dd('الفئة المسجلة',selectedId,options,(v)=>ss(() { selectedId=v; name.text=byId(v)?['name']?.toString() ?? name.text : name.text; })),
             TextField(controller:name,decoration:const InputDecoration(labelText:'اسم الفئة',border:OutlineInputBorder())),
             if(message!=null)Text(message!,style:const TextStyle(color:Colors.red)),
             if(busy)const LinearProgressIndicator(),
@@ -1007,6 +1007,27 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               onChanged: (value) => item['file_name'] = value,
+                            ),
+                            const SizedBox(height: 5),
+                            OutlinedButton.icon(
+                              onPressed: _loading ? null : () async {
+                                try {
+                                  if ((item['save_as'] ?? _imageKind).toString() == 'category' || (item['save_as'] ?? _imageKind).toString() == 'brand') {
+                                    await _openCategoryEditor(item);
+                                  } else {
+                                    await _openProductEditor(item);
+                                  }
+                                } catch (e) {
+                                  if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+                                }
+                              },
+                              icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                              label: Text((item['save_as'] ?? _imageKind).toString() == 'category'
+                                ? 'تكويد الفئة / حفظ بالصورة'
+                                : (item['save_as'] ?? _imageKind).toString() == 'brand'
+                                  ? 'بيانات البراند / حفظ بالصورة' : 'تكويد الصنف / حفظ بالداتا',
+                                style: const TextStyle(fontSize: 10)),
+                              style: OutlinedButton.styleFrom(foregroundColor: _purple, padding: const EdgeInsets.symmetric(horizontal: 4), minimumSize: const Size(0, 30)),
                             ),
                             const SizedBox(height: 5),
                             Align(
