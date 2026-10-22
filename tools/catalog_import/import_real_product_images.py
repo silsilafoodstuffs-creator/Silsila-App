@@ -464,6 +464,7 @@ def choose_image(
     }
     best = None
     best_score = 0.0
+    rejects = {"variant": 0, "identity": 0, "excluded": 0, "origin": 0, "score": 0, "no_url": 0, "bad_image": 0, "duplicate": 0}
     for candidate in candidates:
         code = str(candidate.get("code") or "")
         product_title = normalized(" ".join(str(candidate.get(k) or "") for k in ("product_name", "product_name_en")))
@@ -473,6 +474,7 @@ def choose_image(
         product_tokens = set(product_title.split())
         arabic_candidate = arabic_identity_tokens(product_title)
         if not image_variant_matches(raw_name, product_title):
+            rejects["variant"] += 1
             continue
         if barcode and code == barcode:
             score = 1.0
@@ -483,9 +485,11 @@ def choose_image(
             english_match = bool(required) and required.issubset(title_tokens)
             arabic_match = bool(identity_arabic) and identity_arabic.issubset(arabic_candidate)
             if not english_match and not arabic_match:
+                rejects["identity"] += 1
                 continue
             blocked = set().union(*(exclusions.get(term, set()) for term in required))
             if product_tokens & blocked:
+                rejects["excluded"] += 1
                 continue
             # If the ERP name says Egyptian, don't accept a package with no
             # Egyptian indication in its title/country metadata.
@@ -493,6 +497,7 @@ def choose_image(
                 countries = " ".join(str(x) for x in candidate.get("countries_tags", []) or [])
                 if not ({"egyptian", "egypt"} & title_tokens or "egypt" in countries.casefold()):
                     if not arabic_match or "مصري" not in arabic_candidate:
+                        rejects["origin"] += 1
                         continue
             score = 1.0 if arabic_match else len(required & title_tokens) / max(1, len(required))
         else:
@@ -505,18 +510,26 @@ def choose_image(
                 score = min(score, 0.25)
         threshold = 0.95 if generic_mode else (0.48 if not barcode and not raw_brand and not has_latin_name else 0.42)
         if score < threshold or score <= best_score:
+            rejects["score"] += 1
             continue
         image_url = candidate.get("image_front_url") or candidate.get("image_url")
         if not image_url:
+            rejects["no_url"] += 1
             continue
         image = download_image(str(image_url))
+        if not image:
+            rejects["bad_image"] += 1
+            continue
         if image:
             # Different source records can still point to identical bytes.
             # Never assign an already-used product-pack image to another item.
             if image_digest(image[0]) in used_image_digests:
                 print(f"  DUPLICATE IMAGE BLOCKED: source code {code} reuses an existing image")
+                rejects["duplicate"] += 1
                 continue
             best, best_score = (candidate, image[0], image[1]), score
+    if best is None:
+        print("  REJECTION COUNTS: " + ", ".join(f"{key}={value}" for key, value in rejects.items()))
     return best
 
 GROUP_ITEM_HINTS = {
