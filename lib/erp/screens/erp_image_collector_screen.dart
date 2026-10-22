@@ -735,9 +735,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       final png=_processTransparentPng(Uint8List.fromList(base64Decode(b64)));
       final values=<String,dynamic>{'item_name':ar,'item_name_en':en,'base_unit':minor,'sale_price':price,'tax_rate':tax,'pricing_area':area,'package_description':major+' = '+count.toString()+' '+minor,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,'source_name':'جامع صور سلسلة','source_url':item['url'].toString(),'is_active':true};
       final selectedGroupId = item['category_secondary_id']?.toString() ?? item['category_sub_id']?.toString() ?? item['category_root_id']?.toString();
-      if (selectedGroupId != null && selectedGroupId.isNotEmpty) values['group_id'] = selectedGroupId;
+      if (selectedGroupId != null && selectedGroupId.isNotEmpty) values['category_id'] = selectedGroupId;
       String id;
-      if(mode=='new'){final inserted=await db.from('erp_items').insert({...values,'company_id':company,'item_code':code,'purchase_price':0,'group_id':selectedGroupId}).select('id').single();id=inserted['id'].toString();}
+      if(mode=='new'){final inserted=await db.from('erp_items').insert({...values,'company_id':company,'item_code':code,'purchase_price':0,'category_id':selectedGroupId}).select('id').single();id=inserted['id'].toString();}
       else{id=item['database_item_id'].toString();await db.from('erp_items').update(values).eq('id',id).eq('company_id',company);}
       await db.from('erp_item_units').update({'is_base_unit':false}).eq('company_id',company).eq('item_id',id);
       await db.from('erp_item_units').upsert([{'company_id':company,'item_id':id,'unit_code':'MAJOR','unit_name':major,'conversion_factor':count,'is_base_unit':false,'is_active':true},{'company_id':company,'item_id':id,'unit_code':'MINOR','unit_name':minor,'conversion_factor':1,'is_base_unit':true,'is_active':true}],onConflict:'item_id,unit_code');
