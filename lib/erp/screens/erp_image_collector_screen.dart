@@ -662,7 +662,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     finally{if(mounted)setState(()=>_loading=false);}
   }
 
-  Future<Map<String,dynamic>> _ensureRowCategory(SupabaseClient db,String company,List<Map<String,dynamic>> groups,String name,String? parent,String prefix) async{
+  Future<Map<String,dynamic>> _ensureRowCategory(SupabaseClient db,String company,List<Map<String,dynamic>> categories,String name,String? parent,String prefix) async{
     final normalized=name.trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase();
     for(final g in categories){if((g['parent_id']?.toString()??'')==(parent??'')&&(g['category_name']??'').toString().trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase()==normalized)return g;}
     var max=0;for(final g in categories){final m=RegExp('^'+prefix+r'(\d+)$',caseSensitive:false).firstMatch((g['category_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}
