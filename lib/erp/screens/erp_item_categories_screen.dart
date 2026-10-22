@@ -149,11 +149,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     return rows;
   }
 
-  Future<void> _setLevel(int level) async {
-    setState(() { _level = level; _parentFilter = null; _selectedId = null; });
-    await _load();
-  }
-
   Future<void> _add({String? parentIdOverride}) async {
     if (_company == null || _company!.isEmpty) { setState(() => _error = 'حدد الشركة أولًا.'); return; }
     String? parentId = parentIdOverride;
@@ -298,7 +293,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final id = _s(row['id']);
     final children = _childrenOf(row);
     final expanded = _expandedIds.contains(id);
-    final isDraft = row['_draft'] == true;
     final ar = _ar.putIfAbsent(id, () => TextEditingController(text: _s(row['group_name'])));
     final en = _en.putIfAbsent(id, () => TextEditingController(text: _s(row['group_name_en'])));
     final level = _rowLevel(row);
@@ -332,21 +326,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         ])),
       if (expanded) ...children.map((child) => _treeNode(child, depth + 1)),
     ]);
-  }
-
-  Widget _parentTabs() {
-    if (_level == 0) return const SizedBox.shrink();
-    final parents = _parents;
-    return SizedBox(height:40, child: ListView(scrollDirection:Axis.horizontal, children:[
-      Padding(padding:const EdgeInsetsDirectional.only(start:6,top:3,bottom:3),
-        child:ChoiceChip(label:const Text('الكل'),selected:_parentFilter==null,selectedColor:_catPurple,
-          labelStyle:TextStyle(color:_parentFilter==null?Colors.white:_catPurple,fontSize:12),
-          onSelected:(_)=>setState(()=>_parentFilter=null))),
-      for(final parent in parents) Padding(padding:const EdgeInsetsDirectional.only(start:6,top:3,bottom:3),
-        child:ChoiceChip(label:Text(_s(parent['group_name']),maxLines:1),selected:_parentFilter==_s(parent['id']),
-          selectedColor:_catPurple,labelStyle:TextStyle(color:_parentFilter==_s(parent['id'])?Colors.white:_catPurple,fontSize:12),
-          onSelected:(_)=>setState(()=>_parentFilter=_s(parent['id'])))),
-    ]));
   }
 
   @override
