@@ -58,8 +58,8 @@ class CategoryService {
       if (activityCode != null && activityCode.isNotEmpty) {
         categoriesQuery = categoriesQuery.eq('activity_code', activityCode);
       }
-      final groupRows = await categoriesQuery.order('category_name').limit(limit);
-      final groups = (groupRows as List).map((raw) {
+      final categoryRows = await categoriesQuery.order('category_name').limit(limit);
+      final groups = (categoryRows as List).map((raw) {
         final row = Map<String, dynamic>.from(raw as Map);
         return <String, dynamic>{
           ...row,
