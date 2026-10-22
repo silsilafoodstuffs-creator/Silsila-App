@@ -11,8 +11,18 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Uint8List _processTransparentPngInBackground(Uint8List source) {
-    final sourceImage = img.decodeImage(source);
-    if (sourceImage == null) throw Exception('تعذر فك ترميز الصورة الأصلية.');
+    final decodedSource = img.decodeImage(source);
+    if (decodedSource == null) throw Exception('تعذر فك ترميز الصورة الأصلية.');
+    // Limit the working resolution before the flood-fill; huge source images
+    // otherwise make a single-row download stall the UI on slower devices.
+    const maxDimension = 1800;
+    final sourceLongest = decodedSource.width > decodedSource.height ? decodedSource.width : decodedSource.height;
+    final sourceImage = sourceLongest > maxDimension
+        ? img.copyResize(decodedSource,
+            width: decodedSource.width >= decodedSource.height ? maxDimension : null,
+            height: decodedSource.height > decodedSource.width ? maxDimension : null,
+            interpolation: img.Interpolation.average)
+        : decodedSource;
     final decoded = img.Image(width: sourceImage.width, height: sourceImage.height, numChannels: 4);
     img.compositeImage(decoded, sourceImage);
     final int width = decoded.width;
@@ -49,13 +59,9 @@ Uint8List _processTransparentPngInBackground(Uint8List source) {
       enqueue(x - 1, y); enqueue(x + 1, y);
       enqueue(x, y - 1); enqueue(x, y + 1);
     }
-    final longest = width > height ? width : height;
-    final scale = 4096 / longest;
-    final targetWidth = (width * scale).round().clamp(1, 4096).toInt();
-    final targetHeight = (height * scale).round().clamp(1, 4096).toInt();
-    final resized = img.copyResize(decoded, width: targetWidth, height: targetHeight,
-      interpolation: img.Interpolation.cubic);
-    return Uint8List.fromList(img.encodePng(resized, level: 9));
+    // Do not upscale small originals; retain their actual detail and encode
+    // directly after background removal to minimize CPU time and memory.
+    return Uint8List.fromList(img.encodePng(decoded, level: 6));
   }
 
 
