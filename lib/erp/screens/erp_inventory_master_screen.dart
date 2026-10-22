@@ -236,6 +236,11 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     return rows.isEmpty ? 'بدون فئة' : _s(rows.first['group_code']) + ' — ' + _s(rows.first['group_name']);
   }
 
+  String _warehouseParentName(String? id) {
+    final rows = _warehouses.where((w) => _s(w['id']) == id);
+    return rows.isEmpty ? '' : _s(rows.first['warehouse_name']);
+  }
+
   String _branchName(String? id) {
     final rows = _branches.where((b) => _s(b['id']) == id);
     return rows.isEmpty ? 'بدون فرع محدد' : _s(rows.first['branch_code']) + ' — ' + _s(rows.first['branch_name']);
@@ -380,8 +385,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         Text('المخازن المسجلة • ' + _warehouses.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
         ..._warehouses.map((w) => Card(child: ListTile(
           leading: const Icon(Icons.warehouse_outlined, color: Color(0xFF3E007D)),
-          title: Text(_s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name'])),
-          subtitle: Text(_branchName(_s(w['branch_id'])) + (_s(w['address']).isEmpty ? '' : '\n' + _s(w['address']))),
+          title: Text((_s(w['parent_warehouse_id']).isEmpty ? '' : '↳ ') + _s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name'])),
+          subtitle: Text(_branchName(_s(w['branch_id'])) + (_s(w['address']).isEmpty ? '' : '\n' + _s(w['address'])) + (_s(w['parent_warehouse_id']).isEmpty ? '' : '\nمخزن فرعي تابع لـ ' + _warehouseParentName(_s(w['parent_warehouse_id'])))),
           isThreeLine: true,
           trailing: Wrap(spacing: 0, children: [
             IconButton(tooltip: 'إضافة مخزن فرعي', onPressed: _saving ? null : () => setState(() { _parentWarehouseId = _s(w['id']); _message = 'سيتم ربط المخزن الجديد بالمخزن: ' + _s(w['warehouse_name']); }), icon: const Icon(Icons.account_tree_outlined, color: Color(0xFF3E007D))),
