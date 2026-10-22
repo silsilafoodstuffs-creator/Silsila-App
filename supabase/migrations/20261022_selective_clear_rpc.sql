@@ -135,6 +135,12 @@ begin
         into v_rows
         from public.erp_workspace_records t
         where t.company_id = p_company_id and t.page_key = any(v_pages);
+    elsif v_table = 'erp_cash_vouchers' and cardinality(v_voucher_types)>0 then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_cash_vouchers t where t.company_id=p_company_id and t.voucher_type=any(v_voucher_types);
+    elsif v_table = 'erp_inventory_movements' and cardinality(v_movement_types)>0 then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_inventory_movements t where t.company_id=p_company_id and t.movement_type=any(v_movement_types);
+    elsif v_table = 'erp_app_assets' and cardinality(v_asset_types)>0 then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_app_assets t join public.erp_managed_apps a on a.id=t.app_id where a.company_id=p_company_id and t.asset_type=any(v_asset_types);
     elsif v_table = 'erp_parties' then
       if cardinality(v_party_kinds) > 0 then
         select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows from public.erp_parties t where t.company_id=p_company_id and t.party_kind=any(v_party_kinds);
@@ -262,6 +268,15 @@ begin
     if v_table <> 'erp_workspace_records' and not (v_backup.payload->'tables' ? v_table) then continue; end if;
     if v_table = 'erp_workspace_records' then
       delete from public.erp_workspace_records where company_id=p_company_id and page_key=any(v_pages);
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_cash_vouchers' and cardinality(v_voucher_types)>0 then
+      delete from public.erp_cash_vouchers where company_id=p_company_id and voucher_type=any(v_voucher_types);
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_inventory_movements' and cardinality(v_movement_types)>0 then
+      delete from public.erp_inventory_movements where company_id=p_company_id and movement_type=any(v_movement_types);
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_app_assets' and cardinality(v_asset_types)>0 then
+      delete from public.erp_app_assets t using public.erp_managed_apps a where a.id=t.app_id and a.company_id=p_company_id and t.asset_type=any(v_asset_types);
       get diagnostics v_deleted = row_count;
     elsif v_table = 'erp_parties' then
       if cardinality(v_party_kinds)>0 then delete from public.erp_parties where company_id=p_company_id and party_kind=any(v_party_kinds);
