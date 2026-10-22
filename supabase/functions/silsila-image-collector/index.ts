@@ -54,8 +54,70 @@ function decodeEntities(s: string): string {
     .replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 }
 
+function productMetadata(html: string, base: URL) {
+  const products: Array<Record<string, unknown>> = [];
+  const normalizeImage = (raw: string) => {
+    try {
+      const u = new URL(raw, base);
+      for (const key of ["width", "height", "w", "h", "quality", "q", "fit", "format", "fm", "utm_source", "utm_medium", "utm_campaign"]) u.searchParams.delete(key);
+      u.hash = "";
+      return u.href.toLowerCase();
+    } catch { return ""; }
+  };
+  const walk = (value: unknown) => {
+    if (Array.isArray(value)) { for (const item of value) walk(item); return; }
+    if (!value || typeof value !== "object") return;
+    const obj = value as Record<string, unknown>;
+    const rawType = obj["@type"];
+    const types = (Array.isArray(rawType) ? rawType : [rawType]).map(x => String(x ?? "").toLowerCase());
+    if (types.includes("product")) {
+      const imagesRaw = obj.image;
+      const images = (Array.isArray(imagesRaw) ? imagesRaw : [imagesRaw]).map(x => {
+        if (typeof x === "string") return x;
+        if (x && typeof x === "object") return String((x as Record<string, unknown>).url ?? (x as Record<string, unknown>).contentUrl ?? "");
+        return "";
+      }).filter(Boolean);
+      const offersRaw = obj.offers;
+      const offers = Array.isArray(offersRaw) ? offersRaw[0] : offersRaw;
+      const offer = offers && typeof offers === "object" ? offers as Record<string, unknown> : {};
+      const brandRaw = obj.brand;
+      const brand = brandRaw && typeof brandRaw === "object" ? String((brandRaw as Record<string, unknown>).name ?? "") : String(brandRaw ?? "");
+      const weightRaw = obj.weight;
+      const weight = weightRaw && typeof weightRaw === "object" ? String((weightRaw as Record<string, unknown>).value ?? "") + " " + String(((weightRaw as Record<string, unknown>).unitCode ?? (weightRaw as Record<string, unknown>).unitText) ?? "") : String(weightRaw ?? obj.size ?? "");
+      const item = {
+        product_name: String(obj.name ?? ""),
+        barcode: String(obj.gtin13 ?? obj.gtin14 ?? obj.gtin12 ?? obj.gtin8 ?? obj.gtin ?? obj.sku ?? ""),
+        major_unit: String(obj.unitText ?? obj.unit ?? ""),
+        minor_unit: "",
+        internal_count: "",
+        other_units: "",
+        sale_price: String(offer.price ?? offer.lowPrice ?? ""),
+        main_category: String(obj.category ?? ""),
+        subcategory: "",
+        brand,
+        weight: weight.trim(),
+        description: String(obj.description ?? ""),
+        _images: images.map(x => normalizeImage(x)),
+      };
+      products.push(item);
+    }
+    for (const [key, child] of Object.entries(obj)) {
+      if (key !== "offers" && key !== "brand" && key !== "image") walk(child);
+    }
+  };
+  for (const match of html.matchAll(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try { walk(JSON.parse(decodeEntities(match[1].trim()))); } catch { /* ignore invalid JSON-LD */ }
+  }
+  const byImage = new Map<string, Record<string, unknown>>();
+  for (const product of products) {
+    for (const key of product._images as string[]) if (key && !byImage.has(key)) byImage.set(key, product);
+  }
+  return { byImage, normalizeImage };
+}
+
 function pageImages(html: string, base: URL) {
-  const found = new Map<string, { url: string; alt: string }>();
+  const found = new Map<string, Record<string, unknown>>();
+  const metadata = productMetadata(html, base);
   const blocked = /(?:^|[\/_\-. ])(?:logo|site[-_ ]?logo|brand[-_ ]?logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|icon|social|payment|footer|menu|navigation|nav)(?:$|[\/_\-. ])/i;
   const tracking = new Set(["fbclid", "gclid", "dclid", "msclkid", "ref", "source", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "campaign", "tracking", "width", "height", "w", "h", "quality", "q", "fit", "crop", "auto", "format", "fm", "resize"]);
   const normalize = (u: URL) => {
@@ -76,7 +138,8 @@ function pageImages(html: string, base: URL) {
       if (/\.svg(?:$|\?)/i.test(u.href) || blocked.test(context)) return;
       if ((width > 0 && width < 90) || (height > 0 && height < 70)) return;
       const key = normalize(u);
-      if (!found.has(key)) found.set(key, { url: u.href, alt: alt.slice(0, 180) });
+      const structured = metadata.byImage.get(metadata.normalizeImage(u.href)) ?? {};
+      if (!found.has(key)) found.set(key, { ...structured, url: u.href, alt: alt.slice(0, 180), product_name: String(structured.product_name ?? alt ?? "").slice(0, 180) });
     } catch { /* skip unsafe or malformed candidates */ }
   };
   for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
