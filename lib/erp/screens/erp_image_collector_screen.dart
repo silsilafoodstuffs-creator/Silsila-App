@@ -29,6 +29,65 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   String? _importedScope;
 
   @override
+  void initState() {
+    super.initState();
+    _clearLegacyTestHistory();
+  }
+
+  Future<void> _clearLegacyTestHistory() async {
+    // v1 was used during exploratory test runs; discard it so old test imports
+    // cannot hide images when the user starts a real collection.
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in prefs.getKeys().where(
+      (key) => key.startsWith('silsila_image_collector_imported_v1_'),
+    ).toList()) {
+      await prefs.remove(key);
+    }
+  }
+
+  Future<void> _resetImportHistory() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('بدء سحب جديد من الصفر'),
+        content: const Text(
+          'سيتم مسح سجل الصور التي سبق تسجيلها في جامع الصور على هذا الجهاز، '
+          'وبالتالي ستظهر مرة أخرى عند فحص الصفحات. لن يتم حذف الملفات التي سبق تنزيلها إلى جهازك.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('مسح السجل والبدء من جديد'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs.getKeys().where(
+      (key) => key.startsWith('silsila_image_collector_imported_'),
+    ).toList();
+    for (final key in keys) {
+      await prefs.remove(key);
+    }
+    if (!mounted) return;
+    setState(() {
+      _importedImageKeys.clear();
+      _importedScope = null;
+      _images = [];
+      _selected.clear();
+      _pageUrl = null;
+      _error = null;
+      _status = 'تم مسح سجل السحب السابق. أدخل رابط الصفحة الصحيحة وابدأ السحب من جديد.';
+    });
+  }
+
+  @override
   void dispose() {
     _url.dispose();
     super.dispose();
@@ -82,7 +141,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     ).toString();
   }
 
-  String _prefsKey(String scope) => 'silsila_image_collector_imported_v1_$scope';
+  String _prefsKey(String scope) => 'silsila_image_collector_imported_v2_$scope';
 
   Future<void> _loadImportedForScope(String scope) async {
     final prefs = await SharedPreferences.getInstance();
@@ -488,6 +547,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     icon: const Icon(Icons.folder_zip_outlined),
                     label: Text('حفظ المحدد PNG داخل ZIP (${_selected.length})'),
                     style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13)),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : _resetImportHistory,
+                    icon: const Icon(Icons.restart_alt_rounded),
+                    label: const Text('بدء السحب من الصفر'),
                   ),
                   OutlinedButton.icon(
                     onPressed: _loading || _selected.isEmpty ? null : _exportProductDataExcel,
