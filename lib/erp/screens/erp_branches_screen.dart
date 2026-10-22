@@ -20,6 +20,9 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
   bool _loading = false;
   String? _error;
   String? _message;
+  String? _editingBranchId;
+  final Map<String, TextEditingController> _editFields = {};
+  String? _editGovernorateId, _editDistrictId, _editAreaId;
 
   @override
   void initState() {
@@ -69,6 +72,33 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
   }
 
   Future<void> _edit([Map<String, dynamic>? row]) async {
+    if (row != null) {
+      for (final controller in _editFields.values) {
+        controller.dispose();
+      }
+      _editFields
+        ..clear()
+        ..addAll({
+          'branch_code': TextEditingController(text: _s(row['branch_code'])),
+          'branch_name': TextEditingController(text: _s(row['branch_name'])),
+          'branch_name_en': TextEditingController(text: _s(row['branch_name_en'])),
+          'phone': TextEditingController(text: _s(row['phone'])),
+          'phone2': TextEditingController(text: _s(row['phone2'])),
+          'landline1': TextEditingController(text: _s(row['landline1'])),
+          'landline2': TextEditingController(text: _s(row['landline2'])),
+          'location': TextEditingController(text: _s(row['location'])),
+          'address': TextEditingController(text: _s(row['address'])),
+        });
+      setState(() {
+        _editingBranchId = _s(row['id']);
+        _editGovernorateId = _s(row['governorate_id']).isEmpty ? null : _s(row['governorate_id']);
+        _editDistrictId = _s(row['district_id']).isEmpty ? null : _s(row['district_id']);
+        _editAreaId = _s(row['area_id']).isEmpty ? null : _s(row['area_id']);
+        _error = null;
+        _message = 'وضع تعديل مباشر: عدّل البيانات داخل صف الفرع ثم اضغط حفظ الصف.';
+      });
+      return;
+    }
     final code = TextEditingController(text: _s(row?['branch_code']));
     final name = TextEditingController(text: _s(row?['branch_name']));
     final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
@@ -172,6 +202,77 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     } finally {
       code.dispose(); name.dispose(); nameEn.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
     }
+  }
+
+  Widget _inlineField(String key, {double width = 130, TextInputType? keyboardType}) =>
+      SizedBox(
+        width: width,
+        child: TextField(
+          controller: _editFields[key],
+          keyboardType: keyboardType,
+          isDense: true,
+          style: const TextStyle(fontSize: 12),
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            border: OutlineInputBorder(),
+          ),
+        ),
+      );
+
+  Future<void> _saveInlineEdit(Map<String, dynamic> row) async {
+    final companyId = (widget.companyId ?? '').trim();
+    final code = _editFields['branch_code']!.text.trim();
+    final name = _editFields['branch_name']!.text.trim();
+    if (code.isEmpty || name.isEmpty) {
+      setState(() => _error = 'كود الفرع واسم الفرع العربي مطلوبان.');
+      return;
+    }
+    const allowed = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
+    if (code.split('').any((ch) => !allowed.contains(ch))) {
+      setState(() => _error = 'كود الفرع يجب أن يتكون من حروف إنجليزية وأرقام وشرطة فقط.');
+      return;
+    }
+    try {
+      await _db!.from('erp_branches').update({
+        'branch_code': code,
+        'branch_name': name,
+        'branch_name_en': _editFields['branch_name_en']!.text.trim().isEmpty ? null : _editFields['branch_name_en']!.text.trim(),
+        'phone': _editFields['phone']!.text.trim().isEmpty ? null : _editFields['phone']!.text.trim(),
+        'phone2': _editFields['phone2']!.text.trim().isEmpty ? null : _editFields['phone2']!.text.trim(),
+        'landline1': _editFields['landline1']!.text.trim().isEmpty ? null : _editFields['landline1']!.text.trim(),
+        'landline2': _editFields['landline2']!.text.trim().isEmpty ? null : _editFields['landline2']!.text.trim(),
+        'location': _editFields['location']!.text.trim().isEmpty ? null : _editFields['location']!.text.trim(),
+        'address': _editFields['address']!.text.trim().isEmpty ? null : _editFields['address']!.text.trim(),
+        'governorate_id': _editGovernorateId,
+        'district_id': _editDistrictId,
+        'area_id': _editAreaId,
+      }).eq('id', row['id']).eq('company_id', companyId);
+      for (final controller in _editFields.values) {
+        controller.dispose();
+      }
+      if (!mounted) return;
+      setState(() {
+        _editFields.clear();
+        _editingBranchId = null;
+        _message = 'تم حفظ تعديلات الفرع بنجاح.';
+      });
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر حفظ تعديلات الفرع: $error');
+    }
+  }
+
+  void _cancelInlineEdit() {
+    for (final controller in _editFields.values) {
+      controller.dispose();
+    }
+    setState(() {
+      _editFields.clear();
+      _editingBranchId = null;
+      _message = null;
+      _error = null;
+    });
   }
 
   Map<String, dynamic>? get _singleSelectedBranch {
@@ -303,7 +404,8 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
             final active = row['is_active'] == true;
             final branchId = _s(row['id']);
             final selected = _selectedBranchIds.contains(branchId);
-            return DataRow(selected: selected, cells: [
+            final editing = _editingBranchId == branchId;
+            return DataRow(selected: selected || editing, cells: [
               DataCell(Checkbox(
                 shape: const CircleBorder(),
                 value: selected,
@@ -311,18 +413,48 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
                 activeColor: _branchPurple,
                 visualDensity: VisualDensity.compact,
               )),
-              DataCell(Text(_s(row['branch_code']))),
-              DataCell(Text(_s(row['branch_name']))),
-              DataCell(Text(_s(row['branch_name_en']))),
-              DataCell(Text(_geoName(row['governorate_id']))),
-              DataCell(Text(_geoName(row['district_id']))),
-              DataCell(Text(_geoName(row['area_id']))),
-              DataCell(SizedBox(width: 180, child: Text('${_s(row['address'])} ${_s(row['location'])}', maxLines: 2, overflow: TextOverflow.ellipsis))),
-              DataCell(Text('${_s(row['phone'])} / ${_s(row['phone2'])}')),
-              DataCell(Text('${_s(row['landline1'])} / ${_s(row['landline2'])}')),
-              DataCell(Checkbox(shape: const CircleBorder(), value: active, onChanged: (_) => _toggle(row))),
-              DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
-                IconButton(tooltip: 'تعديل', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _branchPurple)),
+              DataCell(editing ? _inlineField('branch_code', width: 100) : Text(_s(row['branch_code']))),
+              DataCell(editing ? _inlineField('branch_name', width: 150) : Text(_s(row['branch_name']))),
+              DataCell(editing ? _inlineField('branch_name_en', width: 150) : Text(_s(row['branch_name_en']))),
+              DataCell(editing ? SizedBox(width: 150, child: DropdownButtonFormField<String>(
+                value: _editGovernorateId, isExpanded: true, isDense: true,
+                decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8)),
+                items: [const DropdownMenuItem<String>(value: null, child: Text('المحافظة')), ..._geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']), overflow: TextOverflow.ellipsis)))],
+                onChanged: (v) => setState(() { _editGovernorateId = v; _editDistrictId = null; _editAreaId = null; }),
+              )) : Text(_geoName(row['governorate_id']))),
+              DataCell(editing ? SizedBox(width: 150, child: DropdownButtonFormField<String>(
+                value: _editDistrictId, isExpanded: true, isDense: true,
+                decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8)),
+                items: [const DropdownMenuItem<String>(value: null, child: Text('الحي / المركز')), ..._geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (_editGovernorateId ?? '')).map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']), overflow: TextOverflow.ellipsis)))],
+                onChanged: (v) => setState(() { _editDistrictId = v; _editAreaId = null; }),
+              )) : Text(_geoName(row['district_id']))),
+              DataCell(editing ? SizedBox(width: 150, child: DropdownButtonFormField<String>(
+                value: _editAreaId, isExpanded: true, isDense: true,
+                decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8)),
+                items: [const DropdownMenuItem<String>(value: null, child: Text('المنطقة / القرية')), ..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_editDistrictId ?? '')).map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']), overflow: TextOverflow.ellipsis)))],
+                onChanged: (v) => setState(() => _editAreaId = v),
+              )) : Text(_geoName(row['area_id']))),
+              DataCell(editing ? Column(mainAxisSize: MainAxisSize.min, children: [
+                _inlineField('address', width: 180),
+                const SizedBox(height: 4),
+                _inlineField('location', width: 180),
+              ]) : SizedBox(width: 180, child: Text('${_s(row['address'])} ${_s(row['location'])}', maxLines: 2, overflow: TextOverflow.ellipsis))),
+              DataCell(editing ? Column(mainAxisSize: MainAxisSize.min, children: [
+                _inlineField('phone', width: 125, keyboardType: TextInputType.phone),
+                const SizedBox(height: 4),
+                _inlineField('phone2', width: 125, keyboardType: TextInputType.phone),
+              ]) : Text('${_s(row['phone'])} / ${_s(row['phone2'])}')),
+              DataCell(editing ? Column(mainAxisSize: MainAxisSize.min, children: [
+                _inlineField('landline1', width: 125, keyboardType: TextInputType.phone),
+                const SizedBox(height: 4),
+                _inlineField('landline2', width: 125, keyboardType: TextInputType.phone),
+              ]) : Text('${_s(row['landline1'])} / ${_s(row['landline2'])}')),
+              DataCell(editing ? const Icon(Icons.lock_outline, color: Colors.grey, size: 18) : Checkbox(shape: const CircleBorder(), value: active, onChanged: (_) => _toggle(row))),
+              DataCell(Row(mainAxisSize: MainAxisSize.min, children: editing ? [
+                IconButton(tooltip: 'حفظ الصف', onPressed: () => _saveInlineEdit(row), icon: const Icon(Icons.save_rounded, color: Colors.green)),
+                IconButton(tooltip: 'إلغاء التعديل', onPressed: _cancelInlineEdit, icon: const Icon(Icons.close_rounded, color: Colors.grey)),
+              ] : [
+                IconButton(tooltip: 'تعديل داخل الصف', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _branchPurple)),
                 IconButton(tooltip: 'حذف', onPressed: () => _delete(row), icon: const Icon(Icons.delete_forever, color: Colors.red)),
               ])),
             ]);
