@@ -987,7 +987,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           Row(children: [
             const Text('الصور المستخرجة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(width: 8),
-            Expanded(child: Text('${_images.length + _previouslyImportedCount} صورة $_previouslyImportedCount قديمة ${_images.length} جديدة (${_selected.length} محدد ${_images.length - _selected.length} غير محدد)', style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis)),
+            Expanded(child: Tooltip(message: 'تم تجاهل $_duplicateCount صورة مكررة داخل الصفحة', child: Text('${_images.length + _previouslyImportedCount} صورة $_previouslyImportedCount قديمة ${_images.length} جديدة (${_selected.length} محدد ${_images.length - _selected.length} غير محدد)', style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis))),
             const SizedBox(width: 8),
             Expanded(child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
