@@ -254,6 +254,92 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     return '.png';
   }
 
+  String _excelValue(Map<String, dynamic> item, List<String> keys) {
+    for (final key in keys) {
+      final value = item[key];
+      if (value != null && value.toString().trim().isNotEmpty) {
+        return value.toString().trim();
+      }
+    }
+    return '';
+  }
+
+  Future<void> _exportProductDataExcel() async {
+    if (_loading || _selected.isEmpty) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+      _status = 'جارٍ تجهيز ملف Excel لبيانات الصور المحددة...';
+    });
+    try {
+      final excel = Excel.createExcel();
+      final sheet = excel['بيانات الأصناف'];
+      sheet.appendRow([
+        TextCellValue('م'),
+        TextCellValue('نوع الصورة'),
+        TextCellValue('اسم الصنف / الصورة'),
+        TextCellValue('الباركود'),
+        TextCellValue('الوحدة الرئيسية'),
+        TextCellValue('الوحدة الفرعية'),
+        TextCellValue('العدد الداخلي'),
+        TextCellValue('الوحدات الأخرى'),
+        TextCellValue('سعر البيع'),
+        TextCellValue('الفئة الرئيسية'),
+        TextCellValue('الفئة الفرعية'),
+        TextCellValue('الفئة الثانوية'),
+        TextCellValue('العلامة التجارية'),
+        TextCellValue('الوزن / الحجم'),
+        TextCellValue('الرابط الأصلي للصورة'),
+        TextCellValue('رابط صفحة المصدر'),
+      ]);
+      final selectedImages = _images
+          .where((item) => _selected.contains(item['url']?.toString() ?? ''))
+          .toList();
+      for (var i = 0; i < selectedImages.length; i++) {
+        final item = selectedImages[i];
+        final kind = (item['save_as'] ?? 'product').toString();
+        final name = _excelValue(item, [
+          'product_name', 'category_name', 'group_name', 'brand_name',
+          'title', 'name', 'alt', 'file_name',
+        ]);
+        sheet.appendRow([
+          IntCellValue(i + 1),
+          TextCellValue(kind == 'category' ? 'فئة / مجموعة' : kind == 'brand' ? 'ماركة / براند' : 'صنف / منتج'),
+          TextCellValue(name),
+          TextCellValue(_excelValue(item, ['barcode', 'gtin', 'ean', 'upc'])),
+          TextCellValue(_excelValue(item, ['main_unit', 'unit', 'unit_name', 'major_unit'])),
+          TextCellValue(_excelValue(item, ['sub_unit', 'minor_unit', 'small_unit'])),
+          TextCellValue(_excelValue(item, ['internal_count', 'units_per_pack', 'pack_size', 'quantity_per_unit'])),
+          TextCellValue(_excelValue(item, ['other_units', 'units'])),
+          TextCellValue(_excelValue(item, ['sale_price', 'price', 'price_value'])),
+          TextCellValue(_excelValue(item, ['main_category', 'category_name', 'category'])),
+          TextCellValue(_excelValue(item, ['sub_category', 'subcategory', 'group_name'])),
+          TextCellValue(_excelValue(item, ['secondary_category', 'third_category'])),
+          TextCellValue(_excelValue(item, ['brand', 'brand_name', 'manufacturer'])),
+          TextCellValue(_excelValue(item, ['weight', 'volume', 'net_weight', 'size'])),
+          TextCellValue(_excelValue(item, ['url', 'image_url'])),
+          TextCellValue(_pageUrl ?? ''),
+        ]);
+      }
+      final bytes = excel.encode();
+      if (bytes == null || bytes.isEmpty) {
+        throw Exception('تعذر إنشاء ملف Excel من البيانات المحددة.');
+      }
+      await FileSaver.instance.saveFile(
+        name: 'silsila_product_data_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: Uint8List.fromList(bytes),
+        fileExtension: 'xlsx',
+      );
+      if (mounted) {
+        setState(() => _status = 'تم تصدير بيانات ${selectedImages.length} صورة إلى ملف Excel. الحقول غير المتاحة في بيانات المصدر ستظل فارغة.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _saveZip() async {
     if (_selected.isEmpty) {
       setState(() => _error = 'حدد صورة واحدة على الأقل قبل التنزيل.');
