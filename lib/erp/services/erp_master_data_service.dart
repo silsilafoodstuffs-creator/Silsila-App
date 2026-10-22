@@ -104,7 +104,7 @@ class ErpMasterDataService {
 
   Future<List<Map<String, dynamic>>> listItems({
     required String companyId,
-    String? groupId,
+    String? categoryId,
     String? search,
     bool activeOnly = true,
     int limit = 100,
@@ -112,8 +112,8 @@ class ErpMasterDataService {
     _require(companyId, 'معرّف الشركة مطلوب.');
     var query = _db.from('erp_items').select().eq('company_id', companyId);
     if (activeOnly) query = query.eq('is_active', true);
-    if (groupId != null && groupId.trim().isNotEmpty) {
-      query = query.eq('category_id', groupId);
+    if (categoryId != null && categoryId.trim().isNotEmpty) {
+      query = query.eq('category_id', categoryId);
     }
     if (search != null && search.trim().isNotEmpty) {
       final term = _escapeLike(search.trim());
@@ -126,7 +126,7 @@ class ErpMasterDataService {
   Future<void> saveItem({
     String? id,
     required String companyId,
-    String? groupId,
+    String? categoryId,
     required String code,
     String? barcode,
     required String name,
@@ -145,7 +145,7 @@ class ErpMasterDataService {
     }
     final payload = <String, Object?>{
       'company_id': companyId,
-      'category_id': _nullable(groupId),
+      'category_id': _nullable(categoryId),
       'item_code': code.trim(),
       'barcode': _nullable(barcode),
       'item_name': name.trim(),
