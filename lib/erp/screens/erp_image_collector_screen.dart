@@ -280,12 +280,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   }
 
   bool _looksLikeEntityName(String value) {
-    final name = value.trim().replaceAll(RegExp(r'\\s+'), ' ');
+    final name = value.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (name.length < 2 || name.length > 120) return false;
-    if (!RegExp(r'[a-zA-Z\\u0600-\\u06FF]').hasMatch(name)) return false;
+    if (!RegExp(r'[a-zA-Z\u0600-\u06FF]').hasMatch(name)) return false;
     // Reject common technical image names such as -_275_2, IMG_1234 or 275x275.
-    if (RegExp(r'^(?:(?:img|image|photo|dsc|pxl|pic)[-_ .]*)?\\d+(?:[-_ .]+\\d+)*$', caseSensitive: false).hasMatch(name)) return false;
-    if (RegExp(r'^[-_ .]+\\d+(?:[-_ .]+\\d+)*$').hasMatch(name)) return false;
+    if (RegExp(r'^(?:(?:img|image|photo|dsc|pxl|pic)[-_ .]*)?\d+(?:[-_ .]+\d+)*$', caseSensitive: false).hasMatch(name)) return false;
+    if (RegExp(r'^[-_ .]+\d+(?:[-_ .]+\d+)*$').hasMatch(name)) return false;
     if (RegExp(r'^(image|product|item|category|view|details|read more|عرض|صورة|منتج)$', caseSensitive: false).hasMatch(name)) return false;
     return true;
   }
