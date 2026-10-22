@@ -90,6 +90,27 @@ class CatalogImageMatchingTests(unittest.TestCase):
             IMPORTER.image_variant_matches("أرز أبيض مصري", "brown rice")
         )
 
+    def test_common_grocery_aliases_expand_search_without_weakening_identity(self):
+        item = {"item_name": "فطر شرائح معلب 400 جم", "barcode": "", "brand_name": ""}
+        requested_queries = []
+
+        def empty_search(url):
+            requested_queries.append(
+                IMPORTER.urllib.parse.parse_qs(IMPORTER.urllib.parse.urlparse(url).query)["q"][0]
+            )
+            return {"hits": []}
+
+        with patch.object(IMPORTER, "request_json", side_effect=empty_search), patch.object(
+            IMPORTER.time, "sleep"
+        ):
+            self.assertEqual(IMPORTER.off_candidates(item), [])
+
+        self.assertIn("canned sliced mushrooms", requested_queries)
+        self.assertIn("sliced mushrooms tin", requested_queries)
+        self.assertFalse(
+            IMPORTER.image_variant_matches("فطر شرائح معلب", "fresh whole mushrooms")
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
