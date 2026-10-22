@@ -31,12 +31,12 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   final _salePrice = TextEditingController(text: '0');
   final _taxRate = TextEditingController(text: '0');
   final _reorder = TextEditingController(text: '0');
-  List<Map<String, dynamic>> _groups = [];
+  List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _branches = [];
   String? _branchId;
-  String? _itemGroupId;
+  String? _itemCategoryId;
   String _view = 'warehouses';
   bool _expiry = false;
   bool _loading = false;
@@ -101,13 +101,13 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         _repo.fetchWarehouses(_company.text),
         _repo.fetchItems(_company.text),
         _repo.fetchBranches(_company.text),
-        _repo.fetchGroups(_company.text),
+        _repo.fetchCategories(_company.text),
       ]);
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _branches = values[2]; _groups = values[3];
-        if (!_groups.any((g) => _s(g['id']) == _parentGroupId)) _parentGroupId = null;
-        if (!_groups.any((g) => _s(g['id']) == _itemGroupId && g['is_active'] == true)) _itemGroupId = null;
+        _warehouses = values[0]; _items = values[1]; _branches = values[2]; _categories = values[3];
+        if (!_categories.any((g) => _s(g['id']) == _parentGroupId)) _parentGroupId = null;
+        if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
       });
@@ -174,7 +174,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
       }
       await _repo.createItem(companyId: _company.text, code: _itemCode.text, name: _itemName.text,
-        barcode: _barcode.text, groupId: _itemGroupId, unit: _unit.text, purchasePrice: purchase,
+        barcode: _barcode.text, categoryId: _itemCategoryId, unit: _unit.text, purchasePrice: purchase,
         salePrice: sale, taxRate: taxRate, reorderLevel: reorder, expiryTracking: _expiry,
         imageBytes: imageBytes, imageMimeType: imageBytes == null ? null : contentType);
       if (!mounted) return;
@@ -202,7 +202,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   }
 
   String _categoryLabel(String? id) {
-    final rows = _groups.where((g) => _s(g['id']) == id);
+    final rows = _categories.where((g) => _s(g['id']) == id);
     return rows.isEmpty ? 'بدون فئة' : _s(rows.first['group_code']) + ' — ' + _s(rows.first['group_name']);
   }
 
@@ -224,7 +224,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
                 _taxRate.text == '0' ? '' : _taxRate.text,
                 _reorder.text == '0' ? '' : _reorder.text];
     final hasSelection = (_view == 'warehouses' && _branchId != null) ||
-        (_view == 'items' && (_itemGroupId != null || _pickedItemImage != null));
+        (_view == 'items' && (_itemCategoryId != null || _pickedItemImage != null));
     if (currentFields.any((value) => value.trim().isNotEmpty) || hasSelection) {
       setState(() => _message = 'تم الاحتفاظ بالبيانات الحالية كما هي. احفظ السجل الحالي أولًا قبل بدء سجل جديد.');
       return;
@@ -235,7 +235,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       else {
         _itemCode.clear(); _itemName.clear(); _barcode.clear(); _unit.text = 'وحدة';
         _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
-        _itemGroupId = null; _expiry = false; _pickedItemImage = null; _pickedItemImageBytes = null;
+        _itemCategoryId = null; _expiry = false; _pickedItemImage = null; _pickedItemImageBytes = null;
       }
     });
   }
@@ -331,10 +331,10 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             TextField(controller: _itemCode, decoration: const InputDecoration(labelText: 'كود الصنف *')),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _itemGroupId, isExpanded: true,
+              value: _itemCategoryId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'فئة الصنف (اختياري)'),
-              items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فئة')), ..._groups.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['group_code']) + ' — ' + _s(g['group_name']), overflow: TextOverflow.ellipsis)))],
-              onChanged: (v) => setState(() => _itemGroupId = v),
+              items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فئة')), ..._categories.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['group_code']) + ' — ' + _s(g['group_name']), overflow: TextOverflow.ellipsis)))],
+              onChanged: (v) => setState(() => _itemCategoryId = v),
             ),
             TextField(controller: _itemName, decoration: const InputDecoration(labelText: 'اسم الصنف *')),
 
