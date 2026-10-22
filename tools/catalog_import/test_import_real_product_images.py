@@ -75,6 +75,28 @@ class CatalogImageMatchingTests(unittest.TestCase):
             )
         self.assertIsNone(match)
 
+    def test_webp_vp8l_dimensions_are_read(self):
+        data = bytearray(25)
+        data[0:4] = b"RIFF"
+        data[8:12] = b"WEBP"
+        data[12:16] = b"VP8L"
+        data[20] = 0x2F
+        data[21] = 0x7F
+        data[22] = 0xC2
+        data[23] = 0x77
+        data[24] = 0x00
+        self.assertEqual(IMPORTER.image_dimensions(bytes(data), "image/webp"), (640, 480))
+
+    def test_webp_vp8_dimensions_are_read(self):
+        data = bytearray(30)
+        data[0:4] = b"RIFF"
+        data[8:12] = b"WEBP"
+        data[12:16] = b"VP8 "
+        data[23:26] = bytes((0x9D, 0x01, 0x2A))
+        data[26:28] = (640).to_bytes(2, "little")
+        data[28:30] = (480).to_bytes(2, "little")
+        self.assertEqual(IMPORTER.image_dimensions(bytes(data), "image/webp"), (640, 480))
+
     def test_stored_bytea_threshold_matches_minimum_photo_size(self):
         good = "\\x" + ("ab" * IMPORTER.MIN_BYTES)
         small = "\\x" + ("ab" * (IMPORTER.MIN_BYTES - 1))
