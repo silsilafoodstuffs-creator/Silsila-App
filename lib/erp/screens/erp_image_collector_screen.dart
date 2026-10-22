@@ -207,6 +207,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       setState(() {
         _pageUrl = result['page']?.toString() ?? parsed.toString();
         _images = images;
+        // Select every newly collected image by default so the collector is
+        // ready to save the complete result without requiring a manual step.
+        _selected
+          ..clear()
+          ..addAll(images.map((image) => image['url'].toString()));
         _status = images.isEmpty
             ? (candidates.isEmpty
                 ? 'لم يتم العثور على صور ظاهرة في HTML. قد تعتمد الصفحة على JavaScript أو تمنع الوصول.'
