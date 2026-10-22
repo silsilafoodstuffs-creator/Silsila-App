@@ -129,7 +129,6 @@ String silsilaText(String value) {
     'أنواع الأنشطة': 'Activity Types',
     'شجرة الحسابات': 'Chart of Accounts',
     'الفترات المالية': 'Fiscal Periods',
-    'مراكز التكلفة': 'Cost Centers',
     'العملات': 'Currencies',
     'الخزائن الرئيسية والفرعية': 'Cashboxes',
     'قيود اليومية': 'Journal Entries',
