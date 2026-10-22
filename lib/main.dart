@@ -651,7 +651,18 @@ class EntryOptionsScreen extends StatelessWidget {
                     final name = (row['name_ar'] ?? '').toString();
                     final imageData = (row['image_data'] ?? '').toString();
                     Uint8List? imageBytes;
-                    try { if (imageData.isNotEmpty) imageBytes = base64Decode(imageData); } catch (_) {}
+                    if (imageData.isNotEmpty) {
+                      // ERP image columns are PostgreSQL bytea hex strings
+                      // (\\x...), while older app rows may store base64.
+                      imageBytes = _decodeDatabaseBytea(imageData);
+                      if (imageBytes == null) {
+                        try {
+                          imageBytes = base64Decode(imageData);
+                        } catch (_) {
+                          imageBytes = null;
+                        }
+                      }
+                    }
                     return SizedBox(width: 142, child: InkWell(
                       borderRadius: BorderRadius.circular(14),
                       onTap: () => _open(context, LoginScreen(initialAccountType: name)),
