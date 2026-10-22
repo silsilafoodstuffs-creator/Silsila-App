@@ -233,7 +233,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
 
   String _categoryLabel(String? id) {
     final rows = _categories.where((g) => _s(g['id']) == id);
-    return rows.isEmpty ? 'بدون فئة' : _s(rows.first['group_code']) + ' — ' + _s(rows.first['group_name']);
+    return rows.isEmpty ? 'بدون فئة' : _s(rows.first['category_code']) + ' — ' + _s(rows.first['category_name']);
   }
 
   String _warehouseParentName(String? id) {
@@ -404,7 +404,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             DropdownButtonFormField<String>(
               value: _itemCategoryId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'فئة الصنف (اختياري)'),
-              items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فئة')), ..._categories.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['group_code']) + ' — ' + _s(g['group_name']), overflow: TextOverflow.ellipsis)))],
+              items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فئة')), ..._categories.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis)))],
               onChanged: (v) => setState(() => _itemCategoryId = v),
             ),
             TextField(controller: _itemName, decoration: const InputDecoration(labelText: 'اسم الصنف *')),
@@ -487,7 +487,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(_decodeBytea(i['image_data'])!, width: 48, height: 48, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D))))
               : const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
           title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
-          subtitle: Text(_categoryLabel(_s(i['group_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
+          subtitle: Text(_categoryLabel(_s(i['category_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
           isThreeLine: true,
           trailing: IconButton(onPressed: _saving ? null : () => _toggle(i, true), icon: Icon(i['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
         ))),
