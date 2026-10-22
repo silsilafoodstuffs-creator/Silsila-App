@@ -65,18 +65,18 @@ class ErpMasterDataService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> listItemGroups({
+  Future<List<Map<String, dynamic>>> listItemCategorys({
     required String companyId,
     bool activeOnly = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    var query = _db.from('erp_item_categories').select('*,group_code:category_code,group_name:category_name,group_name_en:category_name_en').eq('company_id', companyId);
+    var query = _db.from('erp_item_categories').select('*,category_code:category_code,category_name:category_name,category_name_en:category_name_en').eq('company_id', companyId);
     if (activeOnly) query = query.eq('is_active', true);
     final rows = await query.order('category_name');
     return _maps(rows);
   }
 
-  Future<void> saveItemGroup({
+  Future<void> saveItemCategory({
     String? id,
     required String companyId,
     String? parentId,
