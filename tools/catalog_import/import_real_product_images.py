@@ -27,6 +27,7 @@ COMPANY_ID = os.environ.get("SILSILA_ERP_COMPANY_ID", "")
 OFF_API = "https://search.openfoodfacts.org/search"
 USER_AGENT = "SilsilaCatalogEnricher/1.0 (catalog administrator)"
 MIN_BYTES = 12_000
+MIN_STORED_IMAGE_CHARS = 2 * MIN_BYTES + 2  # PostgreSQL bytea is returned as \\x + two hex chars per byte.
 MIN_SIDE = 300
 MAX_BYTES = 4 * 1024 * 1024
 MAX_ITEMS = int(os.environ.get("SILSILA_IMAGE_IMPORT_LIMIT", "250"))
@@ -400,6 +401,12 @@ def image_data_digest(value: Any) -> str | None:
     return None
 
 
+def has_real_size_image(value: Any) -> bool:
+    """Use the same byte threshold for downloaded photos and stored bytea hex."""
+    raw = str(value or "")
+    return raw.startswith("\\x") and len(raw) >= MIN_STORED_IMAGE_CHARS
+
+
 def image_variant_matches(item_name: str, product_title: str) -> bool:
     """Reject a candidate if a distinguishing variant is absent or contradicted."""
     item = normalized(item_name)
@@ -423,6 +430,15 @@ def image_variant_matches(item_name: str, product_title: str) -> bool:
         (("قابلة للدهن",), {"spreadable"}, {"sliced", "block"}),
     ]
     title_tokens = set(title.split())
+    # A sweet-potato pack is not an image match for ordinary salted potato chips.
+    title_is_sweet_potato = {"sweet", "potato"}.issubset(title_tokens)
+    item_is_sweet_potato = any(
+        marker in item for marker in ("بطاطا حلوة", "بطاطس حلوة", "sweet potato")
+    )
+    if title_is_sweet_potato and not item_is_sweet_potato and (
+        "بطاطس" in item or "بطاطا" in item or "potato" in item.split()
+    ):
+        return False
     for arabic_markers, required, conflicts in variants:
         if any(normalized(marker) in item for marker in arabic_markers):
             # The source may describe the same pack in Arabic or English.
@@ -670,7 +686,7 @@ def main() -> int:
         # Guard every existing real-size item image, not just rows whose source
         # provenance URL is recognized. A copied image is still a duplicate.
         stored_image = str(row.get("image_data") or "")
-        if len(stored_image) > 25_000:
+        if has_real_size_image(stored_image):
             digest = image_data_digest(stored_image)
             if digest:
                 used_image_digests.add(digest)
@@ -680,7 +696,7 @@ def main() -> int:
         group = group_by_id.get(row.get("group_id"), {})
         group_code = str(group.get("group_code") or "")
         image_size = len(str(row.get("image_data") or ""))
-        has_good_image = image_size > 25_000
+        has_good_image = has_real_size_image(row.get("image_data"))
         return (0 if group_code.startswith("FOOD-") else 1, 1 if has_good_image else 0, str(row.get("item_name") or ""))
 
     items.sort(key=item_priority)
@@ -691,7 +707,7 @@ def main() -> int:
     for index, item in enumerate(items, 1):
         # Existing photos smaller than the quality threshold are considered placeholders.
         old = str(item.get("image_data") or "")
-        if len(old) > 25_000:
+        if has_real_size_image(old):
             continue
         item_name = str(item.get("item_name") or "(unnamed)")
         candidates = off_candidates(item)
@@ -734,7 +750,7 @@ def main() -> int:
         representative = group_image_matches_item(group_code, item_name, product)
         if group_id and group_id not in refreshed_groups and representative:
             refreshed_groups.add(group_id)
-            if group and (len(str(group.get("image_data") or "")) <= 25_000):
+            if group and not has_real_size_image(group.get("image_data")):
                 if not DRY_RUN:
                     rest("PATCH", "erp_item_groups", urllib.parse.urlencode({"id": f"eq.{group_id}", "company_id": f"eq.{COMPANY_ID}"}), {
                         "image_data": image_value, "image_mime_type": mime, "image_url": None,
@@ -746,7 +762,7 @@ def main() -> int:
                 for category in categories:
                     if normalized(str(category.get("name") or "")) not in normalized_aliases:
                         continue
-                    if len(str(category.get("image_data") or "")) > 25_000:
+                    if has_real_size_image(category.get("image_data")):
                         continue
                     if not DRY_RUN:
                         rest("PATCH", "categories", urllib.parse.urlencode({"id": f"eq.{category['id']}"}), {
