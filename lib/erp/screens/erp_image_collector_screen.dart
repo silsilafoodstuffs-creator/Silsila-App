@@ -30,11 +30,115 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   final Map<String, TextEditingController> _rowControllers = {};
   String? _importedScope;
   String _imageKind = 'product';
+  List<Map<String, dynamic>> _categoryOptions = <Map<String, dynamic>>[];
+  bool _categoryOptionsLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _clearLegacyTestHistory();
+  }
+
+  Future<void> _loadCategoryOptions() async {
+    if (_categoryOptionsLoaded) return;
+    try {
+      final company = await _activeCompanyId();
+      final rows = await Supabase.instance.client.from('erp_item_groups')
+          .select('id,parent_id,group_code,group_name')
+          .eq('company_id', company).eq('is_active', true)
+          .order('group_name').limit(3000);
+      if (!mounted) return;
+      setState(() {
+        _categoryOptions = (rows as List).map((r) => Map<String, dynamic>.from(r)).toList();
+        _categoryOptionsLoaded = true;
+      });
+    } catch (_) {}
+  }
+
+  List<Map<String, dynamic>> _categoriesForParent(String? parentId) =>
+      _categoryOptions.where((r) => (r['parent_id']?.toString() ?? '') == (parentId ?? '')).toList();
+
+  Widget _categoryChoice(Map<String, dynamic> item, String field, String label,
+      List<Map<String, dynamic>> options, {bool enabled = true}) {
+    final current = item[field]?.toString();
+    final valid = options.any((r) => r['id'].toString() == current);
+    return SizedBox(width: 205, child: DropdownButtonFormField<String>(
+      value: valid ? current : null, isExpanded: true,
+      decoration: InputDecoration(labelText: label, hintText: 'اختر $label',
+        isDense: true, border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9)),
+      items: options.map((r) => DropdownMenuItem<String>(
+        value: r['id'].toString(),
+        child: Text('${r['group_code'] ?? ''} - ${r['group_name'] ?? ''}', overflow: TextOverflow.ellipsis),
+      )).toList(),
+      onChanged: !enabled || _loading ? null : (value) {
+        setState(() {
+          item[field] = value;
+          if (field == 'category_root_id') {
+            item.remove('category_sub_id'); item.remove('category_secondary_id');
+          } else if (field == 'category_sub_id') { item.remove('category_secondary_id'); }
+          item['group_id'] = item['category_secondary_id']?.toString() ??
+              item['category_sub_id']?.toString() ?? item['category_root_id']?.toString();
+          final selected = options.where((r) => r['id'].toString() == value);
+          final name = selected.isEmpty ? '' : (selected.first['group_name'] ?? '').toString();
+          item[field == 'category_root_id' ? 'main_category' :
+              field == 'category_sub_id' ? 'sub_category' : 'secondary_category'] = name;
+        });
+      },
+    ));
+  }
+
+  Future<void> _openF1Lookup(Map<String, dynamic> item) async {
+    if (_loading) return;
+    final isCategory = (item['save_as'] ?? 'product') == 'category';
+    final company = await _activeCompanyId();
+    final rows = isCategory
+        ? await Supabase.instance.client.from('erp_item_groups')
+            .select('id,group_code,group_name').eq('company_id', company)
+            .eq('is_active', true).order('group_name').limit(1000)
+        : await Supabase.instance.client.from('erp_items')
+            .select('id,item_code,item_name').eq('company_id', company)
+            .eq('is_active', true).order('item_name').limit(1000);
+    if (!mounted) return;
+    final records = (rows as List).map((r) => Map<String, dynamic>.from(r)).toList();
+    final chosen = await showDialog<Map<String, dynamic>>(context: context, builder: (dialogContext) {
+      final search = TextEditingController();
+      var filtered = List<Map<String, dynamic>>.from(records);
+      return StatefulBuilder(builder: (context, setDialogState) {
+        void filter(String value) {
+          final q = value.trim().toLowerCase();
+          setDialogState(() { filtered = records.where((r) {
+            final code = (r[isCategory ? 'group_code' : 'item_code'] ?? '').toString().toLowerCase();
+            final name = (r[isCategory ? 'group_name' : 'item_name'] ?? '').toString().toLowerCase();
+            return q.isEmpty || code.contains(q) || name.contains(q);
+          }).toList(); });
+        }
+        return AlertDialog(
+          title: Text(isCategory ? 'F1 - اختيار فئة قديمة' : 'F1 - اختيار صنف قديم'),
+          content: SizedBox(width: 620, height: 460, child: Column(children: [
+            TextField(controller: search, autofocus: true, onChanged: filter,
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.search),
+                labelText: 'ابحث بالكود أو الاسم', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            Expanded(child: filtered.isEmpty ? const Center(child: Text('لا توجد نتائج مطابقة'))
+              : ListView.separated(itemCount: filtered.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (_, i) {
+                  final r = filtered[i];
+                  return ListTile(dense: true,
+                    title: Text((r[isCategory ? 'group_name' : 'item_name'] ?? '').toString()),
+                    subtitle: Text((r[isCategory ? 'group_code' : 'item_code'] ?? '').toString()),
+                    onTap: () => Navigator.pop(dialogContext, r));
+                })),
+          ])),
+          actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء'))],
+        );
+      });
+    });
+    if (chosen == null || !mounted) return;
+    _rowController(item, 'legacy_code').text =
+        (chosen[isCategory ? 'group_code' : 'item_code'] ?? '').toString();
+    await _lookupRowCode(item);
   }
 
   Future<void> _clearLegacyTestHistory() async {
@@ -207,6 +311,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       _images = [];
     });
     try {
+      await _loadCategoryOptions();
       final scope = _sourceScope(parsed.toString());
       if (_importedScope != scope) await _loadImportedForScope(scope);
       final result = await _invoke({'action': 'scan', 'url': parsed.toString()});
@@ -615,8 +720,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       final downloaded=await _invoke({'action':'download','url':item['url'].toString()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
       final png=_processTransparentPng(Uint8List.fromList(base64Decode(b64)));
       final values=<String,dynamic>{'item_name':ar,'item_name_en':en,'base_unit':minor,'sale_price':price,'tax_rate':tax,'pricing_area':area,'package_description':major+' = '+count.toString()+' '+minor,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,'source_name':'جامع صور سلسلة','source_url':item['url'].toString(),'is_active':true};
+      final selectedGroupId = item['category_secondary_id']?.toString() ?? item['category_sub_id']?.toString() ?? item['category_root_id']?.toString();
+      if (selectedGroupId != null && selectedGroupId.isNotEmpty) values['group_id'] = selectedGroupId;
       String id;
-      if(mode=='new'){final inserted=await db.from('erp_items').insert({...values,'company_id':company,'item_code':code,'purchase_price':0,'group_id':item['group_id']}).select('id').single();id=inserted['id'].toString();}
+      if(mode=='new'){final inserted=await db.from('erp_items').insert({...values,'company_id':company,'item_code':code,'purchase_price':0,'group_id':selectedGroupId}).select('id').single();id=inserted['id'].toString();}
       else{id=item['database_item_id'].toString();await db.from('erp_items').update(values).eq('id',id).eq('company_id',company);}
       await db.from('erp_item_units').update({'is_base_unit':false}).eq('company_id',company).eq('item_id',id);
       await db.from('erp_item_units').upsert([{'company_id':company,'item_id':id,'unit_code':'MAJOR','unit_name':major,'conversion_factor':count,'is_base_unit':false,'is_active':true},{'company_id':company,'item_id':id,'unit_code':'MINOR','unit_name':minor,'conversion_factor':1,'is_base_unit':true,'is_active':true}],onConflict:'item_id,unit_code');
@@ -770,47 +877,30 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     SizedBox(height: 4),
                     Text('استخراج الصور، تفريغ الخلفية الفاتحة، وتجهيز PNG حتى 4K مضغوط', style: TextStyle(color: Colors.black54, fontSize: 12)),
                   ])),
+                  const SizedBox(width: 12),
+                  SizedBox(width: 285, child: DropdownButtonFormField<String>(value: _imageKind,
+                    decoration: const InputDecoration(labelText: 'نوع الصورة الجاري تنفيذها', border: OutlineInputBorder(), isDense: true),
+                    items: const [DropdownMenuItem(value: 'product', child: Text('صور الأصناف والمنتجات')), DropdownMenuItem(value: 'category', child: Text('صور الفئات والمجموعات'))],
+                    onChanged: _loading ? null : (value) { if (value == null) return; setState(() { _imageKind = value; for (final image in _images) { image['save_as'] = value; image.remove('file_name'); } }); })),
                 ]),
                 const SizedBox(height: 18),
-                Align(alignment: Alignment.centerRight, child: SizedBox(width: 300, child: DropdownButtonFormField<String>(value: _imageKind, decoration: const InputDecoration(labelText: 'نوع الصور الجاري تجهيزها', border: OutlineInputBorder(), isDense: true), items: const [DropdownMenuItem(value: 'product', child: Text('صور الأصناف والمنتجات')), DropdownMenuItem(value: 'category', child: Text('صور الفئات والمجموعات'))], onChanged: _loading ? null : (value) { if (value == null) return; setState(() { _imageKind = value; for (final image in _images) { image['save_as'] = value; image.remove('file_name'); } }); }))),
-                const SizedBox(height: 12),
-                Directionality(
-                  textDirection: TextDirection.ltr,
-                  child: Row(children: [
-                    OutlinedButton.icon(
-                      onPressed: _loading ? null : _pasteClipboardUrl,
-                      icon: const Icon(Icons.content_paste_rounded, size: 17),
-                      label: const Text('لصق الرابط المنسوخ'),
-                      style: OutlinedButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact),
-                    ),
-                    const SizedBox(width: 6),
-                    OutlinedButton.icon(
-                      onPressed: _loading ? null : () {
-                        setState(() { _url.clear(); _error = null; _status = 'تم مسح الرابط.'; });
-                      },
-                      icon: const Icon(Icons.backspace_outlined, size: 17),
-                      label: const Text('مسح الخانة'),
-                      style: OutlinedButton.styleFrom(foregroundColor: Colors.red, visualDensity: VisualDensity.compact),
-                    ),
-                    const Spacer(),
-                    const Directionality(textDirection: TextDirection.rtl,
-                      child: Text('رابط صفحة المنتجات', style: TextStyle(fontWeight: FontWeight.w700))),
-                  ]),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _url,
-                  keyboardType: TextInputType.url,
-                  textDirection: TextDirection.ltr,
-                  onSubmitted: (_) => _loading ? null : _scan(),
-                  decoration: InputDecoration(
-                    hintText: 'https://www.example.com/products',
-                    prefixIcon: const Icon(Icons.link),
-                    filled: true,
-                    fillColor: const Color(0xFFF8F5FB),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  ),
-                ),
+                Row(children: [
+                  const SizedBox(width: 175, child: Text('رابط صفحة المنتجات', style: TextStyle(fontWeight: FontWeight.w700))),
+                  Expanded(flex: 2, child: TextField(controller: _url, keyboardType: TextInputType.url,
+                    textDirection: TextDirection.ltr, onSubmitted: (_) => _loading ? null : _scan(),
+                    decoration: InputDecoration(hintText: 'https://www.example.com/products',
+                      prefixIcon: const Icon(Icons.link), isDense: true, filled: true,
+                      fillColor: const Color(0xFFF8F5FB),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(onPressed: _loading ? null : () { setState(() { _url.clear(); _error = null; _status = 'تم مسح الرابط.'; }); },
+                    icon: const Icon(Icons.backspace_outlined, size: 17), label: const Text('مسح الرابط'),
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.red, visualDensity: VisualDensity.compact)),
+                  const SizedBox(width: 6),
+                  OutlinedButton.icon(onPressed: _loading ? null : _pasteClipboardUrl,
+                    icon: const Icon(Icons.content_paste_rounded, size: 17), label: const Text('لصق الرابط'),
+                    style: OutlinedButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact)),
+                ]),
                 const SizedBox(height: 12),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -870,30 +960,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
             Text('${_images.length} صورة • محدد ${_selected.length}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
           ]),
           const SizedBox(height: 10),
-          if (_images.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: _purple.withValues(alpha: .06),
-                borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: _purple.withValues(alpha: .12)),
-              ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(children: const [
-                  SizedBox(width: 42, child: Text('اختيار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                  SizedBox(width: 38, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                  SizedBox(width: 70, child: Text('الصورة', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                  SizedBox(width: 8),
-                  SizedBox(width: 205, child: Text('اسم الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                  SizedBox(width: 8),
-                  SizedBox(width: 140, child: Text('نوع الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                  SizedBox(width: 8),
-                  Text('تنزيل صورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
-                ]),
-              ),
-            ),
           if (_images.isEmpty)
             SizedBox(
               height: 220,
@@ -904,16 +970,38 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
               ])),
             )
           else
-            
-            ListView.builder(
-              shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+            SizedBox(height: MediaQuery.of(context).size.height * 0.56,
+              child: Column(children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(color: _purple.withValues(alpha: .06),
+                    borderRadius: BorderRadius.circular(9), border: Border.all(color: _purple.withValues(alpha: .12))),
+                  child: SingleChildScrollView(scrollDirection: Axis.horizontal,
+                    child: Row(children: const [
+                      SizedBox(width: 42, child: Text('اختيار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 38, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 70, child: Text('الصورة', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 8), SizedBox(width: 205, child: Text('اسم الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 8), SizedBox(width: 140, child: Text('نوع الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                      SizedBox(width: 8), Text('تنزيل صورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                    ])),
+                ),
+                Expanded(child: ListView.builder(
               padding: const EdgeInsets.only(bottom: 18), itemCount: _images.length,
               itemBuilder: (context,index) {
                 final item=_images[index]; final url=item['url'].toString(); final selected=_selected.contains(url);
                 final kind=(item['save_as']??'product').toString(); final mode=(item['entity_mode']??'new').toString();
                 Widget field(String key,String label,{double width=180,String initial='',TextInputType type=TextInputType.text}) {
-                  return SizedBox(width:width,child:TextField(controller:_rowController(item,key,initial:initial),keyboardType:type,
-                    onChanged:(v)=>item[key]=v,decoration:InputDecoration(labelText:label,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:11))));
+                  return SizedBox(width:width,child:Focus(
+                    onKeyEvent:(node,event){
+                      if(key=='legacy_code' && event is KeyDownEvent && event.logicalKey==LogicalKeyboardKey.f1){
+                        _openF1Lookup(item); return KeyEventResult.handled;
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child:TextField(controller:_rowController(item,key,initial:initial),keyboardType:type,
+                    onChanged:(v)=>item[key]=v,decoration:InputDecoration(labelText:label,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:11)))));
                 }
                 Widget dropdown(String key,String label,String value,List<String> options,{double width=145}) {
                   final choices=options.contains(value)?options:<String>[value,...options];
@@ -939,12 +1027,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined),loadingBuilder:(c,ch,p)=>p==null?ch:const Center(child:CircularProgressIndicator(strokeWidth:2)))),
                   const SizedBox(width:8),field('file_name','اسم الصورة',width:205,initial:suggested),const SizedBox(width:8),
                   dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:140),const SizedBox(width:8),
-                  FilledButton.tonalIcon(onPressed:_loading?null:()=>_saveOne(item),icon:const Icon(Icons.download_rounded,size:18),label:const Text('تنزيل PNG'),style:FilledButton.styleFrom(foregroundColor:_purple)),
+                  FilledButton.tonalIcon(onPressed:_loading?null:()=>_saveOne(item),icon:const Icon(Icons.download_rounded,size:18),label:const Text('تنزيل صورة'),style:FilledButton.styleFrom(foregroundColor:_purple)),
                 ]));
                 final editor=kind=='category'
                   ? SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                       const SizedBox(width:10),dropdown('entity_mode','نوع الكود',mode,const ['new','old'],width:135),const SizedBox(width:8),
-                      if(mode=='old')...[field('legacy_code','كود الفئة القديم',width:155),const SizedBox(width:5),OutlinedButton.icon(onPressed:_loading?null:()=>_lookupRowCode(item),icon:const Icon(Icons.search),label:const Text('بحث')),const SizedBox(width:8)],
+                      if(mode=='old')...[field('legacy_code','كود الفئة القديم',width:155),const SizedBox(width:5),OutlinedButton.icon(onPressed:_loading?null:()=>_openF1Lookup(item),icon:const Icon(Icons.search),label:const Text('بحث F1')),const SizedBox(width:8)],
                       field('category_main_name','اسم فئة رئيسية',width:185,initial:_excelValue(item,['main_category','category_name','category'])),const SizedBox(width:8),
                       field('category_sub_name','اسم فئة فرعية',width:185,initial:_excelValue(item,['sub_category','subcategory','group_name'])),const SizedBox(width:8),
                       field('category_secondary_name','اسم فئة ثانوية',width:185,initial:_excelValue(item,['secondary_category','third_category'])),const SizedBox(width:8),
@@ -952,7 +1040,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     ]))
                   : SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                       const SizedBox(width:10),dropdown('entity_mode','نوع الكود',mode,const ['new','old'],width:135),const SizedBox(width:8),
-                      if(mode=='old')...[field('legacy_code','كود الصنف القديم',width:155),const SizedBox(width:5),OutlinedButton.icon(onPressed:_loading?null:()=>_lookupRowCode(item),icon:const Icon(Icons.search),label:const Text('بحث')),const SizedBox(width:8)],
+                      if(mode=='old')...[field('legacy_code','كود الصنف القديم',width:155),const SizedBox(width:5),OutlinedButton.icon(onPressed:_loading?null:()=>_openF1Lookup(item),icon:const Icon(Icons.search),label:const Text('بحث F1')),const SizedBox(width:8)],
                       field('item_name_ar','اسم الصنف عربي',width:210,initial:productName),const SizedBox(width:8),
                       field('item_name_en','اسم الصنف إنجليزي',width:190,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:8),
                       dropdown('major_unit','الوحدة الكبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:145),const SizedBox(width:8),
@@ -963,10 +1051,28 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       field('tax_rate','نسبة ضريبة %',width:115,initial:_excelValue(item,['tax_rate','tax_percent','vat']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
                       FilledButton.icon(onPressed:_loading?null:()=>_saveRowProduct(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
                     ]));
+                final categoryEditor = kind == 'product' && mode == 'new'
+                    ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+                        const SizedBox(width: 10),
+                        _categoryChoice(item, 'category_root_id', 'الفئة الرئيسية', _categoriesForParent(null)),
+                        const SizedBox(width: 8),
+                        _categoryChoice(item, 'category_sub_id', 'الفئة الفرعية', _categoriesForParent(item['category_root_id']?.toString()), enabled: item['category_root_id'] != null),
+                        const SizedBox(width: 8),
+                        _categoryChoice(item, 'category_secondary_id', 'الفئة الثانوية', _categoriesForParent(item['category_sub_id']?.toString()), enabled: item['category_sub_id'] != null),
+                        const SizedBox(width: 10),
+                      ]))
+                    : const SizedBox.shrink();
                 return Container(margin:const EdgeInsets.only(bottom:10),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
-                  child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Padding(padding:const EdgeInsets.symmetric(horizontal:8,vertical:8),child:common),const Divider(height:1),Padding(padding:const EdgeInsets.symmetric(vertical:9),child:editor)]));
+                  child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+                    Padding(padding:const EdgeInsets.symmetric(horizontal:8,vertical:8),child:common),
+                    const Divider(height:1), Padding(padding:const EdgeInsets.symmetric(vertical:9),child:editor),
+                    if (kind == 'product' && mode == 'new') ...[
+                      const Divider(height:1), Padding(padding:const EdgeInsets.symmetric(vertical:9),child:categoryEditor),
+                    ],
+                  ]));
               },
-            ),
+            )),
+              ]),
         ],
       ),
     );
