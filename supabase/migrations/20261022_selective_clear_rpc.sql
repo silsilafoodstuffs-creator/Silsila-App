@@ -16,6 +16,12 @@ declare
   v_tables text[];
   v_table text;
   v_rows jsonb;
+  v_sales_types text[];
+  v_purchase_types text[];
+  v_price_kinds text[];
+  v_party_kinds text[];
+  v_has_customer boolean;
+  v_has_supplier boolean;
   v_payload jsonb := jsonb_build_object(
     'format', 'silsila-selective-backup-v2',
     'created_at', to_jsonb(clock_timestamp()),
@@ -38,6 +44,17 @@ begin
   if coalesce(array_length(v_pages, 1), 0) = 0 then
     raise exception 'حدد شاشة واحدة على الأقل.';
   end if;
+
+  select coalesce(array_agg(distinct case p when 'عرض سعر' then 'quotation' when 'أمر بيع' then 'order' when 'فاتورة بيع' then 'invoice' when 'فاتورة مبيعات' then 'invoice' when 'مرتجع مبيعات' then 'return' end) filter (where p in ('عرض سعر','أمر بيع','فاتورة بيع','فاتورة مبيعات','مرتجع مبيعات')), '{}'::text[]) into v_sales_types from unnest(v_pages) p;
+  select coalesce(array_agg(distinct case p when 'أمر شراء' then 'order' when 'استلام مشتريات' then 'receipt' when 'فاتورة مشتريات' then 'invoice' when 'مرتجع مشتريات' then 'return' end) filter (where p in ('أمر شراء','استلام مشتريات','فاتورة مشتريات','مرتجع مشتريات')), '{}'::text[]) into v_purchase_types from unnest(v_pages) p;
+  select coalesce(array_agg(distinct case p when 'قوائم أسعار البيع' then 'sale' when 'قوائم أسعار الموردين' then 'purchase' when 'سياسات التسعير والخصومات' then 'sale' end) filter (where p in ('قوائم أسعار البيع','قوائم أسعار الموردين','سياسات التسعير والخصومات')), '{}'::text[]) into v_price_kinds from unnest(v_pages) p;
+  if 'سياسات التسعير والخصومات' = any(v_pages) then v_price_kinds := array['sale','purchase']::text[]; end if;
+  v_has_customer := 'دليل العملاء' = any(v_pages);
+  v_has_supplier := 'دليل الموردين' = any(v_pages);
+  if v_has_customer and v_has_supplier then v_party_kinds := array['customer','supplier','both']::text[];
+  elsif v_has_customer then v_party_kinds := array['customer']::text[];
+  elsif v_has_supplier then v_party_kinds := array['supplier']::text[];
+  else v_party_kinds := '{}'::text[]; end if;
 
   -- Only allowlisted, company-scoped ERP tables are eligible. Global lookup tables,
   -- authentication identities, and the company root record are deliberately protected.
