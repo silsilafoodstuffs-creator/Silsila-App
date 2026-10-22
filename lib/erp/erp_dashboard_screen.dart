@@ -1300,28 +1300,24 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              OutlinedButton.icon(
-                onPressed: () => _leaveCurrentUser(switchUser: true),
-                icon: const Icon(Icons.manage_accounts_rounded, size: 19),
-                label: Text(silsilaText('استبدال مستخدم')),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.45)),
-                  alignment: AlignmentDirectional.centerStart,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              TextButton.icon(
+                onPressed: _leaveCurrentUser,
+                icon: const Icon(Icons.logout_rounded, size: 20, color: _orange),
+                label: Text(
+                  silsilaText('تسجيل خروج'),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              OutlinedButton.icon(
-                onPressed: () => _leaveCurrentUser(switchUser: false),
-                icon: const Icon(Icons.logout_rounded, size: 19),
-                label: Text(silsilaText('تسجيل الخروج')),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFFFFC2BE),
-                  side: BorderSide(color: const Color(0xFFFFC2BE).withValues(alpha: 0.65)),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
                   alignment: AlignmentDirectional.centerStart,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  minimumSize: const Size(0, 42),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  overlayColor: Colors.white.withValues(alpha: 0.08),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
@@ -2398,14 +2394,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ),
   );
 
-  Future<void> _leaveCurrentUser({required bool switchUser}) async {
+  Future<void> _leaveCurrentUser() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(switchUser ? 'استبدال المستخدم' : 'تسجيل الخروج'),
-        content: Text(switchUser
-            ? 'سيتم إنهاء جلسة المستخدم الحالي والعودة إلى شاشة الدخول لتسجيل مستخدم آخر. هل تريد المتابعة؟'
-            : 'هل تريد تسجيل الخروج من برنامج سلسلة؟'),
+        title: const Text('تسجيل خروج'),
+        content: const Text(
+          'سيتم إنهاء جلسة المستخدم الحالي والعودة إلى شاشة الدخول. هل تريد المتابعة؟',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -2414,7 +2410,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: _purple),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(switchUser ? 'استبدال المستخدم' : 'تسجيل الخروج'),
+            child: const Text('تسجيل خروج'),
           ),
         ],
       ),
@@ -2423,7 +2419,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     try {
       await Supabase.instance.client.auth.signOut();
       // ErpLoginGate listens to Supabase auth changes and displays the login
-      // form again, allowing the next person to sign in with a different account.
+      // form again, allowing another user to sign in.
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
