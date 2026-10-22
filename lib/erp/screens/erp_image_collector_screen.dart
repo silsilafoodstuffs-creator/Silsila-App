@@ -141,12 +141,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         fallback: 'صورة_${(index + 1).toString().padLeft(3, '0')}');
   }
 
-  String _nameTypeLabel(String kind) => switch (kind) {
-    'category' => 'فئة / مجموعة',
-    'brand' => 'ماركة / براند',
-    _ => 'منتج',
-  };
-
   String _uniqueFileName(String baseName, String extension, Set<String> usedNames) {
     var candidate = '$baseName$extension';
     var suffix = 2;
@@ -491,7 +485,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                             ),
                             const SizedBox(height: 5),
                             TextFormField(
-                              key: ValueKey('filename_$index_${item['save_as'] ?? 'product'}'),
+                              key: ValueKey('filename_${index}_${item['save_as'] ?? 'product'}'),
                               initialValue: _suggestedImageName(item, index),
                               decoration: const InputDecoration(
                                 labelText: 'اسم الملف المحفوظ',
