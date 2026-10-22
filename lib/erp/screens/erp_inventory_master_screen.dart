@@ -39,8 +39,10 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _branches = [];
+  List<Map<String, dynamic>> _geoRows = [];
   String? _branchId;
   String? _parentWarehouseId;
+  String? _governorateId, _districtId, _areaId;
   String? _itemCategoryId;
   String _view = 'warehouses';
   bool _expiry = false;
@@ -107,10 +109,11 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         _repo.fetchItems(_company.text),
         _repo.fetchBranches(_company.text),
         _repo.fetchCategories(_company.text),
+        Supabase.instance.client.from('erp_geographic_data').select('id,parent_id,name_ar,level,is_active').eq('company_id', _company.text.trim()).eq('is_active', true).order('name_ar'),
       ]);
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _branches = values[2]; _categories = values[3];
+        _warehouses = values[0]; _items = values[1]; _branches = values[2]; _categories = values[3]; _geoRows = (values[4] as List).map((e) => Map<String, dynamic>.from(e)).toList();
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
@@ -127,9 +130,10 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       await _repo.createWarehouse(companyId: _company.text, code: _warehouseCode.text,
         name: _warehouseName.text, branchId: _branchId, address: _address.text,
         nameEn: _warehouseNameEn.text, parentWarehouseId: _parentWarehouseId,
-        location: _warehouseLocation.text, phone: _warehousePhone.text, landline: _warehouseLandline.text);
+        location: _warehouseLocation.text, phone: _warehousePhone.text, landline: _warehouseLandline.text,
+        governorateId: _governorateId, districtId: _districtId, areaId: _areaId);
       if (!mounted) return;
-      _warehouseCode.clear(); _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseLocation.clear(); _warehousePhone.clear(); _warehouseLandline.clear(); _address.clear(); _parentWarehouseId = null;
+      _warehouseCode.clear(); _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseLocation.clear(); _warehousePhone.clear(); _warehouseLandline.clear(); _address.clear(); _parentWarehouseId = null; _governorateId = null; _districtId = null; _areaId = null;
       setState(() { _saving = false; _message = 'تمت إضافة المخزن.'; });
       await _load(clearMessage: false);
     } catch (e) {
@@ -347,6 +351,27 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               decoration: const InputDecoration(labelText: 'الفرع (اختياري)'),
               items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فرع')), ..._branches.map((b) => DropdownMenuItem<String>(value: _s(b['id']), child: Text(_branchName(_s(b['id'])))))],
               onChanged: (v) => setState(() => _branchId = v),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _governorateId, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'المحافظة'),
+              items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المحافظة')), ..._geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
+              onChanged: (v) => setState(() { _governorateId = v; _districtId = null; _areaId = null; }),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _districtId, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'الحي / المركز'),
+              items: [const DropdownMenuItem<String>(value: null, child: Text('اختر الحي أو المركز')), ..._geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (_governorateId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
+              onChanged: (v) => setState(() { _districtId = v; _areaId = null; }),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _areaId, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'المنطقة / القرية'),
+              items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المنطقة أو القرية')), ..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
+              onChanged: (v) => setState(() => _areaId = v),
             ),
             const SizedBox(height: 8),
             FilledButton.icon(onPressed: _saving ? null : _createWarehouse, icon: const Icon(Icons.add_business), label: const Text('حفظ المخزن')),
