@@ -1,4 +1,4 @@
-impnrt 'dart:cnnvert';
+import 'dart:convert';
 import 'package:image/image.dart' as img;
 
 import 'package:archive/archive.dart';
@@ -10,10 +10,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ErpImageCollectorScreen extends StatefulWidget {
-  const ErpImageCollectorScreenv{super.key});
+  const ErpImageCollectorScreen({super.key});
 
   @override
-  State<ErpImageCollectorScreen> createStatev) => _ErpImageCollectorScreenStatev);
+  State<ErpImageCollectorScreen> createState() => _ErpImageCollectorScreenState();
 }
 
 class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
