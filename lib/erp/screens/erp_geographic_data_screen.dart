@@ -25,6 +25,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   String? error;
   String? message;
   bool loading = false;
+  bool _initialExpansionApplied = false;
 
   String s(dynamic value) => (value ?? '').toString();
 
@@ -79,6 +80,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.companyId != widget.companyId) {
       _expandedIds.clear();
+      _initialExpansionApplied = false;
       load();
     }
   }
@@ -144,6 +146,14 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       setState(() {
         rows = allRows;
         _rebuildChildren();
+        if (!_initialExpansionApplied && rows.isNotEmpty) {
+          _expandedIds.addAll(
+            rows
+                .where((row) => s(row['level']) == 'governorate')
+                .map((row) => s(row['id'])),
+          );
+          _initialExpansionApplied = true;
+        }
         loading = false;
         error = null;
       });
