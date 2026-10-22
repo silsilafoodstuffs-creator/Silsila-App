@@ -53,46 +53,46 @@ begin
     ('قوالب صلاحيات المستخدمين','erp_permission_templates'),('قوالب صلاحيات المستخدمين','erp_permission_template_rules'),
     ('صلاحيات المستخدمين','erp_user_permissions'),('صلاحيات المستخدمين','erp_user_permission_matrix'),
     ('إعدادات البرنامج','erp_program_settings'),('إعدادات البرنامج','erp_company_settings'),
-    ('سجل العمليات','erp_app_activity_log'),
+    ('سجل العمليات','erp_app_activity_log'),('إدارة الشعار والصور','erp_app_assets'),('إدارة صور الأصناف والفئات','erp_app_assets'),('إدارة صور الموردين والعملاء','erp_app_assets'),('إدارة صلاحيات التطبيقات','erp_app_role_permissions'),('إدارة ألوان التطبيقات','erp_app_theme_settings'),
     ('سياسات التسعير والخصومات','erp_price_lists'),('سياسات التسعير والخصومات','erp_price_list_lines'),('سياسات التسعير والخصومات','erp_party_price_lists'),
     ('شجرة الحسابات','erp_accounts'),('الفترات المالية','erp_fiscal_periods'),
     ('مراكز التكلفة','erp_cost_centers'),('العملات','erp_currencies'),
-    ('الخزائن الرئيسية والفرعية','erp_cashboxes'),('الخزائن الرئيسية والفرعية','erp_cash_vouchers'),
+    ('الخزائن الرئيسية والفرعية','erp_cashboxes'),('الخزائن الرئيسية والفرعية','erp_cash_vouchers'),('سندات القبض','erp_cash_vouchers'),('سندات الصرف','erp_cash_vouchers'),
     ('دليل المخازن','erp_warehouses'),('فئات الأصناف','erp_item_groups'),('مجموعات الأصناف','erp_item_groups'),
     ('دليل الأصناف','erp_items'),('دليل الأصناف','erp_item_units'),
     ('دليل الموردين','erp_parties'),('دليل الموردين','erp_party_contacts'),('دليل الموردين','erp_party_warehouses'),
     ('دليل العملاء','erp_parties'),('دليل العملاء','erp_party_contacts'),('دليل العملاء','erp_party_warehouses'),
     ('قوائم أسعار البيع','erp_price_lists'),('قوائم أسعار البيع','erp_price_list_lines'),('قوائم أسعار البيع','erp_party_price_lists'),
     ('قوائم أسعار الموردين','erp_price_lists'),('قوائم أسعار الموردين','erp_price_list_lines'),('قوائم أسعار الموردين','erp_party_price_lists'),
-    ('عروض الأصناف','erp_sales_campaigns'),('عروض الأصناف','erp_sales_campaign_items'),
+    ('عروض الأصناف','erp_sales_campaigns'),('عروض الأصناف','erp_sales_campaign_items'),('الحملات التسويقية','erp_sales_campaign_items'),('قواعد العروض','erp_sales_campaign_items'),
     ('قاعدة العملاء المحتملين','erp_public_lead_staging'),
     ('الهيكل الوظيفي','erp_employees'),('الإدارات والأقسام','erp_employees'),('الوظائف والدرجات','erp_employees'),
-    ('ملف الموظف','erp_employees'),('ملف الموظف','erp_attendance_records'),('ملف الموظف','erp_leave_requests'),
+    ('ملف الموظف','erp_employees'),('ملف الموظف','erp_attendance_records'),('ملف الموظف','erp_leave_requests'),('مسير الرواتب','erp_employees'),('صرف الرواتب','erp_employees'),
     ('الحضور والانصراف','erp_attendance_records'),('الحضور والانصراف','erp_hr_attendance_events'),
     ('الحضور والانصراف','erp_hr_fingerprint_devices'),('الحضور والانصراف','erp_hr_shifts'),('الحضور والانصراف','erp_hr_shift_assignments'),
     ('الإجازات والأذونات','erp_leave_requests'),
     ('مسير الرواتب','erp_payroll_runs'),('مسير الرواتب','erp_payroll_lines'),
     ('صرف الرواتب','erp_payroll_runs'),('صرف الرواتب','erp_payroll_lines'),
-    ('أهداف العملاء الشهرية','erp_customer_monthly_goals'),
+    ('أهداف العملاء الشهرية','erp_customer_monthly_goals'),('أهداف العملاء الشهرية','erp_parties'),
     ('عمولات المندوبين','erp_commission_plans'),('عمولات المندوبين','erp_commission_tiers'),('عمولات المندوبين','erp_commission_runs'),
     ('عمولات المبيعات','erp_commission_plans'),('عمولات المبيعات','erp_commission_tiers'),('عمولات المبيعات','erp_commission_runs'),
     ('خطط العمولة','erp_commission_plans'),('خطط العمولة','erp_commission_tiers'),
     ('مسودات العمولات','erp_commission_runs'),('تقرير العمولات المستحقة','erp_commission_runs'),
-    ('توزيع الأصناف على المندوبين','erp_delegate_item_assignments'),('توزيع الأصناف على المندوبين','erp_sales_representatives'),
+    ('توزيع الأصناف على المندوبين','erp_delegate_item_assignments'),('توزيع الأصناف على المندوبين','erp_sales_representatives'),('عمولات المندوبين','erp_sales_representatives'),('عمولات المبيعات','erp_sales_representatives'),
     ('عرض سعر','erp_sales_documents'),('أمر بيع','erp_sales_documents'),('فاتورة بيع','erp_sales_documents'),
-    ('فاتورة مبيعات','erp_sales_documents'),('مرتجع مبيعات','erp_sales_documents'),
-    ('إذن تجهيز','erp_sales_fulfillment_documents'),('إذن تسليم','erp_sales_fulfillment_documents'),
+    ('فاتورة مبيعات','erp_sales_documents'),('مرتجع مبيعات','erp_sales_documents'),('فاتورة بيع','erp_sales_lines'),('أمر بيع','erp_sales_lines'),('عرض سعر','erp_sales_lines'),('مرتجع مبيعات','erp_sales_lines'),
+    ('إذن تجهيز','erp_sales_fulfillment_documents'),('إذن تسليم','erp_sales_fulfillment_documents'),('إذن تجهيز','erp_stock_reservations'),('إذن تسليم','erp_stock_reservations'),
     ('إذن تحميل','erp_sales_fulfillment_documents'),('تسليم طلب','erp_sales_fulfillment_documents'),
     ('عروض أسعار','erp_sales_documents'),('أوامر البيع','erp_sales_documents'),
     ('أرصدة الأصناف','erp_inventory_movements'),('كارت الصنف','erp_inventory_movements'),
     ('الجرد والفروق','erp_inventory_movements'),('إذن إضافة','erp_inventory_movements'),
-    ('إذن صرف','erp_inventory_movements'),('تحويل مخزني','erp_inventory_movements'),('تسوية جرد','erp_inventory_movements'),('جرد فعلي','erp_inventory_movements'),
-    ('أمر شراء','erp_purchase_documents'),('استلام مشتريات','erp_purchase_documents'),('فاتورة مشتريات','erp_purchase_documents'),
+    ('إذن صرف','erp_inventory_movements'),('تحويل مخزني','erp_inventory_movements'),('أرصدة الأصناف','erp_stock_reservations'),('كارت الصنف','erp_stock_reservations'),('إذن إضافة','erp_stock_reservations'),('إذن صرف','erp_stock_reservations'),('تحويل مخزني','erp_stock_reservations'),('تسوية جرد','erp_inventory_movements'),('جرد فعلي','erp_inventory_movements'),
+    ('أمر شراء','erp_purchase_documents'),('استلام مشتريات','erp_purchase_documents'),('فاتورة مشتريات','erp_purchase_documents'),('أمر شراء','erp_purchase_lines'),('استلام مشتريات','erp_purchase_lines'),('فاتورة مشتريات','erp_purchase_lines'),
     ('مرتجع مشتريات','erp_purchase_documents'),
     ('خريطة الحسابات التشغيلية','erp_operational_account_mappings'),
-    ('قيود اليومية','erp_journal_entries'),('قائمة اعتماد القيود','erp_journal_entries'),
+    ('قيود اليومية','erp_journal_entries'),('قائمة اعتماد القيود','erp_journal_entries'),('قيود اليومية','erp_journal_lines'),('قائمة اعتماد القيود','erp_journal_lines'),
     ('إقفال الفترة','erp_journal_entries'),
-    ('إعدادات الفاتورة الإلكترونية','erp_einvoice_settings'),('سجلات الفاتورة الإلكترونية','erp_einvoice_operations'),
+    ('إعدادات الفاتورة الإلكترونية','erp_einvoice_settings'),('سجلات الفاتورة الإلكترونية','erp_einvoice_operations'),('إعدادات البرنامج','erp_managed_apps'),
     ('واجهة API والربط الخارجي','erp_workspace_records'),('إدارة مفاتيح API','erp_workspace_records'),
     ('سجلات التكامل والطلبات','erp_workspace_records'),('إعداد نقاط الربط','erp_workspace_records'),
     ('الحملات التسويقية','erp_sales_campaigns'),('قواعد العروض','erp_sales_campaigns'),('قنوات التواصل','erp_workspace_records')
@@ -126,6 +126,9 @@ begin
     elsif v_table = 'erp_commission_tiers' then
       select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows
       from public.erp_commission_tiers t join public.erp_commission_plans p on p.id=t.plan_id where p.company_id=p_company_id;
+    elsif v_table in ('erp_app_assets','erp_app_role_permissions','erp_app_theme_settings') then
+      execute format('select coalesce(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) from public.%I t join public.erp_managed_apps a on a.id=t.app_id where a.company_id=$1', v_table)
+        into v_rows using p_company_id;
     else
       v_rows := '[]'::jsonb;
     end if;
@@ -181,7 +184,7 @@ begin
     'erp_sales_campaigns','erp_customer_monthly_goals','erp_commission_plans','erp_operational_account_mappings',
     'erp_einvoice_operations','erp_einvoice_settings','erp_public_lead_staging','erp_hr_fingerprint_devices',
     'erp_hr_shifts','erp_employees','erp_sales_representatives','erp_users','erp_user_classifications',
-    'erp_user_types','erp_permission_templates','erp_parties','erp_items','erp_item_units','erp_item_groups',
+    'erp_user_types','erp_permission_templates','erp_parties','erp_item_units','erp_items','erp_item_groups',
     'erp_price_lists','erp_warehouses','erp_cashboxes','erp_accounts','erp_fiscal_periods','erp_currencies',
     'erp_cost_centers','erp_branches','erp_company_settings','erp_program_settings'
   ];
@@ -212,6 +215,10 @@ begin
     elsif v_table = 'erp_commission_tiers' then
       delete from public.erp_commission_tiers t using public.erp_commission_plans p
       where t.plan_id=p.id and p.company_id=p_company_id;
+      get diagnostics v_deleted = row_count;
+    elsif v_table in ('erp_app_assets','erp_app_role_permissions','erp_app_theme_settings') then
+      execute format('delete from public.%I t using public.erp_managed_apps a where a.id=t.app_id and a.company_id=$1', v_table)
+        using p_company_id;
       get diagnostics v_deleted = row_count;
     else
       v_deleted := 0;
