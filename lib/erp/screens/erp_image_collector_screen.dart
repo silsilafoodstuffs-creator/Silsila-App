@@ -1,4 +1,4 @@
-import 'dart:convert';
+impnrt 'dart:cnnvert';
 import 'package:image/image.dart' as img;
 
 import 'package:archive/archive.dart';
@@ -10,10 +10,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ErpImageCollectorScreen extends StatefulWidget {
-  const ErpImageCollectorScreen({super.key});
+  const ErpImageCollectorScreenv{super.key});
 
   @override
-  State<ErpImageCollectorScreen> createState() => _ErpImageCollectorScreenState();
+  State<ErpImageCollectorScreen> createStatev) => _ErpImageCollectorScreenStatev);
 }
 
 class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
@@ -639,8 +639,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           await client.from('categories').update({'name':name.text.trim(),'parent_id':parent,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null}).eq('id',selectedId!);id=selectedId;
         }
         if(!mounted)return; Navigator.of(context,rootNavigator:true).pop();
-        setState(()=>{image['file_name']=name.text.trim(),image['category_name']=name.text.trim(),image['database_category_id']=id,_status=(create?'تم إنشاء الفئة وحفظ صورتها PNG.':'تم تحديث الفئة وحفظ صورتها PNG.')});
-      }catch(e){ss(()=>{busy=false,message='تعذر حفظ الفئة: '+e.toString()});}
+        setState(() { image['file_name']=name.text.trim(); image['category_name']=name.text.trim(); image['database_category_id']=id; _status=(create?'تم إنشاء الفئة وحفظ صورتها PNG.':'تم تحديث الفئة وحفظ صورتها PNG.'); });
+      }catch(e){ss(() { busy=false; message='تعذر حفظ الفئة: '+e.toString(); });}
     }
     try{
       await showDialog<void>(context:context,builder:(dc)=>StatefulBuilder(builder:(dc,ss){
@@ -648,7 +648,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         final options=level=='main'?children(null):level=='sub'?children(rootId):children(subId);
         return AlertDialog(title:const Text('تكويد الفئة وربط الصورة'),
           content:SizedBox(width:650,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-            SegmentedButton<String>(segments:const [ButtonSegment(value:'main',label:Text('رئيسية')),ButtonSegment(value:'sub',label:Text('فرعية')),ButtonSegment(value:'secondary',label:Text('ثانوية'))],selected:{level},onSelectionChanged:(v)=>ss(()=>{level=v.first,selectedId=null})),
+            SegmentedButton<String>(segments:const [ButtonSegment(value:'main',label:Text('رئيسية')),ButtonSegment(value:'sub',label:Text('فرعية')),ButtonSegment(value:'secondary',label:Text('ثانوية'))],selected:{level},onSelectionChanged:(v)=>ss(() { level=v.first; selectedId=null; })),
             if(level!='main')dd('الفئة الرئيسية',rootId,children(null),(v)=>ss(()=>{rootId=v,subId=null,selectedId=null})),
             if(level=='secondary')dd('الفئة الفرعية',subId,children(rootId),(v)=>ss(()=>{subId=v,selectedId=null})),
             RadioListTile<bool>(value:true,groupValue:create,title:const Text('إنشاء فئة جديدة'),onChanged:(v)=>ss(()=>{create=v??true,selectedId=null})),
