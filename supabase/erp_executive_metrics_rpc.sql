@@ -74,7 +74,7 @@ begin
       and d.is_demo_data = false
       and d.document_date >= current_date - 6
       and d.document_date <= current_date
-    category by d.document_date
+    group by d.document_date
   ),
   inventory_by_category as (
     select coalesce(g.category_name,'غير مصنف') as category_name,
@@ -83,7 +83,7 @@ begin
     join public.erp_items i on i.id = m.item_id and i.company_id = p_company_id
     left join public.erp_item_categories g on g.id = i.category_id and g.company_id = p_company_id
     where m.company_id = p_company_id
-    category by coalesce(g.category_name,'غير مصنف')
+    group by coalesce(g.category_name,'غير مصنف')
     order by sum((m.quantity_in-m.quantity_out) * i.purchase_price) desc
     limit 7
   ),
