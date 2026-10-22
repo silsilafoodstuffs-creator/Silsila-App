@@ -56,8 +56,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     for (final r in _all) { if (_s(r['id']) == _s(row['parent_id'])) return r; }
     return null;
   }
-  String _parentLabel(Map<String,dynamic> row) => '${_s(row['group_code'])} - ${_s(row['group_name'])}';
-
   Future<void> _load() async {
     if (_db == null) { setState(() => _error = 'Supabase غير مهيأ.'); return; }
     setState(() { _loading = true; _error = null; _message = null; });
