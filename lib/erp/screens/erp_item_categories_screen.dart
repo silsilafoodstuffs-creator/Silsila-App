@@ -153,7 +153,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = _level == 1 ? 'أضف فئة رئيسية أولًا.' : 'أضف فئة فرعية أولًا.');
       return;
     }
-    final prefix = ['C','S','T'][_level];
     final codeNumbers = _all.map((r) => int.tryParse(_s(r['group_code']).replaceFirst(RegExp(r'^[A-Za-z_-]+'),'')) ?? 0).toList();
     final next = (codeNumbers.isEmpty ? 0 : codeNumbers.reduce((a,b) => a>b?a:b)) + 1;
     final draft = <String,dynamic>{
@@ -371,8 +370,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         _all.where((r) => r['parent_id'] == null).isEmpty
           ? const Center(child: Text('لا توجد فئات رئيسية. اضغط «إضافة جديد» لبدء إنشاء شجرة الفئات.'))
           : ListView(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              children: _all.where((r) => r['parent_id'] == null)
-                .toList()..sort((a,b) => _s(a['group_code']).compareTo(_s(b['group_code'])))
+              children: (_all.where((r) => r['parent_id'] == null).toList()
+                ..sort((a,b) => _s(a['group_code']).compareTo(_s(b['group_code']))))
                 .map((root) => _treeNode(root, 0)).toList())),
     ],
   ));
