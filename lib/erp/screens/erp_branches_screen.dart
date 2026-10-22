@@ -385,7 +385,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       Card(color: _branchPurple, child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('الفروع ومراكز التشغيل', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+          const Text('الفروع', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
           const Text('إدارة دليل الفروع الفعلي المرتبط بالشركة.', style: TextStyle(color: Colors.white70)),
           const SizedBox(height: 8),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
