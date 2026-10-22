@@ -107,10 +107,33 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   }
 
   String _safeName(String value, {String fallback = 'image'}) {
-    var name = value.trim().replaceAll(RegExp(r'[^a-zA-Z0-9\u0600-\u06FF_-]+'), '_');
-    name = name.replaceAll(RegExp(r'_+'), '_');
+    var name = value.trim().replaceAll(RegExp(r'[^a-zA-Z0-9\\u0600-\\u06FF_-]+'), '_');
+    name = name.replaceAll(RegExp(r'_+'), '_').replaceAll(RegExp(r'^_+|_+$'), '');
     if (name.length > 70) name = name.substring(0, 70);
     return name.isEmpty ? fallback : name;
+  }
+
+  String _imageBaseName(Map<String, dynamic> image, int index) {
+    final productName = [
+      image['product_name'],
+      image['title'],
+      image['name'],
+      image['alt'],
+    ].map((value) => value?.toString().trim() ?? '').firstWhere(
+      (value) => value.isNotEmpty,
+      orElse: () => 'صورة_${(index + 1).toString().padLeft(3, '0')}',
+    );
+    return _safeName(productName, fallback: 'صورة_${(index + 1).toString().padLeft(3, '0')}');
+  }
+
+  String _uniqueFileName(String baseName, String extension, Set<String> usedNames) {
+    var candidate = '$baseName$extension';
+    var suffix = 2;
+    while (!usedNames.add(candidate.toLowerCase())) {
+      candidate = '${baseName}_$suffix$extension';
+      suffix++;
+    }
+    return candidate;
   }
 
   String _extension(String mime, String url) {
@@ -140,16 +163,19 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     try {
       final archive = Archive();
       var index = 0;
+      final usedFileNames = <String>{};
       for (final image in _images.where((x) => _selected.contains(x['url'].toString()))) {
+        final imageIndex = _images.indexOf(image);
         index++;
         final url = image['url'].toString();
         final downloaded = await _invoke({'action': 'download', 'url': url});
         final encoded = downloaded['base64']?.toString();
         if (encoded == null || encoded.isEmpty) continue;
         final bytes = base64Decode(encoded);
-        final title = _safeName((image['alt'] ?? '').toString(), fallback: 'image_${index.toString().padLeft(3, '0')}');
+        final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
         final ext = _extension(downloaded['mime']?.toString() ?? '', url);
-        archive.addFile(ArchiveFile('$title${ext}', bytes.length, bytes));
+        final fileName = _uniqueFileName(title, ext, usedFileNames);
+        archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
         if (mounted) setState(() => _status = 'تم تجهيز $index من ${_selected.length} صورة...');
       }
       if (archive.isEmpty) throw Exception('لم يمكن تنزيل أي صورة من الاختيارات.');
@@ -183,8 +209,16 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
       final bytes = Uint8List.fromList(base64Decode(encoded));
       final ext = _extension(result['mime']?.toString() ?? '', url);
+      final imageIndex = _images.indexOf(image);
+      final baseName = _imageBaseName(image, imageIndex < 0 ? 0 : imageIndex);
+      final matchingIndexes = _images.asMap().entries
+          .where((entry) => _imageBaseName(entry.value, entry.key).toLowerCase() == baseName.toLowerCase())
+          .map((entry) => entry.key)
+          .toList();
+      final occurrence = matchingIndexes.indexOf(imageIndex);
+      final uniqueBaseName = occurrence > 0 ? '${baseName}_${occurrence + 1}' : baseName;
       await FileSaver.instance.saveFile(
-        name: _safeName((image['alt'] ?? '').toString(), fallback: 'silsila_image'),
+        name: uniqueBaseName,
         bytes: bytes,
         fileExtension: ext.replaceFirst('.', ''),
         mimeType: switch (result['mime']?.toString()) {
