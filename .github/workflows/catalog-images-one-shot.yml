@@ -19,12 +19,12 @@ jobs:
         run: |
           python -m py_compile tools/catalog_import/import_real_product_images.py
           python -m unittest discover -s tools/catalog_import -p 'test_*.py' -v
-      - name: Import up to 25 strictly matched ERP item photos
+      - name: Import up to 250 strictly matched ERP item photos
         env:
           SUPABASE_URL: https://teitsopmhruczplwlwgn.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SILSILA_ERP_COMPANY_ID: 47278c99-7743-4dd4-9ce6-d11f28e02504
-          SILSILA_IMAGE_IMPORT_LIMIT: "25"
+          SILSILA_IMAGE_IMPORT_LIMIT: "250"
           SILSILA_IMAGE_IMPORT_DRY_RUN: "0"
         run: |
           if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
