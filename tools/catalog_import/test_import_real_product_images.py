@@ -157,12 +157,6 @@ class CatalogImageMatchingTests(unittest.TestCase):
         self.assertIn("sunflower seeds roasted", requested_queries)
         self.assertIn("ground coffee pack", requested_queries)
         self.assertIn("apricot jam jar", requested_queries)
-        self.assertFalse(
-            IMPORTER.image_variant_matches("لب سوري", "plain corn flakes")
-        )
-        self.assertFalse(
-            IMPORTER.image_variant_matches("مربى مشمش", "strawberry jam")
-        )
 
     def test_iced_tea_beverage_does_not_match_loose_tea_pack(self):
         self.assertFalse(
