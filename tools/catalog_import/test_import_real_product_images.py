@@ -76,8 +76,8 @@ class CatalogImageMatchingTests(unittest.TestCase):
         self.assertIsNone(match)
 
     def test_stored_bytea_threshold_matches_minimum_photo_size(self):
-        good = r"\\x" + ("ab" * IMPORTER.MIN_BYTES)
-        small = r"\\x" + ("ab" * (IMPORTER.MIN_BYTES - 1))
+        good = "\\x" + ("ab" * IMPORTER.MIN_BYTES)
+        small = "\\x" + ("ab" * (IMPORTER.MIN_BYTES - 1))
         self.assertTrue(IMPORTER.has_real_size_image(good))
         self.assertFalse(IMPORTER.has_real_size_image(small))
 
