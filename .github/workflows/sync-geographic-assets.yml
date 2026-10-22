@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: silsila-geographic-assets-\${{ github.ref }}
+  group: silsila-geographic-assets-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -35,6 +35,6 @@ jobs:
       - name: Store governorate image bytes in Supabase
         env:
           SUPABASE_URL: https://teitsopmhruczplwlwgn.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: \${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SILSILA_COMPANY_ID: 47278c99-7743-4dd4-9ce6-d11f28e02504
         run: python tools/geographic_data/sync_governorate_logo_bytes.py
