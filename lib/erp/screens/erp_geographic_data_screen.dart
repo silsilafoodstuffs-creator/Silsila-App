@@ -102,11 +102,11 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
 
   Future<void> load() async {
     final companyId = (widget.companyId ?? '').trim();
-    if (db == null || companyId.isEmpty) {
+    if (db == null) {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = 'لا توجد شركة نشطة محددة. افتح بيانات الشركة ثم أعد تحديث الشاشة.';
+        error = 'تعذر الاتصال بقاعدة البيانات.';
       });
       return;
     }
@@ -125,15 +125,33 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       var offset = 0;
       final allRows = <Map<String, dynamic>>[];
       while (true) {
-        final result = await db!
-            .from('erp_geographic_data')
-            .select(
-              'id,parent_id,geo_code,name_ar,name_en,level,is_active,logo_url,logo_bytes,'
-              'logo_mime_type,source_name,source_url,latitude,longitude,admin_type',
-            )
-            .eq('company_id', companyId)
-            .order('geo_code')
-            .range(offset, offset + pageSize - 1);
+        final fields =
+            'id,company_id,parent_id,geo_code,name_ar,name_en,level,is_active,logo_bytes,'
+            'logo_mime_type,source_name,source_url,latitude,longitude,admin_type';
+        List<dynamic> pageResult = <dynamic>[];
+        if (companyId.isNotEmpty) {
+          final scoped = await db!
+              .from('erp_geographic_data')
+              .select(fields)
+              .eq('company_id', companyId)
+              .order('geo_code')
+              .range(offset, offset + pageSize - 1);
+          pageResult = scoped as List;
+        }
+        // The directory is master/reference data. Older deployments seeded it
+        // under the setup company, so an empty company-scoped result must not
+        // leave the entire grid blank.
+        if (pageResult.isEmpty && offset == 0) {
+          final shared = await db!
+              .from('erp_geographic_data')
+              .select(fields)
+              .order('geo_code')
+              .range(0, pageSize - 1);
+          pageResult = shared as List;
+        }
+        final page = pageResult
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
         final page = (result as List)
             .map((item) => Map<String, dynamic>.from(item))
             .toList();
@@ -235,8 +253,13 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         throw ArgumentError('الكود والاسم العربي مطلوبان.');
       }
       final companyId = (widget.companyId ?? '').trim();
+      final rowCompanyId = s(row?['company_id']).trim();
+      final writeCompanyId = row == null ? companyId : rowCompanyId;
+      if (writeCompanyId.isEmpty) {
+        throw ArgumentError('لا توجد شركة نشطة للحفظ. افتح بيانات الشركة أولاً.');
+      }
       final data = <String, Object?>{
-        'company_id': companyId,
+        'company_id': writeCompanyId,
         'parent_id': parent,
         'geo_code': code.text.trim(),
         'name_ar': arabic.text.trim(),
@@ -252,7 +275,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
             .from('erp_geographic_data')
             .update(data)
             .eq('id', row['id'])
-            .eq('company_id', companyId);
+            .eq('company_id', writeCompanyId);
       }
 
       if (mounted) {
@@ -274,7 +297,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
           .from('erp_geographic_data')
           .update({'is_active': row['is_active'] != true})
           .eq('id', row['id'])
-          .eq('company_id', (widget.companyId ?? '').trim());
+          .eq('company_id', s(row['company_id']));
       await load();
     } catch (e) {
       if (mounted) setState(() => error = 'تعذر تغيير الحالة: $e');
@@ -314,7 +337,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
           .from('erp_geographic_data')
           .delete()
           .eq('id', id)
-          .eq('company_id', (widget.companyId ?? '').trim());
+          .eq('company_id', s(row['company_id']));
       await load();
     } catch (e) {
       if (mounted) setState(() => error = 'تعذر الحذف: $e');
@@ -345,7 +368,6 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   }
 
   Widget _governorateLogo(Map<String, dynamic> row) {
-    final url = s(row['logo_url']);
     final bytes = _decodeLogoBytes(row['logo_bytes']);
     final fallback = const Icon(Icons.account_balance, color: Color(0xFF3E007D));
     return Padding(
@@ -363,17 +385,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                   errorBuilder: (_, __, ___) => fallback,
                 ),
               )
-            : url.isEmpty
-                ? fallback
-                : ClipOval(
-                    child: Image.network(
-                      url,
-                      width: 42,
-                      height: 42,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => fallback,
-                    ),
-                  ),
+            : fallback,
       ),
     );
   }
