@@ -584,6 +584,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         } else {
           await client.from('erp_items').update(values).eq('id',itemId!).eq('company_id',companyId); savedId=itemId!;
         }
+        await client.from('erp_item_units').update({'is_base_unit':false}).eq('company_id',companyId).eq('item_id',savedId);
         await client.from('erp_item_units').upsert([
           {'company_id':companyId,'item_id':savedId,'unit_code':'MAJOR','unit_name':major.text.trim(),'conversion_factor':n,'is_base_unit':false,'is_active':true},
           {'company_id':companyId,'item_id':savedId,'unit_code':'MINOR','unit_name':minor.text.trim(),'conversion_factor':1,'is_base_unit':true,'is_active':true},
