@@ -75,6 +75,37 @@ class CatalogImageMatchingTests(unittest.TestCase):
             )
         self.assertIsNone(match)
 
+    def test_clear_200px_product_packshot_passes_image_quality_gate(self):
+        payload = bytearray(8500)
+        payload[0:8] = b"\\x89PNG\\r\\n\\x1a\\n"
+        payload[16:20] = (200).to_bytes(4, "big")
+        payload[20:24] = (200).to_bytes(4, "big")
+
+        class FakeResponse:
+            headers = None
+
+            def __init__(self, body):
+                self.body = body
+                self.headers = self
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self, limit):
+                return bytes(self.body)
+
+            def get_content_type(self):
+                return "image/png"
+
+        with patch.object(
+            IMPORTER.urllib.request, "urlopen", return_value=FakeResponse(payload)
+        ):
+            result = IMPORTER.download_image("https://example.test/product.png")
+        self.assertEqual(result, (bytes(payload), "image/png"))
+
     def test_webp_vp8l_dimensions_are_read(self):
         data = bytearray(25)
         data[0:4] = b"RIFF"
