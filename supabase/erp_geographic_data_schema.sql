@@ -6,6 +6,8 @@ create table if not exists public.erp_geographic_data (
  level text not null check (level in ('governorate','district','area')),
  is_active boolean not null default true,
  logo_url text null, logo_source_url text null,
+ logo_bytes bytea null, logo_mime_type text null, logo_sha256 text null,
+ logo_bytes_updated_at timestamptz null,
  source_name text null, source_url text null,
  latitude double precision null, longitude double precision null,
  created_at timestamptz not null default now(),
@@ -18,3 +20,9 @@ drop policy if exists erp_geographic_data_member_access on public.erp_geographic
 create policy erp_geographic_data_member_access on public.erp_geographic_data for all to authenticated using (public.erp_user_can_access_company(company_id)) with check (public.erp_user_can_access_company(company_id));
 
 create index if not exists idx_erp_geographic_data_company_level on public.erp_geographic_data(company_id,level,geo_code);
+
+-- Existing installations: preserve the original URL metadata while storing image bytes in PostgreSQL.
+alter table public.erp_geographic_data add column if not exists logo_bytes bytea null;
+alter table public.erp_geographic_data add column if not exists logo_mime_type text null;
+alter table public.erp_geographic_data add column if not exists logo_sha256 text null;
+alter table public.erp_geographic_data add column if not exists logo_bytes_updated_at timestamptz null;
