@@ -228,9 +228,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         final ar = (_ar[id]?.text ?? _s(row['group_name'])).trim();
         final en = (_en[id]?.text ?? _s(row['group_name_en'])).trim();
         if (ar.isEmpty) { if (row['_draft'] == true) continue; throw StateError('اسم الفئة العربية مطلوب للكود ${row['group_code']}.'); }
-        final normalizedName = ar.toLowerCase().replaceAll(RegExp(r'\\s+'), ' ').trim();
+        final normalizedName = ar.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
         final duplicate = _all.any((other) => _s(other['id']) != id &&
-          (_ar[_s(other['id'])]?.text ?? _s(other['group_name'])).toLowerCase().replaceAll(RegExp(r'\\s+'), ' ').trim() == normalizedName);
+          (_ar[_s(other['id'])]?.text ?? _s(other['group_name'])).toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim() == normalizedName);
         if (duplicate) throw StateError('اسم الفئة «$ar» مستخدم بالفعل في مستوى فئة آخر أو داخل المستوى نفسه.');
         final rowLevel = _rowLevel(row);
         if (rowLevel == 1 && (_s(row['parent_id']).isEmpty || !_parents.any((p) => _s(p['id']) == _s(row['parent_id'])))) {
