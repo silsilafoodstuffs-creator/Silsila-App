@@ -4,12 +4,6 @@ name: Deploy Silsila ERP Web Preview
   push:
     branches:
       - main
-    paths:
-      - 'lib/**'
-      - 'web/**'
-      - 'pubspec.yaml'
-      - 'pubspec.lock'
-      - '.github/workflows/deploy-erp-web.yml'
   workflow_dispatch:
 
 permissions:
