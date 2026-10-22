@@ -28,15 +28,36 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
 
   String s(dynamic value) => (value ?? '').toString();
 
-  String label(String level) {
-    switch (level) {
-      case 'governorate':
-        return 'محافظة';
-      case 'district':
-        return 'مركز أو قسم';
-      default:
-        return 'قرية أو شياخة أو منطقة محلية';
+  String label(String level, [String? adminType]) {
+    if (level == 'district') {
+      switch (adminType) {
+        case 'markaz':
+          return 'مركز';
+        case 'qism':
+          return 'قسم';
+        case 'neighborhood':
+          return 'حي';
+        case 'city':
+          return 'مدينة';
+        case 'outlying_area':
+          return 'خارج الزمام';
+        default:
+          return 'وحدة إدارية';
+      }
     }
+    if (level == 'area') {
+      switch (adminType) {
+        case 'shiyakha':
+          return 'شياخة';
+        case 'urban_locality':
+          return 'منطقة حضرية (تصنيف مبدئي)';
+        case 'rural_locality':
+          return 'قرية/منطقة ريفية (تصنيف مبدئي)';
+        default:
+          return 'منطقة محلية';
+      }
+    }
+    return level == 'governorate' ? 'محافظة' : level;
   }
 
   String childLevel(String level) =>
@@ -106,7 +127,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
             .from('erp_geographic_data')
             .select(
               'id,parent_id,geo_code,name_ar,name_en,level,is_active,logo_url,logo_bytes,'
-              'logo_mime_type,source_name,source_url,latitude,longitude',
+              'logo_mime_type,source_name,source_url,latitude,longitude,admin_type',
             )
             .eq('company_id', companyId)
             .order('geo_code')
@@ -373,7 +394,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                         Text(
-                          '${s(row['geo_code'])}  •  ${label(level)}',
+                          '${s(row['geo_code'])}  •  ${label(level, s(row['admin_type']))}',
                           style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF3E007D),
