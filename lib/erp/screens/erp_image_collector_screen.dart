@@ -614,54 +614,112 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     } finally { code.dispose();name.dispose();brand.dispose();major.dispose();minor.dispose();count.dispose();barcode.dispose(); }
   }
 
+
   Future<void> _openCategoryEditor(Map<String, dynamic> image) async {
-    final client=Supabase.instance.client;
-    final raw=await client.from('categories').select('id,parent_id,name,is_active,sort_order').eq('is_active',true).order('sort_order').limit(2000);
-    final cats=(raw as List).map((e)=>Map<String,dynamic>.from(e)).toList();
-    final name=TextEditingController(text:_suggestedImageName(image,_images.indexOf(image)));
-    String level='main'; String? rootId,subId,selectedId; bool create=true,busy=false; String? message;
-    List<Map<String,dynamic>> children(String? p)=>cats.where((x)=>x['parent_id']?.toString()==p).toList();
-    Map<String,dynamic>? byId(String? id){for(final x in cats){if(x['id'].toString()==id)return x;}return null;}
-    Future<void> save(StateSetter ss) async {
-      if(name.text.trim().isEmpty){ss(()=>message='اسم الفئة مطلوب.');return;}
-      if(!create&&selectedId==null){ss(()=>message='اختر فئة مسجلة.');return;}
-      if(level!='main'&&rootId==null){ss(()=>message='اختر الفئة الرئيسية.');return;}
-      if(level=='secondary'&&subId==null){ss(()=>message='اختر الفئة الفرعية.');return;}
-      ss(()=>busy=true);
-      try{
-        final result=await _invoke({'action':'download','url':image['url'].toString()});
-        final png=_processTransparentPng(Uint8List.fromList(base64Decode(result['base64'].toString())));
-        final parentRaw=level=='main'?null:level=='sub'?rootId:subId;
-        final parent=parentRaw==null?null:int.parse(parentRaw);
-        dynamic id;
-        if(create){
-          final ins=await client.from('categories').insert({'name':name.text.trim(),'parent_id':parent,'is_active':true,'sort_order':cats.length+1,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null}).select('id').single();id=ins['id'];
-        }else{
-          await client.from('categories').update({'name':name.text.trim(),'parent_id':parent,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null}).eq('id',selectedId!);id=selectedId;
-        }
-        if(!mounted)return; Navigator.of(context,rootNavigator:true).pop();
-        setState(() { image['file_name']=name.text.trim(); image['category_name']=name.text.trim(); image['database_category_id']=id; _status=(create?'تم إنشاء الفئة وحفظ صورتها PNG.':'تم تحديث الفئة وحفظ صورتها PNG.'); });
-      }catch(e){ss(() { busy=false; message='تعذر حفظ الفئة: '+e.toString(); });}
+    final client = Supabase.instance.client;
+    final companyId = await _activeCompanyId();
+    final raw = await client.from('erp_item_groups')
+      .select('id,company_id,parent_id,group_code,group_name,group_name_en,is_active,show_in_app')
+      .eq('company_id', companyId).eq('is_active', true).order('group_code').limit(3000);
+    final groups = (raw as List).map((e) => Map<String,dynamic>.from(e)).toList();
+    final name = TextEditingController(text: _suggestedImageName(image, _images.indexOf(image)));
+    String level = 'main';
+    String? rootId, subId, selectedId;
+    bool createNew = true, busy = false;
+    String? message;
+    bool success = false;
+    List<Map<String,dynamic>> children(String? parent) => groups.where((x) => x['parent_id']?.toString() == parent).toList();
+    Map<String,dynamic>? byId(String? id) { for (final x in groups) { if (x['id'].toString() == id) return x; } return null; }
+    int groupLevel(Map<String,dynamic> x) {
+      if (x['parent_id'] == null) return 0;
+      final p = byId(x['parent_id']?.toString());
+      if (p == null || p['parent_id'] == null) return 1;
+      return 2;
     }
-    try{
-      await showDialog<void>(context:context,builder:(dc)=>StatefulBuilder(builder:(dc,ss){
-        Widget dd(String label,String? value,List<Map<String,dynamic>> opts,ValueChanged<String?> change)=>SizedBox(width:300,child:DropdownButtonFormField<String>(value:opts.any((x)=>x['id'].toString()==value)?value:null,isExpanded:true,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true),items:opts.map((x)=>DropdownMenuItem<String>(value:x['id'].toString(),child:Text(x['name'].toString(),overflow:TextOverflow.ellipsis))).toList(),onChanged:change));
-        final options=level=='main'?children(null):level=='sub'?children(rootId):children(subId);
-        return AlertDialog(title:const Text('تكويد الفئة وربط الصورة'),
-          content:SizedBox(width:650,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-            SegmentedButton<String>(segments:const [ButtonSegment(value:'main',label:Text('رئيسية')),ButtonSegment(value:'sub',label:Text('فرعية')),ButtonSegment(value:'secondary',label:Text('ثانوية'))],selected:{level},onSelectionChanged:(v)=>ss(() { level=v.first; selectedId=null; })),
-            if(level!='main')dd('الفئة الرئيسية',rootId,children(null),(v)=>ss(() { rootId=v; subId=null; selectedId=null; })),
-            if(level=='secondary')dd('الفئة الفرعية',subId,children(rootId),(v)=>ss(() { subId=v; selectedId=null; })),
-            RadioListTile<bool>(value:true,groupValue:create,title:const Text('إنشاء فئة جديدة'),onChanged:(v)=>ss(() { create=v??true; selectedId=null; })),
-            RadioListTile<bool>(value:false,groupValue:create,title:const Text('ربط فئة موجودة'),onChanged:(v)=>ss(() { create=v??false; selectedId=null; })),
-            if(!create)dd('الفئة المسجلة',selectedId,options,(v)=>ss(() { selectedId=v; name.text=byId(v)?['name']?.toString() ?? name.text; })),
-            TextField(controller:name,decoration:const InputDecoration(labelText:'اسم الفئة',border:OutlineInputBorder())),
-            if(message!=null)Text(message!,style:const TextStyle(color:Colors.red)),
-            if(busy)const LinearProgressIndicator(),
+    Future<void> save(StateSetter ss) async {
+      if (name.text.trim().isEmpty) { ss(() { message='اسم الفئة مطلوب.'; success=false; }); return; }
+      if (!createNew && selectedId == null) { ss(() { message='اختر فئة مسجلة لربط الصورة بها.'; success=false; }); return; }
+      if (level != 'main' && rootId == null) { ss(() { message='اختر الفئة الرئيسية أولًا.'; success=false; }); return; }
+      if (level == 'secondary' && subId == null) { ss(() { message='اختر الفئة الفرعية أولًا.'; success=false; }); return; }
+      ss(() { busy=true; message=null; });
+      try {
+        final downloaded = await _invoke({'action':'download','url':image['url'].toString()});
+        final encoded = downloaded['base64']?.toString();
+        if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
+        final png = _processTransparentPng(Uint8List.fromList(base64Decode(encoded)));
+        final parentId = level == 'main' ? null : level == 'sub' ? rootId : subId;
+        String code;
+        dynamic id;
+        if (createNew) {
+          final prefix = level == 'main' ? 'C' : level == 'sub' ? 'S' : 'T';
+          var maxCode = 0;
+          for (final group in groups) {
+            final value = (group['group_code'] ?? '').toString();
+            final match = RegExp(r'(\d+)$').firstMatch(value);
+            if (match != null) { final n = int.tryParse(match.group(1)!) ?? 0; if (n > maxCode) maxCode = n; }
+          }
+          code = prefix + (maxCode + 1).toString().padLeft(4,'0');
+          final inserted = await client.from('erp_item_groups').insert({
+            'company_id':companyId,'parent_id':parentId,'group_code':code,'group_name':name.text.trim(),
+            'group_name_en':'','is_active':true,'show_in_app':true,
+            'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,
+          }).select('id').single();
+          id = inserted['id'];
+        } else {
+          final old = byId(selectedId);
+          if (old == null) throw Exception('تعذر العثور على الفئة المختارة.');
+          code = (old['group_code'] ?? '').toString();
+          await client.from('erp_item_groups').update({
+            'parent_id':parentId,'group_name':name.text.trim(),
+            'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,
+          }).eq('id',selectedId!).eq('company_id',companyId);
+          id = selectedId;
+        }
+        if (!mounted) return;
+        Navigator.of(context,rootNavigator:true).pop();
+        setState(() {
+          image['file_name']=name.text.trim(); image['category_name']=name.text.trim();
+          image['database_category_id']=id; image['database_category_code']=code; image['save_as']='category';
+          _status=(createNew?'تم إنشاء الفئة ':'تم تحديث الفئة ')+code+' وحفظ صورة PNG الشفافة داخل قاعدة بيانات الشركة.';
+        });
+      } catch(e) {
+        ss(() { busy=false; message='تعذر حفظ الفئة: '+e.toString(); success=false; });
+      }
+    }
+    try {
+      await showDialog<void>(context:context,builder:(dc)=>StatefulBuilder(builder:(dc,ss) {
+        Widget dropdown(String label,String? value,List<Map<String,dynamic>> options,ValueChanged<String?> change) =>
+          SizedBox(width:300,child:DropdownButtonFormField<String>(
+            value:options.any((x)=>x['id'].toString()==value)?value:null,isExpanded:true,
+            decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true),
+            items:options.map((x)=>DropdownMenuItem<String>(value:x['id'].toString(),child:Text((x['group_code']??'').toString()+' — '+(x['group_name']??'').toString(),overflow:TextOverflow.ellipsis))).toList(),onChanged:change));
+        final levelOptions = level=='main' ? children(null) : level=='sub' ? children(rootId) : children(subId);
+        return AlertDialog(
+          title:const Text('تكويد الفئة وربط الصورة',style:TextStyle(color:_purple,fontWeight:FontWeight.w800)),
+          content:SizedBox(width:680,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+            SegmentedButton<String>(segments:const [
+              ButtonSegment(value:'main',label:Text('رئيسية')),
+              ButtonSegment(value:'sub',label:Text('فرعية')),
+              ButtonSegment(value:'secondary',label:Text('ثانوية')),
+            ],selected:{level},onSelectionChanged:(v)=>ss(() { level=v.first; selectedId=null; })),
+            const SizedBox(height:10),
+            if(level!='main') dropdown('الفئة الرئيسية',rootId,children(null),(v)=>ss(() { rootId=v; subId=null; selectedId=null; })),
+            if(level=='secondary') dropdown('الفئة الفرعية',subId,children(rootId),(v)=>ss(() { subId=v; selectedId=null; })),
+            RadioListTile<bool>(value:true,groupValue:createNew,title:const Text('إنشاء فئة جديدة بكود تلقائي'),onChanged:(v)=>ss(() { createNew=v??true; selectedId=null; })),
+            RadioListTile<bool>(value:false,groupValue:createNew,title:const Text('ربط صورة بفئة مسجلة'),onChanged:(v)=>ss(() { createNew=v??false; selectedId=null; })),
+            if(!createNew) dropdown('الفئة المسجلة',selectedId,levelOptions,(v)=>ss(() { selectedId=v; name.text=byId(v)?['group_name']?.toString() ?? name.text; })),
+            const SizedBox(height:8),
+            TextField(controller:name,decoration:const InputDecoration(labelText:'اسم الفئة (قابل للتعديل)',border:OutlineInputBorder(),isDense:true)),
+            if(message!=null) Padding(padding:const EdgeInsets.only(top:8),child:Text(message!,style:TextStyle(color:success?Colors.green:Colors.red,fontSize:12))),
+            if(busy) const Padding(padding:EdgeInsets.only(top:10),child:LinearProgressIndicator()),
           ]))),
-          actions:[TextButton(onPressed:busy?null:()=>Navigator.pop(dc),child:const Text('إلغاء')),FilledButton.icon(onPressed:busy?null:()=>save(ss),icon:const Icon(Icons.save),label:Text(create?'إنشاء الفئة وحفظ الصورة':'حفظ الفئة والصورة'))]);
+          actions:[
+            TextButton(onPressed:busy?null:()=>Navigator.pop(dc),child:const Text('إلغاء')),
+            FilledButton.icon(onPressed:busy?null:()=>save(ss),icon:const Icon(Icons.save_outlined),label:Text(createNew?'إنشاء الفئة وحفظ الصورة':'حفظ الفئة والصورة')),
+          ],
+        );
       }));
-    }finally{name.dispose();}
+    } finally { name.dispose(); }
   }
 
   Future<void> _saveZip() async {
