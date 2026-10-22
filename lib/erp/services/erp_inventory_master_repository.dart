@@ -28,9 +28,9 @@ class ErpInventoryMasterRepository {
 
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
     final rows = await _db.from('erp_items')
-      .select('id, item_code, barcode, item_name, group_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_data, image_mime_type')
+      .select('id, item_code, barcode, item_name, category_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_data, image_mime_type')
       .eq('company_id', companyId.trim()).order('item_code').limit(2000);
-    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    return rows.map((r) { final item = Map<String, dynamic>.from(r); item['group_id'] = item['category_id']; return item; }).toList();
   }
   Future<List<Map<String, dynamic>>> fetchBranches(String companyId) async {
     final rows = await _db.from('erp_branches')
