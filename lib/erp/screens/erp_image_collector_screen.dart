@@ -356,31 +356,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   }
 
 
-  String _extensionForMime(String? rawMime, String url) {
-    final mime = (rawMime ?? '').split(';').first.trim().toLowerCase();
-    switch (mime) {
-      case 'image/jpeg':
-      case 'image/jpg':
-        return '.jpg';
-      case 'image/png':
-        return '.png';
-      case 'image/webp':
-        return '.webp';
-      case 'image/gif':
-        return '.gif';
-      case 'image/avif':
-        return '.avif';
-      case 'image/bmp':
-        return '.bmp';
-      case 'image/tiff':
-        return '.tiff';
-    }
-    final path = Uri.tryParse(url)?.path.toLowerCase() ?? '';
-    for (final extension in <String>['.jpeg', '.jpg', '.png', '.webp', '.gif', '.avif', '.bmp', '.tiff']) {
-      if (path.endsWith(extension)) return extension;
-    }
-    return '.png';
-  }
+
 
   String _excelValue(Map<String, dynamic> item, List<String> keys) {
     for (final key in keys) {
