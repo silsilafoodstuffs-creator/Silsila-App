@@ -49,24 +49,24 @@ class CategoryService {
             .maybeSingle();
         activityCode = activityRow?['code']?.toString();
       }
-      var groupsQuery = _requireClient
+      var categoriesQuery = _requireClient
           .from('erp_item_categories')
-          .select('id,parent_id,group_code:category_code,group_name:category_name,group_name_en:category_name_en,activity_code,is_active,show_in_app,image_data,image_mime_type');
+          .select('id,parent_id,category_code:category_code,category_name:category_name,category_name_en:category_name_en,activity_code,is_active,show_in_app,image_data,image_mime_type');
       if (activeOnly) {
-        groupsQuery = groupsQuery.eq('is_active', true).eq('show_in_app', true);
+        categoriesQuery = categoriesQuery.eq('is_active', true).eq('show_in_app', true);
       }
       if (activityCode != null && activityCode.isNotEmpty) {
-        groupsQuery = groupsQuery.eq('activity_code', activityCode);
+        categoriesQuery = categoriesQuery.eq('activity_code', activityCode);
       }
-      final groupRows = await groupsQuery.order('category_name').limit(limit);
+      final groupRows = await categoriesQuery.order('category_name').limit(limit);
       final groups = (groupRows as List).map((raw) {
         final row = Map<String, dynamic>.from(raw as Map);
         return <String, dynamic>{
           ...row,
-          'name': row['group_name'],
-          'name_en': row['group_name_en'],
+          'name': row['category_name'],
+          'name_en': row['category_name_en'],
           'activity_type': activity,
-          'sort_order': row['group_code']?.toString() ?? '',
+          'sort_order': row['category_code']?.toString() ?? '',
           'icon': null,
         };
       }).toList(growable: false);
