@@ -75,6 +75,20 @@ class CatalogImageMatchingTests(unittest.TestCase):
             )
         self.assertIsNone(match)
 
+    def test_stored_bytea_threshold_matches_minimum_photo_size(self):
+        good = r"\\x" + ("ab" * IMPORTER.MIN_BYTES)
+        small = r"\\x" + ("ab" * (IMPORTER.MIN_BYTES - 1))
+        self.assertTrue(IMPORTER.has_real_size_image(good))
+        self.assertFalse(IMPORTER.has_real_size_image(small))
+
+    def test_sweet_potato_chips_do_not_match_regular_potato_chips(self):
+        self.assertFalse(
+            IMPORTER.image_variant_matches("رقائق بطاطس ملح", "sweet potato chips")
+        )
+        self.assertTrue(
+            IMPORTER.image_variant_matches("رقائق بطاطا حلوة", "sweet potato chips")
+        )
+
     def test_corn_tortillas_are_not_accepted_as_corn_flour(self):
         item = {"item_name": "دقيق ذرة 500 جم", "barcode": "", "brand_name": ""}
         candidate = {
