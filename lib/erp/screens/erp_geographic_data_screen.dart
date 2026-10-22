@@ -301,7 +301,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   Uint8List? _decodeLogoBytes(dynamic value) {
     if (value is! String || value.isEmpty) return null;
     var hex = value;
-    if (hex.startsWith(r'\\x')) hex = hex.substring(2);
+    if (hex.startsWith(r'\x')) hex = hex.substring(2);
     if (hex.isEmpty || hex.length.isOdd) return null;
     try {
       return Uint8List.fromList(List<int>.generate(
