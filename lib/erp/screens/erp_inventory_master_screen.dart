@@ -337,7 +337,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _parentWarehouseId, isExpanded: true,
-              decoration: const InputDecoration(labelText: 'المخزن الرئيسي (اتركه فارغًا للمخزن الرئيسي)')),
+              decoration: const InputDecoration(labelText: 'المخزن الرئيسي (اتركه فارغًا للمخزن الرئيسي)'),
               items: [const DropdownMenuItem<String>(value: null, child: Text('مخزن رئيسي')), ..._warehouses.where((w) => _s(w['id']) != _parentWarehouseId).map((w) => DropdownMenuItem<String>(value: _s(w['id']), child: Text(_s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name']))))],
               onChanged: (v) => setState(() => _parentWarehouseId = v),
             ),
