@@ -20,6 +20,9 @@ declare
   v_purchase_types text[];
   v_price_kinds text[];
   v_party_kinds text[];
+  v_movement_types text[];
+  v_asset_types text[];
+  v_voucher_types text[];
   v_has_customer boolean;
   v_has_supplier boolean;
   v_payload jsonb := jsonb_build_object(
@@ -55,6 +58,14 @@ begin
   elsif v_has_customer then v_party_kinds := array['customer']::text[];
   elsif v_has_supplier then v_party_kinds := array['supplier']::text[];
   else v_party_kinds := '{}'::text[]; end if;
+  select coalesce(array_agg(distinct case p when 'إذن إضافة' then 'purchase_receipt' when 'إذن صرف' then 'sales_issue' when 'تحويل مخزني' then 'transfer_in' when 'تسوية جرد' then 'adjustment' when 'جرد فعلي' then 'adjustment' end) filter (where p in ('إذن إضافة','إذن صرف','تحويل مخزني','تسوية جرد','جرد فعلي')), '{}'::text[]) into v_movement_types from unnest(v_pages) p;
+  if 'تحويل مخزني'=any(v_pages) then v_movement_types := array_append(v_movement_types,'transfer_out'); end if;
+  if 'إذن صرف'=any(v_pages) then v_movement_types := array_append(v_movement_types,'waste'); end if;
+  select coalesce(array_agg(distinct case p when 'إدارة الشعار والصور' then 'app_logo' when 'إدارة صور الأصناف والفئات' then 'item' when 'إدارة صور الموردين والعملاء' then 'supplier' end) filter (where p in ('إدارة الشعار والصور','إدارة صور الأصناف والفئات','إدارة صور الموردين والعملاء')), '{}'::text[]) into v_asset_types from unnest(v_pages) p;
+  if 'إدارة الشعار والصور'=any(v_pages) then v_asset_types := v_asset_types || array['splash','app_icon']::text[]; end if;
+  if 'إدارة صور الأصناف والفئات'=any(v_pages) then v_asset_types := v_asset_types || array['category']::text[]; end if;
+  if 'إدارة صور الموردين والعملاء'=any(v_pages) then v_asset_types := v_asset_types || array['customer','shipping_company']::text[]; end if;
+  select coalesce(array_agg(distinct case p when 'سندات القبض' then 'receipt' when 'سندات الصرف' then 'payment' end) filter (where p in ('سندات القبض','سندات الصرف')), '{}'::text[]) into v_voucher_types from unnest(v_pages) p;
 
   -- Only allowlisted, company-scoped ERP tables are eligible. Global lookup tables,
   -- authentication identities, and the company root record are deliberately protected.
@@ -74,7 +85,7 @@ begin
     ('سياسات التسعير والخصومات','erp_price_lists'),('سياسات التسعير والخصومات','erp_price_list_lines'),('سياسات التسعير والخصومات','erp_party_price_lists'),
     ('شجرة الحسابات','erp_accounts'),('الفترات المالية','erp_fiscal_periods'),
     ('مراكز التكلفة','erp_cost_centers'),('العملات','erp_currencies'),
-    ('الخزائن الرئيسية والفرعية','erp_cashboxes'),('الخزائن الرئيسية والفرعية','erp_cash_vouchers'),('سندات القبض','erp_cash_vouchers'),('سندات الصرف','erp_cash_vouchers'),
+    ('الخزائن الرئيسية والفرعية','erp_cashboxes'),('سندات القبض','erp_cash_vouchers'),('سندات الصرف','erp_cash_vouchers'),
     ('دليل المخازن','erp_warehouses'),('فئات الأصناف','erp_item_groups'),('مجموعات الأصناف','erp_item_groups'),
     ('دليل الأصناف','erp_items'),('دليل الأصناف','erp_item_units'),
     ('دليل الموردين','erp_parties'),('دليل الموردين','erp_party_contacts'),('دليل الموردين','erp_party_warehouses'),
@@ -83,14 +94,14 @@ begin
     ('قوائم أسعار الموردين','erp_price_lists'),('قوائم أسعار الموردين','erp_price_list_lines'),('قوائم أسعار الموردين','erp_party_price_lists'),
     ('عروض الأصناف','erp_sales_campaigns'),('عروض الأصناف','erp_sales_campaign_items'),('الحملات التسويقية','erp_sales_campaign_items'),('قواعد العروض','erp_sales_campaign_items'),
     ('قاعدة العملاء المحتملين','erp_public_lead_staging'),
-    ('الهيكل الوظيفي','erp_employees'),('الإدارات والأقسام','erp_employees'),('الوظائف والدرجات','erp_employees'),
-    ('ملف الموظف','erp_employees'),('ملف الموظف','erp_attendance_records'),('ملف الموظف','erp_leave_requests'),('مسير الرواتب','erp_employees'),('صرف الرواتب','erp_employees'),
+    ('الهيكل الوظيفي','erp_workspace_records'),('الإدارات والأقسام','erp_workspace_records'),('الوظائف والدرجات','erp_workspace_records'),
+    ('ملف الموظف','erp_employees'),('مسير الرواتب','erp_employees'),('صرف الرواتب','erp_employees'),
     ('الحضور والانصراف','erp_attendance_records'),('الحضور والانصراف','erp_hr_attendance_events'),
     ('الحضور والانصراف','erp_hr_fingerprint_devices'),('الحضور والانصراف','erp_hr_shifts'),('الحضور والانصراف','erp_hr_shift_assignments'),
     ('الإجازات والأذونات','erp_leave_requests'),
     ('مسير الرواتب','erp_payroll_runs'),('مسير الرواتب','erp_payroll_lines'),
     ('صرف الرواتب','erp_payroll_runs'),('صرف الرواتب','erp_payroll_lines'),
-    ('أهداف العملاء الشهرية','erp_customer_monthly_goals'),('أهداف العملاء الشهرية','erp_parties'),
+    ('أهداف العملاء الشهرية','erp_customer_monthly_goals'),
     ('عمولات المندوبين','erp_commission_plans'),('عمولات المندوبين','erp_commission_tiers'),('عمولات المندوبين','erp_commission_runs'),
     ('عمولات المبيعات','erp_commission_plans'),('عمولات المبيعات','erp_commission_tiers'),('عمولات المبيعات','erp_commission_runs'),
     ('خطط العمولة','erp_commission_plans'),('خطط العمولة','erp_commission_tiers'),
@@ -101,9 +112,8 @@ begin
     ('إذن تجهيز','erp_sales_fulfillment_documents'),('إذن تسليم','erp_sales_fulfillment_documents'),('إذن تجهيز','erp_stock_reservations'),('إذن تسليم','erp_stock_reservations'),
     ('إذن تحميل','erp_sales_fulfillment_documents'),('تسليم طلب','erp_sales_fulfillment_documents'),
     ('عروض أسعار','erp_sales_documents'),('أوامر البيع','erp_sales_documents'),
-    ('أرصدة الأصناف','erp_inventory_movements'),('كارت الصنف','erp_inventory_movements'),
-    ('الجرد والفروق','erp_inventory_movements'),('إذن إضافة','erp_inventory_movements'),
-    ('إذن صرف','erp_inventory_movements'),('تحويل مخزني','erp_inventory_movements'),('أرصدة الأصناف','erp_stock_reservations'),('كارت الصنف','erp_stock_reservations'),('إذن إضافة','erp_stock_reservations'),('إذن صرف','erp_stock_reservations'),('تحويل مخزني','erp_stock_reservations'),('تسوية جرد','erp_inventory_movements'),('جرد فعلي','erp_inventory_movements'),
+    ('إذن إضافة','erp_inventory_movements'),
+    ('إذن صرف','erp_inventory_movements'),('تحويل مخزني','erp_inventory_movements'),('إذن إضافة','erp_stock_reservations'),('إذن صرف','erp_stock_reservations'),('تحويل مخزني','erp_stock_reservations'),('تسوية جرد','erp_inventory_movements'),('جرد فعلي','erp_inventory_movements'),
     ('أمر شراء','erp_purchase_documents'),('استلام مشتريات','erp_purchase_documents'),('فاتورة مشتريات','erp_purchase_documents'),('أمر شراء','erp_purchase_lines'),('استلام مشتريات','erp_purchase_lines'),('فاتورة مشتريات','erp_purchase_lines'),
     ('مرتجع مشتريات','erp_purchase_documents'),
     ('خريطة الحسابات التشغيلية','erp_operational_account_mappings'),
