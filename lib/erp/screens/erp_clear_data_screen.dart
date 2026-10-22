@@ -81,7 +81,7 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
         name: 'silsila_backup_${DateTime.now().toIso8601String().replaceAll(':', '-')}',
         bytes: bytes, fileExtension: 'json', mimeType: MimeType.json,
       );
-      if (savedPath == null || savedPath.isEmpty) {
+      if (savedPath.isEmpty) {
         throw StateError('لم يؤكد النظام حفظ ملف النسخة الاحتياطية على الجهاز؛ تم إلغاء المسح.');
       }
       if (!mounted) return;
