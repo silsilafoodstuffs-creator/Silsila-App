@@ -7,7 +7,7 @@ permissions:
   contents: read
 concurrency:
   group: silsila-full-catalog-image-import
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   import:
     if: contains(github.event.head_commit.message, 'Run one-time strict catalog image import')
