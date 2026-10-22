@@ -154,6 +154,13 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
           ..remove('_مسودة')
           ..remove('_مرجع داخلي');
         await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: payload);
+        // Keep the app activity catalogue synchronized with the ERP master data.
+        await Supabase.instance.client.from('activity_types').upsert({
+          'code': payload['كود النشاط']!.trim(),
+          'name': payload['اسم النشاط عربي']!.trim(),
+          'sort_order': int.tryParse(payload['ترتيب السطر'] ?? '') ?? 0,
+          'is_active': (payload['نشط'] ?? 'true').toLowerCase() != 'false',
+        }, onConflict: 'code');
       }
       await _load();
       if (mounted) setState(() { _editing = false; _message = 'تم حفظ جميع صفوف أنواع الأنشطة في قاعدة البيانات.'; });
