@@ -956,134 +956,73 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
               ])),
             )
           else
-            GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 18),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 205,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: .76,
-                ),
-                itemCount: _images.length,
-                itemBuilder: (context, index) {
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStatePropertyAll(_purple.withValues(alpha: .07)),
+                dataRowMinHeight: 86, dataRowMaxHeight: 104, columnSpacing: 16, horizontalMargin: 12,
+                columns: const [
+                  DataColumn(label: Text('اختيار')), DataColumn(label: Text('م')),
+                  DataColumn(label: Text('الصورة')), DataColumn(label: Text('اسم الصورة')),
+                  DataColumn(label: Text('نوع الصورة')), DataColumn(label: Text('بيانات / تكويد')),
+                  DataColumn(label: Text('تنزيل صورة')),
+                ],
+                rows: List<DataRow>.generate(_images.length, (index) {
                   final item = _images[index];
                   final imageUrl = item['url'].toString();
                   final selected = _selected.contains(imageUrl);
-                  final alt = (item['alt'] ?? '').toString();
-                  return InkWell(
-                    onTap: () => _toggle(imageUrl, !selected),
-                    borderRadius: BorderRadius.circular(13),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(13),
-                        border: Border.all(color: selected ? _purple : const Color(0xFFE7E0EE), width: selected ? 2 : 1),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        Expanded(
-                          child: Stack(fit: StackFit.expand, children: [
-                            Container(color: const Color(0xFFF7F4F9), alignment: Alignment.center,
-                              child: Image.network(
-                                imageUrl,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, size: 42, color: Colors.black26),
-                                loadingBuilder: (context, child, progress) => progress == null ? child : const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                              ),
-                            ),
-                            Positioned(
-                              top: 6, right: 6,
-                              child: Container(
-                                decoration: BoxDecoration(color: selected ? _purple : Colors.white.withValues(alpha: .95), shape: BoxShape.circle),
-                                child: Checkbox(
-                                  value: selected,
-                                  onChanged: (v) => _toggle(imageUrl, v),
-                                  activeColor: _purple,
-                                  side: BorderSide(color: selected ? _purple : Colors.black38),
-                                ),
-                              ),
-                            ),
-                          ]),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
-                          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                            Text(alt.isEmpty ? 'صورة ${index + 1}' : alt, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 5),
-                            DropdownButtonFormField<String>(
-                              value: (item['save_as'] ?? 'product').toString(),
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'نوع الصورة',
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 7),
-                                border: OutlineInputBorder(),
-                              ),
-                              items: const [
-                                DropdownMenuItem(value: 'product', child: Text('صنف / منتج')),
-                                DropdownMenuItem(value: 'category', child: Text('فئة / مجموعة')),
-                                
-                              ],
-                              onChanged: _loading ? null : (value) {
-                                if (value == null) return;
-                                setState(() {
-                                  item['save_as'] = value;
-                                  item.remove('file_name');
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 5),
-                            TextFormField(
-                              key: ValueKey('filename_${index}_${item['save_as'] ?? 'product'}'),
-                              initialValue: _suggestedImageName(item, index),
-                              decoration: const InputDecoration(
-                                labelText: 'اسم الملف المحفوظ',
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 8),
-                                border: OutlineInputBorder(),
-                              ),
-                              onChanged: (value) => item['file_name'] = value,
-                            ),
-                            const SizedBox(height: 5),
-                            OutlinedButton.icon(
-                              onPressed: _loading ? null : () async {
-                                try {
-                                  if ((item['save_as'] ?? _imageKind).toString() == 'category' || (item['save_as'] ?? _imageKind).toString() == 'brand') {
-                                    await _openCategoryEditor(item);
-                                  } else {
-                                    await _openProductEditor(item);
-                                  }
-                                } catch (e) {
-                                  if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
-                                }
-                              },
-                              icon: const Icon(Icons.inventory_2_outlined, size: 16),
-                              label: Text((item['save_as'] ?? _imageKind).toString() == 'category'
-                                ? 'تكويد الفئة / حفظ بالصورة'
-                                : (item['save_as'] ?? _imageKind).toString() == 'brand'
-                                  ? 'بيانات البراند / حفظ بالصورة' : 'تكويد الصنف / حفظ بالداتا',
-                                style: const TextStyle(fontSize: 10)),
-                              style: OutlinedButton.styleFrom(foregroundColor: _purple, padding: const EdgeInsets.symmetric(horizontal: 4), minimumSize: const Size(0, 30)),
-                            ),
-                            const SizedBox(height: 5),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                onPressed: _loading ? null : () => _saveOne(item),
-                                icon: const Icon(Icons.download, size: 16),
-                                label: const Text('تنزيل', style: TextStyle(fontSize: 11)),
-                                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 30)),
-                              ),
-                            ),
-                          ]),
-                        ),
-                      ]),
-                    ),
-                  );
-                },
+                  final kind = (item['save_as'] ?? 'product').toString();
+                  return DataRow(selected: selected, cells: [
+                    DataCell(Checkbox(value: selected, activeColor: _purple,
+                      onChanged: _loading ? null : (value) => _toggle(imageUrl, value))),
+                    DataCell(Text('${index + 1}', style: const TextStyle(fontWeight: FontWeight.w700))),
+                    DataCell(Container(width: 76, height: 72, padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: const Color(0xFFF7F4F9), borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE7E0EE))),
+                      child: Image.network(imageUrl, fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38),
+                        loadingBuilder: (context, child, progress) => progress == null ? child :
+                          const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+                      ))),
+                    DataCell(SizedBox(width: 210, child: TextFormField(
+                      key: ValueKey('filename_row_$index_${item['save_as'] ?? 'product'}'),
+                      initialValue: (item['file_name']?.toString().trim().isNotEmpty ?? false)
+                        ? item['file_name'].toString() : _suggestedImageName(item, index),
+                      decoration: const InputDecoration(hintText: 'اسم الصورة / الصنف', isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 10), border: OutlineInputBorder()),
+                      onChanged: (value) => item['file_name'] = value,
+                    ))),
+                    DataCell(SizedBox(width: 160, child: DropdownButtonFormField<String>(
+                      value: kind, isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'نوع الصورة', isDense: true,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 9), border: OutlineInputBorder()),
+                      items: const [DropdownMenuItem(value: 'product', child: Text('صنف')),
+                        DropdownMenuItem(value: 'category', child: Text('فئة'))],
+                      onChanged: _loading ? null : (value) {
+                        if (value == null) return;
+                        setState(() { item['save_as'] = value; item.remove('file_name'); });
+                      },
+                    ))),
+                    DataCell(OutlinedButton.icon(
+                      onPressed: _loading ? null : () async {
+                        try {
+                          if (kind == 'category') { await _openCategoryEditor(item); }
+                          else { await _openProductEditor(item); }
+                        } catch (e) {
+                          if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+                        }
+                      },
+                      icon: const Icon(Icons.edit_note_rounded, size: 18),
+                      label: Text(kind == 'category' ? 'بيانات الفئة' : 'بيانات الصنف'),
+                      style: OutlinedButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact),
+                    )),
+                    DataCell(FilledButton.tonalIcon(onPressed: _loading ? null : () => _saveOne(item),
+                      icon: const Icon(Icons.download_rounded, size: 18), label: const Text('تنزيل PNG'),
+                      style: FilledButton.styleFrom(foregroundColor: _purple, visualDensity: VisualDensity.compact))),
+                  ]);
+                }),
               ),
+            ),
         ],
       ),
     );
