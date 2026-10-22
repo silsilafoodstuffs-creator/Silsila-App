@@ -56,12 +56,12 @@ function decodeEntities(s: string): string {
 
 function pageImages(html: string, base: URL) {
   const found = new Map<string, { url: string; alt: string }>();
-  const blocked = /(?:^|[\\/_\\-. ])(?:logo|site[-_ ]?logo|brand[-_ ]?logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|icon|social|payment|footer|menu|navigation|nav)(?:$|[\\/_\\-. ])/i;
+  const blocked = /(?:^|[\/_\-. ])(?:logo|site[-_ ]?logo|brand[-_ ]?logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|icon|social|payment|footer|menu|navigation|nav)(?:$|[\/_\-. ])/i;
   const tracking = new Set(["fbclid", "gclid", "dclid", "msclkid", "ref", "source", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "campaign", "tracking", "width", "height", "w", "h", "quality", "q", "fit", "crop", "auto", "format", "fm", "resize"]);
   const normalize = (u: URL) => {
     const path = u.pathname
-      .replace(/[-_](?:\\d{2,4}x\\d{2,4}|\\d{2,4}w|thumb(?:nail)?|small|medium|large)(?=\\.[a-z0-9]+$)/i, "")
-      .replace(/\\/(?:thumb|thumbnail|small|medium|large|resized)\\//i, "/");
+      .replace(/[-_](?:\d{2,4}x\d{2,4}|\d{2,4}w|thumb(?:nail)?|small|medium|large)(?=\.[a-z0-9]+$)/i, "")
+      .replace(/\/(?:thumb|thumbnail|small|medium|large|resized)\//i, "/");
     const params = [...u.searchParams.entries()]
       .filter(([k]) => !tracking.has(k.toLowerCase()))
       .sort(([a, av], [b, bv]) => a.toLowerCase().localeCompare(b.toLowerCase()) || av.localeCompare(bv));
@@ -73,28 +73,28 @@ function pageImages(html: string, base: URL) {
     try {
       const u = safeUrl(new URL(clean, base).toString());
       const context = (u.pathname + " " + u.search + " " + alt + " " + hint).toLowerCase();
-      if (/\\.svg(?:$|\\?)/i.test(u.href) || blocked.test(context)) return;
+      if (/\.svg(?:$|\?)/i.test(u.href) || blocked.test(context)) return;
       if ((width > 0 && width < 90) || (height > 0 && height < 70)) return;
       const key = normalize(u);
       if (!found.has(key)) found.set(key, { url: u.href, alt: alt.slice(0, 180) });
     } catch { /* skip unsafe or malformed candidates */ }
   };
-  for (const m of html.matchAll(/<img\\b[^>]*>/gi)) {
+  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0];
-    const alt = decodeEntities(tag.match(/\\balt=["']([^"']*)["']/i)?.[1] ?? "");
-    const title = decodeEntities(tag.match(/\\btitle=["']([^"']*)["']/i)?.[1] ?? "");
+    const alt = decodeEntities(tag.match(/\balt=["']([^"']*)["']/i)?.[1] ?? "");
+    const title = decodeEntities(tag.match(/\btitle=["']([^"']*)["']/i)?.[1] ?? "");
     const hint = [
-      tag.match(/\\bclass=["']([^"']*)["']/i)?.[1] ?? "",
-      tag.match(/\\bid=["']([^"']*)["']/i)?.[1] ?? "",
-      tag.match(/\\bitemprop=["']([^"']*)["']/i)?.[1] ?? "",
+      tag.match(/\bclass=["']([^"']*)["']/i)?.[1] ?? "",
+      tag.match(/\bid=["']([^"']*)["']/i)?.[1] ?? "",
+      tag.match(/\bitemprop=["']([^"']*)["']/i)?.[1] ?? "",
     ].join(" ");
-    const width = Number(tag.match(/\\bwidth=["']?(\\d+)/i)?.[1] ?? 0);
-    const height = Number(tag.match(/\\bheight=["']?(\\d+)/i)?.[1] ?? 0);
-    const srcset = tag.match(/\\b(?:srcset|data-srcset)=["']([^"']+)["']/i)?.[1];
-    const src = tag.match(/\\b(?:src|data-src|data-original|data-lazy-src|data-image)=["']([^"']+)["']/i)?.[1];
+    const width = Number(tag.match(/\bwidth=["']?(\d+)/i)?.[1] ?? 0);
+    const height = Number(tag.match(/\bheight=["']?(\d+)/i)?.[1] ?? 0);
+    const srcset = tag.match(/\b(?:srcset|data-srcset)=["']([^"']+)["']/i)?.[1];
+    const src = tag.match(/\b(?:src|data-src|data-original|data-lazy-src|data-image)=["']([^"']+)["']/i)?.[1];
     if (srcset) {
       const choices = srcset.split(",").map(x => {
-        const parts = x.trim().split(/\\s+/);
+        const parts = x.trim().split(/\s+/);
         const descriptor = parts[1] ?? "1x";
         const value = descriptor.endsWith("w") ? Number.parseInt(descriptor, 10) : Number.parseFloat(descriptor) * 1000;
         return { url: parts[0], value: Number.isFinite(value) ? value : 0 };
