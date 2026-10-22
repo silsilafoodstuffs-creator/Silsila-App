@@ -1,1 +1,1 @@
-Batch 2 authorization: inspect the next 25 existing ERP catalog rows with strict image matching. Store only verified binary pack photos; do not create marketplace products or change supplier/pricing data.
+Batch 3 authorization: inspect the next 25 existing ERP catalog rows with strict identity/variant matching, stored-image size accounting, and duplicate protection. Do not create marketplace products or modify supplier/pricing data.
