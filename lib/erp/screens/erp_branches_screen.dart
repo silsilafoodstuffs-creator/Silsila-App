@@ -210,7 +210,6 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         child: TextField(
           controller: _editFields[key],
           keyboardType: keyboardType,
-          isDense: true,
           style: const TextStyle(fontSize: 12),
           decoration: const InputDecoration(
             isDense: true,
