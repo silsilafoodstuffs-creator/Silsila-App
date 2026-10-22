@@ -28,6 +28,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   final Map<String,TextEditingController> _en = {};
   final Map<String,Uint8List?> _imageBytes = {};
   final Map<String,String> _imageNames = {};
+  final Set<String> _expandedIds = <String>{};
 
   @override
   void initState() {
@@ -70,6 +71,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         .select('id,company_id,group_code,group_name,group_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type')
         .eq('company_id', company).order('group_code').limit(3000);
       _all = (result as List).map((e) => Map<String,dynamic>.from(e)).toList();
+      _expandedIds.addAll(_all.map((r) => _s(r['id'])));
       _syncControllers();
       if (_parentFilter != null && !_all.any((r) => _s(r['id']) == _parentFilter)) _parentFilter = null;
       if (mounted) setState(() {});
@@ -102,7 +104,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
   void _syncControllers() {
     final keep = <String>{};
-    for (final row in _all.where((r) => _rowLevel(r) == _level)) {
+    for (final row in _all) {
       final id = _s(row['id']); keep.add(id);
       _ar.putIfAbsent(id, () => TextEditingController());
       _en.putIfAbsent(id, () => TextEditingController());
@@ -139,11 +141,11 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     await _load();
   }
 
-  Future<void> _add() async {
+  Future<void> _add({String? parentIdOverride}) async {
     if (_company == null || _company!.isEmpty) { setState(() => _error = 'حدد الشركة أولًا.'); return; }
-    String? parentId;
-    if (_level == 1 && _parents.isNotEmpty) parentId = _parentFilter ?? _s(_parents.first['id']);
-    if (_level == 2 && _secondaryParents.isNotEmpty) {
+    String? parentId = parentIdOverride;
+    if (parentId == null && _level == 1 && _parents.isNotEmpty) parentId = _parentFilter ?? _s(_parents.first['id']);
+    if (parentId == null && _level == 2 && _secondaryParents.isNotEmpty) {
       final candidates = _secondaryParents.where((r) => _parentFilter == null || _s(_parentOf(r)?['id']) == _parentFilter).toList();
       if (candidates.isNotEmpty) parentId = _s(candidates.first['id']);
     }
@@ -156,10 +158,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final next = (codeNumbers.isEmpty ? 0 : codeNumbers.reduce((a,b) => a>b?a:b)) + 1;
     final draft = <String,dynamic>{
       'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company,
-      'group_code':'$prefix${next.toString().padLeft(4,'0')}', 'group_name':'','group_name_en':'',
+      'group_code':'CAT${next.toString().padLeft(4,'0')}', 'group_name':'','group_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
-    setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _syncControllers(); });
+    setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
   }
 
   Future<void> _pickImage(Map<String,dynamic> row) async {
@@ -207,11 +209,15 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     if (_db == null || _company == null) return;
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      for (final row in _all.where((r) => _rowLevel(r) == _level).toList()) {
+      for (final row in _all.toList()) {
         final id = _s(row['id']);
         final ar = (_ar[id]?.text ?? _s(row['group_name'])).trim();
         final en = (_en[id]?.text ?? _s(row['group_name_en'])).trim();
         if (ar.isEmpty) { if (row['_draft'] == true) continue; throw StateError('اسم الفئة العربية مطلوب للكود ${row['group_code']}.'); }
+        final normalizedName = ar.toLowerCase().replaceAll(RegExp(r'\\s+'), ' ').trim();
+        final duplicate = _all.any((other) => _s(other['id']) != id &&
+          (_ar[_s(other['id'])]?.text ?? _s(other['group_name'])).toLowerCase().replaceAll(RegExp(r'\\s+'), ' ').trim() == normalizedName);
+        if (duplicate) throw StateError('اسم الفئة «$ar» مستخدم بالفعل في مستوى فئة آخر أو داخل المستوى نفسه.');
         if (_level == 1 && (_s(row['parent_id']).isEmpty || !_parents.any((p) => _s(p['id']) == _s(row['parent_id'])))) {
           throw StateError('اختر الفئة الرئيسية للفئة الفرعية ${row['group_code']}.');
         }
@@ -268,6 +274,50 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   Widget _task(String label, IconData icon, VoidCallback? action) =>
     SizedBox(width:112, child: ErpQuickTaskButton(label:label,icon:icon,onPressed:action,compact:true));
 
+  List<Map<String,dynamic>> _childrenOf(Map<String,dynamic> parent) =>
+      _all.where((r) => _s(r['parent_id']) == _s(parent['id'])).toList()
+        ..sort((a,b) => _s(a['group_code']).compareTo(_s(b['group_code'])));
+
+  Widget _treeNode(Map<String,dynamic> row, int depth) {
+    final id = _s(row['id']);
+    final children = _childrenOf(row);
+    final expanded = _expandedIds.contains(id);
+    final isDraft = row['_draft'] == true;
+    final ar = _ar.putIfAbsent(id, () => TextEditingController(text: _s(row['group_name'])));
+    final en = _en.putIfAbsent(id, () => TextEditingController(text: _s(row['group_name_en'])));
+    final level = _rowLevel(row);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Container(margin: EdgeInsetsDirectional.only(start: depth * 24, bottom: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+        decoration: BoxDecoration(color: _selectedId == id ? const Color(0xFFF0E7FA) : Colors.white,
+          borderRadius: BorderRadius.circular(10), border: Border.all(color: _selectedId == id ? _catPurple : const Color(0xFFE8E1EF))),
+        child: Row(children: [
+          IconButton(visualDensity: VisualDensity.compact, onPressed: children.isEmpty ? null : () => setState(() {
+            if (expanded) { _expandedIds.remove(id); } else { _expandedIds.add(id); }
+          }), icon: Icon(children.isEmpty ? Icons.circle_outlined : expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _catPurple)),
+          SizedBox(width: 84, child: Text(_s(row['group_code']), style: const TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
+          Expanded(flex: 3, child: TextField(controller: ar, enabled: _editing,
+            decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة عربي'),
+            onTap: () => setState(() => _selectedId = id))),
+          Expanded(flex: 2, child: TextField(controller: en, enabled: _editing,
+            decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة إنجليزي'),
+            onTap: () => setState(() => _selectedId = id))),
+          Tooltip(message: 'نشط', child: Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, activeColor: _catPurple,
+            onChanged: _editing ? (v) => setState(() => row['is_active'] = v == true) : null)),
+          Tooltip(message: 'ظهور في التطبيق', child: Checkbox(shape: const CircleBorder(), value: row['show_in_app'] == true, activeColor: _catOrange,
+            onChanged: _editing ? (v) => setState(() => row['show_in_app'] = v == true) : null)),
+          IconButton(tooltip: 'اختيار أو تصوير صورة', onPressed: _editing ? () => _pickImage(row) : null,
+            icon: Icon(_imageBytes[id] != null || _decodeBytea(row['image_data']) != null ? Icons.image : Icons.add_a_photo_outlined, color: _catPurple)),
+          if (level < 2) IconButton(tooltip: level == 0 ? 'إضافة فئة فرعية' : 'إضافة فئة ثانوية',
+            onPressed: _saving ? null : () { setState(() { _level = level + 1; _editing = true; }); _add(parentIdOverride: id); },
+            icon: const Icon(Icons.add_circle_outline, color: _catPurple)),
+          IconButton(tooltip: 'تحديد الفئة', onPressed: () => setState(() => _selectedId = id),
+            icon: Icon(Icons.radio_button_checked, color: _selectedId == id ? _catPurple : Colors.black26)),
+        ])),
+      if (expanded) ...children.map((child) => _treeNode(child, depth + 1)),
+    ]);
+  }
+
   Widget _parentTabs() {
     if (_level == 0) return const SizedBox.shrink();
     final parents = _parents;
@@ -309,77 +359,21 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           _task('طباعة',Icons.print,null),
           _task('PDF',Icons.picture_as_pdf,null),
         ]))),
-      Padding(padding:const EdgeInsets.fromLTRB(8,7,8,2),child:Row(children:[
-        for(var i=0;i<3;i++) Expanded(child:Padding(padding:const EdgeInsetsDirectional.only(end:5),
-          child:ChoiceChip(label:Center(child:Text(['فئة رئيسية','فئة فرعية','فئة ثانوية'][i],maxLines:1,overflow:TextOverflow.ellipsis)),
-            selected:_level==i,selectedColor:_catPurple,showCheckmark:false,
-            labelStyle:TextStyle(fontSize:12,fontWeight:FontWeight.w700,color:_level==i?Colors.white:_catPurple),
-            onSelected:(_)=>_setLevel(i)))),
-      ])),
-      _parentTabs(),
       if(_error!=null) Padding(padding:const EdgeInsets.all(7),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
       if(_message!=null) Padding(padding:const EdgeInsets.all(7),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:12))),
-      Expanded(child:_loading?const Center(child:CircularProgressIndicator()):SingleChildScrollView(scrollDirection:Axis.horizontal,
-        child:SingleChildScrollView(child:DataTable(
-          headingRowColor:WidgetStateProperty.all(const Color(0xFFEDE4F8)),
-          dataRowMinHeight:57,dataRowMaxHeight:57,headingRowHeight:57,columnSpacing:13,horizontalMargin:10,
-          columns:[
-            const DataColumn(label:Text('م')),
-            const DataColumn(label:Text('كود الفئة')),
-            if(_level==1) const DataColumn(label:Text('الفئة الرئيسية')),
-            if(_level==2) ...[const DataColumn(label:Text('الفئة الرئيسية')),const DataColumn(label:Text('الفئة الفرعية'))],
-            const DataColumn(label:Text('اسم الفئة عربي')),
-            const DataColumn(label:Text('اسم الفئة إنجليزي')),
-            const DataColumn(label:Text('نشط')),
-            const DataColumn(label:Text('ظهور في التطبيق')),
-            const DataColumn(label:Text('صورة الفئة')),
-          ],
-          rows:List<DataRow>.generate(_visibleRows.length,(i){
-            final row=_visibleRows[i];final id=_s(row['id']);final selected=id==_selectedId;
-            final parent=_parentOf(row);final grand=parent==null?null:_parentOf(parent);
-            return DataRow(selected:selected,onSelectChanged:(_)=>setState(()=>_selectedId=id),cells:[
-              DataCell(Text('${i+1}')),
-              DataCell(Text(_s(row['group_code']))),
-              if(_level==1) DataCell(SizedBox(width:180,child:DropdownButtonHideUnderline(child:DropdownButton<String>(
-                isExpanded:true,value:_s(row['parent_id']).isEmpty?null:_s(row['parent_id']),
-                hint:const Text('اختر الفئة الرئيسية',style:TextStyle(fontSize:11)),
-                items:_parents.map((p)=>DropdownMenuItem(value:_s(p['id']),child:Text(_parentLabel(p),overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11)))).toList(),
-                onChanged:_editing?(v)=>setState(()=>row['parent_id']=v):null)))),
-              if(_level==2) ...[
-                DataCell(SizedBox(width:170,child:DropdownButtonHideUnderline(child:DropdownButton<String>(
-                  isExpanded:true,value:grand==null?null:_s(grand['id']),hint:const Text('الرئيسية',style:TextStyle(fontSize:11)),
-                  items:_parents.map((p)=>DropdownMenuItem(value:_s(p['id']),child:Text(_parentLabel(p),overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11)))).toList(),
-                  onChanged:_editing?(v)=>setState(()=>row['_main_parent_id']=v):null)))),
-                DataCell(SizedBox(width:180,child:DropdownButtonHideUnderline(child:DropdownButton<String>(
-                  isExpanded:true,value:parent==null?null:_s(parent['id']),hint:const Text('الفرعية',style:TextStyle(fontSize:11)),
-                  items:_secondaryParents.where((p)=>row['_main_parent_id']==null||_s(p['parent_id'])==_s(row['_main_parent_id'])).map((p)=>DropdownMenuItem(value:_s(p['id']),child:Text(_parentLabel(p),overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:11)))).toList(),
-                  onChanged:_editing?(v)=>setState(()=>row['parent_id']=v):null)))),
-              ],
-              DataCell(SizedBox(width:190,child:TextField(controller:_ar[id],enabled:_editing,
-                decoration:const InputDecoration(isDense:true,border:InputBorder.none,hintText:'اسم الفئة بالعربية'),
-                onTap:()=>setState(()=>_selectedId=id)))),
-              DataCell(SizedBox(width:170,child:TextField(controller:_en[id],enabled:_editing,
-                decoration:const InputDecoration(isDense:true,border:InputBorder.none,hintText:'Category name'),
-                onTap:()=>setState(()=>_selectedId=id)))),
-              DataCell(Checkbox(value:row['is_active']==true,activeColor:_catPurple,onChanged:_editing?(v)=>setState(()=>row['is_active']=v==true):null)),
-              DataCell(Checkbox(value:row['show_in_app']==true,activeColor:_catOrange,onChanged:_editing?(v)=>setState(()=>row['show_in_app']=v==true):null)),
-              DataCell(SizedBox(width:150,child:Row(children:[
-                ClipRRect(borderRadius:BorderRadius.circular(6),child:Container(
-                  width:38,height:38,color:const Color(0xFFF5EFFB),
-                  child:_imageBytes[id]!=null
-                    ? Image.memory(_imageBytes[id]!,fit:BoxFit.contain)
-                    : _decodeBytea(row['image_data']) != null
-                      ? Image.memory(_decodeBytea(row['image_data'])!,fit:BoxFit.contain,
-                          errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,color:_catPurple,size:20))
-                      : const Icon(Icons.image_outlined,color:Colors.black38,size:20),
-                )),
-                const SizedBox(width:5),Expanded(child:TextButton.icon(
-                  onPressed:_editing?()=>_pickImage(row):null,icon:const Icon(Icons.add_a_photo_outlined,size:15),
-                  label:const Text('اختيار/تصوير',style:TextStyle(fontSize:10)),))
-              ]))),
-            ]);
-          }),
-        )))),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), child: Row(children: const [
+        SizedBox(width: 84, child: Text('كود الفئة', style: TextStyle(fontWeight: FontWeight.w800))),
+        Expanded(flex: 3, child: Text('اسم الفئة عربي', style: TextStyle(fontWeight: FontWeight.w800))),
+        Expanded(flex: 2, child: Text('اسم الفئة إنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
+        Text('نشط'), SizedBox(width: 8), Text('في التطبيق'), SizedBox(width: 8), Text('الصورة'), SizedBox(width: 24),
+      ])),
+      Expanded(child: _loading ? const Center(child:CircularProgressIndicator()) :
+        _all.where((r) => r['parent_id'] == null).isEmpty
+          ? const Center(child: Text('لا توجد فئات رئيسية. اضغط «إضافة جديد» لبدء إنشاء شجرة الفئات.'))
+          : ListView(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              children: _all.where((r) => r['parent_id'] == null)
+                .toList()..sort((a,b) => _s(a['group_code']).compareTo(_s(b['group_code'])))
+                .map((root) => _treeNode(root, 0)).toList())),
     ],
   ));
   }
