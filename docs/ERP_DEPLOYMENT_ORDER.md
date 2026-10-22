@@ -5,7 +5,7 @@
 ## ترتيب التثبيت في بيئة جديدة
 
 1. **المخطط الأساسي:** `erp_schema.sql` ثم `erp_operations_schema.sql` ثم `erp_master_data_schema.sql`.
-2. **عضويات الشركات والصلاحيات:** `erp_security_membership.sql` بعد إنشاء كل الجداول التي يشير إليها، ثم `erp_user_classifications.sql` و`erp_operational_accounting.sql` و`erp_workspace_records.sql` و`erp_company_settings_schema.sql`.
+2. **عضويات الشركات والصلاحيات:** `erp_security_membership.sql` بعد إنشاء كل الجداول التي يشير إليها، ثم `erp_user_classifications.sql` و`erp_operational_accounting.sql` و`erp_workspace_records.sql` و`erp_company_settings_schema.sql`. لتفعيل النسخ الاحتياطي قبل المسح الانتقائي، طبّق أيضًا `supabase/migrations/20261022_erp_data_backups.sql` بعد إنشاء `erp_workspace_records`.
 3. **سلامة البيانات والحسابات:** `erp_master_data_integrity.sql` و`erp_account_integrity.sql` و`erp_account_tree_metrics.sql` و`erp_journal_workflow.sql` و`erp_fiscal_period_workflow.sql`.
 4. **الموارد البشرية:** `erp_hr_schema.sql` ثم `erp_hr_company_policies.sql`، وبعدها `erp_hr_attendance_schema.sql` و`erp_hr_attendance_access.sql`.
 5. **الخزائن:** `erp_cash_vouchers_schema.sql` ثم `erp_cash_voucher_member_policies.sql` ثم `erp_cash_voucher_workflow.sql`.
