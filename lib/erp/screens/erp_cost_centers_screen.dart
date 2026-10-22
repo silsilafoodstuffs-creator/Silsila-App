@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import '../widgets/erp_quick_task_button.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../widgets/erp_quick_task_button.dart';
 
 const _costPurple = Color(0xFF3E007D);
+const _costOrange = Color(0xFFFFA015);
 
 class ErpCostCentersScreen extends StatefulWidget {
   const ErpCostCentersScreen({super.key, required this.companyId});
   final String? companyId;
-
   @override
   State<ErpCostCentersScreen> createState() => _ErpCostCentersScreenState();
 }
@@ -16,9 +17,13 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   SupabaseClient? _db;
   List<Map<String, dynamic>> _centers = [];
   List<Map<String, dynamic>> _branches = [];
-  bool _loading = false;
-  String? _error;
-  String? _message;
+  final Set<String> _selectedIds = {};
+  bool _loading = false, _saving = false;
+  String? _error, _message;
+
+  String _s(dynamic v) => (v ?? '').toString();
+  String _ar(Map<String, dynamic> r) => _s(r['center_name_ar']).isEmpty ? _s(r['center_name']) : _s(r['center_name_ar']);
+  bool _child(Map<String, dynamic> r) => _s(r['parent_id']).isNotEmpty;
 
   @override
   void initState() {
@@ -30,216 +35,197 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   @override
   void didUpdateWidget(covariant ErpCostCentersScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.companyId != widget.companyId) _load();
+    if (oldWidget.companyId != widget.companyId) { _selectedIds.clear(); _load(); }
   }
 
-  String _s(dynamic value) => (value ?? '').toString();
-
   Future<void> _load() async {
-    final companyId = (widget.companyId ?? '').trim();
-    if (_db == null || companyId.isEmpty) {
+    final company = (widget.companyId ?? '').trim();
+    if (!mounted) return;
+    if (_db == null || company.isEmpty) {
       setState(() { _loading = false; _error = _db == null ? 'سجّل الدخول إلى Supabase أولًا.' : 'لا توجد شركة نشطة مرتبطة بالمستخدم.'; });
       return;
     }
     setState(() { _loading = true; _error = null; });
     try {
-      final centers = await _db!
-          .from('erp_cost_centers')
-          .select('id, center_code, center_name, branch_id, parent_id, is_active')
-          .eq('company_id', companyId)
-          .order('center_code');
-      final branches = await _db!
-          .from('erp_branches')
-          .select('id, branch_code, branch_name')
-          .eq('company_id', companyId)
-          .order('branch_code');
+      final result = await Future.wait<dynamic>([
+        _db!.from('erp_cost_centers').select('id,center_code,center_name,center_name_ar,center_name_en,branch_id,parent_id,is_active').eq('company_id', company).order('center_code'),
+        _db!.from('erp_branches').select('id,branch_code,branch_name').eq('company_id', company).order('branch_code'),
+      ]);
       if (!mounted) return;
       setState(() {
-        _centers = (centers as List).whereType<Map<String, dynamic>>().toList(growable: false);
-        _branches = (branches as List).whereType<Map<String, dynamic>>().toList(growable: false);
+        _centers = (result[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _branches = (result[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _selectedIds.removeWhere((id) => !_centers.any((r) => _s(r['id']) == id));
         _loading = false;
       });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() { _loading = false; _error = 'تعذر تحميل مراكز التكلفة. تأكد من تطبيق erp_cost_centers_schema.sql: $error'; });
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل مراكز التكلفة: $e'; });
     }
   }
 
-  Future<void> _edit([Map<String, dynamic>? row]) async {
-    final code = TextEditingController(text: _s(row?['center_code']));
-    final name = TextEditingController(text: _s(row?['center_name']));
-    String branchId = _s(row?['branch_id']);
-    String parentId = _s(row?['parent_id']);
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(builder: (context, refresh) => AlertDialog(
-        title: Text(row == null ? 'إضافة مركز تكلفة' : 'تعديل مركز التكلفة'),
-        content: SizedBox(
-          width: 450,
-          child: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: code, decoration: const InputDecoration(labelText: 'كود مركز التكلفة *', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم مركز التكلفة *', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: _branches.any((b) => _s(b['id']) == branchId) ? branchId : '',
-                decoration: const InputDecoration(labelText: 'الفرع (اختياري)', border: OutlineInputBorder()),
-                items: [
-                  const DropdownMenuItem(value: '', child: Text('بدون فرع محدد')),
-                  ..._branches.map((b) => DropdownMenuItem(value: _s(b['id']), child: Text('${_s(b['branch_code'])} — ${_s(b['branch_name'])}'))),
-                ],
-                onChanged: (value) => refresh(() => branchId = value ?? ''),
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                value: row != null && parentId == _s(row['id']) ? '' : parentId,
-                decoration: const InputDecoration(labelText: 'مركز التكلفة الأب (اختياري)', border: OutlineInputBorder()),
-                items: [
-                  const DropdownMenuItem(value: '', child: Text('بدون أب')),
-                  ..._centers.where((center) => _s(center['id']) != _s(row?['id'])).map((center) => DropdownMenuItem(value: _s(center['id']), child: Text('${_s(center['center_code'])} — ${_s(center['center_name'])}'))),
-                ],
-                onChanged: (value) => refresh(() => parentId = value ?? ''),
-              ),
-            ]),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حفظ')),
-        ],
-      )),
-    );
-    if (result != true) { code.dispose(); name.dispose(); return; }
-    try {
-      final companyId = (widget.companyId ?? '').trim();
-      if (companyId.isEmpty) throw StateError('لا توجد شركة نشطة.');
-      if (code.text.trim().isEmpty || name.text.trim().isEmpty) throw ArgumentError('كود واسم مركز التكلفة مطلوبان.');
-      if (row != null && parentId == _s(row['id'])) throw ArgumentError('لا يمكن ربط مركز التكلفة بنفسه.');
-      final payload = <String, Object?>{
-        'company_id': companyId,
-        'center_code': code.text.trim(),
-        'center_name': name.text.trim(),
-        'branch_id': branchId.isEmpty ? null : branchId,
-        'parent_id': parentId.isEmpty ? null : parentId,
-        'is_active': row?['is_active'] != false,
-      };
-      if (row == null) {
-        payload['is_active'] = true;
-        await _db!.from('erp_cost_centers').insert(payload);
-      } else {
-        await _db!.from('erp_cost_centers').update(payload).eq('id', row['id']).eq('company_id', companyId);
+  List<Map<String, dynamic>> get _tree {
+    final out = <Map<String, dynamic>>[];
+    final roots = _centers.where((r) => !_child(r)).toList()..sort((a,b) => _s(a['center_code']).compareTo(_s(b['center_code'])));
+    for (final root in roots) {
+      out.add(root);
+      final children = _centers.where((r) => _s(r['parent_id']) == _s(root['id'])).toList()
+        ..sort((a,b) => _s(a['center_code']).compareTo(_s(b['center_code'])));
+      out.addAll(children);
+    }
+    for (final row in _centers) {
+      if (!out.any((r) => _s(r['id']) == _s(row['id']))) out.add(row);
+    }
+    return out;
+  }
+
+  String _newCode() {
+    var max = 0;
+    for (final r in _centers) {
+      final m = RegExp(r'(\d+)$').firstMatch(_s(r['center_code']));
+      final n = int.tryParse(m?.group(1) ?? '') ?? 0;
+      if (n > max) max = n;
+    }
+    return 'CC-\${(max + 1).toString().padLeft(3, '0')}';
+  }
+
+  void _addMain() {
+    setState(() {
+      _centers.add({'id': null, 'center_code': _newCode(), 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': null, 'parent_id': null, 'is_active': true, '_draft': true});
+      _message = 'أُضيف صف مركز رئيسي. أكمل البيانات واضغط حفظ.';
+      _error = null;
+    });
+  }
+
+  void _addChild(Map<String, dynamic> parent) {
+    if (_s(parent['id']).isEmpty) { setState(() => _error = 'احفظ المركز الرئيسي أولًا ثم أضف المركز الفرعي.'); return; }
+    if (_child(parent)) { setState(() => _error = 'المركز الفرعي لا يمكن أن يكون أبًا لمركز آخر.'); return; }
+    setState(() {
+      _centers.add({'id': null, 'center_code': _newCode(), 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': parent['branch_id'], 'parent_id': parent['id'], 'is_active': true, '_draft': true});
+      _message = 'أُضيف صف فرعي تحت المركز الرئيسي المحدد.';
+      _error = null;
+    });
+  }
+
+  Future<void> _save() async {
+    final db = _db;
+    final company = (widget.companyId ?? '').trim();
+    if (db == null || company.isEmpty) return;
+    final codes = <String>{};
+    for (final r in _centers) {
+      final code = _s(r['center_code']).trim();
+      if (code.isEmpty || _ar(r).trim().isEmpty) { setState(() => _error = 'الكود والاسم العربي مطلوبان في كل صف.'); return; }
+      if (!RegExp(r'^[A-Za-z]+-[0-9]+$').hasMatch(code)) { setState(() => _error = 'الكود "$code" غير صحيح. استخدم حروفًا إنجليزية ثم شرطة وأرقامًا، مثل CC-001.'); return; }
+      if (!codes.add(code.toUpperCase())) { setState(() => _error = 'الكود "$code" مكرر.'); return; }
+      if (_child(r) && !_centers.any((p) => _s(p['id']) == _s(r['parent_id']) && !_child(p))) {
+        setState(() => _error = 'كل مركز فرعي يجب أن يتبع مركزًا رئيسيًا محفوظًا.'); return;
       }
-      if (mounted) setState(() => _message = 'تم حفظ مركز التكلفة في قاعدة البيانات.');
+    }
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final ordered = [..._centers.where((r) => !_child(r)), ..._centers.where(_child)];
+      for (final r in ordered) {
+        final ar = _ar(r).trim();
+        final branch = _s(r['branch_id']).trim();
+        final payload = <String, dynamic>{
+          'company_id': company, 'center_code': _s(r['center_code']).trim(),
+          'center_name': ar, 'center_name_ar': ar,
+          'center_name_en': _s(r['center_name_en']).trim().isEmpty ? null : _s(r['center_name_en']).trim(),
+          'branch_id': branch.isEmpty ? null : branch,
+          'parent_id': _s(r['parent_id']).isEmpty ? null : r['parent_id'],
+          'is_active': r['is_active'] == true,
+        };
+        if (_s(r['id']).isEmpty) {
+          final inserted = await db.from('erp_cost_centers').insert(payload).select('id').single();
+          r['id'] = inserted['id'];
+          r.remove('_draft');
+        } else {
+          await db.from('erp_cost_centers').update(payload).eq('id', r['id']).eq('company_id', company);
+        }
+      }
+      if (mounted) setState(() => _message = 'تم حفظ جميع مراكز التكلفة في قاعدة البيانات.');
       await _load();
-    } catch (error) {
-      if (mounted) setState(() => _error = 'تعذر حفظ مركز التكلفة: $error');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر حفظ مراكز التكلفة: $e');
     } finally {
-      code.dispose(); name.dispose();
+      if (mounted) setState(() => _saving = false);
     }
   }
 
-  Future<void> _toggle(Map<String, dynamic> row) async {
-    try {
-      await _db!
-          .from('erp_cost_centers')
-          .update({'is_active': row['is_active'] != true})
-          .eq('id', row['id'])
-          .eq('company_id', (widget.companyId ?? '').trim());
-      if (mounted) setState(() => _message = 'تم تغيير حالة مركز التكلفة.');
-      await _load();
-    } catch (error) {
-      if (mounted) setState(() => _error = 'تعذر تغيير الحالة: $error');
-    }
+  Map<String, dynamic>? get _selected {
+    if (_selectedIds.length != 1) return null;
+    for (final r in _centers) { if (_s(r['id']) == _selectedIds.single) return r; }
+    return null;
+  }
+
+  String _branchName(dynamic id) {
+    for (final b in _branches) { if (_s(b['id']) == _s(id)) return '\${_s(b['branch_code'])} — \${_s(b['branch_name'])}'; }
+    return 'بدون فرع';
   }
 
   Future<void> _delete(Map<String, dynamic> row) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('حذف مركز التكلفة'),
-        content: Text('هل تريد حذف «${_s(row['center_name'])}»؟ لا يمكن حذفه إذا كان له مراكز فرعية مرتبطة.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await _db!
-          .from('erp_cost_centers')
-          .delete()
-          .eq('id', row['id'])
-          .eq('company_id', (widget.companyId ?? '').trim());
-      if (mounted) setState(() => _message = 'تم حذف مركز التكلفة.');
-      await _load();
-    } catch (error) {
-      if (mounted) setState(() => _error = 'تعذر حذف المركز؛ قد يكون مرتبطًا بمراكز فرعية أو بحركات مالية: $error');
-    }
-  }
-
-  Future<void> _seedStandardTemplate() async {
-    final companyId = (widget.companyId ?? '').trim();
-    if (_db == null || companyId.isEmpty) {
-      setState(() => _error = 'اختر شركة نشطة وسجّل الدخول أولاً.');
+    final id = _s(row['id']);
+    final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('حذف مركز التكلفة'),
+      content: Text('هل تريد حذف «\${_ar(row)}»؟ قد تمنع قاعدة البيانات الحذف إذا ارتبط المركز بفروع فرعية أو بحركات مالية.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+        FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف')),
+      ],
+    ));
+    if (yes != true) return;
+    if (id.isEmpty) {
+      setState(() { _centers.remove(row); _message = 'تم حذف الصف غير المحفوظ.'; _error = null; });
       return;
     }
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('إنشاء مراكز التكلفة القياسية'),
-        content: const Text('سيضيف البرنامج هيكلًا مناسبًا لتوزيع المواد الغذائية بالجملة، مع الحفاظ على المراكز الموجودة وعدم استبدالها.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('إنشاء الهيكل')),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    setState(() { _loading = true; _error = null; _message = null; });
     try {
-      final result = await _db!.rpc('erp_seed_standard_cost_centers', params: {'p_company_id': companyId});
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _message = 'تم إنشاء الهيكل القياسي. عدد المراكز الجديدة: ${result ?? 0}.';
-      });
+      await _db!.from('erp_cost_centers').delete().eq('id', id).eq('company_id', (widget.companyId ?? '').trim());
+      if (mounted) setState(() { _centers.removeWhere((r) => _s(r['id']) == id); _selectedIds.remove(id); _message = 'تم حذف المركز.'; _error = null; });
       await _load();
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'تعذر إنشاء الهيكل القياسي. تأكد من تطبيق supabase/erp_cost_centers_standard_template.sql ثم أعد المحاولة. التفاصيل: $error';
-      });
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر الحذف؛ قد يكون المركز مرتبطًا بمراكز فرعية أو بحركات مالية: $e');
     }
   }
 
-  String _branchLabel(String? id) {
-    if (id == null || id.isEmpty) return 'بدون فرع';
-    for (final row in _branches) {
-      if (_s(row['id']) == id) return '${_s(row['branch_code'])} — ${_s(row['branch_name'])}';
-    }
-    return 'فرع غير متاح';
+  Future<void> _editSelected() async {
+    if (_selected == null) { setState(() => _error = 'حدد صفًا واحدًا أولًا.'); return; }
+    setState(() => _message = 'عدّل الحقول مباشرة في الصف المحدد، ثم اضغط حفظ.');
   }
 
-  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
+  InputDecoration _dec(String hint) => InputDecoration(
+    hintText: hint, isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: Colors.grey.shade300)),
+  );
+
+  Widget _task(String label, IconData icon, Color color, VoidCallback? action) =>
       ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
-  Future<void> _previewCostCenters() async {
+  Future<void> _preview() async {
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('معاينة مراكز التكلفة'),
-      content: SizedBox(width: 720, child: _centers.isEmpty ? const Text('لا توجد مراكز تكلفة محمّلة.')
-        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _centers.take(100).map((r) => ListTile(
-          dense: true, title: Text('${_s(r['center_code'])} — ${_s(r['center_name'])}'),
-          subtitle: Text('${r['is_active'] == true ? 'نشط' : 'موقوف'}'),
-        )).toList()))),
+      content: SizedBox(width: 750, child: SingleChildScrollView(child: DataTable(
+        headingRowHeight: 34, dataRowMinHeight: 30, dataRowMaxHeight: 36,
+        columns: const [DataColumn(label: Text('الكود')), DataColumn(label: Text('الاسم العربي')), DataColumn(label: Text('الاسم الإنجليزي')), DataColumn(label: Text('النوع')), DataColumn(label: Text('الفرع')), DataColumn(label: Text('الحالة'))],
+        rows: _tree.map((r) => DataRow(cells: [
+          DataCell(Text(_s(r['center_code']))), DataCell(Text('\${_child(r) ? '↳ ' : ''}\${_ar(r)}')),
+          DataCell(Text(_s(r['center_name_en']))), DataCell(Text(_child(r) ? 'فرعي' : 'رئيسي')),
+          DataCell(Text(_branchName(r['branch_id']))), DataCell(Text(r['is_active'] == true ? 'نشط' : 'غير نشط')),
+        ])).toList(),
+      ))),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
     ));
+  }
+
+  Future<void> _copyReport(String format) async {
+    final lines = <String>[
+      'م\\tكود مركز التكلفة\\tاسم عربي\\tاسم إنجليزي\\tالنوع\\tالفرع\\tالحالة',
+      ..._tree.asMap().entries.map((e) {
+        final r = e.value;
+        return '\${e.key + 1}\\t\${_s(r['center_code'])}\\t\${_ar(r)}\\t\${_s(r['center_name_en'])}\\t\${_child(r) ? 'فرعي' : 'رئيسي'}\\t\${_branchName(r['branch_id'])}\\t\${r['is_active'] == true ? 'نشط' : 'غير نشط'}';
+      }),
+    ];
+    await Clipboard.setData(ClipboardData(text: lines.join('\\n')));
+    if (mounted) setState(() => _message = 'تم نسخ بيانات الجدول إلى الحافظة. يمكنك لصقها في Excel ($format).');
   }
 
   @override
@@ -247,57 +233,95 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     textDirection: TextDirection.rtl,
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Card(color: _costPurple, child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Text('مراكز التكلفة', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
-          const Text('تصنيف المصروفات والإيرادات حسب مركز وفرع النشاط.', style: TextStyle(color: Colors.white70)),
-          const SizedBox(height: 8),
+          const Text('إدارة المراكز الرئيسية والفرعية وربطها بالفروع.', style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 5),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
-            _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : () => _edit()),
-            _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _centers.isEmpty ? null : () => _edit(_centers.first)),
-            _quickTask('حذف', Icons.delete_outline, Colors.red, _centers.isEmpty ? null : () => _delete(_centers.first)),
-            _quickTask('إنشاء الهيكل القياسي', Icons.account_tree_outlined, const Color(0xFF137C8B), _loading ? null : _seedStandardTemplate),
-            _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewCostCenters),
+            _task('تحديث', Icons.refresh, Colors.blue, _loading || _saving ? null : _load),
+            _task('إضافة', Icons.add_circle_outline, Colors.green, _loading || _saving ? null : _addMain),
+            _task('حفظ', Icons.save_outlined, _costPurple, _loading || _saving ? null : _save),
+            _task('تعديل', Icons.edit_outlined, _costOrange, _selected == null ? null : _editSelected),
+            _task('حذف', Icons.delete_outline, Colors.red, _selected == null ? null : () => _delete(_selected!)),
+            _task('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _preview),
+            _task('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _preview),
+            _task('Excel', Icons.table_view_outlined, const Color(0xFF16834A), () => _copyReport('Excel/TSV')),
+            _task('PDF', Icons.picture_as_pdf_outlined, Colors.red, () => _copyReport('PDF')),
           ])),
         ]),
       )),
-      const SizedBox(height: 12),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
-      if (_loading)
-        const Center(child: Padding(padding: EdgeInsets.all(28), child: CircularProgressIndicator()))
-      else if (_centers.isEmpty)
-        const Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد مراكز تكلفة مسجلة بعد.')))
-      else
-        ..._centers.map((row) {
-          final active = row['is_active'] == true;
-          final parent = _centers.where((item) => _s(item['id']) == _s(row['parent_id']));
-          final parentLabel = parent.isEmpty ? 'بدون مركز أب' : _s(parent.first['center_name']);
-          return Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: BorderSide(color: Colors.grey.shade300)),
-            child: ListTile(
-              leading: CircleAvatar(backgroundColor: _costPurple.withValues(alpha: .09), child: const Icon(Icons.account_balance_outlined, color: _costPurple)),
-              title: Text('${_s(row['center_code'])} — ${_s(row['center_name'])}', style: const TextStyle(fontWeight: FontWeight.w800)),
-              subtitle: Text('${_branchLabel(row['branch_id']?.toString())}\n$parentLabel • ${active ? 'نشط' : 'موقوف'}', maxLines: 2, overflow: TextOverflow.ellipsis),
-              isThreeLine: true,
-              trailing: Wrap(spacing: 0, children: [
-                IconButton(tooltip: 'تعديل', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _costPurple)),
-                IconButton(tooltip: active ? 'إيقاف' : 'تفعيل', onPressed: () => _toggle(row), icon: Icon(active ? Icons.pause_circle_outline : Icons.play_circle_outline, color: active ? Colors.orange : Colors.green)),
-                IconButton(tooltip: 'حذف', onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
-              ]),
-            ),
-          );
-        }),
+      if (_loading) const LinearProgressIndicator(minHeight: 2),
+      Expanded(child: _loading && _centers.isEmpty
+        ? const Center(child: CircularProgressIndicator())
+        : Scrollbar(child: SingleChildScrollView(child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: DataTable(
+            headingRowHeight: 38, dataRowMinHeight: 38, dataRowMaxHeight: 42,
+            horizontalMargin: 8, columnSpacing: 11, dividerThickness: .6,
+            headingTextStyle: const TextStyle(fontWeight: FontWeight.w800, color: _costPurple, fontSize: 12),
+            columns: const [
+              DataColumn(label: Text('تحديد')), DataColumn(label: Text('م')),
+              DataColumn(label: Text('كود مركز تكلفة')), DataColumn(label: Text('اسم مركز التكلفة عربي')),
+              DataColumn(label: Text('اسم مركز التكلفة إنجليزي')), DataColumn(label: Text('نوع المركز')),
+              DataColumn(label: Text('الفرع (اختياري)')), DataColumn(label: Text('نشط')),
+              DataColumn(label: Text('إضافة فرعي')), DataColumn(label: Text('حذف')),
+            ],
+            rows: _tree.asMap().entries.map((entry) {
+              final i = entry.key; final r = entry.value; final isChild = _child(r);
+              final id = _s(r['id']); final draft = id.isEmpty;
+              final selected = id.isNotEmpty && _selectedIds.contains(id);
+              return DataRow(
+                selected: selected,
+                color: WidgetStateProperty.resolveWith<Color?>((states) =>
+                  states.contains(WidgetState.selected) ? _costPurple.withValues(alpha: .08) : (isChild ? const Color(0xFFF8F4FC) : Colors.white)),
+                cells: [
+                  DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: selected, activeColor: _costPurple,
+                    onChanged: draft ? null : (v) => setState(() { if (v == true) { _selectedIds.add(id); } else { _selectedIds.remove(id); } }))),
+                  DataCell(SizedBox(width: 25, child: Text('\${i + 1}', style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(width: 115, child: TextFormField(key: ValueKey('code-$id-$i'), initialValue: _s(r['center_code']),
+                    onChanged: (v) => r['center_code'] = v, decoration: _dec('CC-001'), style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(width: 165, child: Padding(
+                    padding: EdgeInsetsDirectional.only(start: isChild ? 16 : 0),
+                    child: TextFormField(key: ValueKey('ar-$id-$i'), initialValue: _ar(r),
+                      onChanged: (v) { r['center_name_ar'] = v; r['center_name'] = v; },
+                      decoration: _dec(isChild ? 'اسم المركز الفرعي' : 'اسم المركز الرئيسي'),
+                      style: TextStyle(fontSize: 12, fontWeight: isChild ? FontWeight.normal : FontWeight.w700)),
+                  ))),
+                  DataCell(SizedBox(width: 155, child: TextFormField(key: ValueKey('en-$id-$i'), initialValue: _s(r['center_name_en']),
+                    onChanged: (v) => r['center_name_en'] = v, decoration: _dec('Cost center name'),
+                    textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 12)))),
+                  DataCell(Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: isChild ? const Color(0xFFEDE3FA) : const Color(0xFFE5F2EA), borderRadius: BorderRadius.circular(7)),
+                    child: Text(isChild ? 'فرعي' : 'رئيسي', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: isChild ? _costPurple : const Color(0xFF176B3A))))),
+                  DataCell(SizedBox(width: 175, child: DropdownButtonHideUnderline(child: DropdownButton<String>(
+                    isExpanded: true, isDense: true,
+                    value: _branches.any((b) => _s(b['id']) == _s(r['branch_id'])) ? _s(r['branch_id']) : '',
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('بدون فرع', style: TextStyle(fontSize: 11))),
+                      ..._branches.map((b) => DropdownMenuItem(value: _s(b['id']), child: Text('\${_s(b['branch_code'])} — \${_s(b['branch_name'])}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)))),
+                    ],
+                    onChanged: (v) => setState(() => r['branch_id'] = v == null || v.isEmpty ? null : v),
+                  )))),
+                  DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: r['is_active'] == true, activeColor: Colors.green,
+                    onChanged: (v) => setState(() { r['is_active'] = v == true; _message = 'تم تغيير الحالة محليًا؛ اضغط حفظ لاعتمادها.'; }))),
+                  DataCell(!isChild && !draft ? IconButton(tooltip: 'إضافة مركز تكلفة فرعي', visualDensity: VisualDensity.compact,
+                    onPressed: _saving ? null : () => _addChild(r), icon: const Icon(Icons.add_circle, color: _costPurple, size: 21)) : const SizedBox(width: 32)),
+                  DataCell(IconButton(tooltip: 'حذف المركز', visualDensity: VisualDensity.compact, onPressed: _saving ? null : () => _delete(r),
+                    icon: const Icon(Icons.delete_forever, color: Colors.red, size: 22))),
+                ],
+              );
+            }).toList(),
+          ),
+        )))),
     ]),
   );
 
-  Widget _notice(String message, Color color) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(color: color.withValues(alpha: .08), borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withValues(alpha: .3))),
-    child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+  Widget _notice(String text, Color color) => Container(
+    margin: const EdgeInsets.only(bottom: 5), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+    decoration: BoxDecoration(color: color.withValues(alpha: .07), borderRadius: BorderRadius.circular(8), border: Border.all(color: color.withValues(alpha: .25))),
+    child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
   );
 }
