@@ -340,18 +340,23 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Future<void> _loadWorkspaceSettings(String companyId) async {
     try {
-      final pricing = await _workspaceSettingsRepository.getSetting(
-        companyId: companyId,
-        key: 'pricing_policy',
-      );
-      final permissions = await _workspaceSettingsRepository.getSetting(
-        companyId: companyId,
-        key: 'program_permissions',
-      );
-      final restrictions = await _workspaceSettingsRepository.getSetting(
-        companyId: companyId,
-        key: 'transaction_restrictions',
-      );
+      final settings = await Future.wait<Map<String, dynamic>?>([
+        _workspaceSettingsRepository.getSetting(
+          companyId: companyId,
+          key: 'pricing_policy',
+        ),
+        _workspaceSettingsRepository.getSetting(
+          companyId: companyId,
+          key: 'program_permissions',
+        ),
+        _workspaceSettingsRepository.getSetting(
+          companyId: companyId,
+          key: 'transaction_restrictions',
+        ),
+      ]);
+      final pricing = settings[0];
+      final permissions = settings[1];
+      final restrictions = settings[2];
       if (!mounted) return;
       setState(() {
         if (pricing != null) {
