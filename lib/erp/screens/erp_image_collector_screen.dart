@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ErpImageCollectorScreen extends StatefulWidget {
@@ -150,6 +151,72 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     };
   }
 
+  /// Converts an image to PNG and removes a near-uniform background connected
+  /// to the image edges. This is a lightweight cut-out, not an AI segmentation model.
+  Uint8List _toTransparentPng(Uint8List sourceBytes) {
+    final decoded = img.decodeImage(sourceBytes);
+    if (decoded == null) throw Exception('تعذر قراءة الصورة لتحويلها إلى PNG.');
+    final image = img.bakeOrientation(decoded);
+    final width = image.width;
+    final height = image.height;
+    if (width < 2 || height < 2) {
+      return Uint8List.fromList(img.encodePng(image));
+    }
+
+    final corners = [
+      image.getPixel(0, 0),
+      image.getPixel(width - 1, 0),
+      image.getPixel(0, height - 1),
+      image.getPixel(width - 1, height - 1),
+    ];
+    final bgR = corners.map((p) => p.r.toDouble()).reduce((a, b) => a + b) / corners.length;
+    final bgG = corners.map((p) => p.g.toDouble()).reduce((a, b) => a + b) / corners.length;
+    final bgB = corners.map((p) => p.b.toDouble()).reduce((a, b) => a + b) / corners.length;
+    const thresholdSquared = 65 * 65;
+    final pixelCount = width * height;
+    final visited = Uint8List(pixelCount);
+    final queue = Int32List(pixelCount);
+    var head = 0;
+    var tail = 0;
+
+    bool resemblesBackground(int x, int y) {
+      final p = image.getPixel(x, y);
+      final dr = p.r.toDouble() - bgR;
+      final dg = p.g.toDouble() - bgG;
+      final db = p.b.toDouble() - bgB;
+      return dr * dr + dg * dg + db * db <= thresholdSquared;
+    }
+
+    void enqueue(int x, int y) {
+      final index = y * width + x;
+      if (visited[index] != 0 || !resemblesBackground(x, y)) return;
+      visited[index] = 1;
+      queue[tail++] = index;
+    }
+
+    for (var x = 0; x < width; x++) {
+      enqueue(x, 0);
+      enqueue(x, height - 1);
+    }
+    for (var y = 1; y < height - 1; y++) {
+      enqueue(0, y);
+      enqueue(width - 1, y);
+    }
+
+    while (head < tail) {
+      final index = queue[head++];
+      final x = index % width;
+      final y = index ~/ width;
+      final p = image.getPixel(x, y);
+      image.setPixelRgba(x, y, p.r, p.g, p.b, 0);
+      if (x > 0) enqueue(x - 1, y);
+      if (x + 1 < width) enqueue(x + 1, y);
+      if (y > 0) enqueue(x, y - 1);
+      if (y + 1 < height) enqueue(x, y + 1);
+    }
+    return Uint8List.fromList(img.encodePng(image));
+  }
+
   Future<void> _saveZip() async {
     if (_selected.isEmpty) {
       setState(() => _error = 'حدد صورة واحدة على الأقل قبل التنزيل.');
@@ -171,10 +238,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         final downloaded = await _invoke({'action': 'download', 'url': url});
         final encoded = downloaded['base64']?.toString();
         if (encoded == null || encoded.isEmpty) continue;
-        final bytes = base64Decode(encoded);
+        final bytes = _toTransparentPng(Uint8List.fromList(base64Decode(encoded)));
         final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
-        final ext = _extension(downloaded['mime']?.toString() ?? '', url);
-        final fileName = _uniqueFileName(title, ext, usedFileNames);
+        final fileName = _uniqueFileName(title, '.png', usedFileNames);
         archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
         if (mounted) setState(() => _status = 'تم تجهيز $index من ${_selected.length} صورة...');
       }
@@ -187,7 +253,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         fileExtension: 'zip',
         mimeType: MimeType.zip,
       );
-      if (mounted) setState(() => _status = 'تم تجهيز ملف ZIP للصور المختارة.');
+      if (mounted) setState(() => _status = 'تم حفظ ${archive.length} صورة بصيغة PNG داخل ملف ZIP بخلفيات شفافة عند إمكانية تمييزها.');
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -207,8 +273,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       final result = await _invoke({'action': 'download', 'url': url});
       final encoded = result['base64']?.toString();
       if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
-      final bytes = Uint8List.fromList(base64Decode(encoded));
-      final ext = _extension(result['mime']?.toString() ?? '', url);
+      final bytes = _toTransparentPng(Uint8List.fromList(base64Decode(encoded)));
       final imageIndex = _images.indexOf(image);
       final baseName = _imageBaseName(image, imageIndex < 0 ? 0 : imageIndex);
       final matchingIndexes = _images.asMap().entries
@@ -220,14 +285,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       await FileSaver.instance.saveFile(
         name: uniqueBaseName,
         bytes: bytes,
-        fileExtension: ext.replaceFirst('.', ''),
-        mimeType: switch (result['mime']?.toString()) {
-          'image/png' => MimeType.png,
-          'image/webp' => MimeType.webp,
-          _ => MimeType.jpeg,
-        },
+        fileExtension: 'png',
+        mimeType: MimeType.png,
       );
-      if (mounted) setState(() => _status = 'تم إرسال الصورة إلى التنزيلات.');
+      if (mounted) setState(() => _status = 'تم حفظ الصورة بصيغة PNG بخلفية شفافة (عند إمكانية تمييز الخلفية).');
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -293,12 +354,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   OutlinedButton.icon(
                     onPressed: _loading || _images.isEmpty ? null : _selectAll,
                     icon: Icon(allSelected ? Icons.deselect : Icons.select_all),
-                    label: Text(allSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل'),
+                    label: Text(allSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل (${_images.length})'),
                   ),
                   FilledButton.icon(
                     onPressed: _loading || _selected.isEmpty ? null : _saveZip,
                     icon: const Icon(Icons.folder_zip_outlined),
-                    label: Text('تنزيل ZIP (${_selected.length})'),
+                    label: Text('حفظ المحدد PNG داخل ZIP (${_selected.length})'),
                     style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13)),
                   ),
                 ]),
