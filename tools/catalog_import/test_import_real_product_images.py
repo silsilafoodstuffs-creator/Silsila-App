@@ -77,7 +77,7 @@ class CatalogImageMatchingTests(unittest.TestCase):
 
     def test_clear_200px_product_packshot_passes_image_quality_gate(self):
         payload = bytearray(8500)
-        payload[0:8] = b"\\x89PNG\\r\\n\\x1a\\n"
+        payload[0:8] = b"\x89PNG\r\n\x1a\n"
         payload[16:20] = (200).to_bytes(4, "big")
         payload[20:24] = (200).to_bytes(4, "big")
 
