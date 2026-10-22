@@ -160,16 +160,23 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           duplicateCount++;
           continue;
         }
-        // A number of stores expose the same product image through separate
-        // thumbnail/CDN URLs. When the alt text is a real product label,
-        // use it as a second duplicate signal (ignore generic labels).
         final label = (image['alt'] ?? '').toString()
             .toLowerCase()
-            .replaceAll(RegExp(r'[^a-z0-9\\u0600-\\u06FF]+'), ' ')
+            .replaceAll(RegExp(r'[^a-z0-9\u0600-\u06FF]+'), ' ')
             .trim()
-            .replaceAll(RegExp(r'\\s+'), ' ');
+            .replaceAll(RegExp(r'\s+'), ' ');
+        final genericLabel = RegExp(r'^(image|photo|product|item|صورة|منتج)\s*\d*$').hasMatch(label);
         if (label.length >= 4 && !genericLabels.contains(label) &&
-            !RegExp(r'^(image|photo|product|item|صورة|منتج)\\s*\\d*
+            !genericLabel && !seenProductLabels.add(label)) {
+          duplicateCount++;
+          continue;
+        }
+        if (_importedImageKeys.contains(key)) {
+          previouslyImportedCount++;
+          continue;
+        }
+        images.add(image);
+      }
       if (!mounted) return;
       setState(() {
         _pageUrl = result['page']?.toString() ?? parsed.toString();
