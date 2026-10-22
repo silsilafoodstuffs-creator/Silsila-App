@@ -210,6 +210,7 @@ declare
   v_price_kinds text[];
   v_party_kinds text[];
   v_batch integer := 0;
+  v_remaining boolean := false;
 begin
   if v_user is null then raise exception 'يجب تسجيل الدخول أولاً.'; end if;
   if not public.erp_user_has_company_role(p_company_id, array['owner','admin']::text[]) then
@@ -282,10 +283,10 @@ begin
       delete from public.erp_purchase_lines t using public.erp_purchase_documents d where d.id=t.document_id and d.company_id=p_company_id and d.document_type=any(v_purchase_types);
       get diagnostics v_deleted = row_count;
     elsif v_table = 'erp_customer_shortages' and cardinality(v_sales_types)>0 then
-      delete from public.erp_customer_shortages t where t.company_id=p_company_id and (t.source_document_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types)) or t.source_document_id is null);
+      delete from public.erp_customer_shortages t where t.company_id=p_company_id and (t.source_document_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types)) );
       get diagnostics v_deleted = row_count;
     elsif v_table = 'erp_stock_reservations' and cardinality(v_sales_types)>0 and not (v_pages && array['أرصدة الأصناف','كارت الصنف','الجرد والفروق','إذن إضافة','إذن صرف','تحويل مخزني','تسوية جرد','جرد فعلي']::text[]) then
-      delete from public.erp_stock_reservations t where t.company_id=p_company_id and (t.sales_document_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types)) or t.sales_document_id is null);
+      delete from public.erp_stock_reservations t where t.company_id=p_company_id and (t.sales_document_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types)) or t.sales_line_id in (select l.id from public.erp_sales_lines l join public.erp_sales_documents d on d.id=l.document_id where d.company_id=p_company_id and d.document_type=any(v_sales_types)));
       get diagnostics v_deleted = row_count;
     elsif v_table = 'erp_sales_fulfillment_documents' then
       delete from public.erp_sales_fulfillment_documents t where t.company_id=p_company_id and (('إذن تجهيز'=any(v_pages) and t.kind='preparation') or (('إذن تسليم'=any(v_pages) or 'إذن تحميل'=any(v_pages)) and t.kind='delivery') or (cardinality(v_sales_types)>0 and t.invoice_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types))));
@@ -299,8 +300,8 @@ begin
         exit when v_batch = 0;
       end loop;
       if exists (select 1 from information_schema.columns where table_schema='public' and table_name=v_table and column_name='parent_id') then
-        execute format('select exists(select 1 from public.%I where company_id=$1)', v_table) into v_batch using p_company_id;
-        if v_batch > 0 then raise exception 'تعذر مسح شجرة % بسبب علاقة دائرية أو سجل تابع غير قابل للحذف؛ النسخة الاحتياطية محفوظة.', v_table; end if;
+        execute format('select exists(select 1 from public.%I where company_id=$1)', v_table) into v_remaining using p_company_id;
+        if v_remaining then raise exception 'تعذر مسح شجرة % بسبب علاقة دائرية أو سجل تابع غير قابل للحذف؛ النسخة الاحتياطية محفوظة.', v_table; end if;
       end if;
     elsif exists (
       select 1 from information_schema.columns
