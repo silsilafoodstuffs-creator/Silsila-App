@@ -52,7 +52,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
 
   String _sourceScope(String pageUrl) {
     final uri = Uri.parse(pageUrl);
-    return uri.host.toLowerCase().replaceFirst(RegExp(r'^www\\.'), '');
+    return uri.host.toLowerCase().replaceFirst(RegExp(r'^www\.'), '');
   }
 
   String _imageKey(String rawUrl) {
