@@ -1,0 +1,232 @@
+-- Transactional preparation and completion for screen-based ERP data clearing.
+-- Run after 20261022_erp_data_backups.sql and erp_workspace_records.sql.
+begin;
+
+create or replace function public.erp_prepare_selective_data_clear(
+  p_company_id uuid,
+  p_selected_pages text[]
+) returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_pages text[];
+  v_tables text[];
+  v_table text;
+  v_rows jsonb;
+  v_payload jsonb := jsonb_build_object(
+    'format', 'silsila-selective-backup-v2',
+    'created_at', to_jsonb(clock_timestamp()),
+    'company_id', p_company_id,
+    'selected_pages', coalesce(to_jsonb(p_selected_pages), '[]'::jsonb),
+    'tables', '{}'::jsonb
+  );
+  v_total integer := 0;
+  v_backup_id text;
+begin
+  if v_user is null then raise exception 'يجب تسجيل الدخول أولاً.'; end if;
+  if p_company_id is null then raise exception 'يجب تحديد الشركة.'; end if;
+  if not public.erp_user_has_company_role(p_company_id, array['owner','admin']::text[]) then
+    raise exception 'هذه العملية متاحة لمالك الشركة أو مديرها فقط.';
+  end if;
+
+  select array_agg(distinct trim(p)) into v_pages
+  from unnest(coalesce(p_selected_pages, '{}'::text[])) as u(p)
+  where trim(p) <> '';
+  if coalesce(array_length(v_pages, 1), 0) = 0 then
+    raise exception 'حدد شاشة واحدة على الأقل.';
+  end if;
+
+  -- Only allowlisted, company-scoped ERP tables are eligible. Global lookup tables,
+  -- authentication identities, and the company root record are deliberately protected.
+  select array_agg(distinct m.table_name order by m.table_name) into v_tables
+  from unnest(v_pages) p(page_name)
+  join (values
+    ('بيانات الشركة','erp_company_settings'),('بيانات الشركة','erp_program_settings'),
+    ('الفروع ومراكز التكلفة','erp_branches'),('الفروع ومراكز التكلفة','erp_cost_centers'),
+    ('دليل الفروع','erp_branches'),('الفروع','erp_branches'),
+    ('أنواع الأنشطة','erp_workspace_records'),
+    ('أنواع المستخدمين','erp_user_types'),('تصنيفات المستخدمين','erp_user_classifications'),
+    ('المستخدمين','erp_users'),('المستخدمين','erp_user_permission_matrix'),
+    ('قوالب صلاحيات المستخدمين','erp_permission_templates'),('قوالب صلاحيات المستخدمين','erp_permission_template_rules'),
+    ('صلاحيات المستخدمين','erp_user_permissions'),('صلاحيات المستخدمين','erp_user_permission_matrix'),
+    ('إعدادات البرنامج','erp_program_settings'),('إعدادات البرنامج','erp_company_settings'),
+    ('سجل العمليات','erp_app_activity_log'),
+    ('سياسات التسعير والخصومات','erp_price_lists'),('سياسات التسعير والخصومات','erp_price_list_lines'),('سياسات التسعير والخصومات','erp_party_price_lists'),
+    ('شجرة الحسابات','erp_accounts'),('الفترات المالية','erp_fiscal_periods'),
+    ('مراكز التكلفة','erp_cost_centers'),('العملات','erp_currencies'),
+    ('الخزائن الرئيسية والفرعية','erp_cashboxes'),('الخزائن الرئيسية والفرعية','erp_cash_vouchers'),
+    ('دليل المخازن','erp_warehouses'),('فئات الأصناف','erp_item_groups'),('مجموعات الأصناف','erp_item_groups'),
+    ('دليل الأصناف','erp_items'),('دليل الأصناف','erp_item_units'),
+    ('دليل الموردين','erp_parties'),('دليل الموردين','erp_party_contacts'),('دليل الموردين','erp_party_warehouses'),
+    ('دليل العملاء','erp_parties'),('دليل العملاء','erp_party_contacts'),('دليل العملاء','erp_party_warehouses'),
+    ('قوائم أسعار البيع','erp_price_lists'),('قوائم أسعار البيع','erp_price_list_lines'),('قوائم أسعار البيع','erp_party_price_lists'),
+    ('قوائم أسعار الموردين','erp_price_lists'),('قوائم أسعار الموردين','erp_price_list_lines'),('قوائم أسعار الموردين','erp_party_price_lists'),
+    ('عروض الأصناف','erp_sales_campaigns'),('عروض الأصناف','erp_sales_campaign_items'),
+    ('قاعدة العملاء المحتملين','erp_public_lead_staging'),
+    ('الهيكل الوظيفي','erp_employees'),('الإدارات والأقسام','erp_employees'),('الوظائف والدرجات','erp_employees'),
+    ('ملف الموظف','erp_employees'),('ملف الموظف','erp_attendance_records'),('ملف الموظف','erp_leave_requests'),
+    ('الحضور والانصراف','erp_attendance_records'),('الحضور والانصراف','erp_hr_attendance_events'),
+    ('الحضور والانصراف','erp_hr_fingerprint_devices'),('الحضور والانصراف','erp_hr_shifts'),('الحضور والانصراف','erp_hr_shift_assignments'),
+    ('الإجازات والأذونات','erp_leave_requests'),
+    ('مسير الرواتب','erp_payroll_runs'),('مسير الرواتب','erp_payroll_lines'),
+    ('صرف الرواتب','erp_payroll_runs'),('صرف الرواتب','erp_payroll_lines'),
+    ('أهداف العملاء الشهرية','erp_customer_monthly_goals'),
+    ('عمولات المندوبين','erp_commission_plans'),('عمولات المندوبين','erp_commission_tiers'),('عمولات المندوبين','erp_commission_runs'),
+    ('عمولات المبيعات','erp_commission_plans'),('عمولات المبيعات','erp_commission_tiers'),('عمولات المبيعات','erp_commission_runs'),
+    ('خطط العمولة','erp_commission_plans'),('خطط العمولة','erp_commission_tiers'),
+    ('مسودات العمولات','erp_commission_runs'),('تقرير العمولات المستحقة','erp_commission_runs'),
+    ('توزيع الأصناف على المندوبين','erp_delegate_item_assignments'),('توزيع الأصناف على المندوبين','erp_sales_representatives'),
+    ('عرض سعر','erp_sales_documents'),('أمر بيع','erp_sales_documents'),('فاتورة بيع','erp_sales_documents'),
+    ('فاتورة مبيعات','erp_sales_documents'),('مرتجع مبيعات','erp_sales_documents'),
+    ('إذن تجهيز','erp_sales_fulfillment_documents'),('إذن تسليم','erp_sales_fulfillment_documents'),
+    ('إذن تحميل','erp_sales_fulfillment_documents'),('تسليم طلب','erp_sales_fulfillment_documents'),
+    ('عروض أسعار','erp_sales_documents'),('أوامر البيع','erp_sales_documents'),
+    ('أرصدة الأصناف','erp_inventory_movements'),('كارت الصنف','erp_inventory_movements'),
+    ('الجرد والفروق','erp_inventory_movements'),('إذن إضافة','erp_inventory_movements'),
+    ('إذن صرف','erp_inventory_movements'),('تحويل مخزني','erp_inventory_movements'),('تسوية جرد','erp_inventory_movements'),('جرد فعلي','erp_inventory_movements'),
+    ('أمر شراء','erp_purchase_documents'),('استلام مشتريات','erp_purchase_documents'),('فاتورة مشتريات','erp_purchase_documents'),
+    ('مرتجع مشتريات','erp_purchase_documents'),
+    ('خريطة الحسابات التشغيلية','erp_operational_account_mappings'),
+    ('قيود اليومية','erp_journal_entries'),('قائمة اعتماد القيود','erp_journal_entries'),
+    ('إقفال الفترة','erp_journal_entries'),
+    ('إعدادات الفاتورة الإلكترونية','erp_einvoice_settings'),('سجلات الفاتورة الإلكترونية','erp_einvoice_operations'),
+    ('واجهة API والربط الخارجي','erp_workspace_records'),('إدارة مفاتيح API','erp_workspace_records'),
+    ('سجلات التكامل والطلبات','erp_workspace_records'),('إعداد نقاط الربط','erp_workspace_records'),
+    ('الحملات التسويقية','erp_sales_campaigns'),('قواعد العروض','erp_sales_campaigns'),('قنوات التواصل','erp_workspace_records')
+  ) as m(page_name, table_name) on m.page_name = p.page_name;
+
+  -- Configurable workspace rows are selected by their exact screen label.
+  v_tables := array_append(coalesce(v_tables, '{}'::text[]), 'erp_workspace_records');
+  select array_agg(distinct x order by x) into v_tables from unnest(v_tables) x;
+
+  foreach v_table in array v_tables loop
+    if v_table = 'erp_workspace_records' then
+      select coalesce(jsonb_agg(to_jsonb(t) order by t.created_at), '[]'::jsonb)
+        into v_rows
+        from public.erp_workspace_records t
+        where t.company_id = p_company_id and t.page_key = any(v_pages);
+    elsif exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = v_table and column_name = 'company_id'
+    ) then
+      execute format('select coalesce(jsonb_agg(to_jsonb(t)), ''[]''::jsonb) from public.%I t where t.company_id = $1', v_table)
+        into v_rows using p_company_id;
+    elsif v_table = 'erp_journal_lines' then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows
+      from public.erp_journal_lines t join public.erp_journal_entries p on p.id=t.entry_id where p.company_id=p_company_id;
+    elsif v_table = 'erp_sales_lines' then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows
+      from public.erp_sales_lines t join public.erp_sales_documents p on p.id=t.document_id where p.company_id=p_company_id;
+    elsif v_table = 'erp_purchase_lines' then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows
+      from public.erp_purchase_lines t join public.erp_purchase_documents p on p.id=t.document_id where p.company_id=p_company_id;
+    elsif v_table = 'erp_commission_tiers' then
+      select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb) into v_rows
+      from public.erp_commission_tiers t join public.erp_commission_plans p on p.id=t.plan_id where p.company_id=p_company_id;
+    else
+      v_rows := '[]'::jsonb;
+    end if;
+    v_payload := jsonb_set(v_payload, array['tables', v_table], coalesce(v_rows, '[]'::jsonb), true);
+    v_total := v_total + jsonb_array_length(coalesce(v_rows, '[]'::jsonb));
+  end loop;
+
+  v_backup_id := 'clear_' || replace(gen_random_uuid()::text, '-', '');
+  v_payload := v_payload || jsonb_build_object('backup_id', v_backup_id, 'record_count', v_total);
+  insert into public.erp_data_backups(company_id, backup_id, backup_type, selected_pages, record_count, payload, created_by)
+  values (p_company_id, v_backup_id, 'selective_clear', v_pages, v_total, v_payload, v_user);
+
+  return v_payload;
+end;
+$$;
+
+create or replace function public.erp_complete_selective_data_clear(p_company_id uuid, p_backup_id text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_user uuid := auth.uid();
+  v_backup public.erp_data_backups%rowtype;
+  v_pages text[];
+  v_tables text[];
+  v_table text;
+  v_count integer := 0;
+  v_deleted integer := 0;
+  v_result jsonb := '{}'::jsonb;
+begin
+  if v_user is null then raise exception 'يجب تسجيل الدخول أولاً.'; end if;
+  if not public.erp_user_has_company_role(p_company_id, array['owner','admin']::text[]) then
+    raise exception 'هذه العملية متاحة لمالك الشركة أو مديرها فقط.';
+  end if;
+  select * into v_backup from public.erp_data_backups
+  where company_id=p_company_id and backup_id=p_backup_id and backup_type='selective_clear';
+  if not found then raise exception 'لم يتم العثور على نسخة احتياطية صالحة على السيرفر.'; end if;
+  v_pages := v_backup.selected_pages;
+
+  -- Delete dependent rows first. Any unselected dependent rows cause a safe transaction
+  -- rollback; the server backup remains available for recovery.
+  v_tables := array[
+    'erp_workspace_records','erp_sales_lines','erp_purchase_lines','erp_journal_lines','erp_commission_tiers',
+    'erp_stock_reservations','erp_sales_fulfillment_documents','erp_sales_documents','erp_purchase_documents',
+    'erp_customer_shortages','erp_sales_campaign_items','erp_party_price_lists','erp_price_list_lines',
+    'erp_party_contacts','erp_party_warehouses','erp_inventory_movements','erp_cash_vouchers',
+    'erp_payroll_lines','erp_payroll_runs','erp_attendance_records','erp_leave_requests',
+    'erp_hr_attendance_events','erp_hr_shift_assignments','erp_commission_runs','erp_delegate_item_assignments',
+    'erp_user_branch_warehouse_access','erp_user_permission_matrix','erp_permission_template_rules',
+    'erp_user_permissions','erp_app_activity_log','erp_app_assets','erp_app_role_permissions','erp_app_theme_settings',
+    'erp_sales_campaigns','erp_customer_monthly_goals','erp_commission_plans','erp_operational_account_mappings',
+    'erp_einvoice_operations','erp_einvoice_settings','erp_public_lead_staging','erp_hr_fingerprint_devices',
+    'erp_hr_shifts','erp_employees','erp_sales_representatives','erp_users','erp_user_classifications',
+    'erp_user_types','erp_permission_templates','erp_parties','erp_items','erp_item_units','erp_item_groups',
+    'erp_price_lists','erp_warehouses','erp_cashboxes','erp_accounts','erp_fiscal_periods','erp_currencies',
+    'erp_cost_centers','erp_branches','erp_company_settings','erp_program_settings'
+  ];
+
+  foreach v_table in array v_tables loop
+    if v_table <> 'erp_workspace_records' and not (v_backup.payload->'tables' ? v_table) then continue; end if;
+    if v_table = 'erp_workspace_records' then
+      delete from public.erp_workspace_records where company_id=p_company_id and page_key=any(v_pages);
+      get diagnostics v_deleted = row_count;
+    elsif exists (
+      select 1 from information_schema.columns
+      where table_schema='public' and table_name=v_table and column_name='company_id'
+    ) then
+      execute format('delete from public.%I where company_id=$1', v_table) using p_company_id;
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_journal_lines' then
+      delete from public.erp_journal_lines t using public.erp_journal_entries p
+      where t.entry_id=p.id and p.company_id=p_company_id;
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_sales_lines' then
+      delete from public.erp_sales_lines t using public.erp_sales_documents p
+      where t.document_id=p.id and p.company_id=p_company_id;
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_purchase_lines' then
+      delete from public.erp_purchase_lines t using public.erp_purchase_documents p
+      where t.document_id=p.id and p.company_id=p_company_id;
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_commission_tiers' then
+      delete from public.erp_commission_tiers t using public.erp_commission_plans p
+      where t.plan_id=p.id and p.company_id=p_company_id;
+      get diagnostics v_deleted = row_count;
+    else
+      v_deleted := 0;
+    end if;
+    v_result := jsonb_set(v_result, array[v_table], to_jsonb(v_deleted), true);
+    v_count := v_count + v_deleted;
+  end loop;
+
+  return jsonb_build_object('success', true, 'deleted_count', v_count, 'deleted_by_table', v_result, 'backup_id', p_backup_id);
+end;
+$$;
+
+revoke all on function public.erp_prepare_selective_data_clear(uuid, text[]) from public, anon;
+revoke all on function public.erp_complete_selective_data_clear(uuid, text) from public, anon;
+grant execute on function public.erp_prepare_selective_data_clear(uuid, text[]) to authenticated;
+grant execute on function public.erp_complete_selective_data_clear(uuid, text) to authenticated;
+
+commit;
