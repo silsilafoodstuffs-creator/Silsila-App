@@ -15,7 +15,7 @@ class ErpInventoryMasterRepository {
 
   Future<List<Map<String, dynamic>>> fetchWarehouses(String companyId) async {
     final rows = await _db.from('erp_warehouses')
-      .select('id, warehouse_code, warehouse_name, branch_id, address, is_active')
+      .select('id, warehouse_code, warehouse_name, warehouse_name_en, parent_warehouse_id, branch_id, address, location, phone, landline, governorate_id, district_id, area_id, is_active')
       .eq('company_id', companyId.trim()).order('warehouse_code');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
@@ -41,12 +41,15 @@ class ErpInventoryMasterRepository {
 
   Future<void> createWarehouse({
     required String companyId, required String code, required String name,
-    String? branchId, String? address,
+    String? branchId, String? address, String? nameEn, String? parentWarehouseId,
+    String? location, String? phone, String? landline, String? governorateId, String? districtId, String? areaId,
   }) async {
     if (code.trim().isEmpty || name.trim().isEmpty) throw ArgumentError('كود المخزن واسمه مطلوبان.');
     await _db.from('erp_warehouses').insert({
       'company_id': companyId.trim(), 'warehouse_code': code.trim(), 'warehouse_name': name.trim(),
-      'branch_id': branchId, 'address': _blank(address), 'is_active': true,
+      'branch_id': branchId, 'address': _blank(address), 'warehouse_name_en': _blank(nameEn),
+      'parent_warehouse_id': parentWarehouseId, 'location': _blank(location), 'phone': _blank(phone), 'landline': _blank(landline),
+      'governorate_id': governorateId, 'district_id': districtId, 'area_id': areaId, 'is_active': true,
     });
   }
 
