@@ -235,8 +235,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         return;
       }
       final companyId = companyIds.first;
-      final apps = await _appManagementService.listApps(companyId: companyId);
-      final registryRows = await _appManagementService.listAppRegistry(companyId: companyId);
+      // These requests are independent; run them together to reduce dashboard startup latency.
+      final initialResults = await Future.wait<dynamic>([
+        _appManagementService.listApps(companyId: companyId),
+        _appManagementService.listAppRegistry(companyId: companyId),
+      ]);
+      final apps = initialResults[0] as List<ErpManagedApp>;
+      final registryRows = initialResults[1] as Map<String, String>;
       if (!mounted) return;
       setState(() {
         _appManagementCompanyId = companyId;
@@ -266,12 +271,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         }
         _appManagementMessage = 'تم تحميل سجل التطبيقات من قاعدة البيانات.';
       });
-      await _loadSelectedManagedAppTheme();
-      await _loadPermissionsForSelectedApp();
-      await _loadSavedAppActivity();
-      await _loadWorkspaceSettings(companyId);
-      await _loadExecutivePermissions(companyId);
-      await _loadExecutiveMetrics(companyId);
+      // None of these loaders depends on another loader's network result.
+      // Await them together so the screen is not delayed by a serial chain of requests.
+      await Future.wait<void>([
+        _loadSelectedManagedAppTheme(),
+        _loadPermissionsForSelectedApp(),
+        _loadSavedAppActivity(),
+        _loadWorkspaceSettings(companyId),
+        _loadExecutivePermissions(companyId),
+        _loadExecutiveMetrics(companyId),
+      ]);
     } catch (error) {
       if (!mounted) return;
       setState(() {
