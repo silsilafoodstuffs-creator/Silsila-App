@@ -966,7 +966,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
               child: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.image_search_outlined, size: 54, color: _purple.withValues(alpha: .35)),
                 const SizedBox(height: 10),
-                const Text('ضع رابط صفحة ثم اضغط «تنفيذ وسحب الصور»', style: TextStyle(color: Colors.black54)),
+                const Text('ضع رابط صفحة ثم اضغط «فحص الصفحة وجمع الصور»', style: TextStyle(color: Colors.black54)),
               ])),
             )
           else
@@ -1073,6 +1073,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
               },
             )),
               ]),
+            ),
         ],
       ),
     );
