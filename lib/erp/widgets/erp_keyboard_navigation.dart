@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 /// Enter advances between single-line fields; arrow keys move focus between
 /// controls when the user is not editing text. Native text-caret and dropdown
 /// arrow behavior is preserved.
-class ErpKeyboardNavigation extends StatelessWidget {
+class ErpKeyboardNavigation extends StatefulWidget {
   const ErpKeyboardNavigation({super.key, required this.child});
 
   final Widget child;
@@ -25,8 +25,22 @@ class ErpKeyboardNavigation extends StatelessWidget {
   }
 
   @override
+  State<ErpKeyboardNavigation> createState() => _ErpKeyboardNavigationState();
+}
+
+class _ErpKeyboardNavigationState extends State<ErpKeyboardNavigation> {
+  @override
+  void didUpdateWidget(covariant ErpKeyboardNavigation oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Clear stale callbacks only when the wrapped screen changes. Do not clear
+    // them on ordinary focus/parent rebuilds: a child screen may not rebuild.
+    if (oldWidget.child != widget.child) {
+      ErpKeyboardNavigation.clearActions();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    clearActions();
     return FocusTraversalGroup(
       policy: WidgetOrderTraversalPolicy(),
       child: Focus(
@@ -37,11 +51,11 @@ class ErpKeyboardNavigation extends StatelessWidget {
           final focusedWidget = primary?.context?.widget;
 
           if (event.logicalKey == LogicalKeyboardKey.f12) {
-            final action = onF12Add;
+            final action = ErpKeyboardNavigation.onF12Add;
             if (action != null) { action(); return KeyEventResult.handled; }
           }
           if (event.logicalKey == LogicalKeyboardKey.f8) {
-            final action = onF8Save;
+            final action = ErpKeyboardNavigation.onF8Save;
             if (action != null) { action(); return KeyEventResult.handled; }
           }
 
@@ -73,7 +87,7 @@ class ErpKeyboardNavigation extends StatelessWidget {
           }
           return KeyEventResult.ignored;
         },
-        child: child,
+        child: widget.child,
       ),
     );
   }
