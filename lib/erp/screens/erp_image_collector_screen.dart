@@ -165,7 +165,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       await FileSaver.instance.saveFile(
         name: 'silsila_images_${DateTime.now().millisecondsSinceEpoch}',
         bytes: Uint8List.fromList(zipped),
-        ext: 'zip',
+        fileExtension: 'zip',
         mimeType: MimeType.zip,
       );
       if (mounted) setState(() => _status = 'تم تجهيز ملف ZIP للصور المختارة.');
@@ -193,7 +193,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       await FileSaver.instance.saveFile(
         name: _safeName((image['alt'] ?? '').toString(), fallback: 'silsila_image'),
         bytes: bytes,
-        ext: ext.replaceFirst('.', ''),
+        fileExtension: ext.replaceFirst('.', ''),
         mimeType: switch (result['mime']?.toString()) {
           'image/png' => MimeType.png,
           'image/webp' => MimeType.webp,
