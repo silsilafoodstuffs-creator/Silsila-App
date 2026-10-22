@@ -78,7 +78,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       query[entry.key] = entry.value.join(',');
     }
     var path = uri.path
-        .replaceAll(RegExp(r'[-_](?:\\d{2,4}x\\d{2,4}|\\d{2,4}w|thumb(?:nail)?|small|medium|large)(?=\\.[a-z0-9]+$)', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[-_](?:\d{2,4}x\d{2,4}|\d{2,4}w|thumb(?:nail)?|small|medium|large)(?=\.[a-z0-9]+$)', caseSensitive: false), '')
         .replaceAll(RegExp(r'/(?:thumb|thumbnail|small|medium|large|resized)/', caseSensitive: false), '/');
     return uri.replace(
       scheme: uri.scheme.toLowerCase(),
@@ -94,7 +94,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     final alt = (image['alt'] ?? '').toString().toLowerCase();
     final hint = '$url $alt';
     return RegExp(
-      r'(^|[\\/_\\-. ])(site[-_ ]?logo|logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|social|payment|footer|navigation|navbar|menu)([\\/_\\-. ]|$)',
+      r'(^|[\/_\-. ])(site[-_ ]?logo|logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|social|payment|footer|navigation|navbar|menu)([\/_\-. ]|$)',
       caseSensitive: false,
     ).hasMatch(hint);
   }
