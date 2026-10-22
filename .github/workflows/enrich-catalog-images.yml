@@ -18,12 +18,16 @@ on:
           - "100"
           - "250"
         default: "10"
+  push:
+    paths:
+      - "tools/catalog_import/.run-image-import-once"
 
 permissions:
   contents: read
 
 jobs:
   enrich:
+    if: github.event_name != 'push' || hashFiles('tools/catalog_import/.run-image-import-once') != ''
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -35,13 +39,33 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Determine safe import mode
+        id: mode
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            mode="$(tr -d '[:space:]' < tools/catalog_import/.run-image-import-once)"
+            case "$mode" in
+              dry-run) echo "dry_run=1" >> "$GITHUB_OUTPUT" ;;
+              apply) echo "dry_run=0" >> "$GITHUB_OUTPUT" ;;
+              *) echo "::error::Marker must contain exactly 'dry-run' or 'apply'."; exit 1 ;;
+            esac
+            echo "item_limit=10" >> "$GITHUB_OUTPUT"
+          else
+            echo "dry_run=${{ inputs.apply_images == true && '0' || '1' }}" >> "$GITHUB_OUTPUT"
+            echo "item_limit=${{ inputs.item_limit || '10' }}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Selected item limit and mode:"
+          echo "limit=$(grep '^item_limit=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)"
+          echo "dry_run=$(grep '^dry_run=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)"
+
       - name: Run image matching and optional database import
         env:
           SUPABASE_URL: https://teitsopmhruczplwlwgn.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           SILSILA_ERP_COMPANY_ID: 47278c99-7743-4dd4-9ce6-d11f28e02504
-          SILSILA_IMAGE_IMPORT_LIMIT: ${{ inputs.item_limit || '10' }}
-          SILSILA_IMAGE_IMPORT_DRY_RUN: ${{ inputs.apply_images == true && '0' || '1' }}
+          SILSILA_IMAGE_IMPORT_LIMIT: ${{ steps.mode.outputs.item_limit }}
+          SILSILA_IMAGE_IMPORT_DRY_RUN: ${{ steps.mode.outputs.dry_run }}
         run: |
           if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
             echo "::error::Repository secret SUPABASE_SERVICE_ROLE_KEY is not configured."
