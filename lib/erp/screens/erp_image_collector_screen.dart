@@ -162,7 +162,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if (archive.isEmpty) throw Exception('لم يمكن تنزيل أي صورة من الاختيارات.');
       final zipped = ZipEncoder().encode(archive);
       if (zipped == null || zipped.isEmpty) throw Exception('تعذر إنشاء ملف ZIP.');
-      await FileSaver.instance.saveFile(
+      await FileSaver.instance.saveAs(
         name: 'silsila_images_${DateTime.now().millisecondsSinceEpoch}',
         bytes: Uint8List.fromList(zipped),
         fileExtension: 'zip',
