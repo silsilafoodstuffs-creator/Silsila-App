@@ -75,6 +75,20 @@ class CatalogImageMatchingTests(unittest.TestCase):
             )
         self.assertIsNone(match)
 
+    def test_corn_tortillas_are_not_accepted_as_corn_flour(self):
+        item = {"item_name": "دقيق ذرة 500 جم", "barcode": "", "brand_name": ""}
+        candidate = {
+            "code": "tortilla-product",
+            "product_name": "Flour & corn tortillas",
+            "product_name_en": "Flour & corn",
+            "brands": "",
+            "image_front_url": "https://images.example.test/tortillas.jpg",
+        }
+        with patch.object(IMPORTER, "download_image") as download:
+            match = IMPORTER.choose_image(item, [candidate])
+        self.assertIsNone(match)
+        download.assert_not_called()
+
     def test_postgrest_bytea_hash_matches_original_bytes(self):
         raw = b"stored-photo"
         value = "\\x" + raw.hex()
