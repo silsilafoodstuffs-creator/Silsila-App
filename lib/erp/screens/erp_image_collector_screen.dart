@@ -210,6 +210,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       final result = await _invoke({'action': 'scan', 'url': parsed.toString()});
       final rawImages = (result['images'] as List? ?? const []);
       final candidates = rawImages.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
+      for (final image in candidates) { image['save_as'] = _imageKind; }
       final seen = <String>{};
       final images = <Map<String, dynamic>>[];
       var duplicateCount = 0;
@@ -559,7 +560,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       try {
         final groupId=thirdId ?? subId ?? mainId;
         final group=byId(groupId);
-        final prefix=((group?['group_code']??'ITEM').toString().toUpperCase()).replaceAll(RegExp(r'[^A-Z0-9_-]'),'');
+        final rawPrefix=((group?['group_code']??'ITEM').toString().toUpperCase()).replaceAll(RegExp(r'[^A-Z0-9_-]'),'');
+        final prefix=rawPrefix.isEmpty?'ITEM':rawPrefix;
         var itemCode=code.text.trim();
         if(create) {
           final prior=await client.from('erp_items').select('item_code').eq('company_id',companyId).like('item_code',prefix+'-%').limit(5000);
@@ -630,12 +632,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     bool success = false;
     List<Map<String,dynamic>> children(String? parent) => groups.where((x) => x['parent_id']?.toString() == parent).toList();
     Map<String,dynamic>? byId(String? id) { for (final x in groups) { if (x['id'].toString() == id) return x; } return null; }
-    int groupLevel(Map<String,dynamic> x) {
-      if (x['parent_id'] == null) return 0;
-      final p = byId(x['parent_id']?.toString());
-      if (p == null || p['parent_id'] == null) return 1;
-      return 2;
-    }
     Future<void> save(StateSetter ss) async {
       if (name.text.trim().isEmpty) { ss(() { message='اسم الفئة مطلوب.'; success=false; }); return; }
       if (!createNew && selectedId == null) { ss(() { message='اختر فئة مسجلة لربط الصورة بها.'; success=false; }); return; }
