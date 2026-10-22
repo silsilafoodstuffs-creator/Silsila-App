@@ -2316,23 +2316,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     }
   }
 
-  Widget _aboutContactButton({
-    required String label,
-    required IconData icon,
-    required String url,
-    Color color = _purple,
-  }) => OutlinedButton.icon(
-    onPressed: () => _openAboutLink(url),
-    icon: Icon(icon, size: 19),
-    label: Text(label),
-    style: OutlinedButton.styleFrom(
-      foregroundColor: color,
-      side: BorderSide(color: color.withValues(alpha: 0.55)),
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ),
-  );
-
   Widget _aboutIconButton({
     required String label,
     required IconData icon,
