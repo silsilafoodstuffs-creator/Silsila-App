@@ -358,6 +358,32 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     }
   }
 
+  String _extensionForMime(String? rawMime, String url) {
+    final mime = (rawMime ?? '').split(';').first.trim().toLowerCase();
+    switch (mime) {
+      case 'image/jpeg':
+      case 'image/jpg':
+        return '.jpg';
+      case 'image/png':
+        return '.png';
+      case 'image/webp':
+        return '.webp';
+      case 'image/gif':
+        return '.gif';
+      case 'image/avif':
+        return '.avif';
+      case 'image/bmp':
+        return '.bmp';
+      case 'image/tiff':
+        return '.tiff';
+    }
+    final path = Uri.tryParse(url)?.path.toLowerCase() ?? '';
+    for (final extension in <String>['.jpeg', '.jpg', '.png', '.webp', '.gif', '.avif', '.bmp', '.tiff']) {
+      if (path.endsWith(extension)) return extension;
+    }
+    return '.png';
+  }
+
   Future<void> _saveZip() async {
     if (_selected.isEmpty) {
       setState(() => _error = 'حدد صورة واحدة على الأقل قبل التنزيل.');
@@ -380,7 +406,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         final downloaded = await _invoke({'action': 'download', 'url': url});
         final encoded = downloaded['base64']?.toString();
         if (encoded == null || encoded.isEmpty) continue;
-        final bytes = _toTransparentPng(Uint8List.fromList(base64Decode(encoded)));
+        final bytes = Uint8List.fromList(base64Decode(encoded));
         final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
         final fileName = _uniqueFileName(title, '.png', usedFileNames);
         archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
@@ -426,11 +452,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           .toList();
       final occurrence = matchingIndexes.indexOf(imageIndex);
       final uniqueBaseName = occurrence > 0 ? '${baseName}_${occurrence + 1}' : baseName;
+      final extension = _extensionForMime(result['mime']?.toString(), url);
       await FileSaver.instance.saveFile(
         name: uniqueBaseName,
         bytes: bytes,
-        fileExtension: 'png',
-        mimeType: MimeType.png,
+        fileExtension: extension.replaceFirst('.', ''),
       );
       await _markImported({_imageKey(url)});
       if (mounted) setState(() => _status = 'تم حفظ الصورة؛ ستُخفى تلقائيًا عند فحص الموقع نفسه مرة أخرى.');
