@@ -282,6 +282,24 @@ def image_dimensions(data: bytes, mime: str) -> tuple[int, int]:
     return 0, 0
 
 
+# Search aliases help the external catalog find common Egyptian grocery
+# products even when the local Arabic item name is not represented verbatim.
+# These are query expansions only; they do NOT bypass the strict identity checks
+# in choose_image(), and therefore cannot make an unrelated image acceptable.
+SEARCH_QUERY_ALIASES = {
+    "أرز أبيض مصري": ["Egyptian white rice", "Calrose rice Egypt"],
+    "أرز مصري عريض": ["Egyptian rice", "Calrose rice Egypt"],
+    "بسكويت سادة": ["plain biscuits Egypt", "plain tea biscuits"],
+    "بسكويت مالح": ["salted crackers Egypt", "savory biscuits"],
+    "بسلة معلبة": ["canned green peas", "canned peas Egypt"],
+    "بهارات مشكلة": ["mixed spices Egypt", "mixed seasoning spices"],
+    "بيكنج بودر": ["baking powder Egypt", "baking powder sachet"],
+    "تمر معبأ": ["packaged dates Egypt", "dates package"],
+    "جبنة رومي": ["Egyptian Roumy cheese", "Roumy cheese"],
+    "جبنة مطبوخة مثلثات": ["processed cheese triangles", "triangle cheese portions"],
+}
+
+
 def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
     barcode = str(item.get("barcode") or "").strip()
     name = str(item.get("item_name") or "").strip()
@@ -293,6 +311,10 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
         english = english_terms_for_name(name)
         if english:
             searches.append(" ".join(part for part in (brand, english) if part))
+        for arabic_name, aliases in SEARCH_QUERY_ALIASES.items():
+            if normalized(arabic_name) in normalized(name):
+                searches.extend(aliases)
+                break
     # Avoid querying the same Arabic name twice; this also respects the public
     # search API's rate limit and makes the validation loop faster.
     searches = list(dict.fromkeys(term.strip() for term in searches if term.strip()))
