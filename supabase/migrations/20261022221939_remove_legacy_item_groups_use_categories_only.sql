@@ -65,6 +65,9 @@ for select to anon, authenticated using (is_active = true and show_in_app = true
 
 alter table public.erp_items drop constraint if exists erp_items_group_id_fkey;
 alter table public.erp_items drop column if exists group_id;
+alter table public.erp_items drop constraint if exists erp_items_category_id_fkey;
+alter table public.erp_items add constraint erp_items_category_id_fkey
+  foreign key (category_id) references public.erp_item_categories(id) on delete restrict;
 drop table public.erp_item_groups;
 drop function if exists public.erp_prevent_duplicate_item_group_names();
 
