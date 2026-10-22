@@ -9,6 +9,7 @@ supplier IDs/prices. Open Food Facts is an opt-in open-data source, not Amazon d
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -325,7 +326,68 @@ def off_candidates(item: dict[str, Any]) -> list[dict[str, Any]]:
                 found.append(product)
     return found
 
-def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tuple[dict[str, Any], bytes, str] | None:
+def image_digest(data: bytes) -> str:
+    """Stable content fingerprint, independent of source URL or product code."""
+    return hashlib.sha256(data).hexdigest()
+
+
+def image_data_digest(value: Any) -> str | None:
+    """Fingerprint a PostgREST bytea value when it is returned as \\x-hex."""
+    if not value:
+        return None
+    raw = str(value)
+    if raw.startswith("\\x"):
+        try:
+            return image_digest(bytes.fromhex(raw[2:]))
+        except ValueError:
+            return None
+    return None
+
+
+def image_variant_matches(item_name: str, product_title: str) -> bool:
+    """Reject a candidate if a distinguishing variant is absent or contradicted."""
+    item = normalized(item_name)
+    title = normalized(product_title)
+    # Each tuple is (Arabic item markers, required English title markers,
+    # mutually-conflicting English markers). Conservative by design: uncertain
+    # packaging/processing variants must remain unmatched instead of being guessed.
+    variants = [
+        (("جاف", "جافة", "مجفف", "مجففة"), {"dried"}, {"fresh", "freshly"}),
+        (("معبأ", "معبأة", "مغلف", "مغلفة"), {"packaged"}, set()),
+        (("مجمد", "مجمدة", "مجمده"), {"frozen"}, {"fresh", "canned", "tinned"}),
+        (("معلب", "معلبة", "معلبات"), {"canned"}, {"frozen", "fresh", "dried"}),
+        (("مطحون", "مطحونة"), {"ground"}, {"whole", "wholegrain", "wholemeal"}),
+        (("سادة",), {"plain"}, {"salted", "chocolate", "flavored", "flavoured"}),
+        (("مالح", "مالحة"), {"salted"}, {"sweet", "plain", "unsalted"}),
+        (("أبيض", "ابيض", "بيضاء"), {"white"}, {"brown", "wholegrain", "wholemeal"}),
+        (("حبوب كاملة", "كامل الحبوب"), {"wholegrain"}, {"white", "refined"}),
+        (("شرائح", "شريحة"), {"sliced"}, {"whole", "block"}),
+        (("مثلثات", "مثلث"), {"triangle"}, set()),
+        (("بالشوكولاتة", "شوكولاتة"), {"chocolate"}, {"plain", "vanilla"}),
+        (("قابلة للدهن",), {"spreadable"}, {"sliced", "block"}),
+    ]
+    for arabic_markers, required, conflicts in variants:
+        if any(normalized(marker) in item for marker in arabic_markers):
+            if not required.issubset(set(title.split())):
+                return False
+            if set(title.split()) & conflicts:
+                return False
+    # These two date products must never be treated as interchangeable even if
+    # the external source gives them similar generic titles.
+    if "تمر" in item or "dates" in item.split():
+        if any(marker in item for marker in ("جاف", "جافة", "مجفف")) and "dried" not in title.split():
+            return False
+        if any(marker in item for marker in ("معبأ", "معبأة")) and "packaged" not in title.split():
+            return False
+    return True
+
+
+def choose_image(
+    item: dict[str, Any],
+    candidates: list[dict[str, Any]],
+    used_image_digests: set[str] | None = None,
+) -> tuple[dict[str, Any], bytes, str] | None:
+    used_image_digests = used_image_digests or set()
     barcode = str(item.get("barcode") or "").strip()
     raw_name = str(item.get("item_name") or "")
     raw_brand = str(item.get("brand_name") or "")
@@ -354,6 +416,8 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
         title_tokens = set(title.split())
         product_tokens = set(product_title.split())
         arabic_candidate = arabic_identity_tokens(product_title)
+        if not image_variant_matches(raw_name, product_title):
+            continue
         if barcode and code == barcode:
             score = 1.0
         elif generic_mode:
@@ -391,6 +455,11 @@ def choose_image(item: dict[str, Any], candidates: list[dict[str, Any]]) -> tupl
             continue
         image = download_image(str(image_url))
         if image:
+            # Different source records can still point to identical bytes.
+            # Never assign an already-used product-pack image to another item.
+            if image_digest(image[0]) in used_image_digests:
+                print(f"  DUPLICATE IMAGE BLOCKED: source code {code} reuses an existing image")
+                continue
             best, best_score = (candidate, image[0], image[1]), score
     return best
 
@@ -431,8 +500,20 @@ def group_image_matches_item(group_code: str, item_name: str, product: dict[str,
     hints = GROUP_ITEM_HINTS.get(group_code)
     if not hints:
         return False
-    haystack = normalized(" ".join((item_name, str(product.get("product_name") or ""), str(product.get("product_name_en") or ""), str(product.get("brands") or ""))))
-    return any(normalized(hint) in haystack for hint in hints)
+    item_text = normalized(item_name)
+    product_text = normalized(" ".join((
+        str(product.get("product_name") or ""),
+        str(product.get("product_name_en") or ""),
+        str(product.get("brands") or ""),
+    )))
+    # The ERP item itself must belong to this group, and the source product must
+    # independently confirm that same family. A broad word such as "spread"
+    # in a halva title cannot classify halva as jam/honey.
+    item_matches = any(normalized(hint) in item_text for hint in hints)
+    product_matches = any(normalized(hint) in product_text for hint in hints)
+    if not item_matches or not product_matches:
+        return False
+    return image_variant_matches(item_name, product_text)
 
 
 def main() -> int:
@@ -497,13 +578,18 @@ def main() -> int:
         "limit": "500",
     }))
     group_by_id = {g["id"]: g for g in groups}
-    # Seed the duplicate guard from the entire ERP catalog before slicing the
-    # next batch, so an image already used by an earlier batch cannot be reused.
+    # Seed both guards from the entire ERP catalog before slicing the next
+    # batch. Source-code uniqueness alone is insufficient because two records
+    # may use different product codes but serve identical image bytes.
     used_source_codes: set[str] = set()
+    used_image_digests: set[str] = set()
     for row in items:
         source_match = re.search(r"/product/([^/?#]+)", str(row.get("source_url") or ""))
         if source_match:
             used_source_codes.add(source_match.group(1))
+            digest = image_data_digest(row.get("image_data"))
+            if digest:
+                used_image_digests.add(digest)
     # The alphabetic first page was dominated by household goods. Inspect the
     # full ERP catalog, then prioritize food groups and records without real photos.
     def item_priority(row: dict[str, Any]) -> tuple[int, int, str]:
@@ -527,7 +613,7 @@ def main() -> int:
         candidates = off_candidates(item)
         candidates = [candidate for candidate in candidates if str(candidate.get("code") or "") not in used_source_codes]
         print(f"[{index}/{len(items)}] Checking: {item_name} | barcode={'yes' if item.get('barcode') else 'no'} | brand={'yes' if item.get('brand_name') else 'no'} | source candidates={len(candidates)}")
-        match = choose_image(item, candidates)
+        match = choose_image(item, candidates, used_image_digests)
         if not match:
             # Surface a small set of candidate titles to make matching failures
             # actionable without flooding workflow logs or relaxing identity checks.
@@ -545,6 +631,7 @@ def main() -> int:
         product_code = str(product.get("code") or "")
         if product_code:
             used_source_codes.add(product_code)
+        used_image_digests.add(image_digest(image_bytes))
         image_value = "\\x" + image_bytes.hex()
         source_page = "https://world.openfoodfacts.org/product/" + urllib.parse.quote(str(product.get("code") or ""))
         if not DRY_RUN:
