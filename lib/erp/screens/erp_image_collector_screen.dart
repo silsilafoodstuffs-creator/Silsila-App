@@ -964,7 +964,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           Row(children: [
             const Text('الصور المستخرجة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(width: 8),
-            Text('${_images.length} صورة • محدد ${_selected.length}', style: const TextStyle(fontSize: 10, color: Colors.black54)),
+            Text('${_images.length} صورة (${_selected.length} محدد)', style: const TextStyle(fontSize: 10, color: Colors.black54)),
             const SizedBox(width: 8),
             Expanded(child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
@@ -1007,13 +1007,13 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       return KeyEventResult.ignored;
                     },
                     child:TextField(controller:_rowController(item,key,initial:initial),keyboardType:type,
-                    onChanged:(v)=>item[key]=v,decoration:InputDecoration(hintText:label,labelText:null,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:8,vertical:8)))));
+                    onChanged:(v)=>item[key]=v,decoration:InputDecoration(hintText:label,labelText:null,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:7)))));
                 }
                 Widget dropdown(String key,String label,String value,List<String> options,{double width=145}) {
                   final choices=options.contains(value)?options:<String>[value,...options];
                   return SizedBox(width:width,child:DropdownButtonFormField<String>(value:choices.firstWhere((v)=>v==value,orElse:()=>choices.first),isExpanded:true,
                     decoration:InputDecoration(hintText:label,labelText:null,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:7,vertical:7)),
-                    items:choices.map((v)=>DropdownMenuItem(value:v,child:Text(key=='entity_mode'?(v=='new'?'كود جديد':'كود قديم'):key=='save_as'?(v=='category'?'فئة':'صنف'):key=='major_unit'&&v.isEmpty?'الوحدة الكبرى':key=='minor_unit'&&v.isEmpty?'الوحدة الصغرى':v,overflow:TextOverflow.ellipsis))).toList(),
+                    items:choices.map((v)=>DropdownMenuItem(value:v,child:Text(key=='entity_mode'?(v=='new'?'كود جديد':'كود قديم'):key=='save_as'?(v=='category'?'فئة':'صنف'):key=='major_unit'&&v.isEmpty?'وحدة كبرى':key=='minor_unit'&&v.isEmpty?'وحدة صغرى':v,overflow:TextOverflow.ellipsis))).toList(),
                     onChanged:_loading?null:(v){if(v==null)return;setState((){item[key]=v;if(key=='major_unit'||key=='minor_unit')_rowController(item,key).text=v;if(key=='save_as'){item.remove('entity_mode');item.remove('database_item_id');item.remove('category_target_id');}});}));
                 }
                 final suggested=_suggestedImageName(item,index);
@@ -1102,12 +1102,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       if(mode=='old')...[field('legacy_code','كود الصنف القديم',width:155),const SizedBox(width:5),OutlinedButton.icon(onPressed:_loading?null:()=>_openF1Lookup(item),icon:const Icon(Icons.search),label:const Text('بحث F1')),const SizedBox(width:8)],
                       field('item_name_ar','اسم الصنف عربي',width:185,initial:productName),const SizedBox(width:8),
                       field('item_name_en','اسم الصنف إنجليزي',width:165,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:8),
-                      dropdown('major_unit','الوحدة الكبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:145),const SizedBox(width:8),
-                      field('internal_count','عدد داخلي',width:100,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:TextInputType.number),const SizedBox(width:8),
-                      dropdown('minor_unit','الوحدة الصغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:145),const SizedBox(width:8),
+                      dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:120),const SizedBox(width:8),
+                      field('internal_count','عدد داخلي',width:88,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:TextInputType.number),const SizedBox(width:8),
+                      dropdown('minor_unit','وحدة صغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:120),const SizedBox(width:8),
                       field('sale_price','سعر الصنف',width:110,initial:_excelValue(item,['sale_price','price','price_value']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
-                      field('pricing_area','مساحة تسعير',width:120,initial:_excelValue(item,['pricing_area','price_area']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
-                      field('tax_rate','نسبة ضريبة %',width:115,initial:_excelValue(item,['tax_rate','tax_percent','vat']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
+                      field('pricing_area','مساحة تسعير',width:100,initial:_excelValue(item,['pricing_area','price_area']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
+                      field('tax_rate','ضريبة %',width:80,initial:_excelValue(item,['tax_rate','tax_percent','vat']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:8),
                       FilledButton.icon(onPressed:_loading?null:()=>_saveRowProduct(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
                     ]));
                 final categoryEditor = kind == 'product' && mode == 'new'
