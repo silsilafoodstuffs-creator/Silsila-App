@@ -109,7 +109,7 @@ left join pg_policy p on p.polrelid = c.oid
 where n.nspname = 'public'
   and c.relkind in ('r','p')
   and c.relname like 'erp_%'
-category by c.relname, c.relrowsecurity, c.relforcerowsecurity
+group by c.relname, c.relrowsecurity, c.relforcerowsecurity
 order by c.relname;
 
 select
