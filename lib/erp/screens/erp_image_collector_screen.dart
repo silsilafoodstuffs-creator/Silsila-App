@@ -57,16 +57,19 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
 
   String _imageKey(String rawUrl) {
     final uri = Uri.parse(rawUrl);
-    const trackingKeys = <String>{
+    const ignoredKeys = <String>{
       'fbclid', 'gclid', 'dclid', 'msclkid', 'ref', 'source',
       'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
       'utm_id', 'campaign', 'tracking',
+      // Common image CDN transformations: same original image, different size.
+      'width', 'height', 'w', 'h', 'quality', 'q', 'fit', 'crop', 'auto',
+      'format', 'fm', 'resize', 'dpr', 'imwidth', 'imheight',
     };
     final kept = <String, List<String>>{};
     final entries = uri.queryParametersAll.entries.toList()
       ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
     for (final entry in entries) {
-      if (!trackingKeys.contains(entry.key.toLowerCase())) {
+      if (!ignoredKeys.contains(entry.key.toLowerCase())) {
         kept[entry.key] = entry.value.toList()..sort();
       }
     }
@@ -74,12 +77,26 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     for (final entry in kept.entries) {
       query[entry.key] = entry.value.join(',');
     }
+    var path = uri.path
+        .replaceAll(RegExp(r'[-_](?:\\d{2,4}x\\d{2,4}|\\d{2,4}w|thumb(?:nail)?|small|medium|large)(?=\\.[a-z0-9]+$)', caseSensitive: false), '')
+        .replaceAll(RegExp(r'/(?:thumb|thumbnail|small|medium|large|resized)/', caseSensitive: false), '/');
     return uri.replace(
       scheme: uri.scheme.toLowerCase(),
       host: uri.host.toLowerCase(),
+      path: path,
       fragment: '',
       queryParameters: query.isEmpty ? null : query,
     ).toString();
+  }
+
+  bool _looksLikeSiteChrome(Map<String, dynamic> image) {
+    final url = (image['url'] ?? '').toString().toLowerCase();
+    final alt = (image['alt'] ?? '').toString().toLowerCase();
+    final hint = '$url $alt';
+    return RegExp(
+      r'(^|[\\/_\\-. ])(site[-_ ]?logo|logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|social|payment|footer|navigation|navbar|menu)([\\/_\\-. ]|$)',
+      caseSensitive: false,
+    ).hasMatch(hint);
   }
 
   String _prefsKey(String scope) => 'silsila_image_collector_imported_v1_$scope';
@@ -125,7 +142,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if (_importedScope != scope) await _loadImportedForScope(scope);
       final result = await _invoke({'action': 'scan', 'url': parsed.toString()});
       final rawImages = (result['images'] as List? ?? const []);
-      final candidates = rawImages.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
+      final candidates = rawImages.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).where((image) => !_looksLikeSiteChrome(image)).toList();
       final seen = <String>{};
       final images = <Map<String, dynamic>>[];
       var duplicateCount = 0;
