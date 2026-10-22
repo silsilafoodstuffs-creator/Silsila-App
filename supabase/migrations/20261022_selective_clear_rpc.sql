@@ -205,6 +205,11 @@ declare
   v_count integer := 0;
   v_deleted integer := 0;
   v_result jsonb := '{}'::jsonb;
+  v_sales_types text[];
+  v_purchase_types text[];
+  v_price_kinds text[];
+  v_party_kinds text[];
+  v_batch integer := 0;
 begin
   if v_user is null then raise exception 'يجب تسجيل الدخول أولاً.'; end if;
   if not public.erp_user_has_company_role(p_company_id, array['owner','admin']::text[]) then
@@ -214,13 +219,21 @@ begin
   where company_id=p_company_id and backup_id=p_backup_id and backup_type='selective_clear';
   if not found then raise exception 'لم يتم العثور على نسخة احتياطية صالحة على السيرفر.'; end if;
   v_pages := v_backup.selected_pages;
+  select coalesce(array_agg(distinct case p when 'عرض سعر' then 'quotation' when 'أمر بيع' then 'order' when 'فاتورة بيع' then 'invoice' when 'فاتورة مبيعات' then 'invoice' when 'مرتجع مبيعات' then 'return' end) filter (where p in ('عرض سعر','أمر بيع','فاتورة بيع','فاتورة مبيعات','مرتجع مبيعات')), '{}'::text[]) into v_sales_types from unnest(v_pages) p;
+  select coalesce(array_agg(distinct case p when 'أمر شراء' then 'order' when 'استلام مشتريات' then 'receipt' when 'فاتورة مشتريات' then 'invoice' when 'مرتجع مشتريات' then 'return' end) filter (where p in ('أمر شراء','استلام مشتريات','فاتورة مشتريات','مرتجع مشتريات')), '{}'::text[]) into v_purchase_types from unnest(v_pages) p;
+  select coalesce(array_agg(distinct case p when 'قوائم أسعار البيع' then 'sale' when 'قوائم أسعار الموردين' then 'purchase' when 'سياسات التسعير والخصومات' then 'sale' end) filter (where p in ('قوائم أسعار البيع','قوائم أسعار الموردين','سياسات التسعير والخصومات')), '{}'::text[]) into v_price_kinds from unnest(v_pages) p;
+  if 'سياسات التسعير والخصومات' = any(v_pages) then v_price_kinds := array['sale','purchase']::text[]; end if;
+  if 'دليل العملاء'=any(v_pages) and 'دليل الموردين'=any(v_pages) then v_party_kinds := array['customer','supplier','both']::text[];
+  elsif 'دليل العملاء'=any(v_pages) then v_party_kinds := array['customer']::text[];
+  elsif 'دليل الموردين'=any(v_pages) then v_party_kinds := array['supplier']::text[];
+  else v_party_kinds := '{}'::text[]; end if;
 
   -- Delete dependent rows first. Any unselected dependent rows cause a safe transaction
   -- rollback; the server backup remains available for recovery.
   v_tables := array[
-    'erp_workspace_records','erp_sales_lines','erp_purchase_lines','erp_journal_lines','erp_commission_tiers',
-    'erp_stock_reservations','erp_sales_fulfillment_documents','erp_sales_documents','erp_purchase_documents',
-    'erp_customer_shortages','erp_sales_campaign_items','erp_party_price_lists','erp_price_list_lines',
+    'erp_workspace_records','erp_stock_reservations','erp_sales_fulfillment_documents','erp_sales_lines','erp_customer_shortages',
+    'erp_purchase_lines','erp_journal_lines','erp_commission_tiers','erp_sales_documents','erp_purchase_documents',
+    'erp_sales_campaign_items','erp_party_price_lists','erp_price_list_lines',
     'erp_party_contacts','erp_party_warehouses','erp_inventory_movements','erp_cash_vouchers',
     'erp_payroll_lines','erp_payroll_runs','erp_attendance_records','erp_leave_requests',
     'erp_hr_attendance_events','erp_hr_shift_assignments','erp_commission_runs','erp_delegate_item_assignments',
@@ -228,7 +241,7 @@ begin
     'erp_user_permissions','erp_app_activity_log','erp_app_assets','erp_app_role_permissions','erp_app_theme_settings',
     'erp_sales_campaigns','erp_customer_monthly_goals','erp_commission_plans','erp_operational_account_mappings',
     'erp_einvoice_operations','erp_einvoice_settings','erp_public_lead_staging','erp_hr_fingerprint_devices',
-    'erp_hr_shifts','erp_employees','erp_sales_representatives','erp_users','erp_user_classifications',
+    'erp_hr_shifts','erp_employees','erp_sales_representatives','erp_journal_entries','erp_users','erp_user_classifications',
     'erp_user_types','erp_permission_templates','erp_parties','erp_item_units','erp_items','erp_item_groups',
     'erp_price_lists','erp_warehouses','erp_cashboxes','erp_accounts','erp_fiscal_periods','erp_currencies',
     'erp_cost_centers','erp_branches','erp_company_settings','erp_program_settings'
@@ -239,6 +252,56 @@ begin
     if v_table = 'erp_workspace_records' then
       delete from public.erp_workspace_records where company_id=p_company_id and page_key=any(v_pages);
       get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_parties' then
+      if cardinality(v_party_kinds)>0 then delete from public.erp_parties where company_id=p_company_id and party_kind=any(v_party_kinds);
+      else delete from public.erp_parties where company_id=p_company_id; end if;
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_price_lists' then
+      if cardinality(v_price_kinds)>0 then delete from public.erp_price_lists where company_id=p_company_id and price_kind=any(v_price_kinds);
+      else delete from public.erp_price_lists where company_id=p_company_id; end if;
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_price_list_lines' and cardinality(v_price_kinds)>0 then
+      delete from public.erp_price_list_lines t using public.erp_price_lists l where t.price_list_id=l.id and t.company_id=p_company_id and l.company_id=p_company_id and l.price_kind=any(v_price_kinds);
+      get diagnostics v_deleted = row_count;
+    elsif v_table in ('erp_party_contacts','erp_party_warehouses') and cardinality(v_party_kinds)>0 then
+      execute format('delete from public.%I t using public.erp_parties p where p.id=t.party_id and t.company_id=$1 and p.company_id=$1 and p.party_kind=any($2)', v_table) using p_company_id, v_party_kinds;
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_party_price_lists' and (cardinality(v_party_kinds)>0 or cardinality(v_price_kinds)>0) then
+      delete from public.erp_party_price_lists t where t.company_id=p_company_id and ((cardinality(v_price_kinds)>0 and t.price_list_id in (select l.id from public.erp_price_lists l where l.company_id=p_company_id and l.price_kind=any(v_price_kinds))) or (cardinality(v_party_kinds)>0 and t.party_id in (select p.id from public.erp_parties p where p.company_id=p_company_id and p.party_kind=any(v_party_kinds))));
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_sales_documents' then
+      delete from public.erp_sales_documents where company_id=p_company_id and document_type=any(v_sales_types);
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_purchase_documents' then
+      delete from public.erp_purchase_documents where company_id=p_company_id and document_type=any(v_purchase_types);
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_sales_lines' then
+      delete from public.erp_sales_lines t using public.erp_sales_documents d where d.id=t.document_id and d.company_id=p_company_id and d.document_type=any(v_sales_types);
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_purchase_lines' then
+      delete from public.erp_purchase_lines t using public.erp_purchase_documents d where d.id=t.document_id and d.company_id=p_company_id and d.document_type=any(v_purchase_types);
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_customer_shortages' and cardinality(v_sales_types)>0 then
+      delete from public.erp_customer_shortages t where t.company_id=p_company_id and (t.source_document_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types)) or t.source_document_id is null);
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_stock_reservations' and cardinality(v_sales_types)>0 and not (v_pages && array['أرصدة الأصناف','كارت الصنف','الجرد والفروق','إذن إضافة','إذن صرف','تحويل مخزني','تسوية جرد','جرد فعلي']::text[]) then
+      delete from public.erp_stock_reservations t where t.company_id=p_company_id and (t.sales_document_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types)) or t.sales_document_id is null);
+      get diagnostics v_deleted = row_count;
+    elsif v_table = 'erp_sales_fulfillment_documents' then
+      delete from public.erp_sales_fulfillment_documents t where t.company_id=p_company_id and (('إذن تجهيز'=any(v_pages) and t.kind='preparation') or (('إذن تسليم'=any(v_pages) or 'إذن تحميل'=any(v_pages)) and t.kind='delivery') or (cardinality(v_sales_types)>0 and t.invoice_id in (select d.id from public.erp_sales_documents d where d.company_id=p_company_id and d.document_type=any(v_sales_types))));
+      get diagnostics v_deleted = row_count;
+    elsif v_table in ('erp_accounts','erp_item_groups','erp_cost_centers') then
+      v_deleted := 0;
+      loop
+        execute format('delete from public.%I x where x.company_id=$1 and not exists (select 1 from public.%I c where c.company_id=$1 and c.parent_id=x.id)', v_table, v_table) using p_company_id;
+        get diagnostics v_batch = row_count;
+        v_deleted := v_deleted + v_batch;
+        exit when v_batch = 0;
+      end loop;
+      if exists (select 1 from information_schema.columns where table_schema='public' and table_name=v_table and column_name='parent_id') then
+        execute format('select exists(select 1 from public.%I where company_id=$1)', v_table) into v_batch using p_company_id;
+        if v_batch > 0 then raise exception 'تعذر مسح شجرة % بسبب علاقة دائرية أو سجل تابع غير قابل للحذف؛ النسخة الاحتياطية محفوظة.', v_table; end if;
+      end if;
     elsif exists (
       select 1 from information_schema.columns
       where table_schema='public' and table_name=v_table and column_name='company_id'
