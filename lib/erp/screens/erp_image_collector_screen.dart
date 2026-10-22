@@ -870,10 +870,24 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     Text('استخراج الصور، تفريغ الخلفية الفاتحة، وتجهيز PNG حتى 4K مضغوط', style: TextStyle(color: Colors.black54, fontSize: 12)),
                   ])),
                   const SizedBox(width: 12),
-                  SizedBox(width: 285, child: DropdownButtonFormField<String>(value: _imageKind,
-                    decoration: const InputDecoration(labelText: 'نوع الصورة الجاري تنفيذها', border: OutlineInputBorder(), isDense: true),
-                    items: const [DropdownMenuItem(value: 'product', child: Text('صور الأصناف والمنتجات')), DropdownMenuItem(value: 'category', child: Text('صور الفئات والمجموعات'))],
-                    onChanged: _loading ? null : (value) { if (value == null) return; setState(() { _imageKind = value; for (final image in _images) { image['save_as'] = value; image.remove('file_name'); } }); })),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(color: const Color(0xFFF8F5FB), borderRadius: BorderRadius.circular(10)),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                      const Text('نوع الصور', style: TextStyle(fontSize: 10, color: Colors.black54, fontWeight: FontWeight.w600)),
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        Checkbox(value: _imageKind == 'category', activeColor: _purple, visualDensity: VisualDensity.compact,
+                          onChanged: _loading ? null : (checked) { if (checked == true) setState(() { _imageKind = 'category'; for (final image in _images) { image['save_as'] = 'category'; image.remove('file_name'); } }); }),
+                        const Icon(Icons.category_outlined, color: _purple, size: 20),
+                        const SizedBox(width: 3), const Text('فئة', style: TextStyle(fontSize: 12)),
+                        const SizedBox(width: 8),
+                        Checkbox(value: _imageKind == 'product', activeColor: _purple, visualDensity: VisualDensity.compact,
+                          onChanged: _loading ? null : (checked) { if (checked == true) setState(() { _imageKind = 'product'; for (final image in _images) { image['save_as'] = 'product'; image.remove('file_name'); } }); }),
+                        const Icon(Icons.inventory_2_outlined, color: _purple, size: 20),
+                        const SizedBox(width: 3), const Text('صنف', style: TextStyle(fontSize: 12)),
+                      ]),
+                    ]),
+                  ),
                 ]),
                 const SizedBox(height: 18),
                 Row(children: [
@@ -948,10 +962,25 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           ),
           const SizedBox(height: 14),
           Row(children: [
-            const Expanded(child: Text('الصور المستخرجة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
-            Text('${_images.length} صورة • محدد ${_selected.length}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            const Text('الصور المستخرجة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            const SizedBox(width: 8),
+            Text('${_images.length} صورة • محدد ${_selected.length}', style: const TextStyle(fontSize: 10, color: Colors.black54)),
+            const SizedBox(width: 8),
+            Expanded(child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              decoration: BoxDecoration(color: _purple.withValues(alpha: .06), borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _purple.withValues(alpha: .12))),
+              child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: const [
+                SizedBox(width: 42, child: Text('اختيار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 10))),
+                SizedBox(width: 38, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 10))),
+                SizedBox(width: 58, child: Text('الصورة', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 10))),
+                SizedBox(width: 8), SizedBox(width: 185, child: Text('اسم الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 10))),
+                SizedBox(width: 8), SizedBox(width: 140, child: Text('نوع الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 10))),
+                SizedBox(width: 8), Text('تنزيل على الجهاز', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 10)),
+              ])),
+            )),
           ]),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           if (_images.isEmpty)
             SizedBox(
               height: 220,
@@ -964,21 +993,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           else
             SizedBox(height: MediaQuery.of(context).size.height * 0.56,
               child: Column(children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(color: _purple.withValues(alpha: .06),
-                    borderRadius: BorderRadius.circular(9), border: Border.all(color: _purple.withValues(alpha: .12))),
-                  child: SingleChildScrollView(scrollDirection: Axis.horizontal,
-                    child: Row(children: const [
-                      SizedBox(width: 42, child: Text('اختيار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                      SizedBox(width: 38, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                      SizedBox(width: 70, child: Text('الصورة', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                      SizedBox(width: 8), SizedBox(width: 205, child: Text('اسم الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                      SizedBox(width: 8), SizedBox(width: 140, child: Text('نوع الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
-                      SizedBox(width: 8), Text('تنزيل صورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
-                    ])),
-                ),
                 Expanded(child: ListView.builder(
               padding: const EdgeInsets.only(bottom: 18), itemCount: _images.length,
               itemBuilder: (context,index) {
