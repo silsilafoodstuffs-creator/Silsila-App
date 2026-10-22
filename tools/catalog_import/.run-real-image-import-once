@@ -1,1 +1,1 @@
-Batch 4 authorization: inspect the next 25 existing ERP catalog rows with strict identity/variant matching, duplicate protection, and detailed image-quality diagnostics. Do not create marketplace products or modify supplier/pricing data.
+Batch 5 authorization: inspect the next 25 existing ERP catalog rows using strict identity checks, 8KB minimum packshots, 150px minimum dimensions, WebP dimension support, and duplicate protection. Do not create marketplace products or modify supplier/pricing data.
