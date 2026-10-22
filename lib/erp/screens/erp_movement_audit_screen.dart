@@ -14,6 +14,7 @@ import 'erp_hr_operations_screen.dart';
 import 'erp_payroll_screen.dart';
 import 'erp_fiscal_periods_screen.dart';
 import 'erp_inventory_master_screen.dart';
+import 'erp_item_categories_screen.dart';
 
 class ErpMovementAuditScreen extends StatefulWidget {
   const ErpMovementAuditScreen({super.key, this.initialCompanyId});
@@ -239,7 +240,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
       ));
     } else if (route == 'groups') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => ErpInventoryMasterScreen(initialCompanyId: _company.text.trim(), initialView: 'groups'),
+        builder: (_) => ErpItemCategoriesScreen(companyId: _company.text.trim()),
       ));
     } else if (route == 'items') {
       await Navigator.of(context).push(MaterialPageRoute<void>(
