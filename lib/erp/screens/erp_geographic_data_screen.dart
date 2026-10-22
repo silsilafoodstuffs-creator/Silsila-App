@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -103,8 +105,8 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         final result = await db!
             .from('erp_geographic_data')
             .select(
-              'id,parent_id,geo_code,name_ar,name_en,level,is_active,logo_url,'
-              'source_name,source_url,latitude,longitude',
+              'id,parent_id,geo_code,name_ar,name_en,level,is_active,logo_url,logo_bytes,'
+              'logo_mime_type,source_name,source_url,latitude,longitude',
             )
             .eq('company_id', companyId)
             .order('geo_code')
@@ -296,27 +298,51 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         fallbackColor: color,
       );
 
+  Uint8List? _decodeLogoBytes(dynamic value) {
+    if (value is! String || value.isEmpty) return null;
+    var hex = value;
+    if (hex.startsWith(r'\\x')) hex = hex.substring(2);
+    if (hex.isEmpty || hex.length.isOdd) return null;
+    try {
+      return Uint8List.fromList(List<int>.generate(
+        hex.length ~/ 2,
+        (index) => int.parse(hex.substring(index * 2, index * 2 + 2), radix: 16),
+      ));
+    } catch (_) {
+      return null;
+    }
+  }
+
   Widget _governorateLogo(Map<String, dynamic> row) {
     final url = s(row['logo_url']);
+    final bytes = _decodeLogoBytes(row['logo_bytes']);
+    final fallback = const Icon(Icons.account_balance, color: Color(0xFF3E007D));
     return Padding(
       padding: const EdgeInsetsDirectional.only(end: 8),
       child: CircleAvatar(
         radius: 21,
         backgroundColor: const Color(0xFFF5EFFB),
-        child: url.isEmpty
-            ? const Icon(Icons.account_balance, color: Color(0xFF3E007D))
-            : ClipOval(
-                child: Image.network(
-                  url,
+        child: bytes != null
+            ? ClipOval(
+                child: Image.memory(
+                  bytes,
                   width: 42,
                   height: 42,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.account_balance,
-                    color: Color(0xFF3E007D),
-                  ),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => fallback,
                 ),
-              ),
+              )
+            : url.isEmpty
+                ? fallback
+                : ClipOval(
+                    child: Image.network(
+                      url,
+                      width: 42,
+                      height: 42,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => fallback,
+                    ),
+                  ),
       ),
     );
   }
