@@ -870,6 +870,30 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
             Text('${_images.length} صورة • محدد ${_selected.length}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
           ]),
           const SizedBox(height: 10),
+          if (_images.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: _purple.withValues(alpha: .06),
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: _purple.withValues(alpha: .12)),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(children: const [
+                  SizedBox(width: 42, child: Text('اختيار', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                  SizedBox(width: 38, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                  SizedBox(width: 70, child: Text('الصورة', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                  SizedBox(width: 8),
+                  SizedBox(width: 205, child: Text('اسم الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                  SizedBox(width: 8),
+                  SizedBox(width: 140, child: Text('نوع الصورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12))),
+                  SizedBox(width: 8),
+                  Text('تنزيل صورة', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                ]),
+              ),
+            ),
           if (_images.isEmpty)
             SizedBox(
               height: 220,
