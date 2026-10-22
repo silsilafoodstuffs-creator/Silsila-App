@@ -279,29 +279,47 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     return name.isEmpty ? fallback : name;
   }
 
+  bool _looksLikeEntityName(String value) {
+    final name = value.trim().replaceAll(RegExp(r'\\s+'), ' ');
+    if (name.length < 2 || name.length > 120) return false;
+    if (!RegExp(r'[a-zA-Z\\u0600-\\u06FF]').hasMatch(name)) return false;
+    // Reject common technical image names such as -_275_2, IMG_1234 or 275x275.
+    if (RegExp(r'^(?:(?:img|image|photo|dsc|pxl|pic)[-_ .]*)?\\d+(?:[-_ .]+\\d+)*$', caseSensitive: false).hasMatch(name)) return false;
+    if (RegExp(r'^[-_ .]+\\d+(?:[-_ .]+\\d+)*$').hasMatch(name)) return false;
+    if (RegExp(r'^(image|product|item|category|view|details|read more|عرض|صورة|منتج)$', caseSensitive: false).hasMatch(name)) return false;
+    return true;
+  }
+
   String _suggestedImageName(Map<String, dynamic> image, int index) {
     final kind = (image['save_as'] ?? 'product').toString();
-    // Prefer the actual entity name over a generic image alt-text or URL label.
-    // This makes ZIP filenames identify the product/category/group represented.
+    // Prefer actual catalog metadata and the product-card text around the image.
     final candidates = switch (kind) {
       'category' => [
           image['category_name'], image['group_name'], image['category'],
-          image['group'], image['subcategory_name'], image['title'],
-          image['name'], image['alt'],
+          image['group'], image['subcategory_name'], image['context_name'],
+          image['product_name'], image['title'], image['name'], image['alt'],
         ],
       'brand' => [
           image['brand_name'], image['brand'], image['manufacturer'],
-          image['title'], image['name'], image['alt'],
+          image['context_name'], image['title'], image['name'], image['alt'],
         ],
       _ => [
           image['product_full_name'], image['product_name'],
           image['product_title'], image['sku_name'], image['item_name'],
-          image['title'], image['name'], image['alt'],
+          image['context_name'], image['title'], image['name'], image['alt'],
         ],
     };
-    var suggested = candidates.map((value) => value?.toString().trim() ?? '')
-        .firstWhere((value) => value.isNotEmpty,
-            orElse: () => 'صورة_${(index + 1).toString().padLeft(3, '0')}');
+    var suggested = '';
+    for (final candidate in candidates) {
+      final value = candidate?.toString().trim() ?? '';
+      if (_looksLikeEntityName(value)) {
+        suggested = value;
+        break;
+      }
+    }
+    if (suggested.isEmpty) {
+      suggested = 'صورة_${(index + 1).toString().padLeft(3, '0')}';
+    }
     if (kind != 'category' && kind != 'brand') {
       final unit = _excelValue(image, ['main_unit', 'unit', 'unit_name', 'major_unit']);
       final innerCount = _excelValue(image, [
