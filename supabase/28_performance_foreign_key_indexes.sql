@@ -8,7 +8,7 @@ create index if not exists idx_erp_app_theme_settings_updated_by on public.erp_a
 create index if not exists idx_erp_cashboxes_account_id on public.erp_cashboxes(account_id);
 create index if not exists idx_erp_cashboxes_branch_id on public.erp_cashboxes(branch_id);
 create index if not exists idx_erp_company_settings_updated_by on public.erp_company_settings(updated_by);
-create index if not exists idx_erp_item_groups_parent_id on public.erp_item_groups(parent_id);
+create index if not exists idx_erp_item_categories_parent_id on public.erp_item_categories(parent_id);
 create index if not exists idx_erp_journal_entries_branch_id on public.erp_journal_entries(branch_id);
 create index if not exists idx_erp_journal_entries_created_by on public.erp_journal_entries(created_by);
 create index if not exists idx_erp_journal_entries_fiscal_period_id on public.erp_journal_entries(fiscal_period_id);
