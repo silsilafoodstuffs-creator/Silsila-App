@@ -21,27 +21,27 @@ begin
         raise exception 'فرع المخزن غير نشط أو لا يتبع الشركة نفسها';
       end if;
     end if;
-  elsif tg_table_name = 'erp_item_groups' then
+  elsif tg_table_name = 'erp_item_categories' then
     if new.parent_id is not null then
-      select company_id into v_company from public.erp_item_groups where id = new.parent_id;
+      select company_id into v_company from public.erp_item_categories where id = new.parent_id;
       if v_company is distinct from new.company_id then
-        raise exception 'المجموعة الأب يجب أن تتبع الشركة نفسها';
+        raise exception 'الفئة الأب يجب أن تتبع الشركة نفسها';
       end if;
       with recursive descendants(id, path) as (
         select new.id, array[new.id]::uuid[]
         union all
         select child.id, d.path || child.id
-        from descendants d join public.erp_item_groups child on child.parent_id = d.id
+        from descendants d join public.erp_item_categories child on child.parent_id = d.id
         where not child.id = any(d.path)
       )
       select exists(select 1 from descendants where id = new.parent_id) into v_cycle;
-      if coalesce(v_cycle, false) then raise exception 'لا يمكن وضع المجموعة تحت أحد أحفادها'; end if;
+      if coalesce(v_cycle, false) then raise exception 'لا يمكن وضع الفئة تحت أحد أحفادها'; end if;
     end if;
   elsif tg_table_name = 'erp_items' then
-    if new.group_id is not null then
-      select company_id, is_active into v_company, v_active from public.erp_item_groups where id = new.group_id;
+    if new.category_id is not null then
+      select company_id, is_active into v_company, v_active from public.erp_item_categories where id = new.category_id;
       if v_company is distinct from new.company_id or v_active is distinct from true then
-        raise exception 'مجموعة الصنف غير نشطة أو لا تتبع الشركة نفسها';
+        raise exception 'فئة الصنف غير نشطة أو لا تتبع الشركة نفسها';
       end if;
     end if;
   elsif tg_table_name = 'erp_cashboxes' then
@@ -95,14 +95,14 @@ create trigger erp_warehouse_branch_guard
 before insert or update of company_id, branch_id on public.erp_warehouses
 for each row execute function public.erp_validate_master_data_links();
 
-drop trigger if exists erp_item_group_parent_guard on public.erp_item_groups;
-create trigger erp_item_group_parent_guard
-before insert or update of company_id, parent_id on public.erp_item_groups
+drop trigger if exists erp_item_category_parent_guard on public.erp_item_categories;
+create trigger erp_item_category_parent_guard
+before insert or update of company_id, parent_id on public.erp_item_categories
 for each row execute function public.erp_validate_master_data_links();
 
-drop trigger if exists erp_item_group_guard on public.erp_items;
-create trigger erp_item_group_guard
-before insert or update of company_id, group_id on public.erp_items
+drop trigger if exists erp_item_category_guard on public.erp_items;
+create trigger erp_item_category_guard
+before insert or update of company_id, category_id on public.erp_items
 for each row execute function public.erp_validate_master_data_links();
 
 drop trigger if exists erp_cashbox_account_guard on public.erp_cashboxes;
