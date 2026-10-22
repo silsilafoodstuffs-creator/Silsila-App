@@ -451,6 +451,12 @@ def image_variant_matches(item_name: str, product_title: str) -> bool:
     ]
     title_tokens = set(title.split())
     # A sweet-potato pack is not an image match for ordinary salted potato chips.
+    # Ready-to-drink iced tea is not a loose-tea or tea-bag pack.
+    if "شاي" in item and (
+        {"fuze", "iced", "drink", "beverage", "bottle"} & title_tokens
+        or {"ready", "to", "drink"}.issubset(title_tokens)
+    ):
+        return False
     title_is_sweet_potato = {"sweet", "potato"}.issubset(title_tokens)
     item_is_sweet_potato = any(
         normalized(marker) in item for marker in ("بطاطا حلوة", "بطاطس حلوة", "sweet potato")
