@@ -50,8 +50,8 @@ class CategoryService {
         activityCode = activityRow?['code']?.toString();
       }
       var groupsQuery = _requireClient
-          .from('erp_item_groups')
-          .select('id,parent_id,group_code,group_name,group_name_en,activity_code,is_active,show_in_app,image_data,image_mime_type');
+          .from('erp_item_categories')
+          .select('id,parent_id,group_code:category_code,group_name:category_name,group_name_en:category_name_en,activity_code,is_active,show_in_app,image_data,image_mime_type');
       if (activeOnly) {
         groupsQuery = groupsQuery.eq('is_active', true).eq('show_in_app', true);
       }
