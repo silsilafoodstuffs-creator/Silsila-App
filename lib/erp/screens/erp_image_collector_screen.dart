@@ -186,7 +186,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     try {
       final url = image['url'].toString();
       final result = await _invoke({'action': 'download', 'url': url});
-      final bytes = await _downloadBytes(url);
+      final encoded = result['base64']?.toString();
+      if (encoded == null || encoded.isEmpty) throw Exception('لم تصل بيانات الصورة.');
+      final bytes = Uint8List.fromList(base64Decode(encoded));
       final ext = _extension(result['mime']?.toString() ?? '', url);
       await FileSaver.instance.saveFile(
         name: _safeName((image['alt'] ?? '').toString(), fallback: 'silsila_image'),
