@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -158,6 +159,29 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     _importedImageKeys.addAll(keys);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_prefsKey(scope), _importedImageKeys.toList()..sort());
+  }
+
+  Future<void> _pasteClipboardUrl() async {
+    try {
+      final clipboard = await Clipboard.getData(Clipboard.kTextPlain);
+      final copiedText = clipboard?.text?.trim() ?? '';
+      if (copiedText.isEmpty) {
+        if (mounted) setState(() => _status = 'الحافظة فارغة؛ انسخ رابط صفحة المنتجات أولًا.');
+        return;
+      }
+      _url.text = copiedText;
+      _url.selection = TextSelection.collapsed(offset: _url.text.length);
+      if (mounted) {
+        setState(() {
+          _error = null;
+          _status = 'تم لصق الرابط المنسوخ في خانة رابط صفحة المنتجات.';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _error = 'تعذر قراءة الرابط من الحافظة. الصق الرابط يدويًا.');
+      }
+    }
   }
 
   Future<void> _scan() async {
@@ -455,7 +479,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         mimeType: MimeType.zip,
       );
       await _markImported(savedImageKeys);
-      if (mounted) setState(() => _status = 'تم حفظ ${archive.files.length} صورة. ستُخفى هذه الصور تلقائيًا عند فحص الموقع نفسه مرة أخرى.');
+      if (mounted) {
+        setState(() {
+          _url.clear();
+          _status = 'تم حفظ الصور وملف Excel داخل ZIP. تم مسح رابط الموقع؛ الصق الرابط التالي وابدأ السحب.';
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -491,7 +520,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         fileExtension: extension.replaceFirst('.', ''),
       );
       await _markImported({_imageKey(url)});
-      if (mounted) setState(() => _status = 'تم حفظ الصورة؛ ستُخفى تلقائيًا عند فحص الموقع نفسه مرة أخرى.');
+      if (mounted) {
+        setState(() {
+          _url.clear();
+          _status = 'تم حفظ الصورة. تم مسح رابط الموقع؛ الصق الرابط التالي وابدأ السحب.';
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
@@ -544,6 +578,19 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     filled: true,
                     fillColor: const Color(0xFFF8F5FB),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton.icon(
+                    onPressed: _loading ? null : _pasteClipboardUrl,
+                    icon: const Icon(Icons.content_paste_rounded),
+                    label: const Text('لصق الرابط المنسوخ مؤخرًا'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _purple,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
