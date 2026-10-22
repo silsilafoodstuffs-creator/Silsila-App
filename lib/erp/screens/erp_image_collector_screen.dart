@@ -631,7 +631,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       try{
         final result=await _invoke({'action':'download','url':image['url'].toString()});
         final png=_processTransparentPng(Uint8List.fromList(base64Decode(result['base64'].toString())));
-        final parent=level=='main'?null:level=='sub'?rootId:subId;
+        final parentRaw=level=='main'?null:level=='sub'?rootId:subId;
+        final parent=parentRaw==null?null:int.parse(parentRaw);
         dynamic id;
         if(create){
           final ins=await client.from('categories').insert({'name':name.text.trim(),'parent_id':parent,'is_active':true,'sort_order':cats.length+1,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null}).select('id').single();id=ins['id'];
@@ -653,7 +654,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
             if(level=='secondary')dd('الفئة الفرعية',subId,children(rootId),(v)=>ss(() { subId=v; selectedId=null; })),
             RadioListTile<bool>(value:true,groupValue:create,title:const Text('إنشاء فئة جديدة'),onChanged:(v)=>ss(() { create=v??true; selectedId=null; })),
             RadioListTile<bool>(value:false,groupValue:create,title:const Text('ربط فئة موجودة'),onChanged:(v)=>ss(() { create=v??false; selectedId=null; })),
-            if(!create)dd('الفئة المسجلة',selectedId,options,(v)=>ss(() { selectedId=v; name.text=byId(v)?['name']?.toString() ?? name.text : name.text; })),
+            if(!create)dd('الفئة المسجلة',selectedId,options,(v)=>ss(() { selectedId=v; name.text=byId(v)?['name']?.toString() ?? name.text; })),
             TextField(controller:name,decoration:const InputDecoration(labelText:'اسم الفئة',border:OutlineInputBorder())),
             if(message!=null)Text(message!,style:const TextStyle(color:Colors.red)),
             if(busy)const LinearProgressIndicator(),
@@ -810,7 +811,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   ])),
                 ]),
                 const SizedBox(height: 18),
-                Align(alignment: Alignment.centerRight, child: SizedBox(width: 300, child: DropdownButtonFormField<String>(value: _imageKind, decoration: const InputDecoration(labelText: 'نوع الصور الجاري تجهيزها', border: OutlineInputBorder(), isDense: true), items: const [DropdownMenuItem(value: 'product', child: Text('صور الأصناف والمنتجات')), DropdownMenuItem(value: 'category', child: Text('صور الفئات والمجموعات')), DropdownMenuItem(value: 'brand', child: Text('صور العلامات التجارية'))], onChanged: _loading ? null : (value) { if (value == null) return; setState(() { _imageKind = value; for (final image in _images) { image['save_as'] = value; image.remove('file_name'); } }); }))),
+                Align(alignment: Alignment.centerRight, child: SizedBox(width: 300, child: DropdownButtonFormField<String>(value: _imageKind, decoration: const InputDecoration(labelText: 'نوع الصور الجاري تجهيزها', border: OutlineInputBorder(), isDense: true), items: const [DropdownMenuItem(value: 'product', child: Text('صور الأصناف والمنتجات')), DropdownMenuItem(value: 'category', child: Text('صور الفئات والمجموعات'))], onChanged: _loading ? null : (value) { if (value == null) return; setState(() { _imageKind = value; for (final image in _images) { image['save_as'] = value; image.remove('file_name'); } }); }))),
                 const SizedBox(height: 12),
                 Directionality(
                   textDirection: TextDirection.ltr,
@@ -986,7 +987,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                               items: const [
                                 DropdownMenuItem(value: 'product', child: Text('صنف / منتج')),
                                 DropdownMenuItem(value: 'category', child: Text('فئة / مجموعة')),
-                                DropdownMenuItem(value: 'brand', child: Text('ماركة / براند')),
+                                
                               ],
                               onChanged: _loading ? null : (value) {
                                 if (value == null) return;
