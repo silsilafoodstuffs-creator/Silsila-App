@@ -22,6 +22,10 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   final _company = TextEditingController();
   final _warehouseCode = TextEditingController();
   final _warehouseName = TextEditingController();
+  final _warehouseNameEn = TextEditingController();
+  final _warehouseLocation = TextEditingController();
+  final _warehousePhone = TextEditingController();
+  final _warehouseLandline = TextEditingController();
   final _address = TextEditingController();
   final _itemCode = TextEditingController();
   final _itemName = TextEditingController();
@@ -36,6 +40,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _branches = [];
   String? _branchId;
+  String? _parentWarehouseId;
   String? _itemCategoryId;
   String _view = 'warehouses';
   bool _expiry = false;
@@ -55,7 +60,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   }
   @override
   void dispose() {
-    _company.dispose(); _warehouseCode.dispose(); _warehouseName.dispose(); _address.dispose();
+    _company.dispose(); _warehouseCode.dispose(); _warehouseName.dispose(); _warehouseNameEn.dispose(); _warehouseLocation.dispose(); _warehousePhone.dispose(); _warehouseLandline.dispose(); _address.dispose();
     _itemCode.dispose(); _itemName.dispose(); _barcode.dispose(); _unit.dispose();
     _purchasePrice.dispose(); _salePrice.dispose(); _taxRate.dispose(); _reorder.dispose(); super.dispose();
   }
@@ -120,9 +125,11 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       await _repo.createWarehouse(companyId: _company.text, code: _warehouseCode.text,
-        name: _warehouseName.text, branchId: _branchId, address: _address.text);
+        name: _warehouseName.text, branchId: _branchId, address: _address.text,
+        nameEn: _warehouseNameEn.text, parentWarehouseId: _parentWarehouseId,
+        location: _warehouseLocation.text, phone: _warehousePhone.text, landline: _warehouseLandline.text);
       if (!mounted) return;
-      _warehouseCode.clear(); _warehouseName.clear(); _address.clear();
+      _warehouseCode.clear(); _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseLocation.clear(); _warehousePhone.clear(); _warehouseLandline.clear(); _address.clear(); _parentWarehouseId = null;
       setState(() { _saving = false; _message = 'تمت إضافة المخزن.'; });
       await _load(clearMessage: false);
     } catch (e) {
@@ -131,6 +138,26 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     }
   }
 
+
+  Future<void> _deleteWarehouse(Map<String, dynamic> warehouse) async {
+    final yes = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: const Text('حذف المخزن'),
+      content: Text('حذف المخزن «${_s(warehouse['warehouse_name'])}»؟ إذا كان مرتبطًا بحركات أو يحتوي مخازن فرعية سيرفض النظام الحذف.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+        FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+      ],
+    ));
+    if (yes != true) return;
+    try {
+      await Supabase.instance.client.from('erp_warehouses').delete()
+        .eq('id', _s(warehouse['id'])).eq('company_id', _company.text.trim());
+      if (mounted) setState(() => _message = 'تم حذف المخزن.');
+      await _load(clearMessage: false);
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر حذف المخزن؛ قد يكون مرتبطًا بحركات أو بمخازن فرعية: $e');
+    }
+  }
 
   Future<void> _pickItemImage(ImageSource source) async {
     try {
@@ -299,10 +326,21 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('إضافة مخزن', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+            Text(_parentWarehouseId == null ? 'إضافة مخزن رئيسي' : 'إضافة مخزن فرعي', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
             TextField(controller: _warehouseCode, decoration: const InputDecoration(labelText: 'كود المخزن *')),
-            TextField(controller: _warehouseName, decoration: const InputDecoration(labelText: 'اسم المخزن *')),
+            TextField(controller: _warehouseName, decoration: const InputDecoration(labelText: 'اسم المخزن عربي *')),
+            TextField(controller: _warehouseNameEn, decoration: const InputDecoration(labelText: 'اسم المخزن إنجليزي')),
+            TextField(controller: _warehouseLocation, decoration: const InputDecoration(labelText: 'الموقع / وصف المكان')),
+            TextField(controller: _warehousePhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'الموبايل')),
+            TextField(controller: _warehouseLandline, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'التليفون الأرضي')),
             TextField(controller: _address, decoration: const InputDecoration(labelText: 'العنوان')),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _parentWarehouseId, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'المخزن الرئيسي (اتركه فارغًا للمخزن الرئيسي)')),
+              items: [const DropdownMenuItem<String>(value: null, child: Text('مخزن رئيسي')), ..._warehouses.where((w) => _s(w['id']) != _parentWarehouseId).map((w) => DropdownMenuItem<String>(value: _s(w['id']), child: Text(_s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name']))))],
+              onChanged: (v) => setState(() => _parentWarehouseId = v),
+            ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _branchId, isExpanded: true,
@@ -320,7 +358,11 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           title: Text(_s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name'])),
           subtitle: Text(_branchName(_s(w['branch_id'])) + (_s(w['address']).isEmpty ? '' : '\n' + _s(w['address']))),
           isThreeLine: true,
-          trailing: IconButton(onPressed: _saving ? null : () => _toggle(w, false), icon: Icon(w['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
+          trailing: Wrap(spacing: 0, children: [
+            IconButton(tooltip: 'إضافة مخزن فرعي', onPressed: _saving ? null : () => setState(() { _parentWarehouseId = _s(w['id']); _message = 'سيتم ربط المخزن الجديد بالمخزن: ' + _s(w['warehouse_name']); }), icon: const Icon(Icons.account_tree_outlined, color: Color(0xFF3E007D))),
+            IconButton(tooltip: 'حذف المخزن', onPressed: _saving ? null : () => _deleteWarehouse(w), icon: const Icon(Icons.delete_forever, color: Colors.red)),
+            IconButton(onPressed: _saving ? null : () => _toggle(w, false), icon: Icon(w['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
+          ]),
         ))),
       ] else ...[
         Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
