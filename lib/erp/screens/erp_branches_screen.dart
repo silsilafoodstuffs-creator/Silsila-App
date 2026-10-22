@@ -15,6 +15,7 @@ class ErpBranchesScreen extends StatefulWidget {
 class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
   SupabaseClient? _db;
   List<Map<String, dynamic>> _rows = [];
+  List<Map<String, dynamic>> _geoRows = [];
   bool _loading = false;
   String? _error;
   String? _message;
@@ -45,6 +46,9 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     }
     setState(() { _loading = true; _error = null; });
     try {
+      final geoResult = await _db!.from('erp_geographic_data')
+          .select('id,parent_id,geo_code,name_ar,name_en,level,is_active')
+          .eq('company_id', companyId).eq('is_active', true).order('geo_code');
       final result = await _db!
           .from('erp_branches')
           .select('id, branch_code, branch_name, branch_name_en, phone, phone2, landline1, landline2, location, address, governorate_id, district_id, area_id, is_main, is_active')
@@ -53,6 +57,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       if (!mounted) return;
       setState(() {
         _rows = (result as List).whereType<Map<String, dynamic>>().toList(growable: false);
+        _geoRows = (geoResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
         _loading = false;
       });
     } catch (error) {
@@ -69,6 +74,9 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     final landline1 = TextEditingController(text: _s(row?['landline1']));
     final landline2 = TextEditingController(text: _s(row?['landline2']));
     final location = TextEditingController(text: _s(row?['location']));
+    String? governorateId = _s(row?['governorate_id']).isEmpty ? null : _s(row?['governorate_id']);
+    String? districtId = _s(row?['district_id']).isEmpty ? null : _s(row?['district_id']);
+    String? areaId = _s(row?['area_id']).isEmpty ? null : _s(row?['area_id']);
     final phone = TextEditingController(text: _s(row?['phone']));
     final address = TextEditingController(text: _s(row?['address']));
     final result = await showDialog<bool>(
@@ -93,7 +101,19 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
               const SizedBox(height: 10),
               TextField(controller: landline2, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'تليفون أرضي 2', border: OutlineInputBorder())),
               const SizedBox(height: 10),
-              TextField(controller: location, decoration: const InputDecoration(labelText: 'الموقع / رابط المكان', border: OutlineInputBorder())),
+              TextField(controller: location, decoration: const InputDecoration(labelText: 'الموقع / وصف المكان', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(value: governorateId, isExpanded: true, decoration: const InputDecoration(labelText: 'المحافظة', border: OutlineInputBorder()),
+                items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المحافظة')), ..._geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
+                onChanged: (v) => setState(() { governorateId = v; districtId = null; areaId = null; })),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(value: districtId, isExpanded: true, decoration: const InputDecoration(labelText: 'الحي / المركز', border: OutlineInputBorder()),
+                items: [const DropdownMenuItem<String>(value: null, child: Text('اختر الحي أو المركز')), ..._geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (governorateId ?? '')).map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
+                onChanged: (v) => setState(() { districtId = v; areaId = null; })),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(value: areaId, isExpanded: true, decoration: const InputDecoration(labelText: 'المنطقة / القرية', border: OutlineInputBorder()),
+                items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المنطقة أو القرية')), ..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (districtId ?? '')).map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
+                onChanged: (v) => setState(() => areaId = v)),
               const SizedBox(height: 10),
               TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'العنوان', border: OutlineInputBorder())),
             ]),
@@ -125,6 +145,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         'landline1': landline1.text.trim().isEmpty ? null : landline1.text.trim(),
         'landline2': landline2.text.trim().isEmpty ? null : landline2.text.trim(),
         'location': location.text.trim().isEmpty ? null : location.text.trim(),
+        'governorate_id': governorateId, 'district_id': districtId, 'area_id': areaId,
         'phone': phone.text.trim().isEmpty ? null : phone.text.trim(),
         'address': address.text.trim().isEmpty ? null : address.text.trim(),
         'is_main': row?['is_main'] == true,
