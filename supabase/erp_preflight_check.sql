@@ -39,7 +39,7 @@ from (values
   ('erp_parties','table'),
   ('erp_branches','table'),
   ('erp_cashboxes','table'),
-  ('erp_item_groups','table'),
+  ('erp_item_categories','table'),
   ('erp_item_units','table'),
   ('erp_party_contacts','table'),
   ('erp_price_lists','table'),
@@ -109,7 +109,7 @@ left join pg_policy p on p.polrelid = c.oid
 where n.nspname = 'public'
   and c.relkind in ('r','p')
   and c.relname like 'erp_%'
-group by c.relname, c.relrowsecurity, c.relforcerowsecurity
+category by c.relname, c.relrowsecurity, c.relforcerowsecurity
 order by c.relname;
 
 select
