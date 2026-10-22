@@ -9,6 +9,7 @@ create table if not exists public.erp_geographic_data (
  logo_bytes bytea null, logo_mime_type text null, logo_sha256 text null,
  logo_bytes_updated_at timestamptz null,
  source_name text null, source_url text null,
+ name_source_name text null, name_source_url text null,
  latitude double precision null, longitude double precision null,
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
@@ -26,3 +27,6 @@ alter table public.erp_geographic_data add column if not exists logo_bytes bytea
 alter table public.erp_geographic_data add column if not exists logo_mime_type text null;
 alter table public.erp_geographic_data add column if not exists logo_sha256 text null;
 alter table public.erp_geographic_data add column if not exists logo_bytes_updated_at timestamptz null;
+
+alter table public.erp_geographic_data add column if not exists name_source_name text null;
+alter table public.erp_geographic_data add column if not exists name_source_url text null;
