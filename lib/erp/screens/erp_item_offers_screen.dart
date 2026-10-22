@@ -42,7 +42,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final values = await Future.wait([
-        _inventory.fetchItems(company), _inventory.fetchGroups(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company),
+        _inventory.fetchItems(company), _inventory.fetchCategories(company), _inventory.fetchWarehouses(company), _inventory.fetchBranches(company),
         _partiesRepo.fetchParties(company, kind: 'customer'),
         _db!.from('erp_sales_campaigns').select('id,title,campaign_type,start_date,end_date,is_active').eq('company_id', company).order('created_at', ascending: false).limit(100),
       ]);
