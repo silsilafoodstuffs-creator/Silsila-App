@@ -33,9 +33,9 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       case 'governorate':
         return 'محافظة';
       case 'district':
-        return 'حي أو مركز';
+        return 'مركز أو قسم';
       default:
-        return 'منطقة أو قرية أو شياخة';
+        return 'قرية أو شياخة أو منطقة محلية';
     }
   }
 
@@ -473,7 +473,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                     ),
                   ),
                   const Text(
-                    'المحافظات ثم الأحياء والمراكز ثم المناطق والقرى والشياخات. افتح كل مستوى لعرض التابعين.',
+                    'المحافظات ثم المراكز والأقسام ثم القرى والشياخات والمناطق المحلية. افتح كل مستوى لعرض التابعين.',
                     style: TextStyle(color: Colors.white70),
                   ),
                   SingleChildScrollView(
@@ -497,8 +497,8 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                               title: const Text('معاينة البيانات الجغرافية'),
                               content: Text(
                                 'المحافظات: $governorates\n'
-                                'الأحياء والمراكز: $districts\n'
-                                'المناطق والقرى والشياخات: $areas\n'
+                                'المراكز والأقسام: $districts\n'
+                                'القرى والشياخات والمناطق المحلية: $areas\n'
                                 'إجمالي السجلات: ${rows.length}',
                               ),
                               actions: [
@@ -531,7 +531,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Text(
-              'المحافظات: $governorates  •  الأحياء/المراكز: $districts  •  المناطق/القرى: $areas  •  الإجمالي: ${rows.length}',
+              'المحافظات: $governorates  •  المراكز/الأقسام: $districts  •  القرى/الشياخات/المناطق: $areas  •  الإجمالي: ${rows.length}',
               style: const TextStyle(
                 color: Color(0xFF3E007D),
                 fontWeight: FontWeight.w700,
