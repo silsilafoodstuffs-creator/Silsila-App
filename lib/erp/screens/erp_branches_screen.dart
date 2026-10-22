@@ -47,7 +47,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     try {
       final result = await _db!
           .from('erp_branches')
-          .select('id, branch_code, branch_name, phone, address, is_main, is_active')
+          .select('id, branch_code, branch_name, branch_name_en, phone, phone2, landline1, landline2, location, address, governorate_id, district_id, area_id, is_main, is_active')
           .eq('company_id', companyId)
           .order('branch_code');
       if (!mounted) return;
@@ -64,6 +64,11 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
   Future<void> _edit([Map<String, dynamic>? row]) async {
     final code = TextEditingController(text: _s(row?['branch_code']));
     final name = TextEditingController(text: _s(row?['branch_name']));
+    final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
+    final phone2 = TextEditingController(text: _s(row?['phone2']));
+    final landline1 = TextEditingController(text: _s(row?['landline1']));
+    final landline2 = TextEditingController(text: _s(row?['landline2']));
+    final location = TextEditingController(text: _s(row?['location']));
     final phone = TextEditingController(text: _s(row?['phone']));
     final address = TextEditingController(text: _s(row?['address']));
     final result = await showDialog<bool>(
@@ -76,9 +81,19 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(controller: code, decoration: const InputDecoration(labelText: 'كود الفرع *', border: OutlineInputBorder())),
               const SizedBox(height: 10),
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الفرع *', border: OutlineInputBorder())),
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الفرع عربي *', border: OutlineInputBorder())),
               const SizedBox(height: 10),
-              TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'الهاتف', border: OutlineInputBorder())),
+              TextField(controller: nameEn, decoration: const InputDecoration(labelText: 'اسم الفرع إنجليزي', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'موبايل 1', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: phone2, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'موبايل 2', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: landline1, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'تليفون أرضي 1', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: landline2, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'تليفون أرضي 2', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: location, decoration: const InputDecoration(labelText: 'الموقع / رابط المكان', border: OutlineInputBorder())),
               const SizedBox(height: 10),
               TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'العنوان', border: OutlineInputBorder())),
             ]),
@@ -91,7 +106,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       ),
     );
     if (result != true) {
-      code.dispose(); name.dispose(); phone.dispose(); address.dispose();
+      code.dispose(); name.dispose(); nameEn.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
       return;
     }
     try {
@@ -99,6 +114,160 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       if (companyId.isEmpty) throw StateError('لا توجد شركة نشطة.');
       if (code.text.trim().isEmpty || name.text.trim().isEmpty) {
         throw ArgumentError('كود الفرع واسم الفرع مطلوبان.');
+      if (!RegExp(r'^[A-Za-z0-9-]+
+      }
+      final payload = <String, Object?>{
+        'company_id': companyId,
+        'branch_code': code.text.trim(),
+        'branch_name': name.text.trim(),
+        'branch_name_en': nameEn.text.trim().isEmpty ? null : nameEn.text.trim(),
+        'phone2': phone2.text.trim().isEmpty ? null : phone2.text.trim(),
+        'landline1': landline1.text.trim().isEmpty ? null : landline1.text.trim(),
+        'landline2': landline2.text.trim().isEmpty ? null : landline2.text.trim(),
+        'location': location.text.trim().isEmpty ? null : location.text.trim(),
+        'phone': phone.text.trim().isEmpty ? null : phone.text.trim(),
+        'address': address.text.trim().isEmpty ? null : address.text.trim(),
+        'is_main': row?['is_main'] == true,
+        'is_active': row?['is_active'] != false,
+      };
+      if (row == null) {
+        payload['is_main'] = false;
+        payload['is_active'] = true;
+        await _db!.from('erp_branches').insert(payload);
+      } else {
+        await _db!.from('erp_branches').update(payload).eq('id', row['id']).eq('company_id', companyId);
+      }
+      if (!mounted) return;
+      setState(() => _message = 'تم حفظ بيانات الفرع في قاعدة البيانات.');
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر حفظ الفرع: $error');
+    } finally {
+      code.dispose(); name.dispose(); phone.dispose(); address.dispose();
+    }
+  }
+
+  Future<void> _toggle(Map<String, dynamic> row) async {
+    final companyId = (widget.companyId ?? '').trim();
+    final id = _s(row['id']);
+    final next = row['is_active'] != true;
+    if (row['is_main'] == true && !next) {
+      setState(() => _error = 'لا يمكن إيقاف الفرع الرئيسي قبل تعيين فرع رئيسي بديل.');
+      return;
+    }
+    try {
+      await _db!.from('erp_branches').update({'is_active': next}).eq('id', id).eq('company_id', companyId);
+      if (mounted) setState(() => _message = next ? 'تم تفعيل الفرع.' : 'تم إيقاف الفرع.');
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر تغيير حالة الفرع: $error');
+    }
+  }
+
+  Future<void> _delete(Map<String, dynamic> row) async {
+    if (row['is_main'] == true) {
+      setState(() => _error = 'لا يمكن حذف الفرع الرئيسي.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('حذف الفرع'),
+        content: Text('هل تريد حذف «${_s(row['branch_name'])}»؟ لن يسمح النظام بحذف فرع مرتبط بمخازن أو حركات.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _db!
+          .from('erp_branches')
+          .delete()
+          .eq('id', row['id'])
+          .eq('company_id', (widget.companyId ?? '').trim());
+      if (mounted) setState(() => _message = 'تم حذف الفرع.');
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر حذف الفرع؛ قد يكون مرتبطًا بمخازن أو مراكز تكلفة أو حركات: $error');
+    }
+  }
+
+  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
+      ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
+
+  Future<void> _previewDirectory() async {
+    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('معاينة الدليل'),
+      content: SizedBox(width: 720, child: _rows.isEmpty ? const Text('لا توجد بيانات محمّلة.')
+        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _rows.take(100).map((r) => ListTile(
+          dense: true, title: Text('${r['branch_name'] ?? r['center_name'] ?? r['name'] ?? '—'}'),
+          subtitle: Text('${r['branch_code'] ?? r['center_code'] ?? r['code'] ?? ''} • ${r['is_active'] == true ? 'نشط' : 'موقوف'}'),
+        )).toList()))),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.rtl,
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Card(color: _branchPurple, child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const Text('الفروع', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+          const Text('إدارة دليل الفروع الفعلي المرتبط بالشركة.', style: TextStyle(color: Colors.white70)),
+          const SizedBox(height: 8),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+            _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : () => _edit()),
+            _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _rows.isEmpty ? null : () => _edit(_rows.first)),
+            _quickTask('حذف', Icons.delete_outline, Colors.red, _rows.isEmpty ? null : () => _delete(_rows.first)),
+            _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewDirectory),
+          ])),
+        ]),
+      )),
+      const SizedBox(height: 12),
+      const SizedBox(height: 12),
+      if (_error != null) _notice(_error!, Colors.red),
+      if (_message != null) _notice(_message!, Colors.green),
+      if (_loading)
+        const Center(child: Padding(padding: EdgeInsets.all(28), child: CircularProgressIndicator()))
+      else if (_rows.isEmpty)
+        const Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد.')))
+      else
+        ..._rows.map((row) {
+          final active = row['is_active'] == true;
+          final main = row['is_main'] == true;
+          return Card(
+            elevation: 0,
+            margin: const EdgeInsets.only(bottom: 8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: BorderSide(color: main ? _branchPurple : Colors.grey.shade300)),
+            child: ListTile(
+              leading: CircleAvatar(backgroundColor: _branchPurple.withValues(alpha: .09), child: Icon(main ? Icons.star : Icons.account_tree_outlined, color: _branchPurple)),
+              title: Text('${_s(row['branch_code'])} — ${_s(row['branch_name'])}', style: const TextStyle(fontWeight: FontWeight.w800)),
+              subtitle: Text('${main ? 'الفرع الرئيسي • ' : ''}${active ? 'نشط' : 'موقوف'} • ${_s(row['phone']).isEmpty ? 'لا يوجد هاتف' : _s(row['phone'])}\n${_s(row['address'])}', maxLines: 2, overflow: TextOverflow.ellipsis),
+              isThreeLine: true,
+              trailing: Wrap(spacing: 0, children: [
+                IconButton(tooltip: 'تعديل', onPressed: () => _edit(row), icon: const Icon(Icons.edit_outlined, color: _branchPurple)),
+                IconButton(tooltip: active ? 'إيقاف' : 'تفعيل', onPressed: () => _toggle(row), icon: Icon(active ? Icons.pause_circle_outline : Icons.play_circle_outline, color: active ? Colors.orange : Colors.green)),
+                IconButton(tooltip: 'حذف', onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+              ]),
+            ),
+          );
+        }),
+    ]),
+  );
+
+  Widget _notice(String message, Color color) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(color: color.withValues(alpha: .08), borderRadius: BorderRadius.circular(10), border: Border.all(color: color.withValues(alpha: .3))),
+    child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+  );
+}
+).hasMatch(code.text.trim())) throw ArgumentError('كود الفرع يجب أن يتكون من حروف إنجليزية وأرقام وشرطة فقط.');
       }
       final payload = <String, Object?>{
         'company_id': companyId,
