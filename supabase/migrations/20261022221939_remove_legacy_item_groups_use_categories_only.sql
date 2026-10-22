@@ -15,24 +15,37 @@ begin
   v_def := replace(v_def, 'المجموعة', 'الفئة');
   execute v_def;
 
-  v_def := pg_get_functiondef('public.erp_prevent_duplicate_item_group_names()'::regprocedure);
-  v_def := replace(v_def, 'erp_prevent_duplicate_item_group_names', 'erp_prevent_duplicate_item_category_names');
-  v_def := replace(v_def, 'erp_item_groups', 'erp_item_categories');
-  v_def := replace(v_def, 'group_name', 'category_name');
-  execute v_def;
+  if to_regprocedure('public.erp_prevent_duplicate_item_group_names()') is not null then
+    v_def := pg_get_functiondef('public.erp_prevent_duplicate_item_group_names()'::regprocedure);
+    v_def := replace(v_def, 'erp_prevent_duplicate_item_group_names', 'erp_prevent_duplicate_item_category_names');
+    v_def := replace(v_def, 'erp_item_groups', 'erp_item_categories');
+    v_def := replace(v_def, 'group_name', 'category_name');
+    execute v_def;
+  elsif to_regprocedure('public.erp_prevent_duplicate_item_category_names()') is null then
+    raise exception 'Category name validation function is missing; apply erp_master_data_integrity.sql first.';
+  end if;
 
-  v_def := pg_get_functiondef('public.erp_prepare_selective_data_clear(uuid,text[])'::regprocedure);
-  v_def := replace(v_def, 'erp_item_groups', 'erp_item_categories');
-  execute v_def;
+  if to_regprocedure('public.erp_prepare_selective_data_clear(uuid,text[])') is not null then
+    v_def := pg_get_functiondef('public.erp_prepare_selective_data_clear(uuid,text[])'::regprocedure);
+    v_def := replace(v_def, 'erp_item_groups', 'erp_item_categories');
+    execute v_def;
+  end if;
 
-  v_def := pg_get_functiondef('public.erp_complete_selective_data_clear(uuid,text)'::regprocedure);
-  v_def := replace(v_def, 'erp_item_groups', 'erp_item_categories');
-  execute v_def;
+  if to_regprocedure('public.erp_complete_selective_data_clear(uuid,text)') is not null then
+    v_def := pg_get_functiondef('public.erp_complete_selective_data_clear(uuid,text)'::regprocedure);
+    v_def := replace(v_def, 'erp_item_groups', 'erp_item_categories');
+    execute v_def;
+  end if;
 end $$;
 
 drop trigger if exists erp_item_group_guard on public.erp_items;
-drop trigger if exists erp_item_group_parent_guard on public.erp_item_groups;
-drop trigger if exists erp_item_groups_no_duplicate_names on public.erp_item_groups;
+do $
+begin
+  if to_regclass('public.erp_item_groups') is not null then
+    execute 'drop trigger if exists erp_item_group_parent_guard on public.erp_item_groups';
+    execute 'drop trigger if exists erp_item_groups_no_duplicate_names on public.erp_item_groups';
+  end if;
+end $;
 
 drop trigger if exists erp_item_category_parent_guard on public.erp_item_categories;
 create trigger erp_item_category_parent_guard
@@ -68,7 +81,7 @@ alter table public.erp_items drop column if exists group_id;
 alter table public.erp_items drop constraint if exists erp_items_category_id_fkey;
 alter table public.erp_items add constraint erp_items_category_id_fkey
   foreign key (category_id) references public.erp_item_categories(id) on delete restrict;
-drop table public.erp_item_groups;
+drop table if exists public.erp_item_groups;
 drop function if exists public.erp_prevent_duplicate_item_group_names();
 
 drop trigger if exists erp_item_categories_item_guard on public.erp_items;
