@@ -77,10 +77,13 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
       if (!mounted) return;
       setState(() => _status = 'نجحت النسخة الأولى على السيرفر. جاري الحفظ على الجهاز...');
       final bytes = Uint8List.fromList(utf8.encode(const JsonEncoder.withIndent('  ').convert(payload)));
-      await FileSaver.instance.saveFile(
+      final savedPath = await FileSaver.instance.saveFile(
         name: 'silsila_backup_${DateTime.now().toIso8601String().replaceAll(':', '-')}',
         bytes: bytes, fileExtension: 'json', mimeType: MimeType.json,
       );
+      if (savedPath == null || savedPath.isEmpty) {
+        throw StateError('لم يؤكد النظام حفظ ملف النسخة الاحتياطية على الجهاز؛ تم إلغاء المسح.');
+      }
       if (!mounted) return;
       setState(() => _status = 'نجحت النسختان. جاري مسح السجلات المحددة...');
       await db.from('erp_workspace_records').delete().eq('company_id', companyId).inFilter('page_key', pages);
