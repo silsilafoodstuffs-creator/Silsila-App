@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'widgets/erp_quick_task_button.dart';
 import 'widgets/erp_keyboard_navigation.dart';
 import 'package:flutter/services.dart';
@@ -1593,13 +1594,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         visualDensity: VisualDensity.compact,
         tooltip: 'استبدال مستخدم',
         onPressed: () => _leaveCurrentUser(switchUser: true),
-        icon: const Icon(Icons.switch_account_rounded, color: _purple),
+        icon: const Icon(Icons.manage_accounts_rounded, color: _purple, size: 23),
+        style: IconButton.styleFrom(backgroundColor: const Color(0xFFF0E7FA), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)), fixedSize: const Size(38, 38)),
       ),
       IconButton(
         visualDensity: VisualDensity.compact,
         tooltip: 'تسجيل الخروج',
         onPressed: () => _leaveCurrentUser(switchUser: false),
-        icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+        icon: const Icon(Icons.logout_outlined, color: Color(0xFFB42318), size: 22),
+        style: IconButton.styleFrom(backgroundColor: const Color(0xFFFFF0EF), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)), fixedSize: const Size(38, 38)),
       ),
       SizedBox(width: 190, child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'بحث سريع', prefixIcon: const Icon(Icons.search_rounded), isDense: true, filled: true, fillColor: _canvas, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
     ],
@@ -2397,19 +2400,19 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 children: [
                   _aboutIconButton(label: 'اتصال أرضي', icon: Icons.call, url: 'tel:0222784248', color: const Color(0xFF176B3A)),
                   _aboutIconButton(label: 'اتصال موبايل', icon: Icons.phone_android, url: 'tel:01019617100', color: const Color(0xFF176B3A)),
-                  _aboutIconButton(label: 'واتساب', icon: Icons.chat, url: 'https://wa.me/201019617100', color: const Color(0xFF128C7E)),
+                  _aboutIconButton(label: 'واتساب', icon: FontAwesomeIcons.whatsapp, url: 'https://wa.me/201019617100', color: const Color(0xFF128C7E)),
                   _aboutIconButton(label: 'رسالة SMS', icon: Icons.sms_outlined, url: 'sms:01019617100', color: const Color(0xFF176B3A)),
-                  _aboutIconButton(label: 'تيك توك', icon: Icons.music_note, url: 'https://www.tiktok.com/search?q=Silsila', color: Colors.black87),
-                  _aboutIconButton(label: 'فيسبوك', icon: Icons.facebook, url: 'https://www.facebook.com/search/top?q=Silsila', color: const Color(0xFF1877F2)),
-                  _aboutIconButton(label: 'إنستجرام', icon: Icons.camera_alt_outlined, url: 'https://www.instagram.com/explore/search/keyword/?q=Silsila', color: const Color(0xFFC13584)),
-                  _aboutIconButton(label: 'لينكد إن', icon: Icons.business_center_outlined, url: 'https://www.linkedin.com/search/results/companies/?keywords=Silsila', color: const Color(0xFF0A66C2)),
-                  _aboutIconButton(label: 'ماسنجر', icon: Icons.message_outlined, url: 'https://www.messenger.com/', color: const Color(0xFF0866FF)),
+                  _aboutIconButton(label: 'تيك توك', icon: FontAwesomeIcons.tiktok, url: 'https://www.tiktok.com/search?q=Silsila', color: Colors.black87),
+                  _aboutIconButton(label: 'فيسبوك', icon: FontAwesomeIcons.facebookF, url: 'https://www.facebook.com/search/top?q=Silsila', color: const Color(0xFF1877F2)),
+                  _aboutIconButton(label: 'إنستجرام', icon: FontAwesomeIcons.instagram, url: 'https://www.instagram.com/explore/search/keyword/?q=Silsila', color: const Color(0xFFC13584)),
+                  _aboutIconButton(label: 'لينكد إن', icon: FontAwesomeIcons.linkedinIn, url: 'https://www.linkedin.com/search/results/companies/?keywords=Silsila', color: const Color(0xFF0A66C2)),
+                  _aboutIconButton(label: 'ماسنجر', icon: FontAwesomeIcons.facebookMessenger, url: 'https://www.messenger.com/', color: const Color(0xFF0866FF)),
                 ],
               ),
             ),
             const SizedBox(height: 8),
             const Text(
-              'روابط التواصل تفتح وسائل الاتصال أو صفحات البحث الحالية؛ يمكن استبدالها بالروابط الرسمية عند توفرها.',
+              'اضغط على شعار التطبيق لفتح وسيلة التواصل المناسبة.',
               style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5),
             ),
           ]),
