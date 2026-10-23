@@ -138,7 +138,6 @@ class ProductService {
     final categoriesById = <String, Map<String, dynamic>>{
       for (final category in categories) (category['id'] ?? '').toString(): category,
     };
-    final categoryIds = categories.map((g) => g['id'].toString()).toList(growable: false);
 
     List<Map<String, dynamic>> categoryPath(Map<String, dynamic> leaf) {
       final path = <Map<String, dynamic>>[leaf];
