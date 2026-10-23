@@ -92,6 +92,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   int _duplicateCount = 0;
   final Set<String> _downloadingUrls = <String>{};
   final Map<String, Future<Uint8List?>> _previewFutures = <String, Future<Uint8List?>>{};
+  final ScrollController _imagesScrollController = ScrollController();
 
   @override
   void initState() {
@@ -893,6 +894,14 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   }
 
   @override
+  void dispose() {
+    _imagesScrollController.dispose();
+    _url.dispose();
+    for (final controller in _rowControllers.values) { controller.dispose(); }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final selectableCount = _images.where((x) => x['_previously_imported'] != true).length;
     final allSelected = selectableCount > 0 && _selected.length == selectableCount;
@@ -1044,9 +1053,17 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
               ])),
             )
           else
-            SizedBox(height: MediaQuery.of(context).size.height * 0.56,
+            SizedBox(height: MediaQuery.of(context).size.height * 0.68,
               child: Column(children: [
-                Expanded(child: ListView.builder(
+                Expanded(child: Scrollbar(
+                  controller: _imagesScrollController,
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  interactive: true,
+                  child: ListView.builder(
+              controller: _imagesScrollController,
+              primary: false,
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.only(bottom: 18), itemCount: _images.length,
               itemBuilder: (context,index) {
                 final item=_images[index]; final url=item['url'].toString(); final selected=_selected.contains(url);
@@ -1187,7 +1204,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     ])),
                   ]));
               },
-            )),
+            ))),
               ]),
             ),
         ],
