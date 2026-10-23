@@ -508,7 +508,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
     final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('إيقاف الشركة'),
       content: const Text('سيتم إيقاف الشركة منطقيًا دون حذف بياناتها المالية أو مستنداتها. هل تريد المتابعة؟'),
-      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('نعم، إيقاف الشركة'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No / لا')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Yes / نعم، أوقف الشركة'))],
     ));
     if (confirmed != true) return;
     try {
