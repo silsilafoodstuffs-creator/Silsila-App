@@ -366,6 +366,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       return;
     }
     FocusScope.of(context).unfocus();
+    if (_imagesScrollController.hasClients) _imagesScrollController.jumpTo(0);
     setState(() {
       _loading = true;
       _error = null;
@@ -420,7 +421,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
             ? (candidates.isEmpty
                 ? 'لم يتم العثور على صور ظاهرة في HTML. قد تعتمد الصفحة على JavaScript أو تمنع الوصول.'
                 : 'لا توجد صور جديدة في هذه الصفحة.')
-            : '';
+            : 'تم العثور على ${images.length} صورة. استخدم شريط التمرير بجوار القائمة لاستعراض جميع الصفوف.';
       });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
