@@ -573,7 +573,6 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                           ),
                         ),
                       ],
-                    ],
                   ),
                 ],
               ),
