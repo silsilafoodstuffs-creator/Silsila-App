@@ -873,10 +873,17 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   Future<Uint8List?> _previewImageBytes(String url) {
     return _previewFutures.putIfAbsent(url, () async {
       try {
-        final result = await _invoke({'action': 'download', 'url': url});
+        final result = await _invoke({
+          'action': 'download',
+          'url': url,
+          'referer': _pageUrl ?? _url.text.trim(),
+        });
         final encoded = result['base64']?.toString() ?? '';
         if (encoded.isEmpty) return null;
-        return Uint8List.fromList(base64Decode(encoded));
+        final bytes = Uint8List.fromList(base64Decode(encoded));
+        // Reject HTML/error bodies returned with a misleading image content type.
+        if (bytes.length < 8) return null;
+        return bytes;
       } catch (_) {
         return null;
       }
