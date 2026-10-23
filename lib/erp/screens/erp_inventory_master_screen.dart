@@ -148,8 +148,8 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       title: const Text('حذف المخزن'),
       content: Text('حذف المخزن «${_s(warehouse['warehouse_name'])}»؟ إذا كان مرتبطًا بحركات أو يحتوي مخازن فرعية سيرفض النظام الحذف.'),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-        FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No / لا')),
+        FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('Yes / نعم، احذف المخزن')),
       ],
     ));
     if (yes != true) return;
