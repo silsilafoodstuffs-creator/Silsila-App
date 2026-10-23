@@ -327,11 +327,11 @@ class _ErpAppAssetsScreenState extends State<ErpAppAssetsScreen> {
         title: const Text('حذف الصورة'),
         content: Text('هل تريد حذف «${asset.displayName}» من التخزين وقاعدة البيانات؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No / لا')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('حذف'),
+            child: const Text('Yes / نعم، احذف'),
           ),
         ],
       ),
