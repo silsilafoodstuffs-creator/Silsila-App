@@ -355,7 +355,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('إلغاء'),
+            child: const Text('No / لا'),
           ),
           if (!hasChildren)
             FilledButton(
