@@ -257,6 +257,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
 
   @override
   void dispose() {
+    _imagesScrollController.dispose();
+    for (final controller in _rowControllers.values) { controller.dispose(); }
     _url.dispose();
     for (final controller in _rowControllers.values) { controller.dispose(); }
     super.dispose();
@@ -891,14 +893,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           PositionedDirectional(top: 6, start: 6, child: IconButton(onPressed: () => Navigator.pop(dialogContext), icon: const Icon(Icons.close))),
         ])),
     ));
-  }
-
-  @override
-  void dispose() {
-    _imagesScrollController.dispose();
-    _url.dispose();
-    for (final controller in _rowControllers.values) { controller.dispose(); }
-    super.dispose();
   }
 
   @override
