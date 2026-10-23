@@ -19,6 +19,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
   List<Map<String, dynamic>> _rows = [];
   bool _loading = false;
   bool _activeOnly = true;
+  String _viewMode = 'tree';
   final Set<String> _expandedAccounts = <String>{};
   String? _error;
 
@@ -277,6 +278,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Card(
+          color: depth == 0 ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
           margin: EdgeInsets.only(left: depth * 20.0, bottom: 5),
           child: InkWell(
             onDoubleTap: () {
@@ -381,6 +383,8 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
             const SizedBox(height: 8),
             SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
               _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
+              _quickTask('عرض شجرة', Icons.account_tree_outlined, _viewMode == 'tree' ? const Color(0xFF3E007D) : Colors.grey, () => setState(() => _viewMode = 'tree')),
+              _quickTask('عرض جدول', Icons.table_rows_outlined, _viewMode == 'grid' ? const Color(0xFF3E007D) : Colors.grey, () => setState(() => _viewMode = 'grid')),
               _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _loading ? null : () => _openAccountEditor()),
               _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewAccounts),
               _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _filtered.isEmpty ? null : () => _openAccountEditor(account: _filtered.first)),
@@ -413,7 +417,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
           Expanded(
             child: TextField(
               controller: _search,
-              decoration: const InputDecoration(labelText: 'بحث بالكود أو الاسم', prefixIcon: Icon(Icons.search)),
+              decoration: InputDecoration(labelText: 'ابحث بالكود أو الاسم', prefixIcon: const Icon(Icons.search, color: Color(0xFF3E007D)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, suffixIcon: _search.text.isEmpty ? null : IconButton(tooltip: 'مسح البحث', onPressed: () { _search.clear(); setState(() {}); }, icon: const Icon(Icons.clear))),
               onChanged: (_) => setState(() {}),
             ),
           ),
@@ -434,8 +438,22 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
         const SizedBox(height: 10),
         if (!_loading && rows.isEmpty)
           const Padding(padding: EdgeInsets.all(24), child: Text('أدخل معرّف الشركة واضغط تحديث لعرض الحسابات.')),
-        if (rows.isNotEmpty) ..._childrenOf('').map((row) => _buildTreeNode(row, 0)),
-
+        if (rows.isNotEmpty && _viewMode == 'tree') ..._childrenOf('').map((row) => _buildTreeNode(row, 0)),
+        if (rows.isNotEmpty && _viewMode == 'grid')
+          Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
+            headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+            columns: const [DataColumn(label: Text('كود الحساب')), DataColumn(label: Text('اسم الحساب')), DataColumn(label: Text('نوع الحساب')), DataColumn(label: Text('طبيعة الرصيد')), DataColumn(label: Text('المستوى')), DataColumn(label: Text('الحالة')), DataColumn(label: Text('إجراءات'))],
+            rows: rows.map((r) => DataRow(color: WidgetStateProperty.all(_value(r, 'parent_id').isEmpty ? const Color(0xFFEDE1F8) : const Color(0xFFFFE4BE)), cells: [
+              DataCell(Text(_value(r, 'account_code'))), DataCell(Text(_value(r, 'account_name'))), DataCell(Text(_value(r, 'account_type'))),
+              DataCell(Text(_value(r, 'normal_balance') == 'debit' ? 'مدين' : 'دائن')),
+              DataCell(Text(_value(r, 'parent_id').isEmpty ? 'رئيسي' : 'فرعي')),
+              DataCell(Text(r['is_active'] == true ? 'نشط' : 'معطل')),
+              DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                IconButton(tooltip: 'تعديل', onPressed: () => _openAccountEditor(account: r), icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015))),
+                IconButton(tooltip: 'إيقاف', onPressed: () => _confirmDeactivate(r), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+              ])),
+            ])).toList(),
+          )))),
       ],
     );
   }
