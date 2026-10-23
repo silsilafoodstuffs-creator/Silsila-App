@@ -112,7 +112,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
       title: const Text('حذف الوحدة'),
       content: Text('هل تريد حذف «${_s(row['unit_name_ar'])}»؟'),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No / لا')),
         FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red),
           onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
       ],
