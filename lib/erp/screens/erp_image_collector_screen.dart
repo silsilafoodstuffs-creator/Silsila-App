@@ -904,7 +904,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     final selectableCount = _images.where((x) => x['_previously_imported'] != true).length;
     final allSelected = selectableCount > 0 && _selected.length == selectableCount;
     final pageCount = (_images.length / _imagesPageSize).ceil();
-    final safePage = pageCount == 0 ? 0 : _imagesPage.clamp(0, pageCount - 1);
+    final int safePage = pageCount == 0 ? 0 : _imagesPage.clamp(0, pageCount - 1).toInt();
     final pageStart = safePage * _imagesPageSize;
     final visibleImages = _images.skip(pageStart).take(_imagesPageSize).toList();
     return Directionality(
