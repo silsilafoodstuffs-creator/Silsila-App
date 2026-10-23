@@ -24,6 +24,9 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   String? message;
   bool loading = false;
   String? _activeCompanyId;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String? _membershipDiagnostic;
 
   String s(dynamic value) => (value ?? '').toString();
 
@@ -61,6 +64,12 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
 
   String childLevel(String level) =>
       level == 'governorate' ? 'district' : 'area';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -120,16 +129,22 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       final suppliedCompanyId = (widget.companyId ?? '').trim();
       if (suppliedCompanyId.isNotEmpty) candidates.add(suppliedCompanyId);
       final userId = db!.auth.currentUser?.id;
+      _membershipDiagnostic = null;
       if (userId != null && userId.isNotEmpty) {
-        final membershipResult = await db!
-            .from('erp_company_members')
-            .select('company_id')
-            .eq('user_id', userId)
-            .eq('is_active', true)
-            .order('created_at');
-        for (final item in (membershipResult as List)) {
-          final id = s((item as Map<String, dynamic>)['company_id']).trim();
-          if (id.isNotEmpty && !candidates.contains(id)) candidates.add(id);
+        try {
+          final membershipResult = await db!
+              .from('erp_company_members')
+              .select('company_id')
+              .eq('user_id', userId)
+              .eq('is_active', true)
+              .order('created_at');
+          for (final item in (membershipResult as List)) {
+            final id = s((item as Map<String, dynamic>)['company_id']).trim();
+            if (id.isNotEmpty && !candidates.contains(id)) candidates.add(id);
+          }
+        } catch (membershipError) {
+          // Keep trying a company explicitly supplied by the dashboard.
+          _membershipDiagnostic = 'تعذر قراءة عضوية الشركة: $membershipError';
         }
       }
       if (candidates.isEmpty) {
@@ -147,33 +162,39 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
 
       // Read only rows belonging to a company the signed-in user is linked to.
       // Try all active memberships in case the dashboard passed an old company id.
+      String? lastReadError;
       for (final candidateId in candidates) {
-        final candidateRows = <Map<String, dynamic>>[];
-        var offset = 0;
-        while (true) {
-          final result = await db!
-              .from('erp_geographic_data')
-              .select(fields)
-              .eq('company_id', candidateId)
-              .order('geo_code')
-              .range(offset, offset + pageSize - 1);
-          final page = (result as List)
-              .map((item) => Map<String, dynamic>.from(item))
-              .toList();
-          candidateRows.addAll(page);
-          if (page.length < pageSize) break;
-          offset += pageSize;
-        }
-        if (candidateRows.isNotEmpty) {
-          loadedRows = candidateRows;
-          resolvedCompanyId = candidateId;
-          break;
+        try {
+          final candidateRows = <Map<String, dynamic>>[];
+          var offset = 0;
+          while (true) {
+            final result = await db!
+                .from('erp_geographic_data')
+                .select(fields)
+                .eq('company_id', candidateId)
+                .order('geo_code')
+                .range(offset, offset + pageSize - 1);
+            final page = (result as List)
+                .map((item) => Map<String, dynamic>.from(item))
+                .toList();
+            candidateRows.addAll(page);
+            if (page.length < pageSize) break;
+            offset += pageSize;
+          }
+          if (candidateRows.isNotEmpty) {
+            loadedRows = candidateRows;
+            resolvedCompanyId = candidateId;
+            break;
+          }
+        } catch (readError) {
+          lastReadError = 'الشركة $candidateId: $readError';
         }
       }
 
       if (loadedRows.isEmpty) {
         throw StateError(
-          'لم تُرجع قاعدة البيانات سجلات لهذه الشركات. تحقق من صلاحيات القراءة وسياسات RLS لجدول erp_geographic_data.',
+          'لم تظهر سجلات للشركات المرتبطة. '
+          '${lastReadError ?? _membershipDiagnostic ?? 'تحقق من عضوية المستخدم وصلاحيات RLS لجدول erp_geographic_data.'}',
         );
       }
 
@@ -182,13 +203,8 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         _activeCompanyId = resolvedCompanyId;
         rows = loadedRows;
         _rebuildChildren();
-        _expandedIds
-          ..clear()
-          ..addAll(
-            rows
-                .where((row) => s(row['level']) == 'governorate')
-                .map((row) => s(row['id'])),
-          );
+        // Keep the initial tree compact: show all governorates immediately,
+        // expand districts/areas only when the user opens a branch.
         loading = false;
         error = null;
       });
@@ -474,6 +490,13 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     final roots = rows
         .where((row) => s(row['level']) == 'governorate' && s(row['parent_id']).isEmpty)
         .toList();
+    final visibleRows = _searchQuery.isEmpty
+        ? roots
+        : rows.where((row) =>
+            s(row['name_ar']).toLowerCase().contains(_searchQuery) ||
+            s(row['name_en']).toLowerCase().contains(_searchQuery) ||
+            s(row['geo_code']).toLowerCase().contains(_searchQuery)).toList()
+          ..sort((a, b) => s(a['geo_code']).compareTo(s(b['geo_code'])));
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -504,10 +527,10 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                     'المصدر الأساسي: Open Admin Data (CC BY 4.0). تمت مراجعة الأسماء المحلية بمصدر مجتمعي؛ والتصنيف الريفي/الحضري لبعض الوحدات مبدئي ويحتاج اعتمادًا رسميًا.',
                     style: TextStyle(color: Colors.white60, fontSize: 11),
                   ),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
                         task('تحديث', Icons.refresh, Colors.blue, loading ? null : load),
                         task(
                           'إضافة محافظة',
@@ -523,11 +546,22 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                             context: context,
                             builder: (dialogContext) => AlertDialog(
                               title: const Text('معاينة البيانات الجغرافية'),
-                              content: Text(
-                                'المحافظات: $governorates\n'
-                                'المراكز والأقسام: $districts\n'
-                                'القرى والشياخات والمناطق المحلية: $areas\n'
-                                'إجمالي السجلات: ${rows.length}',
+                              content: SizedBox(
+                                width: 420,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Text('المحافظات: $governorates'),
+                                    Text('المراكز والأقسام: $districts'),
+                                    Text('القرى والشياخات والمناطق المحلية: $areas'),
+                                    Text('إجمالي السجلات: ${rows.length}'),
+                                    const Divider(),
+                                    const Text('المحافظات المحملة', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    ...roots.take(10).map((item) => Text('${s(item['geo_code'])}  •  ${s(item['name_ar'])}')),
+                                    if (roots.length > 10) Text('و${roots.length - 10} محافظة أخرى'),
+                                  ],
+                                ),
                               ),
                               actions: [
                                 TextButton(
@@ -539,7 +573,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
                 ],
               ),
@@ -555,6 +589,27 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
               padding: const EdgeInsets.all(6),
               child: Text(message!, style: const TextStyle(color: Colors.green)),
             ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (value) => setState(() => _searchQuery = value.trim().toLowerCase()),
+              decoration: InputDecoration(
+                labelText: 'ابحث بكود أو اسم المحافظة أو المركز أو المنطقة',
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF3E007D)),
+                suffixIcon: _searchQuery.isEmpty ? null : IconButton(
+                  tooltip: 'مسح البحث',
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                  icon: const Icon(Icons.clear),
+                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                isDense: true,
+              ),
+            ),
+          ),
           if (loading) const LinearProgressIndicator(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -595,9 +650,13 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                       ),
                     ),
                   )
-                : ListView(
-                    children: roots.map((row) => node(row, 0)).toList(),
-                  ),
+                : visibleRows.isEmpty
+                    ? Center(child: Text(_searchQuery.isEmpty ? 'لا توجد محافظات ظاهرة ضمن البيانات المحملة.' : 'لا توجد نتائج مطابقة للبحث.'))
+                    : ListView.builder(
+                        key: ValueKey(_searchQuery.isEmpty ? 'governorates' : 'search-results'),
+                        itemCount: visibleRows.length,
+                        itemBuilder: (context, index) => node(visibleRows[index], 0),
+                      ),
           ),
         ],
       ),
