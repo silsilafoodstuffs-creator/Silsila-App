@@ -331,11 +331,17 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
 
   bool _branchMatches(Map<String, dynamic> row) {
     if (_matchesSearch(row)) return true;
-    return _centers.where((child) => _s(child['parent_id']) == _s(row['id'])).any(_branchMatches);
+    final id = _s(row['id']);
+    if (id.isEmpty) return false;
+    return _centers.where((child) => _s(child['parent_id']) == id).any(_branchMatches);
   }
 
-  List<Map<String, dynamic>> _childrenOfCenter(Map<String, dynamic> row) => _centers.where((child) => _s(child['parent_id']) == _s(row['id'])).toList()
-    ..sort((a, b) => _s(a['center_code']).compareTo(_s(b['center_code'])));
+  List<Map<String, dynamic>> _childrenOfCenter(Map<String, dynamic> row) {
+    final id = _s(row['id']);
+    if (id.isEmpty) return <Map<String, dynamic>>[];
+    return _centers.where((child) => _s(child['parent_id']) == id).toList()
+      ..sort((a, b) => _s(a['center_code']).compareTo(_s(b['center_code'])));
+  }
 
   Widget _treeNode(Map<String, dynamic> row, int depth) {
     final id = _s(row['id']);
