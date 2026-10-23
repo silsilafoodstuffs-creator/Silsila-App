@@ -92,6 +92,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   int _duplicateCount = 0;
   final Set<String> _downloadingUrls = <String>{};
   final Map<String, Future<Uint8List?>> _previewFutures = <String, Future<Uint8List?>>{};
+  final Map<String, String> _previewErrors = <String, String>{};
   final ScrollController _imagesScrollController = ScrollController();
   static const int _imagesPageSize = 10;
   int _imagesPage = 0;
@@ -376,6 +377,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       _selected.clear();
       _images = [];
       _previewFutures.clear();
+      _previewErrors.clear();
     });
     try {
       await _loadCategoryOptions();
@@ -879,12 +881,18 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           'referer': _pageUrl ?? _url.text.trim(),
         });
         final encoded = result['base64']?.toString() ?? '';
-        if (encoded.isEmpty) return null;
+        if (encoded.isEmpty) {
+          _previewErrors[url] = 'الخدمة لم تُرجع بيانات صورة.';
+          return null;
+        }
         final bytes = Uint8List.fromList(base64Decode(encoded));
-        // Reject HTML/error bodies returned with a misleading image content type.
-        if (bytes.length < 8) return null;
+        if (bytes.length < 8) {
+          _previewErrors[url] = 'ملف الصورة فارغ أو غير مكتمل.';
+          return null;
+        }
         return bytes;
-      } catch (_) {
+      } catch (e) {
+        _previewErrors[url] = e.toString().replaceFirst('Exception: ', '');
         return null;
       }
     });
@@ -1214,7 +1222,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     : const SizedBox.shrink();
                 return Container(margin:const EdgeInsets.only(bottom:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
                   child:Row(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-                    SizedBox(width:180, height:245, child: Padding(padding:const EdgeInsets.all(8),child:Material(color:const Color(0xFFF7F4F9),borderRadius:BorderRadius.circular(10),child:InkWell(borderRadius:BorderRadius.circular(10),onTap:()=>_showImagePreview(url),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:FutureBuilder<Uint8List?>(future:_previewImageBytes(url),builder:(context,snapshot){if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(strokeWidth:2));final bytes=snapshot.data;if(bytes==null)return Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,size:40),loadingBuilder:(context,child,progress)=>progress==null?child:const Center(child:CircularProgressIndicator(strokeWidth:2)));return Image.memory(bytes,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,size:40)));})))))),
+                    SizedBox(width:180, height:245, child: Padding(padding:const EdgeInsets.all(8),child:Material(color:const Color(0xFFF7F4F9),borderRadius:BorderRadius.circular(10),child:InkWell(borderRadius:BorderRadius.circular(10),onTap:()=>_showImagePreview(url),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:FutureBuilder<Uint8List?>(future:_previewImageBytes(url),builder:(context,snapshot){if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(strokeWidth:2));final bytes=snapshot.data;if(bytes==null)return Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.broken_image_outlined,size:34,color:Colors.redAccent),Padding(padding:const EdgeInsets.all(6),child:Text(_previewErrors[url]??'تعذر تحميل الصورة من المصدر',textAlign:TextAlign.center,maxLines:5,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,color:Colors.redAccent))) ]),loadingBuilder:(context,child,progress)=>progress==null?child:const Center(child:CircularProgressIndicator(strokeWidth:2)));return Image.memory(bytes,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.broken_image_outlined,size:34,color:Colors.redAccent),Padding(padding:const EdgeInsets.all(6),child:Text('صيغة الصورة غير مدعومة للمعاينة',textAlign:TextAlign.center,maxLines:3,style:const TextStyle(fontSize:10,color:Colors.redAccent))) ])));})))))),
                     const VerticalDivider(width:1),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                       Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),child:common),
