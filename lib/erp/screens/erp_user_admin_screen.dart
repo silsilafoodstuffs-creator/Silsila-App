@@ -516,183 +516,126 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     final hasChildren = children.isNotEmpty;
     final expanded = _expandedHierarchyNodes.contains(nodeKey);
     final selected = _selectedNodeKind == kind && _selectedId == id;
-    final color = isType
-        ? const Color(0xFFEDE1F8)
-        : depth == 1
-            ? const Color(0xFFFFE4BE)
-            : const Color(0xFFFFDDF3);
-    final level = isType
-        ? 'نوع مستخدم'
-        : _s(row['parent_user_id']).isEmpty
-            ? 'مستخدم رئيسي'
-            : 'مستخدم فرعي';
+    final color = isType ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3);
+    final level = isType ? 'نوع مستخدم' : _s(row['parent_user_id']).isEmpty ? 'مستخدم رئيسي' : 'مستخدم فرعي';
     final name = _s(row['name_ar']).trim().isEmpty ? 'بدون اسم' : _s(row['name_ar']);
+    Widget statusCheck(String label, String field, {bool forceHidden = false}) {
+      final value = field == 'show_at_login' ? row[field] == true && !forceHidden : row[field] == true;
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        Checkbox(
+          shape: const CircleBorder(),
+          visualDensity: VisualDensity.compact,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          value: value,
+          onChanged: _editMode && !forceHidden ? (v) => setState(() => row[field] = v == true) : null,
+        ),
+        Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+      ]);
+    }
     return Padding(
-      padding: EdgeInsetsDirectional.only(start: depth * 18, bottom: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Material(
-            color: color,
-            borderRadius: BorderRadius.circular(10),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => _selectHierarchyNode(kind, row),
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 62),
-                padding: const EdgeInsetsDirectional.only(start: 10, end: 8, top: 7, bottom: 7),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: selected ? _userAdminPurple : Colors.black12,
-                    width: selected ? 2 : 1,
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    if (hasChildren)
-                      IconButton(
-                        tooltip: expanded ? 'طي الفروع' : 'فتح الفروع',
-                        visualDensity: VisualDensity.compact,
-                        onPressed: () => setState(() {
-                          if (expanded) {
-                            _expandedHierarchyNodes.remove(nodeKey);
-                          } else {
-                            _expandedHierarchyNodes.add(nodeKey);
-                          }
-                        }),
-                        icon: Icon(
-                          expanded ? Icons.expand_more : Icons.chevron_left,
-                          color: _userAdminPurple,
-                        ),
-                      )
-                    else
-                      const SizedBox(width: 36),
-                    Icon(
-                      isType
-                          ? Icons.badge_outlined
-                          : depth == 1
-                              ? Icons.person_outline
-                              : Icons.people_alt_outlined,
-                      color: _userAdminPurple,
-                      size: 22,
-                    ),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_editMode)
+      padding: EdgeInsetsDirectional.only(start: depth * 14, bottom: 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Material(
+          color: color,
+          borderRadius: BorderRadius.circular(8),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () => _selectHierarchyNode(kind, row),
+            child: Container(
+              constraints: const BoxConstraints(minHeight: 48),
+              padding: const EdgeInsetsDirectional.only(start: 6, end: 5, top: 3, bottom: 3),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: selected ? _userAdminPurple : Colors.black12, width: selected ? 1.7 : 1),
+              ),
+              child: Row(children: [
+                if (hasChildren)
+                  IconButton(
+                    tooltip: expanded ? 'طي الفروع' : 'فتح الفروع',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(width: 28, height: 30),
+                    padding: EdgeInsets.zero,
+                    onPressed: () => setState(() {
+                      if (expanded) { _expandedHierarchyNodes.remove(nodeKey); } else { _expandedHierarchyNodes.add(nodeKey); }
+                    }),
+                    icon: Icon(expanded ? Icons.expand_more : Icons.chevron_left, color: _userAdminPurple, size: 20),
+                  )
+                else const SizedBox(width: 24),
+                Icon(isType ? Icons.badge_outlined : depth == 1 ? Icons.person_outline : Icons.people_alt_outlined,
+                    color: _userAdminPurple, size: 19),
+                const SizedBox(width: 6),
+                Expanded(
+                  flex: 4,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: _editMode
+                        ? Column(mainAxisSize: MainAxisSize.min, children: [
                             TextFormField(
                               key: ValueKey('hierarchy-$kind-$id-ar'),
                               initialValue: _s(row['name_ar']),
                               onChanged: (v) => row['name_ar'] = v,
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                labelText: 'الاسم بالعربية',
-                                border: OutlineInputBorder(),
-                              ),
-                            )
-                          else
-                            Text(name, style: const TextStyle(fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 2),
-                          Text(level + ' • ' + _s(row[isType ? 'type_code' : 'user_code']),
-                            style: const TextStyle(fontSize: 11, color: Colors.black87)),
-                          if (_editMode)
+                              decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 5), labelText: 'الاسم بالعربية', border: OutlineInputBorder()),
+                            ),
+                            const SizedBox(height: 3),
                             TextFormField(
                               key: ValueKey('hierarchy-$kind-$id-en'),
                               initialValue: _s(row['name_en']),
                               onChanged: (v) => row['name_en'] = v,
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                labelText: 'Name in English',
-                                border: OutlineInputBorder(),
-                              ),
-                            )
-                          else if (_s(row['name_en']).isNotEmpty)
-                            Text(_s(row['name_en']), style: const TextStyle(fontSize: 11)),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: selected ? 'السجل المحدد' : 'تحديد السجل',
-                      onPressed: () => _selectHierarchyNode(kind, row),
-                      icon: Icon(
-                        selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                        color: _userAdminPurple,
-                      ),
-                    ),
-                  ],
+                              decoration: const InputDecoration(isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 5), labelText: 'English name', border: OutlineInputBorder()),
+                            ),
+                          ])
+                        : Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                            Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                            Text('$level • ${_s(row[isType ? 'type_code' : 'user_code'])}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.black87)),
+                            if (_s(row['name_en']).isNotEmpty) Text(_s(row['name_en']), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10)),
+                          ]),
+                  ),
                 ),
-              ),
+                if (selected)
+                  Flexible(
+                    flex: 5,
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: Wrap(spacing: 3, runSpacing: 0, crossAxisAlignment: WrapCrossAlignment.center, alignment: WrapAlignment.end, children: [
+                        statusCheck('نشط', 'is_active'),
+                        if (isType)
+                          statusCheck('عند الدخول', 'show_at_login', forceHidden: ['ادمن', 'موظف'].contains(_s(row['name_ar'])))
+                        else ...[
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), minimumSize: const Size(0, 30), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                            onPressed: () => _openBranchWarehousePicker(id),
+                            icon: const Icon(Icons.account_tree_outlined, size: 15),
+                            label: const Text('الفروع', style: TextStyle(fontSize: 11)),
+                          ),
+                          OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), minimumSize: const Size(0, 30), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                            onPressed: () => setState(() { _selectedNodeKind = 'user'; _selectedId = id; _selectedUserId = id; }),
+                            icon: const Icon(Icons.person_add_alt_1, size: 15),
+                            label: const Text('فرعي', style: TextStyle(fontSize: 11)),
+                          ),
+                        ],
+                      ]),
+                    ),
+                  )
+                else
+                  IconButton(
+                    tooltip: 'تحديد السجل',
+                    visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(width: 30, height: 30),
+                    padding: EdgeInsets.zero,
+                    onPressed: () => _selectHierarchyNode(kind, row),
+                    icon: Icon(Icons.radio_button_unchecked, color: _userAdminPurple, size: 19),
+                  ),
+              ]),
             ),
           ),
-          if (selected)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(start: 44, top: 4),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('نشط'),
-                      Checkbox(
-                        shape: const CircleBorder(),
-                        value: row['is_active'] == true,
-                        onChanged: _editMode ? (v) => setState(() => row['is_active'] = v == true) : null,
-                      ),
-                    ],
-                  ),
-                  if (isType)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('يظهر عند الدخول'),
-                        Checkbox(
-                          shape: const CircleBorder(),
-                          value: row['show_at_login'] == true,
-                          onChanged: _editMode ? (v) => setState(() => row['show_at_login'] = v == true) : null,
-                        ),
-                      ],
-                    )
-                  else
-                    OutlinedButton.icon(
-                      onPressed: () => _openBranchWarehousePicker(id),
-                      icon: const Icon(Icons.account_tree_outlined, size: 18),
-                      label: const Text('الفروع والمخازن'),
-                    ),
-                  if (!isType)
-                    OutlinedButton.icon(
-                      onPressed: () => setState(() {
-                        _selectedNodeKind = 'user';
-                        _selectedId = id;
-                        _selectedUserId = id;
-                      }),
-                      icon: const Icon(Icons.person_add_alt_1, size: 18),
-                      label: const Text('إضافة مستخدم فرعي'),
-                    ),
-                ],
-              ),
-            ),
-          if (hasChildren && expanded)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(start: 8, top: 5),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: children.map((child) => _hierarchyTreeNode(
-                  child,
-                  depth + 1,
-                  kind: 'user',
-                )).toList(),
-              ),
-            ),
-        ],
-      ),
+        ),
+        if (hasChildren && expanded)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 7, top: 3),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children.map((child) => _hierarchyTreeNode(child, depth + 1, kind: 'user')).toList()),
+          ),
+      ]),
     );
   }
 
@@ -1061,55 +1004,130 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
 
   Future<void> _openBranchWarehousePicker(String userId) async {
     if (_branches.isEmpty || _warehouses.isEmpty) {
-      if(mounted)setState(()=>_error='لا توجد فروع أو مخازن نشطة متاحة. أضف الفروع والمخازن أولًا ثم أعد المحاولة.');
+      if (mounted) setState(() => _error = 'لا توجد فروع أو مخازن نشطة متاحة. أضف الفروع والمخازن أولًا ثم أعد المحاولة.');
       return;
     }
     try {
-      final existing = await _db!.from('erp_user_branch_warehouse_access').select().eq('company_id',_company).eq('user_id',userId);
-      final current = (existing as List).map((x)=>Map<String,dynamic>.from(x)).toList();
-      final selected = <String>{for(final x in current.where((x)=>x['is_allowed']==true)) '${x['branch_id']}|${x['warehouse_id']}'};
-      String? primary = current.where((x)=>x['is_default']==true).map((x)=>'${x['branch_id']}|${x['warehouse_id']}').firstOrNull;
-      final picked = await showDialog<Map<String,dynamic>>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(context,setDialogState)=>AlertDialog(
-        title:const Text('الفروع والمخازن المسموح بها'),
-        content:SizedBox(width:650,height:460,child:Column(children:[
-          const Text('حدد الفروع والمخازن المسموح بها، ثم اختر مخزنًا افتراضيًا واحدًا لاستخدامه تلقائيًا في الحركات.',style:TextStyle(fontSize:12)),
-          Expanded(child:ListView(children:[
-            for(final branch in _branches) ...[
-              Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Text(_s(branch['branch_name']),style:const TextStyle(fontWeight:FontWeight.w800,color:_userAdminPurple))),
-              for(final warehouse in _warehouses.where((w)=>w['branch_id']==branch['id']))
-                Builder(builder:(context){
-                  final key='${branch['id']}|${warehouse['id']}';
-                  final enabled=selected.contains(key);
-                  return Row(children:[
-                    Checkbox(value:enabled,onChanged:(v)=>setDialogState((){
-                      if(v==true)selected.add(key);else{selected.remove(key);if(primary==key)primary=null;}
-                    })),
-                    Expanded(child:Text(_s(warehouse['warehouse_name']))),
-                    Radio<String>(value:key,groupValue:primary,onChanged:enabled?(v)=>setDialogState(()=>primary=v):null),
-                    const Text('افتراضي',style:TextStyle(fontSize:11)),
-                  ]);
-                }),
-            ]
-          ])),
-        ])),
-        actions:[
-          TextButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إلغاء')),
-          FilledButton(onPressed:(){
-            if(primary!=null&&!selected.contains(primary)){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('المخزن الافتراضي يجب أن يكون ضمن المخازن المسموح بها.')));return;}
-            Navigator.pop(dialogContext,{'allowed':selected.toList(),'default':primary});
-          },child:const Text('حفظ الاختيارات')),
-        ],
-      )));
-      if(picked==null)return;
-      final keys=(picked['allowed'] as List).cast<String>();
-      final defaultKey=picked['default'] as String?;
-      await _db!.from('erp_user_branch_warehouse_access').delete().eq('company_id',_company).eq('user_id',userId);
-      for(final key in keys){
-        final parts=key.split('|');
-        await _db!.from('erp_user_branch_warehouse_access').insert({'company_id':_company,'user_id':userId,'branch_id':parts[0],'warehouse_id':parts[1],'is_allowed':true,'is_default':key==defaultKey});
+      final existing = await _db!.from('erp_user_branch_warehouse_access').select().eq('company_id', _company).eq('user_id', userId);
+      final current = (existing as List).map((x) => Map<String, dynamic>.from(x)).toList();
+      final selected = <String>{for (final x in current.where((x) => x['is_allowed'] == true)) '${x['branch_id']}|${x['warehouse_id']}'};
+      String? primary = current.where((x) => x['is_default'] == true).map((x) => '${x['branch_id']}|${x['warehouse_id']}').firstOrNull;
+      final allKeys = <String>{for (final branch in _branches) for (final warehouse in _warehouses.where((w) => _s(w['branch_id']) == _s(branch['id']))) '${branch['id']}|${warehouse['id']}'};
+      final picked = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) {
+          final allSelected = allKeys.isNotEmpty && selected.containsAll(allKeys);
+          final rows = <DataRow>[];
+          var index = 0;
+          void addWarehouseRows(Map<String, dynamic> branch, Map<String, dynamic> warehouse, int depth) {
+            final key = '${branch['id']}|${warehouse['id']}';
+            final isSelected = selected.contains(key);
+            final children = _warehouses.where((w) => _s(w['parent_warehouse_id']) == _s(warehouse['id'])).toList();
+            rows.add(DataRow(
+              color: WidgetStateProperty.all(depth == 0 ? const Color(0xFFF5EFFB) : Colors.white),
+              cells: [
+                DataCell(Text('${++index}')),
+                DataCell(Padding(
+                  padding: EdgeInsetsDirectional.only(start: depth * 22),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(depth == 0 ? Icons.warehouse_outlined : Icons.subdirectory_arrow_left, size: 17, color: _userAdminPurple),
+                    const SizedBox(width: 5),
+                    Flexible(child: Text(_s(warehouse['warehouse_name']), overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: depth == 0 ? FontWeight.w800 : FontWeight.normal))),
+                  ]),
+                )),
+                DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: isSelected, onChanged: (v) => setDialogState(() {
+                  if (v == true) { selected.add(key); } else { selected.remove(key); if (primary == key) primary = null; }
+                }))),
+                DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: primary == key, onChanged: (v) => setDialogState(() {
+                  if (v == true) { selected.add(key); primary = key; } else if (primary == key) { primary = null; }
+                }))),
+              ],
+            ));
+            for (final child in children) { addWarehouseRows(branch, child, depth + 1); }
+          }
+          for (final branch in _branches) {
+            final branchWarehouses = _warehouses.where((w) => _s(w['branch_id']) == _s(branch['id']) && _s(w['parent_warehouse_id']).isEmpty).toList();
+            final branchKeys = _warehouses.where((w) => _s(w['branch_id']) == _s(branch['id'])).map((w) => '${branch['id']}|${w['id']}').toSet();
+            final branchChecked = branchKeys.isNotEmpty && selected.containsAll(branchKeys);
+            rows.add(DataRow(
+              color: WidgetStateProperty.all(const Color(0xFFEDE1F8)),
+              cells: [
+                DataCell(Text('${++index}')),
+                DataCell(Text(_s(branch['branch_name']), style: const TextStyle(fontWeight: FontWeight.w900, color: _userAdminPurple))),
+                DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: branchChecked, onChanged: (v) => setDialogState(() {
+                  if (v == true) { selected.addAll(branchKeys); } else { selected.removeAll(branchKeys); if (primary != null && branchKeys.contains(primary)) primary = null; }
+                }))),
+                const DataCell(Text('—')),
+              ],
+            ));
+            for (final warehouse in branchWarehouses) { addWarehouseRows(branch, warehouse, 0); }
+          }
+          return AlertDialog(
+            title: const Text('F1 — الفروع والمخازن'),
+            content: SizedBox(
+              width: 760,
+              height: 520,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const Text('حدد الفروع أو المخازن المسموح بها، ثم اختر مخزنًا افتراضيًا واحدًا. تظهر المخازن الفرعية أسفل مخازنها الرئيسية.', style: TextStyle(fontSize: 12)),
+                CheckboxListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.trailing,
+                  title: const Text('اختيار الكل'),
+                  value: allSelected,
+                  onChanged: (v) => setDialogState(() {
+                    if (v == true) { selected.addAll(allKeys); } else { selected.clear(); primary = null; }
+                  }),
+                ),
+                const Divider(height: 1),
+                Expanded(child: SingleChildScrollView(child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    headingRowHeight: 42,
+                    dataRowMinHeight: 39,
+                    dataRowMaxHeight: 44,
+                    horizontalMargin: 8,
+                    columnSpacing: 22,
+                    headingRowColor: WidgetStateProperty.all(const Color(0xFFF0E8F8)),
+                    columns: const [
+                      DataColumn(label: Text('م')),
+                      DataColumn(label: Text('اسم الفرع / المخزن')),
+                      DataColumn(label: Text('اختيار')),
+                      DataColumn(label: Text('المخزن الافتراضي')),
+                    ],
+                    rows: rows,
+                  ),
+                ))),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
+              FilledButton(onPressed: () {
+                if (primary != null && !selected.contains(primary)) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('المخزن الافتراضي يجب أن يكون ضمن المخازن المختارة.')));
+                  return;
+                }
+                Navigator.pop(dialogContext, {'allowed': selected.toList(), 'default': primary});
+              }, child: const Text('حفظ الاختيارات')),
+            ],
+          );
+        }),
+      );
+      if (picked == null) return;
+      final keys = (picked['allowed'] as List).cast<String>();
+      final defaultKey = picked['default'] as String?;
+      await _db!.from('erp_user_branch_warehouse_access').delete().eq('company_id', _company).eq('user_id', userId);
+      for (final key in keys) {
+        final parts = key.split('|');
+        await _db!.from('erp_user_branch_warehouse_access').insert({
+          'company_id': _company, 'user_id': userId, 'branch_id': parts[0], 'warehouse_id': parts[1],
+          'is_allowed': true, 'is_default': key == defaultKey,
+        });
       }
-      if(mounted)setState(()=>_message='تم حفظ صلاحيات الفروع والمخازن والمخزن الافتراضي.');
-    }catch(e){if(mounted)setState(()=>_error='تعذر حفظ صلاحيات الفروع والمخازن: $e');}
+      if (mounted) setState(() => _message = 'تم حفظ صلاحيات الفروع والمخازن والمخزن الافتراضي.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر حفظ صلاحيات الفروع والمخازن: $e');
+    }
   }
 
   Widget _masterGrid(){
