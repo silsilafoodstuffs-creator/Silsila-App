@@ -68,15 +68,19 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
   List<Map<String,dynamic>> _branches = [], _warehouses = [];
   String? _selectedTemplateId;
+  String? _selectedNodeKind;
+  String _viewMode = 'tree';
+  final TextEditingController _hierarchySearchController = TextEditingController();
+  String _hierarchySearch = '';
   String? _activeCompanyId;
   String _selectedPageKey = 'إدارة البرنامج|بيانات أساسية|بيانات الشركة';
   static const _typeNames = <String,String>{
-    'types':'أنواع المستخدمين','users':'المستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
+    'types':'أنواع المستخدمين والمستخدمين','users':'أنواع المستخدمين والمستخدمين','hierarchy':'أنواع المستخدمين والمستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
   };
 
   @override void initState() { super.initState(); _view=widget.initialView; _activeCompanyId=widget.companyId; try {_db=Supabase.instance.client;} catch (_) {} _load(); }
   @override void didUpdateWidget(covariant ErpUserAdminScreen oldWidget) { super.didUpdateWidget(oldWidget); if(oldWidget.companyId!=widget.companyId || oldWidget.initialView!=widget.initialView){_activeCompanyId=widget.companyId;_view=widget.initialView;_load();} }
-  @override void dispose() { super.dispose(); }
+  @override void dispose() { _hierarchySearchController.dispose(); super.dispose(); }
   String _s(dynamic v) => (v??'').toString();
 
   String _nextUniqueName(String base, {String field = 'name_ar'}) {
@@ -112,6 +116,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     });
   }
   String get _company => (_activeCompanyId ?? widget.companyId ?? '').trim();
+  bool get _isHierarchy => _view=='hierarchy' || _view=='types' || _view=='users';
   bool get _isType => _view=='types';
   bool get _isUser => _view=='users';
   bool get _isTemplate => _view=='templates';
@@ -165,7 +170,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       List<Map<String, dynamic>> userList = [];
       List<Map<String, dynamic>> templateList = [];
 
-      if (_isType || _isUser || _isPermissions) {
+      if (_isType || _isUser || _isHierarchy || _isPermissions) {
         final result = await _db!.from('erp_user_types').select().eq('company_id', _company).order('type_code');
         typeList = (result as List).map((x) => Map<String, dynamic>.from(x)).toList();
         const defaults = <Map<String, dynamic>>[
@@ -211,7 +216,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         const priority = {'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
         typeList.sort((a,b) => (priority[_s(a['name_ar'])] ?? 99).compareTo(priority[_s(b['name_ar'])] ?? 99));
       }
-      if (_isUser || _isPermissions) {
+      if (_isUser || _isHierarchy || _isPermissions) {
         // Load users directly; avoid a fragile PostgREST embedded foreign-key relationship.
         final result = await _db!.from('erp_users').select().eq('company_id', _company);
         userList = (result as List).map((x) => Map<String,dynamic>.from(x)).toList();
@@ -240,16 +245,16 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if (!mounted) return;
       setState(() {
         _types=typeList; _users=userList; _templates=templateList;
-        _rows=_isType?typeList:_isUser?userList:_isTemplate?templateList:userList;
+        _rows=_isType?typeList:_isUser?userList:_isHierarchy?typeList:_isTemplate?templateList:userList;
         if (_selectedId != null && !_rows.any((r)=>_s(r['id'])==_selectedId)) _selectedId=null;
         if (_selectedUserId != null && !userList.any((r)=>_s(r['id'])==_selectedUserId)) _selectedUserId=null;
         if (_selectedUserId==null && userList.isNotEmpty) _selectedUserId=_s(userList.first['id']);
         if (_selectedTemplateId != null && !templateList.any((r)=>_s(r['id'])==_selectedTemplateId)) _selectedTemplateId=null;
         if (_selectedTemplateId==null && templateList.isNotEmpty) _selectedTemplateId=_s(templateList.first['id']);
         _loading=false; _error=null;
-        if (_isUser && userList.isEmpty) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
-        if (_isType && typeList.any((r)=>r['_local_default']==true)) _message='أنواع المستخدمين الافتراضية معروضة في الجدول، لكن تعذر حفظها في قاعدة البيانات بسبب الصلاحيات أو سياسات RLS. يمكنك مراجعة السياسات ثم الضغط على تحديث.';
-        if (_isType && typeList.length < 6) _message='عدد أنواع المستخدمين أقل من 6؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
+        if ((_isUser || _isHierarchy) && userList.isEmpty) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
+        if ((_isType || _isHierarchy) && typeList.any((r)=>r['_local_default']==true)) _message='أنواع المستخدمين الافتراضية معروضة في الجدول، لكن تعذر حفظها في قاعدة البيانات بسبب الصلاحيات أو سياسات RLS. يمكنك مراجعة السياسات ثم الضغط على تحديث.';
+        if ((_isType || _isHierarchy) && typeList.length < 6) _message='عدد أنواع المستخدمين أقل من 6؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
       });
       if (_isTemplate && _selectedId!=null) await _loadRules();
       if (_isPermissions) await _loadUserRules();
