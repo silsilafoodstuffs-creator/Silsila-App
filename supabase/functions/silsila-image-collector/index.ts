@@ -28,6 +28,19 @@ function safeUrl(raw: string): URL {
   return u;
 }
 
+function detectRasterMime(bytes: Uint8Array): string | null {
+  if (bytes.length >= 8 &&
+      bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47 &&
+      bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return "image/png";
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+  if (bytes.length >= 6 && String.fromCharCode(...bytes.subarray(0, 3)) === "GIF") return "image/gif";
+  if (bytes.length >= 12 &&
+      String.fromCharCode(...bytes.subarray(0, 4)) === "RIFF" &&
+      String.fromCharCode(...bytes.subarray(8, 12)) === "WEBP") return "image/webp";
+  if (bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x4d) return "image/bmp";
+  return null;
+}
+
 async function readLimited(response: Response, max: number): Promise<Uint8Array> {
   const reader = response.body?.getReader();
   if (!reader) throw new Error("تعذر قراءة محتوى الرابط.");
@@ -347,12 +360,19 @@ Deno.serve(async (req: Request) => {
       }
       if (!res) return json({ error: "تعذر تنزيل الصورة." }, 422);
       if (!res.ok) return json({ error: `تعذر تنزيل الصورة (HTTP ${res.status}).` }, 422);
-      const type = (res.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
-      if (!type.startsWith("image/") || type === "image/svg+xml") return json({ error: "الرابط لا يعيد صورة نقطية مدعومة." }, 422);
       const bytes = await readLimited(res, 5_000_000);
+      // Many product CDNs return valid image bytes with a generic or incorrect
+      // Content-Type. Trust the file signature, not the header, before decoding.
+      const mime = detectRasterMime(bytes);
+      if (!mime) {
+        const headerType = (res.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
+        return json({ error: headerType === "image/avif"
+          ? "المصدر أعاد AVIF غير المدعوم في المعاينة؛ اختر رابط JPG أو PNG أو WebP."
+          : "المحتوى الذي أعاده الرابط ليس صورة JPG أو PNG أو GIF أو WebP أو BMP صالحة." }, 422);
+      }
       let binary = "";
       for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 0x8000, bytes.length)));
-      return json({ mime: type, base64: btoa(binary), bytes: bytes.length });
+      return json({ mime, base64: btoa(binary), bytes: bytes.length });
     }
     return json({ error: "الأمر غير معروف." }, 400);
   } catch (e) {
