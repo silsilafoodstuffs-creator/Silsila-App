@@ -974,7 +974,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   OutlinedButton.icon(
                     onPressed: _loading || _images.isEmpty ? null : _selectAll,
                     icon: Icon(allSelected ? Icons.deselect : Icons.select_all),
-                    label: Text(allSelected ? 'إلغاء تحديد الكل' : 'تحديد الكل (${_images.length})'),
+                    label: Text(allSelected ? 'إلغاء تحديد الصور الجديدة' : 'تحديد الصور الجديدة ($selectableCount)'),
                   ),
                   FilledButton.icon(
                     onPressed: _loading || _selected.isEmpty ? null : _saveZip,
@@ -1083,6 +1083,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 final common=SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                   SizedBox(width:42,child:Checkbox(shape:const CircleBorder(),value:selected,activeColor:_purple,onChanged:_loading?null:(v)=>_toggle(url,v))),
                   SizedBox(width:38,child:Text((index+1).toString(),textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w800))),
+                  if(item['_previously_imported']==true) const SizedBox(width:86,child:Text('سبق تسجيلها',style:TextStyle(fontSize:10,color:Colors.deepOrange,fontWeight:FontWeight.w700))),
                   const SizedBox(width:8),field('file_name','اسم الصورة',width:185,initial:suggested),const SizedBox(width:8),
                   dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:140),const SizedBox(width:8),
                   Tooltip(
