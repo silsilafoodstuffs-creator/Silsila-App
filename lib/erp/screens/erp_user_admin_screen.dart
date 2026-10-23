@@ -129,7 +129,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       setState(() {
         _loading = false;
         _error = 'الاتصال بقاعدة البيانات غير متاح.';
-        if (_isType) {
+        if (_isType || _isHierarchy) {
           _types = _localDefaultUserTypes();
           _rows = List<Map<String, dynamic>>.from(_types);
           _message = 'الجريد ظاهر بالأنواع الافتراضية للمعاينة، لكن قاعدة البيانات غير متاحة حاليًا.';
@@ -457,8 +457,13 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     }
     final isType = _selectedNodeKind == 'type';
     final hasChildren = !isType && _childrenForUser(_selectedId!).isNotEmpty;
+    final linkedUsers = isType && _users.any((u) => _s(u['user_type_id']) == _selectedId);
+    if (linkedUsers) {
+      setState(() => _error = 'لا يمكن حذف نوع المستخدم لأنه مرتبط بمستخدمين. انقل المستخدمين إلى نوع آخر أو احذفهم أولًا.');
+      return;
+    }
     final prompt = isType
-      ? 'سيتم حذف نوع المستخدم المحدد. تأكد من عدم ارتباط مستخدمين به. هل تريد المتابعة؟'
+      ? 'سيتم حذف نوع المستخدم المحدد. هل تريد المتابعة؟'
       : hasChildren
         ? 'هذا المستخدم له مستخدمون فرعيون. حذف السجل قد يجعلهم مستخدمين رئيسيين. هل تريد المتابعة؟'
         : 'هل تريد حذف المستخدم المحدد؟';
