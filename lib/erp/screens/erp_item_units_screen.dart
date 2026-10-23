@@ -114,7 +114,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No / لا')),
         FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red),
-          onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+          onPressed: () => Navigator.pop(context, true), child: const Text('Yes / نعم، احذف الوحدة')),
       ],
     ));
     if (yes != true) return;
