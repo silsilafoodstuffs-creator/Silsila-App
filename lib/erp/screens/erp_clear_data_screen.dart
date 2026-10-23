@@ -62,8 +62,8 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
         title: const Text('تحذير: مسح بيانات'),
         content: Text('سيتم أخذ نسخة كاملة من بيانات الشاشات المحددة على السيرفر ثم حفظ نسخة على الجهاز. لن يبدأ الحذف إلا بعد نجاح النسختين. بعض البيانات المرجعية المشتركة وحسابات الدخول ومعرّف الشركة محمية من المسح. إذا كانت هناك سجلات مرتبطة بشاشات غير محددة، سيتوقف الحذف وتظل النسخة الاحتياطية محفوظة. الإجراء نهائي ولا يمكن التراجع عنه من هذه الشاشة. عدد الشاشات المحددة: ${_selected.length}.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-          FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('موافق، متابعة')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No / لا')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('Yes / نعم، تابع الحذف')),
         ],
       ),
     );
