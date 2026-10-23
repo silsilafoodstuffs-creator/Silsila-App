@@ -447,7 +447,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
         const SizedBox(height: 10),
         if (!_loading && rows.isEmpty)
           const Padding(padding: EdgeInsets.all(24), child: Text('أدخل معرّف الشركة واضغط تحديث لعرض الحسابات.')),
-        if (rows.isNotEmpty && _viewMode == 'tree') ..._childrenOf('').where(_branchMatches).map((row) => _buildTreeNode(row, 0)),
+        if (rows.isNotEmpty && _viewMode == 'tree') Expanded(child: ListView(padding: const EdgeInsets.symmetric(vertical: 4), children: _childrenOf('').where(_branchMatches).map((row) => _buildTreeNode(row, 0)).toList())),
         if (rows.isNotEmpty && _viewMode == 'grid')
           Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
             headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
