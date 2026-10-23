@@ -342,8 +342,8 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
         onChanged: (v) { if (v != null) setDialog(() => selected = v); },
       )),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-        FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No / لا')),
+        FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes / نعم، احذف')),
       ],
     )));
     if (confirmed != true) return;
