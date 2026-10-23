@@ -274,7 +274,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final selectedRow = row;
     final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
       title: const Text('تأكيد الحذف'), content: Text('حذف الفئة «${_s(selectedRow['category_name'])}»؟'),
-      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('No / لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نعم'))]));
+      actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('No / لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('Yes / نعم، احذف'))]));
     if (yes != true) return;
     try {
       if (selectedRow['_draft'] != true) await _db!.from('erp_item_categories').delete().eq('id',id).eq('company_id',_company!);
