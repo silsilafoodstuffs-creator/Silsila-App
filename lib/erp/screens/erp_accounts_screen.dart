@@ -249,11 +249,11 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
           '${children ? 'تنبيه: لهذا الحساب حسابات فرعية. لن تُحذف، وسيظل الحساب محفوظًا في قاعدة البيانات.' : 'لن يُحذف الحساب نهائيًا؛ سيتم تعطيله للحفاظ على السجلات المحاسبية.'}',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No / لا')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('تعطيل الحساب'),
+            child: const Text('Yes / نعم، أوقف الحساب'),
           ),
         ],
       ),
