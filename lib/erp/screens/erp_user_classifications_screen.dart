@@ -171,7 +171,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
     final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(
       title: const Text('تأكيد الحذف'), content: Text('هل تريد حذف التصنيف «${_s(selectedRow['name_ar'])}»؟'),
       actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('No / لا')),
-        FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('نعم، حذف'))],
+        FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Yes / نعم، احذف'))],
     ));
     if (yes != true) return;
     try {
