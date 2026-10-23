@@ -53,3 +53,15 @@ jobs:
       - name: Publish to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Smoke test deployed web page
+        env:
+          DEPLOYED_URL: ${{ steps.deployment.outputs.page_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOYED_URL"
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 5 "$DEPLOYED_URL" -o /tmp/silsila-page.html
+          grep -q 'flutter_bootstrap.js' /tmp/silsila-page.html
+          grep -q 'سلسلة' /tmp/silsila-page.html
+          curl --fail --silent --show-error --location --retry 8 --retry-delay 5 --head "${DEPLOYED_URL%/}/flutter_bootstrap.js"
