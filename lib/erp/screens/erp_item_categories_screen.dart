@@ -33,6 +33,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   final Map<String,Uint8List?> _imageBytes = {};
   final Map<String,String> _imageNames = {};
   final Set<String> _expandedIds = <String>{};
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _viewMode = 'tree';
 
   @override
   void initState() {
@@ -46,6 +49,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   void dispose() {
     for (final c in _ar.values) { c.dispose(); }
     for (final c in _en.values) { c.dispose(); }
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -299,7 +303,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(margin: EdgeInsetsDirectional.only(start: depth * 24, bottom: 5),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        decoration: BoxDecoration(color: _selectedId == id ? const Color(0xFFF0E7FA) : Colors.white,
+        decoration: BoxDecoration(color: _selectedId == id ? const Color(0xFFF0E7FA) : level == 0 ? const Color(0xFFEDE1F8) : level == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
           borderRadius: BorderRadius.circular(10), border: Border.all(color: _selectedId == id ? _catPurple : const Color(0xFFE8E1EF))),
         child: Row(children: [
           IconButton(visualDensity: VisualDensity.compact, onPressed: children.isEmpty ? null : () => setState(() {
@@ -342,6 +346,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       Container(color:_catCanvas,padding:const EdgeInsets.symmetric(horizontal:3,vertical:3),
         child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
           _task('تحديث',Icons.refresh,_loading?null:_load),
+          _task('عرض شجرة',Icons.account_tree_outlined,()=>setState(()=>_viewMode='tree')),
+          _task('عرض جدول',Icons.table_rows_outlined,()=>setState(()=>_viewMode='grid')),
           _task('نقل الصور للقاعدة',Icons.cloud_download_outlined,_saving || _loading ? null : _migrateImages),
           _task('إضافة جديد',Icons.add,_saving ? null : _add),
           _task('حفظ',Icons.save,_saving || !_editing ? null:_save),
@@ -354,6 +360,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           _task('طباعة',Icons.print,null),
           _task('PDF',Icons.picture_as_pdf,null),
         ]))),
+      Padding(padding: const EdgeInsets.fromLTRB(12, 7, 12, 3), child: TextField(controller: _searchController, onChanged: (value) => setState(() => _searchQuery = value.trim().toLowerCase()), decoration: InputDecoration(labelText: 'ابحث بكود الفئة أو اسمها', prefixIcon: const Icon(Icons.search, color: _catPurple), suffixIcon: _searchQuery.isEmpty ? null : IconButton(onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); }, icon: const Icon(Icons.clear)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true))),
       Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 3), child: Row(children: [
         const SizedBox(width: 72, child: Text('النشاط', style: TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
         Expanded(child: DropdownButtonFormField<String>(value: _selectedActivityCode, isExpanded: true,
@@ -363,7 +370,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       ])),
       if(_error!=null) Padding(padding:const EdgeInsets.all(7),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
       if(_message!=null) Padding(padding:const EdgeInsets.all(7),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:12))),
-      Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), child: Row(children: const [
+      if (_viewMode == 'tree') Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), child: Row(children: const [
         SizedBox(width: 84, child: Text('كود الفئة', style: TextStyle(fontWeight: FontWeight.w800))),
         Expanded(flex: 3, child: Text('اسم الفئة عربي', style: TextStyle(fontWeight: FontWeight.w800))),
         Expanded(flex: 2, child: Text('اسم الفئة إنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
