@@ -263,10 +263,11 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
       if (_loading) const LinearProgressIndicator(minHeight: 2),
-      Expanded(child: _loading && _centers.isEmpty
-        ? const Center(child: CircularProgressIndicator())
-        : _viewMode == 'tree' ? ListView(padding: const EdgeInsets.all(8), children: _centers.where((r) => !_child(r) && _branchMatches(r)).map((r) => _treeNode(r, 0)).toList())
-        : Scrollbar(child: SingleChildScrollView(child: SingleChildScrollView(
+      if (_loading && _centers.isEmpty) const Expanded(child: Center(child: CircularProgressIndicator())),
+      if (!(_loading && _centers.isEmpty) && _viewMode == 'tree')
+        Expanded(child: ListView(padding: const EdgeInsets.all(8), children: _centers.where((r) => !_child(r) && _branchMatches(r)).map((r) => _treeNode(r, 0)).toList())),
+      if (!(_loading && _centers.isEmpty) && _viewMode == 'grid')
+        Expanded(child: Scrollbar(child: SingleChildScrollView(child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
             headingRowHeight: 38, dataRowMinHeight: 38, dataRowMaxHeight: 42,
