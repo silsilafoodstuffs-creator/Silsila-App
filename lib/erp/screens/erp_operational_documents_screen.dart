@@ -1073,7 +1073,24 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                                   tooltip: 'حذف من المعاينة',
                                   padding: EdgeInsets.zero,
                                   constraints: const BoxConstraints(minWidth: 32, minHeight: 54),
-                                  onPressed: () { quantities[id]!.clear(); refresh(() {}); },
+                                  onPressed: () async {
+                                    final confirmed = await showDialog<bool>(
+                                      context: dialogContext,
+                                      builder: (confirmContext) => AlertDialog(
+                                        title: const Text('تأكيد إزالة الصنف من المعاينة'),
+                                        content: Text('هل تريد إزالة «${_s(item['item_name'])}» من قائمة الاختيار الحالية؟'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(confirmContext, false), child: const Text('No / لا')),
+                                          FilledButton(
+                                            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                                            onPressed: () => Navigator.pop(confirmContext, true),
+                                            child: const Text('Yes / نعم، أزل الصنف'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed == true) { quantities[id]!.clear(); refresh(() {}); }
+                                  },
                                   icon: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 20),
                                 )),
                               ]),
