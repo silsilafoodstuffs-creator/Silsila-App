@@ -227,7 +227,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           return int.tryParse(match?.group(1) ?? '') ?? 0;
         }
         userList.sort((a, b) => codeNumber(a).compareTo(codeNumber(b)));
-        if (_isUser) {
+        if (_isUser || _isHierarchy) {
           try {
             final b = await _db!.from('erp_branches').select().eq('company_id', _company).eq('is_active', true).order('branch_name');
             _branches = (b as List).map((x) => Map<String,dynamic>.from(x)).toList();
