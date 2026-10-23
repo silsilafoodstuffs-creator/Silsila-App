@@ -682,11 +682,16 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     );
   }
 
+  // Include every loaded user in the hierarchy grid, even if legacy links
+  // point to a deleted type/parent. Guard against accidental parent cycles.
   List<Map<String, dynamic>> _flattenHierarchy() {
     final result = <Map<String, dynamic>>[];
+    final visited = <String>{};
     void addUser(Map<String, dynamic> user, int depth) {
+      final id = _s(user['id']);
+      if (id.isEmpty || !visited.add(id)) return;
       result.add({'kind':'user','depth':depth,'row':user});
-      for (final child in _childrenForUser(_s(user['id']))) {
+      for (final child in _childrenForUser(id)) {
         addUser(child, depth + 1);
       }
     }
@@ -694,7 +699,28 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       result.add({'kind':'type','depth':0,'row':type});
       for (final user in _usersForType(_s(type['id']))) addUser(user, 1);
     }
+    for (final user in _users) {
+      if (!visited.contains(_s(user['id']))) addUser(user, 1);
+    }
     return result;
+  }
+
+  List<Map<String, dynamic>> _orphanHierarchyRoots() {
+    final reachable = <String>{};
+    void markUser(Map<String, dynamic> user) {
+      final id = _s(user['id']);
+      if (id.isEmpty || !reachable.add(id)) return;
+      for (final child in _childrenForUser(id)) {
+        markUser(child);
+      }
+    }
+    for (final type in _types) {
+      for (final user in _usersForType(_s(type['id']))) markUser(user);
+    }
+    final orphans = _users.where((u) => !reachable.contains(_s(u['id']))).toList();
+    final orphanIds = orphans.map((u) => _s(u['id'])).toSet();
+    final roots = orphans.where((u) => !orphanIds.contains(_s(u['parent_user_id']))).toList();
+    return roots.isEmpty && orphans.isNotEmpty ? orphans : roots;
   }
 
   Widget _hierarchyView() {
@@ -717,7 +743,30 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         ChoiceChip(label: const Text('عرض جدول'), selected: _viewMode == 'grid', selectedColor: const Color(0xFFEDE1F8), onSelected: (_) => setState(() => _viewMode = 'grid')),
       ])),
       Expanded(child: _viewMode == 'tree'
-        ? ListView(padding: const EdgeInsets.all(8), children: types.map((t) => _hierarchyTreeNode(t, 0, kind: 'type')).toList())
+        ? ListView(padding: const EdgeInsets.all(8), children: [
+            ...types.map((t) => _hierarchyTreeNode(t, 0, kind: 'type')),
+            if (_orphanHierarchyRoots().isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsetsDirectional.only(top: 8, bottom: 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF2D9),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFFA015)),
+                ),
+                child: Text(
+                  'مستخدمون غير مرتبطين بنوع أو بمستخدم رئيسي (' + _orphanHierarchyRoots().length.toString() + ') — تم إظهارهم بدل إخفائهم',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              ..._orphanHierarchyRoots().map((u) => _hierarchyTreeNode(u, 1, kind: 'user')),
+            ],
+            if (types.isEmpty && _users.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: Text('لا توجد سجلات محفوظة للأنواع أو المستخدمين. اضغط تحديث، أو إضافة لإنشاء أول سجل.')),
+              ),
+          ])
         : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
           headingRowColor: WidgetStateProperty.all(const Color(0xFFF0E8F8)),
           columns: const [DataColumn(label: Text('النوع / المستوى')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الاسم العربي')), DataColumn(label: Text('الاسم الإنجليزي')), DataColumn(label: Text('الحالة'))],
