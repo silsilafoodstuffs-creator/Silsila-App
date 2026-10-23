@@ -284,7 +284,295 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     } catch(e){if(mounted)setState(()=>_error='تعذر تحميل صلاحيات المستخدم: $e');}
   }
 
+  bool _hierarchyMatches(Map<String, dynamic> row, {required bool type}) {
+    if (_hierarchySearch.isEmpty) return true;
+    final code = _s(row[type ? 'type_code' : 'user_code']).toLowerCase();
+    return code.contains(_hierarchySearch) ||
+      _s(row['name_ar']).toLowerCase().contains(_hierarchySearch) ||
+      _s(row['name_en']).toLowerCase().contains(_hierarchySearch);
+  }
+
+  List<Map<String, dynamic>> _usersForType(String typeId) => _users
+      .where((u) => _s(u['user_type_id']) == typeId && _s(u['parent_user_id']).isEmpty)
+      .toList();
+
+  List<Map<String, dynamic>> _childrenForUser(String userId) => _users
+      .where((u) => _s(u['parent_user_id']) == userId)
+      .toList();
+
+  bool _typeBranchMatches(Map<String, dynamic> type) {
+    if (_hierarchyMatches(type, type: true)) return true;
+    for (final user in _users.where((u) => _s(u['user_type_id']) == _s(type['id']))) {
+      if (_userBranchMatches(user)) return true;
+    }
+    return false;
+  }
+
+  bool _userBranchMatches(Map<String, dynamic> user) {
+    if (_hierarchyMatches(user, type: false)) return true;
+    return _childrenForUser(_s(user['id'])).any(_userBranchMatches);
+  }
+
+  void _selectHierarchyNode(String kind, Map<String, dynamic> row) {
+    setState(() {
+      _selectedNodeKind = kind;
+      _selectedId = _s(row['id']);
+      _selectedUserId = kind == 'user' ? _s(row['id']) : null;
+      _message = kind == 'type' ? 'تم تحديد نوع المستخدم.' :
+        _s(row['parent_user_id']).isEmpty ? 'تم تحديد المستخدم الرئيسي.' : 'تم تحديد مستخدم فرعي.';
+    });
+  }
+
+  Future<void> _addHierarchyNode() async {
+    if (_db == null || _company.isEmpty) {
+      setState(() => _error = 'اتصل بقاعدة البيانات وحدد الشركة قبل الإضافة.');
+      return;
+    }
+    try {
+      if (_selectedNodeKind == 'user') {
+        final parent = _users.where((u) => _s(u['id']) == _selectedId).firstOrNull;
+        if (parent == null) {
+          setState(() => _error = 'حدد المستخدم الذي تريد إضافة مستخدم فرعي تحته.');
+          return;
+        }
+        final result = await _db!.from('erp_users').insert({
+          'company_id': _company,
+          'name_ar': 'مستخدم فرعي جديد',
+          'name_en': 'New sub-user',
+          'user_type_id': parent['user_type_id'],
+          'parent_user_id': parent['id'],
+          'is_active': true,
+          'has_sub_warehouse': false,
+        }).select().single();
+        final row = Map<String, dynamic>.from(result);
+        setState(() {
+          _users.add(row);
+          _selectedId = _s(row['id']);
+          _selectedNodeKind = 'user';
+          _editMode = true;
+          _error = null;
+          _message = 'تمت إضافة مستخدم فرعي تحت المستخدم المحدد. أكمل بياناته ثم اضغط حفظ.';
+        });
+      } else if (_selectedNodeKind == 'type') {
+        final result = await _db!.from('erp_users').insert({
+          'company_id': _company,
+          'name_ar': 'مستخدم رئيسي جديد',
+          'name_en': 'New primary user',
+          'user_type_id': _selectedId,
+          'parent_user_id': null,
+          'is_active': true,
+          'has_sub_warehouse': false,
+        }).select().single();
+        final row = Map<String, dynamic>.from(result);
+        setState(() {
+          _users.add(row);
+          _selectedId = _s(row['id']);
+          _selectedNodeKind = 'user';
+          _selectedUserId = _s(row['id']);
+          _editMode = true;
+          _error = null;
+          _message = 'تمت إضافة مستخدم رئيسي تحت نوع المستخدم المحدد.';
+        });
+      } else {
+        final result = await _db!.from('erp_user_types').insert({
+          'company_id': _company,
+          'name_ar': 'نوع مستخدم جديد',
+          'name_en': 'New user type',
+          'show_at_login': false,
+          'is_active': true,
+        }).select().single();
+        final row = Map<String, dynamic>.from(result);
+        setState(() {
+          _types.add(row);
+          _selectedId = _s(row['id']);
+          _selectedNodeKind = 'type';
+          _editMode = true;
+          _error = null;
+          _message = 'تمت إضافة نوع مستخدم جديد.';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذرت إضافة العنصر الهرمي: $e');
+    }
+  }
+
+  Future<void> _saveHierarchy() async {
+    if (!_editMode) {
+      setState(() => _error = 'اضغط تعديل أو إضافة أولًا قبل حفظ التغييرات.');
+      return;
+    }
+    if (_types.any((r) => r['_local_default'] == true)) {
+      setState(() => _error = 'لا يمكن حفظ الأنواع الافتراضية للمعاينة؛ اضغط تحديث حتى تُحمّل الأنواع المحفوظة من قاعدة البيانات.');
+      return;
+    }
+    if (_saving || _db == null) return;
+    setState(() { _saving = true; _error = null; });
+    try {
+      for (final type in _types) {
+        final id = _s(type['id']);
+        if (id.isEmpty || type['_local_default'] == true) continue;
+        await _db!.from('erp_user_types').update({
+          'name_ar': _s(type['name_ar']).trim(),
+          'name_en': _s(type['name_en']).trim(),
+          'image_data': type['image_data'],
+          'is_active': type['is_active'] == true,
+          'show_at_login': !['ادمن','موظف'].contains(_s(type['name_ar'])) && type['show_at_login'] == true,
+        }).eq('company_id', _company).eq('id', id);
+      }
+      for (final user in _users) {
+        final id = _s(user['id']);
+        if (id.isEmpty) continue;
+        await _db!.from('erp_users').update({
+          'name_ar': _s(user['name_ar']).trim(),
+          'name_en': _s(user['name_en']).trim(),
+          'image_data': user['image_data'],
+          'is_active': user['is_active'] == true,
+          'user_type_id': user['user_type_id'],
+          'parent_user_id': _s(user['parent_user_id']).isEmpty ? null : user['parent_user_id'],
+          'has_sub_warehouse': user['has_sub_warehouse'] == true,
+        }).eq('company_id', _company).eq('id', id);
+        final password = _s(user['_password_draft']);
+        if (password.isNotEmpty) {
+          await _db!.rpc('set_erp_user_password', params: {'p_user_id': id, 'p_password': password});
+          user['_password_draft'] = '';
+        }
+      }
+      if (mounted) setState(() { _editMode = false; _message = 'تم حفظ أنواع المستخدمين والمستخدمين وعلاقاتهم في قاعدة البيانات.'; });
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر حفظ الهيكل الهرمي للمستخدمين: $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _deleteHierarchyNode() async {
+    if (_selectedId == null || _selectedNodeKind == null) {
+      setState(() => _error = 'حدد نوع مستخدم أو مستخدمًا من الشجرة أولًا.');
+      return;
+    }
+    if (!_editMode) {
+      setState(() => _error = 'اضغط تعديل أولًا قبل الحذف.');
+      return;
+    }
+    final isType = _selectedNodeKind == 'type';
+    final hasChildren = !isType && _childrenForUser(_selectedId!).isNotEmpty;
+    final prompt = isType
+      ? 'سيتم حذف نوع المستخدم المحدد. تأكد من عدم ارتباط مستخدمين به. هل تريد المتابعة؟'
+      : hasChildren
+        ? 'هذا المستخدم له مستخدمون فرعيون. حذف السجل قد يجعلهم مستخدمين رئيسيين. هل تريد المتابعة؟'
+        : 'هل تريد حذف المستخدم المحدد؟';
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('تأكيد الحذف'), content: Text(prompt),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No / لا')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes / نعم، احذف')),
+      ],
+    ));
+    if (ok != true) return;
+    try {
+      if (isType) {
+        await _db!.from('erp_user_types').delete().eq('company_id', _company).eq('id', _selectedId!);
+        _types.removeWhere((t) => _s(t['id']) == _selectedId);
+      } else {
+        await _db!.from('erp_users').delete().eq('company_id', _company).eq('id', _selectedId!);
+        _users.removeWhere((u) => _s(u['id']) == _selectedId);
+      }
+      setState(() { _selectedId = null; _selectedNodeKind = null; _editMode = false; });
+      await _load();
+      if (mounted) setState(() => _message = 'تم حذف السجل المحدد.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر الحذف: $e');
+    }
+  }
+
+  Widget _hierarchyTreeNode(Map<String, dynamic> row, int depth, {required String kind}) {
+    final isType = kind == 'type';
+    final id = _s(row['id']);
+    final children = isType ? _usersForType(id).where(_userBranchMatches).toList() : _childrenForUser(id).where(_userBranchMatches).toList();
+    final isSelected = _selectedNodeKind == kind && _selectedId == id;
+    final background = isType ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3);
+    final label = isType ? 'نوع مستخدم' : _s(row['parent_user_id']).isEmpty ? 'مستخدم رئيسي' : 'مستخدم فرعي';
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(padding: EdgeInsetsDirectional.only(start: depth * 20, bottom: 4), child: Card(
+        color: background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: isSelected ? _userAdminPurple : Colors.transparent, width: isSelected ? 1.6 : 0)),
+        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5), child: Row(children: [
+          Icon(isType ? Icons.badge_outlined : depth == 1 ? Icons.person_outline : Icons.people_alt_outlined, color: _userAdminPurple),
+          const SizedBox(width: 8),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('$label • ${_s(row[isType ? 'type_code' : 'user_code'])}', style: TextStyle(fontSize: 10, color: _userAdminPurple, fontWeight: FontWeight.w800)),
+            _editMode ? TextFormField(key: ValueKey('hierarchy-$kind-$id-ar'), initialValue: _s(row['name_ar']), onChanged: (v) => row['name_ar'] = v, decoration: const InputDecoration(isDense: true, hintText: 'الاسم بالعربية')) : Text(_s(row['name_ar']), style: const TextStyle(fontWeight: FontWeight.w900)),
+            if (_editMode) TextFormField(key: ValueKey('hierarchy-$kind-$id-en'), initialValue: _s(row['name_en']), onChanged: (v) => row['name_en'] = v, decoration: const InputDecoration(isDense: true, hintText: 'Name in English')) else Text(_s(row['name_en']), style: const TextStyle(fontSize: 11)),
+          ])),
+          if (isType) Row(mainAxisSize: MainAxisSize.min, children: [
+            const Text('نشط', style: TextStyle(fontSize: 10)), Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, onChanged: _editMode ? (v) => setState(() => row['is_active'] = v == true) : null),
+            const Text('دخول', style: TextStyle(fontSize: 10)), Checkbox(shape: const CircleBorder(), value: !['ادمن','موظف'].contains(_s(row['name_ar'])) && row['show_at_login'] == true, onChanged: _editMode && !['ادمن','موظف'].contains(_s(row['name_ar'])) ? (v) => setState(() => row['show_at_login'] = v == true) : null),
+          ]) else Row(mainAxisSize: MainAxisSize.min, children: [
+            const Text('نشط', style: TextStyle(fontSize: 10)), Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, onChanged: _editMode ? (v) => setState(() => row['is_active'] = v == true) : null),
+            IconButton(tooltip: 'الفروع والمخازن', onPressed: () => _openBranchWarehousePicker(id), icon: const Icon(Icons.account_tree_outlined, color: _userAdminPurple, size: 18)),
+          ]),
+          IconButton(tooltip: 'تحديد السجل', onPressed: () => _selectHierarchyNode(kind, row), icon: Icon(isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: _userAdminPurple)),
+          if (!isType) IconButton(tooltip: 'إضافة مستخدم فرعي', onPressed: () => setState(() { _selectedNodeKind = 'user'; _selectedId = id; }), icon: const Icon(Icons.person_add_alt_1, color: _userAdminPurple, size: 19)),
+        ])),
+      )),
+      ...children.map((child) => _hierarchyTreeNode(child, depth + 1, kind: 'user')),
+    ]);
+  }
+
+  List<Map<String, dynamic>> _flattenHierarchy() {
+    final result = <Map<String, dynamic>>[];
+    void addUser(Map<String, dynamic> user, int depth) {
+      result.add({'kind':'user','depth':depth,'row':user});
+      for (final child in _childrenForUser(_s(user['id']))) {
+        addUser(child, depth + 1);
+      }
+    }
+    for (final type in _types) {
+      result.add({'kind':'type','depth':0,'row':type});
+      for (final user in _usersForType(_s(type['id']))) addUser(user, 1);
+    }
+    return result;
+  }
+
+  Widget _hierarchyView() {
+    final types = _types.where(_typeBranchMatches).toList();
+    final flat = _flattenHierarchy().where((item) {
+      final row = Map<String, dynamic>.from(item['row'] as Map);
+      return item['kind'] == 'type' ? _typeBranchMatches(row) : _userBranchMatches(row);
+    }).toList();
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(padding: const EdgeInsets.fromLTRB(8, 6, 8, 4), child: TextField(
+        controller: _hierarchySearchController,
+        onChanged: (v) => setState(() => _hierarchySearch = v.trim().toLowerCase()),
+        decoration: InputDecoration(labelText: 'بحث في أنواع المستخدمين وأسماء المستخدمين', prefixIcon: const Icon(Icons.search, color: _userAdminPurple), suffixIcon: _hierarchySearch.isEmpty ? null : IconButton(onPressed: () { _hierarchySearchController.clear(); setState(() => _hierarchySearch = ''); }, icon: const Icon(Icons.clear)), isDense: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+      )),
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), child: Wrap(spacing: 8, children: [
+        ChoiceChip(label: const Text('عرض شجرة'), selected: _viewMode == 'tree', selectedColor: const Color(0xFFEDE1F8), onSelected: (_) => setState(() => _viewMode = 'tree')),
+        ChoiceChip(label: const Text('عرض جدول'), selected: _viewMode == 'grid', selectedColor: const Color(0xFFEDE1F8), onSelected: (_) => setState(() => _viewMode = 'grid')),
+      ])),
+      Expanded(child: _viewMode == 'tree'
+        ? ListView(padding: const EdgeInsets.all(8), children: types.map((t) => _hierarchyTreeNode(t, 0, kind: 'type')).toList())
+        : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
+          headingRowColor: WidgetStateProperty.all(const Color(0xFFF0E8F8)),
+          columns: const [DataColumn(label: Text('النوع / المستوى')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الاسم العربي')), DataColumn(label: Text('الاسم الإنجليزي')), DataColumn(label: Text('الحالة'))],
+          rows: flat.map((item) {
+            final kind = _s(item['kind']); final depth = item['depth'] as int; final row = Map<String, dynamic>.from(item['row'] as Map); final isType = kind == 'type'; final id = _s(row['id']);
+            final selected = _selectedNodeKind == kind && _selectedId == id;
+            return DataRow(selected: selected, color: WidgetStateProperty.all(isType ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3)), onSelectChanged: (_) => _selectHierarchyNode(kind, row), cells: [
+              DataCell(Text('${'  ' * depth}${isType ? 'نوع مستخدم' : depth == 1 ? 'مستخدم رئيسي' : 'مستخدم فرعي'}')),
+              DataCell(Text(_s(row[isType ? 'type_code' : 'user_code']))),
+              DataCell(SizedBox(width: 180, child: TextFormField(key: ValueKey('hier-grid-$kind-$id-ar-$_editMode'), initialValue: _s(row['name_ar']), enabled: _editMode, onChanged: (v) => row['name_ar'] = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+              DataCell(SizedBox(width: 180, child: TextFormField(key: ValueKey('hier-grid-$kind-$id-en-$_editMode'), initialValue: _s(row['name_en']), enabled: _editMode, onChanged: (v) => row['name_en'] = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+              DataCell(Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, onChanged: _editMode ? (v) => setState(() => row['is_active'] = v == true) : null)),
+            ]);
+          }).toList(),
+        )))),
+    ]);
+  }
+
   Future<void> _add() async {
+    if (_isHierarchy) { await _addHierarchyNode(); return; }
     if (_saving) return;
     if (_isType && _rows.any((row) => row['_local_default'] == true)) {
       setState(() => _error = 'لا يمكن الإضافة قبل اتصال قاعدة البيانات وتحميل الأنواع المحفوظة؛ الصفوف الحالية للمعاينة فقط.');
@@ -342,6 +630,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _save() async {
+    if (_isHierarchy) { await _saveHierarchy(); return; }
     if (_isType && _rows.any((row) => row['_local_default'] == true)) {
       setState(() => _error = 'الأنواع الظاهرة حاليًا بيانات افتراضية للمعاينة فقط وليست محفوظة. أصلح صلاحيات/سياسات قاعدة البيانات ثم اضغط تحديث قبل الحفظ.');
       return;
@@ -392,6 +681,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _delete() async {
+    if (_isHierarchy) { await _deleteHierarchyNode(); return; }
     if(!_editMode){setState(()=>_error='اضغط «تعديل» أولًا قبل حذف البيانات.');return;}
     if(_isPermissions){
       if(_selectedUserId==null){setState(()=>_error='اختر مستخدمًا أولًا.');return;}
