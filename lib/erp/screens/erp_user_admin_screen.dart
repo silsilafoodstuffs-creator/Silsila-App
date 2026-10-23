@@ -560,7 +560,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             final kind = _s(item['kind']); final depth = item['depth'] as int; final row = Map<String, dynamic>.from(item['row'] as Map); final isType = kind == 'type'; final id = _s(row['id']);
             final selected = _selectedNodeKind == kind && _selectedId == id;
             return DataRow(selected: selected, color: WidgetStateProperty.all(isType ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3)), onSelectChanged: (_) => _selectHierarchyNode(kind, row), cells: [
-              DataCell(Text('${'  ' * depth}${isType ? 'نوع مستخدم' : depth == 1 ? 'مستخدم رئيسي' : 'مستخدم فرعي'}')),
+              DataCell(Text('${List<String>.filled(depth, '  ').join()}${isType ? 'نوع مستخدم' : depth == 1 ? 'مستخدم رئيسي' : 'مستخدم فرعي'}')),
               DataCell(Text(_s(row[isType ? 'type_code' : 'user_code']))),
               DataCell(SizedBox(width: 180, child: TextFormField(key: ValueKey('hier-grid-$kind-$id-ar-$_editMode'), initialValue: _s(row['name_ar']), enabled: _editMode, onChanged: (v) => row['name_ar'] = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
               DataCell(SizedBox(width: 180, child: TextFormField(key: ValueKey('hier-grid-$kind-$id-en-$_editMode'), initialValue: _s(row['name_en']), enabled: _editMode, onChanged: (v) => row['name_en'] = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
