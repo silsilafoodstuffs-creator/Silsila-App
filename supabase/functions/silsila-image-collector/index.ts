@@ -257,6 +257,28 @@ function pageImages(html: string, base: URL) {
     }
     if (src) add(src, alt || title, hint, width, height, contextName);
   }
+  // Amazon stores product image variants in data-a-dynamic-image JSON, not
+  // always in src/srcset. Extract every variant rather than only the thumbnail.
+  for (const m of html.matchAll(/<img\\b[^>]*>/gi)) {
+    const tag = m[0];
+    const dynamic = tag.match(/\\bdata-a-dynamic-image=["']([^"']+)["']/i)?.[1];
+    if (!dynamic) continue;
+    try {
+      const variants = JSON.parse(decodeEntities(dynamic)) as Record<string, unknown>;
+      const contextName = contextualEntityName(html, m.index ?? 0);
+      const alt = decodeEntities(tag.match(/\\balt=["']([^"']*)["']/i)?.[1] ?? "");
+      for (const [url, dimensions] of Object.entries(variants)) {
+        const size = Array.isArray(dimensions) ? dimensions : [];
+        add(url, alt, "amazon-dynamic-image", Number(size[0] ?? 0), Number(size[1] ?? 0), contextName);
+      }
+    } catch { /* malformed dynamic-image JSON; normal img sources still work */ }
+  }
+  // Amazon sometimes embeds product-grid image URLs in escaped script data.
+  const normalizedScript = html.replace(/\\\\u002[fF]/g, "/").replace(/\\\\\\//g, "/").replace(/&amp;/g, "&");
+  for (const m of normalizedScript.matchAll(/https?:\\/\\/(?:m\\.media-amazon\\.com|images-na\\.ssl-images-amazon\\.com)\\/images\\/I\\/[^"'\\s<>\\\\]+/gi)) {
+    const url = m[0].replace(/[),;]+$/, "");
+    add(url, "", "amazon-script-product-image", 0, 0, contextualEntityName(normalizedScript, m.index ?? 0));
+  }
   // Open Graph images are deliberately not collected: they commonly represent
   // the site logo, page banner, or social preview rather than an individual item.
   return [...found.values()].slice(0, 160);
@@ -270,19 +292,37 @@ Deno.serve(async (req: Request) => {
     const action = String(body.action ?? "scan");
     if (action === "scan") {
       const page = safeUrl(String(body.url ?? ""));
-      const res = await fetch(page, {
-        redirect: "manual",
-        headers: { "User-Agent": "SilsilaImageCollector/1.0 (product image selection)", "Accept": "text/html,application/xhtml+xml" },
-        signal: AbortSignal.timeout(18000),
-      });
-      if (res.status >= 300 && res.status < 400) return json({ error: "الموقع يحوّل الرابط تلقائيًا. افتح الرابط النهائي من شريط العنوان ثم أعد المحاولة." }, 422);
+      let target = page;
+      let res: Response | null = null;
+      // Follow normal storefront redirects, validating every destination to
+      // keep the collector from being redirected to private/local addresses.
+      for (let hop = 0; hop <= 5; hop++) {
+        res = await fetch(target, {
+          redirect: "manual",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "ar-EG,ar;q=0.9,en;q=0.8",
+          },
+          signal: AbortSignal.timeout(18000),
+        });
+        if (res.status < 300 || res.status >= 400) break;
+        const location = res.headers.get("location");
+        if (!location || hop === 5) return json({ error: "تعذر الوصول إلى الصفحة بعد عدة تحويلات." }, 422);
+        target = safeUrl(new URL(location, target).toString());
+      }
+      if (!res) return json({ error: "تعذر جلب الصفحة." }, 422);
       if (!res.ok) return json({ error: `الموقع رفض الطلب أو أعاد HTTP ${res.status}.` }, 422);
       const type = res.headers.get("content-type") ?? "";
       if (!type.includes("text/html") && !type.includes("application/xhtml")) return json({ error: "الرابط لا يبدو صفحة HTML." }, 422);
       const htmlBytes = await readLimited(res, 2_500_000);
       const html = new TextDecoder().decode(htmlBytes);
-      const images = pageImages(html, page);
-      return json({ page: page.href, count: images.length, images });
+      if (/captcha|robot check|validatecaptcha|automated access/i.test(html.slice(0, 30000)) &&
+          /amazon|captcha|robot check/i.test(html.slice(0, 12000))) {
+        return json({ error: "أمازون أعاد صفحة تحقق آلي بدل نتائج المنتجات؛ لم تُستخرج الصور من صفحة التحقق." }, 422);
+      }
+      const images = pageImages(html, target);
+      return json({ page: target.href, count: images.length, images });
     }
     if (action === "download") {
       let target = safeUrl(String(body.url ?? ""));
