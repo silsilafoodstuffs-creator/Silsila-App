@@ -34,6 +34,14 @@ void main() {
       expect(find.text('مندوب'), findsOneWidget);
       expect(find.text('شركة شحن'), findsOneWidget);
       expect(find.textContaining('للمعاينة'), findsOneWidget);
+
+      // Switching back must render the expandable hierarchy, not leave the
+      // table in place or produce an empty tree.
+      await tester.tap(find.text('عرض شجرة'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ExpansionTile), findsNWidgets(6));
+      expect(find.text('ادمن'), findsOneWidget);
+      expect(find.text('شركة شحن'), findsOneWidget);
     },
   );
 }
