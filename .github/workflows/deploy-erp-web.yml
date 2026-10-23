@@ -1,4 +1,4 @@
-name: Deploy Silsila ERP Web Preview
+name: Build Silsila ERP Web Preview
 
 # The production Pages site is deployed by deploy.yml.
 # Keep this alternate ERP preview manual-only so it cannot race and overwrite
@@ -8,18 +8,13 @@ name: Deploy Silsila ERP Web Preview
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: silsila-erp-pages
   cancel-in-progress: true
 
 jobs:
-  build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build-preview:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -47,14 +42,9 @@ jobs:
       - name: Build ERP web preview
         run: flutter build web --release --base-href "/Silsila-App/"
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload web build
-        uses: actions/upload-pages-artifact@v3
+      - name: Save ERP web preview artifact
+        uses: actions/upload-artifact@v4
         with:
+          name: silsila-erp-web-preview
           path: build/web
-
-      - name: Deploy web preview
-        id: deployment
-        uses: actions/deploy-pages@v4
+          if-no-files-found: error
