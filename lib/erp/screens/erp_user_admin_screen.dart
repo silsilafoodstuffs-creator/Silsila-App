@@ -1029,11 +1029,14 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
                 DataCell(Text('${++index}')),
                 DataCell(Padding(
                   padding: EdgeInsetsDirectional.only(start: depth * 22),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(depth == 0 ? Icons.warehouse_outlined : Icons.subdirectory_arrow_left, size: 17, color: _userAdminPurple),
-                    const SizedBox(width: 5),
-                    Flexible(child: Text(_s(warehouse['warehouse_name']), overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: depth == 0 ? FontWeight.w800 : FontWeight.normal))),
-                  ]),
+                  child: SizedBox(
+                    width: 260,
+                    child: Row(children: [
+                      Icon(depth == 0 ? Icons.warehouse_outlined : Icons.subdirectory_arrow_left, size: 17, color: _userAdminPurple),
+                      const SizedBox(width: 5),
+                      Expanded(child: Text(_s(warehouse['warehouse_name']), overflow: TextOverflow.ellipsis, style: TextStyle(fontWeight: depth == 0 ? FontWeight.w800 : FontWeight.normal))),
+                    ]),
+                  ),
                 )),
                 DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: isSelected, onChanged: (v) => setDialogState(() {
                   if (v == true) { selected.add(key); } else { selected.remove(key); if (primary == key) primary = null; }
