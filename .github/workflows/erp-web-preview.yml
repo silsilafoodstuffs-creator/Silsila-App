@@ -1,0 +1,59 @@
+name: ERP Web Preview
+
+'on':
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-web-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  erp-web-preview:
+    name: Analyze, test and build ERP web preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.3'
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze Dart source
+        run: flutter analyze lib test --no-fatal-infos
+
+      - name: Run automated tests
+        run: flutter test
+
+      - name: Build ERP web preview
+        run: flutter build web --release --base-href "/Silsila-App/"
+
+      - name: Verify generated web entry point
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s build/web/index.html
+          test -s build/web/flutter_bootstrap.js
+          grep -q 'flutter_bootstrap.js' build/web/index.html
+          echo "ERP web preview output verified."
+
+      - name: Upload ERP web preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: erp-web-preview
+          path: build/web/
+          if-no-files-found: error
+          retention-days: 7
