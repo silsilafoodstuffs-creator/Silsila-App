@@ -39,7 +39,7 @@ void main() {
       // table in place or produce an empty tree.
       await tester.tap(find.text('عرض شجرة'));
       await tester.pumpAndSettle();
-      expect(find.byType(ExpansionTile), findsWidgets);
+      expect(find.byType(ListView), findsOneWidget);
       expect(find.text('ادمن'), findsOneWidget);
       await tester.scrollUntilVisible(
         find.text('شركة شحن'),
