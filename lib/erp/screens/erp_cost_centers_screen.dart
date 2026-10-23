@@ -259,7 +259,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           ])),
         ]),
       )),
-      Padding(padding: const EdgeInsets.fromLTRB(10, 7, 10, 4), child: TextField(controller: _searchController, onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()), decoration: InputDecoration(labelText: 'ابحث بكود أو اسم مركز التكلفة', prefixIcon: const Icon(Icons.search, color: _costPurple), suffixIcon: _searchQuery.isEmpty ? null : IconButton(onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); }, icon: const Icon(Icons.clear)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true)),
+      Padding(padding: const EdgeInsets.fromLTRB(10, 7, 10, 4), child: TextField(controller: _searchController, onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()), decoration: InputDecoration(labelText: 'ابحث بكود أو اسم مركز التكلفة', prefixIcon: const Icon(Icons.search, color: _costPurple), suffixIcon: _searchQuery.isEmpty ? null : IconButton(onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); }, icon: const Icon(Icons.clear)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true))),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
       if (_loading) const LinearProgressIndicator(minHeight: 2),
