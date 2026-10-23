@@ -340,7 +340,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           IconButton(tooltip: 'تحديد الفئة', onPressed: () => setState(() => _selectedId = id),
             icon: Icon(Icons.radio_button_checked, color: _selectedId == id ? _catPurple : Colors.black26)),
         ])),
-      if (expanded) ...children.map((child) => _treeNode(child, depth + 1)),
+      if (expanded) ...children.where(_branchMatches).map((child) => _treeNode(child, depth + 1)),
     ]);
   }
 
