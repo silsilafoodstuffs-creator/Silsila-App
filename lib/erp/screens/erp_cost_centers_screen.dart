@@ -18,10 +18,16 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   List<Map<String, dynamic>> _centers = [];
   List<Map<String, dynamic>> _branches = [];
   final Set<String> _selectedIds = {};
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _viewMode = 'tree';
   bool _loading = false, _saving = false;
   String? _error, _message;
 
   String _s(dynamic v) => (v ?? '').toString();
+  @override
+  void dispose() { _searchController.dispose(); super.dispose(); }
+  bool _matchesSearch(Map<String, dynamic> r) => _searchQuery.isEmpty || _s(r['center_code']).toLowerCase().contains(_searchQuery) || _ar(r).toLowerCase().contains(_searchQuery) || _s(r['center_name_en']).toLowerCase().contains(_searchQuery);
   String _ar(Map<String, dynamic> r) => _s(r['center_name_ar']).isEmpty ? _s(r['center_name']) : _s(r['center_name_ar']);
   bool _child(Map<String, dynamic> r) => _s(r['parent_id']).isNotEmpty;
 
@@ -240,6 +246,8 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           const SizedBox(height: 5),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             _task('تحديث', Icons.refresh, Colors.blue, _loading || _saving ? null : _load),
+            _task('عرض شجرة', Icons.account_tree_outlined, _viewMode == 'tree' ? _costPurple : Colors.grey, () => setState(() => _viewMode = 'tree')),
+            _task('عرض جدول', Icons.table_rows_outlined, _viewMode == 'grid' ? _costPurple : Colors.grey, () => setState(() => _viewMode = 'grid')),
             _task('إضافة', Icons.add_circle_outline, Colors.green, _loading || _saving ? null : _addMain),
             _task('حفظ', Icons.save_outlined, _costPurple, _loading || _saving ? null : _save),
             _task('تعديل', Icons.edit_outlined, _costOrange, _selected == null ? null : _editSelected),
@@ -251,11 +259,13 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           ])),
         ]),
       )),
+      Padding(padding: const EdgeInsets.fromLTRB(10, 7, 10, 4), child: TextField(controller: _searchController, onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()), decoration: InputDecoration(labelText: 'ابحث بكود أو اسم مركز التكلفة', prefixIcon: const Icon(Icons.search, color: _costPurple), suffixIcon: _searchQuery.isEmpty ? null : IconButton(onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); }, icon: const Icon(Icons.clear)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true)),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
       if (_loading) const LinearProgressIndicator(minHeight: 2),
       Expanded(child: _loading && _centers.isEmpty
         ? const Center(child: CircularProgressIndicator())
+        : _viewMode == 'tree' ? ListView(padding: const EdgeInsets.all(8), children: _centers.where((r) => !_child(r) && _branchMatches(r)).map((r) => _treeNode(r, 0)).toList())
         : Scrollbar(child: SingleChildScrollView(child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
@@ -318,6 +328,38 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
         )))),
     ]),
   );
+
+  bool _branchMatches(Map<String, dynamic> row) {
+    if (_matchesSearch(row)) return true;
+    return _centers.where((child) => _s(child['parent_id']) == _s(row['id'])).any(_branchMatches);
+  }
+
+  List<Map<String, dynamic>> _childrenOfCenter(Map<String, dynamic> row) => _centers.where((child) => _s(child['parent_id']) == _s(row['id'])).toList()
+    ..sort((a, b) => _s(a['center_code']).compareTo(_s(b['center_code'])));
+
+  Widget _treeNode(Map<String, dynamic> row, int depth) {
+    final id = _s(row['id']);
+    final children = _childrenOfCenter(row);
+    final child = _child(row);
+    return Padding(
+      padding: EdgeInsetsDirectional.only(start: depth * 18, bottom: 5),
+      child: Card(
+        color: depth == 0 ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
+        child: ListTile(
+          dense: true,
+          leading: Icon(child ? Icons.subdirectory_arrow_left : Icons.account_tree_outlined, color: _costPurple),
+          title: Text('${_s(row['center_code'])} — ${_ar(row)}', style: const TextStyle(fontWeight: FontWeight.w800)),
+          subtitle: Text('${_s(row['center_name_en'])} • ${_branchName(row['branch_id'])} • ${row['is_active'] == true ? 'نشط' : 'غير نشط'}'),
+          selected: id.isNotEmpty && _selectedIds.contains(id),
+          onTap: id.isEmpty ? null : () => setState(() { if (_selectedIds.contains(id)) { _selectedIds.remove(id); } else { _selectedIds..clear()..add(id); } }),
+          trailing: Wrap(spacing: 0, children: [
+            if (!child && id.isNotEmpty) IconButton(tooltip: 'إضافة مركز فرعي', onPressed: _saving ? null : () => _addChild(row), icon: const Icon(Icons.add_circle_outline, color: _costPurple)),
+            IconButton(tooltip: 'حذف المركز', onPressed: _saving ? null : () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+          ]),
+        ),
+      ),
+    );
+  }
 
   Widget _notice(String text, Color color) => Container(
     margin: const EdgeInsets.only(bottom: 5), padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
