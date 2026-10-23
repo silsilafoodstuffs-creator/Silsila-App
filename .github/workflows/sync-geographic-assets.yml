@@ -8,6 +8,8 @@ on:
       - 'tools/geographic_data/**'
       - '.github/workflows/sync-geographic-assets.yml'
       - 'supabase/erp_geographic_data_schema.sql'
+      - 'supabase/erp_egypt_governorates_seed.sql'
+      - 'supabase/migrations/20261023_geographic_data_metadata_and_logos.sql'
 
 permissions:
   contents: read
