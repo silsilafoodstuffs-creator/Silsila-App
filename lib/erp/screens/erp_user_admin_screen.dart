@@ -494,35 +494,157 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   Widget _hierarchyTreeNode(Map<String, dynamic> row, int depth, {required String kind}) {
     final isType = kind == 'type';
     final id = _s(row['id']);
-    final children = isType ? _usersForType(id).where(_userBranchMatches).toList() : _childrenForUser(id).where(_userBranchMatches).toList();
+    final children = isType
+        ? _usersForType(id).where(_userBranchMatches).toList()
+        : _childrenForUser(id).where(_userBranchMatches).toList();
     final isSelected = _selectedNodeKind == kind && _selectedId == id;
-    final background = isType ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3);
-    final label = isType ? 'نوع مستخدم' : _s(row['parent_user_id']).isEmpty ? 'مستخدم رئيسي' : 'مستخدم فرعي';
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Padding(padding: EdgeInsetsDirectional.only(start: depth * 20, bottom: 4), child: Card(
+    final background = isType
+        ? const Color(0xFFEDE1F8)
+        : depth == 1
+            ? const Color(0xFFFFE4BE)
+            : const Color(0xFFFFDDF3);
+    final label = isType
+        ? 'نوع مستخدم'
+        : _s(row['parent_user_id']).isEmpty
+            ? 'مستخدم رئيسي'
+            : 'مستخدم فرعي';
+    return Padding(
+      padding: EdgeInsetsDirectional.only(start: depth * 12, bottom: 5),
+      child: Card(
+        margin: EdgeInsets.zero,
         color: background,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: isSelected ? _userAdminPurple : Colors.transparent, width: isSelected ? 1.6 : 0)),
-        child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5), child: Row(children: [
-          Icon(isType ? Icons.badge_outlined : depth == 1 ? Icons.person_outline : Icons.people_alt_outlined, color: _userAdminPurple),
-          const SizedBox(width: 8),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('$label • ${_s(row[isType ? 'type_code' : 'user_code'])}', style: TextStyle(fontSize: 10, color: _userAdminPurple, fontWeight: FontWeight.w800)),
-            _editMode ? TextFormField(key: ValueKey('hierarchy-$kind-$id-ar'), initialValue: _s(row['name_ar']), onChanged: (v) => row['name_ar'] = v, decoration: const InputDecoration(isDense: true, hintText: 'الاسم بالعربية')) : Text(_s(row['name_ar']), style: const TextStyle(fontWeight: FontWeight.w900)),
-            if (_editMode) TextFormField(key: ValueKey('hierarchy-$kind-$id-en'), initialValue: _s(row['name_en']), onChanged: (v) => row['name_en'] = v, decoration: const InputDecoration(isDense: true, hintText: 'Name in English')) else Text(_s(row['name_en']), style: const TextStyle(fontSize: 11)),
-          ])),
-          if (isType) Row(mainAxisSize: MainAxisSize.min, children: [
-            const Text('نشط', style: TextStyle(fontSize: 10)), Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, onChanged: _editMode ? (v) => setState(() => row['is_active'] = v == true) : null),
-            const Text('دخول', style: TextStyle(fontSize: 10)), Checkbox(shape: const CircleBorder(), value: !['ادمن','موظف'].contains(_s(row['name_ar'])) && row['show_at_login'] == true, onChanged: _editMode && !['ادمن','موظف'].contains(_s(row['name_ar'])) ? (v) => setState(() => row['show_at_login'] = v == true) : null),
-          ]) else Row(mainAxisSize: MainAxisSize.min, children: [
-            const Text('نشط', style: TextStyle(fontSize: 10)), Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, onChanged: _editMode ? (v) => setState(() => row['is_active'] = v == true) : null),
-            IconButton(tooltip: 'الفروع والمخازن', onPressed: () => _openBranchWarehousePicker(id), icon: const Icon(Icons.account_tree_outlined, color: _userAdminPurple, size: 18)),
-          ]),
-          IconButton(tooltip: 'تحديد السجل', onPressed: () => _selectHierarchyNode(kind, row), icon: Icon(isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: _userAdminPurple)),
-          if (!isType) IconButton(tooltip: 'إضافة مستخدم فرعي', onPressed: () => setState(() { _selectedNodeKind = 'user'; _selectedId = id; }), icon: const Icon(Icons.person_add_alt_1, color: _userAdminPurple, size: 19)),
-        ])),
-      )),
-      ...children.map((child) => _hierarchyTreeNode(child, depth + 1, kind: 'user')),
-    ]);
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: isSelected ? _userAdminPurple : Colors.transparent,
+            width: isSelected ? 1.8 : 0,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: ExpansionTile(
+          key: PageStorageKey<String>('hierarchy-$kind-$id'),
+          initiallyExpanded: true,
+          tilePadding: const EdgeInsetsDirectional.only(start: 10, end: 4),
+          childrenPadding: const EdgeInsetsDirectional.fromSTEB(8, 0, 8, 8),
+          leading: Icon(
+            isType
+                ? Icons.badge_outlined
+                : depth == 1
+                    ? Icons.person_outline
+                    : Icons.people_alt_outlined,
+            color: _userAdminPurple,
+          ),
+          title: _editMode
+              ? TextFormField(
+                  key: ValueKey('hierarchy-$kind-$id-ar'),
+                  initialValue: _s(row['name_ar']),
+                  onChanged: (v) => row['name_ar'] = v,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'الاسم بالعربية',
+                    border: OutlineInputBorder(),
+                  ),
+                )
+              : Text(
+                  _s(row['name_ar']).isEmpty ? 'بدون اسم' : _s(row['name_ar']),
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('$label • ${_s(row[isType ? 'type_code' : 'user_code'])}'),
+              if (_editMode)
+                TextFormField(
+                  key: ValueKey('hierarchy-$kind-$id-en'),
+                  initialValue: _s(row['name_en']),
+                  onChanged: (v) => row['name_en'] = v,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    labelText: 'Name in English',
+                    border: OutlineInputBorder(),
+                  ),
+                )
+              else
+                Text(
+                  _s(row['name_en']),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
+          ),
+          trailing: IconButton(
+            tooltip: isSelected ? 'السجل المحدد' : 'تحديد السجل',
+            onPressed: () => _selectHierarchyNode(kind, row),
+            icon: Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+              color: _userAdminPurple,
+            ),
+          ),
+          children: [
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('نشط'),
+                    Checkbox(
+                      shape: const CircleBorder(),
+                      value: row['is_active'] == true,
+                      onChanged: _editMode
+                          ? (v) => setState(() => row['is_active'] = v == true)
+                          : null,
+                    ),
+                  ],
+                ),
+                if (isType)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('يظهر عند الدخول'),
+                      Checkbox(
+                        shape: const CircleBorder(),
+                        value: !['ادمن', 'موظف'].contains(_s(row['name_ar'])) &&
+                            row['show_at_login'] == true,
+                        onChanged: _editMode &&
+                                !['ادمن', 'موظف'].contains(_s(row['name_ar']))
+                            ? (v) => setState(() => row['show_at_login'] = v == true)
+                            : null,
+                      ),
+                    ],
+                  )
+                else
+                  OutlinedButton.icon(
+                    onPressed: () => _openBranchWarehousePicker(id),
+                    icon: const Icon(Icons.account_tree_outlined, size: 18),
+                    label: const Text('الفروع والمخازن'),
+                  ),
+                if (!isType)
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() {
+                      _selectedNodeKind = 'user';
+                      _selectedId = id;
+                      _selectedUserId = id;
+                    }),
+                    icon: const Icon(Icons.person_add_alt_1, size: 18),
+                    label: const Text('إضافة مستخدم فرعي'),
+                  ),
+              ],
+            ),
+            if (children.isNotEmpty)
+              ...children.map((child) => _hierarchyTreeNode(
+                    child,
+                    depth + 1,
+                    kind: 'user',
+                  )),
+          ],
+        ),
+      ),
+    );
   }
 
   List<Map<String, dynamic>> _flattenHierarchy() {
