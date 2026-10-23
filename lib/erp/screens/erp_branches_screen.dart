@@ -325,8 +325,8 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         title: const Text('حذف الفرع'),
         content: Text('هل تريد حذف «${_s(row['branch_name'])}»؟ لن يسمح النظام بحذف فرع مرتبط بمخازن أو حركات.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
-          FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No / لا')),
+          FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('Yes / نعم، احذف')),
         ],
       ),
     );
