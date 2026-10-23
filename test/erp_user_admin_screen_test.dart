@@ -22,6 +22,11 @@ void main() {
       expect(find.text('عرض شجرة'), findsOneWidget);
       expect(find.text('عرض جدول'), findsOneWidget);
       expect(find.textContaining('بحث في أنواع المستخدمين'), findsOneWidget);
+      // The tree is a lazily built ListView; switch to the complete grid before
+      // asserting rows that may initially be below the viewport.
+      await tester.tap(find.text('عرض جدول'));
+      await tester.pumpAndSettle();
+
       expect(find.text('ادمن'), findsOneWidget);
       expect(find.text('موظف'), findsOneWidget);
       expect(find.text('مورد'), findsOneWidget);
