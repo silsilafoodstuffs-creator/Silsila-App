@@ -38,7 +38,43 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     var raw = s(value).trim();
     if (raw.isEmpty) return null;
     if (raw.startsWith(r'\x')) raw = raw.substring(2);
-    if (raw.isEmpty || raw.length.isOdd || !RegExp(r'^[0-9a-fA-F]+
+    if (raw.isEmpty || raw.length.isOdd || !RegExp(r'^[0-9a-fA-F]+$').hasMatch(raw)) {
+      return null;
+    }
+    final bytes = <int>[];
+    for (var i = 0; i < raw.length; i += 2) {
+      bytes.add(int.parse(raw.substring(i, i + 2), radix: 16));
+    }
+    return Uint8List.fromList(bytes);
+  }
+
+  Widget _governorateLogo(Map<String, dynamic> row) {
+    final bytes = _decodeLogoBytes(row['logo_bytes']);
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: 8),
+      child: Container(
+        width: 38,
+        height: 38,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFD8C8E8)),
+        ),
+        child: bytes == null
+            ? const Icon(Icons.account_balance_outlined, color: Color(0xFF3E007D), size: 22)
+            : Image.memory(
+                bytes,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.account_balance_outlined,
+                  color: Color(0xFF3E007D),
+                  size: 22,
+                ),
+              ),
+      ),
+    );
+  }
 
   String label(String level, [String? adminType]) {
     if (level == 'district') {
