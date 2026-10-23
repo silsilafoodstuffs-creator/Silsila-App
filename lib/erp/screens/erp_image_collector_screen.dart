@@ -93,6 +93,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   final Set<String> _downloadingUrls = <String>{};
   final Map<String, Future<Uint8List?>> _previewFutures = <String, Future<Uint8List?>>{};
   final ScrollController _imagesScrollController = ScrollController();
+  static const int _imagesPageSize = 10;
+  int _imagesPage = 0;
 
   @override
   void initState() {
@@ -248,6 +250,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       _importedImageKeys.clear();
       _importedScope = null;
       _images = [];
+      _imagesPage = 0;
       _selected.clear();
       _pageUrl = null;
       _error = null;
@@ -260,7 +263,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     _imagesScrollController.dispose();
     for (final controller in _rowControllers.values) { controller.dispose(); }
     _url.dispose();
-    for (final controller in _rowControllers.values) { controller.dispose(); }
     super.dispose();
   }
 
@@ -409,6 +411,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       setState(() {
         _pageUrl = result['page']?.toString() ?? parsed.toString();
         _images = images;
+        _imagesPage = 0;
         _previouslyImportedCount = previouslyImportedCount;
         _duplicateCount = duplicateCount;
         // Select every newly collected image by default so the collector is
@@ -900,6 +903,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   Widget build(BuildContext context) {
     final selectableCount = _images.where((x) => x['_previously_imported'] != true).length;
     final allSelected = selectableCount > 0 && _selected.length == selectableCount;
+    final pageCount = (_images.length / _imagesPageSize).ceil();
+    final safePage = pageCount == 0 ? 0 : _imagesPage.clamp(0, pageCount - 1);
+    final pageStart = safePage * _imagesPageSize;
+    final visibleImages = _images.skip(pageStart).take(_imagesPageSize).toList();
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(
@@ -1038,6 +1045,17 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
             )),
           ]),
           const SizedBox(height: 6),
+          if (_images.isNotEmpty) ...[
+            Row(children: [
+              Text('عرض ${pageStart + 1}–${(pageStart + visibleImages.length)} من ${_images.length} صف', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              const Spacer(),
+              IconButton(tooltip: 'أول صفحة', onPressed: safePage > 0 ? () => setState(() { _imagesPage = 0; if (_imagesScrollController.hasClients) _imagesScrollController.jumpTo(0); }) : null, icon: const Icon(Icons.first_page)),
+              IconButton(tooltip: 'الصفحة السابقة', onPressed: safePage > 0 ? () => setState(() { _imagesPage = safePage - 1; if (_imagesScrollController.hasClients) _imagesScrollController.jumpTo(0); }) : null, icon: const Icon(Icons.chevron_left)),
+              Text('صفحة ${safePage + 1} من $pageCount', style: const TextStyle(fontSize: 12)),
+              IconButton(tooltip: 'الصفحة التالية', onPressed: safePage + 1 < pageCount ? () => setState(() { _imagesPage = safePage + 1; if (_imagesScrollController.hasClients) _imagesScrollController.jumpTo(0); }) : null, icon: const Icon(Icons.chevron_right)),
+              IconButton(tooltip: 'آخر صفحة', onPressed: safePage + 1 < pageCount ? () => setState(() { _imagesPage = pageCount - 1; if (_imagesScrollController.hasClients) _imagesScrollController.jumpTo(0); }) : null, icon: const Icon(Icons.last_page)),
+            ]),
+          ],
           if (_images.isEmpty)
             SizedBox(
               height: 220,
@@ -1059,9 +1077,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
               controller: _imagesScrollController,
               primary: false,
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 18), itemCount: _images.length,
-              itemBuilder: (context,index) {
-                final item=_images[index]; final url=item['url'].toString(); final selected=_selected.contains(url);
+              padding: const EdgeInsets.only(bottom: 18), itemCount: visibleImages.length,
+              itemBuilder: (context,localIndex) {
+                final index = pageStart + localIndex;
+                final item=visibleImages[localIndex]; final url=item['url'].toString(); final selected=_selected.contains(url);
                 final kind=(item['save_as']??'product').toString(); final mode=(item['entity_mode']??'new').toString();
                 Widget field(String key,String label,{double width=180,String initial='',TextInputType type=TextInputType.text}) {
                   return SizedBox(width:width,child:Focus(
