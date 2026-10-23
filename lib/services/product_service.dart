@@ -177,7 +177,7 @@ class ProductService {
       final rootName = path.isEmpty ? categoryName : (path.first['category_name'] ?? categoryName).toString();
       if (category != null &&
           (itemCategory == null || (category != rootName && category != categoryName &&
-          !path.any((node) => (node['category_name'] ?? '').toString() == category))) {
+          !path.any((node) => (node['category_name'] ?? '').toString() == category)))) {
         continue;
       }
       final subcategoryName = path.length > 1 ? (path[1]['category_name'] ?? '').toString() : '';
