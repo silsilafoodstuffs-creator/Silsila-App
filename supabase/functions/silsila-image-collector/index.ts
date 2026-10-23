@@ -259,14 +259,14 @@ function pageImages(html: string, base: URL) {
   }
   // Amazon stores product image variants in data-a-dynamic-image JSON, not
   // always in src/srcset. Extract every variant rather than only the thumbnail.
-  for (const m of html.matchAll(/<img\\b[^>]*>/gi)) {
+  for (const m of html.matchAll(/<img\b[^>]*>/gi)) {
     const tag = m[0];
-    const dynamic = tag.match(/\\bdata-a-dynamic-image=["']([^"']+)["']/i)?.[1];
+    const dynamic = tag.match(/\bdata-a-dynamic-image=["']([^"']+)["']/i)?.[1];
     if (!dynamic) continue;
     try {
       const variants = JSON.parse(decodeEntities(dynamic)) as Record<string, unknown>;
       const contextName = contextualEntityName(html, m.index ?? 0);
-      const alt = decodeEntities(tag.match(/\\balt=["']([^"']*)["']/i)?.[1] ?? "");
+      const alt = decodeEntities(tag.match(/\balt=["']([^"']*)["']/i)?.[1] ?? "");
       for (const [url, dimensions] of Object.entries(variants)) {
         const size = Array.isArray(dimensions) ? dimensions : [];
         add(url, alt, "amazon-dynamic-image", Number(size[0] ?? 0), Number(size[1] ?? 0), contextName);
@@ -274,8 +274,8 @@ function pageImages(html: string, base: URL) {
     } catch { /* malformed dynamic-image JSON; normal img sources still work */ }
   }
   // Amazon sometimes embeds product-grid image URLs in escaped script data.
-  const normalizedScript = html.replace(/\\\\u002[fF]/g, "/").replace(/\\\\\\//g, "/").replace(/&amp;/g, "&");
-  for (const m of normalizedScript.matchAll(/https?:\\/\\/(?:m\\.media-amazon\\.com|images-na\\.ssl-images-amazon\\.com)\\/images\\/I\\/[^"'\\s<>\\\\]+/gi)) {
+  const normalizedScript = html.replace(/\\u002[fF]/g, "/").replace(/\\\//g, "/").replace(/&amp;/g, "&");
+  for (const m of normalizedScript.matchAll(/https?:\/\/(?:m\.media-amazon\.com|images-na\.ssl-images-amazon\.com)\/images\/I\/[^"'\s<>\\]+/gi)) {
     const url = m[0].replace(/[),;]+$/, "");
     add(url, "", "amazon-script-product-image", 0, 0, contextualEntityName(normalizedScript, m.index ?? 0));
   }
