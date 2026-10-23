@@ -285,13 +285,22 @@ Deno.serve(async (req: Request) => {
       return json({ page: page.href, count: images.length, images });
     }
     if (action === "download") {
-      const target = safeUrl(String(body.url ?? ""));
-      const res = await fetch(target, {
-        redirect: "manual",
-        headers: { "User-Agent": "SilsilaImageCollector/1.0", "Accept": "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8" },
-        signal: AbortSignal.timeout(18000),
-      });
-      if (res.status >= 300 && res.status < 400) return json({ error: "رابط الصورة يحوّل إلى رابط آخر؛ تعذر تنزيله بأمان." }, 422);
+      let target = safeUrl(String(body.url ?? ""));
+      let res: Response | null = null;
+      // Follow common CDN/image redirects manually, validating every hop so
+      // an external image cannot redirect the service to a private address.
+      for (let hop = 0; hop <= 5; hop++) {
+        res = await fetch(target, {
+          redirect: "manual",
+          headers: { "User-Agent": "SilsilaImageCollector/1.1", "Accept": "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8" },
+          signal: AbortSignal.timeout(18000),
+        });
+        if (res.status < 300 || res.status >= 400) break;
+        const location = res.headers.get("location");
+        if (!location || hop === 5) return json({ error: "تعذر الوصول إلى رابط الصورة بعد عدة تحويلات." }, 422);
+        target = safeUrl(new URL(location, target).toString());
+      }
+      if (!res) return json({ error: "تعذر تنزيل الصورة." }, 422);
       if (!res.ok) return json({ error: `تعذر تنزيل الصورة (HTTP ${res.status}).` }, 422);
       const type = (res.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
       if (!type.startsWith("image/") || type === "image/svg+xml") return json({ error: "الرابط لا يعيد صورة نقطية مدعومة." }, 422);
