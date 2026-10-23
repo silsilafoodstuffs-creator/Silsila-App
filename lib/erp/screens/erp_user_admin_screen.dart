@@ -262,7 +262,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if (mounted) setState(() {
         _loading=false;
         _error='تعذر تحميل بيانات الشاشة: $e';
-        if (_isType) {
+        if (_isType || _isHierarchy) {
           _types = _localDefaultUserTypes();
           _rows = List<Map<String, dynamic>>.from(_types);
           _message = 'تم إظهار الأنواع الافتراضية في الجريد للمعاينة. تعذر الوصول إلى بيانات قاعدة البيانات؛ لا تُعتبر هذه الصفوف محفوظة حتى تنجح المزامنة.';
