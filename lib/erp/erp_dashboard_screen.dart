@@ -894,7 +894,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         title: Text(silsilaText('تأكيد حذف السجل')),
         content: Text('هل تريد حذف السجل «$visibleCode» من شاشة «$_page»؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText('إلغاء'))),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText('No / لا'))),
           FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(silsilaText('Yes / نعم، احذف'))),
         ],
       ),
