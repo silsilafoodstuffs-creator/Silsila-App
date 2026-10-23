@@ -41,11 +41,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(ListView), findsOneWidget);
       expect(find.text('ادمن'), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text('شركة شحن'),
-        250,
-        scrollable: find.byType(Scrollable).first,
-      );
+      // Scroll the hierarchy's actual viewport. scrollUntilVisible can select
+      // an offstage Scrollable from the previous table view on web/test builds.
+      for (var i = 0; i < 8 && find.text('شركة شحن').evaluate().isEmpty; i++) {
+        await tester.drag(find.byType(ListView), const Offset(0, -350));
+        await tester.pumpAndSettle();
+      }
       expect(find.text('شركة شحن'), findsOneWidget);
     },
   );
