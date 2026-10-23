@@ -296,8 +296,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   }
 
   @override
-  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(add: _newCurrentRecord, save: _saveCurrentRecord, child: Directionality(textDirection: TextDirection.rtl, child: Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget build(BuildContext context) => ErpKeyboardActionRegistrar(add: _newCurrentRecord, save: _saveCurrentRecord, child: Directionality(textDirection: TextDirection.rtl, child: ListView(
+    padding: const EdgeInsets.only(bottom: 24),
     children: [
       Card(color: const Color(0xFF3E007D), child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
