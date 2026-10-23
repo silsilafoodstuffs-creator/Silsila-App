@@ -1,9 +1,9 @@
 name: Deploy Silsila ERP Web Preview
 
+# The production Pages site is deployed by deploy.yml.
+# Keep this alternate ERP preview manual-only so it cannot race and overwrite
+# the same Pages artifact on every push.
 'on':
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
