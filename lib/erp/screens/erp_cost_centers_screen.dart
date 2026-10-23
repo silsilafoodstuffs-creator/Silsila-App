@@ -168,7 +168,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       title: const Text('حذف مركز التكلفة'),
       content: Text('هل تريد حذف «${_ar(row)}»؟ قد تمنع قاعدة البيانات الحذف إذا ارتبط المركز بفروع فرعية أو بحركات مالية.'),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No / لا')),
         FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف')),
       ],
     ));
