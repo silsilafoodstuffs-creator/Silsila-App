@@ -175,7 +175,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     if (!_editing) { setState(() => _message = 'اضغط «تعديل» أولًا قبل حذف البيانات.'); return; }
     final row = _rows.where((r) => r['كود النشاط'] == _selected).firstOrNull;
     if (row == null) { setState(() => _message = 'حدد النشاط المطلوب حذفه أولاً.'); return; }
-    final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: const Text('تأكيد الحذف'), content: Text('حذف النشاط: ' + (row['اسم النشاط عربي'] ?? '')), actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('نعم، حذف'))]));
+    final yes = await showDialog<bool>(context: context, builder: (c) => AlertDialog(title: const Text('تأكيد الحذف'), content: Text('حذف النشاط: ' + (row['اسم النشاط عربي'] ?? '')), actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('No / لا')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Yes / نعم، احذف'))]));
     if (yes != true) return;
     try {
       final code = (row['كود النشاط'] ?? '').trim();
