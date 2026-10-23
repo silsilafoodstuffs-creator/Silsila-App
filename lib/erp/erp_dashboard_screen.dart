@@ -1085,13 +1085,29 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                   Expanded(
                     // This screen has its own bounded-height tree/grid and must
                     // not be nested in SingleChildScrollView.
-                    child: _page == 'بيانات جغرافية'
+                    child: (
+                      _page == 'بيانات جغرافية' ||
+                      _page == 'أنواع المستخدمين والمستخدمين' ||
+                      _page == 'أنواع المستخدمين' ||
+                      _page == 'المستخدمين' ||
+                      _page == 'قوالب صلاحيات المستخدمين' ||
+                      _page == 'صلاحيات المستخدمين'
+                    )
                         ? Padding(
                             padding: EdgeInsets.all(pagePadding),
                             child: ErpKeyboardNavigation(
-                              child: ErpGeographicDataScreen(
-                                companyId: _appManagementCompanyId,
-                              ),
+                              child: _page == 'بيانات جغرافية'
+                                  ? ErpGeographicDataScreen(
+                                      companyId: _appManagementCompanyId,
+                                    )
+                                  : ErpUserAdminScreen(
+                                      companyId: _appManagementCompanyId,
+                                      initialView: _page == 'قوالب صلاحيات المستخدمين'
+                                          ? 'templates'
+                                          : _page == 'صلاحيات المستخدمين'
+                                              ? 'permissions'
+                                              : 'hierarchy',
+                                    ),
                             ),
                           )
                         : SingleChildScrollView(
