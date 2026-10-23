@@ -548,9 +548,9 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
             ? const Color(0xFFFFE4BE)
             : const Color(0xFFFFDDF3);
     return Container(
-      color: rowColor,
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE6DFED))),
+      decoration: BoxDecoration(
+        color: rowColor,
+        border: const Border(bottom: BorderSide(color: Color(0xFFE6DFED))),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: Row(
