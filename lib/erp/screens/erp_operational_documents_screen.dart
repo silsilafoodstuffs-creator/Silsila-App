@@ -678,7 +678,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                           final yes = await showDialog<bool>(context: dialogContext, builder: (c) => AlertDialog(
                             title: const Text('تأكيد حذف النقص'),
                             content: Text('هل تريد حذف نقص الصنف «' + _s(row['item_name']) + '»؟ لا يمكن التراجع عن الحذف.'),
-                            actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('نعم، حذف'))],
+                            actions: [TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('No / لا')), FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Yes / نعم، احذف'))],
                           ));
                           if (yes != true) return;
                           try {
@@ -1425,7 +1425,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     if (id == null) { setState(() => _error = 'اختر مسودة أولًا.'); return; }
     final rows = _rows.where((row) => _s(row['id']) == id);
     if (rows.isEmpty || _s(rows.first['status']) != 'draft') { setState(() => _error = 'الحذف متاح للمسودات فقط.'); return; }
-    final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: const Text('تأكيد الحذف'), content: const Text('حذف مسودة المستند المحددة؟'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('نعم، احذف'))]));
+    final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(title: const Text('تأكيد الحذف'), content: const Text('حذف مسودة المستند المحددة؟'), actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('لا')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Yes / نعم، احذف'))]));
     if (yes != true) return;
     try {
       await Supabase.instance.client.from('erp_sales_documents').delete().eq('company_id', _company.text.trim()).eq('id', id).eq('status', 'draft');
