@@ -33,6 +33,12 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      - name: Analyze Dart source
+        run: flutter analyze lib test --no-fatal-infos
+
+      - name: Run automated tests
+        run: flutter test
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
