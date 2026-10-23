@@ -341,24 +341,27 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     final id = _s(row['id']);
     final children = _childrenOfCenter(row);
     final child = _child(row);
-    return Padding(
-      padding: EdgeInsetsDirectional.only(start: depth * 18, bottom: 5),
-      child: Card(
-        color: depth == 0 ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
-        child: ListTile(
-          dense: true,
-          leading: Icon(child ? Icons.subdirectory_arrow_left : Icons.account_tree_outlined, color: _costPurple),
-          title: Text('${_s(row['center_code'])} — ${_ar(row)}', style: const TextStyle(fontWeight: FontWeight.w800)),
-          subtitle: Text('${_s(row['center_name_en'])} • ${_branchName(row['branch_id'])} • ${row['is_active'] == true ? 'نشط' : 'غير نشط'}'),
-          selected: id.isNotEmpty && _selectedIds.contains(id),
-          onTap: id.isEmpty ? null : () => setState(() { if (_selectedIds.contains(id)) { _selectedIds.remove(id); } else { _selectedIds..clear()..add(id); } }),
-          trailing: Wrap(spacing: 0, children: [
-            if (!child && id.isNotEmpty) IconButton(tooltip: 'إضافة مركز فرعي', onPressed: _saving ? null : () => _addChild(row), icon: const Icon(Icons.add_circle_outline, color: _costPurple)),
-            IconButton(tooltip: 'حذف المركز', onPressed: _saving ? null : () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
-          ]),
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+        padding: EdgeInsetsDirectional.only(start: depth * 18, bottom: 5),
+        child: Card(
+          color: depth == 0 ? const Color(0xFFEDE1F8) : depth == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
+          child: ListTile(
+            dense: true,
+            leading: Icon(child ? Icons.subdirectory_arrow_left : Icons.account_tree_outlined, color: _costPurple),
+            title: Text('${_s(row['center_code'])} — ${_ar(row)}', style: const TextStyle(fontWeight: FontWeight.w800)),
+            subtitle: Text('${_s(row['center_name_en'])} • ${_branchName(row['branch_id'])} • ${row['is_active'] == true ? 'نشط' : 'غير نشط'}'),
+            selected: id.isNotEmpty && _selectedIds.contains(id),
+            onTap: id.isEmpty ? null : () => setState(() { if (_selectedIds.contains(id)) { _selectedIds.remove(id); } else { _selectedIds..clear()..add(id); } }),
+            trailing: Wrap(spacing: 0, children: [
+              if (!child && id.isNotEmpty) IconButton(tooltip: 'إضافة مركز فرعي', onPressed: _saving ? null : () => _addChild(row), icon: const Icon(Icons.add_circle_outline, color: _costPurple)),
+              IconButton(tooltip: 'حذف المركز', onPressed: _saving ? null : () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+            ]),
+          ),
         ),
       ),
-    );
+      ...children.where(_branchMatches).map((item) => _treeNode(item, depth + 1)),
+    ]);
   }
 
   Widget _notice(String text, Color color) => Container(
