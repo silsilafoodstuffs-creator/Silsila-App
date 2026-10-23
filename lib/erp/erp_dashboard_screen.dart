@@ -745,7 +745,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           ],
         ]))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dctx), child: Text(silsilaText('إلغاء'))),
+          TextButton(onPressed: () => Navigator.pop(dctx), child: Text(silsilaText('No / لا'))),
           FilledButton(onPressed: () async {
             if (name.text.trim().isEmpty) return;
             final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
@@ -895,7 +895,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         content: Text('هل تريد حذف السجل «$visibleCode» من شاشة «$_page»؟'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(silsilaText('إلغاء'))),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(silsilaText('حذف'))),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(silsilaText('Yes / نعم، احذف'))),
         ],
       ),
     );
