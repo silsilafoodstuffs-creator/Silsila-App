@@ -196,7 +196,7 @@ def main() -> int:
     for row in rows:
         code = row.get("geo_code") or "(missing-code)"
         name = row.get("name_ar") or code
-        url = resolved_urls.get(code) or row.get("logo_url")
+        url = resolved_urls.get(code) or row.get("logo_url") or row.get("logo_source_url")
         if row.get("logo_sha256"):
             print(f"SKIP {code} {name}: image bytes are already stored")
             skipped += 1
