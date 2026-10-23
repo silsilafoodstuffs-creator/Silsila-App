@@ -245,8 +245,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if (!mounted) return;
       setState(() {
         _types=typeList; _users=userList; _templates=templateList;
-        _rows=_isType?typeList:_isUser?userList:_isHierarchy?typeList:_isTemplate?templateList:userList;
-        if (_selectedId != null && !_rows.any((r)=>_s(r['id'])==_selectedId)) _selectedId=null;
+        _rows=_isHierarchy?typeList:_isTemplate?templateList:userList;
+        if (_selectedId != null && (_isHierarchy ? !typeList.any((r)=>_s(r['id'])==_selectedId) && !userList.any((r)=>_s(r['id'])==_selectedId) : !_rows.any((r)=>_s(r['id'])==_selectedId))) _selectedId=null;
         if (_selectedUserId != null && !userList.any((r)=>_s(r['id'])==_selectedUserId)) _selectedUserId=null;
         if (_selectedUserId==null && userList.isNotEmpty) _selectedUserId=_s(userList.first['id']);
         if (_selectedTemplateId != null && !templateList.any((r)=>_s(r['id'])==_selectedTemplateId)) _selectedTemplateId=null;
