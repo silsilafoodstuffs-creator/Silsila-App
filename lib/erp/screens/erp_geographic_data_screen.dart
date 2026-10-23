@@ -26,6 +26,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   String? _activeCompanyId;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _viewMode = 'tree';
   String? _membershipDiagnostic;
 
   String s(dynamic value) => (value ?? '').toString();
@@ -482,6 +483,58 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     );
   }
 
+  Widget _gridRow(Map<String, dynamic> row) {
+    final level = s(row['level']);
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE6DFED))),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            flex: 3,
+            child: Text(s(row['name_ar']), maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          Expanded(flex: 2, child: Text(s(row['geo_code']))),
+          Expanded(flex: 2, child: Text(label(level, s(row['admin_type'])))),
+          SizedBox(
+            width: 82,
+            child: Checkbox(
+              value: row['is_active'] == true,
+              onChanged: (_) => toggle(row),
+              shape: const CircleBorder(),
+            ),
+          ),
+          SizedBox(
+            width: 90,
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'معاينة/تعديل',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => edit(
+                    row: row,
+                    parent: s(row['parent_id']).isEmpty ? null : s(row['parent_id']),
+                    level: level,
+                  ),
+                  icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015), size: 19),
+                ),
+                IconButton(
+                  tooltip: 'حذف',
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => remove(row),
+                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 19),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final governorates = rows.where((row) => s(row['level']) == 'governorate').length;
@@ -490,13 +543,16 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     final roots = rows
         .where((row) => s(row['level']) == 'governorate' && s(row['parent_id']).isEmpty)
         .toList();
-    final visibleRows = _searchQuery.isEmpty
-        ? roots
+    final matchedRows = _searchQuery.isEmpty
+        ? rows
         : rows.where((row) =>
             s(row['name_ar']).toLowerCase().contains(_searchQuery) ||
             s(row['name_en']).toLowerCase().contains(_searchQuery) ||
             s(row['geo_code']).toLowerCase().contains(_searchQuery)).toList()
           ..sort((a, b) => s(a['geo_code']).compareTo(s(b['geo_code'])));
+    final visibleRows = _viewMode == 'tree' && _searchQuery.isEmpty
+        ? roots
+        : matchedRows;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -537,6 +593,18 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                           Icons.add_location_alt,
                           const Color(0xFF168447),
                           () => edit(level: 'governorate'),
+                        ),
+                        task(
+                          'عرض شجرة',
+                          Icons.account_tree_outlined,
+                          const Color(0xFF3E007D),
+                          () => setState(() => _viewMode = 'tree'),
+                        ),
+                        task(
+                          'عرض جدول',
+                          Icons.table_rows_outlined,
+                          const Color(0xFF3E007D),
+                          () => setState(() => _viewMode = 'grid'),
                         ),
                         task(
                           'معاينة',
@@ -651,10 +719,33 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                   )
                 : visibleRows.isEmpty
                     ? Center(child: Text(_searchQuery.isEmpty ? 'لا توجد محافظات ظاهرة ضمن البيانات المحملة.' : 'لا توجد نتائج مطابقة للبحث.'))
-                    : ListView.builder(
-                        key: ValueKey(_searchQuery.isEmpty ? 'governorates' : 'search-results'),
-                        itemCount: visibleRows.length,
-                        itemBuilder: (context, index) => node(visibleRows[index], 0),
+                    : Column(
+                        children: [
+                          if (_viewMode == 'grid' || _searchQuery.isNotEmpty)
+                            Container(
+                              color: const Color(0xFFF5EFFB),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              child: const Row(
+                                children: [
+                                  Expanded(flex: 3, child: Text('الاسم', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  Expanded(flex: 2, child: Text('الكود', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  Expanded(flex: 2, child: Text('المستوى', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  SizedBox(width: 82, child: Text('الحالة', style: TextStyle(fontWeight: FontWeight.bold))),
+                                  SizedBox(width: 90, child: Text('إجراءات', style: TextStyle(fontWeight: FontWeight.bold))),
+                                ],
+                              ),
+                            ),
+                          Expanded(
+                            child: ListView.builder(
+                              key: ValueKey('${_viewMode}-${_searchQuery.isEmpty ? 'all' : _searchQuery}'),
+                              itemCount: visibleRows.length,
+                              itemBuilder: (context, index) =>
+                                  _viewMode == 'tree' && _searchQuery.isEmpty
+                                      ? node(visibleRows[index], 0)
+                                      : _gridRow(visibleRows[index]),
+                            ),
+                          ),
+                        ],
                       ),
           ),
         ],
