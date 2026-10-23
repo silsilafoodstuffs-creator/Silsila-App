@@ -232,8 +232,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
 
 
   List<Map<String, dynamic>> _childrenOf(String parentId) {
-    final rows = _filtered;
-    return rows.where((row) => _value(row, 'parent_id') == parentId).toList()
+    return _rows.where((row) => _value(row, 'parent_id') == parentId).toList()
       ..sort((a, b) => _value(a, 'account_code').compareTo(_value(b, 'account_code')));
   }
 
@@ -268,9 +267,19 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     }
   }
 
+  bool _matchesSearch(Map<String, dynamic> row) {
+    final q = _search.text.trim().toLowerCase();
+    return q.isEmpty || _value(row, 'account_code').toLowerCase().contains(q) || _value(row, 'account_name').toLowerCase().contains(q);
+  }
+
+  bool _branchMatches(Map<String, dynamic> row) {
+    if (_matchesSearch(row)) return true;
+    return _childrenOf(_value(row, 'account_id')).any(_branchMatches);
+  }
+
   Widget _buildTreeNode(Map<String, dynamic> row, int depth) {
     final id = _value(row, 'account_id');
-    final children = _childrenOf(id);
+    final children = _childrenOf(id).where(_branchMatches).toList();
     final hasChildren = children.isNotEmpty;
     final expanded = _expandedAccounts.contains(id);
     final isPostable = row['is_postable'] == true;
@@ -438,7 +447,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
         const SizedBox(height: 10),
         if (!_loading && rows.isEmpty)
           const Padding(padding: EdgeInsets.all(24), child: Text('أدخل معرّف الشركة واضغط تحديث لعرض الحسابات.')),
-        if (rows.isNotEmpty && _viewMode == 'tree') ..._childrenOf('').map((row) => _buildTreeNode(row, 0)),
+        if (rows.isNotEmpty && _viewMode == 'tree') ..._childrenOf('').where(_branchMatches).map((row) => _buildTreeNode(row, 0)),
         if (rows.isNotEmpty && _viewMode == 'grid')
           Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
             headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
