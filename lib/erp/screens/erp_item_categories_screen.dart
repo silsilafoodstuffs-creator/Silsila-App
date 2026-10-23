@@ -293,6 +293,18 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       _all.where((r) => _s(r['parent_id']) == _s(parent['id'])).toList()
         ..sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
 
+  bool _matchesSearch(Map<String,dynamic> row) {
+    if (_searchQuery.isEmpty) return true;
+    return _s(row['category_code']).toLowerCase().contains(_searchQuery) ||
+      _s(row['category_name']).toLowerCase().contains(_searchQuery) ||
+      _s(row['category_name_en']).toLowerCase().contains(_searchQuery);
+  }
+
+  bool _branchMatches(Map<String,dynamic> row) {
+    if (_matchesSearch(row)) return true;
+    return _childrenOf(row).any(_branchMatches);
+  }
+
   Widget _treeNode(Map<String,dynamic> row, int depth) {
     final id = _s(row['id']);
     final children = _childrenOf(row);
@@ -377,12 +389,22 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         Text('نشط'), SizedBox(width: 8), Text('في التطبيق'), SizedBox(width: 8), Text('الصورة'), SizedBox(width: 24),
       ])),
       Expanded(child: _loading ? const Center(child:CircularProgressIndicator()) :
-        _all.where((r) => r['parent_id'] == null).isEmpty
-          ? const Center(child: Text('لا توجد فئات رئيسية. اضغط «إضافة جديد» لبدء إنشاء شجرة الفئات.'))
-          : ListView(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              children: (_all.where((r) => r['parent_id'] == null).toList()
+        _viewMode == 'tree'
+          ? ListView(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              children: (_all.where((r) => r['parent_id'] == null && _branchMatches(r)).toList()
                 ..sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code']))))
-                .map((root) => _treeNode(root, 0)).toList())),
+                .map((root) => _treeNode(root, 0)).toList())
+          : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
+              headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+              columns: const [DataColumn(label: Text('كود الفئة')), DataColumn(label: Text('اسم الفئة عربي')), DataColumn(label: Text('اسم الفئة إنجليزي')), DataColumn(label: Text('المستوى')), DataColumn(label: Text('نشط')), DataColumn(label: Text('في التطبيق'))],
+              rows: _all.where((r) => _matchesSearch(r)).map((r) => DataRow(
+                color: WidgetStateProperty.all(_rowLevel(r) == 0 ? const Color(0xFFEDE1F8) : _rowLevel(r) == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3)),
+                cells: [
+                  DataCell(Text(_s(r['category_code']))), DataCell(Text(_s(r['category_name']))), DataCell(Text(_s(r['category_name_en']))),
+                  DataCell(Text(['رئيسية','فرعية','ثانوية'][_rowLevel(r)])),
+                  DataCell(Text(r['is_active'] == true ? 'نشط' : 'غير نشط')), DataCell(Text(r['show_in_app'] == true ? 'نعم' : 'لا')),
+                ])).toList(),
+            )))),
     ],
   ));
   }
