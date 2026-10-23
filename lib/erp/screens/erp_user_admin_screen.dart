@@ -167,11 +167,13 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if (_company.isEmpty) {
         throw StateError('لم يتم العثور على شركة نشطة مرتبطة بالمستخدم الحالي.');
       }
+      String? loadWarning;
       List<Map<String, dynamic>> typeList = [];
       List<Map<String, dynamic>> userList = [];
       List<Map<String, dynamic>> templateList = [];
 
       if (_isType || _isUser || _isHierarchy || _isPermissions) {
+        try {
         final result = await _db!.from('erp_user_types').select().eq('company_id', _company).order('type_code');
         typeList = (result as List).map((x) => Map<String, dynamic>.from(x)).toList();
         const defaults = <Map<String, dynamic>>[
@@ -216,11 +218,23 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         }
         const priority = {'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
         typeList.sort((a,b) => (priority[_s(a['name_ar'])] ?? 99).compareTo(priority[_s(b['name_ar'])] ?? 99));
+        } catch (e) {
+          // A type-table/RLS failure must not abort loading the independent users table.
+          typeList = _localDefaultUserTypes();
+          loadWarning = 'تعذر تحميل أنواع المستخدمين من قاعدة البيانات؛ تظهر الأنواع الافتراضية للمعاينة. تفاصيل الخطأ: $e';
+        }
       }
       if (_isUser || _isHierarchy || _isPermissions) {
         // Load users directly; avoid a fragile PostgREST embedded foreign-key relationship.
-        final result = await _db!.from('erp_users').select().eq('company_id', _company);
-        userList = (result as List).map((x) => Map<String,dynamic>.from(x)).toList();
+        try {
+          final result = await _db!.from('erp_users').select().eq('company_id', _company);
+          userList = (result as List).map((x) => Map<String,dynamic>.from(x)).toList();
+        } catch (e) {
+          // Keep the screen alive and show the actual data-access failure rather than
+          // replacing the entire hierarchy with an empty widget.
+          userList = [];
+          loadWarning = 'تعذر تحميل المستخدمين من قاعدة البيانات. راجع الشركة النشطة وسياسات RLS. تفاصيل الخطأ: $e';
+        }
         // User codes are prefixed strings (USR-1, USR-2, ...); sort by the
         // numeric suffix so USR-10 does not appear before USR-2.
         int codeNumber(Map<String, dynamic> row) {
@@ -252,8 +266,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         if (_selectedUserId==null && userList.isNotEmpty) _selectedUserId=_s(userList.first['id']);
         if (_selectedTemplateId != null && !templateList.any((r)=>_s(r['id'])==_selectedTemplateId)) _selectedTemplateId=null;
         if (_selectedTemplateId==null && templateList.isNotEmpty) _selectedTemplateId=_s(templateList.first['id']);
-        _loading=false; _error=null;
-        if ((_isUser || _isHierarchy) && userList.isEmpty) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
+        _loading=false; _error=loadWarning;
+        if ((_isUser || _isHierarchy) && userList.isEmpty && loadWarning == null) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
         if ((_isType || _isHierarchy) && typeList.any((r)=>r['_local_default']==true)) _message='أنواع المستخدمين الافتراضية معروضة في الجدول، لكن تعذر حفظها في قاعدة البيانات بسبب الصلاحيات أو سياسات RLS. يمكنك مراجعة السياسات ثم الضغط على تحديث.';
         if ((_isType || _isHierarchy) && typeList.length < 6) _message='عدد أنواع المستخدمين أقل من 6؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
       });
