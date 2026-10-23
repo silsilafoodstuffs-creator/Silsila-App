@@ -155,25 +155,29 @@ class ProductService {
       return path;
     }
 
+    // The database's public-catalog RLS policy already restricts rows to active,
+    // app-visible items in active, app-visible categories. Do not add a client-side
+    // IN filter based on the category query: category visibility and pagination can
+    // differ, and that filter silently drops otherwise valid item rows.
     var itemQuery = db.from('erp_items')
         .select('id,category_id:category_id,item_code,item_name,base_unit,sale_price,is_active,show_in_app,image_data,image_mime_type,brand_name,package_description')
         .eq('is_active', true)
-        .eq('show_in_app', true)
-        .inFilter('category_id', categoryIds);
+        .eq('show_in_app', true);
     if (search != null) itemQuery = itemQuery.ilike('item_name', '%${_escapeLike(search)}%');
     final itemRows = await itemQuery.order('item_name').limit(500);
     final results = <Map<String, dynamic>>[];
     for (final raw in (itemRows as List)) {
       final item = Map<String, dynamic>.from(raw as Map);
       final itemCategory = categoriesById[(item['category_id'] ?? '').toString()];
-      if (itemCategory == null) continue;
-      final categoryName = (itemCategory['category_name'] ?? '').toString();
-      final path = categoryPath(itemCategory);
-      final rootName = (path.first['category_name'] ?? categoryName).toString();
+      // Keep the item visible even if its category row is temporarily hidden or
+      // missing from the category response. Missing category metadata must never
+      // make the product (and its stored image) disappear from the catalog.
+      final path = itemCategory == null ? <Map<String, dynamic>>[] : categoryPath(itemCategory);
+      final categoryName = (itemCategory?['category_name'] ?? 'غير مصنف').toString();
+      final rootName = path.isEmpty ? categoryName : (path.first['category_name'] ?? categoryName).toString();
       if (category != null &&
-          category != rootName &&
-          category != categoryName &&
-          !path.any((node) => (node['category_name'] ?? '').toString() == category)) {
+          (itemCategory == null || (category != rootName && category != categoryName &&
+          !path.any((node) => (node['category_name'] ?? '').toString() == category))) {
         continue;
       }
       final subcategoryName = path.length > 1 ? (path[1]['category_name'] ?? '').toString() : '';
