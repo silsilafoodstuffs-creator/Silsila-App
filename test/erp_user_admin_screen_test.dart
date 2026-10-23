@@ -4,32 +4,31 @@ import 'package:silsila_app/erp/screens/erp_user_admin_screen.dart';
 
 void main() {
   testWidgets(
-    'user types grid stays visible with default preview rows when Supabase is unavailable',
+    'combined user hierarchy shows default user types and tree/table controls without Supabase',
     (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
             body: ErpUserAdminScreen(
               companyId: null,
-              initialView: 'types',
+              initialView: 'hierarchy',
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('أنواع المستخدمين'), findsOneWidget);
-      expect(find.text('كود النوع'), findsOneWidget);
+      expect(find.text('أنواع المستخدمين والمستخدمين'), findsOneWidget);
+      expect(find.text('عرض شجرة'), findsOneWidget);
+      expect(find.text('عرض جدول'), findsOneWidget);
+      expect(find.textContaining('بحث في أنواع المستخدمين'), findsOneWidget);
       expect(find.text('ادمن'), findsOneWidget);
       expect(find.text('موظف'), findsOneWidget);
       expect(find.text('مورد'), findsOneWidget);
       expect(find.text('عميل'), findsOneWidget);
       expect(find.text('مندوب'), findsOneWidget);
       expect(find.text('شركة شحن'), findsOneWidget);
-      expect(
-        find.textContaining('للمعاينة'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('للمعاينة'), findsOneWidget);
     },
   );
 }
