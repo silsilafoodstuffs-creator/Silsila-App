@@ -266,7 +266,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('إلغاء'),
+              child: const Text('No / لا'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(dialogContext, true),
@@ -346,11 +346,11 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('حذف بيانات جغرافية'),
+        title: const Text('تأكيد الحذف'),
         content: Text(
           hasChildren
               ? 'لا يمكن حذف سجل له بيانات تابعة. احذف أو انقل التوابع أولاً.'
-              : 'هل تريد حذف «${s(row['name_ar'])}»؟',
+              : 'هل ترغب في حذف «${s(row['name_ar'])}»؟',
         ),
         actions: [
           TextButton(
@@ -361,7 +361,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('حذف'),
+              child: const Text('Yes / نعم، احذف'),
             ),
         ],
       ),
@@ -397,6 +397,11 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     return Padding(
       padding: EdgeInsetsDirectional.only(start: depth * 18, bottom: 5),
       child: Card(
+        color: level == 'governorate'
+            ? const Color(0xFFEDE1F8)
+            : level == 'district'
+                ? const Color(0xFFFFE4BE)
+                : const Color(0xFFFFDDF3),
         margin: const EdgeInsets.symmetric(vertical: 2),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -448,10 +453,16 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                       ),
                     ),
                   if (level != 'area')
-                    IconButton(
-                      tooltip: 'إضافة تابع',
+                    TextButton.icon(
                       onPressed: () => edit(parent: id, level: childLevel(level)),
-                      icon: const Icon(Icons.add_circle, color: Color(0xFF3E007D)),
+                      icon: const Icon(Icons.add_circle, size: 18),
+                      label: Text(level == 'governorate'
+                          ? 'إضافة حي / مركز'
+                          : 'إضافة منطقة أو حي'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF3E007D),
+                        visualDensity: VisualDensity.compact,
+                      ),
                     ),
                   IconButton(
                     tooltip: 'تعديل',
@@ -485,7 +496,13 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
 
   Widget _gridRow(Map<String, dynamic> row) {
     final level = s(row['level']);
+    final rowColor = level == 'governorate'
+        ? const Color(0xFFEDE1F8)
+        : level == 'district'
+            ? const Color(0xFFFFE4BE)
+            : const Color(0xFFFFDDF3);
     return Container(
+      color: rowColor,
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFFE6DFED))),
       ),
