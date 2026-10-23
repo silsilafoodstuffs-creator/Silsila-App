@@ -192,11 +192,11 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         title: Text('حذف $slot'),
         content: const Text('هل تريد إزالة هذا الإعلان من واجهة التطبيق؟'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No / لا')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('حذف الإعلان'),
+            child: const Text('Yes / نعم، احذف الإعلان'),
           ),
         ],
       ),
