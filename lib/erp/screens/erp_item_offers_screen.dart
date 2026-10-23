@@ -178,6 +178,25 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
     ));
   }
 
+  Future<void> _confirmRemoveOfferLine(Map<String, dynamic> line) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تأكيد حذف الصنف من العرض'),
+        content: Text('هل تريد حذف «${_s(line['item_name'])}» من قائمة أصناف العرض؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('No / لا')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes / نعم، احذف'),
+          ),
+        ],
+      ),
+    );
+    if (yes == true && mounted) setState(() => _offerLines.remove(line));
+  }
+
   @override
   Widget build(BuildContext context) {
     ErpKeyboardNavigation.registerActions(save: _save);
@@ -472,7 +491,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                             )),
                             DataCell(IconButton(
                               tooltip: 'حذف الصنف',
-                              onPressed: () => setState(() => _offerLines.remove(line)),
+                              onPressed: () => _confirmRemoveOfferLine(line),
                               icon: const Icon(Icons.delete_forever, color: Colors.red),
                             )),
                           ])).toList(),
