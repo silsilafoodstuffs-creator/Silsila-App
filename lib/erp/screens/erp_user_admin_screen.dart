@@ -1039,7 +1039,12 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
                   ),
                 )),
                 DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: isSelected, onChanged: (v) => setDialogState(() {
-                  if (v == true) { selected.add(key); } else { selected.remove(key); if (primary == key) primary = null; }
+                  if (v == true) {
+                    selected.add(key);
+                  } else {
+                    selected.remove(key);
+                    if (primary == key) primary = null;
+                  }
                 }))),
                 DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: primary == key, onChanged: (v) => setDialogState(() {
                   if (v == true) { selected.add(key); primary = key; } else if (primary == key) { primary = null; }
@@ -1058,7 +1063,12 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
                 DataCell(Text('${++index}')),
                 DataCell(Text(_s(branch['branch_name']), style: const TextStyle(fontWeight: FontWeight.w900, color: _userAdminPurple))),
                 DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: branchChecked, onChanged: (v) => setDialogState(() {
-                  if (v == true) { selected.addAll(branchKeys); } else { selected.removeAll(branchKeys); if (primary != null && branchKeys.contains(primary)) primary = null; }
+                  if (v == true) {
+                    selected.addAll(branchKeys);
+                  } else {
+                    selected.removeAll(branchKeys);
+                    if (primary != null && branchKeys.contains(primary)) primary = null;
+                  }
                 }))),
                 const DataCell(Text('—')),
               ],
