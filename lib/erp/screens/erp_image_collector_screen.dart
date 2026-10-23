@@ -91,6 +91,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   int _previouslyImportedCount = 0;
   int _duplicateCount = 0;
   final Set<String> _downloadingUrls = <String>{};
+  final Map<String, Future<Uint8List?>> _previewFutures = <String, Future<Uint8List?>>{};
 
   @override
   void initState() {
@@ -368,6 +369,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       _status = 'جارٍ فحص الصفحة واستخراج الصور المتاحة...';
       _selected.clear();
       _images = [];
+      _previewFutures.clear();
     });
     try {
       await _loadCategoryOptions();
@@ -391,8 +393,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         }
         if (_importedImageKeys.contains(key)) {
           previouslyImportedCount++;
-          continue;
+          image['_previously_imported'] = true;
+        } else {
+          image['_previously_imported'] = false;
         }
+        // Keep prior images visible; mark them and exclude them from the
+        // default selection so they are not accidentally imported twice.
         images.add(image);
       }
       if (!mounted) return;
@@ -405,7 +411,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         // ready to save the complete result without requiring a manual step.
         _selected
           ..clear()
-          ..addAll(images.map((image) => image['url'].toString()));
+          ..addAll(images.where((image) => image['_previously_imported'] != true)
+              .map((image) => image['url'].toString()));
         _status = images.isEmpty
             ? (candidates.isEmpty
                 ? 'لم يتم العثور على صور ظاهرة في HTML. قد تعتمد الصفحة على JavaScript أو تمنع الوصول.'
@@ -431,12 +438,13 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
 
   void _selectAll() {
     setState(() {
-      if (_selected.length == _images.length) {
+      final selectable = _images.where((x) => x['_previously_imported'] != true).toList();
+      if (selectable.isNotEmpty && _selected.length == selectable.length) {
         _selected.clear();
       } else {
         _selected
           ..clear()
-          ..addAll(_images.map((x) => x['url'].toString()));
+          ..addAll(selectable.map((x) => x['url'].toString()));
       }
     });
   }
@@ -855,15 +863,30 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     }
   }
 
+  Future<Uint8List?> _previewImageBytes(String url) {
+    return _previewFutures.putIfAbsent(url, () async {
+      try {
+        final result = await _invoke({'action': 'download', 'url': url});
+        final encoded = result['base64']?.toString() ?? '';
+        if (encoded.isEmpty) return null;
+        return Uint8List.fromList(base64Decode(encoded));
+      } catch (_) {
+        return null;
+      }
+    });
+  }
+
   Future<void> _showImagePreview(String url) async {
+    final bytes = await _previewImageBytes(url);
+    if (!mounted) return;
     await showDialog<void>(context: context, builder: (dialogContext) => Dialog(
       insetPadding: const EdgeInsets.all(18),
       child: SizedBox(width: MediaQuery.of(context).size.width > 960 ? 900 : MediaQuery.of(context).size.width * .92, height: MediaQuery.of(context).size.height * .82,
         child: Stack(children: [
           Positioned.fill(child: InteractiveViewer(minScale: .5, maxScale: 5, child: Center(
-            child: Image.network(url, fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, size: 64),
-              loadingBuilder: (context, child, progress) => progress == null ? child : const Center(child: CircularProgressIndicator()))))),
+            child: bytes == null
+                ? const Icon(Icons.broken_image_outlined, size: 64)
+                : Image.memory(bytes, fit: BoxFit.contain)))),
           PositionedDirectional(top: 6, start: 6, child: IconButton(onPressed: () => Navigator.pop(dialogContext), icon: const Icon(Icons.close))),
         ])),
     ));
@@ -871,7 +894,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final allSelected = _images.isNotEmpty && _selected.length == _images.length;
+    final selectableCount = _images.where((x) => x['_previously_imported'] != true).length;
+    final allSelected = selectableCount > 0 && _selected.length == selectableCount;
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(
@@ -993,7 +1017,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           Row(children: [
             const Text('الصور المستخرجة', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             const SizedBox(width: 8),
-            Expanded(child: Tooltip(message: 'تم تجاهل $_duplicateCount صورة مكررة داخل الصفحة', child: Text('${_images.length + _previouslyImportedCount} صورة $_previouslyImportedCount قديمة ${_images.length} جديدة (${_selected.length} محدد ${_images.length - _selected.length} غير محدد)', style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis))),
+            Expanded(child: Tooltip(message: 'تم تجاهل $_duplicateCount صورة مكررة داخل الصفحة', child: Text('${_images.length} صورة (${_previouslyImportedCount} سبق تسجيلها، ${_images.length - _previouslyImportedCount} جديدة) • ${_selected.length} محددة', style: const TextStyle(fontSize: 11, color: Colors.black54), maxLines: 2, overflow: TextOverflow.ellipsis))),
             const SizedBox(width: 8),
             Expanded(child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
@@ -1151,7 +1175,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     : const SizedBox.shrink();
                 return Container(margin:const EdgeInsets.only(bottom:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
                   child:Row(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-                    SizedBox(width:180, height:245, child: Padding(padding:const EdgeInsets.all(8),child:Material(color:const Color(0xFFF7F4F9),borderRadius:BorderRadius.circular(10),child:InkWell(borderRadius:BorderRadius.circular(10),onTap:()=>_showImagePreview(url),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,size:40),loadingBuilder:(c,ch,p)=>p==null?ch:const Center(child:CircularProgressIndicator(strokeWidth:2)))))))),
+                    SizedBox(width:180, height:245, child: Padding(padding:const EdgeInsets.all(8),child:Material(color:const Color(0xFFF7F4F9),borderRadius:BorderRadius.circular(10),child:InkWell(borderRadius:BorderRadius.circular(10),onTap:()=>_showImagePreview(url),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:FutureBuilder<Uint8List?>(future:_previewImageBytes(url),builder:(context,snapshot){if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(strokeWidth:2));final bytes=snapshot.data;if(bytes==null)return const Icon(Icons.broken_image_outlined,size:40);return Image.memory(bytes,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image_outlined,size:40));})))))),
                     const VerticalDivider(width:1),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                       Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),child:common),
