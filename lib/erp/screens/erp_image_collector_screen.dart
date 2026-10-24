@@ -1235,7 +1235,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   ]));
                 }),
               ),
-            )),
+            ))),
               ]),
             ),
         ],
