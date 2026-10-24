@@ -1236,8 +1236,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   SizedBox(width:30,child:Text((index+1).toString(),textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w800))),
                   if(item['_previously_imported']==true) const Padding(padding:EdgeInsets.symmetric(horizontal:4),child:Text('سبق تسجيلها',style:TextStyle(fontSize:10,color:Colors.deepOrange,fontWeight:FontWeight.w700))),
                   const SizedBox(width:5),
-                  dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:112),
-                  const SizedBox(width:7),
                   Tooltip(
                     message: item['downloaded_to_device'] == true ? 'تم تنزيل هذه الصورة إلى الجهاز' : 'تنزيل ملف PNG لهذا الصف فقط',
                     child: FilledButton.icon(
@@ -1251,18 +1249,16 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   modeChoice('new','كود جديد'),
                   const SizedBox(width:4),
                   modeChoice('old','كود قديم'),
-                  if (mode == 'old') ...[
-                    const SizedBox(width:4),
-                    OutlinedButton.icon(
-                      onPressed: _loading ? null : () => _openF1Lookup(item),
-                      icon: const Icon(Icons.search, size: 16),
-                      label: const Text('بحث F1'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-                        visualDensity: VisualDensity.compact,
-                      ),
+                  const SizedBox(width:4),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : () => _openF1Lookup(item),
+                    icon: const Icon(Icons.search, size: 16),
+                    label: const Text('بحث F1'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                      visualDensity: VisualDensity.compact,
                     ),
-                  ],
+                  ),
                 ]));
                 final editor=kind=='category'
                   ? SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
@@ -1272,16 +1268,22 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       field('category_secondary_name','اسم فئة ثانوية',width:160,initial:_excelValue(item,['secondary_category','third_category'])),const SizedBox(width:8),
                       FilledButton.icon(onPressed:_loading?null:()=>_saveRowCategory(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
                     ]))
-                  : SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-                      field(mode=='old'?'legacy_code':'item_code','كود الصنف',width:125,initial:mode=='old'?'':_excelValue(item,['item_code','sku','product_code'])),const SizedBox(width:6),
-                      
-                      field('item_name_ar','اسم صنف عربي',width:175,initial:productName),const SizedBox(width:6),
-                      field('item_name_en','اسم صنف إنجليزي',width:155,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:6),
-                      dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:88),const SizedBox(width:6),
-                      field('internal_count','عدد داخلي',width:86,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']).isEmpty?'1000.000':_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:6),
-                      dropdown('minor_unit','وحدة صغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:88),const SizedBox(width:6),
-                      FilledButton.icon(onPressed:_loading?null:()=>_saveRowProduct(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
-                    ]));
+                  : Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+                        dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:112),
+                        const SizedBox(width:6),
+                        field(mode=='old'?'legacy_code':'item_code','كود الصنف',width:125,initial:mode=='old'?'':_excelValue(item,['item_code','sku','product_code'])),const SizedBox(width:6),
+                        field('item_name_ar','اسم صنف عربي',width:175,initial:productName),const SizedBox(width:6),
+                        field('item_name_en','اسم صنف إنجليزي',width:155,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:6),
+                      ])),
+                      const SizedBox(height:3),
+                      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+                        dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:108),const SizedBox(width:6),
+                        field('internal_count','عدد داخلي',width:100,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']).isEmpty?'1000.000':_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:6),
+                        dropdown('minor_unit','وحدة صغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:108),const SizedBox(width:6),
+                        FilledButton.icon(onPressed:_loading?null:()=>_saveRowProduct(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
+                      ])),
+                    ]);
                 final categoryEditor = kind == 'product'
                     ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
                         _categoryChoice(item, 'category_root_id', 'فئة رئيسية', _categoriesForParent(null), enabled: mode == 'new' || item['category_root_id'] != null),
@@ -1292,14 +1294,14 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         const SizedBox(width: 8),
                       ]))
                     : const SizedBox.shrink();
-                return Container(margin:const EdgeInsets.only(bottom:2),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(9),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
+                return Container(margin:const EdgeInsets.only(bottom:1),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(8),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
                   child:Row(textDirection: TextDirection.rtl,crossAxisAlignment:CrossAxisAlignment.start,children:[
                     SizedBox(
                       width: 150,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(4,4,4,2),
+                        padding: const EdgeInsets.fromLTRB(3,3,3,1),
                         child: Column(mainAxisSize:MainAxisSize.min,children:[
-                          SizedBox(height:104,child:Material(
+                          SizedBox(height:88,child:Material(
                             color: const Color(0xFFF7F4F9),
                             borderRadius: BorderRadius.circular(10),
                             child: InkWell(
@@ -1317,9 +1319,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     ),
                     const VerticalDivider(width:1),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-                      Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),child:common),
+                      Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:0),child:common),
                       const Divider(height:2, thickness:0.5),
-                      Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),child:editor),
+                      Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:0),child:editor),
                       if (kind == 'product') ...[
                         const Divider(height:2, thickness:0.5),
                         Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),child:categoryEditor),
