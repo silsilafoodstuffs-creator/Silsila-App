@@ -210,7 +210,7 @@ function contextualEntityName(html: string, imageIndex: number): string {
 function pageImages(html: string, base: URL) {
   const found = new Map<string, Record<string, unknown>>();
   const metadata = productMetadata(html, base);
-  const blocked = /(?:^|[\\/_\\-. ])(?:logo|site[-_ ]?logo|brand[-_ ]?logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|icon|social|payment|footer|menu|navigation|nav|graphic|illustration|infographic|background|texture|decoration|decorative|separator|arrow|badge|rating|star|button|thumbnail-placeholder|blank)(?:$|[\\/_\\-. ])/i;
+  const blocked = /(?:^|[\/_ .-])(?:logo|site[-_ ]?logo|brand[-_ ]?logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|icon|social|payment|footer|menu|navigation|nav|graphic|illustration|infographic|background|texture|decoration|decorative|separator|arrow|badge|rating|star|button|thumbnail-placeholder|blank)(?:$|[\/_ .-])/i;
   const tracking = new Set(["fbclid", "gclid", "dclid", "msclkid", "ref", "source", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "campaign", "tracking", "width", "height", "w", "h", "quality", "q", "fit", "crop", "auto", "format", "fm", "resize"]);
   const normalize = (u: URL) => {
     const path = u.pathname
