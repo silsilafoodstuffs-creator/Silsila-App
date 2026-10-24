@@ -367,15 +367,52 @@ Deno.serve(async (req: Request) => {
       }
       if (!res) return json({ error: "تعذر تنزيل الصورة." }, 422);
       if (!res.ok) return json({ error: `تعذر تنزيل الصورة (HTTP ${res.status}).` }, 422);
-      const bytes = await readLimited(res, 5_000_000);
-      // Many product CDNs return valid image bytes with a generic or incorrect
-      // Content-Type. Trust the file signature, not the header, before decoding.
-      const mime = detectRasterMime(bytes);
+      let bytes = await readLimited(res, 5_000_000);
+      let mime = detectRasterMime(bytes);
+      let headerType = (res.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
+
+      // Some CDNs return a JavaScript challenge/bundle for a direct image URL
+      // when a storefront Referer is supplied. Retry once without Referer before
+      // declaring the candidate invalid; never treat script bytes as an image.
+      if (!mime && /(?:javascript|ecmascript)/i.test(headerType)) {
+        const retry = await fetch(target, {
+          redirect: "manual",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+            "Accept-Language": "ar-EG,ar;q=0.9,en-US;q=0.8,en;q=0.7",
+          },
+          signal: AbortSignal.timeout(18000),
+        });
+        if (retry.ok) {
+          const retryBytes = await readLimited(retry, 5_000_000);
+          const retryMime = detectRasterMime(retryBytes);
+          if (retryMime) {
+            bytes = retryBytes;
+            mime = retryMime;
+            res = retry;
+            headerType = (retry.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
+          }
+        }
+      }
+
+      // Trust file signatures, not headers, and expose concise diagnostics when
+      // the CDN still returns a challenge/script instead of actual image bytes.
       if (!mime) {
-        const headerType = (res.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
-        return json({ error: headerType === "image/avif"
+        const signature = Array.from(bytes.subarray(0, 16)).map((b) => b.toString(16).padStart(2, "0")).join(" ");
+        const finalHost = new URL(res.url || target.href).hostname;
+        const isScript = /(?:javascript|ecmascript)/i.test(headerType) ||
+          (bytes.length >= 8 && String.fromCharCode(...bytes.subarray(0, 8)).toLowerCase().includes("function"));
+        const message = headerType === "image/avif"
           ? "المصدر أعاد AVIF غير المدعوم في المعاينة؛ اختر رابط JPG أو PNG أو WebP."
-          : "المحتوى الذي أعاده الرابط ليس صورة JPG أو PNG أو GIF أو WebP أو BMP صالحة." }, 422);
+          : isScript
+            ? "خادم الصور أعاد JavaScript بدل ملف صورة حتى بعد إعادة المحاولة بدون Referer؛ تم تخطي هذا الرابط."
+            : "المحتوى الذي أعاده الرابط ليس صورة JPG أو PNG أو GIF أو WebP أو BMP صالحة؛ تم تخطي هذا الرابط.";
+        return json({
+          error: message,
+          code: isScript ? "IMAGE_URL_RETURNED_SCRIPT" : "UNSUPPORTED_IMAGE_BYTES",
+          diagnostic: { content_type: headerType, bytes: bytes.length, signature, final_host: finalHost },
+        }, 422);
       }
       let binary = "";
       for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 0x8000, bytes.length)));
