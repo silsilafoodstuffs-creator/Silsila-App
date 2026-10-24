@@ -1223,6 +1223,14 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 if(productName.isNotEmpty&&productUnit.isNotEmpty&&!productName.toLowerCase().contains(productUnit.toLowerCase()))productName=productName+' '+productUnit;
                 final productCount=_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']);
                 if(productName.isNotEmpty&&productCount.isNotEmpty&&!RegExp(r'(^|[^0-9])'+RegExp.escape(productCount)+r'([^0-9]|$)').hasMatch(productName))productName=productName+' عدد داخلي '+productCount;
+                Widget modeChoice(String value,String label) => InkWell(
+                  onTap:_loading?null:(){setState((){item['entity_mode']=value;if(value=='new'){item.remove('database_item_id');item.remove('legacy_code');}},
+                  );},
+                  child:Row(mainAxisSize:MainAxisSize.min,children:[
+                    Checkbox(shape:const CircleBorder(),visualDensity:VisualDensity.compact,materialTapTargetSize:MaterialTapTargetSize.shrinkWrap,value:mode==value,activeColor:_purple,onChanged:_loading?null:(v){if(v==true)setState((){item['entity_mode']=value;if(value=='new'){item.remove('database_item_id');item.remove('legacy_code');}});}),
+                    Text(label,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600)),
+                  ]),
+                );
                 final common=SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                   SizedBox(width:34,child:Checkbox(shape:const CircleBorder(),visualDensity:VisualDensity.compact,materialTapTargetSize:MaterialTapTargetSize.shrinkWrap,value:selected,activeColor:_purple,onChanged:_loading?null:(v)=>_toggle(url,v))),
                   SizedBox(width:30,child:Text((index+1).toString(),textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w800))),
@@ -1244,14 +1252,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   const SizedBox(width:4),
                   modeChoice('old','كود قديم'),
                 ]));
-                Widget modeChoice(String value,String label) => InkWell(
-                  onTap:_loading?null:(){setState((){item['entity_mode']=value;if(value=='new'){item.remove('database_item_id');item.remove('legacy_code');}},
-                  );},
-                  child:Row(mainAxisSize:MainAxisSize.min,children:[
-                    Checkbox(shape:const CircleBorder(),visualDensity:VisualDensity.compact,materialTapTargetSize:MaterialTapTargetSize.shrinkWrap,value:mode==value,activeColor:_purple,onChanged:_loading?null:(v){if(v==true)setState((){item['entity_mode']=value;if(value=='new'){item.remove('database_item_id');item.remove('legacy_code');}});}),
-                    Text(label,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600)),
-                  ]),
-                );
                 final editor=kind=='category'
                   ? SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                       if(mode=='old')...[field('legacy_code','كود الفئة القديم',width:125),const SizedBox(width:5),OutlinedButton.icon(onPressed:_loading?null:()=>_openF1Lookup(item),icon:const Icon(Icons.search,size:17),label:const Text('F1')),const SizedBox(width:8)],
