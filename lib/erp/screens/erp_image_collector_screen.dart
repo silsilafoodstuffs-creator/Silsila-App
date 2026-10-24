@@ -1228,7 +1228,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   SizedBox(width:30,child:Text((index+1).toString(),textAlign:TextAlign.center,style:const TextStyle(fontWeight:FontWeight.w800))),
                   if(item['_previously_imported']==true) const Padding(padding:EdgeInsets.symmetric(horizontal:4),child:Text('سبق تسجيلها',style:TextStyle(fontSize:10,color:Colors.deepOrange,fontWeight:FontWeight.w700))),
                   const SizedBox(width:5),
-                  dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:66),
+                  dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:112),
                   const SizedBox(width:7),
                   Tooltip(
                     message: item['downloaded_to_device'] == true ? 'تم تنزيل هذه الصورة إلى الجهاز' : 'تنزيل ملف PNG لهذا الصف فقط',
@@ -1239,6 +1239,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       style: FilledButton.styleFrom(backgroundColor:item['downloaded_to_device']==true?const Color(0xFFE8F5E9):_purple,foregroundColor:item['downloaded_to_device']==true?const Color(0xFF1B5E20):Colors.white,padding:const EdgeInsets.symmetric(horizontal:9,vertical:8),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(9)),textStyle:const TextStyle(fontWeight:FontWeight.w700,fontSize:12)),
                     ),
                   ),
+                  const SizedBox(width:8),
+                  modeChoice('new','كود جديد'),
+                  const SizedBox(width:4),
+                  modeChoice('old','كود قديم'),
                 ]));
                 Widget modeChoice(String value,String label) => InkWell(
                   onTap:_loading?null:(){setState((){item['entity_mode']=value;if(value=='new'){item.remove('database_item_id');item.remove('legacy_code');}},
@@ -1296,19 +1300,17 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                           TextField(controller:_rowController(item,'file_name',initial:suggested),
                             decoration:const InputDecoration(hintText:'اسم الصورة',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:6)),
                             style:const TextStyle(fontSize:11),onChanged:(v)=>item['file_name']=v),
-                          const SizedBox(height:2),
-                          Row(mainAxisAlignment:MainAxisAlignment.center,children:[modeChoice('new','كود جديد'),modeChoice('old','كود قديم')]),
                         ]),
                       ),
                     ),
                     const VerticalDivider(width:1),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-                      Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),child:common),
-                      const Divider(height:1),
-                      Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),child:editor),
+                      Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),child:common),
+                      const Divider(height:2, thickness:0.5),
+                      Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),child:editor),
                       if (kind == 'product') ...[
-                        const Divider(height:1),
-                        Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),child:categoryEditor),
+                        const Divider(height:2, thickness:0.5),
+                        Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),child:categoryEditor),
                       ],
                     ])),
                   ]));
