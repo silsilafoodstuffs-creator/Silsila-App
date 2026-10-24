@@ -227,7 +227,11 @@ function pageImages(html: string, base: URL) {
     try {
       const u = safeUrl(new URL(clean, base).toString());
       const context = (u.pathname + " " + u.search + " " + alt + " " + hint).toLowerCase();
-      if (/\.svg(?:$|\?)/i.test(u.href) || blocked.test(context)) return;
+      // Never surface stylesheets/scripts as image candidates; some CDN assets
+      // inherit a nearby product name even though their bytes are not images.
+      if (/\.(?:css|js|mjs|map|svg)(?:$|[?#])/i.test(u.href) ||
+          /(?:^|[\/_ .-])(?:stylesheet|stylesheets|javascript|script|bundle|theme-css)(?:$|[\/_ .-])/i.test(context) ||
+          blocked.test(context)) return;
       if ((width > 0 && width < 90) || (height > 0 && height < 70)) return;
       const key = normalize(u);
       const structured = metadata.byImage.get(metadata.normalizeImage(u.href)) ?? {};
