@@ -276,7 +276,15 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     if (data is Map) {
       final result = Map<String, dynamic>.from(data);
       if (response.status >= 400 || result['error'] != null) {
-        throw Exception(result['error']?.toString() ?? 'تعذر تنفيذ الطلب.');
+        final message = result['error']?.toString() ?? 'تعذر تنفيذ الطلب.';
+        final diagnostic = result['diagnostic'];
+        if (diagnostic is Map && diagnostic.isNotEmpty) {
+          final details = diagnostic.entries
+              .map((entry) => '${entry.key}=${entry.value}')
+              .join(', ');
+          throw Exception('$message (تفاصيل فنية: $details)');
+        }
+        throw Exception(message);
       }
       return result;
     }
