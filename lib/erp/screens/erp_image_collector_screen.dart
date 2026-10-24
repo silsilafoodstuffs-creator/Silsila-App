@@ -1187,7 +1187,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   child: SingleChildScrollView(
               controller: _imagesScrollController,
               physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 18),
+              padding: const EdgeInsets.only(bottom: 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: List.generate(visibleImages.length, (localIndex) {
@@ -1245,11 +1245,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       style: FilledButton.styleFrom(backgroundColor:item['downloaded_to_device']==true?const Color(0xFFE8F5E9):_purple,foregroundColor:item['downloaded_to_device']==true?const Color(0xFF1B5E20):Colors.white,padding:const EdgeInsets.symmetric(horizontal:9,vertical:8),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(9)),textStyle:const TextStyle(fontWeight:FontWeight.w700,fontSize:12)),
                     ),
                   ),
-                  const SizedBox(width:8),
+                  const SizedBox(width:4),
                   modeChoice('new','كود جديد'),
-                  const SizedBox(width:4),
+                  const SizedBox(width:2),
                   modeChoice('old','كود قديم'),
-                  const SizedBox(width:4),
+                  const SizedBox(width:2),
                   FilledButton.icon(
                     onPressed: _loading ? null : () => kind == 'category' ? _saveRowCategory(item) : _saveRowProduct(item),
                     icon: Icon(mode == 'old' ? Icons.save_outlined : Icons.add_circle_outline, size: 16),
@@ -1283,10 +1283,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         field('item_name_ar','اسم صنف عربي',width:175,initial:productName),const SizedBox(width:6),
                         field('item_name_en','اسم صنف إنجليزي',width:155,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:6),
                       ])),
-                      const SizedBox(height:3),
+                      const SizedBox(height:1),
                       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-                        dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:108),const SizedBox(width:6),
-                        field('internal_count','عدد داخلي',width:100,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']).isEmpty?'1000.000':_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:6),
+                        dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:108),const SizedBox(width:4),
+                        field('internal_count','عدد داخلي',width:100,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']).isEmpty?'1000.000':_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:4),
                         dropdown('minor_unit','وحدة صغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:108),const SizedBox(width:6),
                       ])),
                     ]);
@@ -1307,7 +1307,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(3,3,3,1),
                         child: Column(mainAxisSize:MainAxisSize.min,children:[
-                          SizedBox(height:88,child:Material(
+                          SizedBox(height:72,child:Material(
                             color: const Color(0xFFF7F4F9),
                             borderRadius: BorderRadius.circular(10),
                             child: InkWell(
@@ -1316,7 +1316,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                               child: ClipRRect(borderRadius: BorderRadius.circular(10),child:_imagePreviewTile(url)),
                             ),
                           )),
-                          const SizedBox(height:4),
+                          const SizedBox(height:2),
                           TextField(controller:_rowController(item,'file_name',initial:suggested),
                             decoration:const InputDecoration(hintText:'اسم الصورة',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:6)),
                             style:const TextStyle(fontSize:11),onChanged:(v)=>item['file_name']=v),
@@ -1326,11 +1326,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     const VerticalDivider(width:1),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                       Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:0),child:common),
-                      const Divider(height:2, thickness:0.5),
+                      const Divider(height:1, thickness:0.5),
                       Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:0),child:editor),
                       if (kind == 'product') ...[
                         const Divider(height:2, thickness:0.5),
-                        Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:1),child:categoryEditor),
+                        Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:0),child:categoryEditor),
                       ],
                     ])),
                   ]));
