@@ -276,12 +276,17 @@ class SilsilaApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) => Directionality(
-        textDirection: currentLocale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-        child: Stack(children: [
-          Positioned.fill(child: child ?? const SizedBox.shrink()),
-          const Positioned(left: 8, top: 8, child: SafeArea(child: SilsilaLanguageToggle())),
-        ]),
+      // Enable native mouse/keyboard text selection throughout the customer
+      // app and ERP, including tables, read-only labels, dialogs and warnings.
+      // Editable TextFields keep their normal editing and selection behavior.
+      builder: (context, child) => SelectionArea(
+        child: Directionality(
+          textDirection: currentLocale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+          child: Stack(children: [
+            Positioned.fill(child: child ?? const SizedBox.shrink()),
+            const Positioned(left: 8, top: 8, child: SafeArea(child: SilsilaLanguageToggle())),
+          ]),
+        ),
       ),
       title: 'سلسلة Silsila',
       debugShowCheckedModeBanner: false,
