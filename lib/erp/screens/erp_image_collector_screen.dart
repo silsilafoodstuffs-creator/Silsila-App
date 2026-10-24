@@ -732,7 +732,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         if(thirdName.isNotEmpty){if(sub==null)throw Exception('الفئة الثانوية تتطلب فئة فرعية.');third=await _ensureRowCategory(db,company,categories,thirdName,sub['id'].toString(),'T');}
         target=third??sub??root;
       }
-      final downloaded=await _invoke({'action':'download','url':item['url'].toString()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
+      final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
       final png=_processTransparentPng(Uint8List.fromList(base64Decode(b64)));
       await db.from('erp_item_categories').update({'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null}).eq('id',target['id'].toString()).eq('company_id',company);
       await _finishSavedRow(item,(mode=='old'?'تم تحديث الفئة ':'تم تكويد الفئة ')+(target['category_code']??'').toString()+' وحفظ صورة PNG في قاعدة البيانات.');
@@ -756,7 +756,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     try{
       var code=oldCode;
       if(mode=='new'){final rows=await db.from('erp_items').select('item_code').eq('company_id',company).like('item_code','ITEM-%').limit(5000);var max=0;for(final r in (rows as List)){final m=RegExp(r'-(\d+)$').firstMatch((r['item_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}code='ITEM-'+(max+1).toString().padLeft(4,'0');}
-      final downloaded=await _invoke({'action':'download','url':item['url'].toString()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
+      final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
       final png=_processTransparentPng(Uint8List.fromList(base64Decode(b64)));
       final values=<String,dynamic>{'item_name':ar,'item_name_en':en,'base_unit':minor,'sale_price':price,'tax_rate':tax,'pricing_area':area,'package_description':major+' = '+count.toString()+' '+minor,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,'source_name':'جامع صور سلسلة','source_url':item['url'].toString(),'is_active':true};
       final selectedCategoryId = item['category_secondary_id']?.toString() ?? item['category_sub_id']?.toString() ?? item['category_root_id']?.toString();
