@@ -1283,7 +1283,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         field('item_name_ar','اسم صنف عربي',width:175,initial:productName),const SizedBox(width:6),
                         field('item_name_en','اسم صنف إنجليزي',width:155,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:6),
                       ])),
-                      const SizedBox(height:19),
+                      const SizedBox(height:8),
                       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                         dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:108),const SizedBox(width:4),
                         field('internal_count','عدد داخلي',width:100,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']).isEmpty?'1000.000':_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:4),
@@ -1329,7 +1329,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       const Divider(height:1, thickness:0.5),
                       Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:0),child:editor),
                       if (kind == 'product') ...[
-                        const SizedBox(height:19),
+                        const SizedBox(height:8),
                         Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:0),child:categoryEditor),
                       ],
                     ])),
