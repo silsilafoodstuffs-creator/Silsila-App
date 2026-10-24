@@ -1262,6 +1262,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 ]));
                 final editor=kind=='category'
                   ? SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+                      dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:112),const SizedBox(width:6),
                       if(mode=='old')...[field('legacy_code','كود الفئة القديم',width:125),const SizedBox(width:5)],
                       field('category_main_name','اسم فئة رئيسية',width:160,initial:_excelValue(item,['main_category','category_name','category'])),const SizedBox(width:6),
                       field('category_sub_name','اسم فئة فرعية',width:160,initial:_excelValue(item,['sub_category','subcategory'])),const SizedBox(width:6),
