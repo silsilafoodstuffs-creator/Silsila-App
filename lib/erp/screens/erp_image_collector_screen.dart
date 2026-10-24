@@ -1088,13 +1088,13 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   thumbVisibility: true,
                   trackVisibility: true,
                   interactive: true,
-                  child: ListView.builder(
+                  child: SingleChildScrollView(
               controller: _imagesScrollController,
-              primary: false,
               physics: const ClampingScrollPhysics(),
-              // Keep this list as the dedicated vertical scroll region for all ten rows on the page.
-              padding: const EdgeInsets.only(bottom: 18), itemCount: visibleImages.length,
-              itemBuilder: (context,localIndex) {
+              padding: const EdgeInsets.only(bottom: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: List.generate(visibleImages.length, (localIndex) {
                 final index = pageStart + localIndex;
                 final item=visibleImages[localIndex]; final url=item['url'].toString(); final selected=_selected.contains(url);
                 final kind=(item['save_as']??'product').toString(); final mode=(item['entity_mode']??'new').toString();
@@ -1233,8 +1233,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       ],
                     ])),
                   ]));
-              },
-            ))),
+                }),
+              ),
+            )),
               ]),
             ),
         ],
