@@ -1250,6 +1250,13 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   const SizedBox(width:4),
                   modeChoice('old','كود قديم'),
                   const SizedBox(width:4),
+                  FilledButton.icon(
+                    onPressed: _loading ? null : () => kind == 'category' ? _saveRowCategory(item) : _saveRowProduct(item),
+                    icon: Icon(mode == 'old' ? Icons.save_outlined : Icons.add_circle_outline, size: 16),
+                    label: Text(mode == 'old' ? 'تحديث بيانات' : 'تكويد جديد'),
+                    style: FilledButton.styleFrom(backgroundColor: _purple, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7), visualDensity: VisualDensity.compact),
+                  ),
+                  const SizedBox(width:4),
                   OutlinedButton.icon(
                     onPressed: _loading ? null : () => _openF1Lookup(item),
                     icon: const Icon(Icons.search, size: 16),
@@ -1267,7 +1274,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       field('category_main_name','اسم فئة رئيسية',width:160,initial:_excelValue(item,['main_category','category_name','category'])),const SizedBox(width:6),
                       field('category_sub_name','اسم فئة فرعية',width:160,initial:_excelValue(item,['sub_category','subcategory'])),const SizedBox(width:6),
                       field('category_secondary_name','اسم فئة ثانوية',width:160,initial:_excelValue(item,['secondary_category','third_category'])),const SizedBox(width:8),
-                      FilledButton.icon(onPressed:_loading?null:()=>_saveRowCategory(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
                     ]))
                   : Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
@@ -1282,7 +1288,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:108),const SizedBox(width:6),
                         field('internal_count','عدد داخلي',width:100,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']).isEmpty?'1000.000':_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:6),
                         dropdown('minor_unit','وحدة صغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:108),const SizedBox(width:6),
-                        FilledButton.icon(onPressed:_loading?null:()=>_saveRowProduct(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
                       ])),
                     ]);
                 final categoryEditor = kind == 'product'
