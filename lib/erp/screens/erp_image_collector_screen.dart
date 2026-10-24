@@ -1251,10 +1251,22 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   modeChoice('new','كود جديد'),
                   const SizedBox(width:4),
                   modeChoice('old','كود قديم'),
+                  if (mode == 'old') ...[
+                    const SizedBox(width:4),
+                    OutlinedButton.icon(
+                      onPressed: _loading ? null : () => _openF1Lookup(item),
+                      icon: const Icon(Icons.search, size: 16),
+                      label: const Text('بحث F1'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
                 ]));
                 final editor=kind=='category'
                   ? SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-                      if(mode=='old')...[field('legacy_code','كود الفئة القديم',width:125),const SizedBox(width:5),OutlinedButton.icon(onPressed:_loading?null:()=>_openF1Lookup(item),icon:const Icon(Icons.search,size:17),label:const Text('F1')),const SizedBox(width:8)],
+                      if(mode=='old')...[field('legacy_code','كود الفئة القديم',width:125),const SizedBox(width:5)],
                       field('category_main_name','اسم فئة رئيسية',width:160,initial:_excelValue(item,['main_category','category_name','category'])),const SizedBox(width:6),
                       field('category_sub_name','اسم فئة فرعية',width:160,initial:_excelValue(item,['sub_category','subcategory'])),const SizedBox(width:6),
                       field('category_secondary_name','اسم فئة ثانوية',width:160,initial:_excelValue(item,['secondary_category','third_category'])),const SizedBox(width:8),
@@ -1262,7 +1274,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     ]))
                   : SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                       field(mode=='old'?'legacy_code':'item_code','كود الصنف',width:125,initial:mode=='old'?'':_excelValue(item,['item_code','sku','product_code'])),const SizedBox(width:6),
-                      if(mode=='old')...[OutlinedButton.icon(onPressed:_loading?null:()=>_openF1Lookup(item),icon:const Icon(Icons.search,size:17),label:const Text('بحث F1')),const SizedBox(width:8)],
+                      
                       field('item_name_ar','اسم صنف عربي',width:175,initial:productName),const SizedBox(width:6),
                       field('item_name_en','اسم صنف إنجليزي',width:155,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:6),
                       dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:88),const SizedBox(width:6),
@@ -1280,14 +1292,14 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         const SizedBox(width: 8),
                       ]))
                     : const SizedBox.shrink();
-                return Container(margin:const EdgeInsets.only(bottom:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
+                return Container(margin:const EdgeInsets.only(bottom:2),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(9),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
                   child:Row(textDirection: TextDirection.rtl,crossAxisAlignment:CrossAxisAlignment.start,children:[
                     SizedBox(
                       width: 150,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(6,6,6,4),
+                        padding: const EdgeInsets.fromLTRB(4,4,4,2),
                         child: Column(mainAxisSize:MainAxisSize.min,children:[
-                          SizedBox(height:118,child:Material(
+                          SizedBox(height:104,child:Material(
                             color: const Color(0xFFF7F4F9),
                             borderRadius: BorderRadius.circular(10),
                             child: InkWell(
