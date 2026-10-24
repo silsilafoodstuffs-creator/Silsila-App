@@ -903,8 +903,17 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           _previewErrors[url] = 'المصدر لم يُرجع صورة قابلة للفك؛ قد يكون رابطًا منتهيًا أو صفحة خطأ.';
           return null;
         }
-        if (decoded.width < 80 || decoded.height < 70) {
-          _previewErrors[url] = 'تم تجاهل صورة صغيرة/أيقونة (${decoded.width}×${decoded.height}) وليست صورة صنف مناسبة.';
+        final width = decoded.width;
+        final height = decoded.height;
+        final shortSide = width < height ? width : height;
+        final longSide = width > height ? width : height;
+        final aspectRatio = longSide / shortSide;
+        // Reject tiny assets and very wide/tall UI strips before showing them
+        // as product candidates. Keep ordinary portrait/landscape package shots.
+        if (width < 80 || height < 70 || (longSide >= 240 && aspectRatio >= 4.0)) {
+          _previewErrors[url] = (aspectRatio >= 4.0 && longSide >= 240)
+              ? 'تم استبعاد صورة شريط/أيقونة (${width}×${height}) لأن أبعادها طويلة جدًا وليست صورة صنف.'
+              : 'تم تجاهل صورة صغيرة/أيقونة (${width}×${height}) وليست صورة صنف مناسبة.';
           return null;
         }
         // Reject blank tracking/placeholder graphics while keeping normal product
