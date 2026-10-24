@@ -426,7 +426,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
             ? (candidates.isEmpty
                 ? 'لم يتم العثور على صور ظاهرة في HTML. قد تعتمد الصفحة على JavaScript أو تمنع الوصول.'
                 : 'لا توجد صور جديدة في هذه الصفحة.')
-            : 'تم العثور على ${images.length} صورة. استخدم شريط التمرير بجوار القائمة لاستعراض جميع الصفوف.';
+            : 'تم العثور على ${images.length} صورة. تعرض الصفحة حتى $_imagesPageSize صفوف؛ مرّر داخل قائمة الصفوف لعرض الباقي.';
       });
     } catch (e) {
       if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -1091,7 +1091,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   child: ListView.builder(
               controller: _imagesScrollController,
               primary: false,
-              physics: const AlwaysScrollableScrollPhysics(),
+              physics: const ClampingScrollPhysics(),
+              // Keep this list as the dedicated vertical scroll region for all ten rows on the page.
               padding: const EdgeInsets.only(bottom: 18), itemCount: visibleImages.length,
               itemBuilder: (context,localIndex) {
                 final index = pageStart + localIndex;
@@ -1221,8 +1222,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       ]))
                     : const SizedBox.shrink();
                 return Container(margin:const EdgeInsets.only(bottom:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
-                  child:Row(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-                    SizedBox(width:180, height:245, child: Padding(padding:const EdgeInsets.all(8),child:Material(color:const Color(0xFFF7F4F9),borderRadius:BorderRadius.circular(10),child:InkWell(borderRadius:BorderRadius.circular(10),onTap:()=>_showImagePreview(url),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:FutureBuilder<Uint8List?>(future:_previewImageBytes(url),builder:(context,snapshot){if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(strokeWidth:2));final bytes=snapshot.data;if(bytes==null)return Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.broken_image_outlined,size:34,color:Colors.redAccent),Padding(padding:const EdgeInsets.all(6),child:Text(_previewErrors[url]??'تعذر تحميل الصورة من المصدر',textAlign:TextAlign.center,maxLines:5,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,color:Colors.redAccent))) ]),loadingBuilder:(context,child,progress)=>progress==null?child:const Center(child:CircularProgressIndicator(strokeWidth:2)));return Image.memory(bytes,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.broken_image_outlined,size:34,color:Colors.redAccent),Padding(padding:const EdgeInsets.all(6),child:Text('صيغة الصورة غير مدعومة للمعاينة',textAlign:TextAlign.center,maxLines:3,style:const TextStyle(fontSize:10,color:Colors.redAccent))) ])));})))))),
+                  child:Row(textDirection: TextDirection.rtl,crossAxisAlignment:CrossAxisAlignment.start,children:[
+                    SizedBox(width:150, height:150, child: Padding(padding:const EdgeInsets.all(6),child:Material(color:const Color(0xFFF7F4F9),borderRadius:BorderRadius.circular(10),child:InkWell(borderRadius:BorderRadius.circular(10),onTap:()=>_showImagePreview(url),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:FutureBuilder<Uint8List?>(future:_previewImageBytes(url),builder:(context,snapshot){if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(strokeWidth:2));final bytes=snapshot.data;if(bytes==null)return Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.broken_image_outlined,size:34,color:Colors.redAccent),Padding(padding:const EdgeInsets.all(6),child:Text(_previewErrors[url]??'تعذر تحميل الصورة من المصدر',textAlign:TextAlign.center,maxLines:5,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,color:Colors.redAccent))) ]),loadingBuilder:(context,child,progress)=>progress==null?child:const Center(child:CircularProgressIndicator(strokeWidth:2)));return Image.memory(bytes,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.broken_image_outlined,size:34,color:Colors.redAccent),Padding(padding:const EdgeInsets.all(6),child:Text('صيغة الصورة غير مدعومة للمعاينة',textAlign:TextAlign.center,maxLines:3,style:const TextStyle(fontSize:10,color:Colors.redAccent))) ])));})))))),
                     const VerticalDivider(width:1),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                       Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),child:common),
