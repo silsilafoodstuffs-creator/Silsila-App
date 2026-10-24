@@ -374,25 +374,45 @@ Deno.serve(async (req: Request) => {
       // Some CDNs return a JavaScript challenge/bundle for a direct image URL
       // when a storefront Referer is supplied. Retry once without Referer before
       // declaring the candidate invalid; never treat script bytes as an image.
-      if (!mime && /(?:javascript|ecmascript)/i.test(headerType)) {
-        const retry = await fetch(target, {
-          redirect: "manual",
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
-            "Accept-Language": "ar-EG,ar;q=0.9,en-US;q=0.8,en;q=0.7",
-          },
-          signal: AbortSignal.timeout(18000),
-        });
-        if (retry.ok) {
-          const retryBytes = await readLimited(retry, 5_000_000);
-          const retryMime = detectRasterMime(retryBytes);
-          if (retryMime) {
-            bytes = retryBytes;
-            mime = retryMime;
-            res = retry;
-            headerType = (retry.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
+      if (!mime && /(?:javascript|ecmascript|text\/css)/i.test(headerType)) {
+        // Some Amazon CDN endpoints return a CSS/theme asset instead of the
+        // requested image, often because the storefront Referer changes the
+        // CDN response. Retry without Referer and safely validate redirects.
+        let retryTarget = target;
+        for (let retryHop = 0; retryHop <= 5; retryHop++) {
+          const retry = await fetch(retryTarget, {
+            redirect: "manual",
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+              "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.5",
+              "Accept-Language": "ar-EG,ar;q=0.9,en-US;q=0.8,en;q=0.7",
+            },
+            signal: AbortSignal.timeout(18000),
+          });
+          if (retry.status >= 300 && retry.status < 400) {
+            const location = retry.headers.get("location");
+            if (!location || retryHop === 5) break;
+            retryTarget = safeUrl(new URL(location, retryTarget).toString());
+            continue;
           }
+          if (retry.ok) {
+            const retryBytes = await readLimited(retry, 5_000_000);
+            const retryMime = detectRasterMime(retryBytes);
+            if (retryMime) {
+              bytes = retryBytes;
+              mime = retryMime;
+              res = retry;
+              target = retryTarget;
+              headerType = (retry.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
+            } else {
+              // Keep the retry's real response type for a precise diagnostic.
+              headerType = (retry.headers.get("content-type") ?? "").split(";")[0].toLowerCase();
+              bytes = retryBytes;
+              res = retry;
+              target = retryTarget;
+            }
+          }
+          break;
         }
       }
 
