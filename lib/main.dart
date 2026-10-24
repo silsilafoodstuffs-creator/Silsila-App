@@ -279,14 +279,23 @@ class SilsilaApp extends StatelessWidget {
       // Enable native mouse/keyboard text selection throughout the customer
       // app and ERP, including tables, read-only labels, dialogs and warnings.
       // Editable TextFields keep their normal editing and selection behavior.
-      builder: (context, child) => SelectionArea(
-        child: Directionality(
-          textDirection: currentLocale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-          child: Stack(children: [
-            Positioned.fill(child: child ?? const SizedBox.shrink()),
-            const Positioned(left: 8, top: 8, child: SafeArea(child: SilsilaLanguageToggle())),
-          ]),
-        ),
+      // Keep an Overlay above SelectionArea. MaterialApp's navigator overlay
+      // is inside `child`, so SelectionArea cannot find it when placed outside
+      // the navigator unless we provide this ancestor overlay.
+      builder: (context, child) => Overlay(
+        initialEntries: [
+          OverlayEntry(
+            builder: (overlayContext) => SelectionArea(
+              child: Directionality(
+                textDirection: currentLocale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                child: Stack(children: [
+                  Positioned.fill(child: child ?? const SizedBox.shrink()),
+                  const Positioned(left: 8, top: 8, child: SafeArea(child: SilsilaLanguageToggle())),
+                ]),
+              ),
+            ),
+          ),
+        ],
       ),
       title: 'سلسلة Silsila',
       debugShowCheckedModeBanner: false,
@@ -5844,7 +5853,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: passwordController,
                 obscureText: obscurePassword,
                 decoration: InputDecoration(
-                  labelText: 'كلمة المرور',
+                  labelText: 'اكتب كلمة المرور الخاصة بك',
                   helperText:
                       '8 أحرف على الأقل مع حرف كبير وصغير ورقم ورمز',
                   prefixIcon: const Icon(Icons.lock_outline),
