@@ -210,7 +210,7 @@ function contextualEntityName(html: string, imageIndex: number): string {
 function pageImages(html: string, base: URL) {
   const found = new Map<string, Record<string, unknown>>();
   const metadata = productMetadata(html, base);
-  const blocked = /(?:^|[\/_\-. ])(?:logo|site[-_ ]?logo|brand[-_ ]?logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|icon|social|payment|footer|menu|navigation|nav)(?:$|[\/_\-. ])/i;
+  const blocked = /(?:^|[\\/_\\-. ])(?:logo|site[-_ ]?logo|brand[-_ ]?logo|header|masthead|banner|hero|favicon|sprite|placeholder|no[-_ ]?image|loading|spinner|avatar|profile|icon|social|payment|footer|menu|navigation|nav|graphic|illustration|infographic|background|texture|decoration|decorative|separator|arrow|badge|rating|star|button|thumbnail-placeholder|blank)(?:$|[\\/_\\-. ])/i;
   const tracking = new Set(["fbclid", "gclid", "dclid", "msclkid", "ref", "source", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_id", "campaign", "tracking", "width", "height", "w", "h", "quality", "q", "fit", "crop", "auto", "format", "fm", "resize"]);
   const normalize = (u: URL) => {
     const path = u.pathname
@@ -231,10 +231,17 @@ function pageImages(html: string, base: URL) {
       if ((width > 0 && width < 90) || (height > 0 && height < 70)) return;
       const key = normalize(u);
       const structured = metadata.byImage.get(metadata.normalizeImage(u.href)) ?? {};
+      const readableAlt = usableEntityName(alt) ? alt : "";
+      const structuredName = String(structured.product_full_name ?? structured.product_name ?? "").trim();
+      const contextualName = usableEntityName(contextName) ? contextName : "";
+      const entityName = structuredName || contextualName || readableAlt;
+      // Only collect assets tied to a named product/category or an explicitly
+      // marked product-image element. Script bundles often contain unrelated
+      // decorative graphics and must not become image candidates.
+      const hasProductContext = Boolean(entityName) ||
+        /(?:product|item|category|catalog|woocommerce|productphoto|product-photo|product_image|itemprop[\\s_-]*image)/i.test(hint);
+      if (!hasProductContext) return;
       if (!found.has(key)) {
-        const readableAlt = usableEntityName(alt) ? alt : "";
-        const entityName = String(structured.product_full_name ?? structured.product_name ?? "").trim() ||
-          (usableEntityName(contextName) ? contextName : "") || readableAlt;
         found.set(key, {
           ...structured,
           url: u.href,
