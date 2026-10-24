@@ -886,8 +886,39 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
           return null;
         }
         final bytes = Uint8List.fromList(base64Decode(encoded));
-        if (bytes.length < 8) {
+        if (bytes.length < 16) {
           _previewErrors[url] = 'ملف الصورة فارغ أو غير مكتمل.';
+          return null;
+        }
+        final decoded = img.decodeImage(bytes);
+        if (decoded == null) {
+          _previewErrors[url] = 'المصدر لم يُرجع صورة قابلة للفك؛ قد يكون رابطًا منتهيًا أو صفحة خطأ.';
+          return null;
+        }
+        if (decoded.width < 80 || decoded.height < 70) {
+          _previewErrors[url] = 'تم تجاهل صورة صغيرة/أيقونة (${decoded.width}×${decoded.height}) وليست صورة صنف مناسبة.';
+          return null;
+        }
+        // Reject blank tracking/placeholder graphics while keeping normal product
+        // shots with white backgrounds. Sample a coarse grid, not every pixel.
+        final sampledColors = <int>{};
+        var visibleSamples = 0;
+        for (var sy = 0; sy < 12; sy++) {
+          for (var sx = 0; sx < 12; sx++) {
+            final p = decoded.getPixel(
+              (sx * (decoded.width - 1) / 11).round(),
+              (sy * (decoded.height - 1) / 11).round(),
+            );
+            if (p.a.toInt() > 12) visibleSamples++;
+            sampledColors.add(
+              ((p.r.toInt() ~/ 24) << 16) |
+              ((p.g.toInt() ~/ 24) << 8) |
+              (p.b.toInt() ~/ 24),
+            );
+          }
+        }
+        if (visibleSamples < 8 || sampledColors.length < 4) {
+          _previewErrors[url] = 'الصورة المستلمة فارغة أو جرافيك ثابت/Placeholder؛ لم تُعرض كصورة صنف.';
           return null;
         }
         return bytes;
@@ -896,6 +927,54 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         return null;
       }
     });
+  }
+
+  Widget _imagePreviewTile(String url) {
+    return FutureBuilder<Uint8List?>(
+      future: _previewImageBytes(url),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+        }
+        final bytes = snapshot.data;
+        if (bytes == null) {
+          return Container(
+            color: const Color(0xFFFFF3F0),
+            padding: const EdgeInsets.all(7),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.broken_image_outlined, size: 30, color: Colors.redAccent),
+                const SizedBox(height: 5),
+                Text(
+                  _previewErrors[url] ?? 'تعذر تحميل الصورة الأصلية',
+                  textAlign: TextAlign.center,
+                  maxLines: 6,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 10, color: Colors.redAccent),
+                ),
+              ],
+            ),
+          );
+        }
+        return Image.memory(
+          bytes,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: const Color(0xFFFFF3F0),
+            padding: const EdgeInsets.all(7),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.broken_image_outlined, size: 30, color: Colors.redAccent),
+                Text('البيانات المستلمة ليست صورة قابلة للعرض', textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 10, color: Colors.redAccent)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _showImagePreview(String url) async {
@@ -1223,7 +1302,25 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     : const SizedBox.shrink();
                 return Container(margin:const EdgeInsets.only(bottom:4),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(12),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
                   child:Row(textDirection: TextDirection.rtl,crossAxisAlignment:CrossAxisAlignment.start,children:[
-                    SizedBox(width:150, height:150, child: Padding(padding:const EdgeInsets.all(6),child:Material(color:const Color(0xFFF7F4F9),borderRadius:BorderRadius.circular(10),child:InkWell(borderRadius:BorderRadius.circular(10),onTap:()=>_showImagePreview(url),child:ClipRRect(borderRadius:BorderRadius.circular(10),child:FutureBuilder<Uint8List?>(future:_previewImageBytes(url),builder:(context,snapshot){if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator(strokeWidth:2));final bytes=snapshot.data;if(bytes==null)return Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.broken_image_outlined,size:34,color:Colors.redAccent),Padding(padding:const EdgeInsets.all(6),child:Text(_previewErrors[url]??'تعذر تحميل الصورة من المصدر',textAlign:TextAlign.center,maxLines:5,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,color:Colors.redAccent))) ]),loadingBuilder:(context,child,progress)=>progress==null?child:const Center(child:CircularProgressIndicator(strokeWidth:2)));return Image.memory(bytes,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Image.network(url,fit:BoxFit.contain,errorBuilder:(_,__,___)=>Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.broken_image_outlined,size:34,color:Colors.redAccent),Padding(padding:const EdgeInsets.all(6),child:Text('صيغة الصورة غير مدعومة للمعاينة',textAlign:TextAlign.center,maxLines:3,style:const TextStyle(fontSize:10,color:Colors.redAccent))) ])));})))))),
+                    SizedBox(
+                      width: 150,
+                      height: 150,
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Material(
+                          color: const Color(0xFFF7F4F9),
+                          borderRadius: BorderRadius.circular(10),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => _showImagePreview(url),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: _imagePreviewTile(url),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     const VerticalDivider(width:1),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                       Padding(padding:const EdgeInsets.symmetric(horizontal:6,vertical:4),child:common),
