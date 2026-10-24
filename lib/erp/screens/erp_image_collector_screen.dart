@@ -1257,7 +1257,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       FilledButton.icon(onPressed:_loading?null:()=>_saveRowCategory(item),icon:Icon(mode=='old'?Icons.save_outlined:Icons.add_circle_outline),label:Text(mode=='old'?'تحديث بيانات':'تكويد جديد'),style:FilledButton.styleFrom(backgroundColor:_purple)),const SizedBox(width:10),
                     ]))
                   : SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-                      field('item_code','كود الصنف',width:125,initial:_excelValue(item,['item_code','sku','product_code'])),const SizedBox(width:6),
+                      field(mode=='old'?'legacy_code':'item_code','كود الصنف',width:125,initial:mode=='old'?'':_excelValue(item,['item_code','sku','product_code'])),const SizedBox(width:6),
                       if(mode=='old')...[OutlinedButton.icon(onPressed:_loading?null:()=>_openF1Lookup(item),icon:const Icon(Icons.search,size:17),label:const Text('بحث F1')),const SizedBox(width:8)],
                       field('item_name_ar','اسم صنف عربي',width:175,initial:productName),const SizedBox(width:6),
                       field('item_name_en','اسم صنف إنجليزي',width:155,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:6),
