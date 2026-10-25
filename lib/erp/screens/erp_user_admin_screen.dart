@@ -10,6 +10,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'erp_user_classifications_screen.dart';
 
 const _userAdminPurple = Color(0xFF3E007D);
 const _userAdminCanvas = Color(0xFFF7F5FA);
@@ -76,7 +77,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   String? _activeCompanyId;
   String _selectedPageKey = 'إدارة البرنامج|بيانات أساسية|بيانات الشركة';
   static const _typeNames = <String,String>{
-    'types':'أنواع المستخدمين والمستخدمين','users':'أنواع المستخدمين والمستخدمين','hierarchy':'أنواع المستخدمين والمستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
+    'types':'المستخدمين','users':'المستخدمين','hierarchy':'المستخدمين','classifications':'المستخدمين','templates':'المستخدمين','permissions':'المستخدمين'
   };
 
   @override void initState() { super.initState(); _view=widget.initialView; _activeCompanyId=widget.companyId; try {_db=Supabase.instance.client;} catch (_) {} _load(); }
@@ -1309,14 +1310,50 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:_userAdminPurple)),Text('إدارة البيانات والصلاحيات للشركة الحالية',style:TextStyle(fontSize:11,color:Colors.grey.shade700))])),
       ])),
       _toolbar(),
+      Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: [
+            _userTab('أنواع المستخدمين والمستخدمين', 'hierarchy', Icons.people_alt_outlined),
+            const SizedBox(width: 6),
+            _userTab('تصنيفات المستخدمين', 'classifications', Icons.category_outlined),
+            const SizedBox(width: 6),
+            _userTab('قوالب صلاحيات المستخدمين', 'templates', Icons.fact_check_outlined),
+            const SizedBox(width: 6),
+            _userTab('صلاحيات المستخدمين', 'permissions', Icons.admin_panel_settings_outlined),
+          ]),
+        ),
+      ),
       if(_error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
       if(_message!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_message!,style:const TextStyle(color:Colors.green))),
       if(_isPermissions)Padding(padding:const EdgeInsets.all(8),child:Text('حدد المستخدم ثم عيّن صلاحيات كل شاشة باستخدام أعمدة المهام التسعة. زر جلب المستخدمين يتيح الاختيار من القائمة.',style:TextStyle(color:Colors.grey.shade700))),
-      Expanded(child:_loading?const Center(child:CircularProgressIndicator()):_isHierarchy ? _hierarchyView() : SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        if(_isPermissions) _ruleGrid() else if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
-
-      ])))),
+      Expanded(child:_view=='classifications'
+        ? ErpUserClassificationsScreen(companyId: _company)
+        : _loading ? const Center(child:CircularProgressIndicator())
+        : _isHierarchy ? _hierarchyView()
+        : SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          if(_isPermissions) _ruleGrid() else if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
+        ])))),
     ])));
+  }
+
+  Widget _userTab(String label, String view, IconData icon) {
+    final selected = _view == view;
+    return OutlinedButton.icon(
+      onPressed: selected ? null : () {
+        setState(() { _view = view; _editMode = false; _error = null; _message = null; });
+        if (view != 'classifications') _load();
+      },
+      icon: Icon(icon, size: 17),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: selected ? Colors.white : _userAdminPurple,
+        backgroundColor: selected ? _userAdminPurple : Colors.white,
+        side: BorderSide(color: _userAdminPurple.withValues(alpha: selected ? 1 : .3)),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      ),
+    );
   }
 
   Future<void> _applyTemplate() async {
