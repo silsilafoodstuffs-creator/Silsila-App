@@ -687,12 +687,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     finally{if(mounted)setState(()=>_loading=false);}
   }
 
-  Future<Map<String,dynamic>> _ensureRowCategory(SupabaseClient db,String company,List<Map<String,dynamic>> categories,String name,String? parent,String prefix) async{
+  Future<Map<String,dynamic>> _ensureRowCategory(SupabaseClient db,String company,List<Map<String,dynamic>> categories,String name,String? parent,String prefix,{String englishName=''}) async{
     final normalized=name.trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase();
-    for(final g in categories){if((g['parent_id']?.toString()??'')==(parent??'')&&(g['category_name']??'').toString().trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase()==normalized)return g;}
+    for(final g in categories){if((g['parent_id']?.toString()??'')==(parent??'')&&(g['category_name']??'').toString().trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase()==normalized){if(englishName.trim().isNotEmpty){await db.from('erp_item_categories').update({'category_name_en':englishName.trim()}).eq('id',g['id'].toString()).eq('company_id',company);g['category_name_en']=englishName.trim();}return g;}}
     var max=0;for(final g in categories){final m=RegExp('^'+prefix+r'(\d+)$',caseSensitive:false).firstMatch((g['category_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}
     final code=prefix+(max+1).toString().padLeft(4,'0');
-    final row=await db.from('erp_item_categories').insert({'company_id':company,'parent_id':parent,'category_code':code,'category_name':name.trim(),'category_name_en':'','is_active':true,'show_in_app':true,'image_url':null}).select('id,parent_id,category_code:category_code,category_name:category_name').single();
+    final row=await db.from('erp_item_categories').insert({'company_id':company,'parent_id':parent,'category_code':code,'category_name':name.trim(),'category_name_en':englishName.trim(),'is_active':true,'show_in_app':true,'image_url':null}).select('id,parent_id,category_code:category_code,category_name:category_name').single();
     final created=Map<String,dynamic>.from(row);categories.add(created);return created;
   }
 
@@ -712,7 +712,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     if(_loading)return;
     final db=Supabase.instance.client;final company=await _activeCompanyId();final mode=(item['entity_mode']??'new').toString();
     final main=_rowController(item,'category_main_name').text.trim(),subName=_rowController(item,'category_sub_name').text.trim(),thirdName=_rowController(item,'category_secondary_name').text.trim();
-    if(main.isEmpty){setState(()=>_error='اسم الفئة الرئيسية مطلوب.');return;}if(thirdName.isNotEmpty&&subName.isEmpty){setState(()=>_error='الفئة الثانوية تتطلب اسم فئة فرعية.');return;}
+    final mainEn=_rowController(item,'category_main_name_en').text.trim(),subEn=_rowController(item,'category_sub_name_en').text.trim(),thirdEn=_rowController(item,'category_secondary_name_en').text.trim();
+    final level=(item['category_level']??'root').toString();
+    if(main.isEmpty){setState(()=>_error='اسم الفئة الرئيسية مطلوب.');return;}
+    if(level!='root'&&subName.isEmpty){setState(()=>_error='اسم الفئة الفرعية مطلوب لهذا المستوى.');return;}
+    if(level=='secondary'&&thirdName.isEmpty){setState(()=>_error='اسم الفئة الثانوية مطلوب.');return;}
     if(mode=='old'&&item['category_target_id']==null){setState(()=>_error='ابحث عن الكود القديم أولًا.');return;}
     setState(()=>_loading=true);
     try{
@@ -722,14 +726,14 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       late Map<String,dynamic> target;
       if(mode=='old'){
         final root=byId(item['category_root_id']),sub=byId(item['category_sub_id']),third=byId(item['category_secondary_id']);
-        if(root!=null)await db.from('erp_item_categories').update({'category_name':main}).eq('id',root['id'].toString()).eq('company_id',company);
-        if(sub!=null&&subName.isNotEmpty)await db.from('erp_item_categories').update({'category_name':subName}).eq('id',sub['id'].toString()).eq('company_id',company);
-        if(third!=null&&thirdName.isNotEmpty)await db.from('erp_item_categories').update({'category_name':thirdName}).eq('id',third['id'].toString()).eq('company_id',company);
+        if(root!=null)await db.from('erp_item_categories').update({'category_name':main,'category_name_en':mainEn}).eq('id',root['id'].toString()).eq('company_id',company);
+        if(sub!=null&&subName.isNotEmpty)await db.from('erp_item_categories').update({'category_name':subName,'category_name_en':subEn}).eq('id',sub['id'].toString()).eq('company_id',company);
+        if(third!=null&&thirdName.isNotEmpty)await db.from('erp_item_categories').update({'category_name':thirdName,'category_name_en':thirdEn}).eq('id',third['id'].toString()).eq('company_id',company);
         target=byId(item['category_target_id'])!;
       }else{
-        final root=await _ensureRowCategory(db,company,categories,main,null,'C');Map<String,dynamic>? sub,third;
-        if(subName.isNotEmpty)sub=await _ensureRowCategory(db,company,categories,subName,root['id'].toString(),'S');
-        if(thirdName.isNotEmpty){if(sub==null)throw Exception('الفئة الثانوية تتطلب فئة فرعية.');third=await _ensureRowCategory(db,company,categories,thirdName,sub['id'].toString(),'T');}
+        final root=await _ensureRowCategory(db,company,categories,main,null,'C',englishName:mainEn);Map<String,dynamic>? sub,third;
+        if(level!='root')sub=await _ensureRowCategory(db,company,categories,subName,root['id'].toString(),'S',englishName:subEn);
+        if(level=='secondary'){if(sub==null)throw Exception('الفئة الثانوية تتطلب فئة فرعية.');third=await _ensureRowCategory(db,company,categories,thirdName,sub['id'].toString(),'T',englishName:thirdEn);}
         target=third??sub??root;
       }
       final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
