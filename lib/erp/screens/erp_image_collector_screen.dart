@@ -741,11 +741,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       Map<String,dynamic>? byId(dynamic id){for(final g in categories){if(id!=null&&g['id'].toString()==id.toString())return g;}return null;}
       late Map<String,dynamic> target;
       if(mode=='old'){
-        final root=byId(item['category_root_id']),sub=byId(item['category_sub_id']),third=byId(item['category_secondary_id']);
-        if(root!=null)await db.from('erp_item_categories').update({'category_name':main,'category_name_en':mainEn}).eq('id',root['id'].toString()).eq('company_id',company);
-        if(sub!=null&&subName.isNotEmpty)await db.from('erp_item_categories').update({'category_name':subName,'category_name_en':subEn}).eq('id',sub['id'].toString()).eq('company_id',company);
-        if(third!=null&&thirdName.isNotEmpty)await db.from('erp_item_categories').update({'category_name':thirdName,'category_name_en':thirdEn}).eq('id',third['id'].toString()).eq('company_id',company);
         target=byId(item['category_target_id'])!;
+        final targetName=level=='root'?main:level=='sub'?subName:thirdName;
+        final targetNameEn=level=='root'?mainEn:level=='sub'?subEn:thirdEn;
+        if(targetName.trim().isEmpty)throw Exception('اسم الفئة المطلوب تعديله فارغ.');
+        await db.from('erp_item_categories').update({'category_name':targetName,'category_name_en':targetNameEn}).eq('id',target['id'].toString()).eq('company_id',company);
+        target['category_name']=targetName;
       }else{
         Map<String,dynamic>? root,sub,third;
         if(level=='root'){
