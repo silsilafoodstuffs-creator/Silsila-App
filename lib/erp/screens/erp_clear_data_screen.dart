@@ -19,9 +19,8 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
   bool _busy = false;
   String _status = '';
   static const List<String> _screens = <String>[
-    'بيانات الشركة', 'الفروع ومراكز التكلفة', 'أنواع المستخدمين',
-    'تصنيفات المستخدمين', 'المستخدمين', 'قوالب صلاحيات المستخدمين',
-    'صلاحيات المستخدمين', 'إعدادات البرنامج', 'سجل العمليات', 'إدارة الشعار والصور',
+    'بيانات الشركة', 'مراكز التكلفة', 'المستخدمين',
+    'المستخدمين', 'إعدادات البرنامج', 'سجل العمليات', 'إدارة الشعار والصور',
     'إدارة صور الأصناف والفئات', 'إدارة صور الموردين والعملاء', 'إدارة صلاحيات التطبيقات',
     'إدارة ألوان التطبيقات', 'سياسات التسعير والخصومات', 'شجرة الحسابات', 'الفترات المالية',
     'مراكز التكلفة', 'العملات', 'الخزائن الرئيسية والفرعية', 'سندات القبض', 'سندات الصرف',
@@ -125,7 +124,7 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
         child: const Row(children: [
           Icon(Icons.delete_sweep_outlined, color: _orange, size: 27), SizedBox(width: 10),
           Expanded(child: Text('مسح جميع البيانات', style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w900))),
-          Text('إدارة البرنامج', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          Text('إعدادات عامة', style: TextStyle(color: Colors.white70, fontSize: 12)),
         ]),
       ),
       Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
