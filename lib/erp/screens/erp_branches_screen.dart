@@ -424,9 +424,18 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
       if (_loading)
-        const Expanded(child: Center(child: CircularProgressIndicator()))
+        const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
       else if (_rows.isEmpty)
-        const Expanded(child: Center(child: Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد.')))))
+        const Center(child: Card(child: Padding(padding: EdgeInsets.all(24), child: Text('لا توجد فروع مسجلة بعد.'))))
+      else if (widget.embedded)
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 8),
+          itemCount: _rows.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 7),
+          itemBuilder: (context, index) => _branchCard(_rows[index], index),
+        )
       else
         Expanded(child: ListView.separated(
           padding: const EdgeInsets.only(bottom: 8),
