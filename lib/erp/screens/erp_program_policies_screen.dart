@@ -45,7 +45,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     try {
       var rows=await db.from('erp_program_policies').select().eq('company_id',company);
       if ((rows as List).isEmpty) {
-        final initial=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();
+        final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();
         await db.from('erp_program_policies').upsert(initial,onConflict:'company_id,policy_key');
         rows=await db.from('erp_program_policies').select().eq('company_id',company);
       }
