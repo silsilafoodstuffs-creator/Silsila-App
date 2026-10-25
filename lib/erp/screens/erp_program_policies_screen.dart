@@ -123,5 +123,8 @@ label:const Text('F1 اختيار مستخدمين'),
 )),
 if(!mandatory&&!all)Padding(padding:const EdgeInsets.only(right:8),child:Text('المحدد: ${(p['user_ids'] as List).length}')),
 ])),
-);}).toList()))]);}
+if(options.isNotEmpty)DropdownButtonFormField<String>(value:options.contains(p['value'])?p['value'] as String:options.first,isExpanded:true,decoration:const InputDecoration(labelText:'القيمة الافتراضية'),items:options.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>setState(()=>p['value']=v)),
+if(p['key']=='fiscal_year')_fiscalRangeEditor(p),
+if(p['key']=='supplier_bonus_variance')TextFormField(key:ValueKey('${p['key']}-${p['value']}'),initialValue:p['value']?.toString()??'',decoration:const InputDecoration(labelText:'نسبة الفروقات %'),keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(v)=>p['value']=v),
+])));
 }
