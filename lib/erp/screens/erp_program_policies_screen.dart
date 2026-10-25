@@ -127,4 +127,4 @@ if(options.isNotEmpty)DropdownButtonFormField<String>(value:options.contains(p['
 if(p['key']=='fiscal_year')_fiscalRangeEditor(p),
 if(p['key']=='supplier_bonus_variance')TextFormField(key:ValueKey('${p['key']}-${p['value']}'),initialValue:p['value']?.toString()??'',decoration:const InputDecoration(labelText:'نسبة الفروقات %'),keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(v)=>p['value']=v),
 ])));
-}}).toList()))]);}
+}).toList()))]);}
