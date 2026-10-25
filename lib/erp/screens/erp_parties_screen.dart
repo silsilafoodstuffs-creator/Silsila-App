@@ -111,8 +111,60 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     }catch(e){if(mounted)setState(()=>{saving=false,error='فشل الحفظ: $e'});}
   }
   Future<void> _manageClassifications() async {
-    final controller=TextEditingController();
-    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:Text('تصنيفات ${kind=='customer'?'العملاء':'الموردين'}'),content:SizedBox(width:360,child:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:controller,decoration:const InputDecoration(labelText:'اسم التصنيف بالعربية')),const SizedBox(height:8),Wrap(spacing:6,children:classifications.map((c)=>Chip(label:Text(s(c['name_ar'])))).toList())])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()async{if(controller.text.trim().isEmpty)return;try{await db!.from('erp_party_classifications').insert({'company_id':companyId,'party_kind':kind,'name_ar':controller.text.trim(),'is_active':true});if(ctx.mounted)Navigator.pop(ctx);await _loadAll();}catch(e){if(ctx.mounted)ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content:Text('تعذر حفظ التصنيف: $e')));}},child:const Text('إضافة'))]));
+    final controller = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('تصنيفات ${kind == 'customer' ? 'العملاء' : 'الموردين'}'),
+        content: SizedBox(
+          width: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(labelText: 'اسم التصنيف بالعربية'),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                children: classifications
+                    .map((item) => Chip(label: Text(s(item['name_ar']))))
+                    .toList(),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (controller.text.trim().isEmpty) return;
+              try {
+                await db!.from('erp_party_classifications').insert({
+                  'company_id': companyId,
+                  'party_kind': kind,
+                  'name_ar': controller.text.trim(),
+                  'is_active': true,
+                });
+                if (ctx.mounted) Navigator.pop(ctx);
+                await _loadAll();
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text('تعذر حفظ التصنيف: $e')),
+                  );
+                }
+              }
+            },
+            child: const Text('إضافة'),
+          ),
+        ],
+      ),
+    );
     controller.dispose();
   }
   Future<void> _map() async {
