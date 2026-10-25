@@ -170,10 +170,12 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
     final collection=TextEditingController(text:rep['monthly_collection_target']?.toString() ?? '0');
     final rate=TextEditingController(text:rep['default_commission_rate']?.toString() ?? '1.25');
     String method=rep['commission_plan']?.toString() ?? 'percentage';
+    String classification=rep['rep_classification']?.toString() ?? 'خارجي';
     final ok=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setLocal)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
       title:Text('أهداف وعمولة '+(rep['rep_name']?.toString() ?? 'المندوب')),
       content:SizedBox(width:420,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
         _field(sales,'مستهدف المبيعات الشهري'),_field(collection,'مستهدف التحصيل الشهري'),
+        DropdownButtonFormField<String>(value:classification,decoration:const InputDecoration(labelText:'تصنيف المندوب'),items:const [DropdownMenuItem(value:'داخلي',child:Text('داخلي')),DropdownMenuItem(value:'خارجي',child:Text('خارجي')),DropdownMenuItem(value:'كول سنتر',child:Text('كول سنتر')),DropdownMenuItem(value:'مبيعات ميدانية',child:Text('مبيعات ميدانية')),DropdownMenuItem(value:'مبيعات هاتفية',child:Text('مبيعات هاتفية')),DropdownMenuItem(value:'أخرى',child:Text('أخرى'))],onChanged:(v)=>setLocal(()=>classification=v ?? 'خارجي')),
         DropdownButtonFormField<String>(value:method,decoration:const InputDecoration(labelText:'طريقة العمولة'),items:const [
           DropdownMenuItem(value:'percentage',child:Text('نسبة من المبيعات')),
           DropdownMenuItem(value:'fixed_per_invoice',child:Text('قيمة لكل فاتورة')),
@@ -187,7 +189,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
     if(ok!=true)return;
     if(_db==null || (widget.companyId ?? '').isEmpty){_toast('بيانات العرض فقط.');return;}
     try{
-      await _db!.from('erp_sales_representatives').update({'monthly_sales_target':double.parse(sales.text),'monthly_collection_target':double.parse(collection.text),'commission_plan':method,'default_commission_rate':double.parse(rate.text),'is_demo_data':false}).eq('id',rep['id']).eq('company_id',widget.companyId!);
+      await _db!.from('erp_sales_representatives').update({'monthly_sales_target':double.parse(sales.text),'monthly_collection_target':double.parse(collection.text),'rep_classification':classification,'commission_plan':method,'default_commission_rate':double.parse(rate.text),'is_demo_data':false}).eq('id',rep['id']).eq('company_id',widget.companyId!);
       await _load();_toast('تم حفظ إعدادات المندوب.');
     }catch(e){_toast('تعذر الحفظ: '+e.toString());}
   }
