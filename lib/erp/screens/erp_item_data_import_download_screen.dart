@@ -12,48 +12,62 @@ const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
 
 Widget _kindCell(_ImportRow row, VoidCallback refresh) => SizedBox(
-  width: 112,
+  width: 108,
   child: Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      Expanded(
-        child: InkWell(
-          onTap: () { row.kind = 'صنف'; if (row.codeMode == 'جديد') row.code = 'ITM${row.id.replaceAll(RegExp(r'\D'), '').padLeft(5, '0')}'; refresh(); },
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Checkbox(
-                shape: const CircleBorder(),
-                value: row.kind == 'صنف',
-                onChanged: (checked) {
-                  if (checked == true) { row.kind = 'صنف'; if (row.codeMode == 'جديد') row.code = 'ITM${row.id.replaceAll(RegExp(r'\D'), '').padLeft(5, '0')}'; refresh(); }
-                },
-                visualDensity: VisualDensity.compact,
-              ),
-              const Flexible(child: Text('صنف', style: TextStyle(fontSize: 12))),
-            ],
+      _compactChoice(
+        label: 'صنف',
+        selected: row.kind == 'صنف',
+        onTap: () {
+          row.kind = 'صنف';
+          if (row.codeMode == 'جديد') {
+            row.code = 'ITM${row.id.replaceAll(RegExp(r'\\D'), '').padLeft(5, '0')}';
+          }
+          refresh();
+        },
+      ),
+      const SizedBox(width: 2),
+      _compactChoice(
+        label: 'فئة',
+        selected: row.kind == 'فئة',
+        onTap: () {
+          row.kind = 'فئة';
+          if (row.codeMode == 'جديد') {
+            row.code = 'CAT${row.id.replaceAll(RegExp(r'\\D'), '').padLeft(5, '0')}';
+          }
+          refresh();
+        },
+      ),
+    ],
+  ),
+);
+
+Widget _compactChoice({
+  required String label,
+  required bool selected,
+  required VoidCallback onTap,
+}) => InkWell(
+  onTap: onTap,
+  borderRadius: BorderRadius.circular(16),
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      SizedBox(
+        width: 23,
+        height: 30,
+        child: Transform.scale(
+          scale: 0.76,
+          child: Checkbox(
+            shape: const CircleBorder(),
+            value: selected,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            onChanged: (value) { if (value == true) onTap(); },
           ),
         ),
       ),
-      Expanded(
-        child: InkWell(
-          onTap: () { row.kind = 'فئة'; if (row.codeMode == 'جديد') row.code = 'CAT${row.id.replaceAll(RegExp(r'\D'), '').padLeft(5, '0')}'; refresh(); },
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Checkbox(
-                shape: const CircleBorder(),
-                value: row.kind == 'فئة',
-                onChanged: (checked) {
-                  if (checked == true) { row.kind = 'فئة'; if (row.codeMode == 'جديد') row.code = 'CAT${row.id.replaceAll(RegExp(r'\D'), '').padLeft(5, '0')}'; refresh(); }
-                },
-                visualDensity: VisualDensity.compact,
-              ),
-              const Flexible(child: Text('فئة', style: TextStyle(fontSize: 12))),
-            ],
-          ),
-        ),
-      ),
+      Text(label, maxLines: 1, softWrap: false, style: const TextStyle(fontSize: 12)),
     ],
   ),
 );
@@ -111,19 +125,29 @@ Future<Map<String, String>?> _pickExistingRecord(BuildContext context, String ki
 }
 
 Widget _codeModeCell(_ImportRow row, VoidCallback refresh) => SizedBox(
-  width: 104,
-  child: Row(mainAxisSize: MainAxisSize.min, children: [
-    InkWell(onTap: () { row.codeMode = 'جديد'; if (row.code.isEmpty) row.code = '${row.kind == 'فئة' ? 'CAT' : 'ITM'}${row.id.replaceAll(RegExp(r'\D'), '').padLeft(5, '0')}'; refresh(); },
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Checkbox(shape: const CircleBorder(), value: row.codeMode == 'جديد', visualDensity: VisualDensity.compact, onChanged: (v) { if (v == true) { row.codeMode='جديد'; row.code = '${row.kind == 'فئة' ? 'CAT' : 'ITM'}${row.id.replaceAll(RegExp(r'\D'), '').padLeft(5, '0')}'; refresh(); } }),
-        const Text('جديد', style: TextStyle(fontSize: 11)),
-      ])),
-    InkWell(onTap: () { row.codeMode='قديم'; refresh(); },
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Checkbox(shape: const CircleBorder(), value: row.codeMode == 'قديم', visualDensity: VisualDensity.compact, onChanged: (v) { if (v == true) { row.codeMode='قديم'; refresh(); } }),
-        const Text('قديم', style: TextStyle(fontSize: 11)),
-      ])),
-  ]),
+  width: 108,
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      _compactChoice(
+        label: 'جديد',
+        selected: row.codeMode == 'جديد',
+        onTap: () {
+          row.codeMode = 'جديد';
+          if (row.code.isEmpty) {
+            row.code = '${row.kind == 'فئة' ? 'CAT' : 'ITM'}${row.id.replaceAll(RegExp(r'\\D'), '').padLeft(5, '0')}';
+          }
+          refresh();
+        },
+      ),
+      const SizedBox(width: 2),
+      _compactChoice(
+        label: 'قديم',
+        selected: row.codeMode == 'قديم',
+        onTap: () { row.codeMode = 'قديم'; refresh(); },
+      ),
+    ],
+  ),
 );
 
 class _ImportRow {
