@@ -159,6 +159,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   String _executivePeriod = 'من بداية النشاط';
   double? _executivePreviousSales;
   double? _executivePreviousPurchases;
+  double? _executivePreviousGrossProfit;
   double? _executivePreviousCollections;
   String? _executiveMetricsError;
   double? _executiveSales;
@@ -1815,6 +1816,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executivePreviousSales = numberValue(previousData, 'sales');
         _executivePreviousCollections = numberValue(previousData, 'collections');
         _executivePreviousPurchases = numberValue(previousData, 'purchases');
+        _executivePreviousGrossProfit = numberValue(previousData, 'gross_profit_estimate');
         _executiveDailySales = numberList(currentData, 'daily_sales');
         _executiveDailyCollections = numberList(currentData, 'daily_collections');
         _executiveInventoryGroupLabels = stringList(currentData, 'inventory_group_labels');
@@ -2147,7 +2149,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               title: 'صافي نتيجة النشاط',
               icon: Icons.assessment_outlined,
               rows: [
-                _analysisRow('صافي النتيجة', null, null),
+                _analysisRow('صافي النتيجة', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
                 _analysisRow('التغير عن الفترة السابقة', null, null),
                 _analysisRow('نسبة النتيجة', null, null, isPercent: true),
               ],
@@ -2533,7 +2535,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             final positive = change != null && change >= 0;
             final color = change == null ? Colors.black45 : positive ? _green : Colors.red.shade700;
             return Row(children: [
-              Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.black87))),
+              Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w800))),
               Expanded(flex: 3, child: Text(
                 !hasData ? '—' : isPercent ? '${value.toStringAsFixed(1)}%' : _executiveMoney(value).replaceAll(' ج.م', ''),
                 textAlign: TextAlign.end,
