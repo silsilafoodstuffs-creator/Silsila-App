@@ -97,8 +97,6 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
           'landline2': TextEditingController(text: _s(row['landline2'])),
           'location': TextEditingController(text: _s(row['location'])),
           'address': TextEditingController(text: _s(row['address'])),
-          'latitude': TextEditingController(text: _s(row['latitude'])),
-          'longitude': TextEditingController(text: _s(row['longitude'])),
         });
       setState(() {
         _editingBranchId = _s(row['id']);
