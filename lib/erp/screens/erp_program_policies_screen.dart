@@ -268,12 +268,12 @@ class _SoftwareSettingsPolicyTableState extends State<_SoftwareSettingsPolicyTab
       final row=await _db.from('erp_program_settings').select('program_name,language_code').eq('company_id',_company).maybeSingle();
       if(row!=null){_name.text=(row['program_name']??'سلسلة').toString();_language=(row['language_code']??'ar').toString();}
       if(mounted)setState(()=>_loading=false);
-    }catch(e){if(mounted)setState(()=>{_loading=false,_error='تعذر تحميل إعدادات البرنامج: $e'});}
+    }catch(e){if(mounted)setState(() {_loading=false;_error='تعذر تحميل إعدادات البرنامج: $e';});}
   }
   Future<void> _save() async {
     if(!_editing){setState(()=>_message='اضغط تعديل أولًا.');return;}
     if(_company.isEmpty)return;
-    setState(()=>{_saving=true,_error=null,_message=null});
+    setState(() {_saving=true;_error=null;_message=null;});
     try{
       final old=await _db.from('erp_program_settings').select().eq('company_id',_company).maybeSingle();
       await _db.from('erp_program_settings').upsert({
@@ -283,8 +283,8 @@ class _SoftwareSettingsPolicyTableState extends State<_SoftwareSettingsPolicyTab
         'identity_accent_color':old?['identity_accent_color']??'#FF27C3','identity_background_color':old?['identity_background_color']??'#FFFFFF',
         'heading_styles':old?['heading_styles']??const [],'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':_db.auth.currentUser?.id,
       },onConflict:'company_id');
-      if(mounted)setState(()=>{_saving=false,_editing=false,_message='تم حفظ إعدادات البرنامج.'});
-    }catch(e){if(mounted)setState(()=>{_saving=false,_error='تعذر الحفظ: $e'});}
+      if(mounted)setState(() {_saving=false;_editing=false;_message='تم حفظ إعدادات البرنامج.';});
+    }catch(e){if(mounted)setState(() {_saving=false;_error='تعذر الحفظ: $e';});}
   }
   Widget _policyRow(int n,String code,String title,Widget value,{double valueWidth=220})=>Card(
     margin:const EdgeInsets.symmetric(vertical:1,horizontal:1),elevation:0,
