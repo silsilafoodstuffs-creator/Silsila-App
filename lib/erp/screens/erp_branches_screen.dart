@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../widgets/erp_quick_task_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const _branchPurple = Color(0xFF3E007D);
 
 class ErpBranchesScreen extends StatefulWidget {
-  const ErpBranchesScreen({super.key, required this.companyId});
+  const ErpBranchesScreen({super.key, required this.companyId, this.embedded = false});
   final String? companyId;
+  final bool embedded;
 
   @override
   State<ErpBranchesScreen> createState() => _ErpBranchesScreenState();
@@ -55,7 +57,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
           .eq('company_id', companyId).eq('is_active', true).order('geo_code');
       final result = await _db!
           .from('erp_branches')
-          .select('id, branch_code, branch_name, branch_name_en, phone, phone2, landline1, landline2, location, address, governorate_id, district_id, area_id, is_main, is_active')
+          .select('id, branch_code, branch_name, branch_name_en, email, phone, phone2, landline1, landline2, location, address, latitude, longitude, governorate_id, district_id, area_id, is_main, is_active')
           .eq('company_id', companyId)
           .order('branch_code');
       if (!mounted) return;
@@ -82,12 +84,15 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
           'branch_code': TextEditingController(text: _s(row['branch_code'])),
           'branch_name': TextEditingController(text: _s(row['branch_name'])),
           'branch_name_en': TextEditingController(text: _s(row['branch_name_en'])),
+          'email': TextEditingController(text: _s(row['email'])),
           'phone': TextEditingController(text: _s(row['phone'])),
           'phone2': TextEditingController(text: _s(row['phone2'])),
           'landline1': TextEditingController(text: _s(row['landline1'])),
           'landline2': TextEditingController(text: _s(row['landline2'])),
           'location': TextEditingController(text: _s(row['location'])),
           'address': TextEditingController(text: _s(row['address'])),
+          'latitude': TextEditingController(text: _s(row['latitude'])),
+          'longitude': TextEditingController(text: _s(row['longitude'])),
         });
       setState(() {
         _editingBranchId = _s(row['id']);
@@ -99,9 +104,13 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       });
       return;
     }
-    final code = TextEditingController(text: _s(row?['branch_code']));
+    final defaultCode = 'BR-${(_rows.length + 1).toString().padLeft(3, '0')}';
+    final code = TextEditingController(text: row == null ? defaultCode : _s(row['branch_code']));
     final name = TextEditingController(text: _s(row?['branch_name']));
     final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
+    final email = TextEditingController(text: _s(row?['email']));
+    final latitude = TextEditingController(text: _s(row?['latitude']));
+    final longitude = TextEditingController(text: _s(row?['longitude']));
     final phone2 = TextEditingController(text: _s(row?['phone2']));
     final landline1 = TextEditingController(text: _s(row?['landline1']));
     final landline2 = TextEditingController(text: _s(row?['landline2']));
@@ -124,6 +133,8 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
               TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الفرع عربي *', border: OutlineInputBorder())),
               const SizedBox(height: 10),
               TextField(controller: nameEn, decoration: const InputDecoration(labelText: 'اسم الفرع إنجليزي', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'البريد الإلكتروني', border: OutlineInputBorder())),
               const SizedBox(height: 10),
               TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'موبايل 1', border: OutlineInputBorder())),
               const SizedBox(height: 10),
@@ -148,6 +159,13 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
                 onChanged: (v) => setState(() => areaId = v)),
               const SizedBox(height: 10),
               TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'العنوان', border: OutlineInputBorder())),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: TextField(controller: latitude, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'خط العرض', border: OutlineInputBorder()))),
+                const SizedBox(width: 8),
+                Expanded(child: TextField(controller: longitude, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'خط الطول', border: OutlineInputBorder()))),
+                IconButton(tooltip: 'فتح الخريطة لتحديد الإحداثيات', onPressed: () async { await launchUrl(Uri.parse('https://www.google.com/maps'), mode: LaunchMode.externalApplication); }, icon: const Icon(Icons.map_outlined, color: _branchPurple)),
+              ]),
             ]),
           ),
         ),
@@ -158,7 +176,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       ),
     );
     if (result != true) {
-      code.dispose(); name.dispose(); nameEn.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
+      code.dispose(); name.dispose(); nameEn.dispose(); email.dispose(); latitude.dispose(); longitude.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
       return;
     }
     try {
@@ -177,6 +195,9 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         'branch_code': code.text.trim(),
         'branch_name': name.text.trim(),
         'branch_name_en': nameEn.text.trim().isEmpty ? null : nameEn.text.trim(),
+        'email': email.text.trim().isEmpty ? null : email.text.trim(),
+        'latitude': double.tryParse(latitude.text.trim()),
+        'longitude': double.tryParse(longitude.text.trim()),
         'phone2': phone2.text.trim().isEmpty ? null : phone2.text.trim(),
         'landline1': landline1.text.trim().isEmpty ? null : landline1.text.trim(),
         'landline2': landline2.text.trim().isEmpty ? null : landline2.text.trim(),
@@ -237,6 +258,9 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         'branch_code': code,
         'branch_name': name,
         'branch_name_en': _editFields['branch_name_en']!.text.trim().isEmpty ? null : _editFields['branch_name_en']!.text.trim(),
+        'email': _editFields['email']!.text.trim().isEmpty ? null : _editFields['email']!.text.trim(),
+        'latitude': double.tryParse(_editFields['latitude']!.text.trim()),
+        'longitude': double.tryParse(_editFields['longitude']!.text.trim()),
         'phone': _editFields['phone']!.text.trim().isEmpty ? null : _editFields['phone']!.text.trim(),
         'phone2': _editFields['phone2']!.text.trim().isEmpty ? null : _editFields['phone2']!.text.trim(),
         'landline1': _editFields['landline1']!.text.trim().isEmpty ? null : _editFields['landline1']!.text.trim(),
