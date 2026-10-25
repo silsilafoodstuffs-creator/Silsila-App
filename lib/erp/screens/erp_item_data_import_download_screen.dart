@@ -11,7 +11,7 @@ const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
 
 Widget _kindCell(_ImportRow row, VoidCallback refresh) => SizedBox(
-  width: 150,
+  width: 112,
   child: Row(
     mainAxisSize: MainAxisSize.min,
     children: [
@@ -110,7 +110,7 @@ Future<Map<String, String>?> _pickExistingRecord(BuildContext context, String ki
 }
 
 Widget _codeModeCell(_ImportRow row, VoidCallback refresh) => SizedBox(
-  width: 150,
+  width: 104,
   child: Row(mainAxisSize: MainAxisSize.min, children: [
     InkWell(onTap: () { row.codeMode = 'جديد'; if (row.code.isEmpty) row.code = '${row.kind == 'فئة' ? 'CAT' : 'ITM'}${row.id.replaceAll(RegExp(r'\D'), '').padLeft(5, '0')}'; refresh(); },
       child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -310,7 +310,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
               : Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(child: DataTable(
-                    columnSpacing: 18,
+                    columnSpacing: 8,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                     columns: [
                       DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -455,6 +455,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
             : Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(child: DataTable(
+                  columnSpacing: 8,
                   columns: [
                     DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Text('الكل'),
