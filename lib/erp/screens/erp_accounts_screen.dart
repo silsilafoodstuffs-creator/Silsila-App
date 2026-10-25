@@ -232,8 +232,18 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
 
 
   List<Map<String, dynamic>> _childrenOf(String parentId) {
-    return _rows.where((row) => _value(row, 'parent_id') == parentId).toList()
+    final ids = _rows.map((row) => _value(row, 'account_id')).where((id) => id.isNotEmpty).toSet();
+    final children = _rows.where((row) {
+      final parent = _value(row, 'parent_id');
+      if (parentId.isEmpty) return parent.isEmpty || !ids.contains(parent);
+      return parent == parentId;
+    }).toList()
       ..sort((a, b) => _value(a, 'account_code').compareTo(_value(b, 'account_code')));
+    // A malformed legacy cycle can leave the hierarchy without any root.
+    if (parentId.isEmpty && children.isEmpty && _rows.isNotEmpty) {
+      children.addAll(_rows);
+    }
+    return children;
   }
 
   Future<void> _confirmDeactivate(Map<String, dynamic> account) async {
