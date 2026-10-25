@@ -501,7 +501,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
             Checkbox(shape: const CircleBorder(), value: row['is_main'] == true, onChanged: editing ? null : (v) => _setMain(row, v == true), activeColor: _branchPurple, visualDensity: VisualDensity.compact),
             const Text('رئيسي', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
             const SizedBox(width: 8),
-            Checkbox(shape: const CircleBorder(), value: row['is_main'] != true, onChanged: editing ? null : (v) { if (v == true && row['is_main'] == true) return; }, activeColor: _branchPurple, visualDensity: VisualDensity.compact),
+            Checkbox(shape: const CircleBorder(), value: row['is_main'] != true, onChanged: editing ? null : (v) { if (v == true) _setMain(row, false); }, activeColor: _branchPurple, visualDensity: VisualDensity.compact),
             const Text('عادي', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
           ]),
           if (!editing) IconButton(tooltip: row['is_active'] == true ? 'إيقاف الفرع' : 'تفعيل الفرع', onPressed: () => _toggle(row), icon: Icon(row['is_active'] == true ? Icons.check_circle : Icons.pause_circle_outline, color: row['is_active'] == true ? Colors.green : Colors.grey)),
@@ -511,18 +511,16 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
   }
 
   Future<void> _setMain(Map<String, dynamic> row, bool isMain) async {
-    if (!isMain) {
-      setState(() => _error = 'عيّن فرعًا رئيسيًا بديلًا بدل إلغاء تعيين الفرع الرئيسي.');
-      return;
-    }
     final companyId = (widget.companyId ?? '').trim();
     try {
-      await _db!.from('erp_branches').update({'is_main': false}).eq('company_id', companyId);
-      await _db!.from('erp_branches').update({'is_main': true}).eq('id', row['id']).eq('company_id', companyId);
-      if (mounted) setState(() => _message = 'تم تعيين الفرع الرئيسي.');
+      if (isMain) {
+        await _db!.from('erp_branches').update({'is_main': false}).eq('company_id', companyId);
+      }
+      await _db!.from('erp_branches').update({'is_main': isMain}).eq('id', row['id']).eq('company_id', companyId);
+      if (mounted) setState(() => _message = isMain ? 'تم تعيين الفرع الرئيسي.' : 'تم تعيين الفرع كفرع عادي.');
       await _load();
     } catch (error) {
-      if (mounted) setState(() => _error = 'تعذر تعيين الفرع الرئيسي: $error');
+      if (mounted) setState(() => _error = 'تعذر تغيير نوع الفرع: $error');
     }
   }
 
