@@ -654,6 +654,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       setState(() => _error = 'اختر العميل وحمّل بيانات الشركة قبل جلب نواقص العميل.');
       return;
     }
+    try {
+      final allowed = await _isPolicyEnabledForCurrentUser('customer_shortages_to_invoice');
+      if (!allowed) {
+        if (mounted) setState(() => _error = 'سياسة إضافة نواقص العملاء إلى فاتورة البيع غير مفعّلة لهذا المستخدم.');
+        return;
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر التحقق من سياسة نواقص العملاء؛ أوقف الجلب احتياطيًا: $e');
+      return;
+    }
     DateTime from = DateTime(DateTime.now().year, DateTime.now().month, 1);
     DateTime to = DateTime.now();
     var loading = false;
