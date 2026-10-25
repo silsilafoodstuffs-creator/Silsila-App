@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../services/erp_accounts_repository.dart';
 
@@ -45,7 +46,27 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
 
   Future<void> _load() async {
     if (_company.text.trim().isEmpty) {
-      setState(() => _error = 'أدخل معرّف الشركة أولاً.');
+      try {
+        final client = Supabase.instance.client;
+        final userId = client.auth.currentUser?.id;
+        if (userId != null) {
+          final memberships = await client
+              .from('erp_company_members')
+              .select('company_id')
+              .eq('user_id', userId)
+              .eq('is_active', true)
+              .order('created_at')
+              .limit(1);
+          if (memberships.isNotEmpty) {
+            _company.text = (memberships.first['company_id'] ?? '').toString();
+          }
+        }
+      } catch (_) {
+        // Show the actionable message below if no active company can be resolved.
+      }
+    }
+    if (_company.text.trim().isEmpty) {
+      setState(() => _error = 'لم يتم العثور على شركة نشطة. اربط المستخدم بشركة ثم اضغط تحديث.');
       return;
     }
     setState(() {
