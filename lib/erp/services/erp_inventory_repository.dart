@@ -29,7 +29,7 @@ class ErpInventoryRepository {
 
   Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
     final rows = await _db.from('erp_items')
-        .select('id, item_code, item_name, base_unit')
+        .select('id, item_code, item_name, base_unit, purchase_price, sale_price')
         .eq('company_id', companyId.trim()).eq('is_active', true)
         .order('item_name').limit(2000);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
@@ -49,6 +49,16 @@ class ErpInventoryRepository {
         .eq('company_id', companyId.trim())
         .order('movement_date', ascending: false).limit(100);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
+  Future<bool> policyApplies(String companyId, String policyKey) async {
+    final actorId = _db.auth.currentUser?.id;
+    final result = await _db.rpc('erp_program_policy_applies', params: {
+      'p_company_id': companyId.trim(),
+      'p_policy_key': policyKey,
+      'p_actor_id': actorId,
+    });
+    return result == true;
   }
 
   Future<String> recordMovement({
