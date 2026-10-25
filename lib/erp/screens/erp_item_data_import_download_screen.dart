@@ -376,56 +376,6 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
     );
   }
   Widget _field(String v,ValueChanged<String> c)=>SizedBox(width:100,child:TextFormField(initialValue:v,onChanged:c,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())));
-}                  columns: [
-                    DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Text('الكل'),
-                      Checkbox(
-                        shape: const CircleBorder(),
-                        value: _all,
-                        onChanged: (v) => setState(() {
-                          _all = v ?? false;
-                          for (final r in _rows) { r.selected = _all; }
-                        }),
-                      ),
-                    ])),
-                    const DataColumn(label: Text('م')),
-                    const DataColumn(label: Text('الصورة')),
-                    const DataColumn(label: Text('الاسم العربي')),
-                    const DataColumn(label: Text('النوع')),
-                    const DataColumn(label: Text('الفئة الرئيسية')),
-                    const DataColumn(label: Text('الفئة الفرعية')),
-                    const DataColumn(label: Text('الوحدة الكبرى')),
-                    const DataColumn(label: Text('العدد الداخلي')),
-                    const DataColumn(label: Text('الوحدة الصغرى')),
-                    const DataColumn(label: Text('الوزن')),
-                    const DataColumn(label: Text('الطول')),
-                    const DataColumn(label: Text('العرض')),
-                    const DataColumn(label: Text('الارتفاع')),
-                  ],
-                  rows: _rows.map((r) => DataRow(cells: [
-                      DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
-                      DataCell(Text('${_rows.indexOf(r) + 1}')),
-                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
-                      DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
-                      DataCell(_kindCell(r, () => setState(() {}))),
-                      DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.category, onChanged: (v) => r.category = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
-                      DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.subcategory, onChanged: (v) => r.subcategory = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
-                      DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.majorUnit, onChanged: (v) => r.majorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
-                      DataCell(SizedBox(width: 85, child: TextFormField(initialValue: r.innerCount, onChanged: (v) => r.innerCount = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
-                      DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.minorUnit, onChanged: (v) => r.minorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
-                      DataCell(_field(r.weight, (v) => r.weight = v)),
-                      DataCell(_field(r.length, (v) => r.length = v)),
-                      DataCell(_field(r.width, (v) => r.width = v)),
-                      DataCell(_field(r.height, (v) => r.height = v)),
-                    ])).toList(),
-                  )),
-                )),
-          ),
-        ],
-      ),
-    );
-  }
-  Widget _field(String value,ValueChanged<String> onChanged)=>SizedBox(width:75,child:TextFormField(initialValue:value,onChanged:onChanged,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())));
 }
 
 class ErpItemDataDownloadScreen extends StatefulWidget {
