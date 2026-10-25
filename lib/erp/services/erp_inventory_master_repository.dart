@@ -14,10 +14,20 @@ class ErpInventoryMasterRepository {
   }
 
   Future<List<Map<String, dynamic>>> fetchWarehouses(String companyId) async {
-    final rows = await _db.from('erp_warehouses')
-      .select('id, warehouse_code, warehouse_name, warehouse_name_en, parent_warehouse_id, branch_id, address, location, phone, landline, governorate_id, district_id, area_id, is_active')
-      .eq('company_id', companyId.trim()).order('warehouse_code');
-    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    final db = _db;
+    final id = companyId.trim();
+    try {
+      final rows = await db.from('erp_warehouses')
+        .select('id, warehouse_code, warehouse_name, warehouse_name_en, parent_warehouse_id, branch_id, address, location, phone, landline, governorate_id, district_id, area_id, is_active')
+        .eq('company_id', id).order('warehouse_code');
+      return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    } catch (_) {
+      // Older deployments may not yet have all optional geography/contact columns.
+      final rows = await db.from('erp_warehouses')
+        .select('id, warehouse_code, warehouse_name, branch_id, address, is_active')
+        .eq('company_id', id).order('warehouse_code');
+      return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    }
   }
   Future<List<Map<String, dynamic>>> fetchCategories(String companyId) async {
     final rows = await _db.from('erp_item_categories')
@@ -34,7 +44,7 @@ class ErpInventoryMasterRepository {
   }
   Future<List<Map<String, dynamic>>> fetchBranches(String companyId) async {
     final rows = await _db.from('erp_branches')
-      .select('id, branch_code, branch_name')
+      .select('id, branch_code, branch_name, is_active')
       .eq('company_id', companyId.trim()).eq('is_active', true).order('branch_code');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
