@@ -2023,7 +2023,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 ? const <String, String>{'order':'طلب شراء','receipt':'استلام مشتريات','invoice':'فاتورة مشتريات','return':'مرتجع مشتريات'}
                 : const <String, String>{'quotation':'عرض سعر','order':'أمر بيع','delivery':'إذن تحميل','invoice':'فاتورة مبيعات','return':'مرتجع مبيعات'})
                 .entries.map((e) => DropdownMenuItem<String>(value: e.key, child: Text(e.value))).toList(),
-              onChanged: (v) => setState(() => _documentType = v ?? _documentType),
+              onChanged: (v) => setState(() {
+                final nextType = v ?? _documentType;
+                if (nextType != _documentType) _sourceDocumentIds = <String>[];
+                _documentType = nextType;
+              }),
             ),
             if (['order', 'invoice'].contains(_documentType)) ...[
               const SizedBox(height: 8),
