@@ -104,20 +104,33 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     }
     setState(() { _loading = true; _error = null; if (clearMessage) _message = null; });
     try {
-      final values = await Future.wait([
-        _repo.fetchWarehouses(_company.text),
-        _repo.fetchItems(_company.text),
-        _repo.fetchBranches(_company.text),
-        _repo.fetchCategories(_company.text),
+      final companyId = _company.text.trim();
+      final loadErrors = <String>[];
+      Future<List<Map<String, dynamic>>> loadPart(
+        String label,
+        Future<List<Map<String, dynamic>>> Function() action,
+      ) async {
+        try {
+          return await action();
+        } catch (e) {
+          loadErrors.add('$label: $e');
+          return <Map<String, dynamic>>[];
+        }
+      }
+      final values = await Future.wait<List<Map<String, dynamic>>>([
+        loadPart('المخازن', () => _repo.fetchWarehouses(companyId)),
+        loadPart('الأصناف', () => _repo.fetchItems(companyId)),
+        loadPart('الفروع', () => _repo.fetchBranches(companyId)),
+        loadPart('فئات الأصناف', () => _repo.fetchCategories(companyId)),
       ]);
       List<Map<String, dynamic>> geoRows = [];
       try {
         final geoResult = await Supabase.instance.client.from('erp_geographic_data')
             .select('id,parent_id,name_ar,level,is_active')
-            .eq('company_id', _company.text.trim()).eq('is_active', true).order('name_ar');
+            .eq('company_id', companyId).eq('is_active', true).order('name_ar');
         geoRows = (geoResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
       } catch (_) {
-        // Geographic metadata is optional for showing warehouse, item and branch grids.
+        // Geography is optional; it must not hide successfully loaded warehouse data.
       }
       if (!mounted) return;
       setState(() {
@@ -125,6 +138,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
+        _error = loadErrors.isEmpty ? null : 'تم تحميل البيانات المتاحة، وتعذر تحميل بعض الأقسام: ${loadErrors.join(' | ')}';
       });
     } catch (e) {
       if (!mounted) return;
