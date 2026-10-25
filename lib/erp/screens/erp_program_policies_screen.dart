@@ -1,6 +1,7 @@
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'erp_program_settings_screen.dart';
 
 class ErpProgramPoliciesScreen extends StatefulWidget {
   const ErpProgramPoliciesScreen({super.key, required this.companyId});
@@ -9,7 +10,7 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية'];
+  static const tabs = ['برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الهوية البصرية'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
@@ -78,7 +79,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget build(BuildContext context) {
     final query = policySearch.trim().toLowerCase();
     final list = values.values.where((p) {
-      if (p['category'] != tabs[tab]) return false;
+      if (tab == tabs.length - 1 || p['category'] != tabs[tab]) return false;
       if (query.isEmpty) return true;
       final ar = (p['ar'] ?? '').toString().toLowerCase();
       final en = (p['en'] ?? '').toString().toLowerCase();
@@ -125,136 +126,280 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
         child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
-      Expanded(child: loading ? const Center(child: CircularProgressIndicator()) : list.isEmpty
-          ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
-              children: [
-                if (tab == 0 && query.isEmpty)
-                  Card(
-                    margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 1),
-                    elevation: 0,
-                    color: const Color(0xFFF5EFFB),
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.18)),
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                    child: ExpansionTile(
-                      initiallyExpanded: true,
-                      leading: const Icon(Icons.tune_rounded, color: Color(0xFF3E007D)),
-                      title: const Text('إعدادات البرنامج والهوية البصرية', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                      subtitle: const Text('اسم البرنامج واللغة والشعار والألوان والخطوط', style: TextStyle(fontSize: 10)),
-                      children: [
-                        SizedBox(
-                          height: 700,
-                          child: ErpProgramSettingsScreen(companyId: widget.companyId),
-                        ),
-                      ],
-                    ),
-                  ),
-                Card(
-                  margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
-                  elevation: 0, color: const Color(0xFFF5EFFB),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                    child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: const [
-                      SizedBox(width: 34, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 82, child: Text('كود السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 225, child: Text('بيانات السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 160, child: Text('القيمة / الاختيار', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 140, child: Text('السنة المالية', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 100, child: Text('نسبة %', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 50, child: Text('تفعيل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 58, child: Text('على الكل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 62, child: Text('مستخدمون', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 112, child: Text('اختيار مستخدمين', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                      SizedBox(width: 8),
-                      SizedBox(width: 58, child: Text('عدد المحدد', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                    ])),
-                  ),
-                ),
-                ...List.generate(list.length, (index) {
-                  final p = list[index];
-                  final mandatory = p['mandatory'] == true;
-                  final all = p['all'] == true;
-                  final options = (p['options'] as List?)?.cast<String>() ?? const <String>[];
-                  final originalIndex = defaults.indexWhere((item) => item['key'] == p['key']) + 1;
-                  final policyCode = 'POL' + originalIndex.toString().padLeft(3, '0');
-                  Widget checkColumn(String label, bool value, ValueChanged<bool?>? onChanged, double width) => SizedBox(
-                    width: width,
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9)),
-                      SizedBox(height: 25, child: Checkbox(value: value, onChanged: onChanged, visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)),
-                    ]),
-                  );
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.16)), borderRadius: BorderRadius.circular(6)),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                      child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        SizedBox(width: 34, child: Text((index + 1).toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10))),
-                        const SizedBox(width: 8),
-                        SizedBox(width: 82, child: Text(policyCode, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600))),
-                        const SizedBox(width: 8),
-                        SizedBox(width: 225, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(p['ar'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
-                          Text(p['en'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 9)),
-                          if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF3E007D), fontSize: 9, fontWeight: FontWeight.bold)),
-                        ])),
-                        const SizedBox(width: 8),
-                        SizedBox(width: 160, child: options.isNotEmpty ? DropdownButtonFormField<String>(
-                          value: options.contains(p['value']) ? p['value'] as String : options.first,
-                          isExpanded: true, isDense: true,
-                          decoration: const InputDecoration(labelText: 'القيمة', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
-                          style: const TextStyle(fontSize: 10, color: Colors.black87),
-                          items: options.map((v) => DropdownMenuItem(value: v, child: Text(v, maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
-                          onChanged: (v) => setState(() => p['value'] = v),
-                        ) : Text((p['value'] ?? '').toString().isEmpty ? '—' : (p['value'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10))),
-                        const SizedBox(width: 8),
-                        SizedBox(width: 140, child: p['key'] == 'fiscal_year' ? TextFormField(
-                          key: ValueKey('fiscal-year-' + (p['value'] ?? '').toString()),
-                          initialValue: p['value']?.toString() ?? '01/01 - 12/31',
-                          decoration: const InputDecoration(labelText: 'السنة المالية', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
-                          style: const TextStyle(fontSize: 10), onChanged: (v) => p['value'] = v,
-                        ) : const Text('—', textAlign: TextAlign.center, style: TextStyle(fontSize: 10))),
-                        const SizedBox(width: 8),
-                        SizedBox(width: 100, child: p['key'] == 'supplier_bonus_variance' ? TextFormField(
-                          key: ValueKey('variance-' + (p['value'] ?? '').toString()),
-                          initialValue: p['value']?.toString() ?? '',
-                          decoration: const InputDecoration(labelText: 'نسبة %', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(fontSize: 10), onChanged: (v) => p['value'] = v,
-                        ) : const Text('—', textAlign: TextAlign.center, style: TextStyle(fontSize: 10))),
-                        const SizedBox(width: 8),
-                        checkColumn('تفعيل', mandatory || p['enabled'] == true, mandatory ? null : (v) => setState(() => p['enabled'] = v == true), 50),
-                        const SizedBox(width: 8),
-                        checkColumn('على الكل', mandatory || all, mandatory ? null : (v) => setState(() { p['all'] = v == true; if (v == true) p['user_ids'] = <String>[]; }), 58),
-                        const SizedBox(width: 8),
-                        checkColumn('مستخدمون', !all, mandatory ? null : (v) => setState(() { p['all'] = v != true; if (v == true && (p['user_ids'] as List).isEmpty) p['user_ids'] = <String>[]; }), 62),
-                        const SizedBox(width: 8),
-                        SizedBox(width: 112, height: 28, child: OutlinedButton(
-                          onPressed: mandatory || all ? null : () => _pickUsers(p),
-                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                          child: const Text('F1 اختيار مستخدمين', maxLines: 1, style: TextStyle(fontSize: 9)),
-                        )),
-                        const SizedBox(width: 8),
-                        SizedBox(width: 58, child: Text(mandatory ? '—' : (p['user_ids'] as List).length.toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
-                      ])),
-                    ),
-                  );
-                }),
-              ],
-            )),
+      Expanded(
+        child: tab == tabs.length - 1
+            ? _IdentityPolicyTable(companyId: widget.companyId)
+            : loading
+                ? const Center(child: CircularProgressIndicator())
+                : list.isEmpty
+                    ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
+                    : ListView(
+                        padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
+                        children: [
+                          Card(
+                            margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
+                            elevation: 0, color: const Color(0xFFF5EFFB),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+                              child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: const [
+                                SizedBox(width: 34, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 82, child: Text('كود السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 225, child: Text('بيانات السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 160, child: Text('القيمة / الاختيار', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 140, child: Text('السنة المالية', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 100, child: Text('نسبة %', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 50, child: Text('تفعيل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 58, child: Text('على الكل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 62, child: Text('مستخدمون', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 112, child: Text('اختيار مستخدمين', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
+                                SizedBox(width: 58, child: Text('عدد المحدد', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                              ])),
+                            ),
+                          ),
+                          ...List.generate(list.length, (index) {
+                            final p = list[index];
+                            final mandatory = p['mandatory'] == true;
+                            final all = p['all'] == true;
+                            final options = (p['options'] as List?)?.cast<String>() ?? const <String>[];
+                            final originalIndex = defaults.indexWhere((item) => item['key'] == p['key']) + 1;
+                            final policyCode = 'POL' + originalIndex.toString().padLeft(3, '0');
+                            Widget checkColumn(String label, bool value, ValueChanged<bool?>? onChanged, double width) => SizedBox(
+                              width: width,
+                              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9)),
+                                SizedBox(height: 25, child: Checkbox(value: value, onChanged: onChanged, visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)),
+                              ]),
+                            );
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.16)), borderRadius: BorderRadius.circular(6)),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                  SizedBox(width: 34, child: Text((index + 1).toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10))),
+                                  const SizedBox(width: 8),
+                                  SizedBox(width: 82, child: Text(policyCode, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600))),
+                                  const SizedBox(width: 8),
+                                  SizedBox(width: 225, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                    Text(p['ar'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                                    Text(p['en'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 9)),
+                                    if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF3E007D), fontSize: 9, fontWeight: FontWeight.bold)),
+                                  ])),
+                                  const SizedBox(width: 8),
+                                  SizedBox(width: 160, child: options.isNotEmpty ? DropdownButtonFormField<String>(
+                                    value: options.contains(p['value']) ? p['value'] as String : options.first,
+                                    isExpanded: true, isDense: true,
+                                    decoration: const InputDecoration(labelText: 'القيمة', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                    style: const TextStyle(fontSize: 10, color: Colors.black87),
+                                    items: options.map((v) => DropdownMenuItem(value: v, child: Text(v, maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
+                                    onChanged: (v) => setState(() => p['value'] = v),
+                                  ) : Text((p['value'] ?? '').toString().isEmpty ? '—' : (p['value'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10))),
+                                  const SizedBox(width: 8),
+                                  SizedBox(width: 140, child: p['key'] == 'fiscal_year' ? TextFormField(
+                                    key: ValueKey('fiscal-year-' + (p['value'] ?? '').toString()), initialValue: p['value']?.toString() ?? '01/01 - 12/31',
+                                    decoration: const InputDecoration(labelText: 'السنة المالية', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                    style: const TextStyle(fontSize: 10), onChanged: (v) => p['value'] = v,
+                                  ) : const Text('—', textAlign: TextAlign.center, style: TextStyle(fontSize: 10))),
+                                  const SizedBox(width: 8),
+                                  SizedBox(width: 100, child: p['key'] == 'supplier_bonus_variance' ? TextFormField(
+                                    key: ValueKey('variance-' + (p['value'] ?? '').toString()), initialValue: p['value']?.toString() ?? '',
+                                    decoration: const InputDecoration(labelText: 'نسبة %', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(fontSize: 10), onChanged: (v) => p['value'] = v,
+                                  ) : const Text('—', textAlign: TextAlign.center, style: TextStyle(fontSize: 10))),
+                                  const SizedBox(width: 8),
+                                  checkColumn('تفعيل', mandatory || p['enabled'] == true, mandatory ? null : (v) => setState(() => p['enabled'] = v == true), 50),
+                                  const SizedBox(width: 8),
+                                  checkColumn('على الكل', mandatory || all, mandatory ? null : (v) => setState(() { p['all'] = v == true; if (v == true) p['user_ids'] = <String>[]; }), 58),
+                                  const SizedBox(width: 8),
+                                  checkColumn('مستخدمون', !all, mandatory ? null : (v) => setState(() { p['all'] = v != true; if (v == true && (p['user_ids'] as List).isEmpty) p['user_ids'] = <String>[]; }), 62),
+                                  const SizedBox(width: 8),
+                                  SizedBox(width: 112, height: 28, child: OutlinedButton(
+                                    onPressed: mandatory || all ? null : () => _pickUsers(p),
+                                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                    child: const Text('F1 اختيار مستخدمين', maxLines: 1, style: TextStyle(fontSize: 9)),
+                                  )),
+                                  const SizedBox(width: 8),
+                                  SizedBox(width: 58, child: Text(mandatory ? '—' : (p['user_ids'] as List).length.toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
+                                ])),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+      ),
+    ]);
+  }
+}
+
+
+class _IdentityPolicyTable extends StatefulWidget {
+  const _IdentityPolicyTable({required this.companyId});
+  final String? companyId;
+  @override State<_IdentityPolicyTable> createState() => _IdentityPolicyTableState();
+}
+
+class _IdentityPolicyTableState extends State<_IdentityPolicyTable> {
+  final _db = Supabase.instance.client;
+  final _name = TextEditingController(text: 'سلسلة');
+  final _primary = TextEditingController(text: '#3E007D');
+  final _secondary = TextEditingController(text: '#FFA015');
+  final _accent = TextEditingController(text: '#FF27C3');
+  final _background = TextEditingController(text: '#FFFFFF');
+  final _logo = TextEditingController();
+  final _sizes = List<TextEditingController>.generate(5, (i) => TextEditingController(text: ['24','20','17','15','13'][i]));
+  final _colors = List<TextEditingController>.generate(5, (i) => TextEditingController(text: ['#3E007D','#3E007D','#3E007D','#333333','#666666'][i]));
+  final _labels = const ['العنوان الرئيسي','العنوان الفرعي الأول','العنوان الفرعي الثاني','العنوان الفرعي الثالث','النص والعناوين الصغيرة'];
+  final _fontOptions = const ['Tajawal','Kufam','Romman','Almarai','Noto Sans Arabic','Arial','Roboto'];
+  final _fonts = List<String>.filled(5, 'Tajawal');
+  final _bold = List<bool>.filled(5, false);
+  final _italic = List<bool>.filled(5, false);
+  final _underline = List<bool>.filled(5, false);
+  String _language = 'ar';
+  String? _logoBase64, _logoMime;
+  bool _loading = true, _saving = false, _editing = false;
+  String? _error, _message;
+  String get _company => (widget.companyId ?? '').trim();
+
+  @override void initState() { super.initState(); _load(); }
+  @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } super.dispose(); }
+
+  Future<void> _load() async {
+    if (_company.isEmpty) { setState(() { _loading = false; _error = 'اختر الشركة أولًا.'; }); return; }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final row = await _db.from('erp_program_settings').select().eq('company_id', _company).maybeSingle();
+      if (row != null) {
+        _name.text = (row['program_name'] ?? 'سلسلة').toString();
+        _language = (row['language_code'] ?? 'ar').toString();
+        _primary.text = (row['identity_primary_color'] ?? '#3E007D').toString();
+        _secondary.text = (row['identity_secondary_color'] ?? '#FFA015').toString();
+        _accent.text = (row['identity_accent_color'] ?? '#FF27C3').toString();
+        _background.text = (row['identity_background_color'] ?? '#FFFFFF').toString();
+        _logoBase64 = row['logo_base64']?.toString(); _logoMime = row['logo_mime_type']?.toString();
+        final styles = row['heading_styles'];
+        if (styles is List) {
+          for (var i = 0; i < 5 && i < styles.length; i++) {
+            if (styles[i] is Map) {
+              final s = Map<String,dynamic>.from(styles[i] as Map);
+              _sizes[i].text = (s['size'] ?? _sizes[i].text).toString();
+              _colors[i].text = (s['color'] ?? _colors[i].text).toString();
+              final font = (s['font'] ?? 'Tajawal').toString();
+              _fonts[i] = _fontOptions.contains(font) ? font : 'Tajawal';
+              _bold[i] = s['bold'] == true; _italic[i] = s['italic'] == true; _underline[i] = s['underline'] == true;
+            }
+          }
+        }
+      }
+      if (mounted) setState(() => _loading = false);
+    } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات الهوية البصرية: $e'; }); }
+  }
+
+  Future<void> _pickLogo() async {
+    if (!_editing) return;
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false, withData: true);
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.single;
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) throw StateError('تعذر قراءة الصورة.');
+      if (bytes.length > 1024 * 1024) throw ArgumentError('حجم الشعار يجب ألا يتجاوز 1 ميجابايت.');
+      final ext = (file.extension ?? '').toLowerCase();
+      final mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','webp':'image/webp'}[ext];
+      if (mime == null) throw ArgumentError('الصيغ المدعومة PNG وJPG وWEBP.');
+      setState(() { _logoBase64 = base64Encode(bytes); _logoMime = mime; _message = 'تم اختيار الشعار؛ احفظ التغييرات لتثبيته.'; });
+    } catch (e) { if (mounted) setState(() => _error = 'تعذر اختيار الشعار: $e'); }
+  }
+
+  Future<void> _save() async {
+    if (!_editing) { setState(() => _message = 'اضغط تعديل أولًا.'); return; }
+    if (_company.isEmpty) return;
+    final colors = [_primary.text,_secondary.text,_accent.text,_background.text,..._colors.map((c) => c.text)];
+    if (colors.any((v) => !RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$').hasMatch(v.trim()))) {
+      setState(() => _error = 'أدخل الألوان بصيغة HEX صحيحة مثل #3E007D.'); return;
+    }
+    for (var i = 0; i < 5; i++) {
+      final size = double.tryParse(_sizes[i].text.trim());
+      if (size == null || size < 8 || size > 72) { setState(() => _error = 'حجم الخط يجب أن يكون من 8 إلى 72.'); return; }
+    }
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final existing = await _db.from('erp_program_settings').select('program_name,language_code').eq('company_id', _company).maybeSingle();
+      final styles = List.generate(5, (i) => {'key':'heading_${i+1}','label':_labels[i],'font':_fonts[i],'size':double.parse(_sizes[i].text.trim()),'color':_colors[i].text.trim().toUpperCase(),'bold':_bold[i],'italic':_italic[i],'underline':_underline[i]});
+      await _db.from('erp_program_settings').upsert({
+        'company_id':_company,
+        'program_name':_name.text.trim().isEmpty ? (existing?['program_name'] ?? 'سلسلة') : _name.text.trim(),
+        'language_code':_language,
+        'logo_base64':_logoBase64,'logo_mime_type':_logoMime,
+        'identity_primary_color':_primary.text.trim().toUpperCase(),
+        'identity_secondary_color':_secondary.text.trim().toUpperCase(),
+        'identity_accent_color':_accent.text.trim().toUpperCase(),
+        'identity_background_color':_background.text.trim().toUpperCase(),
+        'heading_styles':styles,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':_db.auth.currentUser?.id,
+      }, onConflict:'company_id');
+      if (mounted) setState(() { _saving = false; _editing = false; _message = 'تم حفظ إعدادات الهوية البصرية.'; });
+    } catch (e) { if (mounted) setState(() { _saving = false; _error = 'تعذر الحفظ: $e'; }); }
+  }
+
+  Widget _field(TextEditingController c, {double width = 150, String? hint}) => SizedBox(width: width, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7), border: const OutlineInputBorder())));
+  Widget _row(int index, String code, String title, Widget value, {Widget extra = const SizedBox(width: 1)}) => Card(
+    margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0,
+    shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: .16)), borderRadius: BorderRadius.circular(6)),
+    child: Padding(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+      child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+        SizedBox(width: 38, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11))),
+        const SizedBox(width: 8), SizedBox(width: 95, child: Text(code, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700))),
+        const SizedBox(width: 8), SizedBox(width: 230, child: Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
+        const SizedBox(width: 8), SizedBox(width: 190, child: value),
+        const SizedBox(width: 8), SizedBox(width: 100, child: extra),
+      ]))),
+  );
+
+  @override Widget build(BuildContext context) {
+    final rows = <Widget>[
+      _row(0,'VIS001','اسم البرنامج',_field(_name)),
+      _row(1,'VIS002','لغة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:5),border:OutlineInputBorder()),items:const [DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
+      _row(2,'VIS003','شعار البرنامج',Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))])),
+      _row(3,'VIS004','اللون الأساسي',_field(_primary,hint:'#3E007D')),
+      _row(4,'VIS005','اللون الثانوي',_field(_secondary,hint:'#FFA015')),
+      _row(5,'VIS006','لون التمييز',_field(_accent,hint:'#FF27C3')),
+      _row(6,'VIS007','لون الخلفية',_field(_background,hint:'#FFFFFF')),
+    ];
+    for (var i=0;i<5;i++) {
+      rows.add(_row(7+i,'VIS${(i+8).toString().padLeft(3,'0')}','${_labels[i]} — الخط / الحجم / اللون',
+        SizedBox(width:190,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:_fontOptions.map((f)=>DropdownMenuItem(value:f,child:Text(f))).toList(),onChanged:_editing?(v){if(v!=null)setState(()=>_fonts[i]=v);}:null)),
+        extra: Row(children:[SizedBox(width:55,child:TextField(controller:_sizes[i],enabled:_editing,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,labelText:'حجم',contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:6),border:OutlineInputBorder()),style:const TextStyle(fontSize:10))),const SizedBox(width:4),SizedBox(width:80,child:TextField(controller:_colors[i],enabled:_editing,decoration:const InputDecoration(isDense:true,labelText:'لون HEX',contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:6),border:OutlineInputBorder()),style:const TextStyle(fontSize:10)))])));
+    }
+    return Column(children:[
+      Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),child:Row(children:[
+        const Expanded(child:Text('سياسات الهوية البصرية',style:TextStyle(fontWeight:FontWeight.bold,fontSize:14,color:Color(0xFF3E007D)))),
+        TextButton.icon(onPressed:_loading?null:_load,icon:const Icon(Icons.refresh,size:16),label:const Text('تحديث')),
+        FilledButton.tonalIcon(onPressed:_loading||_editing?null:()=>setState(()=>_editing=true),icon:const Icon(Icons.edit,size:16),label:const Text('تعديل')),
+        const SizedBox(width:4),
+        FilledButton.icon(onPressed:_saving||!_editing?null:_save,icon:const Icon(Icons.save,size:16),label:Text(_saving?'جارٍ الحفظ':'حفظ')),
+      ])),
+      if(_error!=null) Padding(padding:const EdgeInsets.all(4),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
+      if(_message!=null) Padding(padding:const EdgeInsets.all(4),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
+      Expanded(child:_loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.fromLTRB(5,1,5,3),children:[
+        Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:4),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:const [
+          SizedBox(width:38,child:Text('م',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:95,child:Text('كود السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:230,child:Text('بيانات السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:190,child:Text('القيمة / الاختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:100,child:Text('الحجم / اللون',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
+        ])))),
+        ...rows,
+      ])),
     ]);
   }
 }
