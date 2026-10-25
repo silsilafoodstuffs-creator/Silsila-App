@@ -109,11 +109,19 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         _repo.fetchItems(_company.text),
         _repo.fetchBranches(_company.text),
         _repo.fetchCategories(_company.text),
-        Supabase.instance.client.from('erp_geographic_data').select('id,parent_id,name_ar,level,is_active').eq('company_id', _company.text.trim()).eq('is_active', true).order('name_ar'),
       ]);
+      List<Map<String, dynamic>> geoRows = [];
+      try {
+        final geoResult = await Supabase.instance.client.from('erp_geographic_data')
+            .select('id,parent_id,name_ar,level,is_active')
+            .eq('company_id', _company.text.trim()).eq('is_active', true).order('name_ar');
+        geoRows = (geoResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
+      } catch (_) {
+        // Geographic metadata is optional for showing warehouse, item and branch grids.
+      }
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _branches = values[2]; _categories = values[3]; _geoRows = (values[4] as List).map((e) => Map<String, dynamic>.from(e)).toList();
+        _warehouses = values[0]; _items = values[1]; _branches = values[2]; _categories = values[3]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
