@@ -41,7 +41,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     try {
       final result=await Future.wait<dynamic>([
         client.from('erp_parties').select('id,party_code,party_name,party_name_en,party_kind,country,address,governorate,district,center,area,customer_type,transaction_type,sales_rep_employee_id,is_active').eq('company_id',cid).eq('party_kind',kind).order('party_code').limit(2000),
-        client.from('erp_geographic_data').select('id,parent_id,level,name_ar,name_en').eq('company_id',cid).eq('is_active',true).order('name_ar'),
+        _fetchAllGeo(client,cid),
         client.from('erp_party_classifications').select('id,name_ar,name_en').eq('company_id',cid).eq('party_kind',kind).eq('is_active',true).order('name_ar'),
         client.from('erp_employees').select('id,employee_code,full_name,job_title').eq('company_id',cid).eq('is_active',true).order('full_name'),
       ]);
@@ -52,6 +52,20 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       reps=(result[3] as List).map((e)=>Map<String,dynamic>.from(e)).where((e){final job=s(e['job_title']).toLowerCase(); return job.contains('مندوب')||job.contains('مبيعات')||job.contains('sales representative')||job.contains('sales rep');}).toList();
       if(mounted)setState(()=>{loading=false,error=null});
     } catch(e) { if(mounted)setState(()=>{loading=false,error='تعذر تحميل البيانات. تأكد من تطبيق ترحيل بيانات العملاء والموردين: $e'}); }
+  }
+  Future<List<Map<String,dynamic>>> _fetchAllGeo(SupabaseClient client, String cid) async {
+    final all = <Map<String,dynamic>>[];
+    var offset = 0;
+    while (true) {
+      final batch = await client.from('erp_geographic_data')
+          .select('id,parent_id,level,name_ar,name_en')
+          .eq('company_id', cid).eq('is_active', true)
+          .order('name_ar').range(offset, offset + 999);
+      all.addAll((batch as List).map((e) => Map<String,dynamic>.from(e)));
+      if (batch.length < 1000) break;
+      offset += 1000;
+    }
+    return all;
   }
   List<Map<String,dynamic>> _geoLevel(String level, [String? parent]) => geos.where((g)=>s(g['level'])==level && (parent==null ? g['parent_id']==null : s(g['parent_id'])==parent)).toList();
   Future<void> _new() async {
