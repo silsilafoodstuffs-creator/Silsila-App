@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:excel/excel.dart' hide Border;
+import 'package:data_table_2/data_table_2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
@@ -307,9 +308,10 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
           Expanded(
             child: _rows.isEmpty
               ? const Center(child: Text('ستظهر الصور المكتشفة هنا بعد استكشاف الموقع.'))
-              : Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(child: DataTable(
+               : DataTable2(
+                    fixedTopRows: 1,
+                    fixedLeftColumns: 4,
+                    minWidth: 1700,
                     columnSpacing: 8,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                     columns: [
@@ -381,8 +383,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       DataCell(_field(r.width, (v) => r.width = v)),
                       DataCell(_field(r.height, (v) => r.height = v)),
                     ])).toList(),
-                  ))),
-                )),
+                  ),
           ),
         ],
       ),
@@ -452,9 +453,10 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
         Expanded(
           child: _rows.isEmpty
             ? const Center(child: Text('افتح ملف ZIP لعرض البيانات وتعديلها.'))
-            : Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(child: DataTable(
+             : DataTable2(
+                  fixedTopRows: 1,
+                  fixedLeftColumns: 4,
+                  minWidth: 1700,
                   columnSpacing: 8,
                   columns: [
                     DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -517,8 +519,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                     DataCell(_field(r.width, (v) => r.width = v)),
                     DataCell(_field(r.height, (v) => r.height = v)),
                   ])).toList(),
-                ))),
-              )),
+                ),
         ),
       ]),
     );
