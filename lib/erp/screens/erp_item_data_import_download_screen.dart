@@ -11,23 +11,50 @@ const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
 
 Widget _kindCell(_ImportRow row, VoidCallback refresh) => SizedBox(
-  width: 132,
-  child: Row(mainAxisSize: MainAxisSize.min, children: [
-    Checkbox(
-      shape: const CircleBorder(),
-      value: row.kind == 'صنف',
-      onChanged: (checked) { if (checked == true) { row.kind = 'صنف'; refresh(); } },
-      visualDensity: VisualDensity.compact,
-    ),
-    const Text('صنف', style: TextStyle(fontSize: 12)),
-    Checkbox(
-      shape: const CircleBorder(),
-      value: row.kind == 'فئة',
-      onChanged: (checked) { if (checked == true) { row.kind = 'فئة'; refresh(); } },
-      visualDensity: VisualDensity.compact,
-    ),
-    const Text('فئة', style: TextStyle(fontSize: 12)),
-  ]),
+  width: 150,
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Expanded(
+        child: InkWell(
+          onTap: () { row.kind = 'صنف'; refresh(); },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Checkbox(
+                shape: const CircleBorder(),
+                value: row.kind == 'صنف',
+                onChanged: (checked) {
+                  if (checked == true) { row.kind = 'صنف'; refresh(); }
+                },
+                visualDensity: VisualDensity.compact,
+              ),
+              const Flexible(child: Text('صنف', style: TextStyle(fontSize: 12))),
+            ],
+          ),
+        ),
+      ),
+      Expanded(
+        child: InkWell(
+          onTap: () { row.kind = 'فئة'; refresh(); },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Checkbox(
+                shape: const CircleBorder(),
+                value: row.kind == 'فئة',
+                onChanged: (checked) {
+                  if (checked == true) { row.kind = 'فئة'; refresh(); }
+                },
+                visualDensity: VisualDensity.compact,
+              ),
+              const Flexible(child: Text('فئة', style: TextStyle(fontSize: 12))),
+            ],
+          ),
+        ),
+      ),
+    ],
+  ),
 );
 
 class _ImportRow {
