@@ -31,7 +31,7 @@ class ErpMasterDataService {
     _require(companyId, 'معرّف الشركة مطلوب.');
     var query = _db.from('erp_branches').select().eq('company_id', companyId);
     if (activeOnly) query = query.eq('is_active', true);
-    final rows = await query.order('branch_name');
+    final rows = await query.order('branch_code');
     return _maps(rows);
   }
 
