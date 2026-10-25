@@ -151,10 +151,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   String _executivePeriod = 'من بداية النشاط';
   double? _executivePreviousSales;
   double? _executivePreviousPurchases;
-  double? _executivePreviousGrossProfit;
   double? _executivePreviousCollections;
-  double? _executivePreviousReceivables;
-  double? _executivePreviousInventoryValue;
   String? _executiveMetricsError;
   double? _executiveSales;
   double? _executiveGrossProfit;
@@ -1809,10 +1806,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveInventoryValue = numberValue(currentData, 'inventory_value_estimate');
         _executivePreviousSales = numberValue(previousData, 'sales');
         _executivePreviousCollections = numberValue(previousData, 'collections');
-        _executivePreviousReceivables = numberValue(previousData, 'receivables');
         _executivePreviousPurchases = numberValue(previousData, 'purchases');
-        _executivePreviousGrossProfit = numberValue(previousData, 'gross_profit_estimate');
-        _executivePreviousInventoryValue = numberValue(previousData, 'inventory_value_estimate');
         _executiveDailySales = numberList(currentData, 'daily_sales');
         _executiveDailyCollections = numberList(currentData, 'daily_collections');
         _executiveInventoryGroupLabels = stringList(currentData, 'inventory_group_labels');
@@ -2415,29 +2409,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       ]),
     );
   }
-
-  Widget _executiveKpi(String title, String value, String note, IconData icon, Color color) =>
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE6DDED)),
-          boxShadow: const [
-            BoxShadow(color: Color(0x08000000), blurRadius: 5, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Row(children: [
-          Container(width: 46, height: 46, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: color, size: 25)),
-          const SizedBox(width: 11),
-          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 3),
-            FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: Text(value, maxLines: 1, style: TextStyle(color: color, fontSize: 25, fontWeight: FontWeight.w900))),
-            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black45, fontSize: 13)),
-          ])),
-        ]),
-      );
 
   void _goHome() => setState(() {
     _module = 'إعدادات عامة';
