@@ -29,7 +29,7 @@ class _ErpCustomerCreditScreenState extends State<ErpCustomerCreditScreen> {
     try {
       final data=await client.from('erp_parties').select('id,party_code,party_name,transaction_type,credit_limit').eq('company_id',company).eq('party_kind','customer').order('party_code').limit(2000);
       if(!mounted)return;
-      setState(()=>{rows:(data as List).map((e)=>Map<String,dynamic>.from(e)).toList(),loading=false,error=null});
+      setState(() { rows = (data as List).map((e)=>Map<String,dynamic>.from(e)).toList(); loading = false; error = null; });
     } catch(e) { if(mounted)setState(()=>{loading=false,error:'تعذر تحميل ائتمان العملاء: $e'}); }
   }
   void _select(Map<String,dynamic> row) { setState(()=>selectedId=s(row['id'])); transactionType=s(row['transaction_type']).isEmpty?'نقدي':s(row['transaction_type']); limitController.text=s(row['credit_limit']).isEmpty?'0':s(row['credit_limit']); }
@@ -37,11 +37,11 @@ class _ErpCustomerCreditScreenState extends State<ErpCustomerCreditScreen> {
     final client=db; final id=selectedId; final company=widget.companyId; final limit=double.tryParse(limitController.text.trim());
     if(client==null||id==null||company==null)return;
     if(limit==null||limit<0){setState(()=>error='أدخل حد ائتمان صحيحًا غير سالب.');return;}
-    setState(()=>{saving=true,error=null,message=null});
+    setState(() { saving = true; error = null; message = null; });
     try {
       await client.from('erp_parties').update({'transaction_type':transactionType,'credit_limit':limit}).eq('id',id).eq('company_id',company).eq('party_kind','customer');
-      if(!mounted)return; setState(()=>{saving=false,message='تم حفظ سياسة ائتمان العميل.'}); await _load();
-    } catch(e) { if(mounted)setState(()=>{saving=false,error:'تعذر حفظ سياسة الائتمان: $e'}); }
+      if(!mounted)return; setState(() { saving = false; message = 'تم حفظ سياسة ائتمان العميل.'; }); await _load();
+    } catch(e) { if(mounted)setState(() { saving = false; error = 'تعذر حفظ سياسة الائتمان: $e'; }); }
   }
   @override
   Widget build(BuildContext context) => Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
