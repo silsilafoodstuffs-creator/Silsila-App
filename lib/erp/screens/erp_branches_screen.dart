@@ -110,7 +110,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       });
       return;
     }
-    final defaultCode = 'BR-${(_rows.length + 1).toString().padLeft(3, '0')}';
+    final defaultCode = (_rows.length + 1).toString().padLeft(3, '0');
     final code = TextEditingController(text: row == null ? defaultCode : _s(row['branch_code']));
     final name = TextEditingController(text: _s(row?['branch_name']));
     final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
