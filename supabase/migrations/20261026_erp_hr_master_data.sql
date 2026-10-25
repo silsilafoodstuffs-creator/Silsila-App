@@ -56,4 +56,8 @@ do $$ declare c record; d record; dep uuid; begin
  ) v(code,ar,en,dept_code) loop select id into dep from public.erp_hr_departments where company_id=c.id and department_code=d.dept_code;
  insert into public.erp_hr_jobs(company_id,job_code,name_ar,name_en,department_id) values(c.id,d.code,d.ar,d.en,dep) on conflict(company_id,job_code) do nothing; end loop;
  insert into public.erp_hr_work_locations(company_id,location_code,name_ar,location_type) values(c.id,'LOC-001','الإدارة المركزية','central') on conflict(company_id,location_code) do nothing;
+  insert into public.erp_hr_work_locations(company_id,location_code,name_ar,location_type,address,is_active)
+  select b.company_id, b.branch_code, b.branch_name, 'branch', b.address, coalesce(b.is_active,true)
+  from public.erp_branches b where b.company_id=c.id and coalesce(b.is_active,true)
+  on conflict(company_id,location_code) do update set name_ar=excluded.name_ar,address=excluded.address,is_active=excluded.is_active;
  end loop; end $$;
