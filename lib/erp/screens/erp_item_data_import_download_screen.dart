@@ -363,7 +363,6 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
                       DataCell(Text('${_rows.indexOf(r) + 1}')),
                       DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
-                      DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(_kindCell(r, () => setState(() {}))),
                     DataCell(_codeModeCell(r, () => setState(() {}))),
                     DataCell(IconButton(tooltip: 'بحث F1 في قائمة الصنف أو الفئة', onPressed: () async {
