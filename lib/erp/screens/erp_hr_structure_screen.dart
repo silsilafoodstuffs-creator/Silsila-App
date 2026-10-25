@@ -103,6 +103,48 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     }
   }
 
+  Future<void> _edit(Map<String, dynamic> row, String kind) async {
+    _code.text = row[kind == 'job' ? 'job_code' : kind == 'location' ? 'location_code' : 'department_code']?.toString() ?? '';
+    _ar.text = row['name_ar']?.toString() ?? '';
+    _en.text = row['name_en']?.toString() ?? '';
+    final saved = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('تعديل البيانات الأساسية'),
+      content: SizedBox(width: 440, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: _code, decoration: const InputDecoration(labelText: 'الكود')),
+        TextField(controller: _ar, decoration: const InputDecoration(labelText: 'الاسم بالعربية')),
+        TextField(controller: _en, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية')),
+      ])),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ التعديل')),
+      ],
+    ));
+    if (saved != true || _code.text.trim().isEmpty || _ar.text.trim().isEmpty || _db == null) return;
+    final table = kind == 'job' ? 'erp_hr_jobs' : kind == 'location' ? 'erp_hr_work_locations' : 'erp_hr_departments';
+    final codeColumn = kind == 'job' ? 'job_code' : kind == 'location' ? 'location_code' : 'department_code';
+    try {
+      await _db!.from(table).update({
+        codeColumn: _code.text.trim().toUpperCase(),
+        'name_ar': _ar.text.trim(),
+        if (kind != 'location') 'name_en': _en.text.trim(),
+      }).eq('id', row['id']).eq('company_id', _companyId);
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعديل السجل: ' + e.toString())));
+    }
+  }
+
+  Future<void> _toggleActive(Map<String, dynamic> row, String kind) async {
+    if (_db == null) return;
+    final table = kind == 'job' ? 'erp_hr_jobs' : kind == 'location' ? 'erp_hr_work_locations' : 'erp_hr_departments';
+    try {
+      await _db!.from(table).update({'is_active': row['is_active'] != true}).eq('id', row['id']).eq('company_id', _companyId);
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تغيير الحالة: ' + e.toString())));
+    }
+  }
+
   Widget _recordCard(Map<String, dynamic> row, String codeKey, String nameKey, String kind) {
     final childDepartments = kind == 'department'
         ? _departments.where((d) => d['parent_id'] == row['id']).toList()
@@ -121,6 +163,10 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
         leading: Icon(kind == 'location' ? Icons.location_on_outlined : kind == 'job' ? Icons.work_outline : Icons.account_tree_outlined, color: _hrStructureOrange),
         title: Text(row[codeKey].toString() + ' • ' + row[nameKey].toString(), style: const TextStyle(fontWeight: FontWeight.w800)),
         subtitle: Text(row['is_active'] == false ? 'غير نشط' : 'نشط'),
+        trailing: Wrap(spacing: 2, children: [
+          IconButton(tooltip: 'تعديل', onPressed: () => _edit(row, kind), icon: const Icon(Icons.edit_outlined, color: _hrStructurePurple)),
+          IconButton(tooltip: row['is_active'] == true ? 'إيقاف' : 'تنشيط', onPressed: () => _toggleActive(row, kind), icon: Icon(row['is_active'] == true ? Icons.pause_circle_outline : Icons.check_circle_outline, color: _hrStructureOrange)),
+        ]),
         children: childWidgets,
       ),
     );
