@@ -32,7 +32,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'skip_supply_order','category':'شرائية','ar':'تخطي أمر التوريد في أمر الشراء','en':'Skip supply order in purchase order'},
     {'key':'skip_purchase_order','category':'شرائية','ar':'تخطي أمر الشراء في فاتورة الشراء','en':'Skip purchase order in purchase invoice'},
     {'key':'supplier_bonus_variance','category':'شرائية','ar':'تحديد نسبة فروقات وارد حوافز الموردين','en':'Set supplier incentives incoming variance','value':'0.025%'},
-    {'key':'national_id_required','category':'إدارية','ar':'شرط تسجيل الرقم القومي عند تسجيل موظف جديد','en':'Require national ID for new employees','all':true},
+    {'key':'national_id_required','category':'إدارية','ar':'الرقم القومي الزامي لتسجيل موظف جديد','en':'Require national ID for new employees','all':true},
   ];
   final db = Supabase.instance.client;
   final values = <String,Map<String,dynamic>>{};
