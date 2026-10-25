@@ -40,8 +40,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   @override void initState(){super.initState(); for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
   @override void didUpdateWidget(covariant ErpProgramPoliciesScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
   Future<void> _load() async {
-    if(company.isEmpty){setState(()=>{loading=false,error='اختر الشركة وسجّل الدخول أولاً.'});return;}
-    setState(()=>{loading=true,error=null,message=null});
+    if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; });return;}
+    setState(() { loading=true; error=null; message=null; });
     try {
       var rows=await db.from('erp_program_policies').select().eq('company_id',company);
       if ((rows as List).isEmpty) {
@@ -51,17 +51,17 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       }
       for(final row in (rows as List).whereType<Map<String,dynamic>>()) { final key=(row['policy_key']??'').toString(); if(!values.containsKey(key))continue; final p=values[key]!; p['enabled']=row['is_enabled']==true; p['all']=row['apply_to_all']==true || p['mandatory']==true; p['value']=(row['policy_value']??p['value']??'').toString(); p['user_ids']=List<String>.from((row['user_ids'] as List?)??const []); }
       final us=await db.from('erp_users').select('id,user_code,name_ar').eq('company_id',company);
-      if(mounted)setState(()=>{users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)),loading=false});
-    } catch(e){if(mounted)setState(()=>{loading=false,error='تعذر تحميل السياسات. طبّق migration سياسات البرنامج أولاً. $e'});}
+      if(mounted)setState(() { users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)); loading=false; });
+    } catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل السياسات. طبّق migration سياسات البرنامج أولاً. $e'; });}
   }
   Future<void> _save() async {
-    setState(()=>{saving=true,error=null,message=null});
-    try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??''}).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(()=>{saving=false,message='تم حفظ سياسات البرنامج.'}); } catch(e){if(mounted)setState(()=>{saving=false,error='تعذر حفظ السياسات: $e'});}
+    setState(() { saving=true; error=null; message=null; });
+    try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??''}).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; });}
   }
   Future<void> _pickUsers(Map<String,dynamic> p) async {
     final chosen=<String>{...List<String>.from(p['user_ids'] as List)};
     final result=await showDialog<Set<String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,ds)=>AlertDialog(title:const Text('اختيار المستخدمين — F1'),content:SizedBox(width:480,child:Column(mainAxisSize:MainAxisSize.min,children:[Align(alignment:Alignment.centerRight,child:TextButton(onPressed:()=>ds(() { if(chosen.length==users.length){chosen.clear();}else{chosen.addAll(users.map((u)=>(u['id']??'').toString()));} }),child:const Text('تحديد الكل / إلغاء تحديد الكل'))),Flexible(child:ListView(shrinkWrap:true,children:users.map((u){final id=(u['id']??'').toString();final name=(u['name_ar']??u['user_code']??id).toString();return CheckboxListTile(dense:true,value:chosen.contains(id),title:Text(name),onChanged:(v)=>ds(() { if(v==true){chosen.add(id);}else{chosen.remove(id);} }));}).toList()))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,chosen),child:const Text('حفظ'))])));
-    if(result!=null&&mounted)setState(()=>{p['user_ids']=result.toList(),p['all']=false});
+    if(result!=null&&mounted)setState(() { p['user_ids']=result.toList(); p['all']=false; });
   }
   int _daysInMonth(int month) => month == 2 ? 29 : ([4,6,9,11].contains(month) ? 30 : 31);
 
