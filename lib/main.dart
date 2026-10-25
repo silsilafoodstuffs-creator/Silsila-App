@@ -318,6 +318,12 @@ class SilsilaApp extends StatelessWidget {
           secondary: orange,
         ),
         // Circular, modern checkbox styling shared by the customer app and ERP.
+        dropdownButtonTheme: const DropdownButtonThemeData(
+          isDense: true,
+          menuMaxHeight: 320,
+          alignment: AlignmentDirectional.centerStart,
+          style: TextStyle(fontSize: 12, color: Color(0xFF241735)),
+        ),
         checkboxTheme: CheckboxThemeData(
           shape: const CircleBorder(),
           side: const BorderSide(color: purple, width: 1.6),
@@ -387,8 +393,8 @@ class SilsilaApp extends StatelessWidget {
           filled: true,
           fillColor: Colors.white,
           isDense: true,
-          constraints: const BoxConstraints(minHeight: 54, maxHeight: 58),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          constraints: const BoxConstraints(minHeight: 40, maxHeight: 44),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           disabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(6),
             borderSide: const BorderSide(color: Color(0xFFD8CDE3)),
