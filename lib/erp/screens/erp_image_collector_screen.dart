@@ -1281,8 +1281,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   if(mode=='new') Padding(
                     padding: const EdgeInsets.symmetric(horizontal:3),
                     child: Text(kind=='category'
-                      ? 'كود مقترح: يُنشأ تلقائيًا'
-                      : 'كود مقترح: يُنشأ تلقائيًا',
+                      ? 'كود الفئة: يُنشأ تلقائيًا عند الحفظ'
+                      : 'الكود المقترح: ${_suggestedCodeLoaded ? _nextSuggestedItemCode : 'جارٍ التحديد…'}',
                       style: const TextStyle(fontSize:11,fontWeight:FontWeight.w800,color:_purple)),
                   ),
                   const SizedBox(width:2),
