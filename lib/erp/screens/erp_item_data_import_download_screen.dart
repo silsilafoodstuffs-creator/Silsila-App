@@ -256,9 +256,36 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                         ),
                       ])),
                       const DataColumn(label: Text('م')),
-                      const DataColumn(label: Text('الصورة')),
+                      DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Text('الصورة'),
+                        Checkbox(
+                          shape: const CircleBorder(),
+                          visualDensity: VisualDensity.compact,
+                          value: _rows.isNotEmpty && _rows.every((r) => r.selected),
+                          onChanged: (v) => setState(() {
+                            _selectAll = v ?? false;
+                            for (final r in _rows) { r.selected = _selectAll; }
+                          }),
+                        ),
+                      ])),
                       const DataColumn(label: Text('الاسم العربي المقترح')),
-                      const DataColumn(label: Text('النوع')),
+                      DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Text('النوع'),
+                        Checkbox(
+                          shape: const CircleBorder(),
+                          visualDensity: VisualDensity.compact,
+                          value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'صنف'),
+                          onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'صنف'; } }); },
+                        ),
+                        const Text('صنف', style: TextStyle(fontSize: 11)),
+                        Checkbox(
+                          shape: const CircleBorder(),
+                          visualDensity: VisualDensity.compact,
+                          value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'فئة'),
+                          onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'فئة'; } }); },
+                        ),
+                        const Text('فئة', style: TextStyle(fontSize: 11)),
+                      ])),
                       const DataColumn(label: Text('الفئة الرئيسية')),
                       const DataColumn(label: Text('الفئة الفرعية')),
                       const DataColumn(label: Text('الوحدة الكبرى')),
@@ -367,9 +394,36 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                       }),
                     ])),
                     const DataColumn(label: Text('م')),
-                    const DataColumn(label: Text('الصورة')),
+                    DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Text('الصورة'),
+                      Checkbox(
+                        shape: const CircleBorder(),
+                        visualDensity: VisualDensity.compact,
+                        value: _rows.isNotEmpty && _rows.every((r) => r.selected),
+                        onChanged: (v) => setState(() {
+                          _all = v ?? false;
+                          for (final r in _rows) { r.selected = _all; }
+                        }),
+                      ),
+                    ])),
                     const DataColumn(label: Text('الاسم العربي')),
-                    const DataColumn(label: Text('النوع')),
+                    DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Text('النوع'),
+                      Checkbox(
+                        shape: const CircleBorder(),
+                        visualDensity: VisualDensity.compact,
+                        value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'صنف'),
+                        onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'صنف'; } }); },
+                      ),
+                      const Text('صنف', style: TextStyle(fontSize: 11)),
+                      Checkbox(
+                        shape: const CircleBorder(),
+                        visualDensity: VisualDensity.compact,
+                        value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'فئة'),
+                        onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'فئة'; } }); },
+                      ),
+                      const Text('فئة', style: TextStyle(fontSize: 11)),
+                    ])),
                     const DataColumn(label: Text('الفئة الرئيسية')),
                     const DataColumn(label: Text('الفئة الفرعية')),
                     const DataColumn(label: Text('الوحدة الكبرى')),
