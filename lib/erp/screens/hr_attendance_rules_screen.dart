@@ -19,7 +19,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
   int? _editingShiftIndex;
   final weekdays = const ['السبت','الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
   final departments = const ['كل الإدارات','الإدارة العامة','المبيعات','المخازن','الحسابات','الموارد البشرية'];
-  final branches = const ['كل الفروع','الإدارة الرئيسية','فرع القاهرة','فرع الجيزة','فرع الإسكندرية'];
+  final branches = const ['كل الفروع','الإدارة الرئيسية','فرع القاهرة','فرع الجيزة','فرع القليوبية','فرع الشرقية'];
 
   final _settingsRepository = ErpCompanySettingsRepository();
   bool _savingSettings = false;
