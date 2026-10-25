@@ -1094,7 +1094,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _page == 'أنواع المستخدمين' ||
                       _page == 'المستخدمين' ||
                       _page == 'قوالب صلاحيات المستخدمين' ||
-                      _page == 'صلاحيات المستخدمين'
+                      _page == 'صلاحيات المستخدمين' ||
+                      _page == 'سياسات البرنامج'
                     )
                         ? Padding(
                             padding: EdgeInsets.all(pagePadding),
@@ -1103,14 +1104,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                   ? ErpGeographicDataScreen(
                                       companyId: _appManagementCompanyId,
                                     )
-                                  : ErpUserAdminScreen(
-                                      companyId: _appManagementCompanyId,
-                                      initialView: _page == 'قوالب صلاحيات المستخدمين'
-                                          ? 'templates'
-                                          : _page == 'صلاحيات المستخدمين'
-                                              ? 'permissions'
-                                              : 'hierarchy',
-                                    ),
+                                  : _page == 'سياسات البرنامج'
+                                      ? ErpProgramPoliciesScreen(
+                                          companyId: _appManagementCompanyId,
+                                        )
+                                      : ErpUserAdminScreen(
+                                          companyId: _appManagementCompanyId,
+                                          initialView: _page == 'قوالب صلاحيات المستخدمين'
+                                              ? 'templates'
+                                              : _page == 'صلاحيات المستخدمين'
+                                                  ? 'permissions'
+                                                  : 'hierarchy',
+                                        ),
                             ),
                           )
                         : SingleChildScrollView(
