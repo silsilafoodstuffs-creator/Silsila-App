@@ -96,35 +96,92 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     ]);
   }
 
-  @override Widget build(BuildContext context){final list=values.values.where((p)=>p['category']==tabs[tab]).toList();return Column(children:[Container(color:const Color(0xFF3E007D),padding:const EdgeInsets.all(12),child:Row(children:[const Icon(Icons.policy_outlined,color:Color(0xFFFFA015),size:28),const SizedBox(width:8),const Expanded(child:Text('سياسات البرنامج',style:TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:20))),TextButton.icon(onPressed:loading?null:_load,icon:const Icon(Icons.refresh,color:Colors.white),label:const Text('تحديث',style:TextStyle(color:Colors.white))),FilledButton.icon(onPressed:saving?null:_save,icon:const Icon(Icons.save),label:Text(saving?'جارٍ الحفظ':'حفظ'))])),if(error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(error!,style:const TextStyle(color:Colors.red))),if(message!=null)Padding(padding:const EdgeInsets.all(8),child:Text(message!,style:const TextStyle(color:Colors.green))),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:List.generate(tabs.length,(i)=>Padding(padding:const EdgeInsets.all(4),child:ChoiceChip(label:Text(tabs[i]),selected:tab==i,onSelected:(_)=>setState(()=>tab=i)))))),Expanded(child:loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.all(10),children:list.map((p){final mandatory=p['mandatory']==true;final all=p['all']==true;final options=(p['options'] as List?)?.cast<String>()??const <String>[];return Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[
-SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
-SizedBox(width:300,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-Text(p['ar'].toString(),style:const TextStyle(fontWeight:FontWeight.bold)),
-Text(p['en'].toString(),style:const TextStyle(color:Colors.black54,fontSize:11)),
-if(mandatory)const Text('إلزامي للجميع',style:TextStyle(color:Color(0xFF3E007D),fontSize:11,fontWeight:FontWeight.bold)),
-])),
-const SizedBox(width:12),
-SizedBox(width:105,child:Column(mainAxisSize:MainAxisSize.min,children:[
-const Text('تفعيل السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:11)),
-Checkbox(value:mandatory?true:p['enabled']==true,onChanged:mandatory?null:(v)=>setState(()=>p['enabled']=v==true)),
-])),
-SizedBox(width:105,child:Column(mainAxisSize:MainAxisSize.min,children:[
-const Text('تطبق على الكل',textAlign:TextAlign.center,style:TextStyle(fontSize:11)),
-Checkbox(value:mandatory||all,onChanged:mandatory?null:(v)=>setState(() { p['all']=v==true; if(v==true)p['user_ids']=<String>[]; })),
-])),
-if(!mandatory)SizedBox(width:115,child:Column(mainAxisSize:MainAxisSize.min,children:[
-const Text('اختيار مستخدمين',textAlign:TextAlign.center,style:TextStyle(fontSize:11)),
-Checkbox(value:!all,onChanged:(v)=>setState(() { p['all']=v!=true; if(v==true&&((p['user_ids'] as List).isEmpty))p['user_ids']=<String>[]; })),
-])),
-if(!mandatory)Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:OutlinedButton.icon(
-onPressed:all?null:()=>_pickUsers(p),
-icon:const Icon(Icons.person_search),
-label:const Text('F1 اختيار مستخدمين'),
-)),
-if(!mandatory&&!all)Padding(padding:const EdgeInsets.only(right:8),child:Text('المحدد: ${(p['user_ids'] as List).length}')),
-])),
-if(options.isNotEmpty)DropdownButtonFormField<String>(value:options.contains(p['value'])?p['value'] as String:options.first,isExpanded:true,decoration:const InputDecoration(labelText:'القيمة الافتراضية'),items:options.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>setState(()=>p['value']=v)),
-if(p['key']=='fiscal_year')_fiscalRangeEditor(p),
-if(p['key']=='supplier_bonus_variance')TextFormField(key:ValueKey('${p['key']}-${p['value']}'),initialValue:p['value']?.toString()??'',decoration:const InputDecoration(labelText:'نسبة الفروقات %'),keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(v)=>p['value']=v),
-])));
-}).toList()))]);}
+
+  @override
+  Widget build(BuildContext context) {
+    final list = values.values.where((p) => p['category'] == tabs[tab]).toList();
+    return Column(children: [
+      Container(
+        color: const Color(0xFF3E007D),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(children: [
+          const Icon(Icons.policy_outlined, color: Color(0xFFFFA015), size: 23),
+          const SizedBox(width: 6),
+          const Expanded(child: Text('سياسات البرنامج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17))),
+          TextButton.icon(onPressed: loading ? null : _load, icon: const Icon(Icons.refresh, color: Colors.white, size: 17), label: const Text('تحديث', style: TextStyle(color: Colors.white))),
+          FilledButton.icon(onPressed: saving ? null : _save, icon: const Icon(Icons.save, size: 17), label: Text(saving ? 'جارٍ الحفظ' : 'حفظ')),
+        ]),
+      ),
+      if (error != null) Padding(padding: const EdgeInsets.all(4), child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 11))),
+      if (message != null) Padding(padding: const EdgeInsets.all(4), child: Text(message!, style: const TextStyle(color: Colors.green, fontSize: 11))),
+      SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: List.generate(tabs.length, (i) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+        child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
+      )))),
+      Expanded(child: loading ? const Center(child: CircularProgressIndicator()) : ListView.builder(
+        padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
+        itemCount: list.length,
+        itemBuilder: (context, index) {
+          final p = list[index];
+          final mandatory = p['mandatory'] == true;
+          final all = p['all'] == true;
+          final options = (p['options'] as List?)?.cast<String>() ?? const <String>[];
+          Widget checkColumn(String label, bool value, ValueChanged<bool?>? onChanged, double width) => SizedBox(
+            width: width,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9)),
+              SizedBox(height: 25, child: Checkbox(value: value, onChanged: onChanged, visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)),
+            ]),
+          );
+          return Card(
+            margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
+            elevation: 0,
+            shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.16)), borderRadius: BorderRadius.circular(6)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+              child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(width: 225, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(p['ar'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                  Text(p['en'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 9)),
+                  if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF3E007D), fontSize: 9, fontWeight: FontWeight.bold)),
+                ])),
+                const SizedBox(width: 4),
+                checkColumn('تفعيل', mandatory || p['enabled'] == true, mandatory ? null : (v) => setState(() => p['enabled'] = v == true), 50),
+                checkColumn('على الكل', mandatory || all, mandatory ? null : (v) => setState(() { p['all'] = v == true; if (v == true) p['user_ids'] = <String>[]; }), 58),
+                if (!mandatory) checkColumn('مستخدمون', !all, (v) => setState(() { p['all'] = v != true; if (v == true && (p['user_ids'] as List).isEmpty) p['user_ids'] = <String>[]; }), 62),
+                if (!mandatory) Padding(padding: const EdgeInsets.symmetric(horizontal: 2), child: SizedBox(
+                  width: 112, height: 28,
+                  child: OutlinedButton(
+                    onPressed: all ? null : () => _pickUsers(p),
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                    child: const Text('F1 اختيار مستخدمين', maxLines: 1, style: TextStyle(fontSize: 9)),
+                  ),
+                )),
+                if (!mandatory && !all) SizedBox(width: 50, child: Text('المحدد: ' + (p['user_ids'] as List).length.toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
+                if (options.isNotEmpty) SizedBox(width: 160, child: DropdownButtonFormField<String>(
+                  value: options.contains(p['value']) ? p['value'] as String : options.first,
+                  isExpanded: true, isDense: true,
+                  decoration: const InputDecoration(labelText: 'القيمة', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                  style: const TextStyle(fontSize: 10, color: Colors.black87),
+                  items: options.map((v) => DropdownMenuItem(value: v, child: Text(v, maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
+                  onChanged: (v) => setState(() => p['value'] = v),
+                )),
+                if (p['key'] == 'fiscal_year') SizedBox(width: 140, child: TextFormField(
+                  key: ValueKey('fiscal-year-' + (p['value'] ?? '').toString()),
+                  initialValue: p['value']?.toString() ?? '01/01 - 12/31',
+                  decoration: const InputDecoration(labelText: 'السنة المالية', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                  style: const TextStyle(fontSize: 10), onChanged: (v) => p['value'] = v,
+                )),
+                if (p['key'] == 'supplier_bonus_variance') SizedBox(width: 100, child: TextFormField(
+                  key: ValueKey('variance-' + (p['value'] ?? '').toString()),
+                  initialValue: p['value']?.toString() ?? '',
+                  decoration: const InputDecoration(labelText: 'نسبة %', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(fontSize: 10), onChanged: (v) => p['value'] = v,
+                )),
+              ])),
+            ),
+          );
+        },
+      )),
+    ]);
+  }
