@@ -176,7 +176,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       }
       final saved=await _db!.from('erp_user_permissions').select('user_id,menu_key,allow_access,can_add,can_edit,can_delete,can_save,can_print,can_export_excel,can_export_pdf,show_in_quick_tasks').eq('company_id',company);
       _draft.clear();for(final u in users){_draft[_s(u['user_id'])]=_blank('مخصص بلا صلاحيات');}
-      final fields={'مسموح':'allow_access','إضافة':'can_add','تعديل':'can_edit','حذف':'can_delete','حفظ':'can_save','طباعة':'can_print','Excel':'can_export_excel','PDF':'can_export_pdf'};
+      final fields={'مسموح':'allow_access','إضافة':'can_add','تعديل':'can_edit','حذف':'can_delete','حفظ':'can_save','طباعة':'can_print','Excel':'can_export_excel','PDF':'can_export_pdf','وصول سريع':'show_in_quick_tasks'};
       for(final r in (saved as List).whereType<Map<String,dynamic>>()){
         final uid=_s(r['user_id']),key=_s(r['menu_key']);if(!_draft.containsKey(uid))continue;
         for(final a in fields.entries){_draft[uid]![key+'::'+a.key]=r[a.value]==true;}
