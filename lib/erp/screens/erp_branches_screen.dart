@@ -115,8 +115,6 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     final name = TextEditingController(text: _s(row?['branch_name']));
     final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
     final email = TextEditingController(text: _s(row?['email']));
-    final latitude = TextEditingController(text: _s(row?['latitude']));
-    final longitude = TextEditingController(text: _s(row?['longitude']));
     final phone2 = TextEditingController(text: _s(row?['phone2']));
     final landline1 = TextEditingController(text: _s(row?['landline1']));
     final landline2 = TextEditingController(text: _s(row?['landline2']));
@@ -165,13 +163,6 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
                 onChanged: (v) => setState(() => areaId = v)),
               const SizedBox(height: 10),
               TextField(controller: address, maxLines: 2, decoration: const InputDecoration(labelText: 'العنوان', border: OutlineInputBorder())),
-              const SizedBox(height: 10),
-              Row(children: [
-                Expanded(child: TextField(controller: latitude, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'خط العرض', border: OutlineInputBorder()))),
-                const SizedBox(width: 8),
-                Expanded(child: TextField(controller: longitude, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'خط الطول', border: OutlineInputBorder()))),
-                IconButton(tooltip: 'فتح الخريطة لتحديد الإحداثيات', onPressed: () async { await launchUrl(Uri.parse('https://www.google.com/maps'), mode: LaunchMode.externalApplication); }, icon: const Icon(Icons.map_outlined, color: _branchPurple)),
-              ]),
             ]),
           ),
         ),
@@ -182,7 +173,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       ),
     );
     if (result != true) {
-      code.dispose(); name.dispose(); nameEn.dispose(); email.dispose(); latitude.dispose(); longitude.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
+      code.dispose(); name.dispose(); nameEn.dispose(); email.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
       return;
     }
     try {
@@ -202,8 +193,6 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         'branch_name': name.text.trim(),
         'branch_name_en': nameEn.text.trim().isEmpty ? null : nameEn.text.trim(),
         'email': email.text.trim().isEmpty ? null : email.text.trim(),
-        'latitude': double.tryParse(latitude.text.trim()),
-        'longitude': double.tryParse(longitude.text.trim()),
         'phone2': phone2.text.trim().isEmpty ? null : phone2.text.trim(),
         'landline1': landline1.text.trim().isEmpty ? null : landline1.text.trim(),
         'landline2': landline2.text.trim().isEmpty ? null : landline2.text.trim(),
@@ -265,8 +254,6 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         'branch_name': name,
         'branch_name_en': _editFields['branch_name_en']!.text.trim().isEmpty ? null : _editFields['branch_name_en']!.text.trim(),
         'email': _editFields['email']!.text.trim().isEmpty ? null : _editFields['email']!.text.trim(),
-        'latitude': double.tryParse(_editFields['latitude']!.text.trim()),
-        'longitude': double.tryParse(_editFields['longitude']!.text.trim()),
         'phone': _editFields['phone']!.text.trim().isEmpty ? null : _editFields['phone']!.text.trim(),
         'phone2': _editFields['phone2']!.text.trim().isEmpty ? null : _editFields['phone2']!.text.trim(),
         'landline1': _editFields['landline1']!.text.trim().isEmpty ? null : _editFields['landline1']!.text.trim(),
@@ -466,7 +453,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     return Card(
       margin: EdgeInsets.zero, elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: BorderSide(color: selected || editing ? _branchPurple.withValues(alpha: .65) : _branchPurple.withValues(alpha: .18), width: selected || editing ? 1.4 : 1)),
-      child: Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           SizedBox(width: 28, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, color: _branchPurple))),
           Checkbox(shape: const CircleBorder(), value: selected, onChanged: (v) => _selectBranch(id, v == true), visualDensity: VisualDensity.compact, activeColor: _branchPurple),
@@ -484,22 +471,20 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
             IconButton(tooltip: 'حذف الفرع', onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
           ],
         ]),
-        const Divider(height: 14),
-        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 10, runSpacing: 8, children: [
+        const Divider(height: 8),
+        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, children: [
           editing ? geoDropdown('المحافظة', _editGovernorateId, 'governorate', (v) => setState(() { _editGovernorateId=v; _editDistrictId=null; _editAreaId=null; }), width: 220) : textCell('المحافظة', _geoName(row['governorate_id']), width: 220),
           editing ? geoDropdown('الحي / المركز', _editDistrictId, 'district', (v) => setState(() { _editDistrictId=v; _editAreaId=null; }), parent: _editGovernorateId, width: 220) : textCell('الحي / المركز', _geoName(row['district_id']), width: 220),
           editing ? geoDropdown('المنطقة / القرية', _editAreaId, 'area', (v) => setState(() => _editAreaId=v), parent: _editDistrictId, width: 220) : textCell('المنطقة / القرية', _geoName(row['area_id']), width: 220),
         ])),
-        const Divider(height: 14),
-        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        const Divider(height: 8),
+        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           editing ? inputCell('العنوان', 'address', width: 300) : textCell('العنوان', _s(row['address']), width: 300),
           editing ? inputCell('علامة مميزة', 'location', width: 220) : textCell('علامة مميزة', _s(row['location']), width: 220),
-          if (editing) inputCell('خط العرض', 'latitude', width: 135, keyboard: const TextInputType.numberWithOptions(decimal: true, signed: true)),
-          if (editing) inputCell('خط الطول', 'longitude', width: 135, keyboard: const TextInputType.numberWithOptions(decimal: true, signed: true)),
-          OutlinedButton.icon(onPressed: () => _selectMapPoint(row), icon: const Icon(Icons.map_outlined, size: 18), label: const Text('تحديد على الخريطة'), style: OutlinedButton.styleFrom(foregroundColor: _branchPurple)),
+          OutlinedButton.icon(onPressed: () => _openBranchInGoogleMaps(row), icon: const Icon(Icons.map_outlined, size: 18), label: const Text('فتح خرائط Google'), style: OutlinedButton.styleFrom(foregroundColor: _branchPurple, visualDensity: VisualDensity.compact)),
         ])),
-        const Divider(height: 14),
-        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 10, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+        const Divider(height: 8),
+        Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           editing ? inputCell('إيميل الفرع', 'email', width: 235, keyboard: TextInputType.emailAddress) : textCell('إيميل الفرع', _s(row['email']), width: 235),
           editing ? inputCell('موبايل', 'phone', width: 165, keyboard: TextInputType.phone) : textCell('موبايل', _s(row['phone']), width: 165),
           editing ? inputCell('أرضي', 'landline1', width: 165, keyboard: TextInputType.phone) : textCell('أرضي', _s(row['landline1']), width: 165),
@@ -530,48 +515,21 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     }
   }
 
-  Future<void> _selectMapPoint(Map<String, dynamic> row) async {
-    final lat = TextEditingController(text: _s(row['latitude']));
-    final lng = TextEditingController(text: _s(row['longitude']));
-    final accepted = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('تحديد موقع الفرع على الخريطة'),
-      content: SizedBox(width: 430, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Text('افتح الخريطة لتحديد النقطة، ثم أدخل إحداثياتها هنا لحفظها مع بيانات الفرع.'),
-        const SizedBox(height: 10),
-        Row(children: [
-          Expanded(child: TextField(controller: lat, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'خط العرض', border: OutlineInputBorder()))),
-          const SizedBox(width: 8),
-          Expanded(child: TextField(controller: lng, keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true), decoration: const InputDecoration(labelText: 'خط الطول', border: OutlineInputBorder()))),
-        ]),
-        const SizedBox(height: 8),
-        Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(onPressed: () async {
-          final q = '${_s(row['address'])} ${_s(row['location'])}';
-          final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(q)}');
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        }, icon: const Icon(Icons.open_in_new), label: const Text('فتح خرائط Google'))),
-      ])),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ الإحداثيات')),
-      ],
-    ));
-    if (accepted == true) {
-      final latitude = double.tryParse(lat.text.trim());
-      final longitude = double.tryParse(lng.text.trim());
-      if (latitude == null || longitude == null || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-        if (mounted) setState(() => _error = 'أدخل إحداثيات صحيحة: خط العرض من -90 إلى 90 وخط الطول من -180 إلى 180.');
-      } else {
-        try {
-          await _db!.from('erp_branches').update({'latitude': latitude, 'longitude': longitude}).eq('id', row['id']).eq('company_id', (widget.companyId ?? '').trim());
-          if (mounted) setState(() => _message = 'تم حفظ إحداثيات موقع الفرع.');
-          await _load();
-        } catch (error) {
-          if (mounted) setState(() => _error = 'تعذر حفظ موقع الفرع: $error');
-        }
-      }
+  Future<void> _openBranchInGoogleMaps(Map<String, dynamic> row) async {
+    final parts = <String>[
+      _s(row['branch_name']),
+      _s(row['address']),
+      _s(row['location']),
+      _geoName(row['area_id']),
+      _geoName(row['district_id']),
+      _geoName(row['governorate_id']),
+    ].where((value) => value.trim().isNotEmpty && value.trim() != '—').toList();
+    final query = parts.join('، ');
+    final uri = Uri.https('www.google.com', '/maps/search/', {'api': '1', 'query': query.isEmpty ? 'مصر' : query});
+    final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!opened && mounted) {
+      setState(() => _error = 'تعذر فتح خرائط Google. تحقق من اتصال الإنترنت ثم حاول مرة أخرى.');
     }
-    lat.dispose();
-    lng.dispose();
   }
 
   Widget _notice(String message, Color color) => Container(
