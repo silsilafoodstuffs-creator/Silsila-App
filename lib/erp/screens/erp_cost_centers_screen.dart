@@ -84,6 +84,19 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     return out;
   }
 
+  List<Map<String, dynamic>> get _treeRoots {
+    final ids = _centers.map((r) => _s(r['id'])).where((id) => id.isNotEmpty).toSet();
+    final roots = _centers.where((r) {
+      final parentId = _s(r['parent_id']);
+      return parentId.isEmpty || !ids.contains(parentId);
+    }).toList()
+      ..sort((a, b) => _s(a['center_code']).compareTo(_s(b['center_code'])));
+    // Recover gracefully if legacy data contains a cycle and therefore has no root.
+    return roots.isEmpty
+        ? ([..._centers]..sort((a, b) => _s(a['center_code']).compareTo(_s(b['center_code']))))
+        : roots;
+  }
+
   String _newCode() {
     var max = 0;
     for (final r in _centers) {
@@ -265,7 +278,10 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       if (_loading) const LinearProgressIndicator(minHeight: 2),
       if (_loading && _centers.isEmpty) const Expanded(child: Center(child: CircularProgressIndicator())),
       if (!(_loading && _centers.isEmpty) && _viewMode == 'tree')
-        Expanded(child: ListView(padding: const EdgeInsets.all(8), children: _centers.where((r) => !_child(r) && _branchMatches(r)).map((r) => _treeNode(r, 0)).toList())),
+        Expanded(child: ListView(
+          padding: const EdgeInsets.all(8),
+          children: _treeRoots.where(_branchMatches).map((r) => _treeNode(r, 0, <String>{})).toList(),
+        )),
       if (!(_loading && _centers.isEmpty) && _viewMode == 'grid')
         Expanded(child: Scrollbar(child: SingleChildScrollView(child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -330,11 +346,15 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     ]),
   );
 
-  bool _branchMatches(Map<String, dynamic> row) {
+  bool _branchMatches(Map<String, dynamic> row) => _branchMatchesVisited(row, <String>{});
+
+  bool _branchMatchesVisited(Map<String, dynamic> row, Set<String> visited) {
     if (_matchesSearch(row)) return true;
     final id = _s(row['id']);
-    if (id.isEmpty) return false;
-    return _centers.where((child) => _s(child['parent_id']) == id).any(_branchMatches);
+    if (id.isEmpty || !visited.add(id)) return false;
+    return _centers
+        .where((child) => _s(child['parent_id']) == id)
+        .any((child) => _branchMatchesVisited(child, visited));
   }
 
   List<Map<String, dynamic>> _childrenOfCenter(Map<String, dynamic> row) {
@@ -344,9 +364,14 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       ..sort((a, b) => _s(a['center_code']).compareTo(_s(b['center_code'])));
   }
 
-  Widget _treeNode(Map<String, dynamic> row, int depth) {
+  Widget _treeNode(Map<String, dynamic> row, int depth, Set<String> visited) {
     final id = _s(row['id']);
-    final children = _childrenOfCenter(row);
+    // Protect the tree view from malformed legacy parent links and cycles.
+    if (id.isNotEmpty && !visited.add(id)) return const SizedBox.shrink();
+    final children = _childrenOfCenter(row).where((item) {
+      final childId = _s(item['id']);
+      return childId.isEmpty || !visited.contains(childId);
+    }).toList();
     final child = _child(row);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
@@ -367,7 +392,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           ),
         ),
       ),
-      ...children.where(_branchMatches).map((item) => _treeNode(item, depth + 1)),
+      ...children.where(_branchMatches).map((item) => _treeNode(item, depth + 1, visited)),
     ]);
   }
 
