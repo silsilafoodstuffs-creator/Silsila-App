@@ -688,7 +688,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           ),
         ],
         if (_selectedCompanyTab == 1)
-          Expanded(child: ErpBranchesScreen(companyId: _activeCompanyId ?? widget.companyId, embedded: true)),
+          ErpBranchesScreen(companyId: _activeCompanyId ?? widget.companyId, embedded: true),
       ]),
     );
   }
