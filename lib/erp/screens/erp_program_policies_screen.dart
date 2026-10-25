@@ -96,5 +96,32 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     ]);
   }
 
-  @override Widget build(BuildContext context){final list=values.values.where((p)=>p['category']==tabs[tab]).toList();return Column(children:[Container(color:const Color(0xFF3E007D),padding:const EdgeInsets.all(12),child:Row(children:[const Icon(Icons.policy_outlined,color:Color(0xFFFFA015),size:28),const SizedBox(width:8),const Expanded(child:Text('سياسات البرنامج',style:TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:20))),TextButton.icon(onPressed:loading?null:_load,icon:const Icon(Icons.refresh,color:Colors.white),label:const Text('تحديث',style:TextStyle(color:Colors.white))),FilledButton.icon(onPressed:saving?null:_save,icon:const Icon(Icons.save),label:Text(saving?'جارٍ الحفظ':'حفظ'))])),if(error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(error!,style:const TextStyle(color:Colors.red))),if(message!=null)Padding(padding:const EdgeInsets.all(8),child:Text(message!,style:const TextStyle(color:Colors.green))),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:List.generate(tabs.length,(i)=>Padding(padding:const EdgeInsets.all(4),child:ChoiceChip(label:Text(tabs[i]),selected:tab==i,onSelected:(_)=>setState(()=>tab=i)))))),Expanded(child:loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.all(10),children:list.map((p){final mandatory=p['mandatory']==true;final all=p['all']==true;final options=(p['options'] as List?)?.cast<String>()??const <String>[];return Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[Row(children:[Checkbox(value:mandatory?true:p['enabled']==true,onChanged:mandatory?null:(v)=>setState(()=>p['enabled']=v==true)),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(p['ar'].toString(),style:const TextStyle(fontWeight:FontWeight.bold)),Text(p['en'].toString(),style:const TextStyle(color:Colors.black54,fontSize:11))])),if(mandatory)const Chip(label:Text('إلزامي للجميع'))]),if(options.isNotEmpty)DropdownButtonFormField<String>(value:options.contains(p['value'])?p['value'] as String:options.first,isExpanded:true,decoration:const InputDecoration(labelText:'القيمة الافتراضية'),items:options.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>setState(()=>p['value']=v)),if(p['key']=='fiscal_year')_fiscalRangeEditor(p),if(p['key']=='supplier_bonus_variance')TextFormField(key:ValueKey('${p['key']}-${p['value']}'),initialValue:p['value']?.toString()??'',decoration:const InputDecoration(labelText:'نسبة الفروقات %'),keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(v)=>p['value']=v),Row(children:[Checkbox(value:mandatory||all,onChanged:mandatory?null:(v)=>setState(() { p['all']=v==true; if(v==true)p['user_ids']=<String>[]; })),const Expanded(child:Text('تطبق على الكل')),if(!mandatory)Checkbox(value:!all,onChanged:(v)=>setState(() { p['all']=v!=true; if(v==true)p['user_ids']=<String>[]; })),if(!mandatory)const Text('تحديد مستخدمين'),if(!mandatory)IconButton(tooltip:'اختيار المستخدمين F1',onPressed:all?null:()=>_pickUsers(p),icon:const Icon(Icons.person_search)),if(!mandatory&&!all)Text((p['user_ids'] as List).length.toString())])])));}).toList()))]);}
+  @override Widget build(BuildContext context){final list=values.values.where((p)=>p['category']==tabs[tab]).toList();return Column(children:[Container(color:const Color(0xFF3E007D),padding:const EdgeInsets.all(12),child:Row(children:[const Icon(Icons.policy_outlined,color:Color(0xFFFFA015),size:28),const SizedBox(width:8),const Expanded(child:Text('سياسات البرنامج',style:TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:20))),TextButton.icon(onPressed:loading?null:_load,icon:const Icon(Icons.refresh,color:Colors.white),label:const Text('تحديث',style:TextStyle(color:Colors.white))),FilledButton.icon(onPressed:saving?null:_save,icon:const Icon(Icons.save),label:Text(saving?'جارٍ الحفظ':'حفظ'))])),if(error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(error!,style:const TextStyle(color:Colors.red))),if(message!=null)Padding(padding:const EdgeInsets.all(8),child:Text(message!,style:const TextStyle(color:Colors.green))),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:List.generate(tabs.length,(i)=>Padding(padding:const EdgeInsets.all(4),child:ChoiceChip(label:Text(tabs[i]),selected:tab==i,onSelected:(_)=>setState(()=>tab=i)))))),Expanded(child:loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.all(10),children:list.map((p){final mandatory=p['mandatory']==true;final all=p['all']==true;final options=(p['options'] as List?)?.cast<String>()??const <String>[];return Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[
+SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(crossAxisAlignment:CrossAxisAlignment.center,children:[
+SizedBox(width:300,child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+Text(p['ar'].toString(),style:const TextStyle(fontWeight:FontWeight.bold)),
+Text(p['en'].toString(),style:const TextStyle(color:Colors.black54,fontSize:11)),
+if(mandatory)const Text('إلزامي للجميع',style:TextStyle(color:Color(0xFF3E007D),fontSize:11,fontWeight:FontWeight.bold)),
+])),
+const SizedBox(width:12),
+SizedBox(width:105,child:Column(mainAxisSize:MainAxisSize.min,children:[
+const Text('تفعيل السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:11)),
+Checkbox(value:mandatory?true:p['enabled']==true,onChanged:mandatory?null:(v)=>setState(()=>p['enabled']=v==true)),
+])),
+SizedBox(width:105,child:Column(mainAxisSize:MainAxisSize.min,children:[
+const Text('تطبق على الكل',textAlign:TextAlign.center,style:TextStyle(fontSize:11)),
+Checkbox(value:mandatory||all,onChanged:mandatory?null:(v)=>setState(() { p['all']=v==true; if(v==true)p['user_ids']=<String>[]; })),
+])),
+if(!mandatory)SizedBox(width:115,child:Column(mainAxisSize:MainAxisSize.min,children:[
+const Text('اختيار مستخدمين',textAlign:TextAlign.center,style:TextStyle(fontSize:11)),
+Checkbox(value:!all,onChanged:(v)=>setState(() { p['all']=v!=true; if(v==true&&((p['user_ids'] as List).isEmpty))p['user_ids']=<String>[]; })),
+])),
+if(!mandatory)Padding(padding:const EdgeInsets.symmetric(horizontal:8),child:OutlinedButton.icon(
+onPressed:all?null:()=>_pickUsers(p),
+icon:const Icon(Icons.person_search),
+label:const Text('F1 اختيار مستخدمين'),
+)),
+if(!mandatory&&!all)Padding(padding:const EdgeInsets.only(right:8),child:Text('المحدد: ${(p['user_ids'] as List).length}')),
+])),
+);}).toList()))]);}
 }
