@@ -183,7 +183,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
             (_geoRows.isEmpty ? _govs.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
             (v) => setState(() {
               _govGeoId = _geoRows.isEmpty ? null : v;
-              _gov = _geoRows.isEmpty ? (v ?? '') : _s(_geoRows.where((g) => _s(g['id']) == v).map((g) => g['name_ar']).firstOrNull);
+              _gov = _geoRows.isEmpty ? (v ?? '') : (_first(_geoRows.where((g) => _s(g['id']) == v).map((g) => _s(g['name_ar']))) ?? '');
               _district = ''; _locality = ''; _districtGeoId = null;
             })),
           _drop('مركز أو حي', _geoRows.isEmpty ? (_district.isEmpty ? null : _district) : _districtGeoId,
