@@ -5,6 +5,7 @@ import 'package:excel/excel.dart' hide Border;
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 const _purple = Color(0xFF3E007D);
@@ -30,6 +31,16 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   String _status = 'أدخل رابط موقع لبدء اكتشاف الصفحات والصور.';
   static const _headers = ['id','image_file','image_url','name_ar','record_type','category','subcategory','major_unit','inner_count','minor_unit','weight','length','width','height'];
   @override void dispose(){_url.dispose();super.dispose();}
+  Future<void> _pasteUrl() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final value = data?.text?.trim();
+    if (value != null && value.isNotEmpty && mounted) {
+      setState(() { _url.text = value; _status = 'تم لصق الرابط. اضغط استكشاف الموقع للبدء.'; });
+    }
+  }
+  void _resetExploration() {
+    setState(() { _rows.clear(); _selectAll = true; _status = 'تمت إعادة ضبط الاستكشاف. أدخل رابطًا ثم ابدأ الفحص.'; });
+  }
   Future<void> _crawl() async {
     final raw = _url.text.trim();
     final uri = Uri.tryParse(raw);
@@ -125,18 +136,26 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
             ]),
           ),
           Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(children: [
-              Row(children: [
-                Expanded(child: TextField(controller: _url, decoration: const InputDecoration(labelText: 'رابط الموقع الأساسي', hintText: 'https://example.com', border: OutlineInputBorder(), isDense: true))),
-                const SizedBox(width: 8),
-                FilledButton.icon(onPressed: _busy ? null : _crawl, icon: const Icon(Icons.travel_explore), label: const Text('استكشاف الموقع')),
-              ]),
-              const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: Text(_status, style: const TextStyle(fontSize: 12))),
-                FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black), onPressed: _busy ? null : _downloadZip, icon: const Icon(Icons.folder_zip), label: const Text('إنشاء ZIP')),
-              ]),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  SizedBox(width: 250, child: TextField(
+                    controller: _url,
+                    decoration: const InputDecoration(labelText: 'رابط الموقع', hintText: 'https://example.com', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 10)),
+                  )),
+                  FilledButton.icon(onPressed: _busy ? null : _crawl, icon: const Icon(Icons.travel_explore, size: 18), label: const Text('استكشاف الموقع')),
+                  OutlinedButton.icon(onPressed: _busy ? null : _pasteUrl, icon: const Icon(Icons.content_paste, size: 18), label: const Text('لصق الرابط')),
+                  OutlinedButton.icon(onPressed: _busy ? null : () => setState(() { _url.clear(); _status = 'تم مسح الرابط.'; }), icon: const Icon(Icons.clear, size: 18), label: const Text('مسح الرابط')),
+                  OutlinedButton.icon(onPressed: _busy ? null : _resetExploration, icon: const Icon(Icons.restart_alt, size: 18), label: const Text('إعادة ضبط استكشاف')),
+                  FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black), onPressed: _busy || _rows.isEmpty ? null : _downloadZip, icon: const Icon(Icons.folder_zip, size: 18), label: const Text('إنشاء ZIP')),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(_status, style: const TextStyle(fontSize: 12)),
             ]),
           ),
           Expanded(
