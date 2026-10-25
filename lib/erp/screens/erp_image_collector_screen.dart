@@ -758,7 +758,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if(mode=='new'){final rows=await db.from('erp_items').select('item_code').eq('company_id',company).like('item_code','ITEM-%').limit(5000);var max=0;for(final r in (rows as List)){final m=RegExp(r'-(\d+)$').firstMatch((r['item_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}code='ITEM-'+(max+1).toString().padLeft(4,'0');}
       final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
       final png=_processTransparentPng(Uint8List.fromList(base64Decode(b64)));
-      final values=<String,dynamic>{'item_name':ar,'item_name_en':en,'base_unit':minor,'sale_price':price,'tax_rate':tax,'pricing_area':area,'package_description':major+' = '+count.toString()+' '+minor,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,'source_name':'جامع صور سلسلة','source_url':item['url'].toString(),'is_active':true};
+      final values=<String,dynamic>{'item_name':ar,'item_name_en':en,'base_unit':minor,'sale_price':price,'tax_rate':tax,'pricing_area':area,'package_description':major+' = '+count.toStringAsFixed(3)+' '+minor,'weight_kg':double.tryParse(_rowController(item,'weight_kg').text.trim()) ?? 0,'length_cm':double.tryParse(_rowController(item,'length_cm').text.trim()) ?? 0,'width_cm':double.tryParse(_rowController(item,'width_cm').text.trim()) ?? 0,'height_cm':double.tryParse(_rowController(item,'height_cm').text.trim()) ?? 0,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,'source_name':'جامع صور سلسلة','source_url':item['url'].toString(),'is_active':true};
       final selectedCategoryId = item['category_secondary_id']?.toString() ?? item['category_sub_id']?.toString() ?? item['category_root_id']?.toString();
       if (selectedCategoryId != null && selectedCategoryId.isNotEmpty) values['category_id'] = selectedCategoryId;
       String id;
@@ -1276,13 +1276,27 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   ),
                 ]));
                 final editor=kind=='category'
-                  ? SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-                      dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:112),const SizedBox(width:6),
-                      if(mode=='old')...[field('legacy_code','كود الفئة القديم',width:125),const SizedBox(width:5)],
-                      field('category_main_name','اسم فئة رئيسية',width:160,initial:_excelValue(item,['main_category','category_name','category'])),const SizedBox(width:6),
-                      field('category_sub_name','اسم فئة فرعية',width:160,initial:_excelValue(item,['sub_category','subcategory'])),const SizedBox(width:6),
-                      field('category_secondary_name','اسم فئة ثانوية',width:160,initial:_excelValue(item,['secondary_category','third_category'])),const SizedBox(width:8),
-                    ]))
+                  ? Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+                        dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:112),const SizedBox(width:6),
+                        dropdown('category_level','مستوى الفئة',(item['category_level']??'root').toString(),const ['root','sub','secondary'],width:135),const SizedBox(width:6),
+                        if(mode=='old')... [field('legacy_code','كود الفئة القديم',width:125),const SizedBox(width:5)],
+                        field('category_main_name','اسم الفئة الرئيسية عربي',width:170,initial:_excelValue(item,['main_category','category_name','category'])),const SizedBox(width:5),
+                        field('category_main_name_en','اسم الفئة الرئيسية إنجليزي',width:170,initial:_excelValue(item,['main_category_en','category_name_en'])),
+                      ])),
+                      const SizedBox(height:3),
+                      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+                        field('category_sub_name','اسم الفئة الفرعية عربي',width:170,initial:_excelValue(item,['sub_category','subcategory'])),const SizedBox(width:5),
+                        field('category_sub_name_en','اسم الفئة الفرعية إنجليزي',width:170,initial:_excelValue(item,['sub_category_en'])),
+                        const SizedBox(width:8),
+                      ])),
+                      const SizedBox(height:3),
+                      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+                        field('category_secondary_name','اسم الفئة الثانوية عربي',width:170,initial:_excelValue(item,['secondary_category','third_category'])),const SizedBox(width:5),
+                        field('category_secondary_name_en','اسم الفئة الثانوية إنجليزي',width:170,initial:_excelValue(item,['secondary_category_en'])),
+                        const SizedBox(width:8),
+                      ])),
+                    ])
                   : Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                         dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:112),
