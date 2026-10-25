@@ -465,43 +465,25 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                     const DataColumn(label: Text('م')),
                     DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Text('الصورة'),
-                      Checkbox(
-                        shape: const CircleBorder(),
-                        visualDensity: VisualDensity.compact,
+                      Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact,
                         value: _rows.isNotEmpty && _rows.every((r) => r.selected),
-                        onChanged: (v) => setState(() {
-                          _all = v ?? false;
-                          for (final r in _rows) { r.selected = _all; }
-                        }),
-                      ),
+                        onChanged: (v) => setState(() { _all = v ?? false; for (final r in _rows) { r.selected = _all; } })),
                     ])),
-                    DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Text('النوع'),
-                        Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'صنف'), onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'صنف'; } }); }),
-                        const Text('صنف', style: TextStyle(fontSize: 11)),
-                        Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'فئة'), onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'فئة'; } }); }),
-                        const Text('فئة', style: TextStyle(fontSize: 11)),
-                      ])),
-                      const DataColumn(label: Text('نوع الكود')),
-                      const DataColumn(label: Text('بحث F1')),
-                      const DataColumn(label: Text('كود صنف / فئة')),
                     DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Text('النوع'),
-                      Checkbox(
-                        shape: const CircleBorder(),
-                        visualDensity: VisualDensity.compact,
+                      Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact,
                         value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'صنف'),
-                        onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'صنف'; } }); },
-                      ),
+                        onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'صنف'; } }); }),
                       const Text('صنف', style: TextStyle(fontSize: 11)),
-                      Checkbox(
-                        shape: const CircleBorder(),
-                        visualDensity: VisualDensity.compact,
+                      Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact,
                         value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'فئة'),
-                        onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'فئة'; } }); },
-                      ),
+                        onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'فئة'; } }); }),
                       const Text('فئة', style: TextStyle(fontSize: 11)),
                     ])),
+                    const DataColumn(label: Text('نوع الكود')),
+                    const DataColumn(label: Text('بحث F1')),
+                    const DataColumn(label: Text('كود صنف / فئة')),
+                    const DataColumn(label: Text('اسم الصنف / الفئة')),
                     const DataColumn(label: Text('الفئة الرئيسية')),
                     const DataColumn(label: Text('الفئة الفرعية')),
                     const DataColumn(label: Text('الوحدة الكبرى')),
@@ -517,6 +499,13 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                     DataCell(Text('${_rows.indexOf(r) + 1}')),
                     DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
                     DataCell(_kindCell(r, () => setState(() {}))),
+                    DataCell(_codeModeCell(r, () => setState(() {}))),
+                    DataCell(IconButton(tooltip: 'بحث F1 في قائمة الصنف أو الفئة', onPressed: () async {
+                      final picked = await _pickExistingRecord(context, r.kind);
+                      if (picked != null && mounted) setState(() { r.codeMode = 'قديم'; r.code = picked['code'] ?? ''; if ((picked['name'] ?? '').isNotEmpty) r.name = picked['name']!; });
+                    }, icon: const Icon(Icons.search, color: _purple))),
+                    DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.code, onChanged: (v) => r.code = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                    DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                     DataCell(_field(r.category, (v) => r.category = v)),
                     DataCell(_field(r.subcategory, (v) => r.subcategory = v)),
                     DataCell(_field(r.majorUnit, (v) => r.majorUnit = v)),
