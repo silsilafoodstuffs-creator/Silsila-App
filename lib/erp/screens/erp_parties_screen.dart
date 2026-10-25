@@ -244,8 +244,8 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       geos=(result[1] as List).map((e)=>Map<String,dynamic>.from(e)).toList();
       classifications=(result[2] as List).map((e)=>Map<String,dynamic>.from(e)).toList();
       reps=(result[3] as List).map((e)=>Map<String,dynamic>.from(e)).where((e){final job=s(e['job_title']).toLowerCase(); return job.contains('مندوب')||job.contains('مبيعات')||job.contains('sales representative')||job.contains('sales rep');}).toList();
-      if(mounted)setState(()=>{loading=false,error=null});
-    } catch(e) { if(mounted)setState(()=>{loading=false,error='تعذر تحميل البيانات. تأكد من تطبيق ترحيل بيانات العملاء والموردين: $e'}); }
+      if (mounted) setState(() { loading = false; error = null; });
+    } catch(e) { if (mounted) setState(() { loading = false; error = 'تعذر تحميل البيانات. تأكد من تطبيق ترحيل بيانات العملاء والموردين: $e'; }); }
   }
   Future<List<Map<String,dynamic>>> _fetchAllGeo(SupabaseClient client, String cid) async {
     final all = <Map<String,dynamic>>[];
@@ -263,7 +263,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   }
   List<Map<String,dynamic>> _geoLevel(String level, [String? parent]) => geos.where((g)=>s(g['level'])==level && (parent==null ? g['parent_id']==null : s(g['parent_id'])==parent)).toList();
   Future<void> _new() async {
-    setState(()=>{editing=true,error=null,message=null,selectedPartyId=null,selectedClassification=null,selectedGovernorate=null,selectedDistrict=null,selectedArea=null,selectedRep=null});
+    setState(() { editing = true; error = null; message = null; selectedPartyId = null; selectedClassification = null; selectedGovernorate = null; selectedDistrict = null; selectedArea = null; selectedRep = null; });
     for(final e in fields.entries){e.value.text='';}
     fields['country']!.text='مصر'; fields['transaction_type']!.text='نقدي';
     fields['party_code']!.text=await _nextCode();
@@ -276,7 +276,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     return code;
   }
   void _select(Map<String,dynamic> row) {
-    setState(()=>{editing=false,selectedPartyId=s(row['id']),selectedClassification=classifications.where((c)=>s(c['name_ar'])==s(row['customer_type'])).map((c)=>s(c['id'])).firstOrNull,selectedGovernorate=geos.where((g)=>s(g['name_ar'])==s(row['governorate'])&&s(g['level'])=='governorate').map((g)=>s(g['id'])).firstOrNull,selectedRep=s(row['sales_rep_employee_id']).isEmpty?null:s(row['sales_rep_employee_id'])});
+    setState(() { editing = false; selectedPartyId = s(row['id']); selectedClassification = classifications.where((c) => s(c['name_ar']) == s(row['customer_type'])).map((c) => s(c['id'])).firstOrNull; selectedGovernorate = geos.where((g) => s(g['name_ar']) == s(row['governorate']) && s(g['level']) == 'governorate').map((g) => s(g['id'])).firstOrNull; selectedRep = s(row['sales_rep_employee_id']).isEmpty ? null : s(row['sales_rep_employee_id']); });
     fields['party_code']!.text=s(row['party_code']); fields['name_ar']!.text=s(row['party_name']); fields['name_en']!.text=s(row['party_name_en']); fields['country']!.text=s(row['country']).isEmpty?'مصر':s(row['country']); fields['address']!.text=s(row['address']); fields['customer_type']!.text=s(row['customer_type']); fields['transaction_type']!.text=s(row['transaction_type']).isEmpty?'نقدي':s(row['transaction_type']);
     final gov=selectedGovernorate; selectedDistrict=geos.where((g)=>s(g['name_ar'])==s(row['district'])&&s(g['parent_id'])==s(gov)).map((g)=>s(g['id'])).firstOrNull;
     selectedArea=geos.where((g)=>s(g['name_ar'])==s(row['area'])&&s(g['parent_id'])==s(selectedDistrict)).map((g)=>s(g['id'])).firstOrNull;
@@ -285,7 +285,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   Future<void> _save() async {
     final client=db; if(client==null||companyId==null)return;
     if(fields['party_code']!.text.trim().isEmpty||fields['name_ar']!.text.trim().isEmpty){setState(()=>error='كود ${kind=='customer'?'العميل':'المورد'} والاسم العربي مطلوبان.');return;}
-    setState(()=>{saving=true,error=null,message=null});
+    setState(() { saving = true; error = null; message = null; });
     final gov=geos.where((g)=>s(g['id'])==selectedGovernorate).firstOrNull;
     final dist=geos.where((g)=>s(g['id'])==selectedDistrict).firstOrNull;
     final area=geos.where((g)=>s(g['id'])==selectedArea).firstOrNull;
@@ -301,8 +301,8 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     try{
       if(selectedPartyId==null){payload['transaction_type']=kind=='customer'?'نقدي':null;await client.from('erp_parties').insert(payload);}
       else{payload.remove('transaction_type'); await client.from('erp_parties').update(payload).eq('id',selectedPartyId!).eq('company_id',companyId!);}
-      if(!mounted)return; setState(()=>{saving=false,editing=false,message='تم حفظ بيانات ${kind=='customer'?'العميل':'المورد'} بنجاح.'}); await _loadAll();
-    }catch(e){if(mounted)setState(()=>{saving=false,error='فشل الحفظ: $e'});}
+      if (!mounted) return; setState(() { saving = false; editing = false; message = 'تم حفظ بيانات ${kind == 'customer' ? 'العميل' : 'المورد'} بنجاح.'; }); await _loadAll();
+    } catch(e) { if (mounted) setState(() { saving = false; error = 'فشل الحفظ: $e'; }); }
   }
   Future<void> _manageClassifications() async {
     final controller = TextEditingController();
@@ -369,7 +369,6 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   Widget _text(String key,String label,{bool enabled=true})=>TextField(controller:fields[key],enabled:editing&&enabled,decoration:InputDecoration(labelText:label,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:10)));
   Widget _drop({required String label,required String? value,required List<DropdownMenuItem<String>> items,required ValueChanged<String?>? onChanged})=>DropdownButtonFormField<String>(value:items.any((e)=>e.value==value)?value:null,isExpanded:true,decoration:InputDecoration(labelText:label,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:10)),items:items,onChanged:editing?onChanged:null);
   Widget _geoDrop(String level,String label,String? value,ValueChanged<String?> change,[String? parent])=>_drop(label:label,value:value,items:_geoLevel(level,parent).map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['name_ar']),overflow:TextOverflow.ellipsis))).toList(),onChanged:change);
-  Widget _cell(Widget child)=>Padding(padding:const EdgeInsets.all(4),child:child);
   Widget _partyCard(Map<String, dynamic> row, int index) {
     final location = [row['governorate'], row['district'], row['area']]
         .where((value) => value != null && s(value).isNotEmpty)
@@ -431,9 +430,6 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   @override
   Widget build(BuildContext context){
     final title=kind=='customer'?'بيانات العملاء':'بيانات الموردين';
-    final govItems=_geoLevel('governorate').map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['name_ar'])))).toList();
-    final distItems=_geoLevel('district',selectedGovernorate).map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['name_ar'])))).toList();
-    final areaItems=_geoLevel('area',selectedDistrict).map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['name_ar'])))).toList();
     return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:purple,borderRadius:BorderRadius.circular(12)),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),const Text('بطاقات منظمة في جدول بثلاثة صفوف لكل سجل',style:TextStyle(color:Colors.white70))])),Wrap(spacing:6,children:[OutlinedButton.icon(onPressed:loading?null:_loadAll,icon:const Icon(Icons.refresh,color:Colors.white),label:const Text('تحديث',style:TextStyle(color:Colors.white))),FilledButton.icon(onPressed:editing?null:_new,icon:const Icon(Icons.add),label:const Text('إضافة')),FilledButton.icon(onPressed:!editing||saving?null:_save,icon:const Icon(Icons.save),label:const Text('حفظ')),OutlinedButton.icon(onPressed:selectedPartyId==null||editing?null:()=>setState(()=>editing=true),icon:const Icon(Icons.edit_outlined,color:Colors.white),label:const Text('تعديل',style:TextStyle(color:Colors.white))),OutlinedButton.icon(onPressed:_manageClassifications,icon:const Icon(Icons.category_outlined,color:Colors.white),label:const Text('تصنيفات',style:TextStyle(color:Colors.white)))]) ])),
       if(error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(error!,style:const TextStyle(color:Colors.red))),
@@ -442,7 +438,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       if(editing)Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[
         Row(children:[Expanded(child:_text('party_code','كود ${kind=='customer'?'العميل':'المورد'} (إنجليزي + أرقام)')),Expanded(flex:2,child:_text('name_ar','الاسم بالعربية *')),Expanded(flex:2,child:_text('name_en','الاسم بالإنجليزية')),Expanded(child:_drop(label:'التصنيف',value:selectedClassification,items:classifications.map((c)=>DropdownMenuItem(value:s(c['id']),child:Text(s(c['name_ar'])))).toList(),onChanged:(v)=>setState(()=>selectedClassification=v))) ]),
         const SizedBox(height:8),
-        Row(children:[Expanded(child:_drop(label:'الدولة',value:fields['country']!.text.isEmpty?'مصر':fields['country']!.text,items:countries.map((c)=>DropdownMenuItem(value:c,child:Text(c))).toList(),onChanged:(v)=>setState(()=>fields['country']!.text=v??'مصر'))),Expanded(child:_geoDrop('governorate','المحافظة',selectedGovernorate,(v)=>setState(()=>{selectedGovernorate=v,selectedDistrict=null,selectedArea=null}))),Expanded(child:_geoDrop('district','مركز / حي',selectedDistrict,(v)=>setState(()=>{selectedDistrict=v,selectedArea=null}),selectedGovernorate)),Expanded(child:_geoDrop('area','منطقة / قرية',selectedArea,(v)=>setState(()=>selectedArea=v),selectedDistrict)),Expanded(flex:2,child:_text('address','العنوان')),IconButton(tooltip:'فتح خرائط Google',onPressed:_map,icon:const Icon(Icons.map_outlined,color:purple))]),
+        Row(children:[Expanded(child:_drop(label:'الدولة',value:fields['country']!.text.isEmpty?'مصر':fields['country']!.text,items:countries.map((c)=>DropdownMenuItem(value:c,child:Text(c))).toList(),onChanged:(v)=>setState(()=>fields['country']!.text=v??'مصر'))),Expanded(child:_geoDrop('governorate','المحافظة',selectedGovernorate,(v) => setState(() { selectedGovernorate = v; selectedDistrict = null; selectedArea = null; }))),Expanded(child:_geoDrop('district','مركز / حي',selectedDistrict,(v) => setState(() { selectedDistrict = v; selectedArea = null; }),selectedGovernorate)),Expanded(child:_geoDrop('area','منطقة / قرية',selectedArea,(v)=>setState(()=>selectedArea=v),selectedDistrict)),Expanded(flex:2,child:_text('address','العنوان')),IconButton(tooltip:'فتح خرائط Google',onPressed:_map,icon:const Icon(Icons.map_outlined,color:purple))]),
         const SizedBox(height:8),
         Row(children:[Expanded(child:_drop(label:'نوع العميل',value:fields['transaction_type']!.text,items:const [DropdownMenuItem(value:'نقدي',child:Text('نقدي')),DropdownMenuItem(value:'آجل',child:Text('آجل')),DropdownMenuItem(value:'بيع مباشر',child:Text('بيع مباشر'))],onChanged:null)),Expanded(child:_drop(label:'مندوب المبيعات',value:selectedRep,items:reps.map((r)=>DropdownMenuItem(value:s(r['id']),child:Text('${s(r['employee_code'])} - ${s(r['full_name'])}'))).toList(),onChanged:(v)=>setState(()=>selectedRep=v))),const Spacer()]),
         const Align(alignment:Alignment.centerRight,child:Text('نوع التعامل يبدأ «نقدي» ولا يُعدّل من هذه الشاشة؛ التغيير من شاشة ائتمان العملاء.',style:TextStyle(fontSize:12,color:Colors.deepOrange))),
