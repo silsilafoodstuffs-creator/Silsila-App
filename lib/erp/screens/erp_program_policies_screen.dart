@@ -157,12 +157,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                 SizedBox(width: 8),
                                 SizedBox(width: 225, child: Text('بيانات السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
-                                SizedBox(width: 160, child: Text('القيمة / الاختيار', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                                SizedBox(width: 8),
-                                SizedBox(width: 140, child: Text('السنة المالية', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                                SizedBox(width: 8),
-                                SizedBox(width: 100, child: Text('نسبة %', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                                SizedBox(width: 8),
+                                SizedBox(width: 220, child: Text('القيمة / الاختيار', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 50, child: Text('تفعيل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
                                 SizedBox(width: 58, child: Text('على الكل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
@@ -206,26 +201,49 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF3E007D), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ])),
                                   const SizedBox(width: 8),
-                                  SizedBox(width: 160, child: options.isNotEmpty ? DropdownButtonFormField<String>(
-                                    value: options.contains(p['value']) ? p['value'] as String : options.first,
-                                    isExpanded: true, isDense: true,
-                                    decoration: const InputDecoration(labelText: 'القيمة', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
-                                    style: const TextStyle(fontSize: 10, color: Colors.black87),
-                                    items: options.map((v) => DropdownMenuItem(value: v, child: Text(v, maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
-                                    onChanged: (v) => setState(() => p['value'] = v),
-                                  ) : Text((p['value'] ?? '').toString().isEmpty ? '—' : (p['value'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10))),
-                                  const SizedBox(width: 8),
-                                  SizedBox(width: 140, child: p['key'] == 'fiscal_year' ? TextFormField(
-                                    key: ValueKey('fiscal-year-' + (p['value'] ?? '').toString()), initialValue: p['value']?.toString() ?? '01/01 - 12/31',
-                                    decoration: const InputDecoration(labelText: 'السنة المالية', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
-                                    style: const TextStyle(fontSize: 10), onChanged: (v) => p['value'] = v,
-                                  ) : const Text('—', textAlign: TextAlign.center, style: TextStyle(fontSize: 10))),
-                                  const SizedBox(width: 8),
-                                  SizedBox(width: 100, child: p['key'] == 'supplier_bonus_variance' ? TextFormField(
-                                    key: ValueKey('variance-' + (p['value'] ?? '').toString()), initialValue: p['value']?.toString() ?? '',
-                                    decoration: const InputDecoration(labelText: 'نسبة %', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true), style: const TextStyle(fontSize: 10), onChanged: (v) => p['value'] = v,
-                                  ) : const Text('—', textAlign: TextAlign.center, style: TextStyle(fontSize: 10))),
+                                  SizedBox(width: 220, child: p['key'] == 'fiscal_year'
+                                    ? Row(children: [
+                                        Expanded(child: TextFormField(
+                                          key: ValueKey('fiscal-from-' + (p['value'] ?? '').toString()),
+                                          initialValue: ((p['value'] ?? '01/01 - 12/31').toString().split(' - ').first),
+                                          decoration: const InputDecoration(labelText: 'من', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          style: const TextStyle(fontSize: 10),
+                                          onChanged: (v) {
+                                            final parts = (p['value'] ?? '01/01 - 12/31').toString().split(' - ');
+                                            p['value'] = '${v.trim()} - ${parts.length > 1 ? parts[1] : '12/31'}';
+                                          },
+                                        )),
+                                        const SizedBox(width: 4),
+                                        Expanded(child: TextFormField(
+                                          key: ValueKey('fiscal-to-' + (p['value'] ?? '').toString()),
+                                          initialValue: ((p['value'] ?? '01/01 - 12/31').toString().split(' - ').length > 1 ? (p['value'] ?? '01/01 - 12/31').toString().split(' - ')[1] : '12/31'),
+                                          decoration: const InputDecoration(labelText: 'إلى', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          style: const TextStyle(fontSize: 10),
+                                          onChanged: (v) {
+                                            final parts = (p['value'] ?? '01/01 - 12/31').toString().split(' - ');
+                                            p['value'] = '${parts.first} - ${v.trim()}';
+                                          },
+                                        )),
+                                      ])
+                                    : p['key'] == 'supplier_bonus_variance'
+                                      ? TextFormField(
+                                          key: ValueKey('variance-' + (p['value'] ?? '').toString()),
+                                          initialValue: p['value']?.toString() ?? '',
+                                          decoration: const InputDecoration(labelText: 'نسبة %', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: const TextStyle(fontSize: 10),
+                                          onChanged: (v) => p['value'] = v,
+                                        )
+                                      : options.isNotEmpty
+                                        ? DropdownButtonFormField<String>(
+                                            value: options.contains(p['value']) ? p['value'] as String : options.first,
+                                            isExpanded: true, isDense: true,
+                                            decoration: const InputDecoration(labelText: 'القيمة', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                            style: const TextStyle(fontSize: 10, color: Colors.black87),
+                                            items: options.map((v) => DropdownMenuItem(value: v, child: Text(v, maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
+                                            onChanged: (v) => setState(() => p['value'] = v),
+                                          )
+                                        : Text((p['value'] ?? '').toString().isEmpty ? '—' : (p['value'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10))),
                                   const SizedBox(width: 8),
                                   checkColumn('تفعيل', mandatory || p['enabled'] == true, mandatory ? null : (v) => setState(() => p['enabled'] = v == true), 50),
                                   const SizedBox(width: 8),
