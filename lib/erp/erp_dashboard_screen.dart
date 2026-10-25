@@ -2195,7 +2195,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               title: 'صافي نتيجة النشاط',
               icon: Icons.assessment_outlined,
               rows: [
-                _analysisRow('صافي النتيجة', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
+                _analysisRow('صافي نتيجة النشاط', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
                 _analysisRow('التغير عن الفترة السابقة', null, null),
                 _analysisRow('نسبة النتيجة', null, null, isPercent: true),
               ],
@@ -2206,7 +2206,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               rows: [
                 _analysisRow('المبيعات', null, null),
                 _analysisRow('المرتجعات', null, null),
-                _analysisRow('صافي المبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
+                _analysisRow('صافي نتيجة المبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
               ],
             ),
             _executiveAnalysisCard(
