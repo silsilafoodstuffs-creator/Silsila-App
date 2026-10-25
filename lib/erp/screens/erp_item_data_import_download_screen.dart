@@ -17,7 +17,7 @@ Widget _kindCell(_ImportRow row, VoidCallback refresh) => SizedBox(
     children: [
       Expanded(
         child: InkWell(
-          onTap: () { row.kind = 'صنف'; if (row.codeMode == 'جديد') row.code = 'ITM${row.id.replaceAll(RegExp(r'\\D'), '').padLeft(5, '0')}'; refresh(); },
+          onTap: () { row.kind = 'صنف'; if (row.codeMode == 'جديد') row.code = 'ITM${row.id.replaceAll(RegExp(r'\D'), '').padLeft(5, '0')}'; refresh(); },
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -114,7 +114,7 @@ Widget _codeModeCell(_ImportRow row, VoidCallback refresh) => SizedBox(
   child: Row(mainAxisSize: MainAxisSize.min, children: [
     InkWell(onTap: () { row.codeMode = 'جديد'; if (row.code.isEmpty) row.code = '${row.kind == 'فئة' ? 'CAT' : 'ITM'}${row.id.replaceAll(RegExp(r'\\D'), '').padLeft(5, '0')}'; refresh(); },
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Checkbox(shape: const CircleBorder(), value: row.codeMode == 'جديد', visualDensity: VisualDensity.compact, onChanged: (v) { if (v == true) { row.codeMode='جديد'; row.code = row.kind == 'فئة' ? 'CAT00001' : 'ITM00001'; refresh(); } }),
+        Checkbox(shape: const CircleBorder(), value: row.codeMode == 'جديد', visualDensity: VisualDensity.compact, onChanged: (v) { if (v == true) { row.codeMode='جديد'; row.code = '${row.kind == 'فئة' ? 'CAT' : 'ITM'}${row.id.replaceAll(RegExp(r'\D'), '').padLeft(5, '0')}'; refresh(); } }),
         const Text('جديد', style: TextStyle(fontSize: 11)),
       ])),
     InkWell(onTap: () { row.codeMode='قديم'; refresh(); },
