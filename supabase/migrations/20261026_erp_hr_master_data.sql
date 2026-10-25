@@ -1,3 +1,17 @@
+-- Ensure the employee master exists even when the earlier standalone HR SQL was not applied.
+create table if not exists public.erp_employees (
+ id uuid primary key default gen_random_uuid(),
+ company_id uuid not null references public.erp_companies(id) on delete restrict,
+ branch_id uuid references public.erp_branches(id) on delete restrict,
+ employee_code text not null, full_name text not null, phone text, email text, job_title text,
+ department_name text, hire_date date,
+ employment_status text not null default 'active' check (employment_status in ('active','on_leave','suspended','terminated')),
+ base_salary numeric(14,2) not null default 0 check (base_salary >= 0),
+ national_id_last4 text, notes text, is_active boolean not null default true,
+ created_at timestamptz not null default now(), updated_at timestamptz not null default now(),
+ unique(company_id, employee_code), check(length(trim(full_name)) > 0)
+);
+alter table public.erp_employees enable row level security;
 create table if not exists public.erp_hr_departments (
  id uuid primary key default gen_random_uuid(), company_id uuid not null references public.erp_companies(id) on delete cascade,
  department_code text not null, name_ar text not null, name_en text not null default '', parent_id uuid references public.erp_hr_departments(id) on delete set null,
