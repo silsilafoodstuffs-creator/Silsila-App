@@ -198,7 +198,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
             return DataRow(cells: [
               DataCell(Text((i + 1).toString())), DataCell(Text(_s(e['employee_code']))), DataCell(Text(_s(e['full_name']))),
               DataCell(Text(_s(e['department_name']))), DataCell(Text(_s(e['job_title']))),
-              DataCell(Text(_s(e['mobile_1']).isEmpty ? e['phone'] : e['mobile_1'])),
+              DataCell(Text(_s(_s(e['mobile_1']).isEmpty ? e['phone'] : e['mobile_1']))),
               DataCell(Text(e['is_active'] == true ? 'نشط' : 'غير نشط')),
             ]);
           }),
