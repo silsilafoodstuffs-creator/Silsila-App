@@ -63,7 +63,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final result=await showDialog<Set<String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,ds)=>AlertDialog(title:const Text('اختيار المستخدمين — F1'),content:SizedBox(width:480,child:Column(mainAxisSize:MainAxisSize.min,children:[Align(alignment:Alignment.centerRight,child:TextButton(onPressed:()=>ds(() { if(chosen.length==users.length){chosen.clear();}else{chosen.addAll(users.map((u)=>(u['id']??'').toString()));} }),child:const Text('تحديد الكل / إلغاء تحديد الكل'))),Flexible(child:ListView(shrinkWrap:true,children:users.map((u){final id=(u['id']??'').toString();final name=(u['name_ar']??u['user_code']??id).toString();return CheckboxListTile(dense:true,value:chosen.contains(id),title:Text(name),onChanged:(v)=>ds(() { if(v==true){chosen.add(id);}else{chosen.remove(id);} }));}).toList()))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,chosen),child:const Text('حفظ'))])));
     if(result!=null&&mounted)setState(() { p['user_ids']=result.toList(); p['all']=false; });
   }
-  int _daysInMonth(int month) => month == 2 ? 29 : ([4,6,9,11].contains(month) ? 30 : 31);
 
   @override
   Widget build(BuildContext context) {
@@ -153,3 +152,4 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       )),
     ]);
   }
+}
