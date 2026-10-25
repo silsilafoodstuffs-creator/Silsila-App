@@ -294,7 +294,7 @@ class _SoftwareSettingsPolicyTableState extends State<_SoftwareSettingsPolicyTab
       SizedBox(width:95,child:Text(code,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700))),const SizedBox(width:8),
       SizedBox(width:230,child:Text(title,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),const SizedBox(width:8),
       SizedBox(width:valueWidth,child:value),
-    ])))),
+    ]))),
   );
   @override Widget build(BuildContext context)=>Column(children:[
     Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),child:Row(children:[
