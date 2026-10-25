@@ -73,8 +73,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     var sd=int.tryParse(start.length>1?start[1]:'01')??1;
     var em=int.tryParse(end.isNotEmpty?end[0]:'12')??12;
     var ed=int.tryParse(end.length>1?end[1]:'31')??31;
-    sm=sm.clamp(1,12); em=em.clamp(1,12);
-    sd=sd.clamp(1,_daysInMonth(sm)); ed=ed.clamp(1,_daysInMonth(em));
+    sm=sm.clamp(1,12).toInt(); em=em.clamp(1,12).toInt();
+    sd=sd.clamp(1,_daysInMonth(sm)).toInt(); ed=ed.clamp(1,_daysInMonth(em)).toInt();
     void update() { p['value']='${sm.toString().padLeft(2,'0')}/${sd.toString().padLeft(2,'0')} - ${em.toString().padLeft(2,'0')}/${ed.toString().padLeft(2,'0')}'; }
     Widget picker(String label,int value,int max,ValueChanged<int?> change) => DropdownButtonFormField<int>(
       value:value, isExpanded:true, decoration:InputDecoration(labelText:label, isDense:true),
@@ -84,11 +84,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       const Align(alignment:Alignment.centerRight,child:Text('فترة السنة المالية — الشهر / اليوم')),
       Row(children:[
-        Expanded(child:picker('من — الشهر',sm,12,(v)=>setState(() { if(v!=null){sm=v;sd=sd.clamp(1,_daysInMonth(sm));update();} }))),
+        Expanded(child:picker('من — الشهر',sm,12,(v)=>setState(() { if(v!=null){sm=v;sd=sd.clamp(1,_daysInMonth(sm)).toInt();update();} }))),
         const SizedBox(width:8),
         Expanded(child:picker('من — اليوم',sd,_daysInMonth(sm),(v)=>setState(() { if(v!=null){sd=v;update();} }))),
         const SizedBox(width:8),
-        Expanded(child:picker('إلى — الشهر',em,12,(v)=>setState(() { if(v!=null){em=v;ed=ed.clamp(1,_daysInMonth(em));update();} }))),
+        Expanded(child:picker('إلى — الشهر',em,12,(v)=>setState(() { if(v!=null){em=v;ed=ed.clamp(1,_daysInMonth(em)).toInt();update();} }))),
         const SizedBox(width:8),
         Expanded(child:picker('إلى — اليوم',ed,_daysInMonth(em),(v)=>setState(() { if(v!=null){ed=v;update();} }))),
       ]),
