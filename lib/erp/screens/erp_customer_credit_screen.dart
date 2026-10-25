@@ -30,7 +30,7 @@ class _ErpCustomerCreditScreenState extends State<ErpCustomerCreditScreen> {
       final data=await client.from('erp_parties').select('id,party_code,party_name,transaction_type,credit_limit').eq('company_id',company).eq('party_kind','customer').order('party_code').limit(2000);
       if(!mounted)return;
       setState(() { rows = (data as List).map((e)=>Map<String,dynamic>.from(e)).toList(); loading = false; error = null; });
-    } catch(e) { if(mounted)setState(()=>{loading=false,error:'تعذر تحميل ائتمان العملاء: $e'}); }
+    } catch(e) { if(mounted)setState(() { loading = false; error = 'تعذر تحميل ائتمان العملاء: $e'; }); }
   }
   void _select(Map<String,dynamic> row) { setState(()=>selectedId=s(row['id'])); transactionType=s(row['transaction_type']).isEmpty?'نقدي':s(row['transaction_type']); limitController.text=s(row['credit_limit']).isEmpty?'0':s(row['credit_limit']); }
   Future<void> _save() async {
