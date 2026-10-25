@@ -80,17 +80,24 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }[type] ?? 'مستندات المبيعات';
 
   Future<void> _pickSourceDocuments() async {
-    if (widget.kind != ErpOperationalKind.sales ||
-        !['invoice', 'order'].contains(_documentType) ||
-        _company.text.trim().isEmpty) return;
-    final sourceType = _documentType == 'invoice' ? 'order' : 'quotation';
-    final sourceLabel = sourceType == 'order' ? 'أوامر البيع' : 'عروض الأسعار';
+    if (!['invoice', 'order'].contains(_documentType) ||
+        _company.text.trim().isEmpty || _partyId == null) return;
+    final isSales = widget.kind == ErpOperationalKind.sales;
+    final sourceType = _documentType == 'invoice'
+        ? 'order'
+        : (isSales ? 'quotation' : 'receipt');
+    final sourceLabel = isSales
+        ? (sourceType == 'order' ? 'أوامر البيع' : 'عروض الأسعار')
+        : (sourceType == 'order' ? 'أوامر الشراء' : 'أوامر التوريد');
+    final table = isSales ? 'erp_sales_documents' : 'erp_purchase_documents';
+    final partyColumn = isSales ? 'customer_id' : 'supplier_id';
     try {
       final raw = await Supabase.instance.client
-          .from('erp_sales_documents')
-          .select('id, document_number, auto_number, document_date, customer_id, grand_total, status')
+          .from(table)
+          .select('id, document_number, document_date, $partyColumn, grand_total, status')
           .eq('company_id', _company.text.trim())
           .eq('document_type', sourceType)
+          .eq(partyColumn, _partyId!)
           .inFilter('status', ['draft', 'approved', 'posted'])
           .order('document_date', ascending: false)
           .limit(500);
@@ -105,7 +112,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               width: 620,
               height: 420,
               child: docs.isEmpty
-                  ? const Center(child: Text('لا توجد مستندات مصدر متاحة.'))
+                  ? const Center(child: Text('لا توجد مستندات مصدر متاحة لنفس الطرف.'))
                   : Column(children: [
                       Align(
                         alignment: Alignment.centerRight,
@@ -123,7 +130,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                           return CheckboxListTile(
                             dense: true,
                             value: chosen.contains(id),
-                            title: Text('${_s(d['document_number'])} • مسلسل ${_s(d['auto_number'])}'),
+                            title: Text(_s(d['document_number'])),
                             subtitle: Text('${_s(d['document_date'])} • ${_money(d['grand_total'])} ج.م • ${_s(d['status'])}'),
                             onChanged: (v) => setDialogState(() {
                               if (v == true) chosen.add(id); else chosen.remove(id);
@@ -150,6 +157,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       if (mounted) setState(() => _error = 'تعذر جلب $sourceLabel: $error');
     }
   }
+
   @override
   void initState() {
     super.initState();
@@ -1649,7 +1657,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 SizedBox(width: width, child: OutlinedButton.icon(
                   onPressed: hasDraft || _saving ? null : _pickSourceDocuments,
                   icon: const Icon(Icons.file_open_outlined),
-                  label: Text(_documentType == 'invoice' ? 'جلب أمر بيع F1' : 'جلب عرض سعر F1'),
+                  label: Text(_documentType == 'invoice' ? 'جلب المستند السابق F1' : 'جلب المستند السابق F1'),
                 )),
               if (['quotation', 'order', 'invoice'].contains(_documentType) && _sourceDocumentIds.isNotEmpty)
                 SizedBox(width: width, child: _invoiceMetric('المستندات المرتبطة', _sourceDocumentIds.length.toString())),
@@ -2017,6 +2025,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 .entries.map((e) => DropdownMenuItem<String>(value: e.key, child: Text(e.value))).toList(),
               onChanged: (v) => setState(() => _documentType = v ?? _documentType),
             ),
+            if (['order', 'invoice'].contains(_documentType)) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _saving || _loading ? null : _pickSourceDocuments,
+                icon: const Icon(Icons.link),
+                label: Text(_sourceDocumentIds.isEmpty
+                    ? (_documentType == 'order' ? 'ربط أمر توريد سابق' : 'ربط أمر شراء سابق')
+                    : 'المستندات المصدر المحددة: ${_sourceDocumentIds.length}'),
+              ),
+            ],
             const SizedBox(height: 8),
             if (widget.kind == ErpOperationalKind.sales) ...[
               TextField(
