@@ -22,7 +22,7 @@ class ErpOperationalDocumentsRepository {
       ? 'erp_purchase_documents' : 'erp_sales_documents';
     final columns = kind == ErpOperationalKind.purchase
       ? 'id, company_id, branch_id, warehouse_id, supplier_id, auto_number, document_number, document_date, document_timestamp, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes, source_document_ids'
-      : 'id, company_id, branch_id, warehouse_id, customer_id, sales_rep_id, is_tax_invoice, auto_number, document_number, document_date, document_timestamp, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes, source_channel, source_document_ids';
+      : 'id, company_id, branch_id, warehouse_id, customer_id, sales_rep_id, is_tax_invoice, auto_number, document_number, document_date, document_timestamp, document_type, fiscal_year, fiscal_period_id, payment_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes, source_channel, source_document_ids';
     final rows = await _db.from(table)
       .select(columns)
       .eq('company_id', companyId.trim())
@@ -33,7 +33,7 @@ class ErpOperationalDocumentsRepository {
 
   Future<List<Map<String, dynamic>>> fetchParties(String companyId, ErpOperationalKind kind) async {
     final rows = await _db.from('erp_parties')
-      .select('id, party_code, party_name, party_kind, sales_rep_id, default_warehouse_id')
+      .select('id, party_code, party_name, party_name_en, party_kind, transaction_type, sales_rep_id, sales_rep_employee_id, default_warehouse_id')
       .eq('company_id', companyId.trim()).eq('is_active', true)
       .inFilter('party_kind', kind == ErpOperationalKind.purchase ? ['supplier','both'] : ['customer','both'])
       .order('party_name').limit(2000);
