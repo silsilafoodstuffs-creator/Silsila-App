@@ -68,14 +68,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final parts=(p['value']??'01/01 - 12/31').toString().split('-');
     final start=(parts.isNotEmpty?parts.first:'01/01').trim().split('/');
     final end=(parts.length>1?parts[1]:'12/31').trim().split('/');
-    var sd=int.tryParse((start.isNotEmpty?start[0]:'01'))??1;
-    var sm=int.tryParse((start.length>1?start[1]:'01'))??1;
-    var ed=int.tryParse((end.isNotEmpty?end[0]:'12'))??12;
-    var em=int.tryParse((end.length>1?end[1]:'31'))??31;
-    // Format is DD/MM - DD/MM; months are validated independently.
+    // Preserve the default January 1 through December 31 in MM/DD format.
+    var sm=int.tryParse(start.isNotEmpty?start[0]:'01')??1;
+    var sd=int.tryParse(start.length>1?start[1]:'01')??1;
+    var em=int.tryParse(end.isNotEmpty?end[0]:'12')??12;
+    var ed=int.tryParse(end.length>1?end[1]:'31')??31;
     sm=sm.clamp(1,12); em=em.clamp(1,12);
     sd=sd.clamp(1,_daysInMonth(sm)); ed=ed.clamp(1,_daysInMonth(em));
-    void update() { p['value']='${sd.toString().padLeft(2,'0')}/${sm.toString().padLeft(2,'0')} - ${ed.toString().padLeft(2,'0')}/${em.toString().padLeft(2,'0')}'; }
+    void update() { p['value']='${sm.toString().padLeft(2,'0')}/${sd.toString().padLeft(2,'0')} - ${em.toString().padLeft(2,'0')}/${ed.toString().padLeft(2,'0')}'; }
     Widget picker(String label,int value,int max,ValueChanged<int?> change) => DropdownButtonFormField<int>(
       value:value, isExpanded:true, decoration:InputDecoration(labelText:label, isDense:true),
       items:List.generate(max,(i)=>DropdownMenuItem(value:i+1,child:Text((i+1).toString().padLeft(2,'0')))),
