@@ -98,7 +98,7 @@ begin
     v_doc_id := (v_row->>'id')::uuid;
     v_entity_id := v_doc_id;
     v_doc_type := v_row->>'document_type';
-    if v_doc_type <> 'invoice' then
+    if coalesce(v_doc_type,'') <> 'invoice' then
       if tg_op='DELETE' then return old; else return new; end if;
     end if;
     if tg_op='DELETE' then v_before:=to_jsonb(old); else v_before:=null; end if;
