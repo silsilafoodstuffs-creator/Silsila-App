@@ -82,15 +82,15 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       onChanged:change,
     );
     return Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Align(alignment:Alignment.centerRight,child:Text('فترة السنة المالية — يوم / شهر')),
+      const Align(alignment:Alignment.centerRight,child:Text('فترة السنة المالية — الشهر / اليوم')),
       Row(children:[
-        Expanded(child:picker('من — اليوم',sd,_daysInMonth(sm),(v)=>setState(() { if(v!=null){sd=v;update();} }))),
-        const SizedBox(width:8),
         Expanded(child:picker('من — الشهر',sm,12,(v)=>setState(() { if(v!=null){sm=v;sd=sd.clamp(1,_daysInMonth(sm));update();} }))),
         const SizedBox(width:8),
-        Expanded(child:picker('إلى — اليوم',ed,_daysInMonth(em),(v)=>setState(() { if(v!=null){ed=v;update();} }))),
+        Expanded(child:picker('من — اليوم',sd,_daysInMonth(sm),(v)=>setState(() { if(v!=null){sd=v;update();} }))),
         const SizedBox(width:8),
         Expanded(child:picker('إلى — الشهر',em,12,(v)=>setState(() { if(v!=null){em=v;ed=ed.clamp(1,_daysInMonth(em));update();} }))),
+        const SizedBox(width:8),
+        Expanded(child:picker('إلى — اليوم',ed,_daysInMonth(em),(v)=>setState(() { if(v!=null){ed=v;update();} }))),
       ]),
     ]);
   }
