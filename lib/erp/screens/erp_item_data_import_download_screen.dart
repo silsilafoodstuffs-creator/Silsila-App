@@ -57,13 +57,81 @@ Widget _kindCell(_ImportRow row, VoidCallback refresh) => SizedBox(
   ),
 );
 
+Future<Map<String, String>?> _pickExistingRecord(BuildContext context, String kind) async {
+  final db = Supabase.instance.client;
+  final query = TextEditingController();
+  List<Map<String, dynamic>> records = [];
+  var loading = true;
+  String? error;
+  Future<void> load(StateSetter setDialog) async {
+    setDialog(() { loading = true; error = null; });
+    try {
+      final table = kind == 'فئة' ? 'categories' : 'erp_items';
+      final response = await db.from(table).select('*').limit(500);
+      records = (response as List).whereType<Map<String, dynamic>>().toList();
+      if (records.isEmpty) error = 'لا توجد بيانات في قائمة $kind.';
+    } catch (e) { error = 'تعذر تحميل قائمة $kind: $e'; }
+    setDialog(() => loading = false);
+  }
+  String valueOf(Map<String, dynamic> row, List<String> keys) {
+    for (final key in keys) {
+      final value = row[key]?.toString().trim() ?? '';
+      if (value.isNotEmpty && value != 'null') return value;
+    }
+    return '';
+  }
+  return showDialog<Map<String, String>>(context: context, builder: (dialogContext) => StatefulBuilder(
+    builder: (dialogContext, setDialog) {
+      if (loading && records.isEmpty && error == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) { if (dialogContext.mounted) load(setDialog); });
+      }
+      final filtered = records.where((record) {
+        final searchable = '${valueOf(record, ['name_ar','name','title','item_name','category_name'])} ${valueOf(record, ['item_code','code','category_code','id'])}';
+        return searchable.toLowerCase().contains(query.text.trim().toLowerCase());
+      }).toList();
+      return AlertDialog(
+        title: Text('بحث F1 في قائمة $kind'),
+        content: SizedBox(width: 520, height: 420, child: Column(children: [
+          TextField(controller: query, decoration: const InputDecoration(labelText: 'ابحث بالاسم أو الكود', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()), onChanged: (_) => setDialog(() {})),
+          const SizedBox(height: 8),
+          if (loading) const LinearProgressIndicator(),
+          if (error != null) Padding(padding: const EdgeInsets.all(8), child: Text(error!, style: const TextStyle(color: Colors.red))),
+          Expanded(child: ListView.builder(itemCount: filtered.length, itemBuilder: (_, i) {
+            final record = filtered[i];
+            final name = valueOf(record, ['name_ar','name','title','item_name','category_name']);
+            final code = valueOf(record, ['item_code','code','category_code','id']);
+            return ListTile(title: Text(name.isEmpty ? 'بدون اسم' : name), subtitle: Text(code), onTap: () => Navigator.pop(dialogContext, {'name': name, 'code': code}));
+          })),
+        ])),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')), TextButton(onPressed: () => load(setDialog), child: const Text('تحديث القائمة'))],
+      );
+    },
+  ));
+}
+
+Widget _codeModeCell(_ImportRow row, VoidCallback refresh) => SizedBox(
+  width: 150,
+  child: Row(mainAxisSize: MainAxisSize.min, children: [
+    InkWell(onTap: () { row.codeMode = 'جديد'; if (row.code.isEmpty) row.code = row.kind == 'فئة' ? 'CAT00001' : 'ITM00001'; refresh(); },
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Checkbox(shape: const CircleBorder(), value: row.codeMode == 'جديد', visualDensity: VisualDensity.compact, onChanged: (v) { if (v == true) { row.codeMode='جديد'; row.code = row.kind == 'فئة' ? 'CAT00001' : 'ITM00001'; refresh(); } }),
+        const Text('جديد', style: TextStyle(fontSize: 11)),
+      ])),
+    InkWell(onTap: () { row.codeMode='قديم'; refresh(); },
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Checkbox(shape: const CircleBorder(), value: row.codeMode == 'قديم', visualDensity: VisualDensity.compact, onChanged: (v) { if (v == true) { row.codeMode='قديم'; refresh(); } }),
+        const Text('قديم', style: TextStyle(fontSize: 11)),
+      ])),
+  ]),
+);
+
 class _ImportRow {
-  _ImportRow({required this.id, required this.imageUrl, this.bytes, this.name = '', this.kind = 'صنف', this.category = '', this.subcategory = '', this.majorUnit = '', this.innerCount = '', this.minorUnit = '', this.weight = '', this.length = '', this.width = '', this.height = '', this.selected = true});
+  _ImportRow({required this.id, required this.imageUrl, this.bytes, this.name = '', this.kind = 'صنف', this.codeMode = 'جديد', this.code = '', this.category = '', this.subcategory = '', this.majorUnit = '', this.innerCount = '', this.minorUnit = '', this.weight = '', this.length = '', this.width = '', this.height = '', this.selected = true});
   final String id;
-  String imageUrl, name, kind, category, subcategory, majorUnit, innerCount, minorUnit, weight, length, width, height;
+  String imageUrl, name, kind, codeMode, code, category, subcategory, majorUnit, innerCount, minorUnit, weight, length, width, height;
   Uint8List? bytes;
   bool selected;
-  Map<String,String> toMap() => {'id':id,'image_file':'images/$id.jpg','image_url':imageUrl,'name_ar':name,'record_type':kind,'category':category,'subcategory':subcategory,'major_unit':majorUnit,'inner_count':innerCount,'minor_unit':minorUnit,'weight':weight,'length':length,'width':width,'height':height};
+  Map<String,String> toMap() => {'id':id,'image_file':'images/$id.jpg','image_url':imageUrl,'name_ar':name,'record_type':kind,'code_mode':codeMode,'item_code':code,'category':category,'subcategory':subcategory,'major_unit':majorUnit,'inner_count':innerCount,'minor_unit':minorUnit,'weight':weight,'length':length,'width':width,'height':height};
 }
 
 class ErpItemDataImportScreen extends StatefulWidget {
@@ -75,7 +143,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   final List<_ImportRow> _rows = [];
   bool _busy = false, _selectAll = true;
   String _status = 'أدخل رابط موقع لبدء اكتشاف الصفحات والصور.';
-  static const _headers = ['id','image_file','image_url','name_ar','record_type','category','subcategory','major_unit','inner_count','minor_unit','weight','length','width','height'];
+  static const _headers = ['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','major_unit','inner_count','minor_unit','weight','length','width','height'];
   @override void dispose(){_url.dispose();super.dispose();}
   Future<void> _pasteUrl() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
@@ -121,6 +189,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
         index++;
         _rows.add(_ImportRow(
           id: 'IMG${index.toString().padLeft(5, '0')}',
+          code: 'ITM${index.toString().padLeft(5, '0')}',
           imageUrl: imageUrl,
           name: name,
           kind: (entry['record_type'] ?? 'صنف').toString() == 'فئة' ? 'فئة' : 'صنف',
@@ -268,24 +337,18 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                           }),
                         ),
                       ])),
-                      const DataColumn(label: Text('الاسم العربي المقترح')),
                       DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
                         const Text('النوع'),
-                        Checkbox(
-                          shape: const CircleBorder(),
-                          visualDensity: VisualDensity.compact,
-                          value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'صنف'),
-                          onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'صنف'; } }); },
-                        ),
+                        Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'صنف'), onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'صنف'; } }); }),
                         const Text('صنف', style: TextStyle(fontSize: 11)),
-                        Checkbox(
-                          shape: const CircleBorder(),
-                          visualDensity: VisualDensity.compact,
-                          value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'فئة'),
-                          onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'فئة'; } }); },
-                        ),
+                        Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'فئة'), onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'فئة'; } }); }),
                         const Text('فئة', style: TextStyle(fontSize: 11)),
                       ])),
+                      const DataColumn(label: Text('نوع الكود')),
+                      const DataColumn(label: Text('بحث F1')),
+                      const DataColumn(label: Text('كود صنف / فئة')),
+                      const DataColumn(label: Text('الاسم العربي المقترح')),
+                      
                       const DataColumn(label: Text('الفئة الرئيسية')),
                       const DataColumn(label: Text('الفئة الفرعية')),
                       const DataColumn(label: Text('الوحدة الكبرى')),
@@ -302,6 +365,12 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
                       DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(_kindCell(r, () => setState(() {}))),
+                    DataCell(_codeModeCell(r, () => setState(() {}))),
+                    DataCell(IconButton(tooltip: 'بحث F1 في قائمة الصنف أو الفئة', onPressed: () async {
+                      final picked = await _pickExistingRecord(context, r.kind);
+                      if (picked != null && mounted) setState(() { r.codeMode = 'قديم'; r.code = picked['code'] ?? ''; if ((picked['name'] ?? '').isNotEmpty) r.name = picked['name']!; });
+                    }, icon: const Icon(Icons.search, color: _purple))),
+                    DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.code, onChanged: (v) => r.code = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.category, onChanged: (v) => r.category = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.subcategory, onChanged: (v) => r.subcategory = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.majorUnit, onChanged: (v) => r.majorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
@@ -343,7 +412,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
       final loaded=< _ImportRow >[];
       for(final row in sheet.rows.skip(1)){
         final id=cell(row,0);if(id.isEmpty)continue;final imagePath=cell(row,1);
-        loaded.add(_ImportRow(id:id,imageUrl:cell(row,2),name:cell(row,3),kind:cell(row,4).isEmpty?'صنف':cell(row,4),category:cell(row,5),subcategory:cell(row,6),majorUnit:cell(row,7),innerCount:cell(row,8),minorUnit:cell(row,9),weight:cell(row,10),length:cell(row,11),width:cell(row,12),height:cell(row,13),bytes:files[imagePath],selected:true));
+        loaded.add(_ImportRow(id:id,imageUrl:cell(row,2),name:cell(row,3),kind:cell(row,4).isEmpty?'صنف':cell(row,4),codeMode:cell(row,5).isEmpty?'جديد':cell(row,5),code:cell(row,6),category:cell(row,7),subcategory:cell(row,8),majorUnit:cell(row,9),innerCount:cell(row,10),minorUnit:cell(row,11),weight:cell(row,12),length:cell(row,13),width:cell(row,14),height:cell(row,15),bytes:files[imagePath],selected:true));
       }
       setState(() { _rows=loaded; _status='تم فتح ${loaded.length} صفًا. التعديلات محلية ولن تُحفظ في قاعدة البيانات.'; });
     }catch(e){setState(()=>_status='تعذر فتح ZIP: $e');}
@@ -352,7 +421,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
   Future<void> _exportZip()async{
     setState(()=>_busy=true);
     try{
-      final selected=_rows.where((r)=>r.selected).toList(); if(selected.isEmpty) throw Exception('حدد صفًا واحدًا على الأقل للتصدير'); final archive=Archive();final book=Excel.createExcel();final sheet=book['بيانات الأصناف'];const headers=['id','image_file','image_url','name_ar','record_type','category','subcategory','major_unit','inner_count','minor_unit','weight','length','width','height'];sheet.appendRow(headers.map((h)=>TextCellValue(h)).toList());
+      final selected=_rows.where((r)=>r.selected).toList(); if(selected.isEmpty) throw Exception('حدد صفًا واحدًا على الأقل للتصدير'); final archive=Archive();final book=Excel.createExcel();final sheet=book['بيانات الأصناف'];const headers=['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','major_unit','inner_count','minor_unit','weight','length','width','height'];sheet.appendRow(headers.map((h)=>TextCellValue(h)).toList());
       for(final r in selected){final imageFile=r.bytes==null?'':'images/${r.id}.${_ext(r.imageUrl)}';final m=r.toMap()..['image_file']=imageFile;sheet.appendRow(headers.map((h)=>TextCellValue(m[h]??'')).toList());if(r.bytes!=null)archive.addFile(ArchiveFile(imageFile,r.bytes!.length,r.bytes!));}
       final x=book.encode()!;archive.addFile(ArchiveFile('items.xlsx',x.length,x));final zipped=ZipEncoder().encode(archive)!;
       await FileSaver.instance.saveFile(name:'silsila_items_edited',bytes:Uint8List.fromList(zipped),fileExtension:'zip',mimeType:MimeType.zip);
@@ -406,6 +475,16 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                         }),
                       ),
                     ])),
+                    DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Text('النوع'),
+                        Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'صنف'), onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'صنف'; } }); }),
+                        const Text('صنف', style: TextStyle(fontSize: 11)),
+                        Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: _rows.isNotEmpty && _rows.every((r) => r.kind == 'فئة'), onChanged: (v) { if (v == true) setState(() { for (final r in _rows) { r.kind = 'فئة'; } }); }),
+                        const Text('فئة', style: TextStyle(fontSize: 11)),
+                      ])),
+                      const DataColumn(label: Text('نوع الكود')),
+                      const DataColumn(label: Text('بحث F1')),
+                      const DataColumn(label: Text('كود صنف / فئة')),
                     const DataColumn(label: Text('الاسم العربي')),
                     DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Text('النوع'),
