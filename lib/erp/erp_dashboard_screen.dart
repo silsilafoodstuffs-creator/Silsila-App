@@ -1838,7 +1838,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final client = Supabase.instance.client;
       final from = start.toIso8601String().substring(0, 10);
       final to = end.toIso8601String().substring(0, 10);
-      final month = DateTime(DateTime.now().year, DateTime.now().month).toIso8601String().substring(0, 10);
+      final month = DateTime(start.year, start.month).toIso8601String().substring(0, 10);
       final results = await Future.wait<dynamic>([
         client.from('erp_sales_representatives').select('*').eq('company_id', companyId).eq('is_active', true).order('rep_name'),
         client.from('erp_sales_documents').select('id,sales_rep_id,document_type,grand_total,status,document_date,is_demo_data').eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false).gte('document_date', from).lt('document_date', to),
@@ -1887,7 +1887,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return matching.isEmpty ? 0 : _performanceNumber(matching.first['target_amount']);
   }
 
-  Widget _staffPerformanceCard({required String title, required IconData icon, required Color color, required List<Map<String, dynamic>> people, required double Function(Map<String, dynamic>) actualFor, required double Function(Map<String, dynamic>) targetFor, required String Function(Map<String, dynamic>) nameFor, required String Function(Map<String, dynamic>) classificationFor, required bool showAll, required VoidCallback onToggle, required String emptyText}) {
+  Widget _staffPerformanceCard({required String title, required IconData icon, required Color color, required List<Map<String, dynamic>> people, required double Function(Map<String, dynamic>) actualFor, required double Function(Map<String, dynamic>) targetFor, required String Function(Map<String, dynamic>) nameFor, required String Function(Map<String, dynamic>) classificationFor, required bool showAll, required VoidCallback onToggle, required String emptyText, ValueChanged<Map<String, dynamic>>? onEditTarget}) {
     final sorted = [...people]..sort((a, b) {
       final aTarget = targetFor(a), bTarget = targetFor(b);
       final aRate = aTarget > 0 ? actualFor(a) / aTarget : -1.0;
@@ -1926,6 +1926,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 Text('فعلي: ${_executiveMoney(actual)}', style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w800)),
                 const SizedBox(width: 8),
                 Text('هدف: ${target > 0 ? _executiveMoney(target) : '—'}', style: const TextStyle(fontSize: 10, color: Colors.black54)),
+                if (onEditTarget != null) IconButton(tooltip: 'تحديد الهدف الشهري', visualDensity: VisualDensity.compact, constraints: const BoxConstraints.tightFor(width: 28, height: 28), padding: EdgeInsets.zero, onPressed: () => onEditTarget(person), icon: const Icon(Icons.edit_outlined, size: 15, color: _purple)),
               ]),
               const SizedBox(height: 5),
               ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: target > 0 ? ratio.clamp(0.0, 1.0).toDouble() : 0, minHeight: 7, backgroundColor: const Color(0xFFEFEAF4), color: rateColor)),
@@ -1937,6 +1938,49 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     );
   }
 
+  Future<void> _editPurchaseTarget(Map<String, dynamic> employee) async {
+    final companyId = _appManagementCompanyId;
+    if (companyId == null || companyId.isEmpty) return;
+    final month = DateTime(_executivePeriodBounds(DateTime.now(), DateTime.now()).start.year, _executivePeriodBounds(DateTime.now(), DateTime.now()).start.month);
+    final controller = TextEditingController(text: _employeeTarget(employee['id'].toString(), 'purchase').toStringAsFixed(2));
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        title: Text('هدف المشتريات الشهري — ${employee['full_name'] ?? ''}'),
+        content: SizedBox(width: 360, child: TextField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'قيمة الهدف (ج.م)', border: OutlineInputBorder()),
+        )),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ الهدف')),
+        ],
+      ),
+    ));
+    if (ok != true) return;
+    final amount = double.tryParse(controller.text.trim());
+    if (amount == null || amount < 0) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل قيمة هدف صحيحة لا تقل عن صفر.')));
+      return;
+    }
+    try {
+      final targetMonth = month.toIso8601String().substring(0, 10);
+      await Supabase.instance.client.from('erp_employee_monthly_targets').upsert({
+        'company_id': companyId,
+        'employee_id': employee['id'],
+        'target_type': 'purchase',
+        'target_month': targetMonth,
+        'target_amount': amount,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'company_id,employee_id,target_type,target_month');
+      await _loadExecutiveStaffPerformance(companyId, month, DateTime(month.year, month.month + 1));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ هدف المشتريات الشهري.')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الهدف: $e')));
+    }
+  }
+
   Widget _executiveStaffPerformance() => LayoutBuilder(builder: (context, constraints) {
     final sales = _staffPerformanceCard(
       title: 'أداء مندوبي المبيعات', icon: Icons.trending_up_rounded, color: _purple,
@@ -1944,7 +1988,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       actualFor: _salesRepActual,
       targetFor: (rep) => _performanceNumber(rep['monthly_sales_target']),
       nameFor: (rep) => (rep['rep_name'] ?? 'مندوب مبيعات').toString(),
-      classificationFor: (rep) => (rep['rep_type'] ?? rep['classification'] ?? rep['channel'] ?? 'مندوب مبيعات').toString(),
+      classificationFor: (rep) => (rep['rep_classification'] ?? rep['channel'] ?? 'مندوب مبيعات').toString(),
       showAll: _showAllSalesPerformance,
       onToggle: () => setState(() => _showAllSalesPerformance = !_showAllSalesPerformance),
       emptyText: 'لا توجد بيانات مندوبي مبيعات نشطة. أضف المندوبين وحدد أهدافهم الشهرية لعرض نسب الإنجاز.',
@@ -1959,6 +2003,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       showAll: _showAllPurchasePerformance,
       onToggle: () => setState(() => _showAllPurchasePerformance = !_showAllPurchasePerformance),
       emptyText: 'لا توجد بيانات لموظفي المشتريات النشطين. اربط الموظف بقسم/وظيفة المشتريات وحدد له هدفًا شهريًا.',
+      onEditTarget: _editPurchaseTarget,
     );
     if (constraints.maxWidth < 760) return Column(children: [sales, const SizedBox(height: 12), purchases]);
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: sales), const SizedBox(width: 12), Expanded(child: purchases)]);
