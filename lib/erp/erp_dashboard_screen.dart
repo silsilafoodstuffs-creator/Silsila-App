@@ -14,6 +14,7 @@ import 'screens/erp_app_assets_screen.dart';
 import 'screens/erp_app_advertisements_screen.dart';
 import 'screens/erp_program_settings_screen.dart';
 import 'screens/erp_program_policies_screen.dart';
+import 'screens/erp_supplier_deferred_commissions_screen.dart';
 import 'screens/erp_delegate_allocation_screen.dart';
 import 'screens/erp_company_profile_screen.dart';
 import 'screens/erp_currencies_screen.dart';
