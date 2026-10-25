@@ -37,6 +37,16 @@ jobs:
           flutter-version: "3.29.3"
           cache: true
 
+      - name: Generate supported Android platform project when missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f android/app/build.gradle.kts ] || [ ! -f android/gradlew ] || [ ! -f android/settings.gradle.kts ]; then
+            flutter create --project-name=silsila_app --platforms=android .
+          else
+            echo "Existing Android Gradle project detected; preserving it."
+          fi
+
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
