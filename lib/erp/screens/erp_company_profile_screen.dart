@@ -10,6 +10,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_company_settings_repository.dart';
+import 'erp_branches_screen.dart';
 
 const _companyPurple = Color(0xFF3E007D);
 
@@ -44,6 +45,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
   String? _logoPreviewUrl;
   bool _uploadingLogo = false;
   bool _isEditing = false;
+  int _selectedCompanyTab = 0;
   List<Map<String, String>> _currencyOptions = [
     {'code': 'EGP', 'name': 'جنيه مصري'}, {'code': 'USD', 'name': 'دولار أمريكي'},
     {'code': 'SAR', 'name': 'ريال سعودي'}, {'code': 'AED', 'name': 'درهم إماراتي'},
@@ -595,7 +597,22 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
             _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, _companyPurple, _loading || _saving ? null : _exportCompany),
           ])),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5EFFB),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _companyPurple.withValues(alpha: .14)),
+          ),
+          child: Row(children: [
+            Expanded(child: _companyTabButton('بيانات الشركة', 0, Icons.business_outlined)),
+            const SizedBox(width: 6),
+            Expanded(child: _companyTabButton('الفروع', 1, Icons.account_tree_outlined)),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        if (_selectedCompanyTab == 0) ...[
         if (_error != null) _notice(_error!, Colors.red),
         if (_message != null) _notice(_message!, Colors.green),
         if (_loading)
@@ -669,7 +686,34 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
               ]),
             ),
           ),
+        ],
+        if (_selectedCompanyTab == 1)
+          Expanded(child: ErpBranchesScreen(companyId: _activeCompanyId ?? widget.companyId, embedded: true)),
       ]),
+    );
+  }
+
+  Widget _companyTabButton(String label, int index, IconData icon) {
+    final selected = _selectedCompanyTab == index;
+    return InkWell(
+      borderRadius: BorderRadius.circular(9),
+      onTap: () => setState(() => _selectedCompanyTab = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected ? _companyPurple : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(icon, size: 18, color: selected ? Colors.white : _companyPurple),
+          const SizedBox(width: 7),
+          Text(label, style: TextStyle(
+            color: selected ? Colors.white : _companyPurple,
+            fontWeight: FontWeight.w800,
+          )),
+        ]),
+      ),
     );
   }
 
