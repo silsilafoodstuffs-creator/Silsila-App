@@ -1439,8 +1439,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Wrap(spacing: 5, runSpacing: 5, children: [
               _quick('فاتورة البيع', Icons.point_of_sale_rounded, () => _open('المبيعات والعملاء', 'حركات', 'فاتورة مبيعات')),
               _quick('جامع صور الأصناف', Icons.photo_library_outlined, () => _open('المخازن والفروع', 'حركات', 'جامع صور الأصناف')),
-              _quick('استيراد بيانات اصناف', Icons.travel_explore, () => _open('المخازن والفروع', 'حركات', 'استيراد بيانات اصناف')),
-              _quick('تنزيل بيانات أصناف', Icons.folder_zip_outlined, () => _open('المخازن والفروع', 'حركات', 'تنزيل بيانات أصناف')),
             ]),
           ]),
         ),
