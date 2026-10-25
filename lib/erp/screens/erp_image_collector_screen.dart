@@ -1253,8 +1253,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   if(mode=='new') Padding(
                     padding: const EdgeInsets.symmetric(horizontal:3),
                     child: Text(kind=='category'
-                      ? 'كود مقترح: CAT-0001'
-                      : 'كود مقترح: ITEM-0001',
+                      ? 'كود مقترح: يُنشأ تلقائيًا'
+                      : 'كود مقترح: يُنشأ تلقائيًا',
                       style: const TextStyle(fontSize:11,fontWeight:FontWeight.w800,color:_purple)),
                   ),
                   const SizedBox(width:2),
