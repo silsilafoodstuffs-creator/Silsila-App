@@ -193,10 +193,10 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
               ),
             ]),
           ),
-          const Expanded(child: TabBarView(children: [
-            _ApiCatalogTab(),
-            _ApiExternalTab(),
-            _ApiKeysTab(),
+          Expanded(child: TabBarView(children: [
+            _apiInterface(),
+            _externalConnection(),
+            _apiKeys(),
           ])),
         ]),
       );
