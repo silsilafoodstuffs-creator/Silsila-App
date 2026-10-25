@@ -158,6 +158,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                 SizedBox(width: 225, child: Text('بيانات السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
                                 SizedBox(width: 220, child: Text('القيمة / الاختيار', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 8),
                                 SizedBox(width: 50, child: Text('تفعيل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
                                 SizedBox(width: 58, child: Text('على الكل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
