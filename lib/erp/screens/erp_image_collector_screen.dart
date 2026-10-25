@@ -669,14 +669,18 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         _rowController(item,'category_main_name').text=(root?['category_name']??'').toString();
         _rowController(item,'category_sub_name').text=(sub?['category_name']??'').toString();
         _rowController(item,'category_secondary_name').text=(third?['category_name']??'').toString();
+        _rowController(item,'category_main_name_en').text=(root?['category_name_en']??'').toString();
+        _rowController(item,'category_sub_name_en').text=(sub?['category_name_en']??'').toString();
+        _rowController(item,'category_secondary_name_en').text=(third?['category_name_en']??'').toString();
+        item['category_level']=third!=null?'secondary':sub!=null?'sub':'root';
         item['entity_mode']='old';if(mounted)setState(()=>_status='تم تحميل الفئة القديمة '+code+'؛ راجع الأسماء ثم اضغط تحديث بيانات.');
       }else{
-        final raw=await db.from('erp_items').select('id,item_name,item_name_en,base_unit,sale_price,tax_rate,pricing_area,package_description').eq('company_id',company).eq('item_code',code).maybeSingle();
+        final raw=await db.from('erp_items').select('id,item_name,item_name_en,base_unit,sale_price,tax_rate,pricing_area,package_description,weight_kg,length_cm,width_cm,height_cm').eq('company_id',company).eq('item_code',code).maybeSingle();
         if(raw==null)throw Exception('كود الصنف غير موجود في الشركة الحالية.');
         item['database_item_id']=raw['id'].toString();
         _rowController(item,'item_name_ar').text=(raw['item_name']??'').toString();_rowController(item,'item_name_en').text=(raw['item_name_en']??'').toString();
         _rowController(item,'minor_unit').text=(raw['base_unit']??'قطعة').toString();_rowController(item,'sale_price').text=(raw['sale_price']??0).toString();
-        _rowController(item,'tax_rate').text=(raw['tax_rate']??0).toString();_rowController(item,'pricing_area').text=(raw['pricing_area']??1).toString();
+        _rowController(item,'tax_rate').text=(raw['tax_rate']??0).toString();_rowController(item,'pricing_area').text=(raw['pricing_area']??1).toString();_rowController(item,'weight_kg').text=(raw['weight_kg']??0).toString();_rowController(item,'length_cm').text=(raw['length_cm']??0).toString();_rowController(item,'width_cm').text=(raw['width_cm']??0).toString();_rowController(item,'height_cm').text=(raw['height_cm']??0).toString();
         final desc=(raw['package_description']??'').toString().split('=');
         if(desc.length>1){_rowController(item,'major_unit').text=desc.first.trim();final p=desc[1].trim().split(RegExp(r'\s+'));if(p.isNotEmpty)_rowController(item,'internal_count').text=p.first;}
         final units=await db.from('erp_item_units').select('unit_name,conversion_factor,is_base_unit').eq('company_id',company).eq('item_id',raw['id'].toString()).eq('is_active',true);
