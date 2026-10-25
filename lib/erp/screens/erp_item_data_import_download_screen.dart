@@ -157,7 +157,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
         final id=cell(row,0);if(id.isEmpty)continue;final imagePath=cell(row,1);
         loaded.add(_ImportRow(id:id,imageUrl:cell(row,2),name:cell(row,3),kind:cell(row,4).isEmpty?'صنف':cell(row,4),category:cell(row,5),subcategory:cell(row,6),majorUnit:cell(row,7),innerCount:cell(row,8),minorUnit:cell(row,9),weight:cell(row,10),length:cell(row,11),width:cell(row,12),height:cell(row,13),bytes:files[imagePath],selected:true));
       }
-      setState(()=>{_rows=loaded,_status='تم فتح ${loaded.length} صفًا. التعديلات محلية ولن تُحفظ في قاعدة البيانات.'});
+      setState(() { _rows=loaded; _status='تم فتح ${loaded.length} صفًا. التعديلات محلية ولن تُحفظ في قاعدة البيانات.'; });
     }catch(e){setState(()=>_status='تعذر فتح ZIP: $e');}
     finally{if(mounted)setState(()=>_busy=false);}
   }
