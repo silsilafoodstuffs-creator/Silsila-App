@@ -59,7 +59,6 @@ import '../services/app_language.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
-const _green = Color(0xFF16803C);
 const _pink = Color(0xFFFF27C3);
 const _canvas = Color(0xFFF7F5FA);
 
