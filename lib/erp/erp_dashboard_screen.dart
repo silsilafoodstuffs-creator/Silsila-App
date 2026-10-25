@@ -171,6 +171,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _notificationsPanelVisible = true;
   bool _activityPanelVisible = true;
   bool _quickAccessPanelVisible = true;
+  bool _mainSidebarVisible = true;
+  bool _utilitySidebarVisible = true;
   bool _executiveAccessChecked = false;
   bool _executiveSummaryAllowed = true;
   bool _executivePartialConfigured = false;
@@ -1075,7 +1077,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         return Scaffold(
           backgroundColor: _canvas,
           body: Row(children: [
-            SizedBox(width: sidebarWidth, child: _sidebar()),
+            if (_mainSidebarVisible) SizedBox(width: sidebarWidth, child: _sidebar()),
             Expanded(child: Column(children: [
               _header(compact),
               Expanded(child: Row(
@@ -1119,13 +1121,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       child: ErpKeyboardNavigation(child: _page == 'مسح جميع البيانات' ? ErpClearDataScreen(companyId: _appManagementCompanyId) : _page == 'أنواع الأنشطة' ? ErpActivityTypesScreen(companyId: _appManagementCompanyId) : _page == 'سياسات البرنامج' ? ErpProgramPoliciesScreen(companyId: _appManagementCompanyId) : _page == 'مؤجلات وعمولات الموردين' ? ErpSupplierDeferredCommissionsScreen(companyId: _appManagementCompanyId) : _page == 'عن البرنامج' ? _about() : _page == 'قاعدة العملاء المحتملين' ? ErpPublicLeadsScreen(companyId: _appManagementCompanyId) : _page == 'أهداف العملاء الشهرية' || _page == 'عمولات المندوبين' || _page == 'عمولات المبيعات' || _page == 'خطط العمولة' || _page == 'مسودات العمولات' || _page == 'تحقيق أهداف العملاء' || _page == 'تقرير العمولات المستحقة' ? ErpSalesTargetsCommissionsScreen(companyId: _appManagementCompanyId, initialTabIndex: _page == 'عمولات المندوبين' || _page == 'عمولات المبيعات' ? 1 : _page == 'خطط العمولة' ? 2 : _page == 'مسودات العمولات' || _page == 'تقرير العمولات المستحقة' ? 3 : 0) : _page == 'العملاء' || _page == 'الموردون' || _page == 'دليل العملاء' || _page == 'دليل الموردين' ? ErpPartiesScreen(initialCompanyId: _appManagementCompanyId, initialKind: _page == 'الموردون' || _page == 'دليل الموردين' ? 'supplier' : 'customer') : _page == 'العملات' ? ErpCurrenciesScreen(companyId: _appManagementCompanyId) : _page == 'شجرة الحسابات' ? ErpAccountsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'الفترات المالية' || _page == 'إقفال الفترة' ? ErpFiscalPeriodsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'قائمة اعتماد القيود' ? ErpJournalEntriesScreen(initialCompanyId: _appManagementCompanyId, initialStatus: 'draft') : _page == 'قيود اليومية' ? ErpJournalEntriesScreen(initialCompanyId: _appManagementCompanyId) : _page == 'ميزان المراجعة' ? ErpLedgerReportsScreen(kind: ErpLedgerReportKind.trialBalance, initialCompanyId: _appManagementCompanyId) : _page == 'الأستاذ العام' ? ErpLedgerReportsScreen(kind: ErpLedgerReportKind.generalLedger, initialCompanyId: _appManagementCompanyId) : _page == 'حركة حساب' ? ErpLedgerReportsScreen(kind: ErpLedgerReportKind.accountMovement, initialCompanyId: _appManagementCompanyId) : _page == 'الملخص التنفيذي' || _page == 'ملخص تنفيذي' ? _home() : _module == 'إدارة البرنامج' && _page == 'بيانات الشركة' ? ErpCompanyProfileScreen(companyId: _appManagementCompanyId, onCompanyCreated: (companyId) async { if (!mounted) return; setState(() => _appManagementCompanyId = companyId); await _loadWorkspaceSettings(companyId); await _loadExecutiveMetrics(companyId); }) : _page == 'إدارة إعلانات التطبيق' ? ErpAppAdvertisementsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey]) : _page == 'إدارة الشعار والصور' ? ErpAppAssetsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey], initialAssetType: 'app_logo') : _page == 'إدارة صور الأصناف والفئات' ? ErpAppAssetsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey], initialAssetType: 'item') : _page == 'إدارة صور الموردين والعملاء' ? ErpAppAssetsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey], initialAssetType: 'supplier') : _page == 'إدارة شركات الشحن' ? const ErpShippingCompaniesScreen() : _page == 'الفروع' || _page == 'دليل الفروع' ? ErpBranchesScreen(companyId: _appManagementCompanyId) : _page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة' ? ErpCostCentersScreen(companyId: _appManagementCompanyId) : _page == 'بيانات جغرافية' ? ErpGeographicDataScreen(companyId: _appManagementCompanyId) : _module == 'إدارة التطبيقات' ? _appManagement() : _page == 'اختبار ومراجعة الحركات' ? ErpMovementAuditScreen(initialCompanyId: _appManagementCompanyId) : _page == 'جامع صور الأصناف' ? const ErpImageCollectorScreen() : _page == 'استيراد بيانات اصناف' ? const ErpItemDataImportScreen() : _page == 'تنزيل بيانات أصناف' ? const ErpItemDataDownloadScreen() : _page == 'دليل المخازن' ? ErpInventoryMasterScreen(initialCompanyId: _appManagementCompanyId, initialView: 'warehouses') : _page == 'فئات الأصناف' ? ErpItemCategoriesScreen(companyId: _appManagementCompanyId) : _page == 'دليل الأصناف' ? ErpInventoryMasterScreen(initialCompanyId: _appManagementCompanyId, initialView: 'items') : _page == 'وحدات الأصناف' ? ErpItemUnitsScreen(companyId: _appManagementCompanyId) : _page == 'أرصدة الأصناف' || _page == 'كارت الصنف' || _page == 'الجرد والفروق' || _page == 'إذن إضافة' || _page == 'إذن صرف' || _page == 'تحويل مخزني' || _page == 'تسوية جرد' || _page == 'جرد فعلي' ? ErpInventoryScreen(initialCompanyId: _appManagementCompanyId) : _page == 'ملف الموظف' || _page == 'الحضور والانصراف' || _page == 'الإجازات والأذونات' ? ErpHrOperationsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'مسير الرواتب' || _page == 'صرف الرواتب' ? ErpPayrollScreen(initialCompanyId: _appManagementCompanyId) : _page == 'عروض الأصناف' ? ErpItemOffersScreen(companyId: _appManagementCompanyId) : _page == 'قوائم أسعار البيع' ? ErpPriceListsScreen(initialCompanyId: _appManagementCompanyId, initialKind: 'sale') : _page == 'قوائم أسعار الموردين' || _page == 'قوائم أسعار الشراء' ? ErpPriceListsScreen(initialCompanyId: _appManagementCompanyId, initialKind: 'purchase') : _page == 'خريطة الحسابات التشغيلية' ? ErpOperationalAccountMappingsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'الخزائن الرئيسية والفرعية' ? ErpCashboxesScreen(initialCompanyId: _appManagementCompanyId) : _page == 'الحسابات البنكية' ? ErpCashboxesScreen(initialCompanyId: _appManagementCompanyId, initialBankOnly: true) : _page == 'سندات القبض' ? ErpCashVouchersScreen(initialCompanyId: _appManagementCompanyId, initialType: 'receipt') : _page == 'سندات الصرف' ? ErpCashVouchersScreen(initialCompanyId: _appManagementCompanyId, initialType: 'payment') : _page == 'تحويل بين الخزائن' ? ErpCashVouchersScreen(initialCompanyId: _appManagementCompanyId, initialType: 'transfer') : _page == 'طلب شراء' || _page == 'أمر شراء' || _page == 'استلام مشتريات' || _page == 'فاتورة مشتريات' || _page == 'مرتجع مشتريات' ? ErpOperationalDocumentsScreen(initialCompanyId: _appManagementCompanyId, kind: ErpOperationalKind.purchase, initialDocumentType: _page == 'طلب شراء' || _page == 'أمر شراء' ? 'order' : _page == 'استلام مشتريات' ? 'receipt' : _page == 'مرتجع مشتريات' ? 'return' : 'invoice') : _page == 'إذن التجهيز' ? ErpSalesFulfillmentScreen(companyId: _appManagementCompanyId ?? '', kind: 'preparation') : _page == 'إذن التسليم' ? ErpSalesFulfillmentScreen(companyId: _appManagementCompanyId ?? '', kind: 'delivery') : _page == 'عرض سعر' || _page == 'أمر بيع' || _page == 'فاتورة مبيعات' || _page == 'مرتجع مبيعات' ? ErpOperationalDocumentsScreen(initialCompanyId: _appManagementCompanyId, kind: ErpOperationalKind.sales, initialDocumentType: _page == 'عرض سعر' ? 'quotation' : _page == 'أمر بيع' ? 'order' : _page == 'مرتجع مبيعات' ? 'return' : 'invoice') : _page == 'أنواع المستخدمين والمستخدمين' || _page == 'أنواع المستخدمين' || _page == 'المستخدمين' ? ErpUserAdminScreen(companyId: _appManagementCompanyId, initialView: 'hierarchy') : _page == 'تصنيفات المستخدمين' ? ErpUserClassificationsScreen(companyId: _appManagementCompanyId) : _page == 'قوالب صلاحيات المستخدمين' ? ErpUserAdminScreen(companyId: _appManagementCompanyId, initialView: 'templates') : _page == 'صلاحيات المستخدمين' ? ErpUserAdminScreen(companyId: _appManagementCompanyId, initialView: 'permissions') : _modules['الفاتورة الإلكترونية']![_group]!.contains(_page) ? ErpEinvoiceScreen(companyId: _appManagementCompanyId, initialView: _page) : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? ErpDelegateAllocationScreen(companyId: _appManagementCompanyId) : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _page == 'قواعد الورديات والحضور والانصراف' ? HrShiftRulesScreen(companyId: _appManagementCompanyId) : _page == 'أجهزة البصمة وربط الحضور' ? HrFingerprintDevicesScreen(companyId: _appManagementCompanyId) : _workspace()),
                     ),
                   ),
-                  SizedBox(
-                      width: rightPanelWidth,
-                      child: Padding(
-                        padding: const EdgeInsetsDirectional.only(top: 12),
-                        child: _rightPanel(),
-                      ),
+                  if (_utilitySidebarVisible) SizedBox(
+                    width: rightPanelWidth,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(top: 12),
+                      child: _rightPanel(),
                     ),
+                  ),
                 ],
               )),
             ])),
@@ -1683,6 +1685,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ],
     const SizedBox(width: 4),
 
+    IconButton(
+      visualDensity: VisualDensity.compact,
+      tooltip: _mainSidebarVisible ? 'إخفاء القوائم الرئيسية' : 'إظهار القوائم الرئيسية',
+      onPressed: () => setState(() => _mainSidebarVisible = !_mainSidebarVisible),
+      icon: Icon(Icons.more_horiz_rounded, color: _mainSidebarVisible ? _purple : _orange),
+    ),
+    IconButton(
+      visualDensity: VisualDensity.compact,
+      tooltip: _utilitySidebarVisible ? 'إخفاء النشاطات والتنبيهات والوصول السريع' : 'إظهار النشاطات والتنبيهات والوصول السريع',
+      onPressed: () => setState(() => _utilitySidebarVisible = !_utilitySidebarVisible),
+      icon: Icon(Icons.more_vert_rounded, color: _utilitySidebarVisible ? _purple : _orange),
+    ),
     IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('مركز الإشعارات التجريبي')))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
     const CircleAvatar(radius: 18, backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple, size: 20)),
   ]));
