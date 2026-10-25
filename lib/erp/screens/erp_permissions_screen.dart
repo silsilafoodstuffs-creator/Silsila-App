@@ -23,7 +23,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   String _userFilterValue = '__all__';
   final Map<String,Map<String,bool>> _draft={};
   final Map<String,bool> _expanded={};
-  final List<String> _actions=const ['مسموح','إضافة','تعديل','حذف','حفظ','طباعة','Excel','PDF'];
+  final List<String> _actions=const ['مسموح','إضافة','تعديل','حذف','حفظ','طباعة','Excel','PDF','وصول سريع'];
   static const Map<String,Map<String,List<String>>> _tree={
     'إدارة البرنامج':{
       'بيانات أساسية':['بيانات الشركة','مراكز التكلفة','المستخدمون والصلاحيات','إعدادات البرنامج','سجل العمليات','واجهة API والربط الخارجي','إدارة مفاتيح API','سياسات التسعير والخصومات'],
@@ -142,6 +142,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       out[k+'::طباعة']=read;
       out[k+'::Excel']=['مدير النظام','مدير','محاسب'].contains(role);
       out[k+'::PDF']=read;
+      out[k+'::وصول سريع']=false;
       if(role=='عرض فقط'){out[k+'::إضافة']=false;out[k+'::تعديل']=false;out[k+'::حذف']=false;out[k+'::حفظ']=false;out[k+'::Excel']=false;}
     }
     return out;
@@ -173,7 +174,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
       } catch (_) {
         // Older installations may not yet have the optional member directory.
       }
-      final saved=await _db!.from('erp_user_permissions').select('user_id,menu_key,allow_access,can_add,can_edit,can_delete,can_save,can_print,can_export_excel,can_export_pdf').eq('company_id',company);
+      final saved=await _db!.from('erp_user_permissions').select('user_id,menu_key,allow_access,can_add,can_edit,can_delete,can_save,can_print,can_export_excel,can_export_pdf,show_in_quick_tasks').eq('company_id',company);
       _draft.clear();for(final u in users){_draft[_s(u['user_id'])]=_blank('مخصص بلا صلاحيات');}
       final fields={'مسموح':'allow_access','إضافة':'can_add','تعديل':'can_edit','حذف':'can_delete','حفظ':'can_save','طباعة':'can_print','Excel':'can_export_excel','PDF':'can_export_pdf'};
       for(final r in (saved as List).whereType<Map<String,dynamic>>()){
@@ -468,7 +469,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
         final values=_draft[uid]??_blank('مخصص بلا صلاحيات');
         final rows=<Map<String,dynamic>>[];
         for(final key in _allKeys){
-          rows.add({'company_id':company,'user_id':uid,'menu_key':key,'allow_access':values[key+'::مسموح']==true,'can_add':values[key+'::إضافة']==true,'can_edit':values[key+'::تعديل']==true,'can_delete':values[key+'::حذف']==true,'can_save':values[key+'::حفظ']==true,'can_print':values[key+'::طباعة']==true,'can_export_excel':values[key+'::Excel']==true,'can_export_pdf':values[key+'::PDF']==true,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':_db!.auth.currentUser?.id});
+          rows.add({'company_id':company,'user_id':uid,'menu_key':key,'allow_access':values[key+'::مسموح']==true,'can_add':values[key+'::إضافة']==true,'can_edit':values[key+'::تعديل']==true,'can_delete':values[key+'::حذف']==true,'can_save':values[key+'::حفظ']==true,'can_print':values[key+'::طباعة']==true,'can_export_excel':values[key+'::Excel']==true,'can_export_pdf':values[key+'::PDF']==true,'show_in_quick_tasks':values[key+'::وصول سريع']==true,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':_db!.auth.currentUser?.id});
         }
         await _db!.from('erp_user_permissions').upsert(rows,onConflict:'company_id,user_id,menu_key');
       }
@@ -602,12 +603,12 @@ Widget build(BuildContext context)=>ErpKeyboardActionRegistrar(save: _save, chil
       ]))),
       Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         const Text('مصفوفة الصلاحيات',style:TextStyle(fontSize:16,fontWeight:FontWeight.w900,color:_permPurple)),const SizedBox(height:8),
-        SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:900,child:Column(children:[
+        SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1020,child:Column(children:[
           Row(children:[
             const Expanded(flex:3,child:Text('القائمة / الشاشة',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900))),
             for(final a in _actions)
               Expanded(flex:1,child:Column(mainAxisSize:MainAxisSize.min,children:[
-                Text(a,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),textAlign:TextAlign.center),
+                Text(a,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),textAlign:TextAlign.center,maxLines:1,softWrap:false,overflow:TextOverflow.visible),
                 Checkbox(
                   value:_scopeKeys.isNotEmpty && _targets.isNotEmpty && _scopeKeys.every((key)=>_targets.every((uid)=>_draft[uid]?[key+'::'+a]==true)),
                   onChanged:_saving?null:(value)=>_setColumn(a,value??false),
