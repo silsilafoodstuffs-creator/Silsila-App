@@ -658,7 +658,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if((item['save_as']??'product')=='category'){
         final raw=await db.from('erp_item_categories').select('id,parent_id,category_code:category_code,category_name:category_name,category_name_en:category_name_en').eq('company_id',company).eq('category_code',code).maybeSingle();
         if(raw==null)throw Exception('كود الفئة غير موجود في الشركة الحالية.');
-        final rows=await db.from('erp_item_categories').select('id,parent_id,category_code:category_code,category_name:category_name').eq('company_id',company).limit(3000);
+        final rows=await db.from('erp_item_categories').select('id,parent_id,category_code:category_code,category_name:category_name,category_name_en:category_name_en').eq('company_id',company).limit(3000);
         final categories=(rows as List).map((e)=>Map<String,dynamic>.from(e)).toList();
         Map<String,dynamic>? byId(dynamic id){for(final g in categories){if(id!=null&&g['id'].toString()==id.toString())return g;}return null;}
         final found=Map<String,dynamic>.from(raw);final parent=byId(found['parent_id']);final grand=byId(parent?['parent_id']);
