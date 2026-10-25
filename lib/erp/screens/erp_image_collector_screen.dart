@@ -747,10 +747,21 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         if(third!=null&&thirdName.isNotEmpty)await db.from('erp_item_categories').update({'category_name':thirdName,'category_name_en':thirdEn}).eq('id',third['id'].toString()).eq('company_id',company);
         target=byId(item['category_target_id'])!;
       }else{
-        final root=await _ensureRowCategory(db,company,categories,main,null,'C',englishName:mainEn);Map<String,dynamic>? sub,third;
-        if(level!='root')sub=await _ensureRowCategory(db,company,categories,subName,root['id'].toString(),'S',englishName:subEn);
-        if(level=='secondary'){if(sub==null)throw Exception('الفئة الثانوية تتطلب فئة فرعية.');third=await _ensureRowCategory(db,company,categories,thirdName,sub['id'].toString(),'T',englishName:thirdEn);}
-        target=third??sub??root;
+        Map<String,dynamic>? root,sub,third;
+        if(level=='root'){
+          root=await _ensureRowCategory(db,company,categories,main,null,'C',englishName:mainEn);
+        }else{
+          root=byId(item['category_root_id']);
+          if(root==null)throw Exception('الفئة الرئيسية المختارة غير موجودة.');
+          if(level=='sub'){
+            sub=await _ensureRowCategory(db,company,categories,subName,root['id'].toString(),'S',englishName:subEn);
+          }else{
+            sub=byId(item['category_sub_id']);
+            if(sub==null||sub['parent_id']?.toString()!=root['id'].toString())throw Exception('الفئة الفرعية لا تتبع الفئة الرئيسية المختارة.');
+            third=await _ensureRowCategory(db,company,categories,thirdName,sub['id'].toString(),'T',englishName:thirdEn);
+          }
+        }
+        target=third??sub??root!;
       }
       final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
       final png=_processTransparentPng(Uint8List.fromList(base64Decode(b64)));
@@ -1293,20 +1304,24 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:112),const SizedBox(width:6),
                         dropdown('category_level','مستوى الفئة',(item['category_level']??'root').toString(),const ['root','sub','secondary'],width:135),const SizedBox(width:6),
                         if(mode=='old')... [field('legacy_code','كود الفئة القديم',width:125),const SizedBox(width:5)],
-                        field('category_main_name','اسم الفئة الرئيسية عربي',width:170,initial:_excelValue(item,['main_category','category_name','category'])),const SizedBox(width:5),
-                        field('category_main_name_en','اسم الفئة الرئيسية إنجليزي',width:170,initial:_excelValue(item,['main_category_en','category_name_en'])),
-                      ])),
-                      const SizedBox(height:3),
-                      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-                        field('category_sub_name','اسم الفئة الفرعية عربي',width:170,initial:_excelValue(item,['sub_category','subcategory'])),const SizedBox(width:5),
-                        field('category_sub_name_en','اسم الفئة الفرعية إنجليزي',width:170,initial:_excelValue(item,['sub_category_en'])),
-                        const SizedBox(width:8),
-                      ])),
-                      const SizedBox(height:3),
-                      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-                        field('category_secondary_name','اسم الفئة الثانوية عربي',width:170,initial:_excelValue(item,['secondary_category','third_category'])),const SizedBox(width:5),
-                        field('category_secondary_name_en','اسم الفئة الثانوية إنجليزي',width:170,initial:_excelValue(item,['secondary_category_en'])),
-                        const SizedBox(width:8),
+                        if((item['category_level']??'root')!='root') ...[
+                          _categoryChoice(item,'category_root_id','الفئة الرئيسية الموجودة',_categoriesForParent(null)),
+                          const SizedBox(width:5),
+                        ],
+                        if((item['category_level']??'root')=='secondary') ...[
+                          _categoryChoice(item,'category_sub_id','الفئة الفرعية الموجودة',_categoriesForParent(item['category_root_id']?.toString()),enabled:item['category_root_id']!=null),
+                          const SizedBox(width:5),
+                        ],
+                        if((item['category_level']??'root')=='root') ...[
+                          field('category_main_name','اسم الفئة الرئيسية عربي',width:170,initial:_excelValue(item,['main_category','category_name','category'])),const SizedBox(width:5),
+                          field('category_main_name_en','اسم الفئة الرئيسية إنجليزي',width:170,initial:_excelValue(item,['main_category_en','category_name_en'])),
+                        ] else if((item['category_level']??'root')=='sub') ...[
+                          field('category_sub_name','اسم الفئة الفرعية عربي',width:170,initial:_excelValue(item,['sub_category','subcategory'])),const SizedBox(width:5),
+                          field('category_sub_name_en','اسم الفئة الفرعية إنجليزي',width:170,initial:_excelValue(item,['sub_category_en'])),
+                        ] else ...[
+                          field('category_secondary_name','اسم الفئة الثانوية عربي',width:170,initial:_excelValue(item,['secondary_category','third_category'])),const SizedBox(width:5),
+                          field('category_secondary_name_en','اسم الفئة الثانوية إنجليزي',width:170,initial:_excelValue(item,['secondary_category_en'])),
+                        ],
                       ])),
                     ])
                   : Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
