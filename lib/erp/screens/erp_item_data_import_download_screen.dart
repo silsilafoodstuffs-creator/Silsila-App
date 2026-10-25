@@ -211,9 +211,9 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
           Expanded(
             child: _rows.isEmpty
               ? const Center(child: Text('ستظهر الصور المكتشفة هنا بعد استكشاف الموقع.'))
-              : Scrollbar(child: SingleChildScrollView(
+              : Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(child: DataTable(
+                  child: Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(child: DataTable(
                     columnSpacing: 18,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                     columns: [
@@ -244,7 +244,8 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                     ],
                     rows: _rows.map((r) => DataRow(cells: [
                       DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
-                      DataCell(Text('${_rows.indexOf(r) + 1}')),\n                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                      DataCell(Text('${_rows.indexOf(r) + 1}')),
+                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
                       DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(_kindCell(r, () => setState(() {}))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.category, onChanged: (v) => r.category = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
@@ -257,7 +258,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       DataCell(_field(r.width, (v) => r.width = v)),
                       DataCell(_field(r.height, (v) => r.height = v)),
                     ])).toList(),
-                  )),
+                  ))),
                 )),
           ),
         ],
@@ -328,11 +329,17 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
         Expanded(
           child: _rows.isEmpty
             ? const Center(child: Text('افتح ملف ZIP لعرض البيانات وتعديلها.'))
-            : Scrollbar(child: SingleChildScrollView(
+            : Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: SingleChildScrollView(child: DataTable(
+                child: Scrollbar(thumbVisibility: true, interactive: true, child: SingleChildScrollView(child: DataTable(
                   columns: [
-                    DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [const Text('الكل'), Checkbox(shape: const CircleBorder(), value: _all, onChanged: (v) { setState(() { _all = v ?? false; for (final r in _rows) { r.selected = _all; } }); })),
+                    DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Text('الكل'),
+                      Checkbox(shape: const CircleBorder(), value: _all, onChanged: (v) {
+                        setState(() { _all = v ?? false; for (final r in _rows) { r.selected = _all; } });
+                      }),
+                    ])),
+                    const DataColumn(label: Text('م')),
                     const DataColumn(label: Text('الصورة')),
                     const DataColumn(label: Text('الاسم العربي')),
                     const DataColumn(label: Text('النوع')),
@@ -347,8 +354,9 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                     const DataColumn(label: Text('الارتفاع')),
                   ],
                   rows: _rows.map((r) => DataRow(cells: [
-                    DataCell(Checkbox(value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
-                    DataCell(Text('${_rows.indexOf(r) + 1}')),\n                    DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                    DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
+                    DataCell(Text('${_rows.indexOf(r) + 1}')),
+                    DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
                     DataCell(SizedBox(width: 170, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                     DataCell(_kindCell(r, () => setState(() {}))),
                     DataCell(_field(r.category, (v) => r.category = v)),
@@ -361,7 +369,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                     DataCell(_field(r.width, (v) => r.width = v)),
                     DataCell(_field(r.height, (v) => r.height = v)),
                   ])).toList(),
-                )),
+                ))),
               )),
         ),
       ]),
@@ -396,7 +404,8 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                   ],
                   rows: _rows.map((r) => DataRow(cells: [
                       DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
-                      DataCell(Text('${_rows.indexOf(r) + 1}')),\n                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                      DataCell(Text('${_rows.indexOf(r) + 1}')),
+                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
                       DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(_kindCell(r, () => setState(() {}))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.category, onChanged: (v) => r.category = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
@@ -500,7 +509,8 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                   ],
                   rows: _rows.map((r) => DataRow(cells: [
                     DataCell(Checkbox(value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
-                    DataCell(Text('${_rows.indexOf(r) + 1}')),\n                    DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                    DataCell(Text('${_rows.indexOf(r) + 1}')),
+                    DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
                     DataCell(SizedBox(width: 170, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                     DataCell(_kindCell(r, () => setState(() {}))),
                     DataCell(_field(r.category, (v) => r.category = v)),
