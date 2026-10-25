@@ -308,8 +308,11 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     return _childrenOf(_value(row, 'account_id')).any(_branchMatches);
   }
 
-  Widget _buildTreeNode(Map<String, dynamic> row, int depth) {
+  Widget _buildTreeNode(Map<String, dynamic> row, int depth, [Set<String>? ancestorPath]) {
     final id = _value(row, 'account_id');
+    final path = Set<String>.from(ancestorPath ?? const <String>{});
+    if (id.isNotEmpty && path.contains(id)) return const SizedBox.shrink();
+    if (id.isNotEmpty) path.add(id);
     final children = _childrenOf(id).where(_branchMatches).toList();
     final hasChildren = children.isNotEmpty;
     final expanded = _expandedAccounts.contains(id);
@@ -388,7 +391,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
             ),
           ),
         ),
-        if (hasChildren && expanded) ...children.map((child) => _buildTreeNode(child, depth + 1)),
+        if (hasChildren && expanded) ...children.map((child) => _buildTreeNode(child, depth + 1, path)),
       ],
     );
   }
