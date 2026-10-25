@@ -10,6 +10,26 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
 
+Widget _kindCell(_ImportRow row, VoidCallback refresh) => SizedBox(
+  width: 132,
+  child: Row(mainAxisSize: MainAxisSize.min, children: [
+    Checkbox(
+      shape: const CircleBorder(),
+      value: row.kind == 'صنف',
+      onChanged: (checked) { if (checked == true) { row.kind = 'صنف'; refresh(); } },
+      visualDensity: VisualDensity.compact,
+    ),
+    const Text('صنف', style: TextStyle(fontSize: 12)),
+    Checkbox(
+      shape: const CircleBorder(),
+      value: row.kind == 'فئة',
+      onChanged: (checked) { if (checked == true) { row.kind = 'فئة'; refresh(); } },
+      visualDensity: VisualDensity.compact,
+    ),
+    const Text('فئة', style: TextStyle(fontSize: 12)),
+  ]),
+);
+
 class _ImportRow {
   _ImportRow({required this.id, required this.imageUrl, this.bytes, this.name = '', this.kind = 'صنف', this.category = '', this.subcategory = '', this.majorUnit = '', this.innerCount = '', this.minorUnit = '', this.weight = '', this.length = '', this.width = '', this.height = '', this.selected = true});
   final String id;
@@ -197,8 +217,8 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                     columnSpacing: 18,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                     columns: [
-                      DataColumn(label: Checkbox(value: _selectAll, onChanged: (v) => setState(() { _selectAll = v ?? false; for (final r in _rows) { r.selected = _selectAll; } }))),
-                      const DataColumn(label: Text('الصورة')),
+                      DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [const Text('الكل'), Checkbox(shape: const CircleBorder(), value: _selectAll, onChanged: (v) => setState(() { _selectAll = v ?? false; for (final r in _rows) { r.selected = _selectAll; } }))),
+                      const DataColumn(label: Text('م')),\n                      const DataColumn(label: Text('م')),\n                    const DataColumn(label: Text('الصورة')),
                       const DataColumn(label: Text('الاسم العربي المقترح')),
                       const DataColumn(label: Text('النوع')),
                       const DataColumn(label: Text('الفئة الرئيسية')),
@@ -212,10 +232,10 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       const DataColumn(label: Text('الارتفاع')),
                     ],
                     rows: _rows.map((r) => DataRow(cells: [
-                      DataCell(Checkbox(value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
-                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                      DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
+                      DataCell(Text('${_rows.indexOf(r) + 1}')),\n                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
                       DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
-                      DataCell(DropdownButton<String>(value: r.kind, items: const [DropdownMenuItem(value: 'صنف', child: Text('صنف')), DropdownMenuItem(value: 'فئة', child: Text('فئة'))], onChanged: (v) => setState(() => r.kind = v ?? 'صنف'))),
+                      DataCell(_kindCell(r, () => setState(() {}))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.category, onChanged: (v) => r.category = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.subcategory, onChanged: (v) => r.subcategory = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.majorUnit, onChanged: (v) => r.majorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
@@ -301,7 +321,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                 scrollDirection: Axis.horizontal,
                 child: SingleChildScrollView(child: DataTable(
                   columns: [
-                    DataColumn(label: Checkbox(value: _all, onChanged: (v) { setState(() { _all = v ?? false; for (final r in _rows) { r.selected = _all; } }); })),
+                    DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [const Text('الكل'), Checkbox(shape: const CircleBorder(), value: _all, onChanged: (v) { setState(() { _all = v ?? false; for (final r in _rows) { r.selected = _all; } }); })),
                     const DataColumn(label: Text('الصورة')),
                     const DataColumn(label: Text('الاسم العربي')),
                     const DataColumn(label: Text('النوع')),
@@ -317,9 +337,9 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                   ],
                   rows: _rows.map((r) => DataRow(cells: [
                     DataCell(Checkbox(value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
-                    DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                    DataCell(Text('${_rows.indexOf(r) + 1}')),\n                    DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
                     DataCell(SizedBox(width: 170, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
-                    DataCell(DropdownButton<String>(value: r.kind, items: const [DropdownMenuItem(value: 'صنف', child: Text('صنف')), DropdownMenuItem(value: 'فئة', child: Text('فئة'))], onChanged: (v) => setState(() => r.kind = v ?? 'صنف'))),
+                    DataCell(_kindCell(r, () => setState(() {}))),
                     DataCell(_field(r.category, (v) => r.category = v)),
                     DataCell(_field(r.subcategory, (v) => r.subcategory = v)),
                     DataCell(_field(r.majorUnit, (v) => r.majorUnit = v)),
