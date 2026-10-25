@@ -35,8 +35,10 @@ class _ErpSupplierDeferredCommissionsScreenState extends State<ErpSupplierDeferr
     final supplier=TextEditingController(text:(row?['supplier_name']??'').toString());
     final description=TextEditingController(text:(row?['description']??'').toString());
     final base=TextEditingController(text:(row?['base_amount']??'0').toString());
-    final percent=TextEditingController(text:(row?['variance_percent']??'0.025').toString());
-    final commission=TextEditingController(text:(row?['commission_amount']??'0').toString());
+    var defaultPercent='0.025';
+    if(row==null){try{final policies=await _db.from('erp_program_policies').select('is_enabled,apply_to_all,policy_value').eq('company_id',_company).eq('policy_key','supplier_bonus_variance').limit(1);if((policies as List).isNotEmpty&&policies.first['is_enabled']==true&&((policies.first['apply_to_all']==true)||true)){final saved=(policies.first['policy_value']??'').toString().replaceAll('%','').trim();if(double.tryParse(saved)!=null)defaultPercent=saved;}}catch(_){}}
+    final percent=TextEditingController(text:(row?['variance_percent']??defaultPercent).toString());
+    final commission=TextEditingController(text:(row?['commission_amount']??'').toString());
     final notes=TextEditingController(text:(row?['notes']??'').toString());
     var type=(row?['entry_type']??'مؤجل').toString();
     var status=(row?['status']??'معلق').toString();
