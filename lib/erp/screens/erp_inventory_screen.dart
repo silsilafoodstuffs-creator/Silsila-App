@@ -73,7 +73,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
     }
     setState(() { _loading = true; _error = null; _success = null; });
     try {
-      final values = await Future.wait([
+      final values = await Future.wait<dynamic>([
         _repo.fetchWarehouses(_company.text),
         _repo.fetchItems(_company.text),
         _repo.fetchBalances(_company.text),
