@@ -104,7 +104,10 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       });
       return;
     }
-    final defaultCode = 'BR-${(_rows.length + 1).toString().padLeft(3, '0')}';
+    var nextBranchNumber = 1;
+    String codeFor(int number) => 'BR-${number.toString().padLeft(3, '0')}';
+    while (_rows.any((branch) => _s(branch['branch_code']) == codeFor(nextBranchNumber))) { nextBranchNumber++; }
+    final defaultCode = codeFor(nextBranchNumber);
     final code = TextEditingController(text: row == null ? defaultCode : _s(row['branch_code']));
     final name = TextEditingController(text: _s(row?['branch_name']));
     final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
@@ -185,6 +188,16 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       if (code.text.trim().isEmpty || name.text.trim().isEmpty) {
         throw ArgumentError('كود الفرع واسم الفرع مطلوبان.');
       }
+      if (email.text.trim().isNotEmpty && !email.text.trim().contains('@')) {
+        throw ArgumentError('البريد الإلكتروني للفرع غير صحيح.');
+      }
+      final lat = double.tryParse(latitude.text.trim());
+      final lng = double.tryParse(longitude.text.trim());
+      if ((latitude.text.trim().isNotEmpty && lat == null) || (longitude.text.trim().isNotEmpty && lng == null) || ((lat == null) != (lng == null))) {
+        throw ArgumentError('أدخل خط العرض وخط الطول معًا كأرقام صحيحة.');
+      }
+      if (lat != null && (lat < -90 || lat > 90)) throw ArgumentError('خط العرض يجب أن يكون بين -90 و90.');
+      if (lng != null && (lng < -180 || lng > 180)) throw ArgumentError('خط الطول يجب أن يكون بين -180 و180.');
       final cleanCode = code.text.trim();
       const allowedCodeChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
       if (cleanCode.isEmpty || cleanCode.split('').any((ch) => !allowedCodeChars.contains(ch))) {
@@ -221,7 +234,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     } catch (error) {
       if (mounted) setState(() => _error = 'تعذر حفظ الفرع: $error');
     } finally {
-      code.dispose(); name.dispose(); nameEn.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
+      code.dispose(); name.dispose(); nameEn.dispose(); email.dispose(); latitude.dispose(); longitude.dispose(); phone.dispose(); phone2.dispose(); landline1.dispose(); landline2.dispose(); location.dispose(); address.dispose();
     }
   }
 
@@ -251,6 +264,21 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     const allowed = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
     if (code.split('').any((ch) => !allowed.contains(ch))) {
       setState(() => _error = 'كود الفرع يجب أن يتكون من حروف إنجليزية وأرقام وشرطة فقط.');
+      return;
+    }
+    final email = _editFields['email']!.text.trim();
+    final latitude = double.tryParse(_editFields['latitude']!.text.trim());
+    final longitude = double.tryParse(_editFields['longitude']!.text.trim());
+    if (email.isNotEmpty && !email.contains('@')) {
+      setState(() => _error = 'البريد الإلكتروني للفرع غير صحيح.');
+      return;
+    }
+    if ((_editFields['latitude']!.text.trim().isNotEmpty && latitude == null) ||
+        (_editFields['longitude']!.text.trim().isNotEmpty && longitude == null) ||
+        ((latitude == null) != (longitude == null)) ||
+        (latitude != null && (latitude < -90 || latitude > 90)) ||
+        (longitude != null && (longitude < -180 || longitude > 180))) {
+      setState(() => _error = 'أدخل إحداثيات صحيحة لخط العرض والطول.');
       return;
     }
     try {
