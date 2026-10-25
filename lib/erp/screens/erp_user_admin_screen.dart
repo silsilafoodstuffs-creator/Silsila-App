@@ -1315,7 +1315,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
-            _userTab('أنواع المستخدمين والمستخدمين', 'hierarchy', Icons.people_alt_outlined),
+            _userTab('المستخدمين', 'hierarchy', Icons.people_alt_outlined),
             const SizedBox(width: 6),
             _userTab('تصنيفات المستخدمين', 'classifications', Icons.category_outlined),
             const SizedBox(width: 6),
