@@ -21,7 +21,7 @@ class ErpOperationalDocumentsRepository {
     final table = kind == ErpOperationalKind.purchase
       ? 'erp_purchase_documents' : 'erp_sales_documents';
     final columns = kind == ErpOperationalKind.purchase
-      ? 'id, company_id, branch_id, warehouse_id, supplier_id, customer_id, auto_number, document_number, document_date, document_timestamp, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes'
+      ? 'id, company_id, branch_id, warehouse_id, supplier_id, auto_number, document_number, document_date, document_timestamp, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes, source_document_ids'
       : 'id, company_id, branch_id, warehouse_id, customer_id, sales_rep_id, is_tax_invoice, auto_number, document_number, document_date, document_timestamp, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes, source_channel, source_document_ids';
     final rows = await _db.from(table)
       .select(columns)
@@ -165,6 +165,7 @@ class ErpOperationalDocumentsRepository {
     };
     if (kind == ErpOperationalKind.purchase) {
       payload['supplier_id'] = partyId;
+      payload['source_document_ids'] = sourceDocumentIds;
       final row = await _db.from('erp_purchase_documents').insert(payload).select('id').single();
       return row['id'].toString();
     } else {
