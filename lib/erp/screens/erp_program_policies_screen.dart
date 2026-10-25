@@ -37,6 +37,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final db = Supabase.instance.client;
   final values = <String,Map<String,dynamic>>{};
   final users = <Map<String,dynamic>>[];
+  final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
   int tab = 0; bool loading = true, saving = false; String? error, message;
   String get company => (widget.companyId ?? '').trim();
   @override void initState(){super.initState(); for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
@@ -95,6 +96,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           const Icon(Icons.policy_outlined, color: Color(0xFFFFA015), size: 23),
           const SizedBox(width: 6),
           const Expanded(child: Text('سياسات البرنامج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17))),
+          if (tab == 0) ...[
+            SizedBox(height: 30, child: FilledButton.tonalIcon(
+              onPressed: loading ? null : () => _identityKey.currentState?._startEditing(),
+              icon: const Icon(Icons.edit, size: 15), label: const Text('تعديل', style: TextStyle(fontSize: 11)),
+              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
+            )),
+            const SizedBox(width: 4),
+          ],
           SizedBox(width: 190, height: 30, child: TextField(
             controller: _searchController,
             style: const TextStyle(fontSize: 11),
@@ -116,8 +125,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             label: const Text('بحث', style: TextStyle(fontSize: 11)),
             style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
           )),
-          TextButton.icon(onPressed: loading ? null : _load, icon: const Icon(Icons.refresh, color: Colors.white, size: 17), label: const Text('تحديث', style: TextStyle(color: Colors.white))),
-          FilledButton.icon(onPressed: saving ? null : _save, icon: const Icon(Icons.save, size: 17), label: Text(saving ? 'جارٍ الحفظ' : 'حفظ')),
+          TextButton.icon(onPressed: loading ? null : () { if (tab == 0) { _identityKey.currentState?._load(); } else { _load(); } }, icon: const Icon(Icons.refresh, color: Colors.white, size: 17), label: const Text('تحديث', style: TextStyle(color: Colors.white))),
+          FilledButton.icon(onPressed: saving ? null : () { if (tab == 0) { _identityKey.currentState?._save(); } else { _save(); } }, icon: const Icon(Icons.save, size: 17), label: Text(saving ? 'جارٍ الحفظ' : 'حفظ')),
         ]),
       ),
       if (error != null) Padding(padding: const EdgeInsets.all(4), child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 11))),
@@ -128,7 +137,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       )))),
       Expanded(
         child: tab == 0
-            ? ErpVisualIdentityPolicyScreen(companyId: widget.companyId)
+            ? ErpVisualIdentityPolicyScreen(key: _identityKey, companyId: widget.companyId)
             : loading
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
@@ -322,6 +331,8 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     } catch (e) { if (mounted) setState(() => _error = 'تعذر اختيار الشعار: $e'); }
   }
 
+  void _startEditing() { if (mounted && !_editing) setState(() { _editing = true; _error = null; _message = null; }); }
+
   Future<void> _save() async {
     if (!_editing) { setState(() => _message = 'اضغط تعديل أولًا.'); return; }
     if (_company.isEmpty) return;
@@ -352,7 +363,104 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     } catch (e) { if (mounted) setState(() { _saving = false; _error = 'تعذر الحفظ: $e'; }); }
   }
 
-  Widget _field(TextEditingController c, {double width = 150, String? hint}) => SizedBox(width: width, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7), border: const OutlineInputBorder())));
+  Color _colorFromHex(String value) {
+    final hex = value.trim().replaceFirst('#', '');
+    try {
+      final normalized = hex.length == 6 ? 'FF$hex' : hex;
+      return Color(int.parse(normalized, radix: 16));
+    } catch (_) {
+      return const Color(0xFFBDBDBD);
+    }
+  }
+
+  Future<void> _chooseColor(TextEditingController controller) async {
+    if (!_editing) return;
+    const swatches = <Color>[
+      Color(0xFF3E007D), Color(0xFF5E35B1), Color(0xFF7E57C2), Color(0xFF9575CD),
+      Color(0xFFFFA015), Color(0xFFFF8F00), Color(0xFFFF5722), Color(0xFFE53935),
+      Color(0xFFFF27C3), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF3949AB),
+      Color(0xFF039BE5), Color(0xFF00897B), Color(0xFF43A047), Color(0xFF7CB342),
+      Color(0xFF795548), Color(0xFF616161), Color(0xFF333333), Color(0xFF666666),
+      Color(0xFF999999), Color(0xFFCCCCCC), Color(0xFFF5EFFB), Color(0xFFFFFFFF),
+    ];
+    final selected = await showDialog<Color>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('اختيار اللون'),
+        content: SizedBox(
+          width: 300,
+          child: Wrap(
+            spacing: 9,
+            runSpacing: 9,
+            children: swatches.map((color) => InkWell(
+              onTap: () => Navigator.pop(ctx, color),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black26),
+                ),
+                child: _colorFromHex(controller.text).toARGB32() == color.toARGB32()
+                    ? Icon(Icons.check, size: 17, color: color.computeLuminance() < .45 ? Colors.white : Colors.black87)
+                    : null,
+              ),
+            )).toList(),
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء'))],
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() => controller.text = '#${selected.toARGB32().toRadixString(16).substring(2).toUpperCase()}');
+    }
+  }
+
+  Widget _colorField(TextEditingController controller, {double width = 145}) => SizedBox(
+    width: width,
+    child: Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            enabled: _editing,
+            onChanged: (_) => setState(() {}),
+            style: const TextStyle(fontSize: 10),
+            decoration: const InputDecoration(
+              isDense: true,
+              contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        const SizedBox(width: 3),
+        SizedBox(
+          width: 28,
+          height: 32,
+          child: IconButton(
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            tooltip: 'لوحة الألوان',
+            onPressed: _editing ? () => _chooseColor(controller) : null,
+            icon: const Icon(Icons.palette_outlined, size: 18),
+          ),
+        ),
+        Container(
+          width: 19,
+          height: 19,
+          decoration: BoxDecoration(
+            color: _colorFromHex(controller.text),
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.black26),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _field(TextEditingController c, {double width = 150, String? hint}) => SizedBox(width: width, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
   Widget _row(int index, String code, String title, Widget value, {Widget extra = const SizedBox(width: 1)}) => Card(
     margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0,
     shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: .16)), borderRadius: BorderRadius.circular(6)),
@@ -361,8 +469,8 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         SizedBox(width: 38, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 11))),
         const SizedBox(width: 8), SizedBox(width: 95, child: Text(code, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700))),
         const SizedBox(width: 8), SizedBox(width: 230, child: Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600))),
-        const SizedBox(width: 8), SizedBox(width: 190, child: value),
-        const SizedBox(width: 8), SizedBox(width: 100, child: extra),
+        const SizedBox(width: 8), SizedBox(width: 150, child: value),
+        const SizedBox(width: 8), SizedBox(width: 230, child: extra),
       ]))),
   );
 
@@ -371,23 +479,19 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
       _row(0,'VIS001','اسم البرنامج',_field(_name,width:190,hint:'سلسلة')),
       _row(1,'VIS002','لغة واجهة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
       _row(2,'VIS003','شعار البرنامج',Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))])),
-      _row(3,'VIS004','اللون الأساسي',_field(_primary,hint:'#3E007D')),
-      _row(4,'VIS005','اللون الثانوي',_field(_secondary,hint:'#FFA015')),
-      _row(5,'VIS006','لون التمييز',_field(_accent,hint:'#FF27C3')),
-      _row(6,'VIS007','لون الخلفية',_field(_background,hint:'#FFFFFF')),
+      _row(3,'VIS004','اللون الأساسي',_colorField(_primary)),
+      _row(4,'VIS005','اللون الثانوي',_colorField(_secondary)),
+      _row(5,'VIS006','لون التمييز',_colorField(_accent)),
+      _row(6,'VIS007','لون الخلفية',_colorField(_background)),
     ];
     for (var i=0;i<5;i++) {
       rows.add(_row(7+i,'VIS${(i+8).toString().padLeft(3,'0')}','${_labels[i]} — الخط / الحجم / اللون',
-        SizedBox(width:190,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:_fontOptions.map((f)=>DropdownMenuItem(value:f,child:Text(f))).toList(),onChanged:_editing?(v){if(v!=null)setState(()=>_fonts[i]=v);}:null)),
-        extra: Row(children:[SizedBox(width:55,child:TextField(controller:_sizes[i],enabled:_editing,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,labelText:'حجم',contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:6),border:OutlineInputBorder()),style:const TextStyle(fontSize:10))),const SizedBox(width:4),SizedBox(width:80,child:TextField(controller:_colors[i],enabled:_editing,decoration:const InputDecoration(isDense:true,labelText:'لون HEX',contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:6),border:OutlineInputBorder()),style:const TextStyle(fontSize:10)))])));
+        SizedBox(width:125,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3),border:OutlineInputBorder()),items:_fontOptions.map((f)=>DropdownMenuItem(value:f,child:Text(f,style:const TextStyle(fontSize:10),overflow:TextOverflow.ellipsis))).toList(),onChanged:_editing?(v){if(v!=null)setState(()=>_fonts[i]=v);}:null)),
+        extra: Row(children:[SizedBox(width:48,height:36,child:TextField(controller:_sizes[i],enabled:_editing,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,labelText:'حجم',contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),style:const TextStyle(fontSize:10))),const SizedBox(width:4),_colorField(_colors[i],width:155)])));
     }
     return Column(children:[
       Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),child:Row(children:[
         const Expanded(child:Text('سياسات الهوية البصرية',style:TextStyle(fontWeight:FontWeight.bold,fontSize:14,color:Color(0xFF3E007D)))),
-        TextButton.icon(onPressed:_loading?null:_load,icon:const Icon(Icons.refresh,size:16),label:const Text('تحديث')),
-        FilledButton.tonalIcon(onPressed:_loading||_editing?null:()=>setState(()=>_editing=true),icon:const Icon(Icons.edit,size:16),label:const Text('تعديل')),
-        const SizedBox(width:4),
-        FilledButton.icon(onPressed:_saving||!_editing?null:_save,icon:const Icon(Icons.save,size:16),label:Text(_saving?'جارٍ الحفظ':'حفظ')),
       ])),
       if(_error!=null) Padding(padding:const EdgeInsets.all(4),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
       if(_message!=null) Padding(padding:const EdgeInsets.all(4),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
@@ -396,8 +500,8 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
           SizedBox(width:38,child:Text('م',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
           SizedBox(width:95,child:Text('كود السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
           SizedBox(width:230,child:Text('بيانات السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-          SizedBox(width:190,child:Text('القيمة / الاختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-          SizedBox(width:100,child:Text('الحجم / اللون',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
+          SizedBox(width:150,child:Text('نوع الخط',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:230,child:Text('الحجم / اللون المختار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
         ])))),
         ...rows,
       ])),
