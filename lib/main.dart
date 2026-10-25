@@ -282,8 +282,15 @@ class SilsilaApp extends StatelessWidget {
       // Keep an Overlay above SelectionArea. MaterialApp's navigator overlay
       // is inside `child`, so SelectionArea cannot find it when placed outside
       // the navigator unless we provide this ancestor overlay.
-      builder: (context, child) => Overlay(
-        initialEntries: [
+      builder: (context, child) => DropdownButtonTheme(
+        data: const DropdownButtonThemeData(
+          isDense: true,
+          menuMaxHeight: 320,
+          alignment: AlignmentDirectional.centerStart,
+          style: TextStyle(fontSize: 12, color: Color(0xFF241735)),
+        ),
+        child: Overlay(
+          initialEntries: [
           OverlayEntry(
             builder: (overlayContext) => SelectionArea(
               child: Directionality(
@@ -295,7 +302,8 @@ class SilsilaApp extends StatelessWidget {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
       title: 'سلسلة Silsila',
       debugShowCheckedModeBanner: false,
@@ -318,12 +326,6 @@ class SilsilaApp extends StatelessWidget {
           secondary: orange,
         ),
         // Circular, modern checkbox styling shared by the customer app and ERP.
-        dropdownButtonTheme: const DropdownButtonThemeData(
-          isDense: true,
-          menuMaxHeight: 320,
-          alignment: AlignmentDirectional.centerStart,
-          style: TextStyle(fontSize: 12, color: Color(0xFF241735)),
-        ),
         checkboxTheme: CheckboxThemeData(
           shape: const CircleBorder(),
           side: const BorderSide(color: purple, width: 1.6),
