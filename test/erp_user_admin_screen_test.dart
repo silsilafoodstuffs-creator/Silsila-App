@@ -18,7 +18,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('أنواع المستخدمين والمستخدمين'), findsOneWidget);
+      expect(find.text('المستخدمين'), findsOneWidget);
       expect(find.text('عرض شجرة'), findsOneWidget);
       expect(find.text('عرض جدول'), findsOneWidget);
       expect(find.textContaining('بحث في أنواع المستخدمين'), findsOneWidget);
