@@ -28,8 +28,9 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   List<Map<String, dynamic>> _deps = [];
   List<Map<String, dynamic>> _jobs = [];
   List<Map<String, dynamic>> _locs = [];
+  List<Map<String, dynamic>> _geoRows = [];
   String _country = 'مصر', _gov = '', _district = '', _locality = '', _status = 'active';
-  String? _admin, _dep, _job, _loc, _error, _message;
+  String? _admin, _dep, _job, _loc, _error, _message, _govGeoId, _districtGeoId;
   bool _loading = false, _saving = false;
   final _govs = const ['القاهرة','الجيزة','القليوبية','الإسكندرية','الشرقية','الدقهلية','الغربية','المنوفية','البحيرة','كفر الشيخ','دمياط','بورسعيد','الإسماعيلية','السويس','شمال سيناء','جنوب سيناء','بني سويف','الفيوم','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح'];
   final Map<String, List<String>> _districts = const {
@@ -70,12 +71,22 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         _db!.from('erp_hr_jobs').select('id,job_code,name_ar,department_id').eq('company_id', _cid).eq('is_active', true).order('job_code'),
         _db!.from('erp_hr_work_locations').select('id,location_code,name_ar').eq('company_id', _cid).eq('is_active', true).order('location_code'),
       ]);
+      List<Map<String, dynamic>> geoRows = [];
+      try {
+        final geo = await _db!.from('erp_geographic_data')
+            .select('id,parent_id,name_ar,level,is_active')
+            .eq('company_id', _cid).eq('is_active', true).order('geo_code');
+        geoRows = List<Map<String, dynamic>>.from(geo);
+      } catch (_) {
+        // Keep the built-in governorate list as a fallback if geography data has not been loaded.
+      }
       if (!mounted) return;
       setState(() {
         _employees = List<Map<String, dynamic>>.from(x[0]);
         _deps = List<Map<String, dynamic>>.from(x[1]);
         _jobs = List<Map<String, dynamic>>.from(x[2]);
         _locs = List<Map<String, dynamic>>.from(x[3]);
+        _geoRows = geoRows;
         _loading = false;
       });
     } catch (e) {
@@ -114,7 +125,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   void _clear() {
     for (final c in [_code,_ar,_en,_address,_map,_m1,_m2,_w1,_w2]) { c.clear(); }
     setState(() {
-      _gov = ''; _district = ''; _locality = ''; _admin = null; _dep = null;
+      _gov = ''; _district = ''; _locality = ''; _govGeoId = null; _districtGeoId = null; _admin = null; _dep = null;
       _job = null; _loc = null; _status = 'active';
     });
   }
@@ -168,9 +179,23 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
           _field(_code, 'كود الموظف (حروف إنجليزية ثم أرقام) *', required: true),
           _field(_ar, 'اسم الموظف عربي *', required: true), _field(_en, 'اسم الموظف إنجليزي'),
           _drop('الدولة', _country, ['مصر','السعودية','الإمارات','أخرى'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _country = v ?? 'مصر'; })),
-          _drop('المحافظة', _gov.isEmpty ? null : _gov, _govs.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _gov = v ?? ''; _district = ''; _locality = ''; })),
-          _drop('مركز أو حي', _district.isEmpty ? null : _district, (_districts[_gov] ?? ['المركز الرئيسي','وسط المدينة','حي أول','حي ثان']).map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _district = v ?? ''; _locality = ''; })),
-          _drop('منطقة أو قرية', _locality.isEmpty ? null : _locality, ['المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _locality = v ?? ''; })),
+          _drop('المحافظة', _geoRows.isEmpty ? (_gov.isEmpty ? null : _gov) : _govGeoId,
+            (_geoRows.isEmpty ? _govs.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
+            (v) => setState(() {
+              _govGeoId = _geoRows.isEmpty ? null : v;
+              _gov = _geoRows.isEmpty ? (v ?? '') : _s(_geoRows.where((g) => _s(g['id']) == v).map((g) => g['name_ar']).firstOrNull);
+              _district = ''; _locality = ''; _districtGeoId = null;
+            })),
+          _drop('مركز أو حي', _geoRows.isEmpty ? (_district.isEmpty ? null : _district) : _districtGeoId,
+            (_geoRows.isEmpty ? (_districts[_gov] ?? ['المركز الرئيسي','وسط المدينة','حي أول','حي ثان']).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (_govGeoId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
+            (v) => setState(() {
+              _districtGeoId = _geoRows.isEmpty ? null : v;
+              _district = _geoRows.isEmpty ? (v ?? '') : _s(_geoRows.where((g) => _s(g['id']) == v).map((g) => g['name_ar']).firstOrNull);
+              _locality = '';
+            })),
+          _drop('منطقة أو قرية', _locality.isEmpty ? null : _locality,
+            (_geoRows.isEmpty ? ['المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'].map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtGeoId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['name_ar']), child: Text(_s(g['name_ar']))))).toList(),
+            (v) => setState(() { _locality = v ?? ''; })),
           _field(_address, 'العنوان التفصيلي'), _field(_map, 'رابط موقع Google Maps'),
           OutlinedButton.icon(onPressed: () async {
             final query = Uri.encodeComponent([_address.text, _district, _gov, _country].where((v) => v.trim().isNotEmpty).join(' '));
