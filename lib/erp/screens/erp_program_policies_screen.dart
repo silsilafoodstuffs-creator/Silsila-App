@@ -367,7 +367,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
       _row(0,'VIS001','اسم البرنامج',_field(_name,width:190,hint:'سلسلة')),
-      _row(1,'VIS002','لغة واجهة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null)),
+      _row(1,'VIS002','لغة واجهة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
       _row(2,'VIS003','شعار البرنامج',Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))])),
       _row(3,'VIS004','اللون الأساسي',_field(_primary,hint:'#3E007D')),
       _row(4,'VIS005','اللون الثانوي',_field(_secondary,hint:'#FFA015')),
