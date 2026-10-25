@@ -168,7 +168,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final Map<String, bool> _managedPermissions = <String, bool>{};
   bool _permissionsLoading = false;
   List<ErpAppActivityEntry> _savedAppActivity = <ErpAppActivityEntry>[];
-  bool _sidebarVisible = true;
   bool _notificationsPanelVisible = true;
   bool _activityPanelVisible = true;
   bool _quickAccessPanelVisible = true;
@@ -1068,17 +1067,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         // Responsive breakpoints: phone/tablet portrait, compact laptop, desktop.
         final width = c.maxWidth;
         final compact = width < 980;
-        final showRightPanel = width >= 1280 &&
-            (_notificationsPanelVisible || _activityPanelVisible || _quickAccessPanelVisible);
-        final sidebarWidth = width < 1450 ? 235.0 : 260.0;
-        final rightPanelWidth = width < 1500 ? 252.0 : 286.0;
-        final pagePadding = width < 480 ? 8.0 : width < 980 ? 12.0 : width < 1450 ? 16.0 : 22.0;
+        // Keep both navigation and work panels visible at every desktop breakpoint.
+        // Their widths adapt to the viewport; the center workspace receives all remaining space.
+        final sidebarWidth = width < 760 ? 148.0 : width < 1050 ? 178.0 : width < 1320 ? 205.0 : width < 1550 ? 228.0 : 248.0;
+        final rightPanelWidth = width < 760 ? 148.0 : width < 1050 ? 178.0 : width < 1320 ? 205.0 : width < 1550 ? 228.0 : 248.0;
+        final pagePadding = width < 480 ? 6.0 : width < 980 ? 8.0 : width < 1450 ? 12.0 : 16.0;
         return Scaffold(
           backgroundColor: _canvas,
-          drawer: compact ? Drawer(child: _sidebar()) : null,
           body: Row(children: [
-            if (!compact && _sidebarVisible)
-              SizedBox(width: sidebarWidth, child: _sidebar()),
+            SizedBox(width: sidebarWidth, child: _sidebar()),
             Expanded(child: Column(children: [
               _header(compact),
               Expanded(child: Row(
@@ -1652,17 +1649,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       ),
     ),
     if (compact)
-      Builder(builder: (ctx) => IconButton(
-        tooltip: 'عرض القوائم الرئيسية',
-        onPressed: () => Scaffold.of(ctx).openDrawer(),
-        icon: const Icon(Icons.menu_rounded, color: _purple),
-      ))
-    else
-      IconButton(
-        tooltip: _sidebarVisible ? 'إخفاء جميع القوائم الرئيسية' : 'إظهار جميع القوائم الرئيسية',
-        onPressed: () => setState(() => _sidebarVisible = !_sidebarVisible),
-        icon: Icon(Icons.menu_rounded, color: _purple),
-      ),
+      const SizedBox(width: 4),
     Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(_module, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: compact ? 15 : 18)),
       if (!compact) const SizedBox(height: 4),
@@ -1699,21 +1686,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       SizedBox(width: 190, child: TextField(onChanged: (v) => setState(() => _search = v), decoration: InputDecoration(hintText: 'بحث سريع', prefixIcon: const Icon(Icons.search_rounded), isDense: true, filled: true, fillColor: _canvas, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none)))),
     ],
     const SizedBox(width: 4),
-    if (!compact) ...[
-      IconButton(
-        visualDensity: VisualDensity.compact,
-        tooltip: (_notificationsPanelVisible || _activityPanelVisible || _quickAccessPanelVisible)
-            ? 'إخفاء لوحات المهام الثلاث'
-            : 'إظهار لوحات المهام الثلاث',
-        onPressed: () => setState(() {
-          final showPanels = !(_notificationsPanelVisible || _activityPanelVisible || _quickAccessPanelVisible);
-          _notificationsPanelVisible = showPanels;
-          _activityPanelVisible = showPanels;
-          _quickAccessPanelVisible = showPanels;
-        }),
-        icon: const Icon(Icons.menu_rounded, color: _purple),
-      ),
-    ],
+
     IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('مركز الإشعارات التجريبي')))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
     const CircleAvatar(radius: 18, backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple, size: 20)),
   ]));
