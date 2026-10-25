@@ -1249,6 +1249,14 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   modeChoice('new','كود جديد'),
                   const SizedBox(width:2),
                   modeChoice('old','كود قديم'),
+                  const SizedBox(width:4),
+                  if(mode=='new') Padding(
+                    padding: const EdgeInsets.symmetric(horizontal:3),
+                    child: Text(kind=='category'
+                      ? 'كود مقترح: CAT-0001'
+                      : 'كود مقترح: ITEM-0001',
+                      style: const TextStyle(fontSize:11,fontWeight:FontWeight.w800,color:_purple)),
+                  ),
                   const SizedBox(width:2),
                   FilledButton.icon(
                     onPressed: _loading ? null : () => kind == 'category' ? _saveRowCategory(item) : _saveRowProduct(item),
@@ -1289,6 +1297,16 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         field('internal_count','عدد داخلي',width:100,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']).isEmpty?'1000.000':_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:4),
                         dropdown('minor_unit','وحدة صغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:108),const SizedBox(width:6),
                       ])),
+                      const SizedBox(height:3),
+                      SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+                        field('weight_kg','وزن الصنف (كجم)',width:130,initial:_excelValue(item,['weight_kg','weight','net_weight']),type:const TextInputType.numberWithOptions(decimal:true)),
+                        const SizedBox(width:4),
+                        field('length_cm','الطول (سم)',width:112,initial:_excelValue(item,['length_cm','length']),type:const TextInputType.numberWithOptions(decimal:true)),
+                        const SizedBox(width:4),
+                        field('width_cm','العرض (سم)',width:112,initial:_excelValue(item,['width_cm','width']),type:const TextInputType.numberWithOptions(decimal:true)),
+                        const SizedBox(width:4),
+                        field('height_cm','الارتفاع (سم)',width:112,initial:_excelValue(item,['height_cm','height']),type:const TextInputType.numberWithOptions(decimal:true)),
+                      ])),
                     ]);
                 final categoryEditor = kind == 'product'
                     ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
@@ -1309,9 +1327,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                         child: Column(mainAxisSize:MainAxisSize.min,children:[
                           SizedBox(height:76,child:Material(
                             color: const Color(0xFFF7F4F9),
-                            borderRadius: BorderRadius.circular(10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: BorderSide(color:_purple.withValues(alpha:.22))),
+                            clipBehavior: Clip.antiAlias,
                             child: InkWell(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(18),
                               onTap: () => _showImagePreview(url),
                               child: ClipRRect(borderRadius: BorderRadius.circular(10),child:_imagePreviewTile(url)),
                             ),
