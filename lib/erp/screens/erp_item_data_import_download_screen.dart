@@ -220,7 +220,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
       final selected=_rows.where((r)=>r.selected).toList(); if(selected.isEmpty) throw Exception('حدد صفًا واحدًا على الأقل للتصدير'); final archive=Archive();final book=Excel.createExcel();final sheet=book['بيانات الأصناف'];const headers=['id','image_file','image_url','name_ar','record_type','category','subcategory','major_unit','inner_count','minor_unit','weight','length','width','height'];sheet.appendRow(headers.map((h)=>TextCellValue(h)).toList());
       for(final r in selected){final imageFile=r.bytes==null?'':'images/${r.id}.${_ext(r.imageUrl)}';final m=r.toMap()..['image_file']=imageFile;sheet.appendRow(headers.map((h)=>TextCellValue(m[h]??'')).toList());if(r.bytes!=null)archive.addFile(ArchiveFile(imageFile,r.bytes!.length,r.bytes!));}
       final x=book.encode()!;archive.addFile(ArchiveFile('items.xlsx',x.length,x));final zipped=ZipEncoder().encode(archive)!;
-      await FileSaver.instance.saveFile(name:'silsila_items_edited',bytes:Uint8List.fromList(zipped),ext:'zip',mimeType:MimeType.zip);
+      await FileSaver.instance.saveFile(name:'silsila_items_edited',bytes:Uint8List.fromList(zipped),fileExtension:'zip',mimeType:MimeType.zip);
       setState(()=>_status='تم تصدير ZIP المعدل دون أي كتابة في قاعدة البيانات.');
     }catch(e){setState(()=>_status='فشل التصدير: $e');}finally{if(mounted)setState(()=>_busy=false);}
   }
