@@ -35,7 +35,6 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     final uri = Uri.tryParse(raw);
     if(uri == null || !uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) { setState(()=>_status='أدخل رابطًا صحيحًا يبدأ بـ https:// أو http://'); return; }
     setState((){_busy=true;_status='جاري استكشاف الموقع والصفحات الداخلية...';_rows.clear();});
-    final origin = '${uri.scheme}://${uri.host}';
     final queue=<Uri>[uri], visited=<String>{}, images=<String>{};
     final found = <String>[];
     try {
@@ -101,7 +100,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       archive.addFile(ArchiveFile('manifest.json',manifest.length,manifest));
       final zipped=ZipEncoder().encode(archive);
       if(zipped==null)throw Exception('تعذر ضغط الملف');
-      await FileSaver.instance.saveFile(name:'silsila_items_import',bytes:Uint8List.fromList(zipped),ext:'zip',mimeType:MimeType.zip);
+      await FileSaver.instance.saveFile(name:'silsila_items_import',bytes:Uint8List.fromList(zipped),fileExtension:'zip',mimeType:MimeType.zip);
       if(mounted)setState(()=>_status='تم إنشاء ملف ZIP للتنزيل. لم يتم حفظ أي بيانات أو صور في قاعدة البيانات.');
     }catch(e){if(mounted)setState(()=>_status='تعذر إنشاء الملف: $e');}
     finally{if(mounted)setState(()=>_busy=false);}
@@ -109,28 +108,82 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   Future<Uint8List?> _fetchImage(String url) async {try{final r=await http.get(Uri.parse(url)).timeout(const Duration(seconds:15));if(r.statusCode==200&&r.bodyBytes.isNotEmpty)return r.bodyBytes;}catch(_){}return null;}
   String _extension(String url){final p=Uri.tryParse(url)?.path.toLowerCase()??'';for(final e in ['png','webp','gif','avif','jpeg']){if(p.endsWith('.$e'))return e;}return 'jpg';}
   void _preview(_ImportRow row){showDialog<void>(context:context,builder:(ctx)=>Dialog(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[Row(children:[const Expanded(child:Text('معاينة الصورة',style:TextStyle(fontWeight:FontWeight.bold))),IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close))]),Flexible(child:InteractiveViewer(child:Image.network(row.imageUrl,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image,size:80),fit:BoxFit.contain))),const SizedBox(height:8),Text(row.name)]))));}
-  @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Column(children:[
-    Container(color:_purple,padding:const EdgeInsets.all(14),child:Row(children:[const Icon(Icons.inventory_2,color:Colors.white,size:28),const SizedBox(width:10),const Expanded(child:Text('استيراد بيانات اصناف',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold))),const Icon(Icons.link,color:Colors.white)])),
-    Padding(padding:const EdgeInsets.all(12),child:Column(children:[
-      Row(children:[Expanded(child:TextField(controller:_url,decoration:const InputDecoration(labelText:'رابط الموقع الأساسي',hintText:'https://example.com',border:OutlineInputBorder(),isDense:true))),const SizedBox(width:8),FilledButton.icon(onPressed:_busy?null:_crawl,icon:const Icon(Icons.travel_explore),label:const Text('استكشاف الموقع'))]),
-      const SizedBox(height:8),Row(children:[Expanded(child:Text(_status,style:const TextStyle(fontSize:12))),FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:_orange,foregroundColor:Colors.black),onPressed:_busy?null:_downloadZip,icon:const Icon(Icons.folder_zip),label:const Text('إنشاء ZIP'))])
-    ])),
-    Expanded(child:_rows.isEmpty?const Center(child:Text('ستظهر الصور المكتشفة هنا بعد استكشاف الموقع.')):Scrollbar(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columnSpacing:18,headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),columns:[
-      DataColumn(label:Checkbox(value:_selectAll,onChanged:(v)=>setState((){_selectAll=v??false;for(final r in _rows){r.selected=_selectAll;}}))),
-      const DataColumn(label:Text('الصورة')),const DataColumn(label:Text('الاسم العربي المقترح')),const DataColumn(label:Text('النوع')),const DataColumn(label:Text('الفئة الرئيسية')),const DataColumn(label:Text('الفئة الفرعية')),const DataColumn(label:Text('الوحدة الكبرى')),const DataColumn(label:Text('العدد الداخلي')),const DataColumn(label:Text('الوحدة الصغرى')),const DataColumn(label:Text('الوزن')),const DataColumn(label:Text('الطول')),const DataColumn(label:Text('العرض')),const DataColumn(label:Text('الارتفاع'))
-    ],rows:_rows.map((r)=>DataRow(cells:[
-      DataCell(Checkbox(value:r.selected,onChanged:(v)=>setState(()=>r.selected=v??false))),
-      DataCell(GestureDetector(onTap:()=>_preview(r),child:SizedBox(width:52,height:48,child:Image.network(r.imageUrl,fit:BoxFit.contain,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image))))),
-      DataCell(SizedBox(width:190,child:TextFormField(initialValue:r.name,onChanged:(v)=>r.name=v,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
-      DataCell(DropdownButton<String>(value:r.kind,items:const [DropdownMenuItem(value:'صنف',child:Text('صنف')),DropdownMenuItem(value:'فئة',child:Text('فئة'))],onChanged:(v)=>setState(()=>r.kind=v??'صنف'))),
-      DataCell(SizedBox(width:130,child:TextFormField(initialValue:r.category,onChanged:(v)=>r.category=v,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
-      DataCell(SizedBox(width:130,child:TextFormField(initialValue:r.subcategory,onChanged:(v)=>r.subcategory=v,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
-      DataCell(SizedBox(width:110,child:TextFormField(initialValue:r.majorUnit,onChanged:(v)=>r.majorUnit=v,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
-      DataCell(SizedBox(width:85,child:TextFormField(initialValue:r.innerCount,onChanged:(v)=>r.innerCount=v,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
-      DataCell(SizedBox(width:110,child:TextFormField(initialValue:r.minorUnit,onChanged:(v)=>r.minorUnit=v,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
-      DataCell(_field(r.weight,(v)=>r.weight=v)),DataCell(_field(r.length,(v)=>r.length=v)),DataCell(_field(r.width,(v)=>r.width=v)),DataCell(_field(r.height,(v)=>r.height=v))
-    ])).toList())))),
-  ]));
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        children: [
+          Container(
+            color: _purple,
+            padding: const EdgeInsets.all(14),
+            child: const Row(children: [
+              Icon(Icons.inventory_2, color: Colors.white, size: 28),
+              SizedBox(width: 10),
+              Expanded(child: Text('استيراد بيانات اصناف', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))),
+              Icon(Icons.link, color: Colors.white),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(children: [
+              Row(children: [
+                Expanded(child: TextField(controller: _url, decoration: const InputDecoration(labelText: 'رابط الموقع الأساسي', hintText: 'https://example.com', border: OutlineInputBorder(), isDense: true))),
+                const SizedBox(width: 8),
+                FilledButton.icon(onPressed: _busy ? null : _crawl, icon: const Icon(Icons.travel_explore), label: const Text('استكشاف الموقع')),
+              ]),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(child: Text(_status, style: const TextStyle(fontSize: 12))),
+                FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black), onPressed: _busy ? null : _downloadZip, icon: const Icon(Icons.folder_zip), label: const Text('إنشاء ZIP')),
+              ]),
+            ]),
+          ),
+          Expanded(
+            child: _rows.isEmpty
+              ? const Center(child: Text('ستظهر الصور المكتشفة هنا بعد استكشاف الموقع.'))
+              : Scrollbar(child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SingleChildScrollView(child: DataTable(
+                    columnSpacing: 18,
+                    headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+                    columns: [
+                      DataColumn(label: Checkbox(value: _selectAll, onChanged: (v) => setState(() { _selectAll = v ?? false; for (final r in _rows) { r.selected = _selectAll; } }))),
+                      const DataColumn(label: Text('الصورة')),
+                      const DataColumn(label: Text('الاسم العربي المقترح')),
+                      const DataColumn(label: Text('النوع')),
+                      const DataColumn(label: Text('الفئة الرئيسية')),
+                      const DataColumn(label: Text('الفئة الفرعية')),
+                      const DataColumn(label: Text('الوحدة الكبرى')),
+                      const DataColumn(label: Text('العدد الداخلي')),
+                      const DataColumn(label: Text('الوحدة الصغرى')),
+                      const DataColumn(label: Text('الوزن')),
+                      const DataColumn(label: Text('الطول')),
+                      const DataColumn(label: Text('العرض')),
+                      const DataColumn(label: Text('الارتفاع')),
+                    ],
+                    rows: _rows.map((r) => DataRow(cells: [
+                      DataCell(Checkbox(value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
+                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                      DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(DropdownButton<String>(value: r.kind, items: const [DropdownMenuItem(value: 'صنف', child: Text('صنف')), DropdownMenuItem(value: 'فئة', child: Text('فئة'))], onChanged: (v) => setState(() => r.kind = v ?? 'صنف'))),
+                      DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.category, onChanged: (v) => r.category = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.subcategory, onChanged: (v) => r.subcategory = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.majorUnit, onChanged: (v) => r.majorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 85, child: TextFormField(initialValue: r.innerCount, onChanged: (v) => r.innerCount = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.minorUnit, onChanged: (v) => r.minorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(_field(r.weight, (v) => r.weight = v)),
+                      DataCell(_field(r.length, (v) => r.length = v)),
+                      DataCell(_field(r.width, (v) => r.width = v)),
+                      DataCell(_field(r.height, (v) => r.height = v)),
+                    ])).toList(),
+                  )),
+                )),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _field(String value,ValueChanged<String> onChanged)=>SizedBox(width:75,child:TextFormField(initialValue:value,onChanged:onChanged,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())));
 }
 
@@ -173,10 +226,66 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
   }
   String _ext(String url){final p=Uri.tryParse(url)?.path.toLowerCase()??'';for(final e in ['png','webp','gif','avif','jpeg']){if(p.endsWith('.$e'))return e;}return 'jpg';}
   void _preview(_ImportRow r){showDialog<void>(context:context,builder:(c)=>Dialog(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[Align(alignment:Alignment.centerRight,child:IconButton(onPressed:()=>Navigator.pop(c),icon:const Icon(Icons.close))),Flexible(child:r.bytes!=null?InteractiveViewer(child:Image.memory(r.bytes!,fit:BoxFit.contain)):Image.network(r.imageUrl,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image))),Text(r.name)]))));}
-  @override Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Column(children:[
-    Container(color:_purple,padding:const EdgeInsets.all(14),child:Row(children:[const Icon(Icons.download_for_offline,color:Colors.white,size:28),const SizedBox(width:10),const Expanded(child:Text('تنزيل بيانات أصناف',style:TextStyle(color:Colors.white,fontSize:20,fontWeight:FontWeight.bold))),OutlinedButton.icon(onPressed:_busy?null:_openZip,icon:const Icon(Icons.folder_open,color:Colors.white),label:const Text('فتح ZIP',style:TextStyle(color:Colors.white)))])),
-    Padding(padding:const EdgeInsets.all(10),child:Row(children:[Expanded(child:Text(_status,style:const TextStyle(fontSize:12))),FilledButton.icon(onPressed:_busy||_rows.isEmpty?null:_exportZip,icon:const Icon(Icons.folder_zip),label:const Text('تصدير ZIP المعدل'))])),
-    Expanded(child:_rows.isEmpty?const Center(child:Text('افتح ملف ZIP لعرض البيانات وتعديلها.')):Scrollbar(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columns:const [DataColumn(label:Checkbox(value:_all,onChanged:(v){setState((){_all=v??false;for(final r in _rows){r.selected=_all;}});})),DataColumn(label:Text('الصورة')),DataColumn(label:Text('الاسم العربي')),DataColumn(label:Text('النوع')),DataColumn(label:Text('الفئة الرئيسية')),DataColumn(label:Text('الفئة الفرعية')),DataColumn(label:Text('الوحدة الكبرى')),DataColumn(label:Text('العدد الداخلي')),DataColumn(label:Text('الوحدة الصغرى')),DataColumn(label:Text('الوزن')),DataColumn(label:Text('الطول')),DataColumn(label:Text('العرض')),DataColumn(label:Text('الارتفاع'))],rows:_rows.map((r)=>DataRow(cells:[DataCell(Checkbox(value:r.selected,onChanged:(v)=>setState(()=>r.selected=v??false))),DataCell(GestureDetector(onTap:()=>_preview(r),child:SizedBox(width:52,height:48,child:r.bytes!=null?Image.memory(r.bytes!,fit:BoxFit.contain):Image.network(r.imageUrl,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image))))),DataCell(SizedBox(width:170,child:TextFormField(initialValue:r.name,onChanged:(v)=>r.name=v,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),DataCell(DropdownButton<String>(value:r.kind,items:const [DropdownMenuItem(value:'صنف',child:Text('صنف')),DropdownMenuItem(value:'فئة',child:Text('فئة'))],onChanged:(v)=>setState(()=>r.kind=v??'صنف'))),DataCell(_field(r.category,(v)=>r.category=v)),DataCell(_field(r.subcategory,(v)=>r.subcategory=v)),DataCell(_field(r.majorUnit,(v)=>r.majorUnit=v)),DataCell(_field(r.innerCount,(v)=>r.innerCount=v)),DataCell(_field(r.minorUnit,(v)=>r.minorUnit=v)),DataCell(_field(r.weight,(v)=>r.weight=v)),DataCell(_field(r.length,(v)=>r.length=v)),DataCell(_field(r.width,(v)=>r.width=v)),DataCell(_field(r.height,(v)=>r.height=v))])).toList()))))
-  ]));
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(children: [
+        Container(
+          color: _purple,
+          padding: const EdgeInsets.all(14),
+          child: Row(children: [
+            const Icon(Icons.download_for_offline, color: Colors.white, size: 28),
+            const SizedBox(width: 10),
+            const Expanded(child: Text('تنزيل بيانات أصناف', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold))),
+            OutlinedButton.icon(onPressed: _busy ? null : _openZip, icon: const Icon(Icons.folder_open, color: Colors.white), label: const Text('فتح ZIP', style: TextStyle(color: Colors.white))),
+          ]),
+        ),
+        Padding(padding: const EdgeInsets.all(10), child: Row(children: [
+          Expanded(child: Text(_status, style: const TextStyle(fontSize: 12))),
+          FilledButton.icon(onPressed: _busy || _rows.isEmpty ? null : _exportZip, icon: const Icon(Icons.folder_zip), label: const Text('تصدير ZIP المعدل')),
+        ])),
+        Expanded(
+          child: _rows.isEmpty
+            ? const Center(child: Text('افتح ملف ZIP لعرض البيانات وتعديلها.'))
+            : Scrollbar(child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SingleChildScrollView(child: DataTable(
+                  columns: [
+                    DataColumn(label: Checkbox(value: _all, onChanged: (v) { setState(() { _all = v ?? false; for (final r in _rows) { r.selected = _all; } }); })),
+                    const DataColumn(label: Text('الصورة')),
+                    const DataColumn(label: Text('الاسم العربي')),
+                    const DataColumn(label: Text('النوع')),
+                    const DataColumn(label: Text('الفئة الرئيسية')),
+                    const DataColumn(label: Text('الفئة الفرعية')),
+                    const DataColumn(label: Text('الوحدة الكبرى')),
+                    const DataColumn(label: Text('العدد الداخلي')),
+                    const DataColumn(label: Text('الوحدة الصغرى')),
+                    const DataColumn(label: Text('الوزن')),
+                    const DataColumn(label: Text('الطول')),
+                    const DataColumn(label: Text('العرض')),
+                    const DataColumn(label: Text('الارتفاع')),
+                  ],
+                  rows: _rows.map((r) => DataRow(cells: [
+                    DataCell(Checkbox(value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
+                    DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                    DataCell(SizedBox(width: 170, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                    DataCell(DropdownButton<String>(value: r.kind, items: const [DropdownMenuItem(value: 'صنف', child: Text('صنف')), DropdownMenuItem(value: 'فئة', child: Text('فئة'))], onChanged: (v) => setState(() => r.kind = v ?? 'صنف'))),
+                    DataCell(_field(r.category, (v) => r.category = v)),
+                    DataCell(_field(r.subcategory, (v) => r.subcategory = v)),
+                    DataCell(_field(r.majorUnit, (v) => r.majorUnit = v)),
+                    DataCell(_field(r.innerCount, (v) => r.innerCount = v)),
+                    DataCell(_field(r.minorUnit, (v) => r.minorUnit = v)),
+                    DataCell(_field(r.weight, (v) => r.weight = v)),
+                    DataCell(_field(r.length, (v) => r.length = v)),
+                    DataCell(_field(r.width, (v) => r.width = v)),
+                    DataCell(_field(r.height, (v) => r.height = v)),
+                  ])).toList(),
+                )),
+              )),
+        ),
+      ]),
+    );
+  }
   Widget _field(String v,ValueChanged<String> c)=>SizedBox(width:100,child:TextFormField(initialValue:v,onChanged:c,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())));
 }
