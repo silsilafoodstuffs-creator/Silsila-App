@@ -11,6 +11,7 @@ create table if not exists public.erp_user_permissions (
  can_print boolean not null default false,
  can_export_excel boolean not null default false,
  can_export_pdf boolean not null default false,
+ show_in_quick_tasks boolean not null default false,
  updated_at timestamptz not null default now(),
  updated_by uuid references auth.users(id),
  unique(company_id,user_id,menu_key),
