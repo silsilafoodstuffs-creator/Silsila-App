@@ -118,6 +118,7 @@ String silsilaText(String value) {
     'مبيعات': 'Sales',
     'موارد بشرية': 'Human Resources',
     'علاقات عملاء': 'Customer Relations',
+    'فاتورة إلكترونية': 'E-Invoice',
     'بيانات الشركة': 'Company Profile',
     'الفروع': 'Branches',
     'مراكز التكلفة': 'Cost Centers',
