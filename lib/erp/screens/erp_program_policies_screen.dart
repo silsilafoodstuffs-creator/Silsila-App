@@ -10,7 +10,7 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية'];
+  static const tabs = ['الهوية البصرية','برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
@@ -79,7 +79,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget build(BuildContext context) {
     final query = policySearch.trim().toLowerCase();
     final list = values.values.where((p) {
-      if (p['category'] != tabs[tab]) return false;
+      if (tab == 0 || p['category'] != tabs[tab]) return false;
       if (query.isEmpty) return true;
       final ar = (p['ar'] ?? '').toString().toLowerCase();
       final en = (p['en'] ?? '').toString().toLowerCase();
@@ -127,11 +127,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
       Expanded(
-        child: loading
-            ? const Center(child: CircularProgressIndicator())
-            : list.isEmpty
-                ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
-                : ListView(
+        child: tab == 0
+            ? ErpVisualIdentityPolicyScreen(companyId: widget.companyId)
+            : loading
+                ? const Center(child: CircularProgressIndicator())
+                : list.isEmpty
+                    ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
+                    : ListView(
                         padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
                         children: [
                           Card(
