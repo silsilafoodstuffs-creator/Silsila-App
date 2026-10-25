@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'erp_program_settings_screen.dart';
 
 class ErpProgramPoliciesScreen extends StatefulWidget {
   const ErpProgramPoliciesScreen({super.key, required this.companyId});
@@ -129,6 +130,28 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           : ListView(
               padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
               children: [
+                if (tab == 0 && query.isEmpty)
+                  Card(
+                    margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 1),
+                    elevation: 0,
+                    color: const Color(0xFFF5EFFB),
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.18)),
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    child: ExpansionTile(
+                      initiallyExpanded: true,
+                      leading: const Icon(Icons.tune_rounded, color: Color(0xFF3E007D)),
+                      title: const Text('إعدادات البرنامج والهوية البصرية', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                      subtitle: const Text('اسم البرنامج واللغة والشعار والألوان والخطوط', style: TextStyle(fontSize: 10)),
+                      children: [
+                        SizedBox(
+                          height: 700,
+                          child: ErpProgramSettingsScreen(companyId: widget.companyId),
+                        ),
+                      ],
+                    ),
+                  ),
                 Card(
                   margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
                   elevation: 0, color: const Color(0xFFF5EFFB),
