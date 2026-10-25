@@ -32,6 +32,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   final _accountingRepo = ErpOperationalAccountingRepository();
   final _company = TextEditingController();
   final _documentNumber = TextEditingController();
+  final _fiscalYear = TextEditingController(text: DateTime.now().year.toString());
   final _partyCode = TextEditingController();
   final _notes = TextEditingController();
   final _quantity = TextEditingController(text: '1');
@@ -60,6 +61,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   String? _selectedDocumentId;
   String _documentType = 'invoice';
   String _sourceChannel = 'manual';
+  String _paymentType = 'آجل';
+  List<Map<String, dynamic>> _fiscalPeriods = [];
+  String? _fiscalPeriodId;
+  bool _canChangeWarehouse = false;
+  bool _canChangePaymentType = false;
   List<String> _sourceDocumentIds = <String>[];
   bool _saving = false;
   bool _loading = false;
@@ -164,6 +170,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     _company.text = widget.initialCompanyId ?? '';
     _documentType = widget.initialDocumentType ?? 'invoice';
     _selectedDocumentId = widget.initialDocumentId;
+    _paymentType = 'آجل';
     if (widget.initialDocumentId != null) {
       // Load once when opening a specific document; scheduling a second load
       // here can race the initial company load and overwrite selected state.
@@ -182,7 +189,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
   @override
   void dispose() {
-    _company.dispose(); _documentNumber.dispose(); _partyCode.dispose(); _notes.dispose(); _quantity.dispose();
+    _company.dispose(); _documentNumber.dispose(); _fiscalYear.dispose(); _partyCode.dispose(); _notes.dispose(); _quantity.dispose();
     _unitPrice.dispose(); _discount.dispose(); _tax.dispose(); _invoiceDiscountAmount.dispose(); _invoiceDiscountPercent.dispose(); super.dispose();
   }
 
@@ -337,10 +344,28 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     });
     if (widget.kind == ErpOperationalKind.sales) {
       try {
+        final fiscal = await Supabase.instance.client.from('erp_fiscal_periods')
+            .select('id,period_name,starts_on,ends_on,status')
+            .eq('company_id', _company.text.trim())
+            .order('starts_on', ascending: false);
+        final periods = List<Map<String, dynamic>>.from(fiscal);
+        if (mounted) setState(() {
+          _fiscalPeriods = periods;
+          final date = _documentDate.toIso8601String().substring(0,10);
+          final current = periods.where((p) => date.compareTo(_s(p['starts_on'])) >= 0 && date.compareTo(_s(p['ends_on'])) <= 0);
+          _fiscalPeriodId = current.isEmpty ? null : _s(current.first['id']);
+          _fiscalYear.text = current.isEmpty ? _documentDate.year.toString() : _s(current.first['period_name']);
+        });
+      } catch (_) {
+        if (mounted) setState(() { _fiscalPeriods = []; _fiscalPeriodId = null; _fiscalYear.text = _documentDate.year.toString(); });
+      }
+      try {
         final reps = await _repo.fetchRepresentatives(_company.text.trim());
         final canChangeRep = await _resolveSalesRepChangePermission(_company.text.trim());
         if (mounted) setState(() {
           _canChangeSalesRep = canChangeRep;
+          _canChangeWarehouse = canChangeRep;
+          _canChangePaymentType = canChangeRep;
           _representatives = reps;
           final selectedParty = _parties.where((party) => _s(party['id']) == _partyId);
           if (selectedParty.isNotEmpty) {
@@ -481,6 +506,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         companyId: _company.text, kind: widget.kind, documentNumber: _documentNumber.text,
         documentType: _documentType, partyId: _partyId!, warehouseId: _warehouseId!, notes: _notes.text,
         documentDate: _documentDate, salesRepId: _salesRepId, isTaxInvoice: _isTaxInvoice,
+        fiscalYear: _fiscalYear.text.trim(), fiscalPeriodId: _fiscalPeriodId, paymentType: _paymentType,
         sourceChannel: _sourceChannel, sourceDocumentIds: _sourceDocumentIds,
       );
       if (!mounted) return;
