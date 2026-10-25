@@ -42,7 +42,12 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if(company.isEmpty){setState(()=>{loading=false,error='اختر الشركة وسجّل الدخول أولاً.'});return;}
     setState(()=>{loading=true,error=null,message=null});
     try {
-      final rows=await db.from('erp_program_policies').select().eq('company_id',company);
+      var rows=await db.from('erp_program_policies').select().eq('company_id',company);
+      if ((rows as List).isEmpty) {
+        final initial=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();
+        await db.from('erp_program_policies').upsert(initial,onConflict:'company_id,policy_key');
+        rows=await db.from('erp_program_policies').select().eq('company_id',company);
+      }
       for(final row in (rows as List).whereType<Map<String,dynamic>>()) { final key=(row['policy_key']??'').toString(); if(!values.containsKey(key))continue; final p=values[key]!; p['enabled']=row['is_enabled']==true; p['all']=row['apply_to_all']==true || p['mandatory']==true; p['value']=(row['policy_value']??p['value']??'').toString(); p['user_ids']=List<String>.from((row['user_ids'] as List?)??const []); }
       final us=await db.from('erp_users').select('id,user_code,display_name,name_ar').eq('company_id',company);
       if(mounted)setState(()=>{users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)),loading=false});
