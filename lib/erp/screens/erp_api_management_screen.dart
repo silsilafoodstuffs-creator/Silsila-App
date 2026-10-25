@@ -52,41 +52,21 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
         ]),
       );
 
-  Widget _apiInterface() => ListView(
-        padding: const EdgeInsets.all(14),
-        children: [
-          _sectionTitle('واجهة API', 'كتالوج المسارات المقترحة. هذه قائمة تعريفية وليست نقاط اتصال منشورة فعليًا.'),
-          Card(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('الاسم')),
-                  DataColumn(label: Text('المسار')),
-                  DataColumn(label: Text('الطريقة')),
-                  DataColumn(label: Text('الصلاحية المطلوبة')),
-                  DataColumn(label: Text('الوصف')),
-                ],
-                rows: erpApiCatalog.map((endpoint) => DataRow(cells: [
-                  DataCell(Text(endpoint.name)),
-                  DataCell(SelectableText(endpoint.path)),
-                  DataCell(Text(endpoint.method)),
-                  DataCell(Text(endpoint.requiredScope)),
-                  DataCell(SizedBox(width: 250, child: Text(endpoint.description))),
-                ])).toList(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text('يجب أن تمر الطلبات الفعلية عبر خادم موثوق يتحقق من هوية المستخدم والشركة والصلاحيات وحدود الاستخدام.',
-              style: TextStyle(color: Colors.black54)),
-        ],
-      );
-
   Widget _externalConnection() => ListView(
         padding: const EdgeInsets.all(14),
         children: [
-          _sectionTitle('الربط الخارجي', 'تعريف بيانات النظام الخارجي والتحقق من صحتها قبل تفعيل الحفظ والاتصال.'),
+          _sectionTitle('واجهة API والربط الخارجي', 'كتالوج المسارات وتعريف النظام الخارجي والتحقق من بيانات الربط.'),
+          Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('مسارات API المتاحة للتصميم', style: TextStyle(fontWeight: FontWeight.w900, color: _apiPurple)),
+            const SizedBox(height: 6),
+            ...erpApiCatalog.map((endpoint) => Padding(padding: const EdgeInsets.symmetric(vertical: 4), child: Row(children: [
+              SizedBox(width: 52, child: Text(endpoint.method, style: const TextStyle(fontWeight: FontWeight.w800, color: _apiPurple))),
+              Expanded(child: Text('${endpoint.path}  •  ${endpoint.name}')),
+              Text(endpoint.requiredScope, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+            ]))),
+            const SizedBox(height: 4),
+            const Text('المسارات تعريفية وليست منشورة كخدمة فعلية بعد.', style: TextStyle(color: Colors.black54, fontSize: 12)),
+          ]))),
           TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم النظام المتصل', border: OutlineInputBorder())),
           const SizedBox(height: 10),
           TextField(controller: _code, decoration: const InputDecoration(labelText: 'رمز الربط', helperText: '3 إلى 40 حرفًا أو رقمًا أو - أو _', border: OutlineInputBorder())),
@@ -170,7 +150,7 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
 
   @override
   Widget build(BuildContext context) => DefaultTabController(
-        length: 3,
+        length: 2,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
             color: _apiPurple,
@@ -186,15 +166,13 @@ class _ErpApiManagementScreenState extends State<ErpApiManagementScreen> {
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white70,
                 tabs: [
-                  Tab(text: 'واجهة API'),
-                  Tab(text: 'الربط الخارجي'),
+                  Tab(text: 'واجهة API والربط الخارجي'),
                   Tab(text: 'إدارة مفاتيح API'),
                 ],
               ),
             ]),
           ),
           Expanded(child: TabBarView(children: [
-            _apiInterface(),
             _externalConnection(),
             _apiKeys(),
           ])),
