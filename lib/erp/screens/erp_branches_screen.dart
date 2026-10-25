@@ -51,19 +51,27 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     }
     setState(() { _loading = true; _error = null; });
     try {
-      final geoResult = await _db!.from('erp_geographic_data')
-          .select('id,parent_id,geo_code,name_ar,name_en,level,is_active')
-          .eq('company_id', companyId).eq('is_active', true).order('geo_code');
+      // Load the branch directory independently from optional geography data.
+      // A geography-table/RLS issue must never hide existing branches.
       final result = await _db!
           .from('erp_branches')
           .select('id, branch_code, branch_name, branch_name_en, phone, phone2, landline1, landline2, location, address, governorate_id, district_id, area_id, is_main, is_active')
           .eq('company_id', companyId)
           .order('branch_code');
+      List<Map<String, dynamic>> geoRows = [];
+      try {
+        final geoResult = await _db!.from('erp_geographic_data')
+            .select('id,parent_id,geo_code,name_ar,name_en,level,is_active')
+            .eq('company_id', companyId).eq('is_active', true).order('geo_code');
+        geoRows = (geoResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
+      } catch (_) {
+        // Keep branches visible even if the geographic lookup is unavailable.
+      }
       if (!mounted) return;
       setState(() {
         _rows = (result as List).whereType<Map<String, dynamic>>().toList(growable: false);
         _selectedBranchIds.removeWhere((id) => !_rows.any((row) => _s(row['id']) == id));
-        _geoRows = (geoResult as List).map((e) => Map<String, dynamic>.from(e)).toList();
+        _geoRows = geoRows;
         _loading = false;
       });
     } catch (error) {
