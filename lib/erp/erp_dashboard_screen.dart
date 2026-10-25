@@ -1094,7 +1094,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _page == 'المستخدمين' ||
                       _page == 'قوالب صلاحيات المستخدمين' ||
                       _page == 'صلاحيات المستخدمين' ||
-                      _page == 'سياسات البرنامج'
+                      _page == 'سياسات البرنامج' ||
+                      _page == 'الهوية البصرية'
                     )
                         ? Padding(
                             padding: EdgeInsets.all(pagePadding),
@@ -1107,7 +1108,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       ? ErpProgramPoliciesScreen(
                                           companyId: _appManagementCompanyId,
                                         )
-                                      : ErpUserAdminScreen(
+                                      : _page == 'الهوية البصرية'
+                                          ? ErpVisualIdentityPolicyScreen(companyId: _appManagementCompanyId)
+                                          : ErpUserAdminScreen(
                                           companyId: _appManagementCompanyId,
                                           initialView: _page == 'قوالب صلاحيات المستخدمين'
                                               ? 'templates'
