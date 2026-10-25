@@ -688,7 +688,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
           ),
         ],
         if (_selectedCompanyTab == 1)
-          ErpBranchesScreen(companyId: _activeCompanyId ?? widget.companyId, embedded: true),
+          SizedBox(height: 650, child: ErpBranchesScreen(companyId: _activeCompanyId ?? widget.companyId, embedded: true)),
       ]),
     );
   }
