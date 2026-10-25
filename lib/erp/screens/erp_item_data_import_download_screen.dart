@@ -371,6 +371,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       if (picked != null && mounted) setState(() { r.codeMode = 'قديم'; r.code = picked['code'] ?? ''; if ((picked['name'] ?? '').isNotEmpty) r.name = picked['name']!; });
                     }, icon: const Icon(Icons.search, color: _purple))),
                     DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.code, onChanged: (v) => r.code = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                    DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.category, onChanged: (v) => r.category = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.subcategory, onChanged: (v) => r.subcategory = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.majorUnit, onChanged: (v) => r.majorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
@@ -485,7 +486,6 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                       const DataColumn(label: Text('نوع الكود')),
                       const DataColumn(label: Text('بحث F1')),
                       const DataColumn(label: Text('كود صنف / فئة')),
-                    const DataColumn(label: Text('الاسم العربي')),
                     DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Text('النوع'),
                       Checkbox(
@@ -517,7 +517,6 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                     DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
                     DataCell(Text('${_rows.indexOf(r) + 1}')),
                     DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
-                    DataCell(SizedBox(width: 170, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                     DataCell(_kindCell(r, () => setState(() {}))),
                     DataCell(_field(r.category, (v) => r.category = v)),
                     DataCell(_field(r.subcategory, (v) => r.subcategory = v)),
