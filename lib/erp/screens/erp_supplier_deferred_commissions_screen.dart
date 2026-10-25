@@ -57,7 +57,7 @@ class _ErpSupplierDeferredCommissionsScreenState extends State<ErpSupplierDeferr
         DropdownButtonFormField<String>(value:status,decoration:const InputDecoration(labelText:'الحالة'),items:const ['معلق','مستحق','تمت التسوية','ملغي'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>ds(()=>status=v??status)),
         TextFormField(controller:notes,decoration:const InputDecoration(labelText:'ملاحظات'),maxLines:2),
       ])))),
-      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>{if(formKey.currentState?.validate()??false)Navigator.pop(ctx,true)},child:const Text('حفظ'))],
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:(){if(formKey.currentState?.validate()??false)Navigator.pop(ctx,true);},child:const Text('حفظ'))],
     )));
     if(result!=true){for(final c in [supplier,description,base,percent,commission,notes]){c.dispose();}return;}
     setState(()=>_saving=true);
