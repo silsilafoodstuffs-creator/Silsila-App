@@ -102,7 +102,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     controller.dispose();
   }
   Future<void> _map() async {
-    final address=[fields['country']!.text,geos.where((g)=>s(g['id'])==selectedGovernorate).map((g)=>s(g['name_ar'])).firstOrNull,geos.where((g)=>s(g['id'])==selectedDistrict).map((g)=>s(g['name_ar'])).firstOrNull,geos.where((g)=>s(g['id'])==selectedArea).map((g)=>s(g['name_ar'])).firstOrNull,fields['address']!.text].where((e)=>e!=null&&e.trim().isNotEmpty).join(' ');
+    final address=[fields['country']!.text,geos.where((g)=>s(g['id'])==selectedGovernorate).map((g)=>s(g['name_ar'])).firstOrNull,geos.where((g)=>s(g['id'])==selectedDistrict).map((g)=>s(g['name_ar'])).firstOrNull,geos.where((g)=>s(g['id'])==selectedArea).map((g)=>s(g['name_ar'])).firstOrNull,fields['address']!.text].where((e)=>e!=null&&e.toString().trim().isNotEmpty).join(' ');
     final uri=Uri.https('www.google.com','/maps/search/',{'api':'1','query':address});
     if(!await launchUrl(uri,mode:LaunchMode.platformDefault)&&mounted)setState(()=>error='تعذر فتح خرائط Google.');
   }
@@ -142,3 +142,5 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     ]));
   }
 }
+
+extension _FirstOrNull<T> on Iterable<T> { T? get firstOrNull => isEmpty ? null : first; }
