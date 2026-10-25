@@ -7,6 +7,7 @@ import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _purple = Color(0xFF3E007D);
 const _orange = Color(0xFFFFA015);
@@ -44,43 +45,62 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   Future<void> _crawl() async {
     final raw = _url.text.trim();
     final uri = Uri.tryParse(raw);
-    if(uri == null || !uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) { setState(()=>_status='أدخل رابطًا صحيحًا يبدأ بـ https:// أو http://'); return; }
-    setState((){_busy=true;_status='جاري استكشاف الموقع والصفحات الداخلية...';_rows.clear();});
-    final queue=<Uri>[uri], visited=<String>{}, images=<String>{};
-    final found = <String>[];
+    if (uri == null || !uri.hasScheme || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      setState(() => _status = 'أدخل رابطًا صحيحًا يبدأ بـ https:// أو http://');
+      return;
+    }
+    setState(() { _busy = true; _status = 'جاري فحص الصفحة واستخراج بيانات الصور من خدمة سلسلة...'; _rows.clear(); });
     try {
-      while(queue.isNotEmpty && visited.length<80 && images.length<1500) {
-        final page=queue.removeAt(0);
-        if(!visited.add(page.toString())) continue;
-        try {
-          final response=await http.get(page,headers:{'User-Agent':'Mozilla/5.0 SilsilaCatalogImporter/1.0'}).timeout(const Duration(seconds:12));
-          if(response.statusCode<200||response.statusCode>=400) continue;
-          final html=utf8.decode(response.bodyBytes,allowMalformed:true);
-          final imgReg=RegExp(r'''<img\b[^>]*(?:src|data-src|data-lazy-src|srcset)\s*=\s*["']([^"']+)["'][^>]*>''',caseSensitive:false);
-          for(final m in imgReg.allMatches(html)) {
-            var value=m.group(1)?.split(',').first.trim().split(' ').first ?? '';
-            if(value.isEmpty || value.startsWith('data:')) continue;
-            final imageUri=page.resolve(value);
-            if(imageUri.hasScheme && (imageUri.scheme=='http'||imageUri.scheme=='https') && images.add(imageUri.toString())) found.add(imageUri.toString());
-          }
-          final linkReg=RegExp(r'''<a\b[^>]*href\s*=\s*["']([^"']+)["']''',caseSensitive:false);
-          for(final m in linkReg.allMatches(html)) {
-            final href=m.group(1); if(href==null||href.startsWith('#')||href.startsWith('mailto:')||href.startsWith('javascript:')) continue;
-            final next=page.resolve(href);
-            if(next.host==uri.host && (next.scheme=='http'||next.scheme=='https') && !visited.contains(next.toString()) && queue.length<400) queue.add(next);
-          }
-        } catch (_) { /* Keep processing other pages when one is blocked. */ }
-        if(mounted) setState(()=>_status='صفحات تمت زيارتها: ${visited.length} — صور مكتشفة: ${found.length}');
+      // Use the server-side collector so browser CORS restrictions do not
+      // silently leave the screen empty when a shop blocks direct requests.
+      final response = await Supabase.instance.client.functions.invoke(
+        'silsila-image-collector',
+        body: {'action': 'scan', 'url': uri.toString()},
+      );
+      final payload = response.data;
+      if (response.status >= 400 || payload is! Map || payload['error'] != null) {
+        final message = payload is Map ? (payload['error']?.toString() ?? 'تعذر استكشاف الموقع.') : 'استجابة غير مفهومة من خدمة الاستكشاف.';
+        throw Exception(message);
       }
-      for(var i=0;i<found.length;i++){
-        final imageUrl=found[i];
-        final path=Uri.parse(imageUrl).path.toLowerCase();
-        if(RegExp(r'(logo|icon|sprite|favicon|banner|avatar|header|footer)').hasMatch(path)) continue;
-        final id='IMG${(i+1).toString().padLeft(5,'0')}';
-        _rows.add(_ImportRow(id:id,imageUrl:imageUrl,name:_suggestName(path),selected:true));
+      final list = payload['images'];
+      if (list is! List) throw Exception('لم تُرجع خدمة الاستكشاف قائمة صور صالحة.');
+      final seen = <String>{};
+      var index = 0;
+      for (final entry in list) {
+        if (entry is! Map) continue;
+        final imageUrl = (entry['url'] ?? '').toString().trim();
+        if (imageUrl.isEmpty || !seen.add(imageUrl)) continue;
+        final path = Uri.tryParse(imageUrl)?.path.toLowerCase() ?? '';
+        final suppliedName = (entry['product_name'] ?? entry['context_name'] ?? entry['alt'] ?? '').toString().trim();
+        final name = suppliedName.isNotEmpty ? suppliedName : _suggestName(path);
+        index++;
+        _rows.add(_ImportRow(
+          id: 'IMG${index.toString().padLeft(5, '0')}',
+          imageUrl: imageUrl,
+          name: name,
+          kind: (entry['record_type'] ?? 'صنف').toString() == 'فئة' ? 'فئة' : 'صنف',
+          category: (entry['main_category'] ?? '').toString(),
+          subcategory: (entry['subcategory'] ?? '').toString(),
+          majorUnit: (entry['major_unit'] ?? '').toString(),
+          innerCount: (entry['internal_count'] ?? '').toString(),
+          minorUnit: (entry['minor_unit'] ?? '').toString(),
+          weight: (entry['weight'] ?? '').toString(),
+          selected: true,
+        ));
       }
-      if(mounted)setState(()=>_status='اكتمل الفحص: ${visited.length} صفحة، ${_rows.length} صورة مرشحة. قد تمنع بعض المواقع الوصول الآلي أو تحميل الصور.');
-    } finally {if(mounted)setState(()=>_busy=false);}
+      if (mounted) {
+        setState(() {
+          _selectAll = true;
+          _status = _rows.isEmpty
+            ? 'تم فحص الصفحة، لكن لم تُكتشف صور أصناف مسماة. جرّب رابط صفحة فئة أو صفحة منتجات مباشرة.'
+            : 'تم فحص الصفحة: ${_rows.length} صورة/صنف مرشح. راجع الجدول ثم أنشئ ZIP.';
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _status = 'فشل الاستكشاف: ${e.toString().replaceFirst('Exception: ', '')}');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
   String _suggestName(String path) {
     var base=path.split('/').last.split('?').first.replaceAll(RegExp(r'\.(jpg|jpeg|png|webp|gif|avif)$',caseSensitive:false),'');
@@ -116,7 +136,19 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     }catch(e){if(mounted)setState(()=>_status='تعذر إنشاء الملف: $e');}
     finally{if(mounted)setState(()=>_busy=false);}
   }
-  Future<Uint8List?> _fetchImage(String url) async {try{final r=await http.get(Uri.parse(url)).timeout(const Duration(seconds:15));if(r.statusCode==200&&r.bodyBytes.isNotEmpty)return r.bodyBytes;}catch(_){}return null;}
+  Future<Uint8List?> _fetchImage(String url) async {
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'silsila-image-collector',
+        body: {'action': 'download', 'url': url, 'referer': _url.text.trim()},
+      );
+      final payload = response.data;
+      if (response.status >= 400 || payload is! Map || payload['base64'] == null) return null;
+      return Uint8List.fromList(base64Decode(payload['base64'].toString()));
+    } catch (_) {
+      return null;
+    }
+  }
   String _extension(String url){final p=Uri.tryParse(url)?.path.toLowerCase()??'';for(final e in ['png','webp','gif','avif','jpeg']){if(p.endsWith('.$e'))return e;}return 'jpg';}
   void _preview(_ImportRow row){showDialog<void>(context:context,builder:(ctx)=>Dialog(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[Row(children:[const Expanded(child:Text('معاينة الصورة',style:TextStyle(fontWeight:FontWeight.bold))),IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close))]),Flexible(child:InteractiveViewer(child:Image.network(row.imageUrl,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image,size:80),fit:BoxFit.contain))),const SizedBox(height:8),Text(row.name)]))));}
   @override
