@@ -1149,10 +1149,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     child: SafeArea(
       child: Column(children: [
         Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsetsDirectional.fromSTEB(8, 12, 8, 12),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              IconButton(
+                visualDensity: VisualDensity.compact,
+                tooltip: 'إخفاء القوائم الرئيسية',
+                onPressed: () => setState(() => _mainSidebarVisible = false),
+                icon: const Icon(Icons.menu_rounded, color: _orange, size: 25),
+              ),
               Image.asset(
                 'assets/images/silsila_logo.png',
                 width: 58,
@@ -1689,17 +1695,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ],
     const SizedBox(width: 4),
 
-    IconButton(
-      visualDensity: VisualDensity.compact,
-      tooltip: _mainSidebarVisible ? 'إخفاء القوائم الرئيسية' : 'إظهار القوائم الرئيسية',
-      onPressed: () => setState(() => _mainSidebarVisible = !_mainSidebarVisible),
-      icon: Icon(Icons.more_horiz_rounded, color: _mainSidebarVisible ? _purple : _orange),
-    ),
+    if (!_mainSidebarVisible)
+      IconButton(
+        visualDensity: VisualDensity.compact,
+        tooltip: 'إظهار القوائم الرئيسية',
+        onPressed: () => setState(() => _mainSidebarVisible = true),
+        icon: const Icon(Icons.menu_rounded, color: _orange),
+      ),
     IconButton(
       visualDensity: VisualDensity.compact,
       tooltip: _utilitySidebarVisible ? 'إخفاء النشاطات والتنبيهات والوصول السريع' : 'إظهار النشاطات والتنبيهات والوصول السريع',
       onPressed: () => setState(() => _utilitySidebarVisible = !_utilitySidebarVisible),
-      icon: Icon(Icons.more_vert_rounded, color: _utilitySidebarVisible ? _purple : _orange),
+      icon: Icon(Icons.menu_rounded, color: _utilitySidebarVisible ? _purple : _orange),
     ),
     IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('مركز الإشعارات التجريبي')))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
     const CircleAvatar(radius: 18, backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple, size: 20)),
