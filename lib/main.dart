@@ -282,15 +282,8 @@ class SilsilaApp extends StatelessWidget {
       // Keep an Overlay above SelectionArea. MaterialApp's navigator overlay
       // is inside `child`, so SelectionArea cannot find it when placed outside
       // the navigator unless we provide this ancestor overlay.
-      builder: (context, child) => DropdownButtonTheme(
-        data: const DropdownButtonThemeData(
-          isDense: true,
-          menuMaxHeight: 320,
-          alignment: AlignmentDirectional.centerStart,
-          style: TextStyle(fontSize: 12, color: Color(0xFF241735)),
-        ),
-        child: Overlay(
-          initialEntries: [
+      builder: (context, child) => Overlay(
+        initialEntries: [
           OverlayEntry(
             builder: (overlayContext) => SelectionArea(
               child: Directionality(
@@ -302,13 +295,13 @@ class SilsilaApp extends StatelessWidget {
               ),
             ),
           ),
-          ],
-        ),
+        ],
       ),
       title: 'سلسلة Silsila',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
+        buttonTheme: const ButtonThemeData(height: 42, alignedDropdown: true, padding: EdgeInsets.symmetric(horizontal: 8)),
         fontFamily: 'Tajawal',
         scaffoldBackgroundColor: canvas,
         // Keep preview/read-only values legible throughout the ERP and customer app.
