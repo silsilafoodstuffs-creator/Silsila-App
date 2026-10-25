@@ -10,10 +10,10 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية','إعدادات برمجية'];
+  static const tabs = ['برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية'];
   static const defaults = <Map<String,dynamic>>[
-    {'key':'ui_dimensions','category':'إعدادات برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
-    {'key':'ui_reorder','category':'إعدادات برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
+    {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
+    {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
     {'key':'fiscal_year','category':'محاسبية','ar':'فترة السنة المالية','en':'Fiscal year','mandatory':true,'value':'01/01 - 12/31'},
     {'key':'inventory_valuation','category':'محاسبية','ar':'طريقة تقييم المخزون','en':'Inventory valuation method','mandatory':true,'value':'المتوسط المرجح','options':['المتوسط المرجح','الوارد أولاً صادر أولاً (FIFO)','التحديد المحدد']},
     {'key':'inventory_count','category':'محاسبية','ar':'طريقة الجرد','en':'Inventory counting method','mandatory':true,'value':'الجرد المستمر','options':['الجرد المستمر','الجرد الدوري']},
@@ -79,7 +79,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget build(BuildContext context) {
     final query = policySearch.trim().toLowerCase();
     final list = values.values.where((p) {
-      if (tab == tabs.length - 1 || p['category'] != tabs[tab]) return false;
+      if (p['category'] != tabs[tab]) return false;
       if (query.isEmpty) return true;
       final ar = (p['ar'] ?? '').toString().toLowerCase();
       final en = (p['en'] ?? '').toString().toLowerCase();
@@ -127,13 +127,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
       Expanded(
-        child: tab == tabs.length - 1
-            ? _SoftwareSettingsPolicyTable(companyId: widget.companyId)
-            : loading
-                ? const Center(child: CircularProgressIndicator())
-                : list.isEmpty
-                    ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
-                    : ListView(
+        child: loading
+            ? const Center(child: CircularProgressIndicator())
+            : list.isEmpty
+                ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
+                : ListView(
                         padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
                         children: [
                           Card(
@@ -243,79 +241,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
 }
 
 
-
-class _SoftwareSettingsPolicyTable extends StatefulWidget {
-  const _SoftwareSettingsPolicyTable({required this.companyId});
-  final String? companyId;
-  @override State<_SoftwareSettingsPolicyTable> createState() => _SoftwareSettingsPolicyTableState();
-}
-
-class _SoftwareSettingsPolicyTableState extends State<_SoftwareSettingsPolicyTable> {
-  final _db = Supabase.instance.client;
-  final _name = TextEditingController(text:'سلسلة');
-  String _language = 'ar';
-  bool _loading = true, _editing = false, _saving = false;
-  String? _error, _message;
-  String get _company => (widget.companyId ?? '').trim();
-  @override void initState(){super.initState();_load();}
-  @override void dispose(){_name.dispose();super.dispose();}
-  Future<void> _load() async {
-    if(_company.isEmpty){setState(()=>_loading=false);return;}
-    setState(()=>_loading=true);
-    try{
-      final row=await _db.from('erp_program_settings').select('program_name,language_code').eq('company_id',_company).maybeSingle();
-      if(row!=null){_name.text=(row['program_name']??'سلسلة').toString();_language=(row['language_code']??'ar').toString();}
-      if(mounted)setState(()=>_loading=false);
-    }catch(e){if(mounted)setState(() {_loading=false;_error='تعذر تحميل إعدادات البرنامج: $e';});}
-  }
-  Future<void> _save() async {
-    if(!_editing){setState(()=>_message='اضغط تعديل أولًا.');return;}
-    if(_company.isEmpty)return;
-    setState(() {_saving=true;_error=null;_message=null;});
-    try{
-      final old=await _db.from('erp_program_settings').select().eq('company_id',_company).maybeSingle();
-      await _db.from('erp_program_settings').upsert({
-        'company_id':_company,'program_name':_name.text.trim().isEmpty?'سلسلة':_name.text.trim(),'language_code':_language,
-        'logo_base64':old?['logo_base64'],'logo_mime_type':old?['logo_mime_type'],
-        'identity_primary_color':old?['identity_primary_color']??'#3E007D','identity_secondary_color':old?['identity_secondary_color']??'#FFA015',
-        'identity_accent_color':old?['identity_accent_color']??'#FF27C3','identity_background_color':old?['identity_background_color']??'#FFFFFF',
-        'heading_styles':old?['heading_styles']??const [],'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':_db.auth.currentUser?.id,
-      },onConflict:'company_id');
-      if(mounted)setState(() {_saving=false;_editing=false;_message='تم حفظ إعدادات البرنامج.';});
-    }catch(e){if(mounted)setState(() {_saving=false;_error='تعذر الحفظ: $e';});}
-  }
-  Widget _policyRow(int n,String code,String title,Widget value,{double valueWidth=220})=>Card(
-    margin:const EdgeInsets.symmetric(vertical:1,horizontal:1),elevation:0,
-    shape:RoundedRectangleBorder(side:BorderSide(color:Colors.deepPurple.withValues(alpha:.16)),borderRadius:BorderRadius.circular(6)),
-    child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:4),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-      SizedBox(width:38,child:Text('$n',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),const SizedBox(width:8),
-      SizedBox(width:95,child:Text(code,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700))),const SizedBox(width:8),
-      SizedBox(width:230,child:Text(title,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),const SizedBox(width:8),
-      SizedBox(width:valueWidth,child:value),
-    ]))),
-  );
-  @override Widget build(BuildContext context)=>Column(children:[
-    Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),child:Row(children:[
-      const Expanded(child:Text('إعدادات برمجية',style:TextStyle(fontWeight:FontWeight.bold,fontSize:14,color:Color(0xFF3E007D)))),
-      TextButton.icon(onPressed:_loading?null:_load,icon:const Icon(Icons.refresh,size:16),label:const Text('تحديث')),
-      FilledButton.tonalIcon(onPressed:_loading||_editing?null:()=>setState(()=>_editing=true),icon:const Icon(Icons.edit,size:16),label:const Text('تعديل')),
-      const SizedBox(width:4),FilledButton.icon(onPressed:_saving||!_editing?null:_save,icon:const Icon(Icons.save,size:16),label:Text(_saving?'جارٍ الحفظ':'حفظ')),
-    ])),
-    if(_error!=null)Padding(padding:const EdgeInsets.all(4),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
-    if(_message!=null)Padding(padding:const EdgeInsets.all(4),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
-    Expanded(child:_loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.fromLTRB(5,1,5,3),children:[
-      Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:4),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:const[
-        SizedBox(width:38,child:Text('م',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-        SizedBox(width:95,child:Text('كود السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-        SizedBox(width:230,child:Text('بيانات السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:220,child:Text('القيمة / الاختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
-      ])))),
-      _policyRow(1,'SYS001','اسم البرنامج',TextField(controller:_name,enabled:_editing,style:const TextStyle(fontSize:11),decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:7),border:OutlineInputBorder()))),
-      _policyRow(2,'SYS002','لغة واجهة البرنامج',SizedBox(width:220,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
-      _policyRow(3,'SYS003','السماح بتعديل مساحة وحدود الأزرار والخانات',const Text('يُدار من سياسة برمجية POL001',style:TextStyle(fontSize:10))),
-      _policyRow(4,'SYS004','نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف',const Text('يُدار من سياسة برمجية POL002',style:TextStyle(fontSize:10))),
-    ])),
-  ]);
-}
 
 class ErpVisualIdentityPolicyScreen extends StatefulWidget {
   const ErpVisualIdentityPolicyScreen({super.key, required this.companyId});
@@ -441,14 +366,16 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
 
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
-      _row(0,'VIS001','شعار البرنامج',Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))])),
-      _row(1,'VIS002','اللون الأساسي',_field(_primary,hint:'#3E007D')),
-      _row(2,'VIS003','اللون الثانوي',_field(_secondary,hint:'#FFA015')),
-      _row(3,'VIS004','لون التمييز',_field(_accent,hint:'#FF27C3')),
-      _row(4,'VIS005','لون الخلفية',_field(_background,hint:'#FFFFFF')),
+      _row(0,'VIS001','اسم البرنامج',_field(_name,width:190,hint:'سلسلة')),
+      _row(1,'VIS002','لغة واجهة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null)),
+      _row(2,'VIS003','شعار البرنامج',Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))])),
+      _row(3,'VIS004','اللون الأساسي',_field(_primary,hint:'#3E007D')),
+      _row(4,'VIS005','اللون الثانوي',_field(_secondary,hint:'#FFA015')),
+      _row(5,'VIS006','لون التمييز',_field(_accent,hint:'#FF27C3')),
+      _row(6,'VIS007','لون الخلفية',_field(_background,hint:'#FFFFFF')),
     ];
     for (var i=0;i<5;i++) {
-      rows.add(_row(5+i,'VIS${(i+6).toString().padLeft(3,'0')}','${_labels[i]} — الخط / الحجم / اللون',
+      rows.add(_row(7+i,'VIS${(i+8).toString().padLeft(3,'0')}','${_labels[i]} — الخط / الحجم / اللون',
         SizedBox(width:190,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:_fontOptions.map((f)=>DropdownMenuItem(value:f,child:Text(f))).toList(),onChanged:_editing?(v){if(v!=null)setState(()=>_fonts[i]=v);}:null)),
         extra: Row(children:[SizedBox(width:55,child:TextField(controller:_sizes[i],enabled:_editing,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,labelText:'حجم',contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:6),border:OutlineInputBorder()),style:const TextStyle(fontSize:10))),const SizedBox(width:4),SizedBox(width:80,child:TextField(controller:_colors[i],enabled:_editing,decoration:const InputDecoration(isDense:true,labelText:'لون HEX',contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:6),border:OutlineInputBorder()),style:const TextStyle(fontSize:10)))])));
     }
