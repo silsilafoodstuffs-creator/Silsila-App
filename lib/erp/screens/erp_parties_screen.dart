@@ -370,13 +370,64 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   Widget _drop({required String label,required String? value,required List<DropdownMenuItem<String>> items,required ValueChanged<String?>? onChanged})=>DropdownButtonFormField<String>(value:items.any((e)=>e.value==value)?value:null,isExpanded:true,decoration:InputDecoration(labelText:label,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:10)),items:items,onChanged:editing?onChanged:null);
   Widget _geoDrop(String level,String label,String? value,ValueChanged<String?> change,[String? parent])=>_drop(label:label,value:value,items:_geoLevel(level,parent).map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['name_ar']),overflow:TextOverflow.ellipsis))).toList(),onChanged:change);
   Widget _cell(Widget child)=>Padding(padding:const EdgeInsets.all(4),child:child);
-  Widget _partyCard(Map<String,dynamic> row,int index)=>InkWell(onTap:()=>_select(row),child:Container(margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(8),decoration:BoxDecoration(color:selectedPartyId==s(row['id'])?const Color(0xFFF5EFFB):Colors.white,border:Border.all(color:const Color(0xFFE1D9EA)),borderRadius:BorderRadius.circular(10)),child:Column(children:[
-    Row(children:[SizedBox(width:38,child:Text('${index+1}',textAlign:TextAlign.center)),Expanded(child:Text(s(row['party_code'),),style:const TextStyle(fontWeight:FontWeight.bold)),),Expanded(flex:2,child:Text(s(row['party_name']))),Expanded(flex:2,child:Text(s(row['party_name_en']))),Expanded(child:Text(s(row['customer_type'])))]),
-    const Divider(height:12),
-    Row(children:[Expanded(child:Text(s(row['country']).isEmpty?'مصر':s(row['country']))),Expanded(flex:2,child:Text([row['governorate'],row['district'],row['area']].where((v)=>v!=null&&s(v).isNotEmpty).join(' / '))),Expanded(flex:2,child:Text(s(row['address']))),IconButton(tooltip:'فتح الموقع على الخريطة',onPressed:()=>launchUrl(Uri.https('www.google.com','/maps/search/',{'api':'1','query':[row['country'],row['governorate'],row['district'],row['area'],row['address']].where((v)=>v!=null&&s(v).isNotEmpty).join(' ')})),icon:const Icon(Icons.map_outlined,color:purple))]),
-    const Divider(height:12),
-    Row(children:[Expanded(child:Text('نوع التعامل: ${s(row['transaction_type']).isEmpty?'نقدي':s(row['transaction_type'])}')),Expanded(child:Text('المندوب: ${s(reps.where((r)=>s(r['id'])==s(row['sales_rep_employee_id'])).map((r)=>r['full_name']).firstOrNull??'—')}'))]),
-  ])));
+  Widget _partyCard(Map<String, dynamic> row, int index) {
+    final location = [row['governorate'], row['district'], row['area']]
+        .where((value) => value != null && s(value).isNotEmpty)
+        .join(' / ');
+    final repName = reps
+        .where((rep) => s(rep['id']) == s(row['sales_rep_employee_id']))
+        .map((rep) => s(rep['full_name']))
+        .firstOrNull ?? '—';
+    return InkWell(
+      onTap: () => _select(row),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: selectedPartyId == s(row['id']) ? const Color(0xFFF5EFFB) : Colors.white,
+          border: Border.all(color: const Color(0xFFE1D9EA)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                SizedBox(width: 38, child: Text('${index + 1}', textAlign: TextAlign.center)),
+                Expanded(child: Text(s(row['party_code']), style: const TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(flex: 2, child: Text(s(row['party_name']))),
+                Expanded(flex: 2, child: Text(s(row['party_name_en']))),
+                Expanded(child: Text(s(row['customer_type']))),
+              ],
+            ),
+            const Divider(height: 12),
+            Row(
+              children: [
+                Expanded(child: Text(s(row['country']).isEmpty ? 'مصر' : s(row['country']))),
+                Expanded(flex: 2, child: Text(location)),
+                Expanded(flex: 2, child: Text(s(row['address']))),
+                IconButton(
+                  tooltip: 'فتح الموقع على الخريطة',
+                  onPressed: () => launchUrl(Uri.https(
+                    'www.google.com',
+                    '/maps/search/',
+                    {'api': '1', 'query': [row['country'], row['governorate'], row['district'], row['area'], row['address']].where((value) => value != null && s(value).isNotEmpty).join(' ')},
+                  )),
+                  icon: const Icon(Icons.map_outlined, color: purple),
+                ),
+              ],
+            ),
+            const Divider(height: 12),
+            Row(
+              children: [
+                Expanded(child: Text('نوع التعامل: ${s(row['transaction_type']).isEmpty ? 'نقدي' : s(row['transaction_type'])}')),
+                Expanded(child: Text('المندوب: $repName')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context){
     final title=kind=='customer'?'بيانات العملاء':'بيانات الموردين';
