@@ -28,6 +28,8 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
   String _type = 'opening';
   bool _loading = false;
   bool _saving = false;
+  bool _groupDuplicateItems = false;
+  bool _balanceSalePrice = false;
   String? _error;
   String? _success;
 
@@ -76,6 +78,8 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
         _repo.fetchItems(_company.text),
         _repo.fetchBalances(_company.text),
         _repo.fetchMovements(_company.text),
+        _repo.policyApplies(_company.text, 'group_duplicate_items'),
+        _repo.policyApplies(_company.text, 'balance_sale_price'),
       ]);
       if (!mounted) return;
       setState(() {
@@ -83,6 +87,8 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
         _items = values[1];
         _balances = values[2];
         _movements = values[3];
+        _groupDuplicateItems = values[4] == true;
+        _balanceSalePrice = values[5] == true;
         if (!_warehouses.any((r) => _s(r['id']) == _warehouseId)) {
           _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
         }
@@ -149,6 +155,46 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر تسجيل الحركة: $e'; });
     }
+  }
+
+  double _salePrice(String itemId) {
+    final rows = _items.where((r) => _s(r['id']) == itemId);
+    return rows.isEmpty ? 0 : _n(rows.first['sale_price']);
+  }
+
+  List<Map<String, dynamic>> get _visibleBalances {
+    final source = _balances.map((row) {
+      final copy = Map<String, dynamic>.from(row);
+      copy['_display_value'] = _balanceSalePrice
+          ? _n(row['quantity_on_hand']) * _salePrice(_s(row['item_id']))
+          : _n(row['inventory_value']);
+      copy['_warehouse_labels'] = <String>[_warehouseName(_s(row['warehouse_id']))];
+      return copy;
+    }).toList();
+    if (!_groupDuplicateItems) return source;
+    final grouped = <String, Map<String, dynamic>>{};
+    for (final row in source) {
+      final id = _s(row['item_id']);
+      final current = grouped[id];
+      if (current == null) {
+        grouped[id] = Map<String, dynamic>.from(row);
+        continue;
+      }
+      current['quantity_on_hand'] = _n(current['quantity_on_hand']) + _n(row['quantity_on_hand']);
+      current['_display_value'] = _n(current['_display_value']) + _n(row['_display_value']);
+      current['inventory_value'] = _n(current['inventory_value']) + _n(row['inventory_value']);
+      final qty = _n(current['quantity_on_hand']);
+      current['average_unit_cost'] = qty == 0 ? 0 : _n(current['inventory_value']) / qty;
+      (current['_warehouse_labels'] as List<String>).addAll(
+        (row['_warehouse_labels'] as List<String>),
+      );
+    }
+    return grouped.values.map((row) {
+      final copy = Map<String, dynamic>.from(row);
+      final labels = (copy['_warehouse_labels'] as List<String>).toSet().toList();
+      copy['_warehouse_labels'] = labels;
+      return copy;
+    }).toList();
   }
 
   String _itemName(String id) {
@@ -310,10 +356,25 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
           const SizedBox(height: 12),
           const Text('الأرصدة الحالية', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           if (_balances.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد أرصدة معروضة؛ حمّل البيانات أو سجّل حركة أولًا.')),
-          ..._balances.map((r) => Card(child: ListTile(
+          if (_groupDuplicateItems || _balanceSalePrice)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 6),
+              child: Text(
+                [
+                  if (_groupDuplicateItems) 'عرض مجمّع حسب الصنف',
+                  if (_balanceSalePrice) 'قيمة التقرير محسوبة بسعر البيع',
+                ].join(' • '),
+                style: const TextStyle(color: Color(0xFF3E007D), fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ..._visibleBalances.map((r) => Card(child: ListTile(
             leading: const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
             title: Text(_itemName(_s(r['item_id']))),
-            subtitle: Text(_warehouseName(_s(r['warehouse_id'])) + '\nالكمية: ' + _qty(r['quantity_on_hand']) + ' • قيمة المخزون: ' + _n(r['inventory_value']).toStringAsFixed(2) + ' ج.م • متوسط التكلفة: ' + _n(r['average_unit_cost']).toStringAsFixed(4)),
+            subtitle: Text(
+              ((r['_warehouse_labels'] as List<String>?) ?? <String>[_warehouseName(_s(r['warehouse_id']))]).join('، ') +
+              '\nالكمية: ' + _qty(r['quantity_on_hand']) +
+              ' • قيمة المخزون: ' + _n(r['_display_value']).toStringAsFixed(2) +
+              ' ج.م • متوسط التكلفة: ' + _n(r['average_unit_cost']).toStringAsFixed(4)),
             isThreeLine: true,
             trailing: Text(_qty(r['quantity_on_hand']), style: TextStyle(
               fontWeight: FontWeight.w900,
