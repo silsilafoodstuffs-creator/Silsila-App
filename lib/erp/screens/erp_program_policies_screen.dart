@@ -10,7 +10,7 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية','إعدادات برمجية','الهوية البصرية'];
+  static const tabs = ['برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية','إعدادات برمجية'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'ui_dimensions','category':'إعدادات برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'إعدادات برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
@@ -79,7 +79,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget build(BuildContext context) {
     final query = policySearch.trim().toLowerCase();
     final list = values.values.where((p) {
-      if (tab >= tabs.length - 2 || p['category'] != tabs[tab]) return false;
+      if (tab == tabs.length - 1 || p['category'] != tabs[tab]) return false;
       if (query.isEmpty) return true;
       final ar = (p['ar'] ?? '').toString().toLowerCase();
       final en = (p['en'] ?? '').toString().toLowerCase();
@@ -128,10 +128,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       )))),
       Expanded(
         child: tab == tabs.length - 1
-            ? _IdentityPolicyTable(companyId: widget.companyId)
-            : tab == tabs.length - 2
-                ? _SoftwareSettingsPolicyTable(companyId: widget.companyId)
-                : loading
+            ? _SoftwareSettingsPolicyTable(companyId: widget.companyId)
+            : loading
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
                     ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
@@ -319,13 +317,13 @@ class _SoftwareSettingsPolicyTableState extends State<_SoftwareSettingsPolicyTab
   ]);
 }
 
-class _IdentityPolicyTable extends StatefulWidget {
-  const _IdentityPolicyTable({required this.companyId});
+class ErpVisualIdentityPolicyScreen extends StatefulWidget {
+  const ErpVisualIdentityPolicyScreen({super.key, required this.companyId});
   final String? companyId;
-  @override State<_IdentityPolicyTable> createState() => _IdentityPolicyTableState();
+  @override State<ErpVisualIdentityPolicyScreen> createState() => _ErpVisualIdentityPolicyScreenState();
 }
 
-class _IdentityPolicyTableState extends State<_IdentityPolicyTable> {
+class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyScreen> {
   final _db = Supabase.instance.client;
   final _name = TextEditingController(text: 'سلسلة');
   final _primary = TextEditingController(text: '#3E007D');
