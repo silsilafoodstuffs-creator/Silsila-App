@@ -66,7 +66,7 @@ Future<Map<String, String>?> _pickExistingRecord(BuildContext context, String ki
   Future<void> load(StateSetter setDialog) async {
     setDialog(() { loading = true; error = null; });
     try {
-      final table = kind == 'فئة' ? 'categories' : 'erp_items';
+      final table = kind == 'فئة' ? 'erp_item_categories' : 'erp_items';
       final response = await db.from(table).select('*').limit(500);
       records = (response as List).whereType<Map<String, dynamic>>().toList();
       if (records.isEmpty) error = 'لا توجد بيانات في قائمة $kind.';
