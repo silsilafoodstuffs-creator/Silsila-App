@@ -477,7 +477,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
       _row(0,'VIS001','اسم البرنامج',_field(_name,width:190,hint:'سلسلة')),
-      _row(1,'VIS002','لغة واجهة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,menuMaxHeight:320,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
+      _row(1,'VIS002','لغة واجهة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight:34,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
       _row(2,'VIS003','شعار البرنامج',Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))])),
       _row(3,'VIS004','اللون الأساسي',_colorField(_primary)),
       _row(4,'VIS005','اللون الثانوي',_colorField(_secondary)),
@@ -486,7 +486,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     ];
     for (var i=0;i<5;i++) {
       rows.add(_row(7+i,'VIS${(i+8).toString().padLeft(3,'0')}','${_labels[i]} — الخط / الحجم / اللون',
-        SizedBox(width:125,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,isDense:true,menuMaxHeight:320,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3),border:OutlineInputBorder()),items:_fontOptions.map((f)=>DropdownMenuItem(value:f,child:Text(f,style:const TextStyle(fontSize:10),overflow:TextOverflow.ellipsis))).toList(),onChanged:_editing?(v){if(v!=null)setState(()=>_fonts[i]=v);}:null)),
+        SizedBox(width:125,child:DropdownButtonFormField<String>(value:_fonts[i],isExpanded:true,isDense:true,itemHeight:34,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3),border:OutlineInputBorder()),items:_fontOptions.map((f)=>DropdownMenuItem(value:f,child:Text(f,style:const TextStyle(fontSize:10),overflow:TextOverflow.ellipsis))).toList(),onChanged:_editing?(v){if(v!=null)setState(()=>_fonts[i]=v);}:null)),
         extra: Row(children:[SizedBox(width:48,height:36,child:TextField(controller:_sizes[i],enabled:_editing,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,labelText:'حجم',contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),style:const TextStyle(fontSize:10))),const SizedBox(width:4),_colorField(_colors[i],width:155)])));
     }
     return Column(children:[
