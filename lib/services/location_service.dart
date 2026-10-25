@@ -1,11 +1,12 @@
 class LocationService {
   /// قائمة المحافظات المصرية.
   static const List<String> governorates = [
+    // Keep the primary operating areas first, in branch-code order.
     'القاهرة',
     'الجيزة',
-    'الإسكندرية',
     'القليوبية',
     'الشرقية',
+    'الإسكندرية',
     'الغربية',
     'المنوفية',
     'البحيرة',
