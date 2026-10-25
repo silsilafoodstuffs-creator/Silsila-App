@@ -149,6 +149,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final ErpCompanySettingsRepository _workspaceSettingsRepository = ErpCompanySettingsRepository();
   String? _appManagementCompanyId;
   bool _executiveMetricsLoading = false;
+  bool _showAllSalesPerformance = false;
+  bool _showAllPurchasePerformance = false;
+  List<Map<String, dynamic>> _executiveSalesReps = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _executiveSalesDocuments = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _executivePurchaseEmployees = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _executivePurchaseDocuments = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _executiveEmployeeTargets = <Map<String, dynamic>>[];
   String _executivePeriod = 'من بداية النشاط';
   double? _executivePreviousSales;
   double? _executivePreviousPurchases;
@@ -1814,6 +1821,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveInventoryGroupValues = numberList(currentData, 'inventory_group_values');
         _executiveMetricsLoading = false;
       });
+      await _loadExecutiveStaffPerformance(companyId, bounds.start, bounds.end);
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -1822,6 +1830,137 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       });
     }
   }
+
+  Future<void> _loadExecutiveStaffPerformance(String companyId, DateTime start, DateTime end) async {
+    try {
+      final client = Supabase.instance.client;
+      final from = start.toIso8601String().substring(0, 10);
+      final to = end.toIso8601String().substring(0, 10);
+      final month = DateTime(DateTime.now().year, DateTime.now().month).toIso8601String().substring(0, 10);
+      final results = await Future.wait<dynamic>([
+        client.from('erp_sales_representatives').select('*').eq('company_id', companyId).eq('is_active', true).order('rep_name'),
+        client.from('erp_sales_documents').select('id,sales_rep_id,document_type,grand_total,status,document_date,is_demo_data').eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false).gte('document_date', from).lt('document_date', to),
+        client.from('erp_employees').select('id,employee_code,full_name,job_title,department_name,is_active').eq('company_id', companyId).eq('is_active', true).order('full_name'),
+        client.from('erp_purchase_documents').select('id,created_by,document_type,grand_total,status,document_date,is_demo_data').eq('company_id', companyId).eq('status', 'posted').eq('is_demo_data', false).gte('document_date', from).lt('document_date', to),
+        client.from('erp_employee_monthly_targets').select('employee_id,target_type,target_month,target_amount').eq('company_id', companyId).eq('target_month', month),
+      ]);
+      if (!mounted) return;
+      final allEmployees = (results[2] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final purchasingEmployees = allEmployees.where((employee) {
+        final role = '${employee['job_title'] ?? ''} ${employee['department_name'] ?? ''}'.toLowerCase();
+        return role.contains('مشت') || role.contains('شراء') || role.contains('procurement') || role.contains('purchas');
+      }).toList();
+      setState(() {
+        _executiveSalesReps = (results[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _executiveSalesDocuments = (results[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _executivePurchaseEmployees = purchasingEmployees;
+        _executivePurchaseDocuments = (results[3] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _executiveEmployeeTargets = (results[4] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      });
+    } catch (_) {
+      // Staff performance is supplemental; keep the financial summary available if optional tables are not deployed yet.
+    }
+  }
+
+  double _performanceNumber(dynamic value) => double.tryParse(value?.toString() ?? '') ?? 0;
+
+  double _salesRepActual(Map<String, dynamic> rep) {
+    final id = rep['id']?.toString();
+    return _executiveSalesDocuments.where((doc) => doc['sales_rep_id']?.toString() == id).fold<double>(0, (sum, doc) {
+      final amount = _performanceNumber(doc['grand_total']);
+      return sum + (doc['document_type']?.toString() == 'return' ? -amount : amount);
+    });
+  }
+
+  double _purchaseEmployeeActual(Map<String, dynamic> employee) {
+    final id = employee['id']?.toString();
+    return _executivePurchaseDocuments.where((doc) => doc['created_by']?.toString() == id).fold<double>(0, (sum, doc) {
+      final amount = _performanceNumber(doc['grand_total']);
+      return sum + (doc['document_type']?.toString() == 'return' ? -amount : amount);
+    });
+  }
+
+  double _employeeTarget(String employeeId, String type) {
+    final matching = _executiveEmployeeTargets.where((target) => target['employee_id']?.toString() == employeeId && target['target_type']?.toString() == type);
+    return matching.isEmpty ? 0 : _performanceNumber(matching.first['target_amount']);
+  }
+
+  Widget _staffPerformanceCard({required String title, required IconData icon, required Color color, required List<Map<String, dynamic>> people, required double Function(Map<String, dynamic>) actualFor, required double Function(Map<String, dynamic>) targetFor, required String Function(Map<String, dynamic>) nameFor, required String Function(Map<String, dynamic>) classificationFor, required bool showAll, required VoidCallback onToggle, required String emptyText}) {
+    final sorted = [...people]..sort((a, b) {
+      final aTarget = targetFor(a), bTarget = targetFor(b);
+      final aRate = aTarget > 0 ? actualFor(a) / aTarget : -1.0;
+      final bRate = bTarget > 0 ? actualFor(b) / bTarget : -1.0;
+      return bRate.compareTo(aRate);
+    });
+    final visible = showAll ? sorted : sorted.take(5).toList();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE7E0EF)), boxShadow: const [BoxShadow(color: Color(0x0A3E007D), blurRadius: 14, offset: Offset(0, 4))]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Container(width: 40, height: 40, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: color)),
+          const SizedBox(width: 10),
+          Expanded(child: Text(title, style: TextStyle(fontSize: 17, color: color, fontWeight: FontWeight.w900))),
+          Text('${people.length}', style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900)),
+        ]),
+        const SizedBox(height: 10),
+        if (people.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text(emptyText, style: const TextStyle(color: Colors.black54, fontSize: 12, height: 1.5))),
+        ...visible.map((person) {
+          final actual = actualFor(person);
+          final target = targetFor(person);
+          final ratio = target > 0 ? actual / target : 0.0;
+          final rateColor = target <= 0 ? Colors.black45 : ratio >= 1 ? _green : ratio >= .7 ? _orange : Colors.red.shade700;
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Row(children: [
+                Expanded(child: Text(nameFor(person), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF2C2435), fontWeight: FontWeight.w900))),
+                const SizedBox(width: 8),
+                Text(target > 0 ? '${(ratio * 100).toStringAsFixed(0)}%' : 'الهدف غير محدد', style: TextStyle(fontSize: 12, color: rateColor, fontWeight: FontWeight.w900)),
+              ]),
+              const SizedBox(height: 2),
+              Row(children: [
+                Expanded(child: Text(classificationFor(person), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54, fontWeight: FontWeight.w700))),
+                Text('فعلي: ${_executiveMoney(actual)}', style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w800)),
+                const SizedBox(width: 8),
+                Text('هدف: ${target > 0 ? _executiveMoney(target) : '—'}', style: const TextStyle(fontSize: 10, color: Colors.black54)),
+              ]),
+              const SizedBox(height: 5),
+              ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: target > 0 ? ratio.clamp(0.0, 1.0).toDouble() : 0, minHeight: 7, backgroundColor: const Color(0xFFEFEAF4), color: rateColor)),
+            ]),
+          );
+        }),
+        if (people.length > 5) Align(alignment: AlignmentDirectional.centerEnd, child: TextButton.icon(onPressed: onToggle, icon: Icon(showAll ? Icons.expand_less : Icons.expand_more), label: Text(showAll ? 'عرض أقل' : 'عرض الكل (${people.length})'))),
+      ]),
+    );
+  }
+
+  Widget _executiveStaffPerformance() => LayoutBuilder(builder: (context, constraints) {
+    final sales = _staffPerformanceCard(
+      title: 'أداء مندوبي المبيعات', icon: Icons.trending_up_rounded, color: _purple,
+      people: _executiveSalesReps,
+      actualFor: _salesRepActual,
+      targetFor: (rep) => _performanceNumber(rep['monthly_sales_target']),
+      nameFor: (rep) => (rep['rep_name'] ?? 'مندوب مبيعات').toString(),
+      classificationFor: (rep) => (rep['rep_type'] ?? rep['classification'] ?? rep['channel'] ?? 'مندوب مبيعات').toString(),
+      showAll: _showAllSalesPerformance,
+      onToggle: () => setState(() => _showAllSalesPerformance = !_showAllSalesPerformance),
+      emptyText: 'لا توجد بيانات مندوبي مبيعات نشطة. أضف المندوبين وحدد أهدافهم الشهرية لعرض نسب الإنجاز.',
+    );
+    final purchases = _staffPerformanceCard(
+      title: 'أداء مسؤولي المشتريات', icon: Icons.shopping_cart_checkout_rounded, color: const Color(0xFF2475B8),
+      people: _executivePurchaseEmployees,
+      actualFor: _purchaseEmployeeActual,
+      targetFor: (employee) => _employeeTarget(employee['id'].toString(), 'purchase'),
+      nameFor: (employee) => (employee['full_name'] ?? 'مسؤول مشتريات').toString(),
+      classificationFor: (employee) => '${employee['job_title'] ?? 'مسؤول مشتريات'} • ${employee['department_name'] ?? 'المشتريات'}',
+      showAll: _showAllPurchasePerformance,
+      onToggle: () => setState(() => _showAllPurchasePerformance = !_showAllPurchasePerformance),
+      emptyText: 'لا توجد بيانات لموظفي المشتريات النشطين. اربط الموظف بقسم/وظيفة المشتريات وحدد له هدفًا شهريًا.',
+    );
+    if (constraints.maxWidth < 760) return Column(children: [sales, const SizedBox(height: 12), purchases]);
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: sales), const SizedBox(width: 12), Expanded(child: purchases)]);
+  });
 
   Widget _home() {
     if (!_executiveAccessChecked && _appManagementCompanyId != null) {
@@ -2014,7 +2153,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               ],
             ),
             _executiveAnalysisCard(
-              title: 'المبيعات والمرتجعات وصافي المبيعات',
+              title: 'صافي مبيعات',
               icon: Icons.point_of_sale_rounded,
               rows: [
                 _analysisRow('المبيعات', null, null),
@@ -2023,7 +2162,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               ],
             ),
             _executiveAnalysisCard(
-              title: 'المشتريات والمرتجعات وصافي المشتريات',
+              title: 'صافي مشتريات',
               icon: Icons.shopping_cart_outlined,
               rows: [
                 _analysisRow('المشتريات', null, null),
@@ -2072,6 +2211,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               ),
           ]);
         }),
+        const SizedBox(height: 12),
+        _executiveStaffPerformance(),
         const SizedBox(height: 16),
         if ((wide || mid) && (canSales || canFinance || canInventory))
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
