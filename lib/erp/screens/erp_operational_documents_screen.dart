@@ -422,10 +422,50 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     await _applyCustomerWarehouseRules(value);
   }
 
+  Future<bool> _isPolicyEnabledForCurrentUser(String key, {bool defaultEnabled = false}) async {
+    final db = Supabase.instance.client;
+    final rows = await db.from('erp_program_policies')
+        .select('is_enabled,apply_to_all,user_ids')
+        .eq('company_id', _company.text.trim())
+        .eq('policy_key', key)
+        .limit(1);
+    if ((rows as List).isEmpty) return defaultEnabled;
+    final policy = Map<String,dynamic>.from(rows.first as Map);
+    if (policy['is_enabled'] != true) return false;
+    if (policy['apply_to_all'] == true) return true;
+    final authId = db.auth.currentUser?.id;
+    if (authId == null) return false;
+    final erpUsers = await db.from('erp_users').select('id')
+        .eq('company_id', _company.text.trim())
+        .eq('auth_user_id', authId).limit(1);
+    if ((erpUsers as List).isEmpty) return false;
+    final erpUserId = (erpUsers.first as Map)['id'].toString();
+    final assigned = (policy['user_ids'] as List?)?.map((v)=>v.toString()).toSet() ?? <String>{};
+    return assigned.contains(erpUserId);
+  }
+
   Future<void> _createDraft() async {
     if (_partyId == null || _warehouseId == null || _documentNumber.text.trim().isEmpty) {
       setState(() => _error = 'أكمل رقم المستند والطرف والمخزن.');
       return;
+    }
+    final requiredSourcePolicy = widget.kind == ErpOperationalKind.sales
+        ? (_documentType == 'order' ? 'skip_quotation' : _documentType == 'invoice' ? 'skip_sales_order' : null)
+        : (_documentType == 'order' ? 'skip_supply_order' : _documentType == 'invoice' ? 'skip_purchase_order' : null);
+    if (requiredSourcePolicy != null && _sourceDocumentIds.isEmpty) {
+      try {
+        final maySkip = await _isPolicyEnabledForCurrentUser(requiredSourcePolicy,
+            defaultEnabled: requiredSourcePolicy == 'skip_quotation');
+        if (!maySkip) {
+          setState(() => _error = widget.kind == ErpOperationalKind.sales
+              ? (_documentType == 'order' ? 'لا يمكن إنشاء أمر البيع دون ربط عرض سعر؛ سياسة تخطي عرض الأسعار غير مفعلة لهذا المستخدم.' : 'لا يمكن إنشاء فاتورة البيع دون ربط أمر بيع؛ سياسة تخطي أمر البيع غير مفعلة لهذا المستخدم.')
+              : (_documentType == 'order' ? 'لا يمكن إنشاء أمر الشراء دون ربط أمر توريد؛ سياسة تخطي أمر التوريد غير مفعلة لهذا المستخدم.' : 'لا يمكن إنشاء فاتورة الشراء دون ربط أمر شراء؛ سياسة تخطي أمر الشراء غير مفعلة لهذا المستخدم.'));
+          return;
+        }
+      } catch (e) {
+        setState(() => _error = 'تعذر التحقق من سياسة تخطي المستند السابق؛ أوقف الإنشاء حتى لا يتم تجاوز السياسة: $e');
+        return;
+      }
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
