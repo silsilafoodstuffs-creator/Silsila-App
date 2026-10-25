@@ -390,6 +390,21 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             FilledButton.icon(onPressed: _saving ? null : _createWarehouse, icon: const Icon(Icons.add_business), label: const Text('حفظ المخزن')),
           ],
         ))),
+        Text('الفروع المسجلة • ' + _branches.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+        if (_branches.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('لا توجد فروع نشطة مسجلة لهذه الشركة حتى الآن.'),
+          )
+        else
+          ..._branches.map((b) => Card(
+            child: ListTile(
+              leading: const Icon(Icons.store_mall_directory_outlined, color: Color(0xFF3E007D)),
+              title: Text(_s(b['branch_code']) + ' — ' + _s(b['branch_name'])),
+              subtitle: const Text('فرع نشط'),
+            ),
+          )),
+        const SizedBox(height: 12),
         Text('المخازن المسجلة • ' + _warehouses.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
         ..._warehouses.map((w) => Card(child: ListTile(
           leading: const Icon(Icons.warehouse_outlined, color: Color(0xFF3E007D)),
