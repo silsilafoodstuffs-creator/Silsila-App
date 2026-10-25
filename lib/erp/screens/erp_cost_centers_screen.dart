@@ -45,10 +45,33 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   }
 
   Future<void> _load() async {
-    final company = (widget.companyId ?? '').trim();
+    var company = (widget.companyId ?? '').trim();
     if (!mounted) return;
-    if (_db == null || company.isEmpty) {
-      setState(() { _loading = false; _error = _db == null ? 'سجّل الدخول إلى Supabase أولًا.' : 'لا توجد شركة نشطة مرتبطة بالمستخدم.'; });
+    if (_db == null) {
+      setState(() { _loading = false; _error = 'سجّل الدخول إلى Supabase أولًا.'; });
+      return;
+    }
+    if (company.isEmpty) {
+      try {
+        final userId = _db!.auth.currentUser?.id;
+        if (userId != null) {
+          final memberships = await _db!
+              .from('erp_company_members')
+              .select('company_id')
+              .eq('user_id', userId)
+              .eq('is_active', true)
+              .order('created_at')
+              .limit(1);
+          if (memberships.isNotEmpty) {
+            company = (memberships.first['company_id'] ?? '').toString().trim();
+          }
+        }
+      } catch (_) {
+        // Keep the empty-company error visible when membership lookup is unavailable.
+      }
+    }
+    if (company.isEmpty) {
+      setState(() { _loading = false; _error = 'لا توجد شركة نشطة مرتبطة بالمستخدم.'; });
       return;
     }
     setState(() { _loading = true; _error = null; });
