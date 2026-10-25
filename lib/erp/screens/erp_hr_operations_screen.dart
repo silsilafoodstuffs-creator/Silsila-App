@@ -115,7 +115,10 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
               return;
             }
             if ((nationalIdRequired && idValue.isEmpty) ||
-                (idValue.isNotEmpty && !RegExp(r'^[0-9]{14}
+                (idValue.isNotEmpty && !RegExp(r'^[0-9]{14}$').hasMatch(idValue))) {
+              refresh(() => localError = nationalIdRequired
+                  ? 'الرقم القومي إلزامي ويجب أن يتكون من 14 رقمًا.'
+                  : 'إذا أدخلت الرقم القومي فيجب أن يتكون من 14 رقمًا.');
               return;
             }
             Navigator.pop(ctx);
