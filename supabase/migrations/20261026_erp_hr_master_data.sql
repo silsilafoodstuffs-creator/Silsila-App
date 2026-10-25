@@ -32,6 +32,7 @@ alter table public.erp_employees add column if not exists full_name_en text, add
  add column if not exists job_id uuid references public.erp_hr_jobs(id) on delete set null,
  add column if not exists work_location_id uuid references public.erp_hr_work_locations(id) on delete set null;
 alter table public.erp_hr_departments enable row level security; alter table public.erp_hr_jobs enable row level security; alter table public.erp_hr_work_locations enable row level security;
+grant select, insert, update, delete on public.erp_hr_departments, public.erp_hr_jobs, public.erp_hr_work_locations to authenticated;
 do $$ declare t text; begin foreach t in array array['erp_hr_departments','erp_hr_jobs','erp_hr_work_locations'] loop
  execute format('drop policy if exists %I on public.%I',t||'_member_access',t);
  execute format('create policy %I on public.%I for all to authenticated using (exists (select 1 from public.erp_company_members m where m.company_id = %I.company_id and m.user_id = auth.uid() and coalesce(m.is_active,true))) with check (exists (select 1 from public.erp_company_members m where m.company_id = %I.company_id and m.user_id = auth.uid() and coalesce(m.is_active,true)))',t||'_member_access',t,t,t);
