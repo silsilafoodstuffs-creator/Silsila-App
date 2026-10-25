@@ -148,6 +148,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final ErpCompanySettingsRepository _workspaceSettingsRepository = ErpCompanySettingsRepository();
   String? _appManagementCompanyId;
   bool _executiveMetricsLoading = false;
+  String _executivePeriod = 'من بداية النشاط';
+  double? _executivePreviousSales;
+  double? _executivePreviousPurchases;
+  double? _executivePreviousGrossProfit;
+  double? _executivePreviousCollections;
+  double? _executivePreviousReceivables;
+  double? _executivePreviousInventoryValue;
   String? _executiveMetricsError;
   double? _executiveSales;
   double? _executiveGrossProfit;
@@ -1708,6 +1715,25 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ) + ' ج.م';
   }
 
+  ({DateTime start, DateTime end}) _executivePeriodBounds(DateTime now, DateTime activityStart) {
+    final today = DateTime(now.year, now.month, now.day);
+    switch (_executivePeriod) {
+      case 'السنة الحالية':
+        return (start: DateTime(now.year), end: DateTime(now.year + 1));
+      case 'الشهر السابق':
+        return (start: DateTime(now.year, now.month - 1), end: DateTime(now.year, now.month));
+      case 'الشهر الحالي':
+        return (start: DateTime(now.year, now.month), end: DateTime(now.year, now.month + 1));
+      default:
+        return (start: DateTime(activityStart.year, activityStart.month, activityStart.day), end: today.add(const Duration(days: 1)));
+    }
+  }
+
+  double? _executiveChange(double? current, double? previous) {
+    if (current == null || previous == null || previous == 0) return null;
+    return ((current - previous) / previous.abs()) * 100;
+  }
+
   Future<void> _loadExecutiveMetrics(String companyId) async {
     if (!mounted || companyId.isEmpty) return;
     setState(() {
@@ -1715,44 +1741,75 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _executiveMetricsError = null;
     });
     final now = DateTime.now();
-    final monthStart = DateTime(now.year, now.month);
-    final nextMonth = DateTime(now.year, now.month + 1);
+    DateTime activityStart = DateTime(2000, 1, 1);
     try {
-      final result = await Supabase.instance.client.rpc(
-        'erp_get_executive_metrics',
-        params: {
-          'p_company_id': companyId,
-          'p_month_start': monthStart.toIso8601String().substring(0, 10),
-          'p_month_end': nextMonth.toIso8601String().substring(0, 10),
-        },
-      );
-      final data = Map<String, dynamic>.from(result as Map);
-      double? numberValue(String key) {
+      final company = await Supabase.instance.client
+          .from('erp_companies')
+          .select('created_at')
+          .eq('id', companyId)
+          .maybeSingle();
+      final createdAt = company?['created_at']?.toString();
+      if (createdAt != null && createdAt.isNotEmpty) {
+        activityStart = DateTime.tryParse(createdAt)?.toLocal() ?? activityStart;
+      }
+    } catch (_) {
+      // Keep a conservative fallback if company metadata is not readable.
+    }
+    final bounds = _executivePeriodBounds(now, activityStart);
+    final duration = bounds.end.difference(bounds.start);
+    final previousEnd = bounds.start;
+    final previousStart = _executivePeriod == 'من بداية النشاط'
+        ? bounds.start
+        : bounds.start.subtract(duration);
+    try {
+      Future<Map<String, dynamic>> fetchMetrics(DateTime start, DateTime end) async {
+        final raw = await Supabase.instance.client.rpc(
+          'erp_get_executive_metrics',
+          params: {
+            'p_company_id': companyId,
+            'p_month_start': start.toIso8601String().substring(0, 10),
+            'p_month_end': end.toIso8601String().substring(0, 10),
+          },
+        );
+        return Map<String, dynamic>.from(raw as Map);
+      }
+      final currentData = await fetchMetrics(bounds.start, bounds.end);
+      Map<String, dynamic> previousData = <String, dynamic>{};
+      if (_executivePeriod != 'من بداية النشاط' && previousEnd.isAfter(previousStart)) {
+        previousData = await fetchMetrics(previousStart, previousEnd);
+      }
+      double? numberValue(Map<String, dynamic> data, String key) {
         final value = data[key];
         return value == null ? null : double.tryParse(value.toString());
       }
-      List<double> numberList(String key) {
+      List<double> numberList(Map<String, dynamic> data, String key) {
         final raw = data[key];
         if (raw is! List) return <double>[];
         return raw.map((value) => double.tryParse(value.toString()) ?? 0).toList();
       }
-      List<String> stringList(String key) {
+      List<String> stringList(Map<String, dynamic> data, String key) {
         final raw = data[key];
         if (raw is! List) return <String>[];
         return raw.map((value) => value.toString()).toList();
       }
       if (!mounted) return;
       setState(() {
-        _executiveSales = numberValue('sales');
-        _executiveCollections = numberValue('collections');
-        _executiveReceivables = numberValue('receivables');
-        _executivePurchases = numberValue('purchases');
-        _executiveGrossProfit = numberValue('gross_profit_estimate');
-        _executiveInventoryValue = numberValue('inventory_value_estimate');
-        _executiveDailySales = numberList('daily_sales');
-        _executiveDailyCollections = numberList('daily_collections');
-        _executiveInventoryGroupLabels = stringList('inventory_group_labels');
-        _executiveInventoryGroupValues = numberList('inventory_group_values');
+        _executiveSales = numberValue(currentData, 'sales');
+        _executiveCollections = numberValue(currentData, 'collections');
+        _executiveReceivables = numberValue(currentData, 'receivables');
+        _executivePurchases = numberValue(currentData, 'purchases');
+        _executiveGrossProfit = numberValue(currentData, 'gross_profit_estimate');
+        _executiveInventoryValue = numberValue(currentData, 'inventory_value_estimate');
+        _executivePreviousSales = numberValue(previousData, 'sales');
+        _executivePreviousCollections = numberValue(previousData, 'collections');
+        _executivePreviousReceivables = numberValue(previousData, 'receivables');
+        _executivePreviousPurchases = numberValue(previousData, 'purchases');
+        _executivePreviousGrossProfit = numberValue(previousData, 'gross_profit_estimate');
+        _executivePreviousInventoryValue = numberValue(previousData, 'inventory_value_estimate');
+        _executiveDailySales = numberList(currentData, 'daily_sales');
+        _executiveDailyCollections = numberList(currentData, 'daily_collections');
+        _executiveInventoryGroupLabels = stringList(currentData, 'inventory_group_labels');
+        _executiveInventoryGroupValues = numberList(currentData, 'inventory_group_values');
         _executiveMetricsLoading = false;
       });
     } catch (error) {
@@ -1891,11 +1948,43 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ),
             const SizedBox(width: 16),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(silsilaText('الملخص التنفيذي'), style: TextStyle(fontSize: 29, height: 1.2, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3)),
+              Row(children: [
+                Expanded(child: Text(silsilaText('الملخص التنفيذي'), style: const TextStyle(fontSize: 29, height: 1.2, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3))),
+                const SizedBox(width: 12),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 220),
+                  child: DropdownButtonFormField<String>(
+                    value: _executivePeriod,
+                    isExpanded: true,
+                    dropdownColor: Colors.white,
+                    style: const TextStyle(color: _purple, fontSize: 13, fontWeight: FontWeight.w800),
+                    decoration: InputDecoration(
+                      labelText: 'فترة التحليلات',
+                      labelStyle: const TextStyle(color: Color(0xFFECE2F8), fontSize: 11),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'من بداية النشاط', child: Text('من بداية النشاط')),
+                      DropdownMenuItem(value: 'السنة الحالية', child: Text('السنة الحالية')),
+                      DropdownMenuItem(value: 'الشهر السابق', child: Text('الشهر السابق')),
+                      DropdownMenuItem(value: 'الشهر الحالي', child: Text('الشهر الحالي')),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() => _executivePeriod = value);
+                      final companyId = _appManagementCompanyId;
+                      if (companyId != null) _loadExecutiveMetrics(companyId);
+                    },
+                  ),
+                ),
+              ]),
               const SizedBox(height: 6),
-              Text(silsilaText('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة'), style: TextStyle(color: Color(0xFFECE2F8), fontSize: 15, height: 1.5)),
+              Text(silsilaText('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة'), style: const TextStyle(color: Color(0xFFECE2F8), fontSize: 15, height: 1.5)),
               const SizedBox(height: 5),
-              Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة من قاعدة البيانات…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'المؤشرات الرئيسية من الحركات المرحلة؛ بقية المؤشرات حسب اكتمال الربط', style: const TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة للفترة المحددة…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'الفترة المحددة: $_executivePeriod • المؤشرات من الحركات المرحلة', style: const TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
             ])),
             const SizedBox(width: 12),
             Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1911,23 +2000,75 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ),
         const SizedBox(height: 16),
         LayoutBuilder(builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 1000 ? 6 : constraints.maxWidth >= 650 ? 3 : 2;
-          return GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: columns == 6 ? 1.25 : columns == 3 ? 1.35 : 1.2,
-            children: [
-              if (canSales) _executiveKpi('صافي المبيعات', _executiveMoney(_executiveSales), 'الشهر الحالي • فواتير مرحلة', Icons.point_of_sale_rounded, _purple),
-              if (canFinance) _executiveKpi('مجمل الربح التقديري', _executiveMoney(_executiveGrossProfit), 'على تكلفة الشراء الحالية', Icons.trending_up_rounded, _green),
-              if (canFinance) _executiveKpi('المحصّل على الفواتير', _executiveMoney(_executiveCollections), 'المدفوع المسجل بالفواتير', Icons.payments_outlined, _orange),
-              if (canFinance) _executiveKpi('مديونية العملاء', _executiveMoney(_executiveReceivables), 'فواتير غير مسددة بالكامل', Icons.groups_rounded, _pink),
-              if (canInventory) _executiveKpi('قيمة المخزون', _executiveMoney(_executiveInventoryValue), 'من حركات المخزون والتكلفة الحالية', Icons.inventory_2_rounded, const Color(0xFF2475B8)),
-              if (canInventory) _executiveKpi('مشتريات الشهر', _executiveMoney(_executivePurchases), 'فواتير شراء مرحلة وغير تجريبية', Icons.local_shipping_outlined, const Color(0xFF168A70)),
-            ],
-          );
+          final compact = constraints.maxWidth < 720;
+          final cards = <Widget>[
+            _executiveAnalysisCard(
+              title: 'صافي نتيجة النشاط',
+              icon: Icons.assessment_outlined,
+              rows: [
+                _analysisRow('صافي النتيجة', null, null),
+                _analysisRow('التغير عن الفترة السابقة', null, null),
+                _analysisRow('نسبة النتيجة', null, null, isPercent: true),
+              ],
+            ),
+            _executiveAnalysisCard(
+              title: 'المبيعات والمرتجعات وصافي المبيعات',
+              icon: Icons.point_of_sale_rounded,
+              rows: [
+                _analysisRow('المبيعات', null, null),
+                _analysisRow('المرتجعات', null, null),
+                _analysisRow('صافي المبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
+              ],
+            ),
+            _executiveAnalysisCard(
+              title: 'المشتريات والمرتجعات وصافي المشتريات',
+              icon: Icons.shopping_cart_outlined,
+              rows: [
+                _analysisRow('المشتريات', null, null),
+                _analysisRow('المرتجعات', null, null),
+                _analysisRow('صافي المشتريات', _executivePurchases, _executiveChange(_executivePurchases, _executivePreviousPurchases)),
+              ],
+            ),
+            _executiveAnalysisCard(
+              title: 'المصروفات',
+              icon: Icons.money_off_csred_outlined,
+              rows: [
+                _analysisRow('إجمالي المصروفات', null, null),
+                _analysisRow('التغير عن الفترة السابقة', null, null),
+                _analysisRow('نسبة المصروفات', null, null, isPercent: true),
+              ],
+            ),
+            _executiveAnalysisCard(
+              title: 'الأصول والإهلاك وصافي الأصول',
+              icon: Icons.account_balance_outlined,
+              rows: [
+                _analysisRow('إجمالي الأصول', null, null),
+                _analysisRow('الإهلاك', null, null),
+                _analysisRow('صافي الأصول', null, null),
+              ],
+            ),
+            _executiveAnalysisCard(
+              title: 'التدفقات الداخلة والخارجة',
+              icon: Icons.swap_vert_circle_outlined,
+              rows: [
+                _analysisRow('التدفقات الداخلة', _executiveCollections, _executiveChange(_executiveCollections, _executivePreviousCollections)),
+                _analysisRow('التدفقات الخارجة', null, null),
+                _analysisRow('صافي التدفق', null, null),
+              ],
+            ),
+          ];
+          return Column(children: [
+            for (var offset = 0; offset < cards.length; offset += 3)
+              Padding(
+                padding: EdgeInsets.only(bottom: offset == 0 ? 9 : 0),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  for (var index = offset; index < offset + 3 && index < cards.length; index++) ...[
+                    if (index > offset) const SizedBox(width: 9),
+                    Expanded(child: SizedBox(height: compact ? 148 : 158, child: cards[index])),
+                  ],
+                ]),
+              ),
+          ]);
         }),
         const SizedBox(height: 16),
         if ((wide || mid) && (canSales || canFinance || canInventory))
@@ -2210,6 +2351,63 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   static const Color _green = Color(0xFF18865A);
+
+  Map<String, Object?> _analysisRow(String label, double? value, double? change, {bool isPercent = false}) => <String, Object?>{
+    'label': label,
+    'value': value,
+    'change': change,
+    'isPercent': isPercent,
+  };
+
+  Widget _executiveAnalysisCard({
+    required String title,
+    required IconData icon,
+    required List<Map<String, Object?>> rows,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: const Color(0xFFE8E1EF)),
+        boxShadow: const [BoxShadow(color: Color(0x0A3E007D), blurRadius: 10, offset: Offset(0, 3))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Icon(icon, size: 18, color: _purple),
+          const SizedBox(width: 6),
+          Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, height: 1.15, fontWeight: FontWeight.w900, color: _purple))),
+        ]),
+        const Divider(height: 13),
+        Expanded(child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: rows.map((row) {
+            final label = row['label']! as String;
+            final value = row['value'] as double?;
+            final change = row['change'] as double?;
+            final isPercent = row['isPercent'] == true;
+            final hasData = value != null;
+            final positive = change != null && change >= 0;
+            final color = change == null ? Colors.black45 : positive ? _green : Colors.red.shade700;
+            return Row(children: [
+              Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.black87))),
+              Expanded(flex: 3, child: Text(
+                !hasData ? '—' : isPercent ? '${value.toStringAsFixed(1)}%' : _executiveMoney(value).replaceAll(' ج.م', ''),
+                textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.black87),
+              )),
+              SizedBox(width: 58, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                Icon(change == null ? Icons.remove_rounded : positive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 12, color: color),
+                Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: color)),
+              ])),
+            ]);
+          }).toList(),
+        )),
+      ]),
+    );
+  }
 
   Widget _executiveKpi(String title, String value, String note, IconData icon, Color color) =>
       Container(
