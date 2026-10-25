@@ -20,7 +20,6 @@ import 'screens/erp_currencies_screen.dart';
 import 'screens/erp_image_collector_screen.dart';
 import 'screens/erp_item_data_import_download_screen.dart';
 import 'screens/erp_user_admin_screen.dart';
-import 'screens/erp_user_classifications_screen.dart';
 import 'screens/erp_shipping_companies_screen.dart';
 import 'screens/erp_geographic_data_screen.dart';
 import 'screens/erp_item_units_screen.dart';
