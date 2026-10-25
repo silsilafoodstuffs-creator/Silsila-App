@@ -1301,13 +1301,13 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       ]))
                     : const SizedBox.shrink();
                 return Container(margin:const EdgeInsets.only(bottom:1),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(8),border:Border.all(color:selected?_purple.withValues(alpha:.65):const Color(0xFFE7E0EE),width:selected?1.5:1)),
-                  child:Row(textDirection: TextDirection.rtl,crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  child:Row(textDirection: TextDirection.rtl,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                     SizedBox(
                       width: 150,
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(3,3,3,1),
+                        padding: const EdgeInsets.fromLTRB(3,2,3,2),
                         child: Column(mainAxisSize:MainAxisSize.min,children:[
-                          SizedBox(height:72,child:Material(
+                          SizedBox(height:76,child:Material(
                             color: const Color(0xFFF7F4F9),
                             borderRadius: BorderRadius.circular(10),
                             child: InkWell(
@@ -1316,9 +1316,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                               child: ClipRRect(borderRadius: BorderRadius.circular(10),child:_imagePreviewTile(url)),
                             ),
                           )),
-                          const SizedBox(height:2),
+                          const SizedBox(height:3),
                           TextField(controller:_rowController(item,'file_name',initial:suggested),
-                            decoration:const InputDecoration(hintText:'اسم الصورة',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:6)),
+                            decoration:const InputDecoration(hintText:'اسم الصورة',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:4)),
                             style:const TextStyle(fontSize:11),onChanged:(v)=>item['file_name']=v),
                         ]),
                       ),
@@ -1326,7 +1326,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     const VerticalDivider(width:1),
                     Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
                       Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:0),child:common),
-                      const Divider(height:1, thickness:0.5),
+                      const SizedBox(height:3),
                       Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:0),child:editor),
                       if (kind == 'product') ...[
                         const SizedBox(height:3),
