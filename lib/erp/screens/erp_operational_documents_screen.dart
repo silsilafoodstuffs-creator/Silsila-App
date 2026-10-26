@@ -194,6 +194,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   String _s(dynamic v) => (v ?? '').toString();
+  String _firstOrEmpty(Iterable<String> values) => values.isEmpty ? '' : values.first;
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
 
@@ -1601,7 +1602,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       searchable: (p) => [
         _s(p['party_code']), _s(p['party_name']), _s(p['party_name_en']),
         _s(p['party_kind']), _s(p['transaction_type']),
-        _s(_representatives.where((r) => _s(r['id']) == _s(p['sales_rep_id'])).map((r) => r['rep_name']).firstOrNull),
+        _firstOrEmpty(_representatives.where((r) => _s(r['id']) == _s(p['sales_rep_id'])).map((r) => _s(r['rep_name']))),
       ],
     );
     if (selected != null && mounted) await _onPartyChanged(selected);
@@ -1880,7 +1881,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 )),
                 box(_lookupInput(label: 'اسم العميل', value: _partyLabel(_partyId), enabled: !hasDraft, onOpen: _openCustomerPicker)),
                 box(_lookupInput(label: 'المخزن', value: _warehouseLabel(_warehouseId), enabled: !hasDraft && _canChangeWarehouse, onOpen: _openWarehousePicker)),
-                box(_lookupInput(label: 'مندوب المبيعات', value: _representatives.where((r) => _s(r['id']) == _salesRepId).map((r) => _s(r['rep_code']) + ' — ' + _s(r['rep_name'])).firstOrNull ?? '', enabled: !hasDraft && _canChangeSalesRep, onOpen: _openRepresentativePicker)),
+                box(_lookupInput(label: 'مندوب المبيعات', value: _firstOrEmpty(_representatives.where((r) => _s(r['id']) == _salesRepId).map((r) => _s(r['rep_code']) + ' — ' + _s(r['rep_name']))), enabled: !hasDraft && _canChangeSalesRep, onOpen: _openRepresentativePicker)),
               ]),
               const SizedBox(height: 12),
               GridView.count(
