@@ -33,7 +33,7 @@ class ErpOperationalDocumentsRepository {
 
   Future<List<Map<String, dynamic>>> fetchParties(String companyId, ErpOperationalKind kind) async {
     final rows = await _db.from('erp_parties')
-      .select('id, party_code, party_name, party_name_en, party_kind, transaction_type, sales_rep_id, sales_rep_employee_id, default_warehouse_id')
+      .select('id, party_code, party_name, party_name_en, party_kind, transaction_type, customer_type, business_classification, sales_rep_id, sales_rep_employee_id, default_warehouse_id')
       .eq('company_id', companyId.trim()).eq('is_active', true)
       .inFilter('party_kind', kind == ErpOperationalKind.purchase ? ['supplier','both'] : ['customer','both'])
       .order('party_name').limit(2000);
