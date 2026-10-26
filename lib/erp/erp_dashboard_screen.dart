@@ -2236,6 +2236,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             _executiveAnalysisCard(
               title: 'صافي نتيجة النشاط',
               icon: Icons.assessment_outlined,
+              trend: _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit),
               rows: [
                 _analysisRow('صافي نتيجة النشاط', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
                 _analysisRow('التغير عن الفترة السابقة', null, null),
@@ -2243,8 +2244,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               ],
             ),
             _executiveAnalysisCard(
-              title: 'صافي مبيعات',
+              title: 'صافي نتيجة المبيعات',
               icon: Icons.point_of_sale_rounded,
+              trend: _executiveChange(_executiveSales, _executivePreviousSales),
               rows: [
                 _analysisRow('المبيعات', _executiveGrossSales, null),
                 _analysisRow('المرتجعات', _executiveSalesReturns, null),
@@ -2252,8 +2254,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               ],
             ),
             _executiveAnalysisCard(
-              title: 'صافي مشتريات',
+              title: 'صافي المشتريات',
               icon: Icons.shopping_cart_outlined,
+              trend: _executiveChange(_executivePurchases, _executivePreviousPurchases),
               rows: [
                 _analysisRow('المشتريات', _executiveGrossPurchases, null),
                 _analysisRow('المرتجعات', _executivePurchaseReturns, null),
@@ -2599,6 +2602,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required String title,
     required IconData icon,
     required List<Map<String, Object?>> rows,
+    double? trend,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -2613,6 +2617,23 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Icon(icon, size: 18, color: _purple),
           const SizedBox(width: 6),
           Expanded(child: Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, height: 1.15, fontWeight: FontWeight.w900, color: _purple))),
+          if (trend != null) ...[
+            const SizedBox(width: 4),
+            Icon(
+              trend >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+              size: 19,
+              color: trend >= 0 ? _green : Colors.red.shade700,
+            ),
+            const SizedBox(width: 2),
+            Text(
+              '${trend.abs().toStringAsFixed(1)}%',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: trend >= 0 ? _green : Colors.red.shade700,
+              ),
+            ),
+          ],
         ]),
         const Divider(height: 13),
         Expanded(child: Column(
