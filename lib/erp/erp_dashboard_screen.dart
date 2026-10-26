@@ -2626,8 +2626,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: const Color(0xFFB69ACF), width: 1.5),
-        boxShadow: const [BoxShadow(color: Color(0x163E007D), blurRadius: 12, offset: Offset(0, 4))],
+        border: Border.all(color: const Color(0xFF6F3AA5), width: 2),
+        boxShadow: const [BoxShadow(color: Color(0x243E007D), blurRadius: 14, spreadRadius: 1, offset: Offset(0, 4))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
