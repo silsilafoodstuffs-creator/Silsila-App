@@ -42,14 +42,14 @@ class ErpOperationalDocumentsRepository {
 
   Future<List<Map<String, dynamic>>> fetchRepresentatives(String companyId) async {
     final rows = await _db.from('erp_sales_representatives')
-      .select('id, rep_code, rep_name')
+      .select('id, rep_code, rep_name, rep_classification')
       .eq('company_id', companyId.trim()).eq('is_active', true).order('rep_name');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
   Future<List<Map<String, dynamic>>> fetchWarehouses(String companyId) async {
     final rows = await _db.from('erp_warehouses')
-      .select('id, warehouse_code, warehouse_name')
+      .select('id, warehouse_code, warehouse_name, branch_id')
       .eq('company_id', companyId.trim()).eq('is_active', true).order('warehouse_name');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
