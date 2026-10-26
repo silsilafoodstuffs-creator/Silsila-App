@@ -1,13 +1,15 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
-if (-not $env:SILSILA_ZK_TOKEN -or $env:SILSILA_ZK_TOKEN.Length -lt 24) {
-  Write-Host "SILSILA_ZK_TOKEN is not set in this PowerShell session." -ForegroundColor Red
-  Write-Host "Use the same PowerShell session as the connector, or copy the token privately into this session." -ForegroundColor Yellow
+$tokenPath = Join-Path $PSScriptRoot ".local-token"
+if (-not (Test-Path $tokenPath)) {
+  Write-Host "Local token file not found. Start run_local_windows.ps1 first." -ForegroundColor Red
   exit 1
 }
+$token = (Get-Content -Raw $tokenPath).Trim()
+if ($token.Length -lt 24) { throw "Local token file is invalid." }
 
-$headers = @{ Authorization = "Bearer $env:SILSILA_ZK_TOKEN"; "Content-Type" = "application/json" }
+$headers = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
 $body = @{ ip = "192.168.2.200"; port = 4370; comm_key = 0; timeout = 8 } | ConvertTo-Json
 try {
   $result = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8765/device/test" -Headers $headers -Body $body -TimeoutSec 20
