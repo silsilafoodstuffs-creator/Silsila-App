@@ -18,6 +18,9 @@ if (-not $env:SILSILA_ZK_TOKEN -or $env:SILSILA_ZK_TOKEN.Length -lt 24) {
   [Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
   $env:SILSILA_ZK_TOKEN = [Convert]::ToBase64String($bytes)
 }
+$tokenPath = Join-Path $PSScriptRoot ".local-token"
+[System.IO.File]::WriteAllText($tokenPath, $env:SILSILA_ZK_TOKEN)
+Write-Host "تم حفظ رمز الوصول في ملف محلي مستثنى من Git: .local-token" -ForegroundColor Yellow
 if (-not $env:SILSILA_ALLOWED_ORIGINS) {
   $env:SILSILA_ALLOWED_ORIGINS = "https://silsilafoodstuffs-creator.github.io"
 }
@@ -25,5 +28,5 @@ if (-not $env:SILSILA_ALLOWED_ORIGINS) {
 Write-Host ""
 Write-Host "موصل سلسلة سيعمل محليًا فقط على 127.0.0.1:8765." -ForegroundColor Green
 Write-Host "رمز الجلسة تم توليده محليًا ولا تشاركه." -ForegroundColor Yellow
-Write-Host "بعد التشغيل، افتح نافذة PowerShell أخرى داخل هذا المجلد وشغّل test_device.ps1." -ForegroundColor Cyan
+Write-Host "بعد التشغيل، افتح نافذة PowerShell أخرى داخل هذا المجلد وشغّل .\\test_device.ps1." -ForegroundColor Cyan
 & ".\.venv\Scripts\python.exe" -m uvicorn app:app --host 127.0.0.1 --port 8765
