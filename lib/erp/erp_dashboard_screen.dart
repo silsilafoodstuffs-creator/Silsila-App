@@ -1905,7 +1905,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Container(width: 40, height: 40, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: color)),
           const SizedBox(width: 10),
           Expanded(child: Text(title, style: TextStyle(fontSize: 17, color: color, fontWeight: FontWeight.w900))),
-          Text('${people.length}', style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900)),
+          Text('${people.length}', style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w900)),
         ]),
         const SizedBox(height: 10),
         if (people.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text(emptyText, style: const TextStyle(color: Colors.black54, fontSize: 12, height: 1.5))),
@@ -2353,8 +2353,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required String value,
     required CustomPainter chart,
   }) => Container(
-    height: 264,
-    padding: const EdgeInsets.fromLTRB(22, 18, 22, 16),
+    height: 208,
+    padding: const EdgeInsets.fromLTRB(12, 10, 12, 9),
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
@@ -2363,11 +2363,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 20, color: _purple, fontWeight: FontWeight.w900))),
-        Text(value, style: TextStyle(fontSize: 21, color: color, fontWeight: FontWeight.w900)),
+        Expanded(child: Text(title, style: const TextStyle(fontSize: 15, color: _purple, fontWeight: FontWeight.w900))),
+        Text(value, style: TextStyle(fontSize: 16, color: color, fontWeight: FontWeight.w900)),
       ]),
       const SizedBox(height: 4),
-      Text(caption, style: const TextStyle(fontSize: 14, color: Colors.black54)),
+      Text(caption, style: const TextStyle(fontSize: 11, color: Colors.black54)),
       const SizedBox(height: 8),
       Expanded(child: CustomPaint(painter: chart, child: const SizedBox.expand())),
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: footerLabels.take(3).map((label) => Expanded(
@@ -2449,13 +2449,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     required Color color,
     required List<Map<String, Object>> items,
   }) => Container(
-    padding: const EdgeInsets.all(15),
+    padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE7E0EF)), boxShadow: const [BoxShadow(color: Color(0x07000000), blurRadius: 14, offset: Offset(0, 4))]),
     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
         Icon(icon, size: 22, color: color),
         const SizedBox(width: 8),
-        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18, color: color, fontWeight: FontWeight.w900))),
+        Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w900))),
         _summaryAction('عرض الكل', () => _showExecutiveCategoryDetails(title, items)),
       ]),
       const Divider(height: 14, thickness: 1, color: Color(0xFFEFEAF4)),
@@ -2485,8 +2485,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Icon(icon, size: 18, color: color),
         const SizedBox(width: 8),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, color: Color(0xFF342B3C), fontWeight: FontWeight.w800, height: 1.2)),
-          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Colors.black45, height: 1.2)),
+          Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFF342B3C), fontWeight: FontWeight.w800, height: 1.2)),
+          Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10, color: Colors.black45, height: 1.2)),
         ])),
         const SizedBox(width: 3),
         Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, color: color, fontWeight: FontWeight.w900)),
