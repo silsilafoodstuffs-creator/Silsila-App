@@ -1924,6 +1924,16 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 box(_lookupInput(label: 'المخزن', value: _warehouseLabel(_warehouseId), enabled: !hasDraft && _canChangeWarehouse, onOpen: _openWarehousePicker)),
                 box(_lookupInput(label: 'مندوب المبيعات', value: _firstOrEmpty(_representatives.where((r) => _s(r['id']) == _salesRepId).map((r) => _s(r['rep_code']) + ' — ' + _s(r['rep_name']))), enabled: !hasDraft && _canChangeSalesRep, onOpen: _openRepresentativePicker)),
               ]),
+              if (['invoice', 'order'].contains(_documentType)) ...[
+                const SizedBox(height: 8),
+                Align(alignment: Alignment.centerRight, child: OutlinedButton.icon(
+                  onPressed: hasDraft || _saving ? null : _pickSourceDocuments,
+                  icon: const Icon(Icons.link),
+                  label: Text(_sourceDocumentIds.isEmpty
+                      ? (_documentType == 'invoice' ? 'ربط أمر بيع مصدر — F1' : 'ربط عرض سعر مصدر — F1')
+                      : 'المستندات المصدر المحددة: ${_sourceDocumentIds.length}'),
+                )),
+              ],
               const SizedBox(height: 12),
               GridView.count(
                 crossAxisCount: wide ? 5 : 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
