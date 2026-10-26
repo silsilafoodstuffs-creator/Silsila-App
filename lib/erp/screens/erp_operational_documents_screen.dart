@@ -1740,7 +1740,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final matches = _rows.where((row) => _s(row['id']) == _selectedDocumentId);
     final doc = matches.isEmpty ? <String, dynamic>{} : matches.first;
     final hasDraft = doc.isNotEmpty && _s(doc['status']) == 'draft';
-    final status = doc.isEmpty ? 'فاتورة جديدة' : hasDraft ? 'مسودة' : _s(doc['status']) == 'posted' ? 'معتمدة / مرحلة' : _s(doc['status']);
+    final status = doc.isEmpty ? _salesDocumentTitle(_documentType) + ' جديدة' : hasDraft ? 'مسودة' : _s(doc['status']) == 'posted' ? 'معتمدة / مرحلة' : _s(doc['status']);
     final hasPendingPreview = _pendingLines.isNotEmpty;
     final gross = hasPendingPreview
         ? _pendingGross
@@ -2283,19 +2283,34 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               ),
             ],
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: _documentType, isExpanded: true,
-              decoration: const InputDecoration(labelText: 'نوع المستند', border: OutlineInputBorder()),
-              items: (widget.kind == ErpOperationalKind.purchase
-                ? const <String, String>{'order':'طلب شراء','receipt':'استلام مشتريات','invoice':'فاتورة مشتريات','return':'مرتجع مشتريات'}
-                : const <String, String>{'quotation':'عرض سعر','order':'أمر بيع','delivery':'إذن تحميل','invoice':'فاتورة مبيعات','return':'مرتجع مبيعات'})
-                .entries.map((e) => DropdownMenuItem<String>(value: e.key, child: Text(e.value))).toList(),
-              onChanged: (v) => setState(() {
-                final nextType = v ?? _documentType;
-                if (nextType != _documentType) _sourceDocumentIds = <String>[];
-                _documentType = nextType;
-              }),
-            ),
+            if (widget.kind == ErpOperationalKind.purchase)
+              DropdownButtonFormField<String>(
+                value: _documentType, isExpanded: true,
+                decoration: const InputDecoration(labelText: 'نوع المستند', border: OutlineInputBorder()),
+                items: const <String, String>{'order':'طلب شراء','receipt':'استلام مشتريات','invoice':'فاتورة مشتريات','return':'مرتجع مشتريات'}.entries
+                    .map((e) => DropdownMenuItem<String>(value: e.key, child: Text(e.value))).toList(),
+                onChanged: (v) => setState(() {
+                  final nextType = v ?? _documentType;
+                  if (nextType != _documentType) _sourceDocumentIds = <String>[];
+                  _documentType = nextType;
+                }),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5EFFB),
+                  borderRadius: BorderRadius.circular(9),
+                  border: Border.all(color: const Color(0xFFE1D9EB)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.description_outlined, color: Color(0xFF3E007D)),
+                  const SizedBox(width: 8),
+                  Text('نوع المستند: ' + _salesDocumentTitle(_documentType),
+                    style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w800)),
+                ]),
+              ),
             if (['order', 'invoice'].contains(_documentType)) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(
