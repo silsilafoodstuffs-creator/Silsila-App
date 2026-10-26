@@ -2328,7 +2328,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Row(children: [
           Icon(Icons.info_outline_rounded, color: _orange, size: 11),
           SizedBox(width: 4),
-          Expanded(child: Text(silsilaText('المؤشرات الرقمية والمخططات توضيحية حتى ربطها بالحركات الفعلية المعتمدة.'), style: TextStyle(fontSize: 11, color: Colors.black54))),
+          Expanded(child: Text(silsilaText(_appManagementCompanyId == null ? 'لا توجد شركة نشطة مرتبطة؛ لم تُحمّل بيانات فعلية.' : _executiveMetricsLoading ? 'يتم تحميل البيانات الفعلية للفترة المحددة.' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات من قاعدة البيانات؛ راجع رسالة الخطأ قبل الاعتماد على النتائج.' : 'المؤشرات المعروضة تعتمد على البيانات التي أمكن تحميلها. تظهر الشرطة (—) عند عدم توفر بيانات المؤشر أو عدم ربطه بعد.'), style: TextStyle(fontSize: 11, color: Colors.black54))),
         ]),
       ]);
     });
@@ -2392,9 +2392,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         color: _pink,
         value: _executiveMoney(_executiveInventoryValue),
         chart: _ExecutiveBarsPainter(values: _executiveInventoryGroupValues),
-        footerLabels: _executiveInventoryGroupLabels.isEmpty
-            ? const <String>['مجموعة 1','مجموعة 2','مجموعة 3']
-            : _executiveInventoryGroupLabels.take(3).toList(),
+        footerLabels: _executiveInventoryGroupLabels.take(3).toList(),
       ),
     ];
     if (charts.isEmpty) return const SizedBox.shrink();
@@ -2873,7 +2871,8 @@ class _ExecutiveBarsPainter extends CustomPainter {
       final y = size.height * i / 4;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
     }
-    final source = values.isEmpty ? const <double>[.48, .72, .56, .88, .64, .79, .42] : values;
+    final source = values;
+    if (source.isEmpty) return;
     final maxValue = source.fold<double>(0, (max, value) => value > max ? value : max);
     const colors = [_purple, _orange, _pink, _purple, _orange, _pink, _purple];
     final slot = size.width / source.length;
@@ -2907,9 +2906,8 @@ class _ExecutiveChartPainter extends CustomPainter {
       final y = size.height * i / 3;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
-    final source = values.length >= 2
-        ? values
-        : const <double>[.28, .42, .34, .66, .58, .82, .73];
+    final source = values;
+    if (source.length < 2) return;
     final maxValue = source.fold<double>(0, (max, value) => value > max ? value : max);
     final points = List<Offset>.generate(source.length, (i) {
       final x = source.length == 1 ? 0.0 : size.width * i / (source.length - 1);
