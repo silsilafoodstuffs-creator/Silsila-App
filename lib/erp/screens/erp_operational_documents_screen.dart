@@ -1706,14 +1706,14 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: Color(0xFFE8E1F0))),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Row(children: [
-            Icon(icon, color: const Color(0xFF3E007D), size: 20),
-            const SizedBox(width: 8),
-            Expanded(child: Text(title, style: const TextStyle(color: Color(0xFF3E007D), fontSize: 15, fontWeight: FontWeight.w900))),
+            Icon(icon, color: const Color(0xFF3E007D), size: 19),
+            const SizedBox(width: 7),
+            Expanded(child: Text(title, style: const TextStyle(color: Color(0xFF3E007D), fontSize: 14, fontWeight: FontWeight.w900))),
           ]),
-          const SizedBox(height: 12),
+          const SizedBox(height: 9),
           child,
         ]),
       ),
@@ -1722,7 +1722,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   Widget _invoiceMetric(String label, String value, {bool strong = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: strong ? const Color(0xFFF5EFFB) : const Color(0xFFFAF8FC),
         borderRadius: BorderRadius.circular(10),
@@ -1731,7 +1731,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF8B7D99), fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(color: strong ? const Color(0xFF3E007D) : const Color(0xFF241735), fontWeight: FontWeight.w900, fontSize: strong ? 16 : 13)),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: strong ? const Color(0xFF3E007D) : const Color(0xFF241735), fontWeight: FontWeight.w900, fontSize: strong ? 15 : 13)),
       ]),
     );
   }
@@ -1992,7 +1992,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             ]),
             const SizedBox(height: 10),
             if (_pendingLines.isEmpty && _lines.isEmpty)
-              Container(padding: const EdgeInsets.all(28), decoration: BoxDecoration(color: const Color(0xFFFAF8FC), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE8E1F0))),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20), decoration: BoxDecoration(color: const Color(0xFFFAF8FC), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFE8E1F0))),
                 child: const Column(children: [
                   Icon(Icons.inventory_2_outlined, size: 34, color: Color(0xFF9B8BAE)),
                   SizedBox(height: 8), Text('لم تتم إضافة أصناف بعد', style: TextStyle(fontWeight: FontWeight.w800)),
@@ -2001,7 +2001,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             if (_pendingLines.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
               headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
               headingTextStyle: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 12),
-              dataRowMinHeight: 57, dataRowMaxHeight: 57, columnSpacing: 16,
+              dataRowMinHeight: 48, dataRowMaxHeight: 52, columnSpacing: 12,
               columns: const [DataColumn(label: Text('م.')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الصنف')), DataColumn(label: Text('الوحدة')), DataColumn(label: Text('الكمية')), DataColumn(label: Text('سعر الوحدة')), DataColumn(label: Text('الخصم')), DataColumn(label: Text('خصم %')), DataColumn(label: Text('الضريبة')), DataColumn(label: Text('الإجمالي')), DataColumn(label: Text(''))],
               rows: List<DataRow>.generate(_pendingLines.length, (index) {
                 final line = _pendingLines[index];
@@ -2049,7 +2049,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           ])),
           const SizedBox(height: 10),
           _invoiceCard('الخصم والملاحظات', Icons.tune_rounded, LayoutBuilder(builder: (context, constraints) {
-            final count = constraints.maxWidth > 700 ? 3 : 1;
+            final count = constraints.maxWidth > 1000 ? 3 : constraints.maxWidth > 650 ? 2 : 1;
             final width = (constraints.maxWidth - (count - 1) * 10) / count;
             return Wrap(spacing: 10, runSpacing: 10, children: [
               SizedBox(width: width, child: TextField(controller: _invoiceDiscountAmount, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: field('خصم الفاتورة بالقيمة'), onChanged: (v) {
@@ -2063,7 +2063,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           })),
           const SizedBox(height: 10),
           _invoiceCard('ملخص الحسابات', Icons.calculate_outlined, LayoutBuilder(builder: (context, constraints) {
-            final count = constraints.maxWidth > 800 ? 5 : 2;
+            final count = constraints.maxWidth > 1000 ? 5 : constraints.maxWidth > 650 ? 3 : 2;
             final width = (constraints.maxWidth - (count - 1) * 10) / count;
             return Wrap(spacing: 10, runSpacing: 10, children: [
               SizedBox(width: width, child: _invoiceMetric('إجمالي الأصناف', _money(gross) + ' ج.م')),
