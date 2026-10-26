@@ -1536,6 +1536,139 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     } catch (e) { if (mounted) setState(() => _error = 'تعذر حذف المسودة: ' + e.toString()); }
   }
 
+  Future<String?> _searchLookup({
+    required String title,
+    required List<Map<String, dynamic>> rows,
+    required String Function(Map<String, dynamic>) label,
+    required List<String> Function(Map<String, dynamic>) searchable,
+  }) async {
+    final search = TextEditingController();
+    String query = '';
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final normalized = query.trim().toLowerCase();
+          final filtered = rows.where((row) => normalized.isEmpty ||
+              searchable(row).any((value) => value.toLowerCase().contains(normalized))).toList();
+          return AlertDialog(
+            title: Text(title, style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900)),
+            content: SizedBox(width: 760, height: 470, child: Column(children: [
+              TextField(
+                controller: search,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'بحث بالاسم العربي أو الإنجليزي أو الكود أو التصنيف',
+                  prefixIcon: Icon(Icons.search), border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => setDialogState(() => query = value),
+                onSubmitted: (_) { if (filtered.length == 1) Navigator.pop(dialogContext, _s(filtered.first['id'])); },
+              ),
+              const SizedBox(height: 8),
+              Align(alignment: Alignment.centerRight, child: Text('عدد النتائج: ${filtered.length}', style: const TextStyle(color: Colors.black54))),
+              const SizedBox(height: 6),
+              Expanded(child: filtered.isEmpty
+                  ? const Center(child: Text('لا توجد نتائج مطابقة'))
+                  : ListView.separated(
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final row = filtered[index];
+                        return ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.radio_button_unchecked, color: Color(0xFF3E007D)),
+                          title: Text(label(row), style: const TextStyle(fontWeight: FontWeight.w800)),
+                          subtitle: Text(searchable(row).where((v) => v.trim().isNotEmpty).take(5).join(' • '), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          onTap: () => Navigator.pop(dialogContext, _s(row['id'])),
+                        );
+                      },
+                    )),
+            ])),
+            actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء'))],
+          );
+        },
+      ),
+    );
+    search.dispose();
+    return selected;
+  }
+
+  Future<void> _openCustomerPicker() async {
+    final selected = await _searchLookup(
+      title: 'اختيار العميل — F1 أو دبل كليك',
+      rows: _parties,
+      label: (p) => '${_s(p['party_code'])} — ${_s(p['party_name'])}',
+      searchable: (p) => [
+        _s(p['party_code']), _s(p['party_name']), _s(p['party_name_en']),
+        _s(p['party_kind']), _s(p['transaction_type']),
+        _s(_representatives.where((r) => _s(r['id']) == _s(p['sales_rep_id'])).map((r) => r['rep_name']).firstOrNull),
+      ],
+    );
+    if (selected != null && mounted) await _onPartyChanged(selected);
+  }
+
+  Future<void> _openWarehousePicker() async {
+    if (!_canChangeWarehouse) {
+      setState(() => _message = 'تغيير المخزن غير مسموح لهذا المستخدم؛ يلزم منحه الصلاحية من إدارة المستخدمين.');
+      return;
+    }
+    final selected = await _searchLookup(
+      title: 'اختيار المخزن — F1 أو دبل كليك',
+      rows: _warehouses,
+      label: (w) => '${_s(w['warehouse_code'])} — ${_s(w['warehouse_name'])}',
+      searchable: (w) => [_s(w['warehouse_code']), _s(w['warehouse_name']), _s(w['branch_id'])],
+    );
+    if (selected != null && mounted) setState(() => _warehouseId = selected);
+  }
+
+  Future<void> _openRepresentativePicker() async {
+    if (!_canChangeSalesRep) {
+      setState(() => _message = 'تغيير المندوب غير مسموح لهذا المستخدم؛ يلزم منحه الصلاحية من إدارة المستخدمين.');
+      return;
+    }
+    final selected = await _searchLookup(
+      title: 'اختيار مندوب المبيعات — F1 أو دبل كليك',
+      rows: _representatives,
+      label: (r) => '${_s(r['rep_code'])} — ${_s(r['rep_name'])}',
+      searchable: (r) => [_s(r['rep_code']), _s(r['rep_name']), _s(r['rep_classification']), _s(r['name_en'])],
+    );
+    if (selected != null && mounted) setState(() => _salesRepId = selected);
+  }
+
+  Widget _lookupInput({
+    required String label,
+    required String value,
+    required VoidCallback onOpen,
+    bool enabled = true,
+  }) => Focus(
+    onKeyEvent: (node, event) {
+      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f1) {
+        onOpen();
+        return KeyEventResult.handled;
+      }
+      return KeyEventResult.ignored;
+    },
+    child: GestureDetector(
+      onDoubleTap: enabled ? onOpen : null,
+      child: InkWell(
+        onTap: enabled ? onOpen : null,
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: label,
+            prefixIcon: const Icon(Icons.search, color: Color(0xFF3E007D)),
+            suffixIcon: const Icon(Icons.keyboard_double_arrow_down),
+            isDense: true, filled: true, fillColor: const Color(0xFFFCFBFE),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 13),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(9)),
+          ),
+          child: Text(value.isEmpty ? 'اضغط F1 أو دبل كليك للاختيار' : value,
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontWeight: FontWeight.w700, color: enabled ? const Color(0xFF241735) : Colors.black45)),
+        ),
+      ),
+    ),
+  );
+
   Widget _invoiceCard(String title, IconData icon, Widget child) {
     return Card(
       elevation: 0,
@@ -1661,96 +1794,118 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           if (_loading) const LinearProgressIndicator(minHeight: 3),
           if (_error != null) _notice(_error!, Colors.red),
           if (_message != null) _notice(_message!, Colors.green),
-          _invoiceCard('بيانات ${_salesDocumentTitle(_documentType)}', Icons.description_outlined, LayoutBuilder(builder: (context, constraints) {
-            final count = constraints.maxWidth > 850 ? 4 : 2;
-            final width = (constraints.maxWidth - (count - 1) * 10) / count;
-            return Wrap(spacing: 10, runSpacing: 10, children: [
-              SizedBox(width: width, child: TextField(controller: _documentNumber, decoration: field('رقم ${_salesDocumentTitle(_documentType)} *'))),
-              SizedBox(width: width, child: InkWell(
-                onTap: _saving ? null : () async {
-                  final chosen = await showDatePicker(context: context, initialDate: _documentDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
-                  if (chosen != null && mounted) setState(() => _documentDate = chosen);
-                },
-                child: InputDecorator(decoration: field('تاريخ الفاتورة', suffix: const Icon(Icons.calendar_month_outlined)),
-                  child: Text(dateText, style: const TextStyle(fontWeight: FontWeight.w800))),
-              )),
-              SizedBox(width: width, child: _invoiceMetric('المسلسل الآلي', doc.isEmpty ? 'يصدر بعد الحفظ' : _s(doc['auto_number']))),
-              SizedBox(width: width, child: _invoiceMetric('نوع المستند', _salesDocumentTitle(_documentType))),
-              if (['quotation', 'order', 'invoice'].contains(_documentType))
-                SizedBox(width: width, child: DropdownButtonFormField<String>(
+          _invoiceCard('بيانات المستند والعميل', Icons.description_outlined, LayoutBuilder(builder: (context, constraints) {
+            final wide = constraints.maxWidth >= 1000;
+            final fieldWidth = wide ? (constraints.maxWidth - 24) / 3 : constraints.maxWidth;
+            final docCode = _s(doc['auto_number']).isEmpty
+                ? '${const <String,String>{'quotation':'QUO','order':'SO','invoice':'INV','return':'SRT','delivery':'DLV'}[_documentType] ?? 'SAL'}-سيصدر-عند-الحفظ'
+                : _s(doc['auto_number']);
+            final fiscalOptions = _fiscalPeriods;
+            Widget box(Widget child) => SizedBox(width: fieldWidth, child: child);
+            Widget metric(String label, String value) => _invoiceMetric(label, value, strong: true);
+            return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFFF5EFFB), Color(0xFFFFF8EC)]),
+                  borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE8E1F0)),
+                ),
+                child: Row(children: [
+                  Expanded(flex: 2, child: TextField(
+                    controller: _documentNumber,
+                    decoration: field('المسلسل اليدوي (غير مكرر) *', suffix: const Icon(Icons.tag)),
+                    enabled: !hasDraft,
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(flex: 3, child: Column(children: [
+                    Text(_salesDocumentTitle(_documentType), textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
+                    const SizedBox(height: 4),
+                    Text('$docCode / ${_fiscalYear.text}', textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFFB56A00))),
+                  ])),
+                  const SizedBox(width: 12),
+                  Expanded(flex: 2, child: InkWell(
+                    onTap: _saving ? null : () async {
+                      final chosen = await showDatePicker(context: context, initialDate: _documentDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                      if (chosen == null || !mounted) return;
+                      setState(() {
+                        _documentDate = chosen;
+                        final day = chosen.toIso8601String().substring(0,10);
+                        final period = _fiscalPeriods.where((p) => day.compareTo(_s(p['starts_on'])) >= 0 && day.compareTo(_s(p['ends_on'])) <= 0);
+                        _fiscalPeriodId = period.isEmpty ? null : _s(period.first['id']);
+                        _fiscalYear.text = period.isEmpty ? chosen.year.toString() : _s(period.first['period_name']);
+                      });
+                    },
+                    child: InputDecorator(decoration: field('تاريخ المستند', suffix: const Icon(Icons.calendar_month_outlined)),
+                      child: Text(dateText, style: const TextStyle(fontWeight: FontWeight.w800))),
+                  )),
+                ]),
+              ),
+              const SizedBox(height: 12),
+              Wrap(spacing: 12, runSpacing: 10, children: [
+                box(DropdownButtonFormField<String>(
+                  value: fiscalOptions.any((p) => _s(p['id']) == _fiscalPeriodId) ? _fiscalPeriodId : null,
+                  isExpanded: true, decoration: field('السنة المالية'),
+                  items: fiscalOptions.map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_s(p['period_name']), overflow: TextOverflow.ellipsis))).toList(),
+                  onChanged: hasDraft ? null : (value) {
+                    final matches = fiscalOptions.where((p) => _s(p['id']) == value);
+                    if (matches.isEmpty) return;
+                    setState(() { _fiscalPeriodId = value; _fiscalYear.text = _s(matches.first['period_name']); });
+                  },
+                  hint: Text(_fiscalYear.text),
+                )),
+                box(DropdownButtonFormField<String>(
                   value: _sourceChannel,
-                  isExpanded: true,
-                  decoration: field('مصدر المستند'),
+                  isExpanded: true, decoration: field('مصدر المستند'),
                   items: const [
-                    DropdownMenuItem(value: 'app', child: Text('التطبيق')),
                     DropdownMenuItem(value: 'manual', child: Text('يدوي')),
+                    DropdownMenuItem(value: 'app', child: Text('تطبيق سلسلة')),
                     DropdownMenuItem(value: 'crm', child: Text('علاقات العملاء')),
-                    DropdownMenuItem(value: 'documents', child: Text('مستند مصدر')),
+                    DropdownMenuItem(value: 'kartona', child: Text('تطبيق كرتونة')),
+                    DropdownMenuItem(value: 'follow_up', child: Text('قسم المتابعة')),
+                    DropdownMenuItem(value: 'documents', child: Text('مستند مرتبط')),
                   ],
-                  onChanged: hasDraft || _sourceDocumentIds.isNotEmpty ? null : (value) => setState(() => _sourceChannel = value ?? 'manual'),
+                  onChanged: hasDraft || _sourceDocumentIds.isNotEmpty ? null : (v) => setState(() => _sourceChannel = v ?? 'manual'),
                 )),
-              if (['invoice', 'order'].contains(_documentType))
-                SizedBox(width: width, child: OutlinedButton.icon(
-                  onPressed: hasDraft || _saving ? null : _pickSourceDocuments,
-                  icon: const Icon(Icons.file_open_outlined),
-                  label: Text(_documentType == 'invoice' ? 'جلب المستند السابق F1' : 'جلب المستند السابق F1'),
+                box(DropdownButtonFormField<String>(
+                  value: const ['نقدي','آجل','بيع مباشر'].contains(_paymentType) ? _paymentType : 'آجل',
+                  isExpanded: true, decoration: field('نوع البيع / السداد'),
+                  items: const [
+                    DropdownMenuItem(value: 'نقدي', child: Text('نقدي')),
+                    DropdownMenuItem(value: 'آجل', child: Text('آجل')),
+                    DropdownMenuItem(value: 'بيع مباشر', child: Text('بيع مباشر')),
+                  ],
+                  onChanged: hasDraft || !_canChangePaymentType ? null : (v) => setState(() => _paymentType = v ?? 'آجل'),
                 )),
-              if (['quotation', 'order', 'invoice'].contains(_documentType) && _sourceDocumentIds.isNotEmpty)
-                SizedBox(width: width, child: _invoiceMetric('المستندات المرتبطة', _sourceDocumentIds.length.toString())),
-            ]);
-          })),
-          const SizedBox(height: 10),
-          _invoiceCard('بيانات العميل والبيع', Icons.storefront_outlined, LayoutBuilder(builder: (context, constraints) {
-            final count = constraints.maxWidth > 850 ? 4 : 2;
-            final width = (constraints.maxWidth - (count - 1) * 10) / count;
-            return Wrap(spacing: 10, runSpacing: 10, children: [
-              SizedBox(width: width, child: TextField(
-                controller: _partyCode, decoration: field('كود العميل', suffix: const Icon(Icons.search_rounded)),
-                onChanged: (code) {
-                  final normalized = code.trim().toLowerCase();
-                  final found = _parties.where((p) => _s(p['party_code']).trim().toLowerCase() == normalized);
-                  if (normalized.isEmpty || found.isEmpty) {
-                    setState(() {
-                      _partyId = null; _salesRepId = null; _warehouses = List<Map<String, dynamic>>.from(_allWarehouses);
-                      if (!_warehouses.any((w) => _s(w['id']) == _warehouseId)) _warehouseId = _warehouses.isEmpty ? null : _s(_warehouses.first['id']);
-                    });
-                  } else if (found.length == 1 && _partyId != _s(found.first['id'])) {
-                    final selected = found.first;
-                    setState(() {
-                      _partyId = _s(selected['id']);
-                      final rep = _s(selected['sales_rep_id']);
-                      _salesRepId = rep.isNotEmpty && _representatives.any((r) => _s(r['id']) == rep) ? rep : null;
-                      _warehouses = []; _warehouseId = null;
-                    });
-                    _applyCustomerWarehouseRules(_s(selected['id']));
-                  }
-                },
-                onSubmitted: (code) {
-                  final found = _parties.where((p) => _s(p['party_code']).trim().toLowerCase() == code.trim().toLowerCase());
-                  if (found.isEmpty) { setState(() => _error = 'كود العميل غير موجود أو العميل غير نشط.'); }
-                  else { _onPartyChanged(_s(found.first['id'])); }
-                },
-              )),
-              SizedBox(width: width, child: DropdownButtonFormField<String>(
-                value: _parties.any((p) => _s(p['id']) == _partyId) ? _partyId : null, isExpanded: true, decoration: field('اسم العميل'),
-                hint: Text(_parties.isEmpty ? 'لا توجد بيانات عملاء نشطة' : 'اختر العميل'),
-                items: _parties.map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_partyLabel(_s(p['id'])), overflow: TextOverflow.ellipsis))).toList(),
-                onChanged: _parties.isEmpty || hasDraft ? null : _onPartyChanged,
-              )),
-              SizedBox(width: width, child: DropdownButtonFormField<String>(
-                value: _warehouses.any((w) => _s(w['id']) == _warehouseId) ? _warehouseId : null, isExpanded: true, decoration: field('المخزن المسموح للعميل'),
-                items: _warehouses.map((w) => DropdownMenuItem<String>(value: _s(w['id']), child: Text(_warehouseLabel(_s(w['id'])), overflow: TextOverflow.ellipsis))).toList(),
-                onChanged: _warehouses.isEmpty || hasDraft ? null : (value) => setState(() => _warehouseId = value),
-              )),
-              SizedBox(width: width, child: DropdownButtonFormField<String>(
-                value: _representatives.any((r) => _s(r['id']) == _salesRepId) ? _salesRepId : null, isExpanded: true, decoration: field('مندوب المبيعات'),
-                items: _representatives.map((r) => DropdownMenuItem<String>(value: _s(r['id']), child: Text(_s(r['rep_code']) + ' — ' + _s(r['rep_name']), overflow: TextOverflow.ellipsis))).toList(),
-                onChanged: _canChangeSalesRep && !hasDraft ? (value) => setState(() => _salesRepId = value) : null,
-              )),
-              SizedBox(width: width, child: _invoiceMetric('نوع العميل', _s(party['party_kind']).isEmpty ? '—' : _s(party['party_kind']))),
-              SizedBox(width: width, child: _invoiceMetric('مندوب افتراضي', _s(party['sales_rep_id']).isEmpty ? 'غير محدد' : 'مرتبط بملف العميل')),
-              SizedBox(width: width, child: _invoiceMetric('المخزن الافتراضي', _warehouseLabel(_s(party['default_warehouse_id'])))),
-              SizedBox(width: width, child: _invoiceMetric('حالة العميل', party.isEmpty ? 'لم يتم الاختيار' : 'تم الاختيار')),
+                box(_lookupInput(label: 'اسم العميل', value: _partyLabel(_partyId), enabled: !hasDraft, onOpen: _openCustomerPicker)),
+                box(_lookupInput(label: 'المخزن', value: _warehouseLabel(_warehouseId), enabled: !hasDraft && _canChangeWarehouse, onOpen: _openWarehousePicker)),
+                box(_lookupInput(label: 'مندوب المبيعات', value: _representatives.where((r) => _s(r['id']) == _salesRepId).map((r) => _s(r['rep_code']) + ' — ' + _s(r['rep_name'])).firstOrNull ?? '', enabled: !hasDraft && _canChangeSalesRep, onOpen: _openRepresentativePicker)),
+              ]),
+              const SizedBox(height: 12),
+              GridView.count(
+                crossAxisCount: wide ? 5 : 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: wide ? 2.5 : 2.8,
+                children: [
+                  metric('قيمة الأصناف', '${_money(gross)} ج.م'),
+                  metric('خصم الفاتورة %', '${_money(double.tryParse(_invoiceDiscountPercent.text) ?? 0)}%'),
+                  metric('خصم الفاتورة قيمة', '${_money(invoiceDiscount)} ج.م'),
+                  metric('قيمة بعد الخصم', '${_money((gross - lineDiscounts - invoiceDiscount).clamp(0, double.infinity))} ج.م'),
+                  metric('الضريبة', '${_money(taxTotal)} ج.م'),
+                  metric('قيمة الفاتورة', '${_money(net)} ج.م'),
+                  metric('المصدر المرتبط', _sourceDocumentIds.isEmpty ? _salesDocumentTitle(_documentType) : '${_sourceDocumentIds.length} مستند مرتبط'),
+                  metric('حالة المستند', status),
+                ],
+              ),
+              if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice') ...[
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero, dense: true, value: _isTaxInvoice,
+                  title: const Text('فاتورة ضريبية'),
+                  subtitle: const Text('عند التفعيل تُحسب الضريبة وفق بيانات الأصناف.'),
+                  onChanged: hasDraft ? null : (value) => setState(() { _isTaxInvoice = value ?? false; _recalculatePendingTax(); }),
+                ),
+              ],
             ]);
           })),
           const SizedBox(height: 10),
