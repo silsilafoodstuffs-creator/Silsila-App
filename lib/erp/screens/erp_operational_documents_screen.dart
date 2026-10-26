@@ -331,6 +331,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         final current = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
         if (current.isNotEmpty) {
           if (widget.kind == ErpOperationalKind.sales) {
+            _documentNumber.text = _s(current.first['document_number']);
             final savedDate = DateTime.tryParse(_s(current.first['document_date']));
             if (savedDate != null) _documentDate = savedDate;
             _fiscalYear.text = _s(current.first['fiscal_year']).isEmpty ? _documentDate.year.toString() : _s(current.first['fiscal_year']);
