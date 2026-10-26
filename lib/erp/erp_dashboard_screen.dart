@@ -1985,7 +1985,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   Widget _executiveStaffPerformance() => LayoutBuilder(builder: (context, constraints) {
     final sales = _staffPerformanceCard(
-      title: 'أداء مندوبي المبيعات', icon: Icons.trending_up_rounded, color: _purple,
+      title: 'أداء مناديب مبيعات', icon: Icons.trending_up_rounded, color: _purple,
       people: _executiveSalesReps,
       actualFor: _salesRepActual,
       targetFor: (rep) => _performanceNumber(rep['monthly_sales_target']),
@@ -1996,7 +1996,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       emptyText: 'لا توجد بيانات مندوبي مبيعات نشطة. أضف المندوبين وحدد أهدافهم الشهرية لعرض نسب الإنجاز.',
     );
     final purchases = _staffPerformanceCard(
-      title: 'أداء مسؤولي المشتريات', icon: Icons.shopping_cart_checkout_rounded, color: const Color(0xFF2475B8),
+      title: 'أداء مسؤولي مشتريات', icon: Icons.shopping_cart_checkout_rounded, color: const Color(0xFF2475B8),
       people: _executivePurchaseEmployees,
       actualFor: _purchaseEmployeeActual,
       targetFor: (employee) => _employeeTarget(employee['id'].toString(), 'purchase'),
