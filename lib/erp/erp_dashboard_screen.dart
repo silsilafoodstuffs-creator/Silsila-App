@@ -1737,6 +1737,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   ({DateTime start, DateTime end}) _executivePeriodBounds(DateTime now, DateTime activityStart) {
     final today = DateTime(now.year, now.month, now.day);
     switch (_executivePeriod) {
+      case 'السنة السابقة':
+        return (start: DateTime(now.year - 1), end: DateTime(now.year));
       case 'السنة الحالية':
         return (start: DateTime(now.year), end: DateTime(now.year + 1));
       case 'الشهر السابق':
@@ -2210,6 +2212,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                     ),
                     items: const [
                       DropdownMenuItem(value: 'من بداية النشاط', child: Text('من بداية النشاط')),
+                      DropdownMenuItem(value: 'السنة السابقة', child: Text('السنة السابقة')),
                       DropdownMenuItem(value: 'السنة الحالية', child: Text('السنة الحالية')),
                       DropdownMenuItem(value: 'الشهر السابق', child: Text('الشهر السابق')),
                       DropdownMenuItem(value: 'الشهر الحالي', child: Text('الشهر الحالي')),
