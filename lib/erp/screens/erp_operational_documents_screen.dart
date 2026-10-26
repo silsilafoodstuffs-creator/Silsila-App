@@ -1741,8 +1741,6 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final doc = matches.isEmpty ? <String, dynamic>{} : matches.first;
     final hasDraft = doc.isNotEmpty && _s(doc['status']) == 'draft';
     final status = doc.isEmpty ? 'فاتورة جديدة' : hasDraft ? 'مسودة' : _s(doc['status']) == 'posted' ? 'معتمدة / مرحلة' : _s(doc['status']);
-    final parties = _parties.where((row) => _s(row['id']) == _partyId);
-    final party = parties.isEmpty ? <String, dynamic>{} : parties.first;
     final hasPendingPreview = _pendingLines.isNotEmpty;
     final gross = hasPendingPreview
         ? _pendingGross
