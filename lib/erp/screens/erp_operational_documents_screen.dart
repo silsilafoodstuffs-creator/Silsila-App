@@ -1836,7 +1836,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           if (_error != null) _notice(_error!, Colors.red),
           if (_message != null) _notice(_message!, Colors.green),
           _invoiceCard('بيانات المستند والعميل', Icons.description_outlined, LayoutBuilder(builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 1000;
+            final wide = constraints.maxWidth >= 700;
             final fieldWidth = wide ? (constraints.maxWidth - 24) / 3 : constraints.maxWidth;
             final docCode = _s(doc['auto_number']).isEmpty
                 ? '${const <String,String>{'quotation':'QUO','order':'SO','invoice':'INV','return':'SRT','delivery':'DLV'}[_documentType] ?? 'SAL'}-سيصدر-عند-الحفظ'
@@ -1851,8 +1851,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   gradient: const LinearGradient(colors: [Color(0xFFF5EFFB), Color(0xFFFFF8EC)]),
                   borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE8E1F0)),
                 ),
-                child: Row(children: [
-                  Expanded(flex: 2, child: InkWell(
+                child: LayoutBuilder(builder: (context, headerConstraints) {
+                  final compactHeader = headerConstraints.maxWidth < 680;
+                  final dateField = InkWell(
                     onTap: _saving ? null : () async {
                       final chosen = await showDatePicker(context: context, initialDate: _documentDate, firstDate: DateTime(2000), lastDate: DateTime(2100));
                       if (chosen == null || !mounted) return;
@@ -1866,22 +1867,36 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     },
                     child: InputDecorator(decoration: field('تاريخ المستند', suffix: const Icon(Icons.calendar_month_outlined)),
                       child: Text(dateText, style: const TextStyle(fontWeight: FontWeight.w800))),
-                  )),
-                  const SizedBox(width: 12),
-                  Expanded(flex: 3, child: Column(children: [
+                  );
+                  final titleBlock = Column(mainAxisSize: MainAxisSize.min, children: [
                     Text(_salesDocumentTitle(_documentType), textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
                     const SizedBox(height: 4),
                     Text('$docCode / ${_fiscalYear.text}', textAlign: TextAlign.center,
                       style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Color(0xFFB56A00))),
-                  ])),
-                  const SizedBox(width: 12),
-                  Expanded(flex: 2, child: TextField(
+                  ]);
+                  final serialField = TextField(
                     controller: _documentNumber,
                     decoration: field('المسلسل اليدوي (غير مكرر) *', suffix: const Icon(Icons.tag)),
                     enabled: !hasDraft,
-                  )),
-                ]),
+                  );
+                  if (compactHeader) {
+                    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      titleBlock,
+                      const SizedBox(height: 10),
+                      dateField,
+                      const SizedBox(height: 8),
+                      serialField,
+                    ]);
+                  }
+                  return Row(children: [
+                    Expanded(flex: 2, child: dateField),
+                    const SizedBox(width: 12),
+                    Expanded(flex: 3, child: titleBlock),
+                    const SizedBox(width: 12),
+                    Expanded(flex: 2, child: serialField),
+                  ]);
+                }),
               ),
               const SizedBox(height: 12),
               Wrap(spacing: 12, runSpacing: 10, children: [
