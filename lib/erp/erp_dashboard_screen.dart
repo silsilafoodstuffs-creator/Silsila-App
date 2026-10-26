@@ -2019,7 +2019,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       return Center(child: Container(
         constraints: const BoxConstraints(maxWidth: 560),
         padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE7E0EF))),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE7E0EF))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.lock_outline_rounded, color: _purple, size: 52),
           const SizedBox(height: 12),
@@ -2120,26 +2120,26 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final mid = outerConstraints.maxWidth >= 600;
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(22, 20, 18, 20),
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: AlignmentDirectional.centerStart,
               end: AlignmentDirectional.centerEnd,
               colors: [Color(0xFF3E007D), Color(0xFF6330A0), Color(0xFF8A50B7)],
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: const [BoxShadow(color: Color(0x183E007D), blurRadius: 18, offset: Offset(0, 7))],
           ),
           child: Row(children: [
             Container(
-              width: 58, height: 58,
+              width: 42, height: 42,
               decoration: BoxDecoration(color: Colors.white.withValues(alpha: .13), borderRadius: BorderRadius.circular(17), border: Border.all(color: Colors.white.withValues(alpha: .22))),
               child: const Icon(Icons.insights_rounded, color: _orange, size: 34),
             ),
             const SizedBox(width: 16),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: Text(silsilaText('الملخص التنفيذي'), style: const TextStyle(fontSize: 29, height: 1.2, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3))),
+                Expanded(child: Text(silsilaText('الملخص التنفيذي'), style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3))),
                 const SizedBox(width: 12),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 220),
@@ -2172,7 +2172,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 ),
               ]),
               const SizedBox(height: 6),
-              Text(silsilaText('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة'), style: const TextStyle(color: Color(0xFFECE2F8), fontSize: 15, height: 1.5)),
+              Text(silsilaText('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة'), style: const TextStyle(color: Color(0xFFECE2F8), fontSize: 12, height: 1.35)),
               const SizedBox(height: 5),
               Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة للفترة المحددة…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'الفترة المحددة: $_executivePeriod • المؤشرات من الحركات المرحلة', style: const TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
             ])),
@@ -2188,7 +2188,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ]),
           ]),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 9),
         LayoutBuilder(builder: (context, constraints) {
           final compact = constraints.maxWidth < 720;
           final cards = <Widget>[
@@ -2254,13 +2254,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   for (var index = offset; index < offset + 3 && index < cards.length; index++) ...[
                     if (index > offset) const SizedBox(width: 9),
-                    Expanded(child: SizedBox(height: compact ? 148 : 158, child: cards[index])),
+                    Expanded(child: SizedBox(height: compact ? 126 : 132, child: cards[index])),
                   ],
                 ]),
               ),
           ]);
         }),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         _executiveStaffPerformance(),
         const SizedBox(height: 16),
         if ((wide || mid) && (canSales || canFinance || canInventory))
