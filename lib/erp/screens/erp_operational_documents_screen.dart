@@ -2075,12 +2075,21 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           })),
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            FilledButton.icon(onPressed: _saving || _loading || hasDraft || doc.isNotEmpty ? null : _createDraft, icon: const Icon(Icons.save_outlined), label: Text('حفظ مسودة ${_salesDocumentTitle(_documentType)}')),
-            FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735)),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              onPressed: _saving || _loading || hasDraft || doc.isNotEmpty ? null : _createDraft,
+              icon: const Icon(Icons.save_outlined), label: Text('حفظ مسودة ${_salesDocumentTitle(_documentType)}')),
+            FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: const Color(0xFF241735), padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               onPressed: _saving || _loading || !hasDraft || _pendingLines.isEmpty ? null : _savePendingLines, icon: const Icon(Icons.playlist_add_check), label: const Text('حفظ البنود')),
-            FilledButton.icon(onPressed: _saving || _loading || !hasDraft ? null : () => _post(doc), icon: const Icon(Icons.verified_outlined), label: const Text('اعتماد المستند')),
-            OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.history_rounded), label: const Text('الفواتير السابقة')),
-            OutlinedButton.icon(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ErpOperationalAccountMappingsScreen(initialCompanyId: _company.text.trim()))), icon: const Icon(Icons.account_tree_outlined), label: const Text('خريطة الحسابات')),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              onPressed: _saving || _loading || !hasDraft ? null : () => _post(doc), icon: const Icon(Icons.verified_outlined), label: const Text('اعتماد المستند')),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF3E007D), padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), side: const BorderSide(color: Color(0xFFE1D6ED))),
+              onPressed: _loading ? null : _load, icon: const Icon(Icons.history_rounded), label: const Text('الفواتير السابقة')),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF3E007D), padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), side: const BorderSide(color: Color(0xFFE1D6ED))),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => ErpOperationalAccountMappingsScreen(initialCompanyId: _company.text.trim()))), icon: const Icon(Icons.account_tree_outlined), label: const Text('خريطة الحسابات')),
           ]),
           const SizedBox(height: 10),
           _invoiceCard('إعدادات الاتصال والفواتير السابقة', Icons.settings_suggest_outlined, Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
