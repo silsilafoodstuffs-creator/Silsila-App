@@ -2179,7 +2179,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(widget.kind == ErpOperationalKind.sales && _documentType == 'invoice' ? 'بيانات رأس فاتورة البيع' : 'إنشاء مستند جديد', style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 17)),
+            Text(widget.kind == ErpOperationalKind.sales ? 'بيانات رأس ' + _salesDocumentTitle(_documentType) : 'إنشاء مستند جديد', style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 17)),
             const SizedBox(height: 8),
             if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice')
               Container(
