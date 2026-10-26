@@ -1609,7 +1609,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       label: (p) => '${_s(p['party_code'])} — ${_s(p['party_name'])}',
       searchable: (p) => [
         _s(p['party_code']), _s(p['party_name']), _s(p['party_name_en']),
-        _s(p['party_kind']), _s(p['transaction_type']),
+        _s(p['party_kind']), _s(p['transaction_type']), _s(p['customer_type']), _s(p['business_classification']),
         _firstOrEmpty(_representatives.where((r) => _s(r['id']) == _s(p['sales_rep_id'])).map((r) => _s(r['rep_name']))),
       ],
     );
@@ -1900,7 +1900,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   metric('خصم الفاتورة %', '${_money(double.tryParse(_invoiceDiscountPercent.text) ?? 0)}%'),
                   metric('خصم الفاتورة قيمة', '${_money(invoiceDiscount)} ج.م'),
                   metric('قيمة بعد الخصم', '${_money((gross - lineDiscounts - invoiceDiscount).clamp(0, double.infinity))} ج.م'),
-                  metric('الضريبة', '${_money(taxTotal)} ج.م'),
+                  metric('نسبة الضريبة', '${_money((gross - lineDiscounts - invoiceDiscount) <= 0 ? 0 : taxTotal * 100 / (gross - lineDiscounts - invoiceDiscount))}%'),
+                  metric('قيمة الضريبة', '${_money(taxTotal)} ج.م'),
                   metric('قيمة الفاتورة', '${_money(net)} ج.م'),
                   metric('المستند المصدر', _sourceDocumentIds.isEmpty ? (_documentType == 'invoice' ? 'أمر بيع' : _documentType == 'order' ? 'عرض سعر' : 'لا يوجد مستند سابق') : '${_sourceDocumentIds.length} مستند مرتبط'),
                   metric('حالة المستند', status),
