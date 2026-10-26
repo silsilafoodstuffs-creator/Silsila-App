@@ -1743,11 +1743,22 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final status = doc.isEmpty ? 'فاتورة جديدة' : hasDraft ? 'مسودة' : _s(doc['status']) == 'posted' ? 'معتمدة / مرحلة' : _s(doc['status']);
     final parties = _parties.where((row) => _s(row['id']) == _partyId);
     final party = parties.isEmpty ? <String, dynamic>{} : parties.first;
-    final gross = _pendingGross;
-    final lineDiscounts = _pendingLineDiscounts;
-    final invoiceDiscount = _invoiceDiscountValue.clamp(0, (gross - lineDiscounts).clamp(0, double.infinity));
-    final taxTotal = _isTaxInvoice ? _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['tax'])) : 0.0;
-    final net = (gross - lineDiscounts - invoiceDiscount + taxTotal).clamp(0, double.infinity);
+    final hasPendingPreview = _pendingLines.isNotEmpty;
+    final gross = hasPendingPreview
+        ? _pendingGross
+        : _lines.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price']));
+    final lineDiscounts = hasPendingPreview
+        ? _pendingLineDiscounts
+        : _lines.fold<double>(0, (sum, line) => sum + _n(line['discount_amount']));
+    final savedInvoiceDiscount = (_n(doc['discount_total']) - lineDiscounts).clamp(0, double.infinity);
+    final invoiceDiscount = (hasPendingPreview ? _invoiceDiscountValue : savedInvoiceDiscount)
+        .clamp(0, (gross - lineDiscounts).clamp(0, double.infinity));
+    final taxTotal = hasPendingPreview
+        ? (_isTaxInvoice ? _pendingLines.fold<double>(0, (sum, line) => sum + _n(line['tax'])) : 0.0)
+        : _n(doc['tax_total']);
+    final net = hasPendingPreview
+        ? (gross - lineDiscounts - invoiceDiscount + taxTotal).clamp(0, double.infinity)
+        : _n(doc['grand_total']);
     final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' + _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
     InputDecoration field(String label, {Widget? suffix}) => InputDecoration(
       labelText: label, suffixIcon: suffix, isDense: true, filled: true, fillColor: const Color(0xFFFCFBFE),
@@ -1919,7 +1930,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: wide ? 2.5 : 2.8,
                 children: [
                   metric('قيمة الأصناف', '${_money(gross)} ج.م'),
-                  metric('خصم الفاتورة %', '${_money(double.tryParse(_invoiceDiscountPercent.text) ?? 0)}%'),
+                  metric('خصم الفاتورة %', '${_money((gross - lineDiscounts) <= 0 ? 0 : invoiceDiscount * 100 / (gross - lineDiscounts))}%'),
                   metric('خصم الفاتورة قيمة', '${_money(invoiceDiscount)} ج.م'),
                   metric('قيمة بعد الخصم', '${_money((gross - lineDiscounts - invoiceDiscount).clamp(0, double.infinity))} ج.م'),
                   metric('نسبة الضريبة', '${_money((gross - lineDiscounts - invoiceDiscount) <= 0 ? 0 : taxTotal * 100 / (gross - lineDiscounts - invoiceDiscount))}%'),
