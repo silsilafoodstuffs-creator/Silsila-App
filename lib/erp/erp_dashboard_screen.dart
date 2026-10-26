@@ -1949,7 +1949,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           Text('${people.length}', style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w900)),
         ]),
         const SizedBox(height: 10),
-        if (people.isEmpty) Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Text(emptyText, style: const TextStyle(color: Colors.black54, fontSize: 12, height: 1.5))),
+        if (people.isEmpty) Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            children: [
+              Icon(Icons.groups_2_outlined, size: 30, color: color.withValues(alpha: .65)),
+              const SizedBox(height: 7),
+              Text(emptyText, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54, fontSize: 12, height: 1.5)),
+              const SizedBox(height: 4),
+              const Text('ستظهر البيانات هنا عند تسجيل الموظفين والأهداف والمستندات المعتمدة.', textAlign: TextAlign.center, style: TextStyle(color: Colors.black45, fontSize: 11)),
+            ],
+          ),
+        ),
         ...visible.map((person) {
           final actual = actualFor(person);
           final target = targetFor(person);
@@ -2305,6 +2316,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             children: [
               analysisRow(0),
               const SizedBox(height: 10),
+              // Always render both staff-performance panels, including when their
+              // data sources are empty or the optional metrics failed to load.
               _executiveStaffPerformance(),
               const SizedBox(height: 10),
               analysisRow(3),
