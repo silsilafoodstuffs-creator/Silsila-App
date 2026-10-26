@@ -2245,7 +2245,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ),
         const SizedBox(height: 9),
         LayoutBuilder(builder: (context, constraints) {
-          final compact = constraints.maxWidth < 720;
           final cards = <Widget>[
             _executiveAnalysisCard(
               title: 'صافي نتيجة النشاط',
@@ -2305,25 +2304,27 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               ],
             ),
           ];
-          Widget analysisRow(int start) => Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var index = start; index < start + 3 && index < cards.length; index++) ...[
-                if (index > start) const SizedBox(width: 9),
-                Expanded(child: SizedBox(height: compact ? 126 : 132, child: cards[index])),
-              ],
-            ],
-          );
+
+          // Keep all six analysis cards in one responsive, content-driven grid.
+          // Their headings, rows and empty-value indicators must remain visible
+          // even when no financial records exist yet.
+          final width = constraints.maxWidth;
+          final columns = width >= 1050 ? 3 : width >= 680 ? 2 : 1;
+          final cardWidth = (width - (columns - 1) * 10) / columns;
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              analysisRow(0),
-              const SizedBox(height: 10),
-              // Always render both staff-performance panels, including when their
-              // data sources are empty or the optional metrics failed to load.
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: cards.map((card) => SizedBox(
+                  width: cardWidth,
+                  height: 174,
+                  child: card,
+                )).toList(),
+              ),
+              const SizedBox(height: 12),
               _executiveStaffPerformance(),
-              const SizedBox(height: 10),
-              analysisRow(3),
             ],
           );
         }),
