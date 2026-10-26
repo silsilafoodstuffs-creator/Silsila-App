@@ -330,6 +330,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       if (_selectedDocumentId != null) {
         final current = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
         if (current.isNotEmpty) {
+          if (widget.kind == ErpOperationalKind.sales) {
+            final savedDate = DateTime.tryParse(_s(current.first['document_date']));
+            if (savedDate != null) _documentDate = savedDate;
+            _fiscalYear.text = _s(current.first['fiscal_year']).isEmpty ? _documentDate.year.toString() : _s(current.first['fiscal_year']);
+            _fiscalPeriodId = _s(current.first['fiscal_period_id']).isEmpty ? null : _s(current.first['fiscal_period_id']);
+            _paymentType = _s(current.first['payment_type']).isEmpty ? 'آجل' : _s(current.first['payment_type']);
+          }
           final documentPartyId = _s(widget.kind == ErpOperationalKind.purchase
               ? current.first['supplier_id']
               : current.first['customer_id']);
@@ -1774,7 +1781,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 ),
                 FilledButton.icon(
                   onPressed: _saving ? null : () => setState(() {
-                    _selectedDocumentId = null; _pendingLines = []; _lines = []; _documentNumber.clear(); _notes.clear(); _sourceChannel = 'manual'; _sourceDocumentIds = <String>[];
+                    _selectedDocumentId = null; _pendingLines = []; _lines = []; _documentNumber.clear(); _notes.clear(); _sourceChannel = 'manual'; _sourceDocumentIds = <String>[]; _paymentType = 'آجل'; _documentDate = DateTime.now(); _fiscalYear.text = _documentDate.year.toString(); _fiscalPeriodId = null;
                     _invoiceDiscountAmount.text = '0'; _invoiceDiscountPercent.text = '0'; _isTaxInvoice = false; _error = null; _message = null;
                   }),
                   icon: const Icon(Icons.add_rounded, size: 16),
@@ -1894,7 +1901,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   metric('قيمة بعد الخصم', '${_money((gross - lineDiscounts - invoiceDiscount).clamp(0, double.infinity))} ج.م'),
                   metric('الضريبة', '${_money(taxTotal)} ج.م'),
                   metric('قيمة الفاتورة', '${_money(net)} ج.م'),
-                  metric('المصدر المرتبط', _sourceDocumentIds.isEmpty ? _salesDocumentTitle(_documentType) : '${_sourceDocumentIds.length} مستند مرتبط'),
+                  metric('المستند المصدر', _sourceDocumentIds.isEmpty ? (_documentType == 'invoice' ? 'أمر بيع' : _documentType == 'order' ? 'عرض سعر' : 'لا يوجد مستند سابق') : '${_sourceDocumentIds.length} مستند مرتبط'),
                   metric('حالة المستند', status),
                 ],
               ),
