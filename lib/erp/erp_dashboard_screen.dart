@@ -1898,13 +1898,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     });
     final visible = showAll ? sorted : sorted.take(5).toList();
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFE7E0EF)), boxShadow: const [BoxShadow(color: Color(0x0A3E007D), blurRadius: 14, offset: Offset(0, 4))]),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), border: Border.all(color: const Color(0xFFE7E0EF)), boxShadow: const [BoxShadow(color: Color(0x0A3E007D), blurRadius: 14, offset: Offset(0, 4))]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           Container(width: 40, height: 40, decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(13)), child: Icon(icon, color: color)),
           const SizedBox(width: 10),
-          Expanded(child: Text(title, style: TextStyle(fontSize: 17, color: color, fontWeight: FontWeight.w900))),
+          Expanded(child: Text(title, style: TextStyle(fontSize: 15, color: color, fontWeight: FontWeight.w900))),
           Text('${people.length}', style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w900)),
         ]),
         const SizedBox(height: 10),
@@ -1918,7 +1918,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             padding: const EdgeInsets.symmetric(vertical: 7),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Row(children: [
-                Expanded(child: Text(nameFor(person), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xFF2C2435), fontWeight: FontWeight.w900))),
+                Expanded(child: Text(nameFor(person), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Color(0xFF2C2435), fontWeight: FontWeight.w900))),
                 const SizedBox(width: 8),
                 Text(target > 0 ? '${(ratio * 100).toStringAsFixed(0)}%' : 'الهدف غير محدد', style: TextStyle(fontSize: 12, color: rateColor, fontWeight: FontWeight.w900)),
               ]),
@@ -2207,7 +2207,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               rows: [
                 _analysisRow('المبيعات', null, null),
                 _analysisRow('المرتجعات', null, null),
-                _analysisRow('صافي نتيجة المبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
+                _analysisRow('صافي المبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
               ],
             ),
             _executiveAnalysisCard(
@@ -2247,21 +2247,26 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               ],
             ),
           ];
-          return Column(children: [
-            for (var offset = 0; offset < cards.length; offset += 3)
-              Padding(
-                padding: EdgeInsets.only(bottom: offset == 0 ? 9 : 0),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  for (var index = offset; index < offset + 3 && index < cards.length; index++) ...[
-                    if (index > offset) const SizedBox(width: 9),
-                    Expanded(child: SizedBox(height: compact ? 126 : 132, child: cards[index])),
-                  ],
-                ]),
-              ),
-          ]);
+          Widget analysisRow(int start) => Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = start; index < start + 3 && index < cards.length; index++) ...[
+                if (index > start) const SizedBox(width: 9),
+                Expanded(child: SizedBox(height: compact ? 126 : 132, child: cards[index])),
+              ],
+            ],
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              analysisRow(0),
+              const SizedBox(height: 10),
+              _executiveStaffPerformance(),
+              const SizedBox(height: 10),
+              analysisRow(3),
+            ],
+          );
         }),
-        const SizedBox(height: 8),
-        _executiveStaffPerformance(),
         const SizedBox(height: 16),
         if ((wide || mid) && (canSales || canFinance || canInventory))
           Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -2580,13 +2585,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             final positive = change != null && change >= 0;
             final color = change == null ? Colors.black45 : positive ? _green : Colors.red.shade700;
             return Row(children: [
-              Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w800))),
+              Expanded(flex: 5, child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w900))),
               Expanded(flex: 3, child: Text(
                 !hasData ? '—' : isPercent ? '${value.toStringAsFixed(1)}%' : _executiveMoney(value).replaceAll(' ج.م', ''),
                 textAlign: TextAlign.end,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.black87),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.black87),
               )),
               SizedBox(width: 58, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                 Icon(change == null ? Icons.remove_rounded : positive ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 12, color: color),
