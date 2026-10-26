@@ -165,6 +165,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   double? _executivePreviousCollections;
   String? _executiveMetricsError;
   double? _executiveSales;
+  double? _executiveGrossSales;
+  double? _executiveSalesReturns;
+  double? _executiveGrossPurchases;
+  double? _executivePurchaseReturns;
   double? _executiveGrossProfit;
   double? _executiveCollections;
   double? _executiveReceivables;
@@ -1789,6 +1793,39 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         return Map<String, dynamic>.from(raw as Map);
       }
       final currentData = await fetchMetrics(bounds.start, bounds.end);
+      // Fetch document-level totals for the visible gross/returns breakdown.
+      // Keep these separate from the server-calculated net KPI values.
+      final fromDate = bounds.start.toIso8601String().substring(0, 10);
+      final toDate = bounds.end.toIso8601String().substring(0, 10);
+      final breakdownResults = await Future.wait<dynamic>([
+        Supabase.instance.client
+            .from('erp_sales_documents')
+            .select('document_type,grand_total')
+            .eq('company_id', companyId)
+            .eq('status', 'posted')
+            .eq('is_demo_data', false)
+            .gte('document_date', fromDate)
+            .lt('document_date', toDate),
+        Supabase.instance.client
+            .from('erp_purchase_documents')
+            .select('document_type,grand_total')
+            .eq('company_id', companyId)
+            .eq('status', 'posted')
+            .eq('is_demo_data', false)
+            .gte('document_date', fromDate)
+            .lt('document_date', toDate),
+      ]);
+      double sumDocumentType(dynamic rows, String type) {
+        if (rows is! List) return 0;
+        return rows.whereType<Map>().where((row) => row['document_type']?.toString() == type)
+            .fold<double>(0, (sum, row) => sum + (double.tryParse(row['grand_total']?.toString() ?? '') ?? 0));
+      }
+      final salesRows = breakdownResults[0];
+      final purchaseRows = breakdownResults[1];
+      final grossSales = sumDocumentType(salesRows, 'invoice');
+      final salesReturns = sumDocumentType(salesRows, 'return');
+      final grossPurchases = sumDocumentType(purchaseRows, 'invoice');
+      final purchaseReturns = sumDocumentType(purchaseRows, 'return');
       Map<String, dynamic> previousData = <String, dynamic>{};
       if (_executivePeriod != 'من بداية النشاط' && previousEnd.isAfter(previousStart)) {
         previousData = await fetchMetrics(previousStart, previousEnd);
@@ -1810,6 +1847,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (!mounted) return;
       setState(() {
         _executiveSales = numberValue(currentData, 'sales');
+        _executiveGrossSales = grossSales;
+        _executiveSalesReturns = salesReturns;
+        _executiveGrossPurchases = grossPurchases;
+        _executivePurchaseReturns = purchaseReturns;
         _executiveCollections = numberValue(currentData, 'collections');
         _executiveReceivables = numberValue(currentData, 'receivables');
         _executivePurchases = numberValue(currentData, 'purchases');
@@ -2205,8 +2246,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               title: 'صافي مبيعات',
               icon: Icons.point_of_sale_rounded,
               rows: [
-                _analysisRow('المبيعات', null, null),
-                _analysisRow('المرتجعات', null, null),
+                _analysisRow('المبيعات', _executiveGrossSales, null),
+                _analysisRow('المرتجعات', _executiveSalesReturns, null),
                 _analysisRow('صافي المبيعات', _executiveSales, _executiveChange(_executiveSales, _executivePreviousSales)),
               ],
             ),
@@ -2214,8 +2255,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               title: 'صافي مشتريات',
               icon: Icons.shopping_cart_outlined,
               rows: [
-                _analysisRow('المشتريات', null, null),
-                _analysisRow('المرتجعات', null, null),
+                _analysisRow('المشتريات', _executiveGrossPurchases, null),
+                _analysisRow('المرتجعات', _executivePurchaseReturns, null),
                 _analysisRow('صافي المشتريات', _executivePurchases, _executiveChange(_executivePurchases, _executivePreviousPurchases)),
               ],
             ),
