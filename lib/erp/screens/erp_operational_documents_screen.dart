@@ -50,6 +50,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   List<Map<String, dynamic>> _parties = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _allWarehouses = [];
+  Map<String, Map<String, dynamic>> _branchById = {};
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _lines = [];
   // Rows chosen in the item picker remain a local invoice preview until the user confirms saving them.
@@ -308,14 +309,35 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       safeLoad('المخازن', () => _repo.fetchWarehouses(_company.text)),
       safeLoad('الأصناف', () => _repo.fetchItems(_company.text)),
     ]);
+    var warehouseRows = results[2];
+    try {
+      final rawBranches = await Supabase.instance.client.from('erp_branches')
+          .select('id,branch_code,branch_name,branch_name_en')
+          .eq('company_id', _company.text.trim()).eq('is_active', true);
+      _branchById = {
+        for (final branch in rawBranches.map((row) => Map<String, dynamic>.from(row)))
+          _s(branch['id']): branch,
+      };
+      warehouseRows = results[2].map((warehouse) {
+        final branch = _branchById[_s(warehouse['branch_id'])] ?? <String, dynamic>{};
+        return <String, dynamic>{
+          ...warehouse,
+          'branch_name': _s(branch['branch_name']),
+          'branch_name_en': _s(branch['branch_name_en']),
+          'branch_code': _s(branch['branch_code']),
+        };
+      }).toList();
+    } catch (_) {
+      warehouseRows = results[2];
+    }
     if (!mounted) return;
     setState(() {
       _rows = widget.kind == ErpOperationalKind.sales
           ? results[0].where((r) => _s(r['document_type']) == (widget.initialDocumentType ?? _documentType)).toList()
           : results[0];
       _parties = results[1];
-      _allWarehouses = results[2];
-      _warehouses = results[2];
+      _allWarehouses = warehouseRows;
+      _warehouses = warehouseRows;
       _items = results[3];
       if (!_parties.any((r) => _s(r['id']) == _partyId)) {
         _partyId = _parties.isEmpty ? null : _s(_parties.first['id']);
@@ -1624,8 +1646,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final selected = await _searchLookup(
       title: 'اختيار المخزن — F1 أو دبل كليك',
       rows: _warehouses,
-      label: (w) => '${_s(w['warehouse_code'])} — ${_s(w['warehouse_name'])}',
-      searchable: (w) => [_s(w['warehouse_code']), _s(w['warehouse_name']), _s(w['branch_id'])],
+      label: (w) => '${_s(w['warehouse_code'])} — ${_s(w['warehouse_name'])}${_s(w['branch_name']).isEmpty ? '' : ' • ' + _s(w['branch_name'])}',
+      searchable: (w) => [_s(w['warehouse_code']), _s(w['warehouse_name']), _s(w['branch_id']), _s(w['branch_code']), _s(w['branch_name']), _s(w['branch_name_en'])],
     );
     if (selected != null && mounted) setState(() => _warehouseId = selected);
   }
