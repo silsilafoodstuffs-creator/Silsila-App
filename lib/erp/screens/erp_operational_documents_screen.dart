@@ -1729,7 +1729,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         border: Border.all(color: const Color(0xFFE8E1F0)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF8B7D99), fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
         Text(value, style: TextStyle(color: strong ? const Color(0xFF3E007D) : const Color(0xFF241735), fontWeight: FontWeight.w900, fontSize: strong ? 16 : 13)),
       ]),
@@ -1786,25 +1786,26 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         },
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(begin: Alignment.centerRight, end: Alignment.centerLeft, colors: [Color(0xFF3E007D), Color(0xFF54209A)]),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: const [BoxShadow(color: Color(0x183E007D), blurRadius: 16, offset: Offset(0, 5))],
+              gradient: const LinearGradient(begin: Alignment.centerRight, end: Alignment.centerLeft, colors: [Colors.white, Color(0xFFFAF8FC)]),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE8E1F0)),
+              boxShadow: const [BoxShadow(color: Color(0x083E007D), blurRadius: 8, offset: Offset(0, 2))],
             ),
             child: Wrap(alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, spacing: 12, runSpacing: 12, children: [
               Row(mainAxisSize: MainAxisSize.min, children: [
-                Container(width: 44, height: 44, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.receipt_long_rounded, color: Color(0xFFFFA015), size: 26)),
+                Container(width: 40, height: 40, decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF3E007D), size: 24)),
                 const SizedBox(width: 12),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(_salesDocumentTitle(_documentType), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22)),
+                  Text(_salesDocumentTitle(_documentType), style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 22)),
                   const SizedBox(height: 3),
-                  const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFFE9DDF8), fontSize: 12)),
+                  const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFF7B6A8E), fontSize: 12)),
                 ]),
               ]),
               Wrap(spacing: 6, runSpacing: 6, children: [
-                Chip(avatar: const Icon(Icons.circle, size: 9, color: Color(0xFFFFA015)), label: Text(status), backgroundColor: Colors.white, side: BorderSide.none),
+                Chip(avatar: const Icon(Icons.circle, size: 9, color: Color(0xFFFFA015)), label: Text(status), backgroundColor: const Color(0xFFF5EFFB), side: const BorderSide(color: Color(0xFFE8E1F0))),
                 FilledButton.icon(
                   onPressed: _loading ? null : _load,
                   icon: const Icon(Icons.refresh_rounded, size: 16),
