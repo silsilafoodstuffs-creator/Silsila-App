@@ -369,10 +369,13 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           setState(() => _error = 'حدد المستخدم الذي تريد إضافة مستخدم فرعي تحته.');
           return;
         }
+        final employee = await _pickEmployee();
+        if (employee == null) { if(mounted)setState(()=>_error='لا يمكن إنشاء مستخدم فرعي دون اختيار موظف نشط.'); return; }
         final result = await _db!.from('erp_users').insert({
           'company_id': _company,
-          'name_ar': 'مستخدم فرعي جديد',
-          'name_en': 'New sub-user',
+          'employee_id': employee['id'],
+          'name_ar': _s(employee['full_name']),
+          'name_en': _s(employee['full_name_en']).isNotEmpty ? employee['full_name_en'] : employee['full_name'],
           'user_type_id': parent['user_type_id'],
           'parent_user_id': parent['id'],
           'is_active': true,
@@ -388,10 +391,15 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           _message = 'تمت إضافة مستخدم فرعي تحت المستخدم المحدد. أكمل بياناته ثم اضغط حفظ.';
         });
       } else if (_selectedNodeKind == 'type') {
+        final selectedType = _types.where((t) => _s(t['id']) == _selectedId).firstOrNull;
+        if (selectedType == null || selectedType['is_active'] != true) { setState(() => _error = 'اختر نوع مستخدم نشطًا قبل إضافة مستخدم تحته.'); return; }
+        final employee = await _pickEmployee();
+        if (employee == null) { if(mounted)setState(()=>_error='لا يمكن إنشاء مستخدم دون اختيار موظف نشط.'); return; }
         final result = await _db!.from('erp_users').insert({
           'company_id': _company,
-          'name_ar': 'مستخدم رئيسي جديد',
-          'name_en': 'New primary user',
+          'employee_id': employee['id'],
+          'name_ar': _s(employee['full_name']),
+          'name_en': _s(employee['full_name_en']).isNotEmpty ? employee['full_name_en'] : employee['full_name'],
           'user_type_id': _selectedId,
           'parent_user_id': null,
           'is_active': true,
@@ -412,6 +420,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           'company_id': _company,
           'name_ar': 'نوع مستخدم جديد',
           'name_en': 'New user type',
+          'description': '',
           'show_at_login': false,
           'is_active': true,
         }).select().single();
@@ -459,6 +468,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         await _db!.from('erp_users').update({
           'name_ar': _s(user['name_ar']).trim(),
           'name_en': _s(user['name_en']).trim(),
+          'employee_id': user['employee_id'],
           'image_data': user['image_data'],
           'is_active': user['is_active'] == true,
           'user_type_id': user['user_type_id'],
