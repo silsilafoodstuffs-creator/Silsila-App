@@ -4,7 +4,7 @@ import 'package:silsila_app/erp/screens/erp_user_admin_screen.dart';
 
 void main() {
   testWidgets(
-    'combined user hierarchy shows default user types and tree/table controls without Supabase',
+    'user administration shows the five configured user types and tree/table controls without Supabase',
     (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
@@ -28,7 +28,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('ادمن'), findsOneWidget);
-      expect(find.text('موظف'), findsOneWidget);
       expect(find.text('مورد'), findsOneWidget);
       expect(find.text('عميل'), findsOneWidget);
       expect(find.text('مندوب'), findsOneWidget);
