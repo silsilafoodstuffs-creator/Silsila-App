@@ -743,7 +743,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
                 child: Center(child: Text('لا توجد سجلات محفوظة للأنواع أو المستخدمين. اضغط تحديث، أو إضافة لإنشاء أول سجل.')),
               ),
           ])
-        : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
+        : _isUser ? _masterGrid() : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
           headingRowColor: WidgetStateProperty.all(const Color(0xFFF0E8F8)),
           columns: const [DataColumn(label: Text('النوع / المستوى')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الاسم العربي')), DataColumn(label: Text('الاسم الإنجليزي')), DataColumn(label: Text('الحالة'))],
           rows: flat.map((item) {
@@ -833,7 +833,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _delete() async {
-    if (_isHierarchy) { await _deleteHierarchyNode(); return; }
+    if (_isHierarchy || (_isUser && _selectedNodeKind != null)) { await _deleteHierarchyNode(); return; }
     if(!_editMode){setState(()=>_error='اضغط «تعديل» أولًا قبل حذف البيانات.');return;}
     if(_isPermissions){
       if(_selectedUserId==null){setState(()=>_error='اختر مستخدمًا أولًا.');return;}
