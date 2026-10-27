@@ -222,7 +222,9 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   Widget _field(TextEditingController c, String label, {bool required = false, TextInputType? type}) {
     return SizedBox(width: 245, child: TextFormField(
       controller: c, keyboardType: type,
-      decoration: InputDecoration(labelText: label, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true),
+      readOnly: c == _code,
+      enableInteractiveSelection: c != _code,
+      decoration: InputDecoration(labelText: label, prefixIcon: c == _code ? const Icon(Icons.lock_outline, size: 18) : null, filled: c == _code, fillColor: c == _code ? const Color(0xFFF1EEF4) : null, helperText: c == _code ? 'يُنشأ تلقائيًا ولا يمكن تعديله' : null, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true),
       validator: (v) {
         final value = (v ?? '').trim();
         if (required && value.isEmpty) return 'حقل مطلوب';
