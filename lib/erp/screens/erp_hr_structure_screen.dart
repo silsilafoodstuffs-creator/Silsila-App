@@ -69,19 +69,31 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     _code.clear(); _ar.clear(); _en.clear();
     final isLocation = kind == 'location';
     final isJob = kind == 'job';
-    final saved = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+    String? selectedDepartmentId;
+    String? selectedGradeId;
+    final saved = await showDialog<bool>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
       title: Text(isLocation ? 'إضافة موقع عمل' : isJob ? 'إضافة وظيفة' : 'إضافة إدارة أو قسم'),
       content: SizedBox(width: 440, child: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: _code, decoration: const InputDecoration(labelText: 'الكود (حروف إنجليزية ثم أرقام)')),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'الاسم بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية')),
+        if (isJob) ...[
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(value: selectedDepartmentId, isExpanded: true, decoration: const InputDecoration(labelText: 'الإدارة / القسم'), items: _departments.where((d) => d['is_active'] != false).map((d) => DropdownMenuItem<String>(value: d['id'].toString(), child: Text(d['department_code'].toString() + ' • ' + d['name_ar'].toString()))).toList(), onChanged: (v) => setDialogState(() => selectedDepartmentId = v)),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(value: selectedGradeId, isExpanded: true, decoration: const InputDecoration(labelText: 'الدرجة الوظيفية'), items: _grades.where((g) => g['is_active'] != false).map((g) => DropdownMenuItem<String>(value: g['id'].toString(), child: Text(g['grade_code'].toString() + ' • ' + g['name_ar'].toString()))).toList(), onChanged: (v) => setDialogState(() => selectedGradeId = v)),
+        ],
       ])),
       actions: [
         TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
         FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ')),
       ],
-    ));
+    )));
     if (saved != true || _code.text.trim().isEmpty || _ar.text.trim().isEmpty || _db == null) return;
+    if (isJob && (selectedDepartmentId == null || selectedGradeId == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر الإدارة أو القسم والدرجة الوظيفية قبل حفظ الوظيفة.')));
+      return;
+    }
     try {
       if (isLocation) {
         await _db!.from('erp_hr_work_locations').insert({
@@ -93,8 +105,8 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
         await _db!.from('erp_hr_jobs').insert({
           'company_id': _companyId, 'job_code': _code.text.trim().toUpperCase(),
           'name_ar': _ar.text.trim(), 'name_en': _en.text.trim(),
-          'department_id': _departments.isEmpty ? null : _departments.first['id'],
-          'grade_id': _grades.isEmpty ? null : _grades.first['id'],
+          'department_id': selectedDepartmentId,
+          'grade_id': selectedGradeId,
           'min_qualification': 'إعدادية', 'min_license_class': '',
           'is_active': true,
         });
