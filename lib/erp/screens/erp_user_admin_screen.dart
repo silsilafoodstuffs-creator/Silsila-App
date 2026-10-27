@@ -14,8 +14,10 @@ import 'erp_user_classifications_screen.dart';
 
 const _userAdminPurple = Color(0xFF3E007D);
 const _userAdminCanvas = Color(0xFFF7F5FA);
-const _userAdminActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','Excel','PDF'];
-const _userAdminActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','Excel':'can_import_excel','PDF':'can_print_pdf',};
+const _userAdminActions = <String>['تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','استيراد Excel','طباعة PDF','الوصول السريع'];
+const _userAdminActionFields = <String,String>{'تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','استيراد Excel':'can_import_excel','طباعة PDF':'can_print_pdf','الوصول السريع':'show_in_quick_tasks'};
+const _permissionActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','Excel','PDF'];
+const _permissionActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','Excel':'can_import_excel','PDF':'can_print_pdf'};
 const _userAdminTree = <String,Map<String,List<String>>>{
   'إعدادات عامة':{
     'بيانات أساسية':['بيانات الشركة','مراكز التكلفة','بيانات جغرافية','أنواع الأنشطة','المستخدمين','سياسات البرنامج','سجل العمليات','واجهة API والربط الخارجي','إدارة مفاتيح API','سجلات التكامل والطلبات','سياسات التسعير والخصومات','توزيع الأصناف على المندوبين','قيود البيع والشراء'],
@@ -832,7 +834,8 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if(_isPermissions){
         final targets=_permissionTargetIds;if(targets.isEmpty)throw StateError('حدد مستخدمًا واحدًا على الأقل قبل حفظ الصلاحيات.');
         final draft=_rules.where((r)=>targets.contains(_s(r['user_id']))).toList();
-        for(final rule in draft){final uid=_s(rule['user_id']);if(uid.isEmpty)continue;final payload=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');}
+        for(final rule in draft){final uid=_s(rule['user_id']);if(uid.isEmpty)continue;final payload=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};for(final field in _permissionActionFields.values)payload[field]=rule[field]==true;
+          payload['show_in_quick_tasks']=rule['show_in_quick_tasks']==true;await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');}
         for(final uid in targets){final keys=draft.where((r)=>_s(r['user_id'])==uid).map((r)=>'${_s(r['menu_name'])}|${_s(r['submenu_name'])}|${_s(r['page_name'])}').toSet();final old=await _db!.from('erp_user_permission_matrix').select('id,menu_name,submenu_name,page_name').eq('company_id',_company).eq('user_id',uid);for(final r in (old as List).whereType<Map<String,dynamic>>()){final key='${_s(r['menu_name'])}|${_s(r['submenu_name'])}|${_s(r['page_name'])}';if(!keys.contains(key))await _db!.from('erp_user_permission_matrix').delete().eq('company_id',_company).eq('id',r['id']);}}
       }
       if(mounted)setState(()=>_message='تم حفظ التغييرات في قاعدة البيانات.');
@@ -1245,16 +1248,16 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     setState((){
       for(final uid in targets)for(final key in keys){
         var rule=_permissionRule(uid,key[0],key[1],key[2]);
-        if(rule==null){rule=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':key[0],'submenu_name':key[1],'page_name':key[2],for(final f in _userAdminActionFields.values)f:false};_rules.add(rule);}
+        if(rule==null){rule=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':key[0],'submenu_name':key[1],'page_name':key[2],for(final f in _permissionActionFields.values)f:false};_rules.add(rule);}
         rule[field]=value;
-        if(field=='can_access'&&!value){for(final f in _userAdminActionFields.values.where((f)=>f!='can_access'))rule[f]=false;}
+        if(field=='can_access'&&!value){for(final f in _permissionActionFields.values.where((f)=>f!='can_access'))rule[f]=false;}
         else if(field!='can_access'&&value)rule['can_access']=true;
       }
       _error=null;_message='تم تحديث الصلاحيات كمسودة. اضغط حفظ لتثبيت التغييرات.';
     });
   }
   Widget _permissionRuleCells(String menu,String sub,String page)=>Row(mainAxisSize:MainAxisSize.min,children:[
-    for(final entry in _userAdminActionFields.entries)SizedBox(width:72,child:Center(child:Checkbox(shape:const CircleBorder(),value:_permissionChecked(menu,sub,page,entry.value),onChanged:_editMode?(v)=>_setPermissionTreeValue(menu,sub,page,entry.value,v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
+    for(final entry in _permissionActionFields.entries)SizedBox(width:72,child:Center(child:Checkbox(shape:const CircleBorder(),value:_permissionChecked(menu,sub,page,entry.value),onChanged:_editMode?(v)=>_setPermissionTreeValue(menu,sub,page,entry.value,v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
   ]);
   Widget _permissionTreeRow(String label,String menu,String sub,String page,{bool strong=false})=>Container(color:strong?const Color(0xFFF0E8F8):Colors.white,padding:const EdgeInsetsDirectional.only(start:8,end:4,top:3,bottom:3),child:Row(children:[
     Expanded(flex:3,child:Text(label,style:TextStyle(fontWeight:strong?FontWeight.w900:FontWeight.w600,fontSize:12,color:strong?_userAdminPurple:Colors.black87))),
@@ -1304,7 +1307,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text('المستخدمون المستهدفون: ${targets.length} • إلغاء «مسموح» من القائمة الرئيسية يلغي صلاحيات الشاشات التابعة.',style:TextStyle(color:Colors.grey.shade700,fontSize:12))),
       Container(color:const Color(0xFFEDE4F8),padding:const EdgeInsetsDirectional.only(start:8,end:4,top:6,bottom:6),child:Row(children:[
         const Expanded(flex:3,child:Text('القائمة / الشاشة',style:TextStyle(fontWeight:FontWeight.w900,color:_userAdminPurple))),
-        Expanded(flex:7,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[for(final action in _userAdminActions)SizedBox(width:72,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900)))]))),
+        Expanded(flex:7,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[for(final action in _permissionActions)SizedBox(width:72,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900)))]))),
       ])),
       Expanded(child:ListView(children:[
         for(final menu in _userAdminTree.entries)ExpansionTile(key:PageStorageKey<String>('perm-menu-${menu.key}'),tilePadding:const EdgeInsets.symmetric(horizontal:4),title:_permissionTreeRow(menu.key,menu.key,'*','*',strong:true),children:[
@@ -1380,14 +1383,18 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       final rows=(source as List).whereType<Map<String,dynamic>>().toList();
       setState((){
         _rules.removeWhere((r)=>targets.contains(_s(r['user_id'])));
-        for(final uid in targets)for(final item in rows)_rules.add(<String,dynamic>{
-          'company_id':_company,'user_id':uid,'menu_name':item['menu_name'],'submenu_name':item['submenu_name']??'','page_name':item['page_name'],
-          for(final field in _userAdminActionFields.values)field:item[field]==true,
-        });
+        for(final uid in targets)for(final item in rows){
+          final anyAction=_userAdminActionFields.values.where((field)=>field!='show_in_quick_tasks').any((field)=>item[field]==true);
+          _rules.add(<String,dynamic>{
+            'company_id':_company,'user_id':uid,'menu_name':item['menu_name'],'submenu_name':item['submenu_name']??'','page_name':item['page_name'],
+            'can_access':item['can_access']==true||anyAction,
+            for(final field in _permissionActionFields.values.where((f)=>f!='can_access'))field:item[field]==true,
+            'show_in_quick_tasks':item['show_in_quick_tasks']==true,
+          });
+        }
         _editMode=true;_error=null;_message='تم تحميل القالب كمسودة على ${targets.length} مستخدم. اضغط حفظ لتثبيت الصلاحيات.';
       });
     }catch(e){if(mounted)setState(()=>_error='تعذر جلب القالب: $e');}
   }
-
 
 }
