@@ -839,18 +839,19 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     if(_saving)return;
     setState(()=>_saving=true);
     try {
-      if(_isType||_isUser||_isTemplate||_isPermissions){
-        final masterRows=_isPermissions?_users:_rows;
-        final targetTable=_isPermissions?'erp_users':_table;
+      if(_isType||_isUser||_isTemplate){
+        final masterRows=_rows;
+        final targetTable=_table;
         for(final row in masterRows){
           final payload=<String,dynamic>{};
-          if(_isType)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'description':_s(row['description']).trim().split(RegExp(r'\\s+')).take(10).join(' '),'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':row['show_at_login']==true});
-          if(_isUser||_isPermissions)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],if(_isUser)'has_sub_warehouse':row['has_sub_warehouse']==true});
+          if(_isType)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'description':_s(row['description']).trim().split(RegExp(r'\s+')).take(10).join(' '),'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':row['show_at_login']==true});
+          if(_isUser){ if(_s(row['employee_id']).isEmpty) throw StateError('يجب ربط المستخدم «${_s(row['name_ar'])}» بموظف أولًا.'); payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'employee_id':row['employee_id'],'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],'has_sub_warehouse':row['has_sub_warehouse']==true}); }
           if(_isTemplate)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true});
           if(_s(row['id']).isNotEmpty) {
             await _db!.from(targetTable).update(payload).eq('company_id',_company).eq('id',row['id']);
             final password = _s(row['_password_draft']);
             if (_isUser && password.isNotEmpty) {
+              if (password != _s(row['_password_confirmation_draft'])) throw StateError('كلمتا المرور غير متطابقتين للمستخدم ${_s(row['name_ar'])}.');
               await _db!.rpc('set_erp_user_password', params: {'p_user_id': row['id'], 'p_password': password});
               row['_password_draft'] = '';
               row['_password_confirmation_draft'] = '';
