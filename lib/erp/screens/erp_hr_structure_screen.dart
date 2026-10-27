@@ -270,7 +270,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
         DataCell(SizedBox(width: 125, child: Text((_grades.firstWhere((g) => g['id'] == j['grade_id'], orElse: () => <String,dynamic>{})['name_ar'] ?? 'غير محدد').toString()))),
         DataCell(Text((j['min_qualification'] ?? '—').toString())),
         DataCell(Text((j['min_license_class'] ?? 'لا يشترط').toString())),
-        ..._documentColumns.map((d) => DataCell(Center(child: Checkbox(value: j[d['key']] == true, visualDensity: VisualDensity.compact, onChanged: (value) => _toggleJobRequirement(j, d['key']!, value == true)))),
+        ..._documentColumns.map((d) => DataCell(Center(child: Checkbox(value: j[d['key']] == true, visualDensity: VisualDensity.compact, onChanged: (value) => _toggleJobRequirement(j, d['key']!, value == true))))),
         DataCell(IconButton(tooltip: 'تعديل متطلبات الوظيفة', onPressed: () => _editJobRequirements(j), icon: const Icon(Icons.edit_outlined, color: _hrStructurePurple))),
       ])).toList(),
     )))),
