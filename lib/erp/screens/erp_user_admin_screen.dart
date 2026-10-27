@@ -1470,6 +1470,24 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     await _applyTemplate();
   }
 
+  Future<void> _fetchPermissionUsers() async {
+    if (_db == null || _company.isEmpty) return;
+    try {
+      final result = await _db!.from('erp_users')
+        .select('id,user_code,name_ar,name_en,user_type_id,is_active')
+        .eq('company_id',_company).order('user_code');
+      if (!mounted) return;
+      setState(() {
+        _users = (result as List).map((r)=>Map<String,dynamic>.from(r)).toList();
+        _permissionAllUsers = false;
+        _message = 'تم جلب ${_users.length} مستخدم. حدد المستخدمين المطلوب تطبيق الصلاحيات عليهم.';
+        _error = null;
+      });
+    } catch(e) {
+      if (mounted) setState(()=>_error='تعذر جلب المستخدمين: $e');
+    }
+  }
+
   Widget _permissionUsersGrid(){
     final targets = _permissionTargetIds;
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -1482,7 +1500,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
           Checkbox(shape:const CircleBorder(),value:!_permissionAllUsers,onChanged:_editMode?(v)=>setState(()=>_permissionAllUsers=!(v==true)):null),
           const Text('مستخدمون محددون'),
         ]),
-        OutlinedButton.icon(onPressed:_load,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
+        OutlinedButton.icon(onPressed:_editMode?_fetchPermissionUsers:null,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
         Row(mainAxisSize:MainAxisSize.min,children:[
           Checkbox(shape:const CircleBorder(),value:_permissionMode=='template',onChanged:_editMode?(v)=>_changePermissionMode(v==true?'template':'manual'):null),
           const Text('تحديد قالب ثابت'),
