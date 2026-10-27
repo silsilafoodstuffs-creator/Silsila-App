@@ -1288,6 +1288,34 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     ]);
   }
 
+  Widget _ruleGrid(){
+    if(_isPermissions)return _permissionUsersGrid();
+    final parentId=_selectedId;
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Row(children:[
+        Expanded(child:DropdownButtonFormField<String>(
+          key:ValueKey('permission-parent-$parentId-template'),
+          value:parentId,
+          decoration:const InputDecoration(isDense:true,labelText:'القالب المحدد'),
+          items:_rows.map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text(_s(r['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
+          onChanged:(v)async{setState(()=>_selectedId=v);if(v!=null)await _loadRules();},
+        )),
+        const SizedBox(width:8),
+        OutlinedButton.icon(onPressed:parentId==null?null:()=>_openMenuPicker(parentId:parentId,template:true),icon:const Icon(Icons.account_tree_outlined),label:const Text('جلب قوائم (F1)')),
+      ]),
+      const SizedBox(height:8),
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
+        headingRowHeight: 57,dataRowMinHeight: 57,dataRowMaxHeight: 57,horizontalMargin:7,columnSpacing:8,
+        columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:80,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
+        rows:_rules.map((rule)=>DataRow(cells:[
+          DataCell(SizedBox(width:250,child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis))),
+          for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:_editMode?(v)=>setState(()=>rule[field]=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
+        ])).toList(),
+      )),
+    ]);
+  }
+
+
   @override Widget build(BuildContext context){
     ErpKeyboardNavigation.registerActions(add: _add, save: _save);
     final title=_typeNames[_view]??'المستخدمين';
