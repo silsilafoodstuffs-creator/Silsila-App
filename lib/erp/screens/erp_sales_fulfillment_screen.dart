@@ -106,7 +106,7 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
               .select('allow_access,can_edit')
               .eq('company_id', widget.companyId)
               .eq('user_id', userId)
-              .eq('menu_key', 'المبيعات والعملاء::حركات::إذن التسليم')
+              .inFilter('menu_key', ['مبيعات::حركات::إذن التسليم', 'المبيعات والعملاء::حركات::إذن التسليم'])
               .maybeSingle();
           canDirect = permission?['allow_access'] == true && permission?['can_edit'] == true;
         }
