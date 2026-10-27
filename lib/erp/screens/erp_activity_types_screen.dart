@@ -198,7 +198,71 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     }
   }
 
-  Widget _task(String text, IconData icon, Color color, VoidCallback? action) => Padding(padding: const EdgeInsetsDirectional.only(end: 5), child: FilledButton.tonalIcon(onPressed: action, style: FilledButton.styleFrom(foregroundColor: color, backgroundColor: color.withValues(alpha: .10), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)), icon: Icon(icon, size: 16), label: Text(text, style: const TextStyle(fontSize: 12))));
+  Widget _task(String text, IconData icon, Color color, VoidCallback? action) =>
+      ErpQuickTaskButton(label: text, icon: icon, onPressed: action, fallbackColor: color, compact: true);
+
+  Future<void> _importExcel() async {
+    if (_editing) { setState(() => _message = 'احفظ التعديلات الحالية قبل استيراد Excel.'); return; }
+    try {
+      final picked = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx', 'xls'], withData: true);
+      if (picked == null || picked.files.single.bytes == null) return;
+      final workbook = excel.Excel.decodeBytes(picked.files.single.bytes!);
+      if (workbook.tables.isEmpty) throw StateError('ملف Excel لا يحتوي على ورقة بيانات.');
+      final sheet = workbook.tables.values.first;
+      if (sheet.rows.isEmpty) throw StateError('ورقة Excel فارغة.');
+      final headers = sheet.rows.first.map((cell) => cell?.value?.toString().trim() ?? '').toList();
+      final imported = <Map<String, String>>[];
+      var nextNumber = int.tryParse(_nextActivityCode().replaceFirst('ACT', '')) ?? 1;
+      for (final row in sheet.rows.skip(1)) {
+        final values = <String, String>{};
+        for (var i = 0; i < headers.length && i < row.length; i++) {
+          if (headers[i].isNotEmpty) values[headers[i]] = row[i]?.value?.toString() ?? '';
+        }
+        final name = (values['اسم النشاط عربي'] ?? values['اسم النشاط'] ?? '').trim();
+        if (name.isEmpty) continue;
+        imported.add({
+          'ترتيب السطر': (_rows.length + imported.length + 1).toString(),
+          'كود النشاط': 'ACT${nextNumber.toString().padLeft(3, '0')}',
+          'اسم النشاط عربي': name,
+          'اسم النشاط إنجليزي': (values['اسم النشاط إنجليزي'] ?? '').trim(),
+          'نشط': (values['نشط'] ?? 'true').toLowerCase() == 'false' ? 'false' : 'true',
+        });
+        nextNumber++;
+      }
+      if (imported.isEmpty) throw StateError('لم يتم العثور على أسماء أنشطة في الملف.');
+      final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+        title: const Text('تأكيد استيراد Excel'),
+        content: Text('سيتم إضافة ${imported.length} نشاطًا مع توليد الأكواد تلقائيًا. هل تريد المتابعة؟'),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('استيراد'))],
+      ));
+      if (confirm != true) return;
+      for (final row in imported) {
+        await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: row);
+        await Supabase.instance.client.from('activity_types').upsert({
+          'code': row['كود النشاط'], 'name': row['اسم النشاط عربي'],
+          'sort_order': int.tryParse(row['ترتيب السطر'] ?? '') ?? 0, 'is_active': row['نشط'] == 'true',
+        }, onConflict: 'code');
+      }
+      await _load();
+      if (mounted) setState(() => _message = 'تم استيراد ${imported.length} نشاطًا بنجاح.');
+    } catch (e) { if (mounted) setState(() => _message = 'تعذر استيراد Excel: $e'); }
+  }
+
+  Future<void> _printPdf() async {
+    if (_rows.isEmpty) { setState(() => _message = 'لا توجد بيانات للطباعة.'); return; }
+    try {
+      final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'اسم النشاط إنجليزي', 'نشط'];
+      final doc = pw.Document();
+      doc.addPage(pw.MultiPage(theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
+        pw.Text('سلسلة — أنواع الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 12),
+        pw.TableHelper.fromTextArray(headers: keys, data: _rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList()),
+      ]));
+      await Printing.layoutPdf(onLayout: (_) async => doc.save());
+      if (mounted) setState(() => _message = 'تم تجهيز ملف الطباعة / PDF.');
+    } catch (e) { if (mounted) setState(() => _message = 'تعذرت الطباعة أو إنشاء PDF: $e'); }
+  }
   Future<void> _preview() async {
     await showDialog<void>(
       context: context,
