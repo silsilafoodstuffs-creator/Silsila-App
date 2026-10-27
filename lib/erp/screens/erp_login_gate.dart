@@ -272,13 +272,13 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                         if (!newActivity) ...[
                           const SizedBox(height: 10),
                           DropdownButtonFormField<String>(
-                            value: accountType,
+                            value: _visibleUserTypes.contains(accountType) ? accountType : null,
                             isExpanded: true,
                             decoration: const InputDecoration(labelText: 'نوع الحساب'),
                             items: _visibleUserTypes
                                 .map((type) => DropdownMenuItem<String>(value: type, child: Text(silsilaText(type), overflow: TextOverflow.ellipsis)))
                                 .toList(),
-                            onChanged: (v) {
+                            onChanged: _visibleUserTypes.isEmpty ? null : (v) {
                               if (v != null) refresh(() => accountType = v);
                             },
                           ),
