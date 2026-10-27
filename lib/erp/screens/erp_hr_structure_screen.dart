@@ -71,12 +71,22 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final isJob = kind == 'job';
     String? selectedDepartmentId;
     String? selectedGradeId;
+    String? selectedParentId;
+    String selectedDepartmentLevel = 'directorate';
     final saved = await showDialog<bool>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
       title: Text(isLocation ? 'إضافة موقع عمل' : isJob ? 'إضافة وظيفة' : 'إضافة إدارة أو قسم'),
       content: SizedBox(width: 440, child: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: _code, decoration: const InputDecoration(labelText: 'الكود (حروف إنجليزية ثم أرقام)')),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'الاسم بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية')),
+        if (!isJob && !isLocation) ...[
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(value: selectedDepartmentLevel, isExpanded: true, decoration: const InputDecoration(labelText: 'نوع المستوى التنظيمي'), items: const [DropdownMenuItem(value: 'directorate', child: Text('إدارة رئيسية')), DropdownMenuItem(value: 'department', child: Text('إدارة فرعية')), DropdownMenuItem(value: 'section', child: Text('قسم'))], onChanged: (v) => setDialogState(() { selectedDepartmentLevel = v ?? 'directorate'; if (selectedDepartmentLevel == 'directorate') selectedParentId = null; })),
+          if (selectedDepartmentLevel != 'directorate') ...[
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(value: selectedParentId, isExpanded: true, decoration: const InputDecoration(labelText: 'يتبع الإدارة / القسم'), items: _departments.where((d) => d['department_level'] != 'section' && d['is_active'] != false).map((d) => DropdownMenuItem<String>(value: d['id'].toString(), child: Text(d['department_code'].toString() + ' • ' + d['name_ar'].toString()))).toList(), onChanged: (v) => setDialogState(() => selectedParentId = v)),
+          ],
+        ],
         if (isJob) ...[
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(value: selectedDepartmentId, isExpanded: true, decoration: const InputDecoration(labelText: 'الإدارة / القسم'), items: _departments.where((d) => d['is_active'] != false).map((d) => DropdownMenuItem<String>(value: d['id'].toString(), child: Text(d['department_code'].toString() + ' • ' + d['name_ar'].toString()))).toList(), onChanged: (v) => setDialogState(() => selectedDepartmentId = v)),
@@ -90,6 +100,10 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       ],
     )));
     if (saved != true || _code.text.trim().isEmpty || _ar.text.trim().isEmpty || _db == null) return;
+    if (!isJob && !isLocation && selectedDepartmentLevel != 'directorate' && selectedParentId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر الإدارة الأب للقسم أو الإدارة الفرعية.')));
+      return;
+    }
     if (isJob && (selectedDepartmentId == null || selectedGradeId == null)) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر الإدارة أو القسم والدرجة الوظيفية قبل حفظ الوظيفة.')));
       return;
@@ -113,7 +127,10 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       } else {
         await _db!.from('erp_hr_departments').insert({
           'company_id': _companyId, 'department_code': _code.text.trim().toUpperCase(),
-          'name_ar': _ar.text.trim(), 'name_en': _en.text.trim(), 'is_active': true,
+          'name_ar': _ar.text.trim(), 'name_en': _en.text.trim(),
+          'department_level': selectedDepartmentLevel,
+          'parent_id': selectedDepartmentLevel == 'directorate' ? null : selectedParentId,
+          'is_active': true,
         });
       }
       await _load();
