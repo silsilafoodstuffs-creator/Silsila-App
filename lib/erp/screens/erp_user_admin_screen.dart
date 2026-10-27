@@ -1175,7 +1175,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       rows:List.generate(_rows.length,(i){
         final row=_rows[i];final id=_s(row['id']);
         return DataRow(selected:id==_selectedId,onSelectChanged:(v)async{setState(()=>_selectedId=v==true?id:null);if(v==true&&_isTemplate)await _loadRules();},cells:[
-          DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]))),
+          DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]).isNotEmpty ? row[codeField] : (_isType ? 'UT${_s(row['type_code']).padLeft(4, '0')}' : _isTemplate ? 'PT${_s(row['template_code']).padLeft(4, '0')}' : row[codeField]))),
           if(!_isUser)DataCell(_textCell(row,'name_ar')),if(!_isUser)DataCell(_textCell(row,'name_en')),
           if(_isType)DataCell(_textCell(row,'description',width:220)),
           if(_isUser)DataCell(_textCell(row,'name_ar',width:165)),
@@ -1326,26 +1326,19 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:_userAdminPurple)),Text('إدارة البيانات والصلاحيات للشركة الحالية',style:TextStyle(fontSize:11,color:Colors.grey.shade700))])),
       ])),
       _toolbar(),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(children: [
-            _userTab('أنواع المستخدمين', 'types', Icons.badge_outlined),
-            const SizedBox(width: 6),
-            _userTab('تصنيفات المستخدمين', 'classifications', Icons.category_outlined),
-            const SizedBox(width: 6),
-            _userTab('قوالب صلاحيات المستخدمين', 'templates', Icons.fact_check_outlined),
-            const SizedBox(width: 6),
-            _userTab('المستخدمين', 'users', Icons.people_alt_outlined),
-            const SizedBox(width: 6),
-            _userTab('احتياطي شاشة المستخدمين', 'hierarchy', Icons.account_tree_outlined),
-          ]),
-        ),
-      ),
       if(_error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
       if(_message!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_message!,style:const TextStyle(color:Colors.green))),
-      if(_isPermissions)Padding(padding:const EdgeInsets.all(8),child:Text('حدد المستخدم ثم عيّن صلاحيات كل شاشة باستخدام أعمدة المهام التسعة. زر جلب المستخدمين يتيح الاختيار من القائمة.',style:TextStyle(color:Colors.grey.shade700))),
+      if(_isPermissions)Padding(padding:const EdgeInsets.all(8),child:Text('حدد المستخدمين ثم اختر قالب صلاحيات أو عدّل الصلاحيات يدويًا حسب القوائم.',style:TextStyle(color:Colors.grey.shade700))),
+      if(!_isPermissions)Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+          _userTab('أنواع المستخدمين', 'types', Icons.badge_outlined), const SizedBox(width: 6),
+          _userTab('تصنيفات المستخدمين', 'classifications', Icons.category_outlined), const SizedBox(width: 6),
+          _userTab('قوالب صلاحيات المستخدمين', 'templates', Icons.fact_check_outlined), const SizedBox(width: 6),
+          _userTab('المستخدمين', 'users', Icons.people_alt_outlined), const SizedBox(width: 6),
+          _userTab('احتياطي شاشة المستخدمين', 'hierarchy', Icons.account_tree_outlined),
+        ])),
+      ),
       Expanded(child:_view=='classifications'
         ? ErpUserClassificationsScreen(companyId: _company)
         : _loading ? const Center(child:CircularProgressIndicator())
