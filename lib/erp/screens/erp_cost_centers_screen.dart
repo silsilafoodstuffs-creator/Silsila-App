@@ -48,6 +48,8 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   Future<void> _load() async {
     var company = (widget.companyId ?? '').trim();
     if (!mounted) return;
+    // Never retain a previous company's scope while a new membership is being resolved.
+    _activeCompanyId = null;
     if (_db == null) {
       setState(() { _loading = false; _error = 'سجّل الدخول إلى Supabase أولًا.'; });
       return;
@@ -152,7 +154,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
 
   Future<void> _save() async {
     final db = _db;
-    final company = (_activeCompanyId ?? widget.companyId ?? '').trim();
+    final company = (_activeCompanyId ?? '').trim();
     if (db == null || company.isEmpty) {
       if (mounted) setState(() => _error = 'لا يمكن الحفظ قبل تحديد الشركة النشطة. حدّث الشاشة وتحقق من عضوية المستخدم.');
       return;
@@ -225,7 +227,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       return;
     }
     try {
-      final company = (_activeCompanyId ?? widget.companyId ?? '').trim();
+      final company = (_activeCompanyId ?? '').trim();
       if (company.isEmpty) throw StateError('لا توجد شركة نشطة مرتبطة بالمستخدم.');
       await _db!.from('erp_cost_centers').delete().eq('id', id).eq('company_id', company);
       if (mounted) setState(() { _centers.removeWhere((r) => _s(r['id']) == id); _selectedIds.remove(id); _message = 'تم حذف المركز.'; _error = null; });
