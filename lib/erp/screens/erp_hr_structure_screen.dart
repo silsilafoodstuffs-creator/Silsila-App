@@ -156,15 +156,24 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final childDepartments = kind == 'department'
         ? _departments.where((d) => d['parent_id'] == row['id']).toList()
         : <Map<String, dynamic>>[];
-    final childWidgets = childDepartments.map<Widget>((department) {
-      final jobs = _jobs.where((job) => job['department_id'] == department['id']).toList();
-      return ListTile(
+    final ownJobs = _jobs.where((job) => job['department_id'] == row['id']).toList();
+    final childWidgets = <Widget>[
+      ...ownJobs.map((job) => ListTile(
         dense: true,
-        leading: const Icon(Icons.subdirectory_arrow_left, color: _hrStructurePurple),
-        title: Text(department['department_code'].toString() + ' • ' + department['name_ar'].toString()),
-        subtitle: Text(jobs.map((job) => job['job_code'].toString() + ' • ' + job['name_ar'].toString()).join(' | ')),
-      );
-    }).toList();
+        leading: const Icon(Icons.work_outline, color: _hrStructureOrange),
+        title: Text(job['job_code'].toString() + ' • ' + job['name_ar'].toString()),
+        subtitle: Text('الدرجة: ' + (_grades.firstWhere((g) => g['id'] == job['grade_id'], orElse: () => <String,dynamic>{})['name_ar'] ?? 'غير محددة').toString()),
+      )),
+      ...childDepartments.map<Widget>((department) {
+        final jobs = _jobs.where((job) => job['department_id'] == department['id']).toList();
+        return ListTile(
+          dense: true,
+          leading: const Icon(Icons.subdirectory_arrow_left, color: _hrStructurePurple),
+          title: Text(department['department_code'].toString() + ' • ' + department['name_ar'].toString()),
+          subtitle: Text(jobs.map((job) => job['job_code'].toString() + ' • ' + job['name_ar'].toString()).join(' | ')),
+        );
+      }),
+    ];
     return Card(
       child: ExpansionTile(
         leading: Icon(kind == 'location' ? Icons.location_on_outlined : kind == 'job' ? Icons.work_outline : Icons.account_tree_outlined, color: _hrStructureOrange),
