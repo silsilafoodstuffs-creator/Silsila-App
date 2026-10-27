@@ -214,13 +214,13 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
             DataCell(SizedBox(width: 210, child: TextField(controller: _arControllers[id], enabled: canEdit,
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم التصنيف بالعربية'),
               onTap: () => _select(row)))),
-            DataCell(SizedBox(width: 190, child: TextField(controller: _enControllers[id], enabled: _editing,
+            DataCell(SizedBox(width: 190, child: TextField(controller: _enControllers[id], enabled: canEdit,
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'Classification name'),
               onTap: () => _select(row)))),
             DataCell(Checkbox(value: row['is_active'] == true, activeColor: _classPurple,
               onChanged: canEdit ? (v) => setState(() { row['is_active'] = v == true; _selectedId = id; }) : null)),
             DataCell(Checkbox(value: row['show_in_app'] == true, activeColor: _classOrange,
-              onChanged: _editing ? (v) => setState(() { row['show_in_app'] = v == true; _selectedId = id; }) : null)),
+              onChanged: canEdit ? (v) => setState(() { row['show_in_app'] = v == true; _selectedId = id; }) : null)),
           ],
         );
       }),
@@ -259,9 +259,11 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
             selectedColor: _classPurple, labelStyle: TextStyle(fontSize: 12, color: _activeTab == i ? Colors.white : _classPurple),
             onSelected: (_) => _switchTab(i))),
       ])),
-      Expanded(child: _loading ? const Center(child: CircularProgressIndicator()) :
-        SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: Padding(
+      Expanded(child: _loading ? const Center(child: CircularProgressIndicator()) : Column(children:[
+        if (!_activeTypeEnabled) const Padding(padding: EdgeInsets.all(8), child: Text('النوع غير نشط: التصنيفات للعرض فقط، ولا يمكن تعديلها أو إضافة تصنيفات حتى إعادة تنشيطه.', style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w700))),
+        Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: Padding(
           padding: const EdgeInsets.all(8), child: _grid())))),
+      ])),
     ]),
   ));
 }
