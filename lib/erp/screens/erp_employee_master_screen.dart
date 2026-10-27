@@ -15,33 +15,33 @@ class ErpEmployeeMasterScreen extends StatefulWidget {
 class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   final _form = GlobalKey<FormState>();
   final _code = TextEditingController();
-  final _ar = TextEditingController();
+  final _ar = TextEditingController(text: 'إدارة عليا');
   final _en = TextEditingController();
-  final _address = TextEditingController();
+  final _address = TextEditingController(text: 'أطلس 4 بجوار الملعب عملية 1248 بلوك 7 مدخل 1 شقة 11');
   final _map = TextEditingController();
-  final _m1 = TextEditingController();
+  final _m1 = TextEditingController(text: '01121237271');
   final _m2 = TextEditingController();
-  final _w1 = TextEditingController();
+  final _w1 = TextEditingController(text: '01044480160');
   final _w2 = TextEditingController();
   final _company = TextEditingController();
   final _hireDate = TextEditingController(text: '01-01-2027');
   final _contractFrom = TextEditingController(text: '01-01-2027');
   final _contractTo = TextEditingController(text: '31-12-2029');
-  final _relativeMobile = TextEditingController();
-  final _relativeRelation = TextEditingController();
+  final _relativeMobile = TextEditingController(text: '01127283261');
+  final _relativeRelation = TextEditingController(text: 'أخ');
   String _contractType = 'بعقد';
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _deps = [];
   List<Map<String, dynamic>> _jobs = [];
   List<Map<String, dynamic>> _locs = [];
   List<Map<String, dynamic>> _geoRows = [];
-  String _country = 'مصر', _gov = '', _district = '', _locality = '', _status = 'active';
+  String _country = 'مصر', _gov = 'القاهرة', _district = 'السلام', _locality = 'أطلس 4', _status = 'active';
   String? _admin, _dep, _job, _loc, _error, _message, _govGeoId, _districtGeoId;
   bool _loading = false, _saving = false;
   static const _contractTypes = ['بعقد','بدون عقد','شركة عمالة','مؤقت','يومية'];
   final _govs = const ['القاهرة','الجيزة','القليوبية','الإسكندرية','الشرقية','الدقهلية','الغربية','المنوفية','البحيرة','كفر الشيخ','دمياط','بورسعيد','الإسماعيلية','السويس','شمال سيناء','جنوب سيناء','بني سويف','الفيوم','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح'];
   final Map<String, List<String>> _districts = const {
-    'القاهرة':['مدينة نصر','مصر الجديدة','المعادي','حلوان','التجمع الخامس','عين شمس','شبرا','المرج'],
+    'القاهرة':['السلام','مدينة نصر','مصر الجديدة','المعادي','حلوان','التجمع الخامس','عين شمس','شبرا','المرج'],
     'الجيزة':['الدقي','العجوزة','الهرم','فيصل','أكتوبر','الشيخ زايد','البدرشين'],
     'القليوبية':['بنها','شبرا الخيمة','قليوب','الخصوص','الخانكة','طوخ','قها','كفر شكر'],
     'الإسكندرية':['المنتزه','شرق','وسط','غرب','العجمي'],
@@ -144,8 +144,10 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
 
   void _clear() {
     for (final c in [_code,_ar,_en,_address,_map,_m1,_m2,_w1,_w2,_relativeMobile,_relativeRelation]) { c.clear(); }
+    _ar.text = 'إدارة عليا'; _address.text = 'أطلس 4 بجوار الملعب عملية 1248 بلوك 7 مدخل 1 شقة 11';
+    _m1.text = '01121237271'; _w1.text = '01044480160'; _relativeMobile.text = '01127283261'; _relativeRelation.text = 'أخ';
     setState(() {
-      _gov = ''; _district = ''; _locality = ''; _govGeoId = null; _districtGeoId = null; _admin = null; _dep = null;
+      _gov = 'القاهرة'; _district = 'السلام'; _locality = 'أطلس 4'; _govGeoId = null; _districtGeoId = null; _admin = null; _dep = null;
       _job = null; _loc = null; _status = 'active'; _contractType = 'بعقد';
       _hireDate.text = '01-01-2027'; _contractFrom.text = '01-01-2027'; _contractTo.text = '31-12-2029';
     });
@@ -215,7 +217,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
               _locality = '';
             })),
           _drop('منطقة أو قرية', _locality.isEmpty ? null : _locality,
-            (_geoRows.isEmpty ? ['المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'].map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtGeoId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['name_ar']), child: Text(_s(g['name_ar']))))).toList(),
+            (_geoRows.isEmpty ? <String>{_locality, 'المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'}.where((v) => v.isNotEmpty).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtGeoId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['name_ar']), child: Text(_s(g['name_ar']))))).toList(),
             (v) => setState(() { _locality = v ?? ''; })),
           _field(_address, 'العنوان التفصيلي'), _field(_map, 'رابط موقع Google Maps'),
           OutlinedButton.icon(onPressed: () async {
