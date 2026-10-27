@@ -137,30 +137,6 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     }
   }
 
-  Future<void> _loadGovernorateLogos(String companyId) async {
-    try {
-      final result = await db!
-          .from('erp_geographic_data')
-          .select('id,logo_bytes,logo_mime_type')
-          .eq('company_id', companyId)
-          .eq('level', 'governorate');
-      if (!mounted || result.isEmpty) return;
-      final logos = <String, Map<String, dynamic>>{
-        for (final item in result)
-          s((item as Map)['id']): Map<String, dynamic>.from(item as Map),
-      };
-      setState(() {
-        for (final row in rows) {
-          final logo = logos[s(row['id'])];
-          if (logo == null) continue;
-          row['logo_bytes'] = logo['logo_bytes'];
-          row['logo_mime_type'] = logo['logo_mime_type'];
-        }
-      });
-    } catch (_) {
-      // The geographic tree remains usable with a neutral emblem if logos fail.
-    }
-  }
 
   void _rebuildChildren() {
     _children.clear();
@@ -279,11 +255,8 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         loading = false;
         error = null;
       });
-      // Logo bytes are fetched separately so a slow/large image payload never
-      // delays the governorate/district/area tree becoming interactive.
-      if (resolvedCompanyId != null) {
-        await _loadGovernorateLogos(resolvedCompanyId);
-      }
+      // Geographic rows intentionally exclude logo bytes. The tree remains fast
+      // and uses a neutral emblem until a dedicated, lazy logo viewer is opened.
     } catch (e) {
       if (!mounted) return;
       setState(() {
