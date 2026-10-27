@@ -1804,31 +1804,33 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFF7B6A8E), fontSize: 12)),
                 ]),
               ]),
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                Chip(avatar: const Icon(Icons.circle, size: 9, color: Color(0xFFFFA015)), label: Text(status), backgroundColor: const Color(0xFFF5EFFB), side: const BorderSide(color: Color(0xFFE8E1F0))),
-                FilledButton.icon(
-                  onPressed: _loading ? null : _load,
-                  icon: const Icon(Icons.refresh_rounded, size: 16),
-                  label: const Text('تحديث'),
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF2475B8), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
-                ),
-                FilledButton.icon(
-                  onPressed: _saving ? null : () => setState(() {
-                    _selectedDocumentId = null; _pendingLines = []; _lines = []; _documentNumber.clear(); _notes.clear(); _sourceChannel = 'manual'; _sourceDocumentIds = <String>[]; _paymentType = 'آجل'; _documentDate = DateTime.now(); _fiscalYear.text = _documentDate.year.toString(); _fiscalPeriodId = null;
-                    _invoiceDiscountAmount.text = '0'; _invoiceDiscountPercent.text = '0'; _isTaxInvoice = false; _error = null; _message = null;
-                  }),
-                  icon: const Icon(Icons.add_rounded, size: 16),
-                  label: const Text('إضافة'),
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF18865A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
-                ),
-                FilledButton.icon(onPressed: _saving ? null : (_selectedDocumentId == null ? _createDraft : _savePendingLines), icon: const Icon(Icons.save_outlined, size: 16), label: const Text('حفظ'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: _selectedDocumentId == null ? null : () => _loadLines(_selectedDocumentId!), icon: const Icon(Icons.edit_outlined, size: 16), label: const Text('تعديل'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: _selectedDocumentId == null ? null : _deleteSelectedSalesDraft, icon: const Icon(Icons.delete_outline_rounded, size: 16), label: const Text('حذف'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: () => _showSalesQuickPreview(), icon: const Icon(Icons.preview_outlined, size: 16), label: const Text('معاينة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6E2BA6), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: _printSalesQuickPdf, icon: const Icon(Icons.print_outlined, size: 16), label: const Text('طباعة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: _importSalesQuickExcel, icon: const Icon(Icons.file_upload_outlined, size: 16), label: const Text('استيراد Excel'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-                FilledButton.icon(onPressed: _printSalesQuickPdf, icon: const Icon(Icons.picture_as_pdf_outlined, size: 16), label: const Text('طباعة PDF'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
-              ]),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Chip(avatar: const Icon(Icons.circle, size: 9, color: Color(0xFFFFA015)), label: Text(status), backgroundColor: const Color(0xFFF5EFFB), side: const BorderSide(color: Color(0xFFE8E1F0))),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(
+                    onPressed: _loading ? null : _load,
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text('تحديث'),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF2475B8), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
+                  ),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(onPressed: _saving ? null : (_selectedDocumentId == null ? _createDraft : _savePendingLines), icon: const Icon(Icons.save_outlined, size: 16), label: const Text('حفظ'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(onPressed: _selectedDocumentId == null ? null : () => _loadLines(_selectedDocumentId!), icon: const Icon(Icons.edit_outlined, size: 16), label: const Text('تعديل'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(onPressed: _selectedDocumentId == null ? null : _deleteSelectedSalesDraft, icon: const Icon(Icons.delete_outline_rounded, size: 16), label: const Text('حذف'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(onPressed: () => _showSalesQuickPreview(), icon: const Icon(Icons.preview_outlined, size: 16), label: const Text('معاينة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6E2BA6), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(onPressed: _printSalesQuickPdf, icon: const Icon(Icons.print_outlined, size: 16), label: const Text('طباعة'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(onPressed: _importSalesQuickExcel, icon: const Icon(Icons.file_upload_outlined, size: 16), label: const Text('استيراد Excel'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(onPressed: _printSalesQuickPdf, icon: const Icon(Icons.picture_as_pdf_outlined, size: 16), label: const Text('طباعة PDF'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD32F2F), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
+                ]),
+              ),
             ]),
           ),
           const SizedBox(height: 12),
@@ -1837,12 +1839,14 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           if (_message != null) _notice(_message!, Colors.green),
           _invoiceCard('بيانات المستند والعميل', Icons.description_outlined, LayoutBuilder(builder: (context, constraints) {
             final wide = constraints.maxWidth >= 700;
-            final fieldWidth = wide ? (constraints.maxWidth - 24) / 3 : constraints.maxWidth;
+            final fieldWidth = constraints.maxWidth >= 850 ? 165.0 : constraints.maxWidth >= 700 ? 145.0 : constraints.maxWidth;
+            final warehouseFieldWidth = constraints.maxWidth >= 850 ? 260.0 : constraints.maxWidth >= 700 ? 220.0 : constraints.maxWidth;
+            final customerFieldWidth = constraints.maxWidth >= 850 ? 210.0 : constraints.maxWidth >= 700 ? 190.0 : constraints.maxWidth;
             final docCode = _s(doc['auto_number']).isEmpty
                 ? '${const <String,String>{'quotation':'QUO','order':'SO','invoice':'INV','return':'SRT','delivery':'DLV'}[_documentType] ?? 'SAL'}-سيصدر-عند-الحفظ'
                 : _s(doc['auto_number']);
             final fiscalOptions = _fiscalPeriods;
-            Widget box(Widget child) => SizedBox(width: fieldWidth, child: child);
+            Widget box(Widget child, {double? width}) => SizedBox(width: width ?? fieldWidth, child: child);
             Widget metric(String label, String value) => _invoiceMetric(label, value, strong: true);
             return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               Container(
@@ -1899,7 +1903,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 }),
               ),
               const SizedBox(height: 12),
-              Wrap(spacing: 12, runSpacing: 10, children: [
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                // Keep the four core controls together on the first desktop row.
                 box(DropdownButtonFormField<String>(
                   value: fiscalOptions.any((p) => _s(p['id']) == _fiscalPeriodId) ? _fiscalPeriodId : null,
                   isExpanded: true, decoration: field('السنة المالية'),
@@ -1934,9 +1939,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   ],
                   onChanged: hasDraft || !_canChangePaymentType ? null : (v) => setState(() => _paymentType = v ?? 'آجل'),
                 )),
-                box(_lookupInput(label: 'اسم العميل', value: _partyLabel(_partyId), enabled: !hasDraft, onOpen: _openCustomerPicker)),
-                box(_lookupInput(label: 'المخزن', value: _warehouseLabel(_warehouseId), enabled: !hasDraft && _canChangeWarehouse, onOpen: _openWarehousePicker)),
-                box(_lookupInput(label: 'مندوب المبيعات', value: _firstOrEmpty(_representatives.where((r) => _s(r['id']) == _salesRepId).map((r) => _s(r['rep_code']) + ' — ' + _s(r['rep_name']))), enabled: !hasDraft && _canChangeSalesRep, onOpen: _openRepresentativePicker)),
+                box(_lookupInput(label: 'المخزن', value: _warehouseLabel(_warehouseId), enabled: !hasDraft && _canChangeWarehouse, onOpen: _openWarehousePicker), width: warehouseFieldWidth),
+                box(_lookupInput(label: 'اسم العميل', value: _partyLabel(_partyId), enabled: !hasDraft, onOpen: _openCustomerPicker), width: customerFieldWidth),
+                box(_lookupInput(label: 'مندوب المبيعات', value: _firstOrEmpty(_representatives.where((r) => _s(r['id']) == _salesRepId).map((r) => _s(r['rep_code']) + ' — ' + _s(r['rep_name']))), enabled: !hasDraft && _canChangeSalesRep, onOpen: _openRepresentativePicker), width: customerFieldWidth),
               ]),
               if (['invoice', 'order'].contains(_documentType)) ...[
                 const SizedBox(height: 8),
