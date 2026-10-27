@@ -595,7 +595,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           .select('allow_access,can_edit')
           .eq('company_id', companyId)
           .eq('user_id', userId)
-          .eq('menu_key', 'مبيعات::حركات::فاتورة بيع')
+          .inFilter('menu_key', ['مبيعات::حركات::فاتورة بيع', 'المبيعات والعملاء::حركات::فاتورة مبيعات'])
           .maybeSingle();
       return permission != null &&
           permission['allow_access'] == true &&
