@@ -311,7 +311,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
                 DataCell(Text((d['department_code'] ?? '').toString())),
                 DataCell(SizedBox(width: 220, child: Text((d['name_ar'] ?? '').toString()))),
                 DataCell(Text(level)),
-                DataCell(SizedBox(width: 180, child: Text((parent?['name_ar'] ?? '—').toString()))),
+                DataCell(SizedBox(width: 180, child: Text((parent['name_ar'] ?? '—').toString()))),
                 DataCell(Text(d['is_active'] == false ? 'غير نشط' : 'نشط')),
                 DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                   IconButton(tooltip: 'تعديل', onPressed: () => _edit(d, 'department'), icon: const Icon(Icons.edit_outlined, color: _hrStructurePurple)),
