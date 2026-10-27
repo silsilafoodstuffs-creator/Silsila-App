@@ -92,7 +92,11 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       } else if (isJob) {
         await _db!.from('erp_hr_jobs').insert({
           'company_id': _companyId, 'job_code': _code.text.trim().toUpperCase(),
-          'name_ar': _ar.text.trim(), 'name_en': _en.text.trim(), 'is_active': true,
+          'name_ar': _ar.text.trim(), 'name_en': _en.text.trim(),
+          'department_id': _departments.isEmpty ? null : _departments.first['id'],
+          'grade_id': _grades.isEmpty ? null : _grades.first['id'],
+          'min_qualification': 'إعدادية', 'min_license_class': '',
+          'is_active': true,
         });
       } else {
         await _db!.from('erp_hr_departments').insert({
@@ -294,6 +298,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
 
   Future<void> _editJobRequirements(Map<String,dynamic> job) async {
     var gradeId = job['grade_id']?.toString();
+    var departmentId = job['department_id']?.toString();
     var qualification = (job['min_qualification'] ?? 'إعدادية').toString();
     var license = (job['min_license_class'] ?? '').toString();
     final required = <String,bool>{for(final d in _documentColumns) d['key']!: job[d['key']] == true};
@@ -302,6 +307,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final saved = await showDialog<bool>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx,setDialogState) => AlertDialog(
       title: Text('متطلبات وظيفة: ' + (job['name_ar'] ?? '').toString()),
       content: SizedBox(width: 540, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        DropdownButtonFormField<String>(value: _departments.any((d)=>d['id'].toString()==departmentId) ? departmentId : null, isExpanded:true, decoration: const InputDecoration(labelText:'الإدارة / القسم'), items:_departments.where((d)=>d['is_active'] != false).map((d)=>DropdownMenuItem<String>(value:d['id'].toString(),child:Text(d['department_code'].toString()+' • '+d['name_ar'].toString()))).toList(), onChanged:(v)=>setDialogState(()=>departmentId=v)),
         DropdownButtonFormField<String>(value: _grades.any((g)=>g['id'].toString()==gradeId) ? gradeId : null, isExpanded:true, decoration: const InputDecoration(labelText:'الدرجة الوظيفية'), items:_grades.map((g)=>DropdownMenuItem<String>(value:g['id'].toString(),child:Text(g['grade_code'].toString()+' • '+g['name_ar'].toString()))).toList(), onChanged:(v)=>setDialogState(()=>gradeId=v)),
         DropdownButtonFormField<String>(value: qualifications.contains(qualification)?qualification:qualifications[2], isExpanded:true, decoration:const InputDecoration(labelText:'أقل مؤهل مطلوب'), items:qualifications.map((q)=>DropdownMenuItem<String>(value:q,child:Text(q))).toList(), onChanged:(v)=>setDialogState(()=>qualification=v ?? qualifications[2])),
         DropdownButtonFormField<String>(value: licenses.contains(license)?license:'', isExpanded:true, decoration:const InputDecoration(labelText:'أقل درجة رخصة مطلوبة'), items:licenses.map((q)=>DropdownMenuItem<String>(value:q,child:Text(q.isEmpty?'لا يشترط رخصة':q))).toList(), onChanged:(v)=>setDialogState(()=>license=v ?? '')),
@@ -312,7 +318,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     )));
     if(saved==true && _db!=null){
       try {
-        await _db!.from('erp_hr_jobs').update({'grade_id':gradeId,'min_qualification':qualification,'min_license_class':license,...required}).eq('id',job['id']).eq('company_id',_companyId);
+        await _db!.from('erp_hr_jobs').update({'department_id':departmentId,'grade_id':gradeId,'min_qualification':qualification,'min_license_class':license,...required}).eq('id',job['id']).eq('company_id',_companyId);
         await _load();
       } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر حفظ متطلبات الوظيفة: ' + e.toString()))); }
     }
