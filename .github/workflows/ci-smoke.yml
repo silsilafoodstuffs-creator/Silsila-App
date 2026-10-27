@@ -42,5 +42,3 @@ jobs:
         run: flutter analyze lib test
       - name: Run automated tests
         run: flutter test
-      - name: Build web release
-        run: flutter build web --release

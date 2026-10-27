@@ -31,12 +31,6 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
-      - name: Analyze Dart source
-        run: flutter analyze lib test --no-fatal-infos
-
-      - name: Run automated tests
-        run: flutter test
-
       - name: Build ERP web preview
         run: flutter build web --release --base-href "/Silsila-App/"
 
