@@ -184,7 +184,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       'address': _address.text.trim(), 'map_url': _map.text.trim(),
       'mobile_1': _m1.text.trim(), 'mobile_2': _m2.text.trim(),
       'work_mobile_1': _w1.text.trim(), 'work_mobile_2': _w2.text.trim(),
-      'phone': _m1.text.trim(), 'department_id': _dep ?? _admin, 'job_id': _job,
+      'phone': _m1.text.trim(), 'administration_id': _admin, 'department_id': _dep ?? _admin, 'job_id': _job,
       'work_location_id': _loc, 'department_name': depName, 'job_title': jobName,
       'employment_status': _status, 'is_active': _status == 'active',
       'hire_date': _isoDate(_hireDate.text).isEmpty ? null : _isoDate(_hireDate.text),
