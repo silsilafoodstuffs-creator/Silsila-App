@@ -795,10 +795,12 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       final payload=<String,dynamic>{'company_id':_company,'is_active':true};
       if(_isType){final code=_nextNumericCode(_types.map((t)=>t['type_code']));payload.addAll({'type_code':code,'type_code_display':_standardCode('UT',code),'name_ar':_nextUniqueName('نوع مستخدم جديد'),'name_en':_nextUniqueName('New user type',field:'name_en'),'description':'','show_at_login':false});}
       else if(_isUser){
-        final code=_nextNumericCode(_users.map((u)=>RegExp(r'(\d+)$').firstMatch(_s(u['user_code']))?.group(1)));
+        final selectedType=await _pickActiveUserType();
+        if(selectedType==null)return;
         final employee=await _pickEmployee();
         if(employee==null){if(mounted)setState(()=>_error='لم تتم إضافة المستخدم. يجب اختيار موظف نشط أولًا.');return;}
-        payload.addAll({'user_code':_standardCode('USR',code),'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':null,'has_sub_warehouse':false});
+        final code=_nextNumericCode(_users.map((u)=>RegExp(r'(\d+)$').firstMatch(_s(u['user_code']))?.group(1)));
+        payload.addAll({'user_code':_standardCode('USR',code),'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':selectedType['id'],'has_sub_warehouse':false});
       } else {final code=_nextNumericCode(_templates.map((t)=>t['template_code']));payload.addAll({'template_code':code,'template_code_display':_standardCode('PT',code),'name_ar':_nextUniqueName('قالب صلاحيات جديد'),'name_en':_nextUniqueName('New permission template',field:'name_en')});}
       final result=await _db!.from(_table).insert(payload).select().single();
       if(!mounted)return;
@@ -1165,6 +1167,17 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء'))]);
     }));
     search.dispose();return picked;
+  }
+  Future<Map<String,dynamic>?> _pickActiveUserType() async {
+    final available=_types.where((t)=>t['is_active']==true).toList();
+    if(available.isEmpty){if(mounted)setState(()=>_error='لا توجد أنواع مستخدمين نشطة. فعّل نوعًا أولًا.');return null;}
+    return showDialog<Map<String,dynamic>>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('اختيار نوع المستخدم'),
+      content:SizedBox(width:360,child:ListView(shrinkWrap:true,children:[
+        for(final type in available)ListTile(leading:const Icon(Icons.badge_outlined),title:Text(_s(type['name_ar'])),subtitle:Text(_s(type['type_code_display'])),onTap:()=>Navigator.pop(ctx,type)),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء'))],
+    ));
   }
   Future<void> _openEmployeePicker(Map<String,dynamic> row) async {
     final picked=await _pickEmployee();if(picked==null||!mounted)return;
