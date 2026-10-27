@@ -256,5 +256,5 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
 
   String _statusLabel(String status) => switch (status) { 'open' => 'مفتوح', 'partial' => 'منفذ جزئيًا', 'closed' => 'مغلق', 'cancelled' => 'ملغي', _ => status };
   Widget _notice(String text, bool error) => Container(margin: const EdgeInsets.only(bottom: 8), padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: error ? Colors.red.shade50 : Colors.green.shade50, borderRadius: BorderRadius.circular(8)), child: Text(text, style: TextStyle(color: error ? Colors.red.shade900 : Colors.green.shade900)));
-  Widget _task(String label, IconData icon, Color color, VoidCallback action) => Padding(padding: const EdgeInsetsDirectional.only(end: 7), child: ErpQuickTaskButton(label: label, icon: icon, color: color, onPressed: action));
+  Widget _task(String label, IconData icon, Color color, VoidCallback action) => Padding(padding: const EdgeInsetsDirectional.only(end: 7), child: ErpQuickTaskButton(label: label, icon: icon, fallbackColor: color, onPressed: action));
 }
