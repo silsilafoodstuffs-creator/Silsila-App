@@ -105,12 +105,8 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _activityTypes = ActivityService.fallbackActivities
-            .map((row) => row['name']!)
-            .toList(growable: false);
-        if (!_activityTypes.contains(_activity) && _activityTypes.isNotEmpty) {
-          _activity = _activityTypes.first;
-        }
+        // Never display hard-coded activity options when the database is unavailable.
+        _activityTypes = const <String>[];
         _activitiesLoading = false;
       });
     }
