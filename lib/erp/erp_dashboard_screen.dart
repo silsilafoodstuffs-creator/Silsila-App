@@ -2305,24 +2305,31 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ),
           ];
 
-          // Keep all six analysis cards in one responsive, content-driven grid.
-          // Their headings, rows and empty-value indicators must remain visible
-          // even when no financial records exist yet.
+          // Keep the three primary financial analyses in the first row,
+          // and the remaining three analyses directly beneath them.
+          // All six cards retain their headings and indicators without data.
           final width = constraints.maxWidth;
-          final columns = width >= 1050 ? 3 : width >= 680 ? 2 : 1;
-          final cardWidth = (width - (columns - 1) * 10) / columns;
+          final cardWidth = (width - 20) / 3;
+          Widget analysisRow(int start) => Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = start; index < start + 3; index++) ...[
+                if (index > start) const SizedBox(width: 10),
+                Expanded(
+                  child: SizedBox(
+                    height: 174,
+                    child: cards[index],
+                  ),
+                ),
+              ],
+            ],
+          );
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: cards.map((card) => SizedBox(
-                  width: cardWidth,
-                  height: 174,
-                  child: card,
-                )).toList(),
-              ),
+              analysisRow(0),
+              const SizedBox(height: 10),
+              analysisRow(3),
               const SizedBox(height: 12),
               _executiveStaffPerformance(),
             ],
