@@ -1519,7 +1519,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       if(event is KeyDownEvent && event.logicalKey==LogicalKeyboardKey.f1){
         if(_isTemplate && _selectedId!=null){_openMenuPicker(parentId:_selectedId!,template:true);return KeyEventResult.handled;}
         if(_isPermissions){_openTemplatePicker();return KeyEventResult.handled;}
-        if(_isUser && _selectedId!=null){_openBranchWarehousePicker(_selectedId!);return KeyEventResult.handled;}
+        if(_isUser && _selectedId!=null){ final user=_users.where((u)=>_s(u['id'])==_selectedId).firstOrNull; if(user!=null)_openEmployeePicker(user); return KeyEventResult.handled; }
       }
       return KeyEventResult.ignored;
     },child:Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -1544,7 +1544,6 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       Expanded(child:_view=='classifications'
         ? ErpUserClassificationsScreen(companyId: _company)
         : _loading ? const Center(child:CircularProgressIndicator())
-        : _isPermissions ? _ruleGrid()
         : _isPermissions ? _ruleGrid()
         : _isHierarchy ? _hierarchyView()
         : SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
