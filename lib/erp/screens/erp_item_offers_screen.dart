@@ -34,6 +34,11 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   SupabaseClient? get _db { try { return Supabase.instance.client; } catch (_) { return null; } }
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
+  String _campaignTitle(String type) => const {
+    'customer_magazine': 'مجلات عروض العملاء',
+    'promotion': 'عروض الترويج',
+    'slow_moving': 'عروض الرواكد',
+  }[type] ?? 'عروض الأصناف';
   String _date(DateTime d) => '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
   @override void initState() { super.initState(); if (widget.initialCampaignType != null && const {'customer_magazine','promotion','slow_moving'}.contains(widget.initialCampaignType)) _campaignType = widget.initialCampaignType!; _load(); }
   @override void dispose() { _name.dispose(); _search.dispose(); super.dispose(); }
@@ -55,7 +60,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
         _warehouses = (values[2] as List).cast<Map<String,dynamic>>();
         _branches = (values[3] as List).cast<Map<String,dynamic>>();
         _parties = (values[4] as List).cast<Map<String,dynamic>>();
-        _campaigns = (values[5] as List).map((r) => Map<String,dynamic>.from(r)).toList();
+        _campaigns = (values[5] as List).map((r) => Map<String,dynamic>.from(r)).where((r) => !widget.lockCampaignType || _s(r['campaign_type']) == _campaignType).toList();
         _loading = false;
       });
     } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات العروض: $e'; }); }
@@ -261,7 +266,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                         const Row(children: [
                           Icon(Icons.local_offer, color: Color(0xFFFFA015), size: 26),
                           SizedBox(width: 8),
-                          Expanded(child: Text('عروض الأصناف', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
+                          Expanded(child: Text(widget.lockCampaignType ? _campaignTitle(_campaignType) : 'عروض الأصناف', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
                         ]),
                         const SizedBox(height: 8),
                         SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
