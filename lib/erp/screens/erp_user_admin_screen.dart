@@ -1494,7 +1494,6 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
             onChanged:_editMode?(v)=>setState(()=>v==true?_permissionSelectedUserIds.add(_s(user['id'])):_permissionSelectedUserIds.remove(_s(user['id']))):null,
           )),
         ]))),
-      ),
       Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text('المستخدمون المستهدفون: ${targets.length} • كل صف رئيسي عند إلغاء «مسموح» يلغي صلاحيات الشاشات التابعة له.',style:TextStyle(color:Colors.grey.shade700,fontSize:12))),
       Container(color:const Color(0xFFEDE4F8),padding:const EdgeInsetsDirectional.only(start:8,end:4,top:6,bottom:6),child:Row(children:[
         const Expanded(flex:3,child:Text('القائمة / الشاشة',style:TextStyle(fontWeight:FontWeight.w900,color:_userAdminPurple))),
