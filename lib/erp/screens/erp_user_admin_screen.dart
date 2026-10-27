@@ -1024,7 +1024,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   Widget _textCell(Map<String,dynamic> row,String field,{double width=145})=>SizedBox(width:width,child:TextFormField(
     key:ValueKey('${row['id']}-$field-${row[field]}-$_editMode'),initialValue:_s(row[field]),enabled:_editMode,
     decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:8),border:OutlineInputBorder()),
-    onChanged:(v)=>row[field]=v,
+    onChanged:(v){ if(field=='description'){ final words=v.trim().split(RegExp(r'\\s+')).where((w)=>w.isNotEmpty).take(10).toList(); row[field]=words.join(' '); } else { row[field]=v; } },
   ));
 
   Future<void> _openBranchWarehousePicker(String userId) async {
@@ -1234,7 +1234,6 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         return DataRow(selected:id==_selectedId,onSelectChanged:(v)async{setState(()=>_selectedId=v==true?id:null);if(v==true&&_isTemplate)await _loadRules();},cells:[
           DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]).isNotEmpty ? row[codeField] : (_isType ? 'UT${_s(row['type_code']).padLeft(4, '0')}' : _isTemplate ? 'PT${_s(row['template_code']).padLeft(4, '0')}' : row[codeField]))),
           if(!_isUser)DataCell(_textCell(row,'name_ar')),if(!_isUser)DataCell(_textCell(row,'name_en')),
-          if(_isType)DataCell(_textCell(row,'description',width:220)),
           if(_isUser)DataCell(_textCell(row,'name_ar',width:165)),
           if(_isUser)DataCell(SizedBox(width:170,child:Row(children:[Expanded(child:Text(_employeeLabel(_s(row['employee_id'])),maxLines:2,overflow:TextOverflow.ellipsis)),IconButton(tooltip:'بحث عن موظف (F1)',visualDensity:VisualDensity.compact,onPressed:_editMode?()=>_openEmployeePicker(row):null,icon:const Icon(Icons.search,size:18))]))),
           if(_isUser)DataCell(SizedBox(width:175,child:Row(children:[Expanded(child:TextFormField(initialValue:_s(row['_password_draft']),obscureText:row['_password_visible']!=true,enabled:_editMode,decoration:const InputDecoration(hintText:'كلمة مرور',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_draft']=v)),IconButton(tooltip:'إظهار/إخفاء كلمة المرور',visualDensity:VisualDensity.compact,onPressed:_editMode?()=>setState(()=>row['_password_visible']=row['_password_visible']!=true):null,icon:Icon(row['_password_visible']==true?Icons.visibility_off:Icons.visibility,size:18))]))),
@@ -1245,11 +1244,12 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
             items:_types.map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
             onChanged:_editMode?(v)=>setState(()=>row['user_type_id']=v):null,
           ))),
-          if(!_isUser)DataCell(_imageCell(row)),
-          DataCell(Checkbox(value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+          if(_isType)DataCell(Checkbox(shape:const CircleBorder(),value:row['show_at_login']==true,onChanged:_editMode?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+          if(!_isUser && !_isType)DataCell(_imageCell(row)),
+          DataCell(Checkbox(shape:const CircleBorder(),value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+          if(_isType)DataCell(_textCell(row,'description',width:220)),
           if(_isUser)DataCell(Checkbox(value:row['has_sub_warehouse']==true,onChanged:_editMode?(v)=>setState(()=>row['has_sub_warehouse']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
           if(_isUser)DataCell(OutlinedButton.icon(onPressed:()=>_openBranchWarehousePicker(id),icon:const Icon(Icons.add_location_alt_outlined,size:16),label:const Text('+ فروع'))),
-          if(_isType)DataCell(Checkbox(value:row['show_at_login']==true,onChanged:_editMode?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
           if(_isTemplate)DataCell(OutlinedButton.icon(onPressed:()async{setState(()=>_selectedId=id);await _loadRules();await _openMenuPicker(parentId:id,template:true);},icon:const Icon(Icons.drive_file_move_outlined,size:16),label:const Text('جلب قوائم'))),
         ]);
       }),
