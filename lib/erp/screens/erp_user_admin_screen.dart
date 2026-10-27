@@ -1310,8 +1310,8 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     return Focus(autofocus:true,onKeyEvent:(node,event){
       if(event is KeyDownEvent && event.logicalKey==LogicalKeyboardKey.f1){
         if(_isTemplate && _selectedId!=null){_openMenuPicker(parentId:_selectedId!,template:true);return KeyEventResult.handled;}
-        if(_isPermissions && _selectedUserId!=null){_openMenuPicker(parentId:_selectedUserId!,template:false);return KeyEventResult.handled;}
-        if(_isUser && _selectedId!=null){_openBranchWarehousePicker(_selectedId!);return KeyEventResult.handled;}
+        if(_isPermissions){_openTemplatePicker();return KeyEventResult.handled;}
+        if(_isUser && _selectedId!=null){final user=_users.where((u)=>_s(u['id'])==_selectedId).firstOrNull;if(user!=null)_openEmployeePicker(user);return KeyEventResult.handled;}
       }
       return KeyEventResult.ignored;
     },child:Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -1320,20 +1320,15 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:_userAdminPurple)),Text('إدارة البيانات والصلاحيات للشركة الحالية',style:TextStyle(fontSize:11,color:Colors.grey.shade700))])),
       ])),
       _toolbar(),
-      Padding(
+      if(!_isPermissions)Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(children: [
-            _userTab('المستخدمين', 'hierarchy', Icons.people_alt_outlined),
-            const SizedBox(width: 6),
-            _userTab('تصنيفات المستخدمين', 'classifications', Icons.category_outlined),
-            const SizedBox(width: 6),
-            _userTab('قوالب صلاحيات المستخدمين', 'templates', Icons.fact_check_outlined),
-            const SizedBox(width: 6),
-            _userTab('صلاحيات المستخدمين', 'permissions', Icons.admin_panel_settings_outlined),
-          ]),
-        ),
+        child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+          _userTab('أنواع المستخدمين','types',Icons.badge_outlined),const SizedBox(width:6),
+          _userTab('تصنيفات المستخدمين','classifications',Icons.category_outlined),const SizedBox(width:6),
+          _userTab('قوالب صلاحيات المستخدمين','templates',Icons.fact_check_outlined),const SizedBox(width:6),
+          _userTab('المستخدمين','users',Icons.people_alt_outlined),const SizedBox(width:6),
+          _userTab('احتياطي شاشة المستخدمين','hierarchy',Icons.account_tree_outlined),
+        ])),
       ),
       if(_error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
       if(_message!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_message!,style:const TextStyle(color:Colors.green))),
@@ -1341,9 +1336,10 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       Expanded(child:_view=='classifications'
         ? ErpUserClassificationsScreen(companyId: _company)
         : _loading ? const Center(child:CircularProgressIndicator())
-        : _isHierarchy ? _hierarchyView()
+        : _isPermissions ? _ruleGrid()
+        : (_isHierarchy || _isUser) ? _hierarchyView()
         : SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          if(_isPermissions) _ruleGrid() else if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
+          if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
         ])))),
     ])));
   }
@@ -1367,17 +1363,20 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   }
 
   Future<void> _applyTemplate() async {
-    if(_selectedUserId==null||_selectedTemplateId==null)return;
+    final targets=_permissionTargetIds;
+    if(targets.isEmpty||_selectedTemplateId==null){if(mounted)setState(()=>_error='اختر المستخدمين المستهدفين ثم حدد قالب الصلاحيات.');return;}
     try{
       final source=await _db!.from('erp_permission_template_rules').select().eq('company_id',_company).eq('template_id',_selectedTemplateId!);
-      for(final item in (source as List).whereType<Map<String,dynamic>>()){
-        final payload=<String,dynamic>{'company_id':_company,'user_id':_selectedUserId,'menu_name':item['menu_name'],'submenu_name':item['submenu_name']??'','page_name':item['page_name']};
-        for(final field in _userAdminActionFields.values)payload[field]=item[field]==true;
-        await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');
-      }
-      await _loadUserRules();
-      if(mounted)setState(()=>_message='تم تطبيق قالب الصلاحيات على المستخدم المحدد.');
-    }catch(e){if(mounted)setState(()=>_error='تعذر تطبيق القالب: $e');}
+      final rows=(source as List).whereType<Map<String,dynamic>>().toList();
+      setState((){
+        _rules.removeWhere((r)=>targets.contains(_s(r['user_id'])));
+        for(final uid in targets)for(final item in rows)_rules.add(<String,dynamic>{
+          'company_id':_company,'user_id':uid,'menu_name':item['menu_name'],'submenu_name':item['submenu_name']??'','page_name':item['page_name'],
+          for(final field in _userAdminActionFields.values)field:item[field]==true,
+        });
+        _editMode=true;_error=null;_message='تم تحميل القالب كمسودة على ${targets.length} مستخدم. اضغط حفظ لتثبيت الصلاحيات.';
+      });
+    }catch(e){if(mounted)setState(()=>_error='تعذر جلب القالب: $e');}
   }
 
   Future<void> _openUserPicker() async {
