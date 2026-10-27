@@ -72,7 +72,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       // a failed geography query must not prevent the branch directory from loading.
       final result = await _db!
           .from('erp_branches')
-          .select('id, branch_code, branch_name, branch_name_en, email, phone, phone2, landline1, landline2, location, address, latitude, longitude, governorate_id, district_id, area_id, is_main, is_active')
+          .select('id, branch_code, branch_name, branch_name_en, email, phone, phone2, landline1, landline2, location, address, governorate_id, district_id, area_id, is_main, is_active')
           .eq('company_id', companyId)
           .order('branch_code');
       List<Map<String, dynamic>> geoRows = [];
@@ -418,9 +418,28 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         Card(color: _branchPurple, child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Text('الفروع', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('الفروع', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white)),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _singleSelectedBranch == null
+                      ? null
+                      : () => _openBranchInGoogleMaps(_singleSelectedBranch!),
+                  icon: const Icon(Icons.map_outlined, size: 18),
+                  label: const Text('خرائط Google'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white70),
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  ),
+                ),
+              ],
+            ),
             const Text('إدارة دليل الفروع الفعلي المرتبط بالشركة.', style: TextStyle(color: Colors.white70)),
-            const SizedBox(height: 8), _branchActions(),
+            const SizedBox(height: 6), _branchActions(),
           ]),
         ))
       else
@@ -435,7 +454,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         Expanded(child: ListView.separated(
           padding: const EdgeInsets.only(bottom: 8),
           itemCount: _rows.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 7),
+          separatorBuilder: (_, __) => const SizedBox(height: 4),
           itemBuilder: (context, index) => _branchCard(_rows[index], index),
         )),
     ]),
@@ -485,7 +504,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     return Card(
       margin: EdgeInsets.zero, elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13), side: BorderSide(color: selected || editing ? _branchPurple.withValues(alpha: .65) : _branchPurple.withValues(alpha: .18), width: selected || editing ? 1.4 : 1)),
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           SizedBox(width: 28, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, color: _branchPurple))),
           Checkbox(shape: const CircleBorder(), value: selected, onChanged: (v) => _selectBranch(id, v == true), visualDensity: VisualDensity.compact, activeColor: _branchPurple),
@@ -503,7 +522,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
             IconButton(tooltip: 'حذف الفرع', onPressed: () => _delete(row), icon: const Icon(Icons.delete_outline, color: Colors.red)),
           ],
         ]),
-        const Divider(height: 8),
+        const Divider(height: 5),
         Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, children: [
           editing ? geoDropdown('المحافظة', _editGovernorateId, 'governorate', (v) => setState(() { _editGovernorateId=v; _editDistrictId=null; _editAreaId=null; }), width: 220) : textCell('المحافظة', _geoName(row['governorate_id']), width: 220),
           editing ? geoDropdown('الحي / المركز', _editDistrictId, 'district', (v) => setState(() { _editDistrictId=v; _editAreaId=null; }), parent: _editGovernorateId, width: 220) : textCell('الحي / المركز', _geoName(row['district_id']), width: 220),
@@ -513,7 +532,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
         Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
           editing ? inputCell('العنوان', 'address', width: 300) : textCell('العنوان', _s(row['address']), width: 300),
           editing ? inputCell('علامة مميزة', 'location', width: 220) : textCell('علامة مميزة', _s(row['location']), width: 220),
-          OutlinedButton.icon(onPressed: () => _openBranchInGoogleMaps(row), icon: const Icon(Icons.map_outlined, size: 18), label: const Text('فتح خرائط Google'), style: OutlinedButton.styleFrom(foregroundColor: _branchPurple, visualDensity: VisualDensity.compact)),
+
         ])),
         const Divider(height: 8),
         Padding(padding: const EdgeInsetsDirectional.only(start: 34), child: Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
