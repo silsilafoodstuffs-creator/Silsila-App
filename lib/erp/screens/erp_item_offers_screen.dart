@@ -263,10 +263,10 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                     Card(color: const Color(0xFF3E007D), child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                        const Row(children: [
-                          Icon(Icons.local_offer, color: Color(0xFFFFA015), size: 26),
-                          SizedBox(width: 8),
-                          Expanded(child: Text(widget.lockCampaignType ? _campaignTitle(_campaignType) : 'عروض الأصناف', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
+                        Row(children: [
+                          const Icon(Icons.local_offer, color: Color(0xFFFFA015), size: 26),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(widget.lockCampaignType ? _campaignTitle(_campaignType) : 'عروض الأصناف', style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w900, color: Colors.white))),
                         ]),
                         const SizedBox(height: 8),
                         SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
