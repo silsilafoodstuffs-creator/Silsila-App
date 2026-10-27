@@ -82,7 +82,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   bool _loading = false, _saving = false, _editMode = false;
   String? _error, _message, _selectedId, _selectedUserId;
   List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
-  List<Map<String,dynamic>> _branches = [], _warehouses = [];
+  List<Map<String,dynamic>> _branches = [], _warehouses = [], _employees = [];
   String? _selectedTemplateId;
   String? _selectedNodeKind;
   String _viewMode = 'tree';
@@ -258,6 +258,10 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         }
         userList.sort((a, b) => codeNumber(a).compareTo(codeNumber(b)));
         if (_isUser || _isHierarchy) {
+          try {
+            final e = await _db!.from('erp_employees').select('id,employee_code,full_name,full_name_en,is_active').eq('company_id', _company).eq('is_active', true).order('employee_code');
+            _employees = (e as List).map((x) => Map<String,dynamic>.from(x)).toList();
+          } catch (_) { _employees = []; }
           try {
             final b = await _db!.from('erp_branches').select().eq('company_id', _company).eq('is_active', true).order('branch_code');
             _branches = (b as List).map((x) => Map<String,dynamic>.from(x)).toList();
@@ -785,9 +789,13 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if (_isType) {
         payload.addAll({'name_ar': _nextUniqueName('نوع مستخدم جديد'), 'name_en': _nextUniqueName('New user type', field: 'name_en'), 'description': '', 'show_at_login': false});
       } else if (_isUser) {
+        if (_employees.isEmpty) { setState(() => _error = 'لا يمكن إنشاء مستخدم قبل إضافة موظف نشط من شاشة ملف الموظف.'); return; }
+        final selectedEmployee = await _pickEmployee();
+        if (selectedEmployee == null) { setState(() => _error = 'إضافة المستخدم أُلغيت: يجب اختيار موظف أولًا.'); return; }
         payload.addAll({
-          'name_ar': _nextUniqueName('مستخدم جديد'),
-          'name_en': _nextUniqueName('New user', field: 'name_en'),
+          'employee_id': selectedEmployee['id'],
+          'name_ar': _s(selectedEmployee['full_name']),
+          'name_en': _s(selectedEmployee['full_name_en']).isNotEmpty ? _s(selectedEmployee['full_name_en']) : _s(selectedEmployee['full_name']),
           'user_type_id': _types.isEmpty ? null : _types.first['id'],
           'has_sub_warehouse': false,
         });
@@ -842,6 +850,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             if (_isUser && password.isNotEmpty) {
               await _db!.rpc('set_erp_user_password', params: {'p_user_id': row['id'], 'p_password': password});
               row['_password_draft'] = '';
+              row['_password_confirmation_draft'] = '';
             }
           }
         }
@@ -1159,6 +1168,54 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     }
   }
 
+  String _employeeLabel(String employeeId) {
+    if (employeeId.isEmpty) return 'غير مرتبط بموظف';
+    final e = _employees.where((x) => _s(x['id']) == employeeId).firstOrNull;
+    if (e == null) return 'موظف غير موجود';
+    return '${_s(e['employee_code'])} — ${_s(e['full_name'])}';
+  }
+
+  Future<Map<String,dynamic>?> _pickEmployee() async {
+    if (_employees.isEmpty) {
+      if (mounted) setState(() => _error = 'لا توجد سجلات موظفين نشطة. أضف الموظف أولًا من شاشة ملف الموظف.');
+      return null;
+    }
+    final search = TextEditingController();
+    final picked = await showDialog<Map<String,dynamic>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) {
+        final q = search.text.trim().toLowerCase();
+        final rows = _employees.where((e) => '${_s(e['employee_code'])} ${_s(e['full_name'])} ${_s(e['full_name_en'])}'.toLowerCase().contains(q)).toList();
+        return AlertDialog(
+          title: const Text('اختيار موظف وربطه بالمستخدم'),
+          content: SizedBox(width: 620, height: 420, child: Column(children: [
+            TextField(controller: search, decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'بحث بالكود أو الاسم', isDense: true), onChanged: (_) => setDialogState(() {})),
+            const SizedBox(height: 8),
+            Expanded(child: ListView.builder(itemCount: rows.length, itemBuilder: (_, i) {
+              final e = rows[i];
+              return ListTile(title: Text(_s(e['full_name'])), subtitle: Text('${_s(e['employee_code'])} • ${_s(e['full_name_en'])}'), onTap: () => Navigator.pop(ctx, e));
+            })),
+          ])),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء'))],
+        );
+      }),
+    );
+    search.dispose();
+    return picked;
+  }
+
+  Future<void> _openEmployeePicker(Map<String,dynamic> row) async {
+    final picked = await _pickEmployee();
+    if (picked == null || !mounted) return;
+    setState(() {
+      row['employee_id'] = picked['id'];
+      row['name_ar'] = picked['full_name'];
+      row['name_en'] = _s(picked['full_name_en']).isNotEmpty ? picked['full_name_en'] : picked['full_name'];
+      _error = null;
+      _message = 'تم ربط المستخدم بموظف ${_s(picked['employee_code'])}. احفظ التعديلات لتثبيت الربط.';
+    });
+  }
+
   Widget _masterGrid(){
     final codeField=_isType?'type_code_display':_isUser?'user_code':'template_code_display';
     return SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
@@ -1166,7 +1223,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
       columns:[
         const DataColumn(label:Text('م')),DataColumn(label:Text(_isType?'كود النوع':_isUser?'كود المستخدم':'كود القالب')),
-        if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isType)const DataColumn(label:Text('وصف مختصر (10 كلمات)')),if(_isUser)const DataColumn(label:Text('اسم المستخدم')),if(_isUser)const DataColumn(label:Text('كلمة المرور')), 
+        if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isType)const DataColumn(label:Text('وصف مختصر (10 كلمات)')),if(_isUser)const DataColumn(label:Text('اسم المستخدم')),if(_isUser)const DataColumn(label:Text('كود الموظف (F1)')),if(_isUser)const DataColumn(label:Text('كلمة المرور')),if(_isUser)const DataColumn(label:Text('تأكيد كلمة المرور')), 
         if(_isUser)const DataColumn(label:Text('نوع المستخدم')),
         if(!_isUser)const DataColumn(label:Text('الصورة')),const DataColumn(label:Text('نشط')),if(_isUser)const DataColumn(label:Text('له خزينة فرعية')),if(_isUser)const DataColumn(label:Text('الفروع والمخازن')),
         if(_isType)const DataColumn(label:Text('يظهر للدخول')),
@@ -1179,8 +1236,10 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
           if(!_isUser)DataCell(_textCell(row,'name_ar')),if(!_isUser)DataCell(_textCell(row,'name_en')),
           if(_isType)DataCell(_textCell(row,'description',width:220)),
           if(_isUser)DataCell(_textCell(row,'name_ar',width:165)),
-          if(_isUser)DataCell(SizedBox(width:185,child:Row(children:[Expanded(child:TextFormField(initialValue:_s(row['_password_draft']),obscureText:row['_password_visible']!=true,decoration:const InputDecoration(hintText:'كلمة مرور جديدة',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_draft']=v)),IconButton(tooltip:'إظهار/إخفاء كلمة المرور',visualDensity:VisualDensity.compact,onPressed:()=>setState(()=>row['_password_visible']=row['_password_visible']!=true),icon:Icon(row['_password_visible']==true?Icons.visibility_off:Icons.visibility,size:18))]))),
-          if(_isUser)DataCell(SizedBox(width:155,child:DropdownButtonFormField<String>(
+          if(_isUser)DataCell(SizedBox(width:170,child:Row(children:[Expanded(child:Text(_employeeLabel(_s(row['employee_id'])),maxLines:2,overflow:TextOverflow.ellipsis)),IconButton(tooltip:'بحث عن موظف (F1)',visualDensity:VisualDensity.compact,onPressed:_editMode?()=>_openEmployeePicker(row):null,icon:const Icon(Icons.search,size:18))]))),
+          if(_isUser)DataCell(SizedBox(width:175,child:Row(children:[Expanded(child:TextFormField(initialValue:_s(row['_password_draft']),obscureText:row['_password_visible']!=true,enabled:_editMode,decoration:const InputDecoration(hintText:'كلمة مرور',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_draft']=v)),IconButton(tooltip:'إظهار/إخفاء كلمة المرور',visualDensity:VisualDensity.compact,onPressed:_editMode?()=>setState(()=>row['_password_visible']=row['_password_visible']!=true):null,icon:Icon(row['_password_visible']==true?Icons.visibility_off:Icons.visibility,size:18))]))),
+          if(_isUser)DataCell(SizedBox(width:155,child:TextFormField(initialValue:_s(row['_password_confirmation_draft']),obscureText:row['_password_visible']!=true,enabled:_editMode,decoration:const InputDecoration(hintText:'تأكيد كلمة المرور',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_confirmation_draft']=v))),
+          if(_isUser)DataCell(SizedBox(width:115,child:DropdownButtonFormField<String>(
             key:ValueKey('${id}-type-${row['user_type_id']}'),value:_types.any((t)=>_s(t['id'])==_s(row['user_type_id']))?_s(row['user_type_id']):null,isExpanded:true,
             decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),
             items:_types.map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
