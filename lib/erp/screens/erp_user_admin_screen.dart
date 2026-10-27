@@ -799,7 +799,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           'employee_id': selectedEmployee['id'],
           'name_ar': _s(selectedEmployee['full_name']),
           'name_en': _s(selectedEmployee['full_name_en']).isNotEmpty ? _s(selectedEmployee['full_name_en']) : _s(selectedEmployee['full_name']),
-          'user_type_id': _selectedNodeKind == 'type' && _types.any((t)=>_s(t['id'])==_selectedId && t['is_active']==true) ? _selectedId : (_types.where((t)=>t['is_active']==true).isEmpty ? null : _types.firstWhere((t)=>t['is_active']==true)['id']),
+          'user_type_id': _selectedNodeKind == 'type' && _types.any((t)=>_s(t['id'])==_selectedId && t['is_active']==true) ? _selectedId : null,
           'has_sub_warehouse': false,
         });
       } else {
@@ -845,7 +845,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         for(final row in masterRows){
           final payload=<String,dynamic>{};
           if(_isType)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'description':_s(row['description']).trim().split(RegExp(r'\s+')).take(10).join(' '),'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':row['show_at_login']==true});
-          if(_isUser){ if(_s(row['employee_id']).isEmpty) throw StateError('يجب ربط المستخدم «${_s(row['name_ar'])}» بموظف أولًا.'); payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'employee_id':row['employee_id'],'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],'has_sub_warehouse':row['has_sub_warehouse']==true}); }
+          if(_isUser){ if(!_types.any((t)=>_s(t['id'])==_s(row['user_type_id']) && t['is_active']==true)) throw StateError('اختر نوع مستخدم نشطًا للسجل «${_s(row['name_ar'])}».'); payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'employee_id':row['employee_id'],'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],'has_sub_warehouse':row['has_sub_warehouse']==true}); }
           if(_isTemplate)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true});
           if(_s(row['id']).isNotEmpty) {
             await _db!.from(targetTable).update(payload).eq('company_id',_company).eq('id',row['id']);
@@ -988,7 +988,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         pw.Table(border:pw.TableBorder.all(color:PdfColors.grey400,width:.5),children:[
           pw.TableRow(children:['م','الكود','الاسم العربي','الاسم الإنجليزي','الحالة'].map((x)=>pw.Padding(padding:const pw.EdgeInsets.all(6),child:pw.Text(x))).toList()),
           for(var i=0;i<_rows.length;i++)pw.TableRow(children:[
-            '${i+1}',_s(_rows[i][_isType?'type_code':_isUser?'user_code':'template_code']),_s(_rows[i]['name_ar']),_s(_rows[i]['name_en']),_rows[i]['is_active']==true?'نشط':'غير نشط'
+            '${i+1}',_s(_rows[i][_isType?'type_code_display':_isUser?'user_code':'template_code_display']),_s(_rows[i]['name_ar']),_s(_rows[i]['name_en']),_rows[i]['is_active']==true?'نشط':'غير نشط'
           ].map((x)=>pw.Padding(padding:const pw.EdgeInsets.all(5),child:pw.Text(x,style:const pw.TextStyle(fontSize:9)))).toList()),
         ]),
       ]));
