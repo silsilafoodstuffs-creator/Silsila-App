@@ -144,7 +144,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
           .select('id,logo_bytes,logo_mime_type')
           .eq('company_id', companyId)
           .eq('level', 'governorate');
-      if (!mounted || result is! List || result.isEmpty) return;
+      if (!mounted || result.isEmpty) return;
       final logos = <String, Map<String, dynamic>>{
         for (final item in result)
           s((item as Map)['id']): Map<String, dynamic>.from(item as Map),
