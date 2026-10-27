@@ -245,6 +245,26 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     }
   }
 
+  void _resetExploration() {
+    if (_loading) return;
+    if (_imagesScrollController.hasClients) {
+      _imagesScrollController.jumpTo(0);
+    }
+    setState(() {
+      _url.clear();
+      _images = [];
+      _selected.clear();
+      _pageUrl = null;
+      _imagesPage = 0;
+      _duplicateCount = 0;
+      _previouslyImportedCount = 0;
+      _previewFutures.clear();
+      _previewErrors.clear();
+      _error = null;
+      _status = 'تمت إعادة ضبط الاستكشاف فقط. سجل الصور المستوردة محفوظ كما هو.';
+    });
+  }
+
   Future<void> _resetImportHistory() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1127,7 +1147,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   FilledButton.icon(
                     onPressed: _loading ? null : _scan,
                     icon: _loading ? const SizedBox(width: 17, height: 17, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.travel_explore),
-                    label: const Text('فحص الصفحة وجمع الصور'),
+                    label: const Text('استكشاف الموقع'),
                     style: FilledButton.styleFrom(backgroundColor: _purple, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13)),
                   ),
                   OutlinedButton.icon(
@@ -1138,13 +1158,18 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   FilledButton.icon(
                     onPressed: _loading || _selected.isEmpty ? null : _saveZip,
                     icon: const Icon(Icons.folder_zip_outlined),
-                    label: Text('تصدير PNG وExcel مضغوط (${_selected.length})'),
+                    label: Text('حفظ المحدد PNG / Excel في ملف ZIP (${_selected.length})'),
                     style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black87, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13)),
                   ),
                   OutlinedButton.icon(
-                    onPressed: _loading ? null : _resetImportHistory,
+                    onPressed: _loading ? null : _resetExploration,
                     icon: const Icon(Icons.restart_alt_rounded),
-                    label: const Text('إعادة ضبط سجل السحب'),
+                    label: const Text('إعادة ضبط استكشاف'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _loading ? null : _resetImportHistory,
+                    icon: const Icon(Icons.history_toggle_off_rounded),
+                    label: const Text('مسح سجل الصور المستوردة'),
                   ),
                   ]),
                 ),

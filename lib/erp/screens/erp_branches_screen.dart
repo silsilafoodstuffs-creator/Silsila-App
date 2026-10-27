@@ -41,6 +41,22 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
 
   String _s(dynamic value) => (value ?? '').toString();
 
+  String _standardBranchCode(String value) {
+    final name = value.trim().toLowerCase();
+    if (name.contains('القاهرة') || name.contains('cairo')) return '001';
+    if (name.contains('الجيزة') || name.contains('الجيزه') || name.contains('giza')) return '002';
+    if (name.contains('القليوبية') || name.contains('القليوبيه') || name.contains('qalyubia') || name.contains('qalyub')) return '003';
+    if (name.contains('الشرقية') || name.contains('الشرقيه') || name.contains('sharqia') || name.contains('sharkia')) return '004';
+    return '';
+  }
+
+  int _branchOrder(Map<String, dynamic> row) {
+    final standardCode = _standardBranchCode(_s(row['branch_name']));
+    if (standardCode.isNotEmpty) return int.parse(standardCode);
+    final actualCode = int.tryParse(_s(row['branch_code']));
+    return actualCode == null ? 100000 : 1000 + actualCode;
+  }
+
   Future<void> _load() async {
     final companyId = (widget.companyId ?? '').trim();
     if (_db == null || companyId.isEmpty) {
@@ -68,7 +84,13 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       } catch (_) {}
       if (!mounted) return;
       setState(() {
-        _rows = (result as List).whereType<Map<String, dynamic>>().toList(growable: false);
+        _rows = (result as List).whereType<Map<String, dynamic>>().toList();
+        _rows.sort((a, b) {
+          final order = _branchOrder(a).compareTo(_branchOrder(b));
+          if (order != 0) return order;
+          return _s(a['branch_code']).compareTo(_s(b['branch_code']));
+        });
+        _rows = List<Map<String, dynamic>>.unmodifiable(_rows);
         _selectedBranchIds.removeWhere((id) => !_rows.any((row) => _s(row['id']) == id));
         _geoRows = geoRows;
         _loading = false;
@@ -110,6 +132,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     }
     final defaultCode = (_rows.length + 1).toString().padLeft(3, '0');
     final code = TextEditingController(text: row == null ? defaultCode : _s(row['branch_code']));
+    var lastAutoCode = defaultCode;
     final name = TextEditingController(text: _s(row?['branch_name']));
     final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
     final email = TextEditingController(text: _s(row?['email']));
@@ -132,7 +155,18 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(controller: code, decoration: const InputDecoration(labelText: 'كود الفرع *', border: OutlineInputBorder())),
               const SizedBox(height: 10),
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الفرع عربي *', border: OutlineInputBorder())),
+              TextField(
+                controller: name,
+                onChanged: (value) {
+                  final suggested = _standardBranchCode(value);
+                  if (code.text == lastAutoCode) {
+                    final nextCode = suggested.isEmpty ? defaultCode : suggested;
+                    code.text = nextCode;
+                    lastAutoCode = nextCode;
+                  }
+                },
+                decoration: const InputDecoration(labelText: 'اسم الفرع عربي *', border: OutlineInputBorder()),
+              ),
               const SizedBox(height: 10),
               TextField(controller: nameEn, decoration: const InputDecoration(labelText: 'اسم الفرع إنجليزي', border: OutlineInputBorder())),
               const SizedBox(height: 10),

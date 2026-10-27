@@ -2094,7 +2094,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.point_of_sale_rounded,
         'color': _purple,
         'items': <Map<String, Object>>[
-          {'title': 'صافي المبيعات', 'value': _executiveMoney(_executiveSales), 'note': 'الشهر الحالي • فواتير مرحلة', 'icon': Icons.point_of_sale_rounded, 'color': _purple, 'details': 'إجمالي فواتير البيع بعد خصم المرتجعات والخصومات، مع مقارنة يومية وشهرية وبحسب الفرع والمندوب.'},
+          {'title': 'صافي المبيعات', 'value': _executiveMoney(_executiveSales), 'note': '$_executivePeriod • فواتير مرحلة', 'icon': Icons.point_of_sale_rounded, 'color': _purple, 'details': 'إجمالي فواتير البيع بعد خصم المرتجعات والخصومات، مع مقارنة يومية وشهرية وبحسب الفرع والمندوب.'},
           {'title': 'نمو المبيعات', 'value': '—%', 'note': 'عن الفترة السابقة', 'icon': Icons.trending_up_rounded, 'color': _green, 'details': 'نسبة نمو صافي المبيعات ومقارنة الأداء بالفترة السابقة والمستهدف.'},
           {'title': 'متوسط الفاتورة', 'value': '— ج.م', 'note': 'لكل فاتورة', 'icon': Icons.receipt_long_rounded, 'color': _orange, 'details': 'متوسط قيمة فاتورة البيع وتحليل التغير حسب العميل والمندوب والفرع.'},
           {'title': 'أفضل العملاء', 'value': '—', 'note': 'حسب قيمة الشراء', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'ترتيب العملاء حسب المبيعات والربحية وانتظام السداد.'},

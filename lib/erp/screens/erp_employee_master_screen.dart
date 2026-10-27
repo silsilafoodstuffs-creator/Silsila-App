@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'package:excel/excel.dart' hide Border;
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -179,6 +182,51 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     onChanged: (_) => setState(() {}),
   ));
 
+  Future<void> _exportEmployeesExcel() async {
+    if (_filteredEmployees.isEmpty) {
+      setState(() => _message = 'لا توجد بيانات موظفين مطابقة للتصدير.');
+      return;
+    }
+    setState(() { _loading = true; _error = null; _message = null; });
+    try {
+      final workbook = Excel.createExcel();
+      final sheet = workbook['الموظفون'];
+      sheet.appendRow([
+        TextCellValue('كود الموظف'),
+        TextCellValue('اسم الموظف'),
+        TextCellValue('الإدارة / القسم'),
+        TextCellValue('الوظيفة'),
+        TextCellValue('الموبايل'),
+        TextCellValue('الحالة'),
+      ]);
+      for (final employee in _filteredEmployees) {
+        sheet.appendRow([
+          TextCellValue(_s(employee['employee_code'])),
+          TextCellValue(_s(employee['full_name'])),
+          TextCellValue(_s(employee['department_name'])),
+          TextCellValue(_s(employee['job_title'])),
+          TextCellValue(_s(_s(employee['mobile_1']).isEmpty ? employee['phone'] : employee['mobile_1'])),
+          TextCellValue(employee['is_active'] == true ? 'نشط' : 'غير نشط'),
+        ]);
+      }
+      final bytes = workbook.encode();
+      if (bytes == null || bytes.isEmpty) {
+        throw StateError('تعذر إنشاء ملف Excel.');
+      }
+      await FileSaver.instance.saveFile(
+        name: 'silsila_employees_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: Uint8List.fromList(bytes),
+        fileExtension: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      if (mounted) setState(() => _message = 'تم تصدير ${_filteredEmployees.length} موظفًا إلى Excel.');
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر تصدير بيانات الموظفين إلى Excel: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
     if (_cid.isEmpty || _db == null) { setState(() { _error = 'لا توجد شركة نشطة أو اتصال بقاعدة البيانات.'; }); return; }
@@ -262,7 +310,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       a('حذف',Icons.delete_outline_rounded,const Color(0xFFB42318),_selectedEmployeeId==null?null:_deleteEmployee),
       a('معاينة',Icons.preview_outlined,const Color(0xFF6E2BA6),_previewEmployee),
       a('طباعة',Icons.print_outlined,const Color(0xFFDB2777),_previewEmployee),
-      a('Excel',Icons.file_upload_outlined,const Color(0xFF16834A),()=>setState(()=>_message='استيراد Excel غير مفعّل في شاشة الموظفين حاليًا.')),
+      a('Excel',Icons.file_download_outlined,const Color(0xFF16834A),_loading?null:_exportEmployeesExcel),
       a('PDF',Icons.picture_as_pdf_outlined,const Color(0xFFD32F2F),_previewEmployee),
     ]));
   }
