@@ -137,6 +137,31 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     }
   }
 
+  Future<void> _loadGovernorateLogos(String companyId) async {
+    try {
+      final result = await db!
+          .from('erp_geographic_data')
+          .select('id,logo_bytes,logo_mime_type')
+          .eq('company_id', companyId)
+          .eq('level', 'governorate');
+      if (!mounted || result is! List || result.isEmpty) return;
+      final logos = <String, Map<String, dynamic>>{
+        for (final item in result)
+          s((item as Map)['id']): Map<String, dynamic>.from(item as Map),
+      };
+      setState(() {
+        for (final row in rows) {
+          final logo = logos[s(row['id'])];
+          if (logo == null) continue;
+          row['logo_bytes'] = logo['logo_bytes'];
+          row['logo_mime_type'] = logo['logo_mime_type'];
+        }
+      });
+    } catch (_) {
+      // The geographic tree remains usable with a neutral emblem if logos fail.
+    }
+  }
+
   void _rebuildChildren() {
     _children.clear();
     for (final row in rows) {
@@ -204,7 +229,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       String? resolvedCompanyId;
       const fields =
           'id,company_id,parent_id,geo_code,name_ar,name_en,level,is_active,'
-          'latitude,longitude,admin_type,logo_bytes,logo_mime_type';
+          'latitude,longitude,admin_type';
 
       // Read only rows belonging to a company the signed-in user is linked to.
       // Try all active memberships in case the dashboard passed an old company id.
@@ -254,6 +279,11 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         loading = false;
         error = null;
       });
+      // Logo bytes are fetched separately so a slow/large image payload never
+      // delays the governorate/district/area tree becoming interactive.
+      if (resolvedCompanyId != null) {
+        await _loadGovernorateLogos(resolvedCompanyId);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
