@@ -950,7 +950,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       for(final key in selected){
         if(existing.contains(key))continue;
         final parts=key.split('|');
-        _rules.add({'menu_name':parts[0],'submenu_name':parts[1],'page_name':parts[2],if(!template)'user_id':parentId,for(final field in _userAdminActionFields.values)field:false});
+        _rules.add({'menu_name':parts[0],'submenu_name':parts[1],'page_name':parts[2],if(!template)'user_id':parentId,for(final field in _userAdminActionFields.values)field:false,if(template)'can_access':true});
       }
     });
     setState(()=>_message='تم جلب القوائم المحددة. اضغط حفظ لتثبيتها.');
@@ -1344,7 +1344,16 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   bool _permissionChecked(String menu, String submenu, String page, String field) {
     final targets = _permissionTargetIds;
     if (targets.isEmpty) return false;
-    return targets.every((uid) => _permissionRule(uid, menu, submenu, page)?[field] == true);
+    bool valueFor(String uid) {
+      final exact = _permissionRule(uid, menu, submenu, page);
+      if (exact != null) return exact[field] == true;
+      if (page != '*' || field != 'can_access') return false;
+      final pages = submenu == '*'
+          ? [for (final sub in (_userAdminTree[menu] ?? const <String,List<String>>{}).entries) ...sub.value.map((p) => [sub.key,p])]
+          : [for (final p in (_userAdminTree[menu]?[submenu] ?? const <String>[])) [submenu,p]];
+      return pages.any((pair) => _permissionRule(uid, menu, pair[0], pair[1])?['can_access'] == true);
+    }
+    return targets.every(valueFor);
   }
 
   void _setPermissionTreeValue(String menu, String submenu, String page, String field, bool value) {
