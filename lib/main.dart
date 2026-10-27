@@ -579,7 +579,7 @@ Future<List<Map<String, dynamic>>> _loadLoginUserTypes() async {
   try {
     final result = await Supabase.instance.client
       .from('erp_user_types')
-      .select('name_ar,name_en,image_data,type_code')
+      .select('name_ar,name_en,image_data,type_code,is_active,show_at_login')
       .eq('is_active', true)
       .eq('show_at_login', true)
       .order('type_code');
@@ -643,24 +643,21 @@ class EntryOptionsScreen extends StatelessWidget {
               future: _loadLoginUserTypes(),
               builder: (context, snapshot) {
                 final rows = snapshot.data ?? const <Map<String, dynamic>>[];
-                const priority = {'مورد': 0, 'عميل': 1, 'مندوب': 2, 'شركة شحن': 3};
                 final unique = <String, Map<String, dynamic>>{};
                 for (final row in rows) {
-                  final name = (row['name_ar'] ?? '').toString();
-                  if (priority.containsKey(name)) unique.putIfAbsent(name, () => row);
+                  final name = (row['name_ar'] ?? '').toString().trim();
+                  if (name.isNotEmpty && row['is_active'] != false && row['show_at_login'] != false) {
+                    unique.putIfAbsent(name, () => row);
+                  }
                 }
-                final visible = unique.values.toList()
-                  ..sort((a, b) => (priority[(a['name_ar'] ?? '').toString()] ?? 99)
-                    .compareTo(priority[(b['name_ar'] ?? '').toString()] ?? 99));
-                if (visible.isEmpty && snapshot.connectionState == ConnectionState.waiting) {
+                final types = unique.values.toList()
+                  ..sort((a, b) => ((a['type_code'] as num?) ?? 0).compareTo((b['type_code'] as num?) ?? 0));
+                if (snapshot.connectionState == ConnectionState.waiting && types.isEmpty) {
                   return const Padding(padding: EdgeInsets.all(10), child: Center(child: CircularProgressIndicator()));
                 }
-                final types = visible.isEmpty ? [
-                  {'name_ar': 'مورد', 'name_en': 'Supplier'},
-                  {'name_ar': 'عميل', 'name_en': 'Customer'},
-                  {'name_ar': 'مندوب', 'name_en': 'Delegate'},
-                  {'name_ar': 'شركة شحن', 'name_en': 'Shipping Company'},
-                ] : visible;
+                if (types.isEmpty) {
+                  return const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد أنواع مستخدمين مفعّلة للظهور في التطبيق. فعّل «يظهر في التطبيق» من شاشة أنواع المستخدمين.', textAlign: TextAlign.center));
+                }
                 return Wrap(alignment: WrapAlignment.center, spacing: 9, runSpacing: 9,
                   children: types.map((row) {
                     final name = (row['name_ar'] ?? '').toString();
