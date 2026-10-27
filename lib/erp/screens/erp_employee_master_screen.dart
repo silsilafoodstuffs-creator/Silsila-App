@@ -201,6 +201,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       'relative_mobile': _relativeMobile.text.trim(),
       'relative_relation': _relativeRelation.text.trim(),
     };
+    if (_selectedEmployeeId != null && _nationalId.text.trim().isEmpty) { payload.remove('national_id'); payload.remove('national_id_last4'); }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       if (_selectedEmployeeId == null) { await _db!.from('erp_employees').insert(payload); } else { await _db!.from('erp_employees').update(payload).eq('id', _selectedEmployeeId!).eq('company_id', _cid); }
