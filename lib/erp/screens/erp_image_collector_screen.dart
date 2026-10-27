@@ -10,9 +10,26 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-Uint8List _processTransparentPngInBackground(Uint8List source) {
+Uint8List _processTransparentPngInBackground(Object input) {
+    final Uint8List source;
+    final int minWidth;
+    final int minHeight;
+    if (input is Uint8List) {
+      source = input;
+      minWidth = 0;
+      minHeight = 0;
+    } else if (input is Map) {
+      source = input['bytes'] as Uint8List;
+      minWidth = (input['minWidth'] as int?) ?? 0;
+      minHeight = (input['minHeight'] as int?) ?? 0;
+    } else {
+      throw Exception('صيغة الصورة غير مدعومة.');
+    }
     final decodedSource = img.decodeImage(source);
     if (decodedSource == null) throw Exception('تعذر فك ترميز الصورة الأصلية.');
+    if (decodedSource.width < minWidth || decodedSource.height < minHeight) {
+      throw Exception('دقة الصورة ${decodedSource.width}×${decodedSource.height} أقل من الحد المطلوب ${minWidth}×${minHeight}. اختر صورة أصلية أوضح بدل الصورة المصغرة.');
+    }
     // Limit the working resolution before the flood-fill; huge source images
     // otherwise make a single-row download stall the UI on slower devices.
     const maxDimension = 1800;
@@ -811,7 +828,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         target=third??sub??root;
       }
       final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
-      final png=_processTransparentPng(Uint8List.fromList(base64Decode(b64)));
+      final sourceBytes=Uint8List.fromList(base64Decode(b64));final png=await compute(_processTransparentPngInBackground,{'bytes':sourceBytes,'minWidth':120,'minHeight':120});
       await db.from('erp_item_categories').update({'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null}).eq('id',target['id'].toString()).eq('company_id',company);
       await _finishSavedRow(item,(mode=='old'?'تم تحديث الفئة ':'تم تكويد الفئة ')+(target['category_code']??'').toString()+' وحفظ صورة PNG في قاعدة البيانات.');
     }catch(e){if(mounted)setState(()=>_error='تعذر حفظ الفئة: '+e.toString().replaceFirst('Exception: ',''));}
@@ -835,7 +852,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       var code=oldCode;
       if(mode=='new'){final rows=await db.from('erp_items').select('item_code').eq('company_id',company).like('item_code','ITEM-%').limit(5000);var max=0;for(final r in (rows as List)){final m=RegExp(r'-(\d+)$').firstMatch((r['item_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}code='ITEM-'+(max+1).toString().padLeft(4,'0');}
       final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
-      final png=_processTransparentPng(Uint8List.fromList(base64Decode(b64)));
+      final sourceBytes=Uint8List.fromList(base64Decode(b64));final png=await compute(_processTransparentPngInBackground,{'bytes':sourceBytes,'minWidth':300,'minHeight':300});
       final values=<String,dynamic>{'item_name':ar,'item_name_en':en,'base_unit':minor,'sale_price':price,'tax_rate':tax,'pricing_area':area,'package_description':major+' = '+count.toStringAsFixed(3)+' '+minor,'weight_kg':double.tryParse(_rowController(item,'weight_kg').text.trim()) ?? 0,'length_cm':double.tryParse(_rowController(item,'length_cm').text.trim()) ?? 0,'width_cm':double.tryParse(_rowController(item,'width_cm').text.trim()) ?? 0,'height_cm':double.tryParse(_rowController(item,'height_cm').text.trim()) ?? 0,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,'source_name':'جامع صور سلسلة','source_url':item['url'].toString(),'is_active':true};
       final selectedCategoryId = item['category_secondary_id']?.toString() ?? item['category_sub_id']?.toString() ?? item['category_root_id']?.toString();
       if (selectedCategoryId != null && selectedCategoryId.isNotEmpty) values['category_id'] = selectedCategoryId;
