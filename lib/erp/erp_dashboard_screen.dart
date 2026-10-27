@@ -2308,8 +2308,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           // Keep the three primary financial analyses in the first row,
           // and the remaining three analyses directly beneath them.
           // All six cards retain their headings and indicators without data.
-          final width = constraints.maxWidth;
-          final cardWidth = (width - 20) / 3;
           Widget analysisRow(int start) => Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
