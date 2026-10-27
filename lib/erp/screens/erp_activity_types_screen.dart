@@ -208,7 +208,71 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     }
   }
 
-  Widget _task(String text, IconData icon, Color color, VoidCallback? action) => Padding(padding: const EdgeInsetsDirectional.only(end: 5), child: FilledButton.tonalIcon(onPressed: action, style: FilledButton.styleFrom(foregroundColor: color, backgroundColor: color.withValues(alpha: .10), visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8)), icon: Icon(icon, size: 16), label: Text(text, style: const TextStyle(fontSize: 12))));
+  Widget _task(String text, IconData icon, Color color, VoidCallback? action) =>
+      ErpQuickTaskButton(label: text, icon: icon, onPressed: action, fallbackColor: color, compact: true);
+
+  Future<void> _importExcel() async {
+    if (_editing) { setState(() => _message = 'احفظ التعديلات الحالية قبل استيراد Excel.'); return; }
+    try {
+      final picked = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['xlsx', 'xls'], withData: true);
+      if (picked == null || picked.files.single.bytes == null) return;
+      final workbook = excel.Excel.decodeBytes(picked.files.single.bytes!);
+      if (workbook.tables.isEmpty) throw StateError('ملف Excel لا يحتوي على ورقة بيانات.');
+      final sheet = workbook.tables.values.first;
+      if (sheet.rows.isEmpty) throw StateError('ورقة Excel فارغة.');
+      final headers = sheet.rows.first.map((cell) => cell?.value?.toString().trim() ?? '').toList();
+      final imported = <Map<String, String>>[];
+      var nextNumber = int.tryParse(_nextActivityCode().substring(3)) ?? 1;
+      for (final row in sheet.rows.skip(1)) {
+        final values = <String, String>{};
+        for (var i = 0; i < headers.length && i < row.length; i++) {
+          if (headers[i].isNotEmpty) values[headers[i]] = row[i]?.value?.toString() ?? '';
+        }
+        final name = (values['اسم النشاط عربي'] ?? values['اسم النشاط'] ?? '').trim();
+        if (name.isEmpty) continue;
+        imported.add({
+          'ترتيب السطر': (_rows.length + imported.length + 1).toString(),
+          'كود النشاط': 'ACT${nextNumber.toString().padLeft(3, '0')}',
+          'اسم النشاط عربي': name,
+          'اسم النشاط إنجليزي': (values['اسم النشاط إنجليزي'] ?? '').trim(),
+          'نشط': (values['نشط'] ?? 'true').toLowerCase() == 'false' ? 'false' : 'true',
+        });
+        nextNumber++;
+      }
+      if (imported.isEmpty) throw StateError('لم يتم العثور على أسماء أنشطة في الملف.');
+      final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+        title: const Text('تأكيد استيراد Excel'),
+        content: Text('سيتم إضافة ${imported.length} نشاطًا مع توليد الأكواد تلقائيًا. هل تريد المتابعة؟'),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('استيراد'))],
+      ));
+      if (confirm != true) return;
+      for (final row in imported) {
+        await _service.saveRecord(companyId: _companyId!, pageKey: _pageKey, record: row);
+        await Supabase.instance.client.from('activity_types').upsert({
+          'code': row['كود النشاط'], 'name': row['اسم النشاط عربي'],
+          'sort_order': int.tryParse(row['ترتيب السطر'] ?? '') ?? 0, 'is_active': row['نشط'] == 'true',
+        }, onConflict: 'code');
+      }
+      await _load();
+      if (mounted) setState(() => _message = 'تم استيراد ${imported.length} نشاطًا بنجاح.');
+    } catch (e) { if (mounted) setState(() => _message = 'تعذر استيراد Excel: $e'); }
+  }
+
+  Future<void> _printPdf() async {
+    if (_rows.isEmpty) { setState(() => _message = 'لا توجد بيانات للطباعة.'); return; }
+    try {
+      final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'اسم النشاط إنجليزي', 'نشط'];
+      final doc = pw.Document();
+      doc.addPage(pw.MultiPage(theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
+        pw.Text('سلسلة — أنواع الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 12),
+        pw.TableHelper.fromTextArray(headers: keys, data: _rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList()),
+      ]));
+      await Printing.layoutPdf(onLayout: (_) async => doc.save());
+      if (mounted) setState(() => _message = 'تم تجهيز ملف الطباعة / PDF.');
+    } catch (e) { if (mounted) setState(() => _message = 'تعذرت الطباعة أو إنشاء PDF: $e'); }
+  }
   Future<void> _preview() async {
     await showDialog<void>(
       context: context,
@@ -238,22 +302,22 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     return Directionality(textDirection: TextDirection.rtl, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), decoration: const BoxDecoration(color: Color(0xFF3E007D), borderRadius: BorderRadius.vertical(top: Radius.circular(10))), child: const Row(children: [Icon(Icons.category_outlined, color: Colors.white), SizedBox(width: 8), Text('أنواع الأنشطة', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)), Spacer(), Text('إدارة البرنامج • بيانات أساسية', style: TextStyle(color: Colors.white70, fontSize: 11))])),
       Container(color: Colors.white, padding: const EdgeInsets.all(8), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
-        _task('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-        _task('إضافة', Icons.add_circle_outline, Colors.green, _saving ? null : _new),
-        _task('حفظ', Icons.save_outlined, const Color(0xFF3E007D), _saving || !_editing ? null : _save),
-        _task('تعديل', Icons.edit_outlined, Colors.orange, _saving || _selected == null ? null : () { final r = _rows.where((x) => x['كود النشاط'] == _selected).firstOrNull; if (r != null) _edit(r); }),
-        _task('حذف', Icons.delete_outline, Colors.red, _editing ? _delete : null),
-        _task('معاينة', Icons.visibility_outlined, Colors.teal, _preview),
-        _task('طباعة', Icons.print_outlined, Colors.blueGrey, () => setState(() => _message = 'تم تجهيز معاينة الطباعة؛ استخدم نافذة المعاينة.')),
-        _task('استيراد Excel', Icons.file_upload_outlined, Colors.green.shade800, () => setState(() => _message = 'استيراد Excel لم يُفعّل في هذه الشاشة بعد.')),
-        _task('طباعة PDF', Icons.picture_as_pdf_outlined, Colors.red, () => setState(() => _message = 'تصدير PDF لم يُفعّل في هذه الشاشة بعد.')),
+        _task('تحديث', Icons.refresh_rounded, const Color(0xFF2475B8), _loading || _saving ? null : _load),
+        _task('إضافة', Icons.add_circle_outline_rounded, const Color(0xFF18865A), _saving ? null : _new),
+        _task('حفظ', Icons.save_outlined, const Color(0xFF6F42C1), _saving || !_editing ? null : _save),
+        _task('تعديل', Icons.edit_outlined, const Color(0xFFFFA015), _saving || _selected == null || _editing ? null : () { final r = _rows.where((x) => x['كود النشاط'] == _selected).firstOrNull; if (r != null) _edit(r); }),
+        _task('حذف', Icons.delete_outline_rounded, const Color(0xFFB42318), _saving || !_editing || _selected == null ? null : _delete),
+        _task('معاينة', Icons.preview_outlined, const Color(0xFF6E2BA6), _preview),
+        _task('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _printPdf),
+        _task('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF16834A), _saving ? null : _importExcel),
+        _task('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _printPdf),
       ]))),
       if (_message != null) Container(color: const Color(0xFFF7F2FC), padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(fontSize: 11, color: Color(0xFF3E007D)))),
       const SizedBox(height: 8),
       Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 57, dataRowMinHeight: 57, dataRowMaxHeight: 57, horizontalMargin: 8, columnSpacing: 14, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م (ترتيب السطر)')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط')), DataColumn(label: Text('نشط / غير نشط'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(selected: _rows[i]['كود النشاط'] == _selected, onSelectChanged: (_) => setState(() => _selected = _rows[i]['كود النشاط']), cells: [
           DataCell(SizedBox(width: 38, child: TextFormField(initialValue: _rows[i]['ترتيب السطر'] ?? (i + 1).toString(), key: ValueKey('activity-order-$i'), enabled: _editing, decoration: const InputDecoration(isDense:true,border:InputBorder.none), onChanged: (v) => _rows[i]['ترتيب السطر'] = v))),
-          DataCell(SizedBox(width: 130, child: TextFormField(initialValue: _rows[i]['كود النشاط'] ?? '', key: ValueKey('activity-code-$i'), enabled: _editing, decoration: const InputDecoration(isDense:true,border:InputBorder.none), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) { _rows[i]['كود النشاط'] = v; _selected = v; }))),
+          DataCell(SizedBox(width: 130, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
           DataCell(SizedBox(width: 270, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i'), enabled: _editing, decoration: const InputDecoration(isDense:true,border:InputBorder.none), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
           DataCell(Checkbox(value: (_rows[i]['نشط'] ?? 'true') == 'true', visualDensity: VisualDensity.compact, onChanged: _editing ? (v) => setState(() => _rows[i]['نشط'] = (v ?? false).toString()) : null)),
         ]),
