@@ -25,6 +25,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   String? error;
   String? message;
   bool loading = false;
+  int _loadGeneration = 0;
   String? _activeCompanyId;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -154,6 +155,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   }
 
   Future<void> load() async {
+    final generation = ++_loadGeneration;
     if (db == null) {
       if (!mounted) return;
       setState(() {
@@ -185,6 +187,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
               .eq('user_id', userId)
               .eq('is_active', true)
               .order('created_at');
+          if (!mounted || generation != _loadGeneration) return;
           for (final item in (membershipResult as List)) {
             final id = s((item as Map<String, dynamic>)['company_id']).trim();
             if (id.isNotEmpty && !candidates.contains(id)) candidates.add(id);
@@ -221,6 +224,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                 .eq('company_id', candidateId)
                 .order('geo_code')
                 .range(offset, offset + pageSize - 1);
+            if (!mounted || generation != _loadGeneration) return;
             final page = (result as List)
                 .map((item) => Map<String, dynamic>.from(item))
                 .toList();
@@ -245,7 +249,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         );
       }
 
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _activeCompanyId = resolvedCompanyId;
         rows = loadedRows;
@@ -258,7 +262,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       // Geographic rows intentionally exclude logo bytes. The tree remains fast
       // and uses a neutral emblem until a dedicated, lazy logo viewer is opened.
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         loading = false;
         error = 'تعذر تحميل البيانات الجغرافية: $e';
@@ -376,13 +380,24 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   }
 
   Future<void> toggle(Map<String, dynamic> row) async {
+    final nextActive = row['is_active'] != true;
+    final id = s(row['id']);
+    final companyId = s(row['company_id']);
     try {
       await db!
           .from('erp_geographic_data')
-          .update({'is_active': row['is_active'] != true})
-          .eq('id', row['id'])
-          .eq('company_id', s(row['company_id']));
-      await load();
+          .update({'is_active': nextActive})
+          .eq('id', id)
+          .eq('company_id', companyId);
+      if (!mounted) return;
+      // Update the visible row locally instead of reloading all 6k+ geographic
+      // records after every checkbox click.
+      setState(() {
+        final index = rows.indexWhere((item) => s(item['id']) == id);
+        if (index >= 0) rows[index]['is_active'] = nextActive;
+        error = null;
+        message = 'تم تحديث الحالة.';
+      });
     } catch (e) {
       if (mounted) setState(() => error = 'تعذر تغيير الحالة: $e');
     }
