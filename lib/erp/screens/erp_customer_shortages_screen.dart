@@ -69,7 +69,7 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
                 const SizedBox(height: 8),
                 SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
                   _task('تحديث', Icons.refresh, Colors.blue, _load),
-                  _task('تصدير Excel', Icons.table_view, const Color(0xFF168447), _exportCsv),
+                  _task('نسخ CSV لـ Excel', Icons.table_view, const Color(0xFF168447), _exportCsv),
                 ])),
               ]),
             ),
