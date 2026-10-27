@@ -236,7 +236,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       final rows=await _db!.from('erp_employees').select().eq('id',id).eq('company_id',_cid).limit(1);
       if(rows.isEmpty)throw StateError('لم يتم العثور على الموظف');
       final r=Map<String,dynamic>.from(rows.first); String v(String k)=>_s(r[k]);
-      _code.text=v('employee_code'); _ar.text=v('full_name'); _en.text=v('full_name_en'); _nationalId.clear();
+      _code.text=v('employee_code'); _ar.text=v('full_name'); _en.text=v('full_name_en'); _nationalId.text=v('national_id');
       _address.text=v('address'); _map.text=v('map_url'); _m1.text=v('mobile_1').isEmpty?v('phone'):v('mobile_1'); _m2.text=v('mobile_2');
       _w1.text=v('work_mobile_1'); _w2.text=v('work_mobile_2'); _relativeMobile.text=v('relative_mobile'); _relativeRelation.text=v('relative_relation');
       String dt(String s){final d=DateTime.tryParse(s);return d==null?s:d.day.toString().padLeft(2,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.year.toString();}
