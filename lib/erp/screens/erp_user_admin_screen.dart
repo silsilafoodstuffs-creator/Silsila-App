@@ -14,11 +14,8 @@ import 'erp_user_classifications_screen.dart';
 
 const _userAdminPurple = Color(0xFF3E007D);
 const _userAdminCanvas = Color(0xFFF7F5FA);
-const _userAdminActions = <String>['تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','استيراد Excel','طباعة PDF','الوصول السريع'];
-const _userAdminActionFields = <String,String>{
-  'تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete',
-  'معاينة':'can_preview','طباعة':'can_print','استيراد Excel':'can_import_excel','طباعة PDF':'can_print_pdf','الوصول السريع':'show_in_quick_tasks',
-};
+const _userAdminActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','Excel','PDF'];
+const _userAdminActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','Excel':'can_import_excel','PDF':'can_print_pdf',};
 const _userAdminTree = <String,Map<String,List<String>>>{
   'إعدادات عامة':{
     'بيانات أساسية':['بيانات الشركة','مراكز التكلفة','بيانات جغرافية','أنواع الأنشطة','المستخدمين','سياسات البرنامج','سجل العمليات','واجهة API والربط الخارجي','إدارة مفاتيح API','سجلات التكامل والطلبات','سياسات التسعير والخصومات','توزيع الأصناف على المندوبين','قيود البيع والشراء'],
@@ -82,7 +79,10 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   bool _loading = false, _saving = false, _editMode = false;
   String? _error, _message, _selectedId, _selectedUserId;
   List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
-  List<Map<String,dynamic>> _branches = [], _warehouses = [];
+  List<Map<String,dynamic>> _branches = [], _warehouses = [], _employees = [];
+  bool _permissionAllUsers = true;
+  String _permissionMode = 'template';
+  final Set<String> _permissionSelectedUserIds = <String>{};
   String? _selectedTemplateId;
   String? _selectedNodeKind;
   String _viewMode = 'tree';
@@ -92,7 +92,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   String? _activeCompanyId;
   String _selectedPageKey = 'إعدادات عامة|بيانات أساسية|بيانات الشركة';
   static const _typeNames = <String,String>{
-    'types':'المستخدمين','users':'المستخدمين','hierarchy':'المستخدمين','classifications':'المستخدمين','templates':'المستخدمين','permissions':'المستخدمين'
+    'types':'أنواع المستخدمين','users':'المستخدمين','hierarchy':'احتياطي شاشة المستخدمين','classifications':'المستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
   };
 
   @override void initState() { super.initState(); _view=widget.initialView; _activeCompanyId=widget.companyId; try {_db=Supabase.instance.client;} catch (_) {} _load(); }
@@ -117,23 +117,23 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   // blocked by company membership or RLS. These rows are preview-only until saved.
   List<Map<String, dynamic>> _localDefaultUserTypes() {
     const defaults = <Map<String, dynamic>>[
-      {'name_ar':'ادمن','name_en':'Admin','show_at_login':false},
-      {'name_ar':'موظف','name_en':'Employee','show_at_login':false},
-      {'name_ar':'مورد','name_en':'Supplier','show_at_login':true},
-      {'name_ar':'عميل','name_en':'Customer','show_at_login':true},
-      {'name_ar':'مندوب','name_en':'Delegate','show_at_login':true},
-      {'name_ar':'شركة شحن','name_en':'Shipping Company','show_at_login':true},
+      {'name_ar':'ادمن','name_en':'Admin','description':'إدارة النظام والصلاحيات','show_at_login':false},
+      {'name_ar':'مورد','name_en':'Supplier','description':'توريد الأصناف والأسعار','show_at_login':true},
+      {'name_ar':'عميل','name_en':'Customer','description':'شراء الأصناف ومتابعة الطلبات','show_at_login':true},
+      {'name_ar':'شركة شحن','name_en':'Shipping Company','description':'إدارة الشحن والتوصيل','show_at_login':true},
+      {'name_ar':'مندوب','name_en':'Sales Representative','description':'البيع والتوزيع والتحصيل','show_at_login':true},
     ];
     return List<Map<String, dynamic>>.generate(defaults.length, (i) => {
       'id': 'local-default-user-type-$i',
       'type_code': i + 1,
+      'type_code_display': 'UT${(i + 1).toString().padLeft(4, '0')}',
       ...defaults[i],
       'is_active': true,
       '_local_default': true,
     });
   }
   String get _company => (_activeCompanyId ?? widget.companyId ?? '').trim();
-  bool get _isHierarchy => _view=='hierarchy' || _view=='types' || _view=='users';
+  bool get _isHierarchy => _view=='hierarchy';
   bool get _isType => _view=='types';
   bool get _isUser => _view=='users';
   bool get _isTemplate => _view=='templates';
@@ -193,12 +193,11 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         final result = await _db!.from('erp_user_types').select().eq('company_id', _company).order('type_code');
         typeList = (result as List).map((x) => Map<String, dynamic>.from(x)).toList();
         const defaults = <Map<String, dynamic>>[
-          {'name_ar':'ادمن','name_en':'Admin','show_at_login':false},
-          {'name_ar':'موظف','name_en':'Employee','show_at_login':false},
-          {'name_ar':'مورد','name_en':'Supplier','show_at_login':true},
-          {'name_ar':'عميل','name_en':'Customer','show_at_login':true},
-          {'name_ar':'مندوب','name_en':'Delegate','show_at_login':true},
-          {'name_ar':'شركة شحن','name_en':'Shipping Company','show_at_login':true},
+          {'name_ar':'ادمن','name_en':'Admin','description':'إدارة النظام والصلاحيات','show_at_login':false},
+          {'name_ar':'مورد','name_en':'Supplier','description':'توريد الأصناف والأسعار','show_at_login':true},
+          {'name_ar':'عميل','name_en':'Customer','description':'شراء الأصناف ومتابعة الطلبات','show_at_login':true},
+          {'name_ar':'شركة شحن','name_en':'Shipping Company','description':'إدارة الشحن والتوصيل','show_at_login':true},
+          {'name_ar':'مندوب','name_en':'Sales Representative','description':'البيع والتوزيع والتحصيل','show_at_login':true},
         ];
         // Repair missing defaults one at a time. A denied/duplicate insert must
         // not abort the whole screen load or hide already-saved rows.
@@ -224,7 +223,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             .eq('company_id', _company).order('type_code') as List)
             .map((x) => Map<String, dynamic>.from(x))
             .toList();
-        if (seedWarning && typeList.length < defaults.length && mounted) {
+        if (seedWarning && typeList.length < 5 && mounted) {
           setState(() => _message = 'تم تحميل الأنواع الموجودة، لكن تعذر إنشاء بعض الأنواع الناقصة. راجع صلاحيات المالك/المدير وسياسات قاعدة البيانات.');
         }
         if (typeList.isEmpty) {
@@ -232,7 +231,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           if (mounted) setState(() => _message =
             'تعذر جلب أنواع المستخدمين المحفوظة من قاعدة البيانات؛ يعرض الجدول الأنواع الافتراضية للمعاينة. راجع عضوية الشركة وسياسات RLS ثم اضغط تحديث.');
         }
-        const priority = {'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
+        const priority = {'ادمن':0,'مورد':1,'عميل':2,'شركة شحن':3,'مندوب':4,'موظف':5};
         typeList.sort((a,b) => (priority[_s(a['name_ar'])] ?? 99).compareTo(priority[_s(b['name_ar'])] ?? 99));
         } catch (e) {
           // A type-table/RLS failure must not abort loading the independent users table.
@@ -254,11 +253,15 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         // User codes are prefixed strings (USR-1, USR-2, ...); sort by the
         // numeric suffix so USR-10 does not appear before USR-2.
         int codeNumber(Map<String, dynamic> row) {
-          final match = RegExp(r'-(\d+)$').firstMatch((row['user_code'] ?? '').toString());
+          final match = RegExp(r'(\d+)$').firstMatch((row['user_code'] ?? '').toString());
           return int.tryParse(match?.group(1) ?? '') ?? 0;
         }
         userList.sort((a, b) => codeNumber(a).compareTo(codeNumber(b)));
         if (_isUser || _isHierarchy) {
+          try {
+            final e = await _db!.from('erp_employees').select('id,employee_code,full_name,full_name_en,is_active').eq('company_id', _company).eq('is_active', true).order('employee_code');
+            _employees = (e as List).map((x) => Map<String,dynamic>.from(x)).toList();
+          } catch (_) { _employees = []; }
           try {
             final b = await _db!.from('erp_branches').select().eq('company_id', _company).eq('is_active', true).order('branch_code');
             _branches = (b as List).map((x) => Map<String,dynamic>.from(x)).toList();
@@ -285,7 +288,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         _loading=false; _error=loadWarning;
         if ((_isUser || _isHierarchy) && userList.isEmpty && loadWarning == null) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
         if ((_isType || _isHierarchy) && typeList.any((r)=>r['_local_default']==true)) _message='أنواع المستخدمين الافتراضية معروضة في الجدول، لكن تعذر حفظها في قاعدة البيانات بسبب الصلاحيات أو سياسات RLS. يمكنك مراجعة السياسات ثم الضغط على تحديث.';
-        if ((_isType || _isHierarchy) && typeList.length < 6) _message='عدد أنواع المستخدمين أقل من 6؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
+        if ((_isType || _isHierarchy) && typeList.length < 5) _message='عدد أنواع المستخدمين أقل من 5؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
       });
       if (_isTemplate && _selectedId!=null) await _loadRules();
       if (_isPermissions) await _loadUserRules();
@@ -1159,69 +1162,61 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     }
   }
 
+  String _employeeLabel(String employeeId) {
+    if(employeeId.isEmpty)return 'غير مرتبط بموظف';
+    final e=_employees.where((x)=>_s(x['id'])==employeeId).firstOrNull;
+    if(e==null)return 'موظف غير موجود';
+    return '${_s(e['employee_code'])} — ${_s(e['full_name'])}';
+  }
+  Future<Map<String,dynamic>?> _pickEmployee() async {
+    if(_employees.isEmpty){if(mounted)setState(()=>_error='لا توجد سجلات موظفين نشطة. أضف الموظف أولًا من شاشة ملف الموظف.');return null;}
+    final search=TextEditingController();
+    final picked=await showDialog<Map<String,dynamic>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){
+      final q=search.text.trim().toLowerCase();
+      final rows=_employees.where((e)=>'${_s(e['employee_code'])} ${_s(e['full_name'])} ${_s(e['full_name_en'])}'.toLowerCase().contains(q)).toList();
+      return AlertDialog(title:const Text('اختيار موظف وربطه بالمستخدم'),content:SizedBox(width:620,height:420,child:Column(children:[
+        TextField(controller:search,decoration:const InputDecoration(prefixIcon:Icon(Icons.search),labelText:'بحث بالكود أو الاسم',isDense:true),onChanged:(_)=>refresh((){})),
+        const SizedBox(height:8),Expanded(child:ListView.builder(itemCount:rows.length,itemBuilder:(_,i){final e=rows[i];return ListTile(title:Text(_s(e['full_name'])),subtitle:Text('${_s(e['employee_code'])} • ${_s(e['full_name_en'])}'),onTap:()=>Navigator.pop(ctx,e));})),
+      ])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء'))]);
+    }));
+    search.dispose();return picked;
+  }
+  Future<void> _openEmployeePicker(Map<String,dynamic> row) async {
+    final picked=await _pickEmployee();if(picked==null||!mounted)return;
+    setState(()=>{row['employee_id']=picked['id'],row['name_ar']=picked['full_name'],row['name_en']=_s(picked['full_name_en']).isNotEmpty?picked['full_name_en']:picked['full_name'],_message='تم ربط المستخدم بموظف ${_s(picked['employee_code'])}. احفظ التعديلات لتثبيت الربط.',_error=null});
+  }
   Widget _masterGrid(){
-    final codeField=_isType?'type_code':_isUser?'user_code':'template_code';
+    final codeField=_isType?'type_code_display':_isUser?'user_code':'template_code_display';
     return SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-      headingRowHeight: 57,dataRowMinHeight: 57,dataRowMaxHeight: 57,horizontalMargin:8,columnSpacing:12,
-      headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
+      headingRowHeight:57,dataRowMinHeight:57,dataRowMaxHeight:57,horizontalMargin:8,columnSpacing:12,headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
       columns:[
         const DataColumn(label:Text('م')),DataColumn(label:Text(_isType?'كود النوع':_isUser?'كود المستخدم':'كود القالب')),
-        if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isUser)const DataColumn(label:Text('اسم المستخدم')),if(_isUser)const DataColumn(label:Text('كلمة المرور')),
-        if(_isUser)const DataColumn(label:Text('نوع المستخدم')),
-        if(!_isUser)const DataColumn(label:Text('الصورة')),const DataColumn(label:Text('نشط')),if(_isUser)const DataColumn(label:Text('له خزينة فرعية')),if(_isUser)const DataColumn(label:Text('الفروع والمخازن')),
-        if(_isType)const DataColumn(label:Text('يظهر للدخول')),
-        if(_isTemplate)const DataColumn(label:Text('قوائم وصلاحيات')),
+        if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),
+        if(_isUser)const DataColumn(label:Text('اسم المستخدم')),if(_isUser)const DataColumn(label:Text('كود الموظف (F1)')),
+        if(_isUser)const DataColumn(label:Text('كلمة المرور')),if(_isUser)const DataColumn(label:Text('تأكيد كلمة المرور')),if(_isUser)const DataColumn(label:Text('نوع المستخدم')),
+        if(_isType)const DataColumn(label:Text('يظهر في التطبيق')),if(!_isUser&&!_isType)const DataColumn(label:Text('الصورة')),
+        const DataColumn(label:Text('نشط')),if(_isType)const DataColumn(label:Text('وصف مختصر (10 كلمات)')),
+        if(_isUser)const DataColumn(label:Text('له خزينة فرعية')),if(_isUser)const DataColumn(label:Text('الفروع والمخازن')),if(_isTemplate)const DataColumn(label:Text('قوائم وصلاحيات')),
       ],
-      rows:List.generate(_rows.length,(i){
-        final row=_rows[i];final id=_s(row['id']);
-        return DataRow(selected:id==_selectedId,onSelectChanged:(v)async{setState(()=>_selectedId=v==true?id:null);if(v==true&&_isTemplate)await _loadRules();},cells:[
-          DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]))),
-          if(!_isUser)DataCell(_textCell(row,'name_ar')),if(!_isUser)DataCell(_textCell(row,'name_en')),
-          if(_isUser)DataCell(_textCell(row,'name_ar',width:165)),
-          if(_isUser)DataCell(SizedBox(width:185,child:Row(children:[Expanded(child:TextFormField(initialValue:_s(row['_password_draft']),obscureText:row['_password_visible']!=true,decoration:const InputDecoration(hintText:'كلمة مرور جديدة',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_draft']=v)),IconButton(tooltip:'إظهار/إخفاء كلمة المرور',visualDensity:VisualDensity.compact,onPressed:()=>setState(()=>row['_password_visible']=row['_password_visible']!=true),icon:Icon(row['_password_visible']==true?Icons.visibility_off:Icons.visibility,size:18))]))),
-          if(_isUser)DataCell(SizedBox(width:155,child:DropdownButtonFormField<String>(
-            key:ValueKey('${id}-type-${row['user_type_id']}'),value:_types.any((t)=>_s(t['id'])==_s(row['user_type_id']))?_s(row['user_type_id']):null,isExpanded:true,
-            decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),
-            items:_types.map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
-            onChanged:_editMode?(v)=>setState(()=>row['user_type_id']=v):null,
-          ))),
-          if(!_isUser)DataCell(_imageCell(row)),
-          DataCell(Checkbox(value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
-          if(_isUser)DataCell(Checkbox(value:row['has_sub_warehouse']==true,onChanged:_editMode?(v)=>setState(()=>row['has_sub_warehouse']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
-          if(_isUser)DataCell(OutlinedButton.icon(onPressed:()=>_openBranchWarehousePicker(id),icon:const Icon(Icons.add_location_alt_outlined,size:16),label:const Text('+ فروع'))),
-          if(_isType)DataCell(Checkbox(value:!['ادمن','موظف'].contains(_s(row['name_ar']))&&row['show_at_login']==true,onChanged:_editMode&&!['ادمن','موظف'].contains(_s(row['name_ar']))?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
-          if(_isTemplate)DataCell(OutlinedButton.icon(onPressed:()async{setState(()=>_selectedId=id);await _loadRules();await _openMenuPicker(parentId:id,template:true);},icon:const Icon(Icons.drive_file_move_outlined,size:16),label:const Text('جلب قوائم'))),
-        ]);
-      }),
+      rows:List.generate(_rows.length,(i){final row=_rows[i];final id=_s(row['id']);return DataRow(selected:id==_selectedId,onSelectChanged:(v)async{
+        setState(()=>{_selectedId=v==true?id:null,if(_isUser){_selectedNodeKind=v==true?'user':null;_selectedUserId=v==true?id:null}});
+        if(v==true&&_isTemplate)await _loadRules();
+      },cells:[
+        DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]).isNotEmpty?_s(row[codeField]):(_isType?'UT${_s(row['type_code']).padLeft(4,'0')}':_isTemplate?'PT${_s(row['template_code']).padLeft(4,'0')}':_s(row[codeField])))),
+        if(!_isUser)DataCell(_textCell(row,'name_ar')),if(!_isUser)DataCell(_textCell(row,'name_en')),if(_isUser)DataCell(_textCell(row,'name_ar',width:165)),
+        if(_isUser)DataCell(SizedBox(width:175,child:Row(children:[Expanded(child:Text(_employeeLabel(_s(row['employee_id'])),maxLines:2,overflow:TextOverflow.ellipsis)),IconButton(tooltip:'بحث عن موظف (F1)',visualDensity:VisualDensity.compact,onPressed:_editMode?()=>_openEmployeePicker(row):null,icon:const Icon(Icons.search,size:18))]))),
+        if(_isUser)DataCell(SizedBox(width:175,child:Row(children:[Expanded(child:TextFormField(initialValue:_s(row['_password_draft']),obscureText:row['_password_visible']!=true,enabled:_editMode,decoration:const InputDecoration(hintText:'كلمة مرور',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_draft']=v)),IconButton(tooltip:'إظهار/إخفاء كلمة المرور',visualDensity:VisualDensity.compact,onPressed:_editMode?()=>setState(()=>row['_password_visible']=row['_password_visible']!=true):null,icon:Icon(row['_password_visible']==true?Icons.visibility_off:Icons.visibility,size:18))]))),
+        if(_isUser)DataCell(SizedBox(width:155,child:TextFormField(initialValue:_s(row['_password_confirmation_draft']),obscureText:row['_password_visible']!=true,enabled:_editMode,decoration:const InputDecoration(hintText:'تأكيد كلمة المرور',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7,border:OutlineInputBorder()),onChanged:(v)=>row['_password_confirmation_draft']=v))),
+        if(_isUser)DataCell(SizedBox(width:120,child:DropdownButtonFormField<String>(key:ValueKey('${id}-type-${row['user_type_id']}-${_editMode}'),value:_types.any((t)=>_s(t['id'])==_s(row['user_type_id'])&&t['is_active']==true)?_s(row['user_type_id']):null,isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5,border:OutlineInputBorder()),items:_types.where((t)=>t['is_active']==true).map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),onChanged:_editMode?(v)=>setState(()=>row['user_type_id']=v):null))),
+        if(_isType)DataCell(Checkbox(shape:const CircleBorder(),value:row['show_at_login']==true,onChanged:_editMode?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+        if(!_isUser&&!_isType)DataCell(_imageCell(row)),DataCell(Checkbox(shape:const CircleBorder(),value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+        if(_isType)DataCell(_textCell(row,'description',width:220)),if(_isUser)DataCell(Checkbox(shape:const CircleBorder(),value:row['has_sub_warehouse']==true,onChanged:_editMode?(v)=>setState(()=>row['has_sub_warehouse']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+        if(_isUser)DataCell(OutlinedButton.icon(onPressed:_editMode?()=>_openBranchWarehousePicker(id):null,icon:const Icon(Icons.add_location_alt_outlined,size:16),label:const Text('+ فروع'))),
+        if(_isTemplate)DataCell(OutlinedButton.icon(onPressed:()async{setState(()=>_selectedId=id);await _loadRules();await _openMenuPicker(parentId:id,template:true);},icon:const Icon(Icons.drive_file_move_outlined,size:16),label:const Text('جلب قوائم'))),
+      ]);}),
     ));
   }
-
-  List<Map<String,String>> get _permissionPages => [
-    for(final menu in _userAdminTree.entries)
-      for(final sub in menu.value.entries)
-        for(final page in sub.value)
-          {'key':'${menu.key}|${sub.key}|${page}','label':'${menu.key} › ${sub.key} › ${page}'}
-  ];
-
-  Map<String,dynamic>? _userRuleFor(String userId) {
-    for(final rule in _rules){
-      if(_s(rule['user_id'])==userId &&
-        '${rule['menu_name']}|${rule['submenu_name']}|${rule['page_name']}'==_selectedPageKey) return rule;
-    }
-    return null;
-  }
-
-  void _setUserPermission(Map<String,dynamic> user,String field,bool value) {
-    final uid=_s(user['id']);
-    var rule=_userRuleFor(uid);
-    if(rule==null){
-      final parts=_selectedPageKey.split('|');
-      rule={'company_id':_company,'user_id':uid,'menu_name':parts[0],'submenu_name':parts[1],'page_name':parts[2],
-        for(final name in _userAdminActionFields.values)name:false};
-      _rules.add(rule);
-    }
-    setState(()=>rule![field]=value);
-  }
+  Widget _textCell(Map<String,dynamic> row,String field,{double width=145})=>SizedBox(width:width,child:TextFormField(key:ValueKey('${row['id']}-$field-${_editMode}'),initialValue:_s(row[field]),enabled:_editMode,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:8),border:OutlineInputBorder()),onChanged:(v)=>row[field]=field=='description'?v.trim().split(RegExp(r'\s+')).where((w)=>w.isNotEmpty).take(10).join(' '):v));
 
   Widget _ruleGrid(){
     if(_isPermissions)return _permissionUsersGrid();
