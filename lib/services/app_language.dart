@@ -160,7 +160,7 @@ String silsilaText(String value) {
     'قوائم أسعار البيع': 'Sales Price Lists',
     'عرض سعر': 'Quotation',
     'أمر بيع': 'Sales Order',
-    'فاتورة مبيعات': 'Sales Invoice',
+    'فاتورة بيع': 'Sales Invoice',
     'مرتجع مبيعات': 'Sales Return',
     'إذن التجهيز': 'Picking Slip',
     'إذن التسليم': 'Delivery Note',
