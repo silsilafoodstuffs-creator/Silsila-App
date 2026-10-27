@@ -279,7 +279,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if (!mounted) return;
       setState(() {
         _types=typeList; _users=userList; _templates=templateList;
-        _rows=_isHierarchy?typeList:_isTemplate?templateList:userList;
+        _rows=_isType?typeList:_isHierarchy?typeList:_isTemplate?templateList:userList;
         if (_selectedId != null && (_isHierarchy ? !typeList.any((r)=>_s(r['id'])==_selectedId) && !userList.any((r)=>_s(r['id'])==_selectedId) : !_rows.any((r)=>_s(r['id'])==_selectedId))) _selectedId=null;
         if (_selectedUserId != null && !userList.any((r)=>_s(r['id'])==_selectedUserId)) _selectedUserId=null;
         if (_selectedUserId==null && userList.isNotEmpty) _selectedUserId=_s(userList.first['id']);
@@ -450,7 +450,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           'name_en': _s(type['name_en']).trim(),
           'image_data': type['image_data'],
           'is_active': type['is_active'] == true,
-          'show_at_login': !['ادمن','موظف'].contains(_s(type['name_ar'])) && type['show_at_login'] == true,
+          'show_at_login': type['show_at_login'] == true,
         }).eq('company_id', _company).eq('id', id);
       }
       for (final user in _users) {
