@@ -156,8 +156,8 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     for (final row in rowsToSave) {
       final code = (row['كود النشاط'] ?? '').trim();
       final ar = (row['اسم النشاط عربي'] ?? '').trim();
-      if (code.isEmpty || ar.isEmpty || code.startsWith('NEW-')) {
-        setState(() { _selected = row['كود النشاط']; _message = 'أكمل كود النشاط واسمه العربي في كل صف جديد قبل الحفظ.'; });
+      if (code.isEmpty || ar.isEmpty) {
+        setState(() { _selected = row['كود النشاط']; _message = 'أدخل اسم النشاط العربي؛ كود النشاط يُولّد تلقائيًا ولا يمكن تعديله.'; });
         return;
       }
       if (_rows.any((r) => r['كود النشاط'] == code && !identical(r, row) && r['_مرجع داخلي'] != row['_مرجع داخلي'])) {
@@ -202,7 +202,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         await Supabase.instance.client.from('activity_types').delete().eq('code', code);
       }
       await _load();
-      _new();
+      if (mounted) setState(() { _editing = false; _selected = null; _message = 'تم حذف النشاط وتحديث القائمة.'; });
     } catch (e) {
       if (mounted) setState(() => _message = 'تعذر الحذف: ' + e.toString());
     }
