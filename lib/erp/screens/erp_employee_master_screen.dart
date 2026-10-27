@@ -336,6 +336,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       const SizedBox(height: 8),
       _employeeToolbar(),
       if (_cid.isEmpty) Padding(padding: const EdgeInsets.only(bottom: 8), child: TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة UUID', border: OutlineInputBorder()), onSubmitted: (_) => _load())),
+      if (_loading) const LinearProgressIndicator(),
       if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
       if (_message != null) Text(_message!, style: const TextStyle(color: Colors.green)),
       if (_readOnly) const Text('تم تحميل الموظف المحدد؛ اضغط تعديل قبل تغيير بياناته.', style: TextStyle(color: _purple,fontWeight:FontWeight.w700)),
