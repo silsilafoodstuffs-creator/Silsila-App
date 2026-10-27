@@ -1847,6 +1847,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   const SizedBox(width: 6),
                   FilledButton.icon(onPressed: _saving ? null : (_selectedDocumentId == null ? _createDraft : _savePendingLines), icon: const Icon(Icons.save_outlined, size: 16), label: const Text('حفظ'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3E007D), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                   const SizedBox(width: 6),
+                  FilledButton.icon(
+                    onPressed: _loading || _saving ? null : _createDraft,
+                    icon: const Icon(Icons.add_circle_outline, size: 16),
+                    label: const Text('إضافة'),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF16834A), foregroundColor: Colors.white, visualDensity: VisualDensity.compact),
+                  ),
+                  const SizedBox(width: 6),
                   FilledButton.icon(onPressed: _selectedDocumentId == null ? null : () => _loadLines(_selectedDocumentId!), icon: const Icon(Icons.edit_outlined, size: 16), label: const Text('تعديل'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFA015), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
                   const SizedBox(width: 6),
                   FilledButton.icon(onPressed: _selectedDocumentId == null ? null : _deleteSelectedSalesDraft, icon: const Icon(Icons.delete_outline_rounded, size: 16), label: const Text('حذف'), style: FilledButton.styleFrom(backgroundColor: const Color(0xFFB42318), foregroundColor: Colors.white, visualDensity: VisualDensity.compact)),
