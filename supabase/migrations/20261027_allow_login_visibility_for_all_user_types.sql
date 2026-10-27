@@ -1,0 +1,1 @@
+alter table public.erp_user_types drop constraint if exists erp_user_types_internal_hidden_check;
