@@ -869,15 +869,26 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         if(_isPermissions){
           final targetIds = _permissionTargetIds;
           if(targetIds.isEmpty) throw StateError('حدد مستخدمًا واحدًا على الأقل قبل حفظ الصلاحيات.');
-          for(final uid in targetIds) {
-            await _db!.from('erp_user_permission_matrix').delete().eq('company_id',_company).eq('user_id',uid);
-          }
-          for(final rule in _rules.where((r)=>targetIds.contains(_s(r['user_id'])))){
+          final targetRules = _rules.where((r)=>targetIds.contains(_s(r['user_id']))).toList();
+          // Upsert the new draft first. Only remove stale rows after all writes succeed.
+          for(final rule in targetRules){
             final uid=_s(rule['user_id']);
             if(uid.isEmpty)continue;
             final payload=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};
             for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;
-            await _db!.from('erp_user_permission_matrix').insert(payload);
+            await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');
+          }
+          for(final uid in targetIds) {
+            final draftKeys = targetRules.where((r)=>_s(r['user_id'])==uid)
+              .map((r)=>'${_s(r['menu_name'])}|${_s(r['submenu_name'])}|${_s(r['page_name'])}').toSet();
+            final existing = await _db!.from('erp_user_permission_matrix')
+              .select('id,menu_name,submenu_name,page_name').eq('company_id',_company).eq('user_id',uid);
+            for(final row in (existing as List).whereType<Map<String,dynamic>>()) {
+              final key='${_s(row['menu_name'])}|${_s(row['submenu_name'])}|${_s(row['page_name'])}';
+              if(!draftKeys.contains(key)) {
+                await _db!.from('erp_user_permission_matrix').delete().eq('company_id',_company).eq('id',row['id']);
+              }
+            }
           }
         }
       if(mounted)setState(()=>_message='تم حفظ التغييرات في قاعدة البيانات.');
