@@ -829,7 +829,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'description':desc,'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':row['show_at_login']==true});
           }
           if(_isUser){
-            if(!_types.any((t)=>_s(t['id'])==_s(row['user_type_id'])&&t['is_active']==true))throw StateError('اختر نوع مستخدم نشطًا للسجل «${_s(row['name_ar'])}».');
+            if(!_types.any((t)=>_s(t['id'])==_s(row['user_type_id'])))throw StateError('اختر نوع مستخدم موجودًا للسجل «${_s(row['name_ar'])}».');
             final password=_s(row['_password_draft']),confirm=_s(row['_password_confirmation_draft']);
             if(password.isNotEmpty||confirm.isNotEmpty){if(password.isEmpty||password!=confirm)throw StateError('كلمتا المرور غير متطابقتين للمستخدم ${_s(row['name_ar'])}.');}
             payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'employee_id':row['employee_id'],'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],'has_sub_warehouse':row['has_sub_warehouse']==true});
