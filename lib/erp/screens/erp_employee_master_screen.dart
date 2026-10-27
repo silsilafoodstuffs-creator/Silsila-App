@@ -227,7 +227,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         final value = (v ?? '').trim();
         if (required && value.isEmpty) return 'حقل مطلوب';
         if (c == _code && value.isNotEmpty && !RegExp(r'^[A-Za-z]+-?[0-9]+$').hasMatch(value)) return 'استخدم حروفًا إنجليزية ثم أرقامًا مثل EMP-0001';
-        if (c == _nationalId && value.isNotEmpty && !RegExp(r'^\d{14}.hasMatch(value)) return 'الرقم القومي يجب أن يتكون من 14 رقمًا';
+        if (c == _nationalId && value.isNotEmpty && !RegExp(r'^\d{14}$').hasMatch(value)) return 'الرقم القومي يجب أن يتكون من 14 رقمًا';
         return null;
       },
     ));
