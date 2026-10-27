@@ -5,9 +5,11 @@ const _hrStructurePurple = Color(0xFF3E007D);
 const _hrStructureOrange = Color(0xFFFFA015);
 
 class ErpHrStructureScreen extends StatefulWidget {
-  const ErpHrStructureScreen({super.key, this.initialCompanyId, this.initialTab});
+  const ErpHrStructureScreen({super.key, this.initialCompanyId, this.initialTab, this.initialView = 'tree', this.onViewChanged});
   final String? initialCompanyId;
   final String? initialTab;
+  final String initialView;
+  final ValueChanged<String>? onViewChanged;
   @override
   State<ErpHrStructureScreen> createState() => _ErpHrStructureScreenState();
 }
@@ -23,6 +25,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   List<Map<String, dynamic>> _locations = [];
   String? _error;
   bool _loading = false;
+  late String _viewMode = widget.initialView;
 
   SupabaseClient? get _db { try { return Supabase.instance.client; } catch (_) { return null; } }
   String get _companyId => (widget.initialCompanyId ?? '').trim();
@@ -34,6 +37,12 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     _tabs = TabController(length: 4, vsync: this, initialIndex: index);
     _load();
   }
+  @override
+  void didUpdateWidget(covariant ErpHrStructureScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialView != widget.initialView) _viewMode = widget.initialView;
+  }
+
   @override
   void dispose() {
     _tabs.dispose(); _code.dispose(); _ar.dispose(); _en.dispose(); super.dispose();
@@ -230,6 +239,90 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   }
 
 
+  Widget _departmentTreeNode(Map<String, dynamic> row) {
+    final children = _departments.where((d) => d['parent_id']?.toString() == row['id']?.toString()).toList()
+      ..sort((a, b) => (a['department_code'] ?? '').toString().compareTo((b['department_code'] ?? '').toString()));
+    final jobs = _jobs.where((j) => j['department_id']?.toString() == row['id']?.toString()).toList();
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      child: ExpansionTile(
+        key: PageStorageKey<String>('hr-department-${row['id']}'),
+        initiallyExpanded: true,
+        leading: Icon(
+          row['department_level'] == 'directorate' ? Icons.account_balance_outlined : row['department_level'] == 'section' ? Icons.segment : Icons.account_tree_outlined,
+          color: row['is_active'] == false ? Colors.grey : _hrStructureOrange,
+        ),
+        title: Text('${row['department_code'] ?? ''} • ${row['name_ar'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: Text('${row['department_level'] == 'directorate' ? 'إدارة رئيسية' : row['department_level'] == 'section' ? 'قسم' : 'إدارة فرعية'} • ${row['is_active'] == false ? 'غير نشط' : 'نشط'}'),
+        trailing: Wrap(spacing: 0, children: [
+          IconButton(tooltip: 'تعديل', onPressed: () => _edit(row, 'department'), icon: const Icon(Icons.edit_outlined, color: _hrStructurePurple)),
+          IconButton(tooltip: row['is_active'] == true ? 'إيقاف' : 'تنشيط', onPressed: () => _toggleActive(row, 'department'), icon: Icon(row['is_active'] == true ? Icons.pause_circle_outline : Icons.check_circle_outline, color: _hrStructureOrange)),
+        ]),
+        children: [
+          ...children.map(_departmentTreeNode),
+          ...jobs.map((j) => ListTile(
+            dense: true,
+            contentPadding: const EdgeInsetsDirectional.only(start: 48, end: 16),
+            leading: const Icon(Icons.work_outline, color: _hrStructurePurple),
+            title: Text('${j['job_code'] ?? ''} • ${j['name_ar'] ?? ''}'),
+            subtitle: Text('الدرجة: ${_grades.firstWhere((g) => g['id']?.toString() == j['grade_id']?.toString(), orElse: () => <String, dynamic>{})['name_ar'] ?? 'غير محددة'}'),
+          )),
+          if (children.isEmpty && jobs.isEmpty)
+            const ListTile(dense: true, leading: Icon(Icons.info_outline, color: Colors.black38), title: Text('لا توجد أقسام فرعية أو وظائف مسجلة تحت هذا العنصر')),
+        ],
+      ),
+    );
+  }
+
+  Widget _departmentsView() {
+    final roots = _departments.where((d) => d['parent_id'] == null).toList()
+      ..sort((a, b) => (a['department_code'] ?? '').toString().compareTo((b['department_code'] ?? '').toString()));
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Row(children: [
+        Expanded(child: Text(_viewMode == 'tree' ? 'شجرة الإدارات والأقسام' : 'جدول الإدارات والأقسام', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
+        Text('${_departments.length} سجل', style: const TextStyle(color: Colors.black54)),
+        const SizedBox(width: 10),
+        FilledButton.icon(onPressed: () => _add('department'), icon: const Icon(Icons.add), label: const Text('إضافة')),
+        IconButton(tooltip: 'إعادة تحميل البيانات', onPressed: _load, icon: const Icon(Icons.refresh)),
+      ]),
+      if (_loading) const LinearProgressIndicator(),
+      if (_error != null) Padding(padding: const EdgeInsets.all(12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+      Expanded(child: _viewMode == 'tree'
+        ? roots.isEmpty
+          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.account_tree_outlined, size: 44, color: _hrStructureOrange),
+              const SizedBox(height: 8),
+              Text(_departments.isEmpty ? 'لا توجد بيانات إدارات محمّلة لهذه الشركة.' : 'لا توجد إدارات رئيسية؛ راجع علاقة الإدارة الأب والمستوى التنظيمي.'),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('إعادة تحميل')),
+            ]))
+          : ListView(children: roots.map(_departmentTreeNode).toList())
+        : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
+            headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+            columns: const [
+              DataColumn(label: Text('الكود')), DataColumn(label: Text('اسم الإدارة / القسم')),
+              DataColumn(label: Text('المستوى')), DataColumn(label: Text('يتبع')),
+              DataColumn(label: Text('الحالة')), DataColumn(label: Text('إجراءات')),
+            ],
+            rows: _departments.map((d) {
+              final parent = _departments.where((p) => p['id']?.toString() == d['parent_id']?.toString()).firstOrNull;
+              final level = d['department_level'] == 'directorate' ? 'إدارة رئيسية' : d['department_level'] == 'section' ? 'قسم' : 'إدارة فرعية';
+              return DataRow(cells: [
+                DataCell(Text((d['department_code'] ?? '').toString())),
+                DataCell(SizedBox(width: 220, child: Text((d['name_ar'] ?? '').toString()))),
+                DataCell(Text(level)),
+                DataCell(SizedBox(width: 180, child: Text((parent?['name_ar'] ?? '—').toString()))),
+                DataCell(Text(d['is_active'] == false ? 'غير نشط' : 'نشط')),
+                DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                  IconButton(tooltip: 'تعديل', onPressed: () => _edit(d, 'department'), icon: const Icon(Icons.edit_outlined, color: _hrStructurePurple)),
+                  IconButton(tooltip: d['is_active'] == true ? 'إيقاف' : 'تنشيط', onPressed: () => _toggleActive(d, 'department'), icon: const Icon(Icons.toggle_on_outlined, color: _hrStructureOrange)),
+                ])),
+              ]);
+            }).toList(),
+          )))),
+    ]);
+  }
+
   static const _documentColumns = <Map<String, String>>[
     {'key':'requires_photo','label':'صورة شخصية'},
     {'key':'requires_id_copy','label':'صورة بطاقة'},
@@ -382,7 +475,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
         Tab(text: 'الإدارات والأقسام'), Tab(text: 'الوظائف ومتطلبات التعيين'), Tab(text: 'درجات الوظائف'), Tab(text: 'مواقع العمل'),
       ]),
       Expanded(child: TabBarView(controller: _tabs, children: [
-        _list('شجرة الإدارات والأقسام', _departments.where((d) => d['parent_id'] == null && d['department_level'] != 'section').toList(), 'department_code', 'name_ar', 'department'),
+        _departmentsView(),
         _jobsView(), _gradesView(),
         _list('مواقع العمل', _locations, 'location_code', 'name_ar', 'location'),
       ])),
