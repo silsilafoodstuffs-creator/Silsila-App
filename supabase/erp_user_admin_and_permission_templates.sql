@@ -119,8 +119,10 @@ create table if not exists public.erp_user_permission_matrix (
  unique(user_id,menu_name,submenu_name,page_name)
 );
 create index if not exists erp_user_types_company_idx on public.erp_user_types(company_id,type_code);
+create unique index if not exists erp_user_types_company_display_code_uq on public.erp_user_types(company_id,type_code_display);
 create index if not exists erp_users_company_idx on public.erp_users(company_id,user_code);
 create index if not exists erp_permission_templates_company_idx on public.erp_permission_templates(company_id,template_code);
+create unique index if not exists erp_permission_templates_company_display_code_uq on public.erp_permission_templates(company_id,template_code_display);
 create index if not exists erp_user_permission_matrix_user_idx on public.erp_user_permission_matrix(company_id,user_id);
 alter table public.erp_user_types enable row level security;
 alter table public.erp_users enable row level security;
@@ -151,7 +153,7 @@ select c.id,v.name_ar,v.name_en,true,v.show_at_login
 from public.erp_companies c
 cross join (values
  ('ادمن','Admin',false),('مورد','Supplier',true),('عميل','Customer',true),
- ('شركة شحن','Shipping Company',true),('مندوب','Sales Representative',true)
+ ('شركة شحن','Shipping Company',true),('مندوب','Sales Representative',true),('موظف','Employee',false)
 ) as v(name_ar,name_en,show_at_login)
 where not exists(select 1 from public.erp_user_types t where t.company_id=c.id and t.name_ar=v.name_ar);
 
@@ -176,7 +178,7 @@ begin
  values
  (new.id,'ادمن','Admin',true,false),(new.id,'مورد','Supplier',true,true),
  (new.id,'عميل','Customer',true,true),(new.id,'شركة شحن','Shipping Company',true,true),
- (new.id,'مندوب','Sales Representative',true,true)
+ (new.id,'مندوب','Sales Representative',true,true),(new.id,'موظف','Employee',false,false)
  on conflict(company_id,name_ar) do nothing;
  return new;
 end $$;
