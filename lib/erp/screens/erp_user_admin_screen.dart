@@ -1189,35 +1189,6 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       ]);}),
     ));
   }
-  Widget _textCell(Map<String,dynamic> row,String field,{double width=145})=>SizedBox(width:width,child:TextFormField(key:ValueKey('${row['id']}-$field-${_editMode}'),initialValue:_s(row[field]),enabled:_editMode,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:8),border:OutlineInputBorder()),onChanged:(v)=>row[field]=field=='description'?v.trim().split(RegExp(r'\s+')).where((w)=>w.isNotEmpty).take(10).join(' '):v));
-
-  Widget _ruleGrid(){
-    if(_isPermissions)return _permissionUsersGrid();
-    final parentId=_selectedId;
-    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Row(children:[
-        Expanded(child:DropdownButtonFormField<String>(
-          key:ValueKey('permission-parent-$parentId-template'),
-          value:parentId,
-          decoration:const InputDecoration(isDense:true,labelText:'القالب المحدد'),
-          items:_rows.map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text(_s(r['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
-          onChanged:(v)async{setState(()=>_selectedId=v);if(v!=null)await _loadRules();},
-        )),
-        const SizedBox(width:8),
-        OutlinedButton.icon(onPressed:parentId==null?null:()=>_openMenuPicker(parentId:parentId,template:true),icon:const Icon(Icons.account_tree_outlined),label:const Text('جلب قوائم (F1)')),
-      ]),
-      const SizedBox(height:8),
-      SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-        headingRowHeight: 57,dataRowMinHeight: 57,dataRowMaxHeight: 57,horizontalMargin:7,columnSpacing:8,
-        columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:80,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
-        rows:_rules.map((rule)=>DataRow(cells:[
-          DataCell(SizedBox(width:250,child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis))),
-          for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:_editMode?(v)=>setState(()=>rule[field]=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
-        ])).toList(),
-      )),
-    ]);
-  }
-
   List<String> get _permissionTargetIds {
     final all=_users.map((u)=>_s(u['id'])).where((id)=>id.isNotEmpty).toList();
     return _permissionAllUsers?all:all.where(_permissionSelectedUserIds.contains).toList();
