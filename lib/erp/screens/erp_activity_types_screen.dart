@@ -76,13 +76,13 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       // Seed the seven starter activity types in the database, without duplicating
       // or overwriting any records the company has already customized.
       const defaults = <Map<String, String>>[
-        {'ترتيب السطر': '1', 'كود النشاط': 'ACT001', 'اسم النشاط عربي': 'مواد غذائية', 'اسم النشاط إنجليزي': 'Foodstuffs', 'نشط': 'true'},
-        {'ترتيب السطر': '2', 'كود النشاط': 'ACT002', 'اسم النشاط عربي': 'لوازم بناء', 'اسم النشاط إنجليزي': 'Building Supplies', 'نشط': 'true'},
-        {'ترتيب السطر': '3', 'كود النشاط': 'ACT003', 'اسم النشاط عربي': 'ملابس واكسسوارات', 'اسم النشاط إنجليزي': 'Clothing & Accessories', 'نشط': 'true'},
-        {'ترتيب السطر': '4', 'كود النشاط': 'ACT004', 'اسم النشاط عربي': 'أجهزة وإلكترونيات', 'اسم النشاط إنجليزي': 'Electronics', 'نشط': 'true'},
-        {'ترتيب السطر': '5', 'كود النشاط': 'ACT005', 'اسم النشاط عربي': 'سيارات ومعدات', 'اسم النشاط إنجليزي': 'Vehicles & Equipment', 'نشط': 'true'},
-        {'ترتيب السطر': '6', 'كود النشاط': 'ACT006', 'اسم النشاط عربي': 'خدمات شحن ونقل', 'اسم النشاط إنجليزي': 'Shipping & Transport Services', 'نشط': 'true'},
-        {'ترتيب السطر': '7', 'كود النشاط': 'ACT007', 'اسم النشاط عربي': 'أثاث وديكورات', 'اسم النشاط إنجليزي': 'Furniture & Decor', 'نشط': 'true'},
+        {'ترتيب السطر': '1', 'كود النشاط': 'ACT001', 'اسم النشاط عربي': 'مواد غذائية', 'اسم النشاط إنجليزي': 'Foodstuffs', 'نشط': 'true', 'يظهر في التطبيق': 'true'},
+        {'ترتيب السطر': '2', 'كود النشاط': 'ACT002', 'اسم النشاط عربي': 'لوازم بناء', 'اسم النشاط إنجليزي': 'Building Supplies', 'نشط': 'true', 'يظهر في التطبيق': 'true'},
+        {'ترتيب السطر': '3', 'كود النشاط': 'ACT003', 'اسم النشاط عربي': 'ملابس واكسسوارات', 'اسم النشاط إنجليزي': 'Clothing & Accessories', 'نشط': 'true', 'يظهر في التطبيق': 'true'},
+        {'ترتيب السطر': '4', 'كود النشاط': 'ACT004', 'اسم النشاط عربي': 'أجهزة وإلكترونيات', 'اسم النشاط إنجليزي': 'Electronics', 'نشط': 'true', 'يظهر في التطبيق': 'true'},
+        {'ترتيب السطر': '5', 'كود النشاط': 'ACT005', 'اسم النشاط عربي': 'سيارات ومعدات', 'اسم النشاط إنجليزي': 'Vehicles & Equipment', 'نشط': 'true', 'يظهر في التطبيق': 'true'},
+        {'ترتيب السطر': '6', 'كود النشاط': 'ACT006', 'اسم النشاط عربي': 'خدمات شحن ونقل', 'اسم النشاط إنجليزي': 'Shipping & Transport Services', 'نشط': 'true', 'يظهر في التطبيق': 'true'},
+        {'ترتيب السطر': '7', 'كود النشاط': 'ACT007', 'اسم النشاط عربي': 'أثاث وديكورات', 'اسم النشاط إنجليزي': 'Furniture & Decor', 'نشط': 'true', 'يظهر في التطبيق': 'true'},
       ];
       final existingCodes = data.map((r) => r['كود النشاط']).toSet();
       for (final starter in defaults) {
@@ -130,6 +130,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       'اسم النشاط إنجليزي': '',
       'صورة النشاط': '',
       'نشط': 'true',
+      'يظهر في التطبيق': 'true',
       '_مسودة': 'true',
     };
     setState(() {
@@ -178,6 +179,8 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
           'name': payload['اسم النشاط عربي']!.trim(),
           'sort_order': int.tryParse(payload['ترتيب السطر'] ?? '') ?? 0,
           'is_active': (payload['نشط'] ?? 'true').toLowerCase() != 'false',
+          'name_en': (payload['اسم النشاط إنجليزي'] ?? '').trim(),
+          'show_in_app': (payload['نشط'] ?? 'true').toLowerCase() != 'false' && (payload['يظهر في التطبيق'] ?? 'true').toLowerCase() != 'false',
         }, onConflict: 'code');
       }
       await _load();
@@ -236,6 +239,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
           'اسم النشاط عربي': name,
           'اسم النشاط إنجليزي': (values['اسم النشاط إنجليزي'] ?? '').trim(),
           'نشط': (values['نشط'] ?? 'true').toLowerCase() == 'false' ? 'false' : 'true',
+          'يظهر في التطبيق': (values['يظهر في التطبيق'] ?? 'true').toLowerCase() == 'false' ? 'false' : 'true',
         });
         nextNumber++;
       }
@@ -251,6 +255,8 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
         await Supabase.instance.client.from('activity_types').upsert({
           'code': row['كود النشاط'], 'name': row['اسم النشاط عربي'],
           'sort_order': int.tryParse(row['ترتيب السطر'] ?? '') ?? 0, 'is_active': row['نشط'] == 'true',
+          'name_en': row['اسم النشاط إنجليزي'] ?? '',
+          'show_in_app': row['نشط'] == 'true' && row['يظهر في التطبيق'] == 'true',
         }, onConflict: 'code');
       }
       await _load();
@@ -262,7 +268,7 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
     if (_rows.isEmpty) { setState(() => _message = 'لا توجد بيانات للطباعة.'); return; }
     try {
       final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
-      const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'اسم النشاط إنجليزي', 'نشط'];
+      const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'اسم النشاط إنجليزي', 'نشط', 'يظهر في التطبيق'];
       final doc = pw.Document();
       doc.addPage(pw.MultiPage(theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
         pw.Text('سلسلة — أنواع الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
@@ -314,12 +320,14 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       ]))),
       if (_message != null) Container(color: const Color(0xFFF7F2FC), padding: const EdgeInsets.all(7), child: Text(_message!, style: const TextStyle(fontSize: 11, color: Color(0xFF3E007D)))),
       const SizedBox(height: 8),
-      Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 57, dataRowMinHeight: 57, dataRowMaxHeight: 57, horizontalMargin: 8, columnSpacing: 14, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م (ترتيب السطر)')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط')), DataColumn(label: Text('نشط / غير نشط'))], rows: [
+      Container(decoration: BoxDecoration(color: Colors.white, border: Border.all(color: const Color(0xFFE4DDED)), borderRadius: BorderRadius.circular(8)), child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowHeight: 42, dataRowMinHeight: 42, dataRowMaxHeight: 42, horizontalMargin: 10, columnSpacing: 18, headingRowColor: WidgetStateProperty.all(const Color(0xFFF1EAF9)), columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('كود النشاط')), DataColumn(label: Text('اسم النشاط عربي')), DataColumn(label: Text('اسم النشاط إنجليزي')), DataColumn(label: Text('نشط')), DataColumn(label: Text('يظهر في التطبيق'))], rows: [
         for (var i = 0; i < _rows.length; i++) DataRow(selected: _rows[i]['كود النشاط'] == _selected, onSelectChanged: (_) => setState(() => _selected = _rows[i]['كود النشاط']), cells: [
-          DataCell(SizedBox(width: 38, child: TextFormField(initialValue: _rows[i]['ترتيب السطر'] ?? (i + 1).toString(), key: ValueKey('activity-order-$i'), enabled: _editing, decoration: const InputDecoration(isDense:true,border:InputBorder.none), onChanged: (v) => _rows[i]['ترتيب السطر'] = v))),
+          DataCell(SizedBox(width: 38, child: Text('${i + 1}', textAlign: TextAlign.center))),
           DataCell(SizedBox(width: 130, child: Align(alignment: AlignmentDirectional.centerStart, child: Text(_rows[i]['كود النشاط'] ?? '', style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6F42C1)))))),
-          DataCell(SizedBox(width: 270, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i'), enabled: _editing, decoration: const InputDecoration(isDense:true,border:InputBorder.none), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
-          DataCell(Checkbox(value: (_rows[i]['نشط'] ?? 'true') == 'true', visualDensity: VisualDensity.compact, onChanged: _editing ? (v) => setState(() => _rows[i]['نشط'] = (v ?? false).toString()) : null)),
+          DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط عربي'] ?? '', key: ValueKey('activity-ar-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط عربي'] = v))),
+          DataCell(SizedBox(width: 220, child: TextFormField(initialValue: _rows[i]['اسم النشاط إنجليزي'] ?? '', key: ValueKey('activity-en-$i-${_rows[i]['كود النشاط']}'), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 6, horizontal: 4)), onTap: () => setState(() => _selected = _rows[i]['كود النشاط']), onChanged: (v) => _rows[i]['اسم النشاط إنجليزي'] = v))),
+          DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing ? (v) => setState(() { final active = v ?? false; _rows[i]['نشط'] = active.toString(); if (!active) _rows[i]['يظهر في التطبيق'] = 'false'; }) : null)),
+          DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: (_rows[i]['يظهر في التطبيق'] ?? 'true') == 'true' && (_rows[i]['نشط'] ?? 'true') == 'true', onChanged: _editing && (_rows[i]['نشط'] ?? 'true') == 'true' ? (v) => setState(() => _rows[i]['يظهر في التطبيق'] = (v ?? false).toString()) : null)),
         ]),
       ]))),
       if (_loading) const LinearProgressIndicator(minHeight: 2),
