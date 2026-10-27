@@ -100,7 +100,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
   }
 
   Future<void> _switchTab(int index) async {
-    setState(() { _activeTab = index; _selectedId = null; });
+    setState(() { _activeTab = index; _selectedId = null; _editing = false; _error = null; });
     await _load();
   }
 
@@ -189,7 +189,8 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
     SizedBox(width: 112, child: ErpQuickTaskButton(label: label, icon: icon, onPressed: action, compact: true));
 
   Widget _grid() {
-    if (_types.isEmpty) return const Padding(padding: EdgeInsets.all(22), child: Text('لا توجد أنواع مستخدمين نشطة.'));
+    if (_types.isEmpty) return const Padding(padding: EdgeInsets.all(22), child: Text('لا توجد أنواع مستخدمين.'));
+    final canEdit = _editing && _activeTypeEnabled;
     return DataTable(
       headingRowColor: WidgetStateProperty.all(const Color(0xFFEDE4F8)),
       dataRowMinHeight: 57, dataRowMaxHeight: 57, headingRowHeight: 57,
@@ -210,14 +211,14 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
           cells: [
             DataCell(Text('${i+1}')),
             DataCell(Text(_s(row['classification_code']).isEmpty ? 'تلقائي عند الحفظ' : _s(row['classification_code']))),
-            DataCell(SizedBox(width: 210, child: TextField(controller: _arControllers[id], enabled: _editing,
+            DataCell(SizedBox(width: 210, child: TextField(controller: _arControllers[id], enabled: canEdit,
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم التصنيف بالعربية'),
               onTap: () => _select(row)))),
             DataCell(SizedBox(width: 190, child: TextField(controller: _enControllers[id], enabled: _editing,
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'Classification name'),
               onTap: () => _select(row)))),
             DataCell(Checkbox(value: row['is_active'] == true, activeColor: _classPurple,
-              onChanged: _editing ? (v) => setState(() { row['is_active'] = v == true; _selectedId = id; }) : null)),
+              onChanged: canEdit ? (v) => setState(() { row['is_active'] = v == true; _selectedId = id; }) : null)),
             DataCell(Checkbox(value: row['show_in_app'] == true, activeColor: _classOrange,
               onChanged: _editing ? (v) => setState(() { row['show_in_app'] = v == true; _selectedId = id; }) : null)),
           ],
@@ -254,7 +255,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
       if (_message != null) Padding(padding: const EdgeInsets.all(8), child: Text(_message!, style: const TextStyle(color: Colors.green))),
       if (_types.isNotEmpty) SizedBox(height: 42, child: ListView(scrollDirection: Axis.horizontal, children: [
         for (var i=0; i<_types.length; i++) Padding(padding: const EdgeInsetsDirectional.only(start: 6, top: 4, bottom: 3),
-          child: ChoiceChip(label: Text(_s(_types[i]['name_ar'])), selected: _activeTab == i,
+          child: ChoiceChip(label: Text('${_s(_types[i]['name_ar'])}${_types[i]['is_active'] == true ? '' : ' (غير نشط)'}'), selected: _activeTab == i,
             selectedColor: _classPurple, labelStyle: TextStyle(fontSize: 12, color: _activeTab == i ? Colors.white : _classPurple),
             onSelected: (_) => _switchTab(i))),
       ])),
