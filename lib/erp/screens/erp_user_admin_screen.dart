@@ -14,10 +14,10 @@ import 'erp_user_classifications_screen.dart';
 
 const _userAdminPurple = Color(0xFF3E007D);
 const _userAdminCanvas = Color(0xFFF7F5FA);
-const _userAdminActions = <String>['تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','استيراد Excel','طباعة PDF','الوصول السريع'];
+const _userAdminActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','Excel','PDF'];
 const _userAdminActionFields = <String,String>{
-  'تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete',
-  'معاينة':'can_preview','طباعة':'can_print','استيراد Excel':'can_import_excel','طباعة PDF':'can_print_pdf','الوصول السريع':'show_in_quick_tasks',
+  'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete',
+  'معاينة':'can_preview','طباعة':'can_print','Excel':'can_import_excel','PDF':'can_print_pdf',
 };
 const _userAdminTree = <String,Map<String,List<String>>>{
   'إعدادات عامة':{
@@ -86,6 +86,9 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   String? _selectedTemplateId;
   String? _selectedNodeKind;
   String _viewMode = 'tree';
+  bool _permissionAllUsers = true;
+  String _permissionMode = 'template';
+  final Set<String> _permissionSelectedUserIds = <String>{};
   final Set<String> _expandedHierarchyNodes = <String>{};
   final TextEditingController _hierarchySearchController = TextEditingController();
   String _hierarchySearch = '';
@@ -288,7 +291,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         _loading=false; _error=loadWarning;
         if ((_isUser || _isHierarchy) && userList.isEmpty && loadWarning == null) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
         if ((_isType || _isHierarchy) && typeList.any((r)=>r['_local_default']==true)) _message='أنواع المستخدمين الافتراضية معروضة في الجدول، لكن تعذر حفظها في قاعدة البيانات بسبب الصلاحيات أو سياسات RLS. يمكنك مراجعة السياسات ثم الضغط على تحديث.';
-        if ((_isType || _isHierarchy) && typeList.length < 5) _message='عدد أنواع المستخدمين أقل من 6؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
+        if ((_isType || _isHierarchy) && typeList.length < 5) _message='عدد أنواع المستخدمين أقل من 5؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
       });
       if (_isTemplate && _selectedId!=null) await _loadRules();
       if (_isPermissions) await _loadUserRules();
@@ -1320,62 +1323,173 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     ]);
   }
 
-  Widget _permissionUsersGrid(){
-    final pages=_permissionPages;
-    final pageValue=pages.any((p)=>p['key']==_selectedPageKey)?_selectedPageKey:(pages.isEmpty?null:pages.first['key']);
-    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.start,children:[
-        SizedBox(width:340,child:DropdownButtonFormField<String>(
-          key:ValueKey('permission-page-$pageValue'),
-          value:pageValue,
-          isExpanded:true,
-          decoration:const InputDecoration(labelText:'القائمة / الشاشة المطلوب تحديد صلاحياتها',isDense:true),
-          items:pages.map((p)=>DropdownMenuItem(value:p['key'],child:Text(p['label']!,overflow:TextOverflow.ellipsis))).toList(),
-          onChanged:(v)=>setState(()=>_selectedPageKey=v??_selectedPageKey),
-        )),
-        OutlinedButton.icon(onPressed:_openUserPicker,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
-        SizedBox(width:190,child:DropdownButtonFormField<String>(
-          key:ValueKey('template-select-$_selectedTemplateId'),
-          value:_templates.any((t)=>_s(t['id'])==_selectedTemplateId)?_selectedTemplateId:null,
-          decoration:const InputDecoration(labelText:'قالب صلاحيات',isDense:true),
-          items:_templates.where((t)=>t['is_active']==true).map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
-          onChanged:(v)=>setState(()=>_selectedTemplateId=v),
-        )),
-        OutlinedButton.icon(onPressed:_selectedUserId==null||_selectedTemplateId==null?null:_applyTemplate,icon:const Icon(Icons.playlist_add_check),label:const Text('تطبيق القالب')),
+  List<String> get _permissionTargetIds {
+    final available = _users.map((u) => _s(u['id'])).where((id) => id.isNotEmpty).toList();
+    if (_permissionAllUsers) return available;
+    return available.where(_permissionSelectedUserIds.contains).toList();
+  }
+
+  Map<String,dynamic>? _permissionRule(String uid, String menu, String submenu, String page) {
+    return _rules.where((r) => _s(r['user_id']) == uid &&
+      _s(r['menu_name']) == menu && _s(r['submenu_name']) == submenu &&
+      _s(r['page_name']) == page).firstOrNull;
+  }
+
+  bool _permissionChecked(String menu, String submenu, String page, String field) {
+    final targets = _permissionTargetIds;
+    if (targets.isEmpty) return false;
+    return targets.every((uid) => _permissionRule(uid, menu, submenu, page)?[field] == true);
+  }
+
+  void _setPermissionTreeValue(String menu, String submenu, String page, String field, bool value) {
+    final targets = _permissionTargetIds;
+    if (targets.isEmpty) {
+      setState(() => _error = 'حدد مستخدمًا واحدًا على الأقل، أو اختر كل المستخدمين.');
+      return;
+    }
+    final keys = <List<String>>[];
+    if (page != '*') {
+      keys.add([menu, submenu, page]);
+    } else if (submenu != '*') {
+      keys.add([menu, submenu, '*']);
+      for (final p in (_userAdminTree[menu]?[submenu] ?? const <String>[])) {
+        keys.add([menu, submenu, p]);
+      }
+    } else {
+      keys.add([menu, '*', '*']);
+      for (final sub in (_userAdminTree[menu] ?? const <String,List<String>>{}).entries) {
+        keys.add([menu, sub.key, '*']);
+        for (final p in sub.value) { keys.add([menu, sub.key, p]); }
+      }
+    }
+    setState(() {
+      for (final uid in targets) {
+        for (final key in keys) {
+          var rule = _permissionRule(uid, key[0], key[1], key[2]);
+          if (rule == null) {
+            rule = <String,dynamic>{
+              'company_id':_company,'user_id':uid,'menu_name':key[0],
+              'submenu_name':key[1],'page_name':key[2],
+              for (final field in _userAdminActionFields.values) field:false,
+            };
+            _rules.add(rule);
+          }
+          rule[field] = value;
+          if (field == 'can_access' && !value) {
+            for (final action in _userAdminActionFields.values.where((f) => f != 'can_access')) {
+              rule[action] = false;
+            }
+          } else if (field != 'can_access' && value) {
+            rule['can_access'] = true;
+          }
+        }
+      }
+      _error = null;
+      _message = 'تم تحديث الصلاحيات كمسودة. اضغط حفظ لتثبيت التغييرات.';
+    });
+  }
+
+  Widget _permissionRuleCells(String menu, String submenu, String page) {
+    return Row(mainAxisSize:MainAxisSize.min,children:[
+      for (final entry in _userAdminActionFields.entries)
+        SizedBox(width:72,child:Center(child:Checkbox(
+          shape:const CircleBorder(),
+          value:_permissionChecked(menu,submenu,page,entry.value),
+          onChanged:_editMode ? (v)=>_setPermissionTreeValue(menu,submenu,page,entry.value,v==true) : null,
+          visualDensity:VisualDensity.compact,activeColor:_userAdminPurple,
+        ))),
+    ]);
+  }
+
+  Widget _permissionTreeRow(String label, String menu, String submenu, String page, {bool strong=false}) {
+    return Container(
+      color: strong ? const Color(0xFFF0E8F8) : Colors.white,
+      padding: const EdgeInsetsDirectional.only(start:8,end:4,top:3,bottom:3),
+      child: Row(children:[
+        Expanded(flex:3,child:Text(label,style:TextStyle(fontWeight:strong?FontWeight.w900:FontWeight.w600,fontSize:12,color:strong?_userAdminPurple:Colors.black87))),
+        Expanded(flex:7,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:_permissionRuleCells(menu,submenu,page))),
       ]),
-      const SizedBox(height:8),
-      SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-        headingRowHeight: 57,dataRowMinHeight: 57,dataRowMaxHeight: 57,horizontalMargin:7,columnSpacing:9,
-        columns:[
-          const DataColumn(label:Text('م')),
-          const DataColumn(label:Text('كود المستخدم')),
-          const DataColumn(label:Text('اسم المستخدم عربي')),
-          const DataColumn(label:Text('اسم المستخدم إنجليزي')),
-          const DataColumn(label:Text('نوع المستخدم')),
-          const DataColumn(label:Text('الصورة')),
-          const DataColumn(label:Text('نشط')),
-          for(final action in _userAdminActions)DataColumn(label:SizedBox(width:82,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800)))),
-        ],
-        rows:List.generate(_users.length,(i){
-          final user=_users[i];final uid=_s(user['id']);final rule=_userRuleFor(uid);
-          return DataRow(selected:uid==_selectedUserId,onSelectChanged:(v)=>setState(()=>_selectedUserId=v==true?uid:null),cells:[
-            DataCell(Text('${i+1}')),
-            DataCell(Text(_s(user['user_code']))),
-            DataCell(_textCell(user,'name_ar')),
-            DataCell(_textCell(user,'name_en')),
-            DataCell(SizedBox(width:150,child:DropdownButtonFormField<String>(
-              key:ValueKey('${uid}-permission-type-${user['user_type_id']}'),
-              value:_types.any((t)=>_s(t['id'])==_s(user['user_type_id']))?_s(user['user_type_id']):null,
-              isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),
-              items:_types.map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
-              onChanged:_editMode?(v)=>setState(()=>user['user_type_id']=v):null,
-            ))),
-            DataCell(_imageCell(user)),
-            DataCell(Checkbox(value:user['is_active']==true,onChanged:_editMode?(v)=>setState(()=>user['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
-            for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule?[field]==true,onChanged:(v)=>_setUserPermission(user,field,v==true),visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
-          ]);
-        }),
-      )),
+    );
+  }
+
+  Future<void> _openTemplatePicker() async {
+    final picked = await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('جلب قالب صلاحيات (F1)'),
+      content:SizedBox(width:460,height:360,child:ListView(children:[
+        for(final template in _templates.where((t)=>t['is_active']==true))
+          ListTile(title:Text(_s(template['name_ar'])),subtitle:Text(_s(template['template_code_display'])),onTap:()=>Navigator.pop(ctx,_s(template['id']))),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء'))],
+    ));
+    if (picked == null || !mounted) return;
+    setState(()=>_selectedTemplateId=picked);
+    await _applyTemplate();
+  }
+
+  Widget _permissionUsersGrid(){
+    final targets = _permissionTargetIds;
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Wrap(spacing:12,runSpacing:6,alignment:WrapAlignment.start,crossAxisAlignment:WrapCrossAlignment.center,children:[
+        Row(mainAxisSize:MainAxisSize.min,children:[
+          Checkbox(shape:const CircleBorder(),value:_permissionAllUsers,onChanged:_editMode?(v)=>setState(()=>_permissionAllUsers=v==true):null),
+          const Text('كل المستخدمين'),
+        ]),
+        Row(mainAxisSize:MainAxisSize.min,children:[
+          Checkbox(shape:const CircleBorder(),value:!_permissionAllUsers,onChanged:_editMode?(v)=>setState(()=>_permissionAllUsers=!(v==true)):null),
+          const Text('مستخدمون محددون'),
+        ]),
+        OutlinedButton.icon(onPressed:_load,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
+        Row(mainAxisSize:MainAxisSize.min,children:[
+          Checkbox(shape:const CircleBorder(),value:_permissionMode=='template',onChanged:_editMode?(v)=>setState(()=>_permissionMode=v==true?'template':'manual'):null),
+          const Text('تحديد قالب ثابت'),
+        ]),
+        Row(mainAxisSize:MainAxisSize.min,children:[
+          Checkbox(shape:const CircleBorder(),value:_permissionMode=='manual',onChanged:_editMode?(v)=>setState(()=>_permissionMode=v==true?'manual':'template'):null),
+          const Text('تحديد صلاحيات يدوي'),
+        ]),
+        if(_permissionMode=='template') OutlinedButton.icon(
+          onPressed:_editMode?_openTemplatePicker:null,
+          icon:const Icon(Icons.file_open_outlined),label:Text(_selectedTemplateId==null?'جلب قالب (F1)': 'تغيير القالب (F1)')),
+        if(_permissionMode=='template') OutlinedButton.icon(
+          onPressed:_editMode&&_selectedTemplateId!=null?_applyTemplate:null,
+          icon:const Icon(Icons.playlist_add_check),label:const Text('تطبيق القالب')),
+      ]),
+      if(!_permissionAllUsers) Container(
+        constraints:const BoxConstraints(maxHeight:130),
+        decoration:BoxDecoration(color:const Color(0xFFFAF8FC),border:Border.all(color:_userAdminPurple.withValues(alpha:.15)),borderRadius:BorderRadius.circular(8)),
+        child:SingleChildScrollView(child:Wrap(spacing:8,runSpacing:2,children:[
+          for(final user in _users) SizedBox(width:210,child:CheckboxListTile(
+            dense:true,controlAffinity:ListTileControlAffinity.leading,
+            value:_permissionSelectedUserIds.contains(_s(user['id'])),
+            title:Text(_s(user['name_ar']),maxLines:1,overflow:TextOverflow.ellipsis),
+            subtitle:Text(_s(user['user_code'])),contentPadding:const EdgeInsets.symmetric(horizontal:6),
+            onChanged:_editMode?(v)=>setState(()=>v==true?_permissionSelectedUserIds.add(_s(user['id'])):_permissionSelectedUserIds.remove(_s(user['id']))):null,
+          )),
+        ]))),
+      ),
+      Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text('المستخدمون المستهدفون: ${targets.length} • كل صف رئيسي عند إلغاء «مسموح» يلغي صلاحيات الشاشات التابعة له.',style:TextStyle(color:Colors.grey.shade700,fontSize:12))),
+      Container(color:const Color(0xFFEDE4F8),padding:const EdgeInsetsDirectional.only(start:8,end:4,top:6,bottom:6),child:Row(children:[
+        const Expanded(flex:3,child:Text('القائمة / الشاشة',style:TextStyle(fontWeight:FontWeight.w900,color:_userAdminPurple))),
+        Expanded(flex:7,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+          for(final action in _userAdminActions) SizedBox(width:72,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900))),
+        ]))),
+      ])),
+      Expanded(child:ListView(children:[
+        for(final menu in _userAdminTree.entries) ExpansionTile(
+          key:PageStorageKey<String>('perm-menu-${menu.key}'),
+          tilePadding:const EdgeInsets.symmetric(horizontal:4),
+          title:_permissionTreeRow(menu.key,menu.key,'*','*',strong:true),
+          children:[
+            for(final sub in menu.value.entries) ExpansionTile(
+              key:PageStorageKey<String>('perm-sub-${menu.key}-${sub.key}'),
+              tilePadding:const EdgeInsetsDirectional.only(start:16,end:4),
+              title:_permissionTreeRow(sub.key,menu.key,sub.key,'*',strong:true),
+              children:[for(final page in sub.value)
+                _permissionTreeRow(page,menu.key,sub.key,page)],
+            ),
+          ],
+        ),
+      ])),
     ]);
   }
 
@@ -1385,7 +1499,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     return Focus(autofocus:true,onKeyEvent:(node,event){
       if(event is KeyDownEvent && event.logicalKey==LogicalKeyboardKey.f1){
         if(_isTemplate && _selectedId!=null){_openMenuPicker(parentId:_selectedId!,template:true);return KeyEventResult.handled;}
-        if(_isPermissions && _selectedUserId!=null){_openMenuPicker(parentId:_selectedUserId!,template:false);return KeyEventResult.handled;}
+        if(_isPermissions){_openTemplatePicker();return KeyEventResult.handled;}
         if(_isUser && _selectedId!=null){_openBranchWarehousePicker(_selectedId!);return KeyEventResult.handled;}
       }
       return KeyEventResult.ignored;
