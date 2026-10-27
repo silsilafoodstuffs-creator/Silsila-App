@@ -1190,7 +1190,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       columns:[
         const DataColumn(label:Text('م')),DataColumn(label:Text(_isType?'كود النوع':_isUser?'كود المستخدم':'كود القالب')),
         if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),
-        if(_isUser)const DataColumn(label:Text('اسم عربي')),if(_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isUser)const DataColumn(label:Text('كود الموظف (F1)'),
+        if(_isUser)const DataColumn(label:Text('اسم عربي')),if(_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isUser)const DataColumn(label:Text('كود الموظف (F1)')),
         if(_isUser)const DataColumn(label:Text('كلمة المرور')),if(_isUser)const DataColumn(label:Text('تأكيد كلمة المرور')),if(_isUser)const DataColumn(label:Text('نوع المستخدم')),
         if(_isType)const DataColumn(label:Text('يظهر في التطبيق')),if(!_isUser&&!_isType)const DataColumn(label:Text('الصورة')),
         const DataColumn(label:Text('نشط')),if(_isType)const DataColumn(label:Text('وصف مختصر (10 كلمات)')),
