@@ -747,7 +747,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
                 child: Center(child: Text('لا توجد سجلات محفوظة للأنواع أو المستخدمين. اضغط تحديث، أو إضافة لإنشاء أول سجل.')),
               ),
           ])
-        : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
+        : _isUser ? _masterGrid() : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
           headingRowColor: WidgetStateProperty.all(const Color(0xFFF0E8F8)),
           columns: const [DataColumn(label: Text('النوع / المستوى')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الاسم العربي')), DataColumn(label: Text('الاسم الإنجليزي')), DataColumn(label: Text('الحالة'))],
           rows: flat.map((item) {
@@ -768,7 +768,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _add() async {
-    if (_isHierarchy) { await _addHierarchyNode(); return; }
+    if (_view == 'hierarchy') { await _addHierarchyNode(); return; }
     if (_saving) return;
     if (_isType && _rows.any((row) => row['_local_default'] == true)) {
       setState(() => _error = 'لا يمكن الإضافة قبل اتصال قاعدة البيانات وتحميل الأنواع المحفوظة؛ الصفوف الحالية للمعاينة فقط.');
@@ -799,7 +799,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           'employee_id': selectedEmployee['id'],
           'name_ar': _s(selectedEmployee['full_name']),
           'name_en': _s(selectedEmployee['full_name_en']).isNotEmpty ? _s(selectedEmployee['full_name_en']) : _s(selectedEmployee['full_name']),
-          'user_type_id': _types.where((t)=>t['is_active']==true).isEmpty ? null : _types.firstWhere((t)=>t['is_active']==true)['id'],
+          'user_type_id': _selectedNodeKind == 'type' && _types.any((t)=>_s(t['id'])==_selectedId && t['is_active']==true) ? _selectedId : (_types.where((t)=>t['is_active']==true).isEmpty ? null : _types.firstWhere((t)=>t['is_active']==true)['id']),
           'has_sub_warehouse': false,
         });
       } else {
@@ -830,7 +830,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _save() async {
-    if (_isHierarchy) { await _saveHierarchy(); return; }
+    if (_view == 'hierarchy') { await _saveHierarchy(); return; }
     if (_isType && _rows.any((row) => row['_local_default'] == true)) {
       setState(() => _error = 'الأنواع الظاهرة حاليًا بيانات افتراضية للمعاينة فقط وليست محفوظة. أصلح صلاحيات/سياسات قاعدة البيانات ثم اضغط تحديث قبل الحفظ.');
       return;
@@ -888,7 +888,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _delete() async {
-    if (_isHierarchy) { await _deleteHierarchyNode(); return; }
+    if (_view == 'hierarchy' || (_isUser && _selectedNodeKind == 'type')) { await _deleteHierarchyNode(); return; }
     if(!_editMode){setState(()=>_error='اضغط «تعديل» أولًا قبل حذف البيانات.');return;}
     if(_isPermissions){
       if(_selectedUserId==null){setState(()=>_error='اختر مستخدمًا أولًا.');return;}
@@ -1558,7 +1558,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         ? ErpUserClassificationsScreen(companyId: _company)
         : _loading ? const Center(child:CircularProgressIndicator())
         : _isPermissions ? _ruleGrid()
-        : _isHierarchy ? _hierarchyView()
+        : (_isHierarchy || _isUser) ? _hierarchyView()
         : SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
         ])))),
