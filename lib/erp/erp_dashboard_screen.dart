@@ -1137,7 +1137,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                               ? 'templates'
                                               : _page == 'صلاحيات المستخدمين'
                                                   ? 'permissions'
-                                                  : 'hierarchy',
+                                                  : 'types',
                                         ),
                             ),
                           )
