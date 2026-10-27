@@ -282,7 +282,15 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           const SizedBox(height: 5),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             _task('تحديث', Icons.refresh, Colors.blue, _loading || _saving ? null : _load),
-            _task('عرض شجرة', Icons.account_tree_outlined, _viewMode == 'tree' ? _costPurple : Colors.grey, () => setState(() => _viewMode = 'tree')),
+            _task('عرض شجرة', Icons.account_tree_outlined, _viewMode == 'tree' ? _costPurple : Colors.grey, () {
+              _searchController.clear();
+              setState(() {
+                _searchQuery = '';
+                _viewMode = 'tree';
+                _error = null;
+              });
+              _load();
+            }),
             _task('عرض جدول', Icons.table_rows_outlined, _viewMode == 'grid' ? _costPurple : Colors.grey, () => setState(() => _viewMode = 'grid')),
             _task('إضافة', Icons.add_circle_outline, Colors.green, _loading || _saving ? null : _addMain),
             _task('حفظ', Icons.save_outlined, _costPurple, _loading || _saving ? null : _save),
