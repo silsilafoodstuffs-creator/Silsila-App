@@ -92,7 +92,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   String? _activeCompanyId;
   String _selectedPageKey = 'إعدادات عامة|بيانات أساسية|بيانات الشركة';
   static const _typeNames = <String,String>{
-    'types':'المستخدمين','users':'المستخدمين','hierarchy':'المستخدمين','classifications':'المستخدمين','templates':'المستخدمين','permissions':'المستخدمين'
+    'types':'أنواع المستخدمين','users':'المستخدمين','hierarchy':'احتياطي شاشة المستخدمين','classifications':'المستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
   };
 
   @override void initState() { super.initState(); _view=widget.initialView; _activeCompanyId=widget.companyId; try {_db=Supabase.instance.client;} catch (_) {} _load(); }
@@ -133,7 +133,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     });
   }
   String get _company => (_activeCompanyId ?? widget.companyId ?? '').trim();
-  bool get _isHierarchy => _view=='hierarchy' || _view=='types' || _view=='users';
+  bool get _isHierarchy => _view=='hierarchy';
   bool get _isType => _view=='types';
   bool get _isUser => _view=='users';
   bool get _isTemplate => _view=='templates';
@@ -276,7 +276,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       if (!mounted) return;
       setState(() {
         _types=typeList; _users=userList; _templates=templateList;
-        _rows=_isHierarchy?typeList:_isTemplate?templateList:userList;
+        _rows=_isType?typeList:_isHierarchy?typeList:_isTemplate?templateList:userList;
         if (_selectedId != null && (_isHierarchy ? !typeList.any((r)=>_s(r['id'])==_selectedId) && !userList.any((r)=>_s(r['id'])==_selectedId) : !_rows.any((r)=>_s(r['id'])==_selectedId))) _selectedId=null;
         if (_selectedUserId != null && !userList.any((r)=>_s(r['id'])==_selectedUserId)) _selectedUserId=null;
         if (_selectedUserId==null && userList.isNotEmpty) _selectedUserId=_s(userList.first['id']);
@@ -445,9 +445,10 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         await _db!.from('erp_user_types').update({
           'name_ar': _s(type['name_ar']).trim(),
           'name_en': _s(type['name_en']).trim(),
+          'description': _s(type['description']).trim().split(RegExp(r'\\s+')).take(10).join(' '),
           'image_data': type['image_data'],
           'is_active': type['is_active'] == true,
-          'show_at_login': !['ادمن','موظف'].contains(_s(type['name_ar'])) && type['show_at_login'] == true,
+          'show_at_login': type['show_at_login'] == true,
         }).eq('company_id', _company).eq('id', id);
       }
       for (final user in _users) {
@@ -783,7 +784,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     try {
       final payload = <String, dynamic>{'company_id': _company, 'is_active': true};
       if (_isType) {
-        payload.addAll({'name_ar': _nextUniqueName('نوع مستخدم جديد'), 'name_en': _nextUniqueName('New user type', field: 'name_en'), 'show_at_login': false});
+        payload.addAll({'name_ar': _nextUniqueName('نوع مستخدم جديد'), 'name_en': _nextUniqueName('New user type', field: 'name_en'), 'description': '', 'show_at_login': false});
       } else if (_isUser) {
         payload.addAll({
           'name_ar': _nextUniqueName('مستخدم جديد'),
@@ -833,7 +834,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         final targetTable=_isPermissions?'erp_users':_table;
         for(final row in masterRows){
           final payload=<String,dynamic>{};
-          if(_isType)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':(!['ادمن','موظف'].contains(_s(row['name_ar'])))&&row['show_at_login']==true});
+          if(_isType)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'description':_s(row['description']).trim().split(RegExp(r'\\s+')).take(10).join(' '),'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':row['show_at_login']==true});
           if(_isUser||_isPermissions)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],if(_isUser)'has_sub_warehouse':row['has_sub_warehouse']==true});
           if(_isTemplate)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true});
           if(_s(row['id']).isNotEmpty) {
@@ -1189,7 +1190,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
           DataCell(Checkbox(value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
           if(_isUser)DataCell(Checkbox(value:row['has_sub_warehouse']==true,onChanged:_editMode?(v)=>setState(()=>row['has_sub_warehouse']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
           if(_isUser)DataCell(OutlinedButton.icon(onPressed:()=>_openBranchWarehousePicker(id),icon:const Icon(Icons.add_location_alt_outlined,size:16),label:const Text('+ فروع'))),
-          if(_isType)DataCell(Checkbox(value:!['ادمن','موظف'].contains(_s(row['name_ar']))&&row['show_at_login']==true,onChanged:_editMode&&!['ادمن','موظف'].contains(_s(row['name_ar']))?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
+          if(_isType)DataCell(Checkbox(value:row['show_at_login']==true,onChanged:_editMode?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
           if(_isTemplate)DataCell(OutlinedButton.icon(onPressed:()async{setState(()=>_selectedId=id);await _loadRules();await _openMenuPicker(parentId:id,template:true);},icon:const Icon(Icons.drive_file_move_outlined,size:16),label:const Text('جلب قوائم'))),
         ]);
       }),
@@ -1330,13 +1331,15 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
-            _userTab('المستخدمين', 'hierarchy', Icons.people_alt_outlined),
+            _userTab('أنواع المستخدمين', 'types', Icons.badge_outlined),
             const SizedBox(width: 6),
             _userTab('تصنيفات المستخدمين', 'classifications', Icons.category_outlined),
             const SizedBox(width: 6),
             _userTab('قوالب صلاحيات المستخدمين', 'templates', Icons.fact_check_outlined),
             const SizedBox(width: 6),
-            _userTab('صلاحيات المستخدمين', 'permissions', Icons.admin_panel_settings_outlined),
+            _userTab('المستخدمين', 'users', Icons.people_alt_outlined),
+            const SizedBox(width: 6),
+            _userTab('احتياطي شاشة المستخدمين', 'hierarchy', Icons.account_tree_outlined),
           ]),
         ),
       ),
