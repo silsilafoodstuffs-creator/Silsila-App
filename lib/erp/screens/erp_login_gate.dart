@@ -39,6 +39,47 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   String? _error;
   List<String> _activityTypes = const <String>[];
   bool _activitiesLoading = true;
+  List<String> _visibleUserTypes = const <String>[];
+  bool _userTypesLoading = true;
+
+  Future<void> _loadVisibleUserTypes() async {
+    try {
+      final rows = await Supabase.instance.client
+          .from('erp_user_types')
+          .select('name_ar,name_en')
+          .eq('is_active', true)
+          .eq('show_at_login', true)
+          .order('type_code');
+      final names = <String>[];
+      for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
+        final name = (row['name_ar'] ?? '').toString().trim();
+        if (name.isNotEmpty && !names.contains(name)) names.add(name);
+      }
+      if (!mounted) return;
+      setState(() {
+        _visibleUserTypes = names;
+        if (!_visibleUserTypes.contains(_accountType) && names.isNotEmpty) {
+          _accountType = names.first;
+        }
+        _userTypesLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _visibleUserTypes = const <String>[];
+        _userTypesLoading = false;
+      });
+    }
+  }
+
+  IconData _userTypeIcon(String type) => switch (type) {
+    'مورد' => Icons.inventory_2_outlined,
+    'عميل' => Icons.storefront_outlined,
+    'مندوب' => Icons.badge_outlined,
+    'شركة شحن' => Icons.local_shipping_outlined,
+    'ادمن' || 'أدمن' => Icons.admin_panel_settings_outlined,
+    _ => Icons.person_outline,
+  };
 
   Future<void> _loadActivityTypes() async {
     try {
@@ -74,6 +115,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   void initState() {
     super.initState();
     _loadActivityTypes();
+    _loadVisibleUserTypes();
     try {
       final client = Supabase.instance.client;
       _signedIn = client.auth.currentSession != null;
@@ -233,13 +275,9 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                             value: accountType,
                             isExpanded: true,
                             decoration: const InputDecoration(labelText: 'نوع الحساب'),
-                            items: [
-                              DropdownMenuItem(value: 'عميل', child: Text(silsilaText('عميل'))),
-                              DropdownMenuItem(value: 'مورد', child: Text(silsilaText('مورد'))),
-                              DropdownMenuItem(value: 'مندوب', child: Text(silsilaText('مندوب'))),
-                              DropdownMenuItem(value: 'شركة شحن', child: Text(silsilaText('شركة شحن'))),
-                              DropdownMenuItem(value: 'إدارة نشاط', child: Text(silsilaText('إدارة نشاط'))),
-                            ],
+                            items: _visibleUserTypes
+                                .map((type) => DropdownMenuItem<String>(value: type, child: Text(silsilaText(type), overflow: TextOverflow.ellipsis)))
+                                .toList(),
                             onChanged: (v) {
                               if (v != null) refresh(() => accountType = v);
                             },
@@ -379,7 +417,8 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
 
   Widget _accountTypeButton(String label, IconData icon) {
     final selected = _accountType == label;
-    return Expanded(
+    return SizedBox(
+      width: 126,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3),
         child: Material(
@@ -512,12 +551,14 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
           const SizedBox(height: 14),
           Text(silsilaText('اختار طريقة دخولك'), textAlign: TextAlign.center, style: TextStyle(color: _silsilaPurple, fontSize: 16, fontWeight: FontWeight.w900)),
           const SizedBox(height: 10),
-          Row(children: [
-            _accountTypeButton('مورد', Icons.inventory_2_outlined),
-            _accountTypeButton('عميل', Icons.storefront_outlined),
-            _accountTypeButton('مندوب', Icons.badge_outlined),
-            _accountTypeButton('إدارة نشاط', Icons.admin_panel_settings_outlined),
-          ]),
+          if (_userTypesLoading)
+            const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator()))
+          else if (_visibleUserTypes.isEmpty)
+            const Text('لا توجد أنواع مستخدمين نشطة ومسموح بظهورها في التطبيق. راجع تبويب أنواع المستخدمين في إعدادات سلسلة.', textAlign: TextAlign.center, style: TextStyle(color: Colors.deepOrange, height: 1.5))
+          else
+            Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 8, children: [
+              for (final type in _visibleUserTypes) _accountTypeButton(type, _userTypeIcon(type)),
+            ]),
           const SizedBox(height: 17),
           Container(
             padding: const EdgeInsets.all(12),
