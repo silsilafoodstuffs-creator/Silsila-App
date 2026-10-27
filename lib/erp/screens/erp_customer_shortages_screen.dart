@@ -46,7 +46,6 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
 
   @override
   Widget build(BuildContext context) {
-    ErpKeyboardNavigation.registerActions(refresh: _load);
     final customerNames = {for (final c in _customers) _s(c['id']): _s(c['party_name'])};
     final itemNames = {for (final i in _items) _s(i['id']): _s(i['item_name'])};
     final filtered = _shortages.where((r) {
