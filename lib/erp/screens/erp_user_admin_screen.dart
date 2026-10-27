@@ -1363,18 +1363,23 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       return;
     }
     final keys = <List<String>>[];
+    final cascadeChildren = field != 'can_access' || !value;
     if (page != '*') {
       keys.add([menu, submenu, page]);
     } else if (submenu != '*') {
       keys.add([menu, submenu, '*']);
-      for (final p in (_userAdminTree[menu]?[submenu] ?? const <String>[])) {
-        keys.add([menu, submenu, p]);
+      if (cascadeChildren) {
+        for (final p in (_userAdminTree[menu]?[submenu] ?? const <String>[])) {
+          keys.add([menu, submenu, p]);
+        }
       }
     } else {
       keys.add([menu, '*', '*']);
-      for (final sub in (_userAdminTree[menu] ?? const <String,List<String>>{}).entries) {
-        keys.add([menu, sub.key, '*']);
-        for (final p in sub.value) { keys.add([menu, sub.key, p]); }
+      if (cascadeChildren) {
+        for (final sub in (_userAdminTree[menu] ?? const <String,List<String>>{}).entries) {
+          keys.add([menu, sub.key, '*']);
+          for (final p in sub.value) { keys.add([menu, sub.key, p]); }
+        }
       }
     }
     setState(() {
