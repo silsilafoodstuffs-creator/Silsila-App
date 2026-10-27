@@ -217,20 +217,35 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         try {
           final candidateRows = <Map<String, dynamic>>[];
           var offset = 0;
-          while (true) {
-            final result = await db!
-                .from('erp_geographic_data')
-                .select(fields)
-                .eq('company_id', candidateId)
-                .order('geo_code')
-                .range(offset, offset + pageSize - 1);
+          var hasMore = true;
+          // Fetch small page batches concurrently: 6k+ rows need only a few
+          // round trips instead of waiting for each 1,000-row page in sequence.
+          while (hasMore) {
+            final pages = await Future.wait<List<dynamic>>(
+              List.generate(4, (index) {
+                final start = offset + index * pageSize;
+                return db!
+                    .from('erp_geographic_data')
+                    .select(fields)
+                    .eq('company_id', candidateId)
+                    .order('geo_code')
+                    .range(start, start + pageSize - 1)
+                    .then((value) => value as List<dynamic>);
+              }),
+            );
             if (!mounted || generation != _loadGeneration) return;
-            final page = (result as List)
-                .map((item) => Map<String, dynamic>.from(item))
-                .toList();
-            candidateRows.addAll(page);
-            if (page.length < pageSize) break;
-            offset += pageSize;
+            hasMore = false;
+            for (final page in pages) {
+              final mapped = page
+                  .map((item) => Map<String, dynamic>.from(item as Map))
+                  .toList();
+              candidateRows.addAll(mapped);
+              if (page.length == pageSize) hasMore = true;
+              else if (page.isEmpty) hasMore = false;
+            }
+            // If any later page is empty, all following pages are empty too.
+            if (pages.any((page) => page.isEmpty)) hasMore = false;
+            offset += pages.length * pageSize;
           }
           if (candidateRows.isNotEmpty) {
             loadedRows = candidateRows;
