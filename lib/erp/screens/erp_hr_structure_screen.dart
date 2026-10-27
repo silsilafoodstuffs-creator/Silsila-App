@@ -48,7 +48,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     try {
       final result = await Future.wait([
         _db!.from('erp_hr_departments').select().eq('company_id', _companyId).order('department_code'),
-        _db!.from('erp_hr_jobs').select('*,erp_hr_job_grades(name_ar,grade_code),erp_hr_departments(name_ar,department_code)').eq('company_id', _companyId).order('job_code'),
+        _db!.from('erp_hr_jobs').select().eq('company_id', _companyId).order('job_code'),
         _db!.from('erp_hr_job_grades').select().eq('company_id', _companyId).order('rank_order'),
         _db!.from('erp_hr_work_locations').select().eq('company_id', _companyId).order('location_code'),
       ]);
@@ -228,8 +228,8 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       rows: _jobs.map((j) => DataRow(cells: [
         DataCell(Text((j['job_code'] ?? '').toString())),
         DataCell(SizedBox(width: 170, child: Text((j['name_ar'] ?? '').toString()))),
-        DataCell(SizedBox(width: 160, child: Text((j['erp_hr_departments'] is Map ? (j['erp_hr_departments'] as Map)['name_ar'] : 'غير محدد').toString()))),
-        DataCell(SizedBox(width: 125, child: Text((j['erp_hr_job_grades'] is Map ? (j['erp_hr_job_grades'] as Map)['name_ar'] : 'غير محدد').toString()))),
+        DataCell(SizedBox(width: 160, child: Text((_departments.firstWhere((d) => d['id'] == j['department_id'], orElse: () => <String,dynamic>{})['name_ar'] ?? 'غير محدد').toString()))),
+        DataCell(SizedBox(width: 125, child: Text((_grades.firstWhere((g) => g['id'] == j['grade_id'], orElse: () => <String,dynamic>{})['name_ar'] ?? 'غير محدد').toString()))),
         DataCell(Text((j['min_qualification'] ?? '—').toString())),
         DataCell(Text((j['min_license_class'] ?? 'لا يشترط').toString())),
         ..._documentColumns.map((d) => DataCell(Center(child: Icon(j[d['key']] == true ? Icons.check_circle : Icons.remove_circle_outline, color: j[d['key']] == true ? Colors.green : Colors.grey, size: 18)))),
