@@ -180,7 +180,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     final jobName = _first(_jobs.where((x) => x['id'] == _job).map((x) => _s(x['name_ar'])));
     final payload = <String, dynamic>{
       'company_id': _cid, 'employee_code': _code.text.trim().toUpperCase(),
-      'full_name': _ar.text.trim(), 'full_name_en': _en.text.trim(), 'national_id': _nationalId.text.trim(), 'country': _country,
+      'full_name': _ar.text.trim(), 'full_name_en': _en.text.trim(), 'national_id': _nationalId.text.trim(), 'national_id_last4': _nationalId.text.trim().length == 14 ? _nationalId.text.trim().substring(10) : null, 'country': _country,
       'governorate': _gov, 'district': _district, 'locality': _locality,
       'address': _address.text.trim(), 'map_url': _map.text.trim(),
       'mobile_1': _m1.text.trim(), 'mobile_2': _m2.text.trim(),
