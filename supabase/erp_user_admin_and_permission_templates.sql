@@ -4,7 +4,9 @@ begin;
 create table if not exists public.erp_user_types (
  id uuid primary key default gen_random_uuid(),
  company_id uuid not null references public.erp_companies(id) on delete cascade,
- type_code bigint generated always as identity,
+type_code bigint generated always as identity,
+ type_code_display text not null,
+ description text not null default '',
  name_ar text not null,
  name_en text not null default '',
  image_data text,
@@ -35,7 +37,7 @@ create or replace function public.erp_assign_user_code()
 returns trigger language plpgsql set search_path=public as $
 begin
  if new.user_code is null or btrim(new.user_code) = '' then
-   new.user_code := 'USR-' || nextval('public.erp_users_user_code_seq')::text;
+   new.user_code := 'USR' || lpad(nextval('public.erp_users_user_code_seq')::text,4,'0');
  end if;
  return new;
 end;
@@ -46,6 +48,7 @@ create table if not exists public.erp_permission_templates (
  id uuid primary key default gen_random_uuid(),
  company_id uuid not null references public.erp_companies(id) on delete cascade,
  template_code bigint generated always as identity,
+ template_code_display text not null,
  name_ar text not null,
  name_en text not null default '',
  image_data text,
@@ -62,6 +65,7 @@ create table if not exists public.erp_permission_template_rules (
  menu_name text not null,
  submenu_name text not null default '',
  page_name text not null,
+ can_access boolean not null default false,
  can_refresh boolean not null default false,
  can_add boolean not null default false,
  can_save boolean not null default false,
@@ -71,6 +75,7 @@ create table if not exists public.erp_permission_template_rules (
  can_print boolean not null default false,
  can_import_excel boolean not null default false,
  can_print_pdf boolean not null default false,
+ show_in_quick_tasks boolean not null default false,
  unique(template_id,menu_name,submenu_name,page_name)
 );
 create table if not exists public.erp_user_permission_matrix (
@@ -89,6 +94,7 @@ create table if not exists public.erp_user_permission_matrix (
  can_print boolean not null default false,
  can_import_excel boolean not null default false,
  can_print_pdf boolean not null default false,
+ show_in_quick_tasks boolean not null default false,
  updated_at timestamptz not null default now(),
  unique(user_id,menu_name,submenu_name,page_name)
 );
@@ -124,8 +130,8 @@ insert into public.erp_user_types(company_id,name_ar,name_en,is_active,show_at_l
 select c.id,v.name_ar,v.name_en,true,v.show_at_login
 from public.erp_companies c
 cross join (values
- ('ادمن','Admin',false),('موظف','Employee',false),('مورد','Supplier',true),
- ('عميل','Customer',true),('مندوب','Delegate',true),('شركة شحن','Shipping Company',true)
+ ('ادمن','Admin',false),('مورد','Supplier',true),('عميل','Customer',true),
+ ('شركة شحن','Shipping Company',true),('مندوب','Sales Representative',true)
 ) as v(name_ar,name_en,show_at_login)
 where not exists(select 1 from public.erp_user_types t where t.company_id=c.id and t.name_ar=v.name_ar);
 
@@ -148,21 +154,15 @@ returns trigger language plpgsql security definer set search_path=public as $$
 begin
  insert into public.erp_user_types(company_id,name_ar,name_en,is_active,show_at_login)
  values
- (new.id,'ادمن','Admin',true,false),(new.id,'موظف','Employee',true,false),
- (new.id,'مورد','Supplier',true,true),(new.id,'عميل','Customer',true,true),
- (new.id,'مندوب','Delegate',true,true),(new.id,'شركة شحن','Shipping Company',true,true)
+ (new.id,'ادمن','Admin',true,false),(new.id,'مورد','Supplier',true,true),
+ (new.id,'عميل','Customer',true,true),(new.id,'شركة شحن','Shipping Company',true,true),
+ (new.id,'مندوب','Sales Representative',true,true)
  on conflict(company_id,name_ar) do nothing;
  return new;
 end $$;
 drop trigger if exists erp_seed_default_user_types_trigger on public.erp_companies;
 create trigger erp_seed_default_user_types_trigger after insert on public.erp_companies for each row execute function public.erp_seed_default_user_types();
-update public.erp_user_types set show_at_login=false where name_ar in ('ادمن','موظف') and show_at_login is distinct from false;
-do $constraint$
-begin
- if not exists(select 1 from pg_constraint where conname='erp_user_types_internal_hidden_check' and conrelid='public.erp_user_types'::regclass) then
-  alter table public.erp_user_types add constraint erp_user_types_internal_hidden_check check (name_ar not in ('ادمن','موظف') or show_at_login=false);
- end if;
-end $constraint$;
+update public.erp_user_types set show_at_login=false where name_ar='ادمن' and show_at_login is distinct from false;
 commit;
 
  
