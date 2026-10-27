@@ -2321,7 +2321,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             children: [
               GridView.extent(
                 maxCrossAxisExtent: 430,
-                mainAxisExtent: 174,
+                childAspectRatio: 2.15,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 10,
