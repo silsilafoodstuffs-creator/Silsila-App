@@ -19,6 +19,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   final _en = TextEditingController();
   List<Map<String, dynamic>> _departments = [];
   List<Map<String, dynamic>> _jobs = [];
+  List<Map<String, dynamic>> _grades = [];
   List<Map<String, dynamic>> _locations = [];
   String? _error;
   bool _loading = false;
@@ -29,8 +30,8 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   @override
   void initState() {
     super.initState();
-    final index = widget.initialTab == 'مواقع العمل' ? 2 : widget.initialTab == 'الوظائف والدرجات' ? 1 : 0;
-    _tabs = TabController(length: 3, vsync: this, initialIndex: index);
+    final index = widget.initialTab == 'مواقع العمل' ? 3 : widget.initialTab == 'درجات الوظائف' ? 2 : widget.initialTab == 'الوظائف والدرجات' ? 1 : 0;
+    _tabs = TabController(length: 4, vsync: this, initialIndex: index);
     _load();
   }
   @override
@@ -47,14 +48,16 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     try {
       final result = await Future.wait([
         _db!.from('erp_hr_departments').select().eq('company_id', _companyId).order('department_code'),
-        _db!.from('erp_hr_jobs').select().eq('company_id', _companyId).order('job_code'),
+        _db!.from('erp_hr_jobs').select('*,erp_hr_job_grades(name_ar,grade_code),erp_hr_departments(name_ar,department_code)').eq('company_id', _companyId).order('job_code'),
+        _db!.from('erp_hr_job_grades').select().eq('company_id', _companyId).order('rank_order'),
         _db!.from('erp_hr_work_locations').select().eq('company_id', _companyId).order('location_code'),
       ]);
       if (!mounted) return;
       setState(() {
         _departments = List<Map<String, dynamic>>.from(result[0]);
         _jobs = List<Map<String, dynamic>>.from(result[1]);
-        _locations = List<Map<String, dynamic>>.from(result[2]);
+        _grades = List<Map<String, dynamic>>.from(result[2]);
+        _locations = List<Map<String, dynamic>>.from(result[3]);
         _loading = false;
       });
     } catch (e) {
@@ -184,18 +187,149 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     ]);
   }
 
+
+  static const _documentColumns = <Map<String, String>>[
+    {'key':'requires_photo','label':'صورة شخصية'},
+    {'key':'requires_id_copy','label':'صورة بطاقة'},
+    {'key':'requires_birth_certificate','label':'شهادة ميلاد'},
+    {'key':'requires_qualification_certificate','label':'المؤهل'},
+    {'key':'requires_work_card','label':'كعب العمل'},
+    {'key':'requires_insurance_printout','label':'برنت تأمينات'},
+    {'key':'requires_military_service','label':'موقف التجنيد'},
+    {'key':'requires_criminal_record','label':'فيش جنائي'},
+    {'key':'requires_trust_receipt','label':'إيصال أمانة'},
+    {'key':'requires_health_certificate','label':'شهادة صحية'},
+    {'key':'requires_driving_license','label':'رخصة قيادة'},
+    {'key':'requires_bank_account','label':'حساب بنكي'},
+  ];
+
+  Widget _jobsView() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    Row(children: [
+      const Expanded(child: Text('دليل الوظائف ومتطلبات التعيين', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
+      OutlinedButton.icon(onPressed: _addGrade, icon: const Icon(Icons.workspace_premium_outlined), label: const Text('إدارة الدرجات')),
+      const SizedBox(width: 8),
+      FilledButton.icon(onPressed: () => _add('job'), icon: const Icon(Icons.add), label: const Text('إضافة وظيفة')),
+    ]),
+    const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('علامة ✓ تعني أن المستند مطلوب للتعيين. لتعديل المتطلبات اضغط زر التعديل في آخر الصف.', style: TextStyle(color: Colors.black54))),
+    if (_loading) const LinearProgressIndicator(),
+    Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
+      headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+      columns: [
+        const DataColumn(label: Text('كود الوظيفة')), const DataColumn(label: Text('الوظيفة')),
+        const DataColumn(label: Text('الإدارة / القسم')), const DataColumn(label: Text('الدرجة')),
+        const DataColumn(label: Text('أقل مؤهل')), const DataColumn(label: Text('أقل رخصة')),
+        ..._documentColumns.map((d) => DataColumn(label: SizedBox(width: 82, child: Text(d['label']!, textAlign: TextAlign.center)))),
+        const DataColumn(label: Text('تعديل')),
+      ],
+      rows: _jobs.map((j) => DataRow(cells: [
+        DataCell(Text((j['job_code'] ?? '').toString())),
+        DataCell(SizedBox(width: 170, child: Text((j['name_ar'] ?? '').toString()))),
+        DataCell(SizedBox(width: 160, child: Text((j['erp_hr_departments'] is Map ? (j['erp_hr_departments'] as Map)['name_ar'] : 'غير محدد').toString()))),
+        DataCell(SizedBox(width: 125, child: Text((j['erp_hr_job_grades'] is Map ? (j['erp_hr_job_grades'] as Map)['name_ar'] : 'غير محدد').toString()))),
+        DataCell(Text((j['min_qualification'] ?? '—').toString())),
+        DataCell(Text((j['min_license_class'] ?? 'لا يشترط').toString())),
+        ..._documentColumns.map((d) => DataCell(Center(child: Icon(j[d['key']] == true ? Icons.check_circle : Icons.remove_circle_outline, color: j[d['key']] == true ? Colors.green : Colors.grey, size: 18)))),
+        DataCell(IconButton(tooltip: 'تعديل متطلبات الوظيفة', onPressed: () => _editJobRequirements(j), icon: const Icon(Icons.edit_outlined, color: _hrStructurePurple))),
+      ])).toList(),
+    )))),
+  ]);
+
+  Widget _gradesView() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    Row(children: [
+      const Expanded(child: Text('درجات الوظائف والتدرج الوظيفي', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
+      FilledButton.icon(onPressed: _addGrade, icon: const Icon(Icons.add), label: const Text('إضافة درجة')),
+    ]),
+    const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('الدرجات مرتبة من القيادات العليا إلى الوظائف المساندة.', style: TextStyle(color: Colors.black54))),
+    Expanded(child: ListView(children: _grades.map((g) => Card(child: ListTile(
+      leading: CircleAvatar(backgroundColor: const Color(0xFFF5EFFB), child: Text((g['rank_order'] ?? '').toString())),
+      title: Text((g['grade_code'].toString() + ' • ' + g['name_ar'].toString()), style: const TextStyle(fontWeight: FontWeight.w800)),
+      subtitle: Text((g['name_en'] ?? '').toString()),
+      trailing: TextButton.icon(onPressed: () => _editGrade(g), icon: const Icon(Icons.edit_outlined), label: const Text('تعديل')),
+    ))).toList())),
+  ]);
+
+  Future<void> _addGrade() async {
+    _code.clear(); _ar.clear(); _en.clear();
+    final rank = TextEditingController(text: (_grades.length + 1).toString());
+    final saved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('إضافة درجة وظيفية'),
+      content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود الدرجة مثل GRD-015')),
+        TextField(controller: _ar, decoration: const InputDecoration(labelText: 'اسم الدرجة بالعربية')),
+        TextField(controller: _en, decoration: const InputDecoration(labelText: 'اسم الدرجة بالإنجليزية')),
+        TextField(controller: rank, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ترتيب الدرجة')),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ'))],
+    ));
+    if (saved == true && _code.text.trim().isNotEmpty && _ar.text.trim().isNotEmpty && _db != null) {
+      try {
+        await _db!.from('erp_hr_job_grades').insert({'company_id':_companyId,'grade_code':_code.text.trim().toUpperCase(),'name_ar':_ar.text.trim(),'name_en':_en.text.trim(),'rank_order':int.tryParse(rank.text) ?? _grades.length + 1,'is_active':true});
+        await _load();
+      } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الدرجة: ' + e.toString()))); }
+    }
+    rank.dispose();
+  }
+
+  Future<void> _editGrade(Map<String,dynamic> grade) async {
+    _code.text = (grade['grade_code'] ?? '').toString(); _ar.text = (grade['name_ar'] ?? '').toString(); _en.text = (grade['name_en'] ?? '').toString();
+    final rank = TextEditingController(text: (grade['rank_order'] ?? 1).toString());
+    final saved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('تعديل الدرجة الوظيفية'),
+      content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود الدرجة')),
+        TextField(controller: _ar, decoration: const InputDecoration(labelText: 'اسم الدرجة بالعربية')),
+        TextField(controller: _en, decoration: const InputDecoration(labelText: 'اسم الدرجة بالإنجليزية')),
+        TextField(controller: rank, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ترتيب الدرجة')),
+      ])),
+      actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ التعديل'))],
+    ));
+    if (saved == true && _code.text.trim().isNotEmpty && _ar.text.trim().isNotEmpty && _db != null) {
+      try {
+        await _db!.from('erp_hr_job_grades').update({'grade_code':_code.text.trim().toUpperCase(),'name_ar':_ar.text.trim(),'name_en':_en.text.trim(),'rank_order':int.tryParse(rank.text) ?? 1}).eq('id',grade['id']).eq('company_id',_companyId);
+        await _load();
+      } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعديل الدرجة: ' + e.toString()))); }
+    }
+    rank.dispose();
+  }
+
+  Future<void> _editJobRequirements(Map<String,dynamic> job) async {
+    var gradeId = job['grade_id']?.toString();
+    var qualification = (job['min_qualification'] ?? 'إعدادية').toString();
+    var license = (job['min_license_class'] ?? '').toString();
+    final required = <String,bool>{for(final d in _documentColumns) d['key']!: job[d['key']] == true};
+    const qualifications = ['بدون مؤهل','ابتدائية','إعدادية','ثانوية عامة','دبلوم فني','تجارة / ثانوية','جامعية','تجارة / جامعية','مؤهل متخصص'];
+    const licenses = ['', 'مهنية','ثالثة مهنية','ثانية مهنية','أولى مهنية','خاصة','دراجة نارية'];
+    final saved = await showDialog<bool>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx,setDialogState) => AlertDialog(
+      title: Text('متطلبات وظيفة: ' + (job['name_ar'] ?? '').toString()),
+      content: SizedBox(width: 540, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        DropdownButtonFormField<String>(value: _grades.any((g)=>g['id'].toString()==gradeId) ? gradeId : null, isExpanded:true, decoration: const InputDecoration(labelText:'الدرجة الوظيفية'), items:_grades.map((g)=>DropdownMenuItem<String>(value:g['id'].toString(),child:Text(g['grade_code'].toString()+' • '+g['name_ar'].toString()))).toList(), onChanged:(v)=>setDialogState(()=>gradeId=v)),
+        DropdownButtonFormField<String>(value: qualifications.contains(qualification)?qualification:qualifications[2], isExpanded:true, decoration:const InputDecoration(labelText:'أقل مؤهل مطلوب'), items:qualifications.map((q)=>DropdownMenuItem<String>(value:q,child:Text(q))).toList(), onChanged:(v)=>setDialogState(()=>qualification=v ?? qualifications[2])),
+        DropdownButtonFormField<String>(value: licenses.contains(license)?license:'', isExpanded:true, decoration:const InputDecoration(labelText:'أقل درجة رخصة مطلوبة'), items:licenses.map((q)=>DropdownMenuItem<String>(value:q,child:Text(q.isEmpty?'لا يشترط رخصة':q))).toList(), onChanged:(v)=>setDialogState(()=>license=v ?? '')),
+        const Align(alignment:Alignment.centerRight, child:Padding(padding:EdgeInsets.only(top:12,bottom:6),child:Text('المسوغات المطلوبة للتعيين',style:TextStyle(fontWeight:FontWeight.w900,color:_hrStructurePurple)))),
+        ..._documentColumns.map((d)=>CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text(d['label']!),value:required[d['key']] == true,onChanged:(v)=>setDialogState(()=>required[d['key']!]=v==true))),
+      ]))),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ المتطلبات'))],
+    )));
+    if(saved==true && _db!=null){
+      try {
+        await _db!.from('erp_hr_jobs').update({'grade_id':gradeId,'min_qualification':qualification,'min_license_class':license,...required}).eq('id',job['id']).eq('company_id',_companyId);
+        await _load();
+      } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر حفظ متطلبات الوظيفة: ' + e.toString()))); }
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
     child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
       const Align(alignment: Alignment.centerRight, child: Text('الهيكل التنظيمي والوظائف ومواقع العمل', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
       if (_error != null) Align(alignment: Alignment.centerRight, child: Text(_error!, style: const TextStyle(color: Colors.red))),
-      TabBar(controller: _tabs, labelColor: _hrStructurePurple, indicatorColor: _hrStructureOrange, tabs: const [
-        Tab(text: 'الإدارات والأقسام'), Tab(text: 'الوظائف والدرجات'), Tab(text: 'مواقع العمل'),
+      TabBar(controller: _tabs, isScrollable: true, labelColor: _hrStructurePurple, indicatorColor: _hrStructureOrange, tabs: const [
+        Tab(text: 'الإدارات والأقسام'), Tab(text: 'الوظائف ومتطلبات التعيين'), Tab(text: 'درجات الوظائف'), Tab(text: 'مواقع العمل'),
       ]),
       Expanded(child: TabBarView(controller: _tabs, children: [
         _list('شجرة الإدارات والأقسام', _departments.where((d) => d['parent_id'] == null && d['department_level'] != 'section').toList(), 'department_code', 'name_ar', 'department'),
-        _list('دليل الوظائف', _jobs, 'job_code', 'name_ar', 'job'),
+        _jobsView(), _gradesView(),
         _list('مواقع العمل', _locations, 'location_code', 'name_ar', 'location'),
       ])),
     ])),
