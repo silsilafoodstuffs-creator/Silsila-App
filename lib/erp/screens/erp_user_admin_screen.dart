@@ -865,6 +865,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             await _db!.from('erp_permission_template_rules').upsert(payload,onConflict:'template_id,menu_name,submenu_name,page_name');
           }
         }
+      }
         if(_isPermissions){
           final targetIds = _permissionTargetIds;
           if(targetIds.isEmpty) throw StateError('حدد مستخدمًا واحدًا على الأقل قبل حفظ الصلاحيات.');
@@ -879,7 +880,6 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             await _db!.from('erp_user_permission_matrix').insert(payload);
           }
         }
-      }
       if(mounted)setState(()=>_message='تم حفظ التغييرات في قاعدة البيانات.');
       if(mounted)setState(()=>_editMode=false);
       await _load();
@@ -1544,6 +1544,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       Expanded(child:_view=='classifications'
         ? ErpUserClassificationsScreen(companyId: _company)
         : _loading ? const Center(child:CircularProgressIndicator())
+        : _isPermissions ? _ruleGrid()
         : _isPermissions ? _ruleGrid()
         : _isHierarchy ? _hierarchyView()
         : SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
