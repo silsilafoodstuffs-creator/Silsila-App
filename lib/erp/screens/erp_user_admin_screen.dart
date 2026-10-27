@@ -764,111 +764,71 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   }
 
   Future<void> _add() async {
-    if (_isHierarchy) { await _addHierarchyNode(); return; }
-    if (_saving) return;
-    if (_isType && _rows.any((row) => row['_local_default'] == true)) {
-      setState(() => _error = 'لا يمكن الإضافة قبل اتصال قاعدة البيانات وتحميل الأنواع المحفوظة؛ الصفوف الحالية للمعاينة فقط.');
-      return;
-    }
-    if (_isPermissions) {
-      setState(() {
-        _editMode = true;
-        _message = 'اختر المستخدم ثم عدّل مربعات الصلاحيات في الجدول.';
-        _error = null;
-      });
-      return;
-    }
-    if (_company.isEmpty || _db == null) {
-      setState(() => _error = 'حدد الشركة وتأكد من الاتصال بقاعدة البيانات قبل الإضافة.');
-      return;
-    }
-    setState(() { _editMode = true; _error = null; });
-    try {
-      final payload = <String, dynamic>{'company_id': _company, 'is_active': true};
-      if (_isType) {
-        payload.addAll({'name_ar': _nextUniqueName('نوع مستخدم جديد'), 'name_en': _nextUniqueName('New user type', field: 'name_en'), 'show_at_login': false});
-      } else if (_isUser) {
-        payload.addAll({
-          'name_ar': _nextUniqueName('مستخدم جديد'),
-          'name_en': _nextUniqueName('New user', field: 'name_en'),
-          'user_type_id': _types.isEmpty ? null : _types.first['id'],
-          'has_sub_warehouse': false,
-        });
-      } else {
-        payload.addAll({'name_ar': _nextUniqueName('قالب صلاحيات جديد'), 'name_en': _nextUniqueName('New permission template', field: 'name_en')});
-      }
-      final result = await _db!.from(_table).insert(payload).select().single();
-      if (!mounted) return;
-      final row = Map<String, dynamic>.from(result);
-      setState(() {
-        // Keep the current in-memory edits in every previous row. Reloading here
-        // would overwrite unsaved text/checkbox changes with the database snapshot.
+    if(_view=='hierarchy'){await _addHierarchyNode();return;}
+    if(_saving||_db==null||_company.isEmpty)return;
+    if(_isPermissions){setState(()=>_editMode=true);return;}
+    setState(()=>_editMode=true);
+    try{
+      final payload=<String,dynamic>{'company_id':_company,'is_active':true};
+      if(_isType)payload.addAll({'name_ar':_nextUniqueName('نوع مستخدم جديد'),'name_en':_nextUniqueName('New user type',field:'name_en'),'description':'','show_at_login':false});
+      else if(_isUser){
+        final employee=await _pickEmployee();
+        if(employee==null){if(mounted)setState(()=>_error='لم تتم إضافة المستخدم. يجب اختيار موظف نشط أولًا.');return;}
+        payload.addAll({'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':_selectedNodeKind=='type'&&_types.any((t)=>_s(t['id'])==_selectedId&&t['is_active']==true)?_selectedId:null,'has_sub_warehouse':false});
+      } else payload.addAll({'name_ar':_nextUniqueName('قالب صلاحيات جديد'),'name_en':_nextUniqueName('New permission template',field:'name_en')});
+      final result=await _db!.from(_table).insert(payload).select().single();
+      if(!mounted)return;
+      final row=Map<String,dynamic>.from(result);
+      row['_password_draft']='';row['_password_confirmation_draft']='';
+      setState((){
         _rows.add(row);
-        if (_isType) {
-          _types = _rows;
-        } else if (_isUser) {
-          _users = _rows;
-          _selectedUserId = _s(row['id']);
-        } else {
-          _templates = _rows;
-        }
-        _selectedId = _s(row['id']);
-        _message = 'تم إنشاء سجل جديد دون إعادة تحميل الجريد. أكمل بياناته ثم اضغط حفظ.';
-        _error = null;
+        if(_isType)_types=_rows;else if(_isUser){_users=_rows;_selectedUserId=_s(row['id']);_selectedNodeKind='user';}else _templates=_rows;
+        _selectedId=_s(row['id']);_error=null;_message='تم إنشاء السجل. أكمل بياناته ثم اضغط حفظ.';
       });
-    } catch (e) {
-      if (mounted) setState(() => _error = 'تعذر إضافة السجل: $e');
-    }
+    }catch(e){if(mounted)setState(()=>_error='تعذر إضافة السجل: $e');}
   }
 
   Future<void> _save() async {
-    if (_isHierarchy) { await _saveHierarchy(); return; }
-    if (_isType && _rows.any((row) => row['_local_default'] == true)) {
-      setState(() => _error = 'الأنواع الظاهرة حاليًا بيانات افتراضية للمعاينة فقط وليست محفوظة. أصلح صلاحيات/سياسات قاعدة البيانات ثم اضغط تحديث قبل الحفظ.');
-      return;
-    }
+    if(_view=='hierarchy'){await _saveHierarchy();return;}
     if(!_editMode){setState(()=>_error='اضغط «تعديل» أو «إضافة» أولًا قبل تغيير البيانات.');return;}
-    if(_saving)return;
+    if(_saving||_db==null)return;
     setState(()=>_saving=true);
-    try {
-      if(_isType||_isUser||_isTemplate||_isPermissions){
-        final masterRows=_isPermissions?_users:_rows;
-        final targetTable=_isPermissions?'erp_users':_table;
-        for(final row in masterRows){
+    try{
+      if(_isType||_isUser||_isTemplate){
+        for(final row in _rows){
+          final id=_s(row['id']);if(id.isEmpty)continue;
           final payload=<String,dynamic>{};
-          if(_isType)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':(!['ادمن','موظف'].contains(_s(row['name_ar'])))&&row['show_at_login']==true});
-          if(_isUser||_isPermissions)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],if(_isUser)'has_sub_warehouse':row['has_sub_warehouse']==true});
+          if(_isType){
+            final desc=_s(row['description']).trim().split(RegExp(r'\s+')).where((w)=>w.isNotEmpty).take(10).join(' ');
+            payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'description':desc,'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':row['show_at_login']==true});
+          }
+          if(_isUser){
+            if(!_types.any((t)=>_s(t['id'])==_s(row['user_type_id'])&&t['is_active']==true))throw StateError('اختر نوع مستخدم نشطًا للسجل «${_s(row['name_ar'])}».');
+            final password=_s(row['_password_draft']),confirm=_s(row['_password_confirmation_draft']);
+            if(password.isNotEmpty||confirm.isNotEmpty){if(password.isEmpty||password!=confirm)throw StateError('كلمتا المرور غير متطابقتين للمستخدم ${_s(row['name_ar'])}.');}
+            payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'employee_id':row['employee_id'],'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],'has_sub_warehouse':row['has_sub_warehouse']==true});
+          }
           if(_isTemplate)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true});
-          if(_s(row['id']).isNotEmpty) {
-            await _db!.from(targetTable).update(payload).eq('company_id',_company).eq('id',row['id']);
-            final password = _s(row['_password_draft']);
-            if (_isUser && password.isNotEmpty) {
-              await _db!.rpc('set_erp_user_password', params: {'p_user_id': row['id'], 'p_password': password});
-              row['_password_draft'] = '';
-            }
-          }
+          await _db!.from(_table).update(payload).eq('company_id',_company).eq('id',id);
+          final password=_s(row['_password_draft']);
+          if(_isUser&&password.isNotEmpty){await _db!.rpc('set_erp_user_password',params:{'p_user_id':id,'p_password':password});row['_password_draft']='';row['_password_confirmation_draft']='';}
         }
-        if(_isTemplate && _selectedId!=null){
-          for(final rule in _rules){
-            final payload=<String,dynamic>{'company_id':_company,'template_id':_selectedId,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};
-            for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;
-            await _db!.from('erp_permission_template_rules').upsert(payload,onConflict:'template_id,menu_name,submenu_name,page_name');
-          }
+        if(_isTemplate&&_selectedId!=null)for(final rule in _rules){
+          final payload=<String,dynamic>{'company_id':_company,'template_id':_selectedId,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};
+          for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;
+          await _db!.from('erp_permission_template_rules').upsert(payload,onConflict:'template_id,menu_name,submenu_name,page_name');
         }
-        if(_isPermissions){
-          for(final rule in _rules){
-            final uid=_s(rule['user_id']);
-            if(uid.isEmpty)continue;
-            final payload=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};
-            for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;
-            await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');
-          }
-        }
+      }
+      if(_isPermissions){
+        final targets=_permissionTargetIds;if(targets.isEmpty)throw StateError('حدد مستخدمًا واحدًا على الأقل قبل حفظ الصلاحيات.');
+        final draft=_rules.where((r)=>targets.contains(_s(r['user_id']))).toList();
+        for(final rule in draft){final uid=_s(rule['user_id']);if(uid.isEmpty)continue;final payload=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');}
+        for(final uid in targets){final keys=draft.where((r)=>_s(r['user_id'])==uid).map((r)=>'${_s(r['menu_name'])}|${_s(r['submenu_name'])}|${_s(r['page_name'])}').toSet();final old=await _db!.from('erp_user_permission_matrix').select('id,menu_name,submenu_name,page_name').eq('company_id',_company).eq('user_id',uid);for(final r in (old as List).whereType<Map<String,dynamic>>()){final key='${_s(r['menu_name'])}|${_s(r['submenu_name'])}|${_s(r['page_name'])}';if(!keys.contains(key))await _db!.from('erp_user_permission_matrix').delete().eq('company_id',_company).eq('id',r['id']);}}
       }
       if(mounted)setState(()=>_message='تم حفظ التغييرات في قاعدة البيانات.');
       if(mounted)setState(()=>_editMode=false);
       await _load();
-    } catch(e){if(mounted)setState(()=>_error='تعذر الحفظ: $e');}
+    }catch(e){if(mounted)setState(()=>_error='تعذر الحفظ: $e');}
     finally{if(mounted)setState(()=>_saving=false);}
   }
 
