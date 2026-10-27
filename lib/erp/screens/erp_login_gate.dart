@@ -72,6 +72,11 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     }
   }
 
+  String _profileAccountType(String type) => switch (type) {
+    'ادمن' || 'أدمن' => 'admin',
+    _ => type,
+  };
+
   IconData _userTypeIcon(String type) => switch (type) {
     'مورد' => Icons.inventory_2_outlined,
     'عميل' => Icons.storefront_outlined,
@@ -357,7 +362,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                         data: {
                           'full_name': name.text.trim(),
                           'contact_phone': _normalizePhone(_asciiDigits(phone.text)),
-                          'account_type': newActivity ? 'إدارة نشاط' : accountType,
+                          'account_type': newActivity ? 'إدارة نشاط' : _profileAccountType(accountType),
                           'activity_type': activity,
                           'activity_user_type': newActivity ? 'مستخدم رئيسي للنشاط' : _activityUserType,
                         },
