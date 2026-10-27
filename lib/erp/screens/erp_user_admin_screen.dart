@@ -93,7 +93,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   String _hierarchySearch = '';
   String? _activeCompanyId;
   static const _typeNames = <String,String>{
-    'types':'أنواع المستخدمين','users':'المستخدمين','hierarchy':'احتياطي شاشة المستخدمين','classifications':'المستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
+    'types':'أنواع المستخدمين','users':'المستخدمين','hierarchy':'احتياطي شاشة المستخدمين','classifications':'تصنيفات المستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
   };
 
   @override void initState() { super.initState(); _view=widget.initialView; _activeCompanyId=widget.companyId; try {_db=Supabase.instance.client;} catch (_) {} _load(); }
