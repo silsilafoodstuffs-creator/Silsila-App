@@ -43,6 +43,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
 
   String _s(dynamic v) => (v ?? '').toString();
   String get _typeId => _types.isEmpty ? '' : _s(_types[_activeTab.clamp(0, _types.length - 1)]['id']);
+  bool get _activeTypeEnabled => _types.isNotEmpty && _types[_activeTab.clamp(0, _types.length - 1)]['is_active'] == true;
 
   Future<void> _load() async {
     if (_db == null) {
@@ -63,7 +64,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
       if (company.isEmpty) throw StateError('لم يتم العثور على شركة نشطة.');
       _company = company;
       final typeResult = await _db!.from('erp_user_types').select('id,type_code,name_ar,name_en,is_active')
-        .eq('company_id', company).eq('is_active', true).order('type_code');
+        .eq('company_id', company).order('type_code');
       _types = (typeResult as List).map((e) => Map<String,dynamic>.from(e)).toList();
       if (_types.isEmpty) {
         _rows = [];
@@ -104,8 +105,8 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
   }
 
   Future<void> _add() async {
-    if (_typeId.isEmpty || _company == null) {
-      setState(() => _error = 'لا يوجد نوع مستخدم نشط لإضافة تصنيف تحته.');
+    if (_typeId.isEmpty || _company == null || !_activeTypeEnabled) {
+      setState(() => _error = 'النوع المحدد غير نشط أو غير متاح؛ فعّله من شاشة أنواع المستخدمين قبل إضافة التصنيفات.');
       return;
     }
     final draft = <String,dynamic>{
@@ -119,7 +120,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
 
   Future<void> _save() async {
     if (!_editing) { setState(() => _error = 'اضغط «تعديل» أو «إضافة» أولًا قبل تغيير التصنيفات.'); return; }
-    if (_db == null || _company == null || _typeId.isEmpty) return;
+    if (_db == null || _company == null || _typeId.isEmpty || !_activeTypeEnabled) { if (mounted) setState(() => _error = 'لا يمكن تعديل تصنيفات نوع غير نشط. فعّل النوع أولًا.'); return; }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       for (final row in _rows) {
@@ -159,6 +160,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
   }
 
   Future<void> _delete() async {
+    if (!_activeTypeEnabled) { setState(() => _error = 'لا يمكن حذف أو تعديل تصنيفات نوع غير نشط. فعّل النوع أولًا.'); return; }
     if (!_editing) { setState(() => _error = 'اضغط «تعديل» أولًا قبل حذف التصنيفات.'); return; }
     final id = _selectedId;
     if (id == null) { setState(() => _error = 'حدد تصنيفًا من الجريد أولًا.'); return; }
@@ -237,10 +239,10 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
       Container(color: _classCanvas, padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
         child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
           _task('تحديث', Icons.refresh, _loading ? null : _load),
-          _task('إضافة', Icons.add, _saving ? null : _add),
-          _task('حفظ', Icons.save, _saving || !_editing ? null : _save),
-          _task('تعديل', Icons.edit, _saving || _editing ? null : () => setState(() => _editing = true)),
-          _task('حذف', Icons.delete, _saving ? null : _delete),
+          _task('إضافة', Icons.add, _saving || !_activeTypeEnabled ? null : _add),
+          _task('حفظ', Icons.save, _saving || !_editing || !_activeTypeEnabled ? null : _save),
+          _task('تعديل', Icons.edit, _saving || _editing || !_activeTypeEnabled ? null : () => setState(() => _editing = true)),
+          _task('حذف', Icons.delete, _saving || !_activeTypeEnabled ? null : _delete),
           _task('معاينة', Icons.preview, () => showDialog<void>(context: context, builder: (c) => AlertDialog(
             title: const Text('معاينة التصنيفات'), content: Text('عدد السجلات: ${_rows.length}'),
             actions: [TextButton(onPressed: () => Navigator.pop(c), child: const Text('إغلاق'))]))),
