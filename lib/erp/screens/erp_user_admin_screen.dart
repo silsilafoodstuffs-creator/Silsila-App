@@ -288,7 +288,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         _loading=false; _error=loadWarning;
         if ((_isUser || _isHierarchy) && userList.isEmpty && loadWarning == null) _message='لا توجد سجلات مستخدمين محفوظة لهذه الشركة حتى الآن. يمكنك إضافة مستخدم من زر إضافة.';
         if ((_isType || _isHierarchy) && typeList.any((r)=>r['_local_default']==true)) _message='أنواع المستخدمين الافتراضية معروضة في الجدول، لكن تعذر حفظها في قاعدة البيانات بسبب الصلاحيات أو سياسات RLS. يمكنك مراجعة السياسات ثم الضغط على تحديث.';
-        if ((_isType || _isHierarchy) && typeList.length < 6) _message='عدد أنواع المستخدمين أقل من 6؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
+        if ((_isType || _isHierarchy) && typeList.length < 5) _message='عدد أنواع المستخدمين أقل من 6؛ راجع صلاحيات قاعدة البيانات ثم اضغط تحديث لإكمال الأنواع الناقصة.';
       });
       if (_isTemplate && _selectedId!=null) await _loadRules();
       if (_isPermissions) await _loadUserRules();
@@ -448,7 +448,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         await _db!.from('erp_user_types').update({
           'name_ar': _s(type['name_ar']).trim(),
           'name_en': _s(type['name_en']).trim(),
-          'description': _s(type['description']).trim().split(RegExp(r'\\s+')).take(10).join(' '),
+          'description': _s(type['description']).trim().split(RegExp(r'\s+')).take(10).join(' '),
           'image_data': type['image_data'],
           'is_active': type['is_active'] == true,
           'show_at_login': type['show_at_login'] == true,
