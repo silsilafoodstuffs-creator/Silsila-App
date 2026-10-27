@@ -114,16 +114,6 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     return '$base $suffix';
   }
 
-  int _nextNumericCode(Iterable<dynamic> values) {
-    var maxCode = 0;
-    for (final value in values) {
-      final parsed = int.tryParse(_s(value));
-      if (parsed != null && parsed > maxCode) maxCode = parsed;
-    }
-    return maxCode + 1;
-  }
-  String _standardCode(String prefix, int number) => '$prefix${number.toString().padLeft(4, '0')}';
-
   // Always keep the user-types grid visible even if database reads/writes are
   // blocked by company membership or RLS. These rows are preview-only until saved.
   List<Map<String, dynamic>> _localDefaultUserTypes() {
@@ -213,7 +203,6 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         // Repair missing defaults one at a time. A denied/duplicate insert must
         // not abort the whole screen load or hide already-saved rows.
         var seedWarning = false;
-        var nextTypeCode = _nextNumericCode(typeList.map((row) => row['type_code']));
         for (final type in defaults) {
           final exists = typeList.any((row) => _s(row['name_ar']) == type['name_ar']);
           if (!exists) {
@@ -222,12 +211,11 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
               // after the initial read. Ignore the unique (company_id, name_ar)
               // conflict instead of surfacing a failed request in database logs.
               await _db!.from('erp_user_types').upsert(<String,dynamic>{
-                ...type, 'company_id':_company, 'is_active':true, 'type_code':nextTypeCode, 'type_code_display':_standardCode('UT',nextTypeCode),
+                ...type, 'company_id':_company, 'is_active':true,
               }, onConflict: 'company_id,name_ar', ignoreDuplicates: true);
             } catch (_) {
               seedWarning = true;
             }
-            nextTypeCode++;
           }
         }
         // Always show all saved types, including Delegate; never filter a type
@@ -793,15 +781,14 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     setState(()=>_editMode=true);
     try{
       final payload=<String,dynamic>{'company_id':_company,'is_active':true};
-      if(_isType){final code=_nextNumericCode(_types.map((t)=>t['type_code']));payload.addAll({'type_code':code,'type_code_display':_standardCode('UT',code),'name_ar':_nextUniqueName('نوع مستخدم جديد'),'name_en':_nextUniqueName('New user type',field:'name_en'),'description':'','show_at_login':false});}
+      if(_isType){payload.addAll({'name_ar':_nextUniqueName('نوع مستخدم جديد'),'name_en':_nextUniqueName('New user type',field:'name_en'),'description':'','show_at_login':false});}
       else if(_isUser){
         final selectedType=await _pickActiveUserType();
         if(selectedType==null)return;
         final employee=await _pickEmployee();
         if(employee==null){if(mounted)setState(()=>_error='لم تتم إضافة المستخدم. يجب اختيار موظف نشط أولًا.');return;}
-        final code=_nextNumericCode(_users.map((u)=>RegExp(r'(\d+)$').firstMatch(_s(u['user_code']))?.group(1)));
-        payload.addAll({'user_code':_standardCode('USR',code),'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':selectedType['id'],'has_sub_warehouse':false});
-      } else {final code=_nextNumericCode(_templates.map((t)=>t['template_code']));payload.addAll({'template_code':code,'template_code_display':_standardCode('PT',code),'name_ar':_nextUniqueName('قالب صلاحيات جديد'),'name_en':_nextUniqueName('New permission template',field:'name_en')});}
+        payload.addAll({'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':selectedType['id'],'has_sub_warehouse':false});
+      } else {payload.addAll({'name_ar':_nextUniqueName('قالب صلاحيات جديد'),'name_en':_nextUniqueName('New permission template',field:'name_en')});}
       final result=await _db!.from(_table).insert(payload).select().single();
       if(!mounted)return;
       final row=Map<String,dynamic>.from(result);
