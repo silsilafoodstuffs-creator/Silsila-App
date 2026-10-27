@@ -49,36 +49,21 @@ class ActivityService {
     {'code': 'other', 'name': 'أنشطة أخرى'},
   ];
 
-  /// جلب الأنشطة النشطة من قاعدة البيانات.
-  ///
-  /// تعاد القائمة الاحتياطية إذا فشل الاتصال أو لم توجد نتائج.
+  /// تحميل الأنشطة المفعّلة والمصرّح بعرضها في التطبيق من المصدر الموحد.
+  /// لا نعرض قائمة ثابتة عند فشل الاتصال أو عندما تكون القائمة فارغة؛
+  /// لأن ذلك قد يُظهر نشاطًا أخفاه مسؤول النظام.
   Future<List<Map<String, dynamic>>> getActivities() async {
     try {
       final response = await _requireClient
           .from('activity_types')
-          .select()
+          .select('id,code,name,name_en,sort_order,is_active,show_in_app')
           .eq('is_active', true)
+          .eq('show_in_app', true)
           .order('sort_order', ascending: true);
-
-      final activities =
-          List<Map<String, dynamic>>.from(response);
-
-      if (activities.isNotEmpty) {
-        return activities;
-      }
+      return List<Map<String, dynamic>>.from(response);
     } catch (_) {
-      // نستخدم القائمة الاحتياطية عند تعذر جلب البيانات.
+      return <Map<String, dynamic>>[];
     }
-
-    return fallbackActivities
-        .map(
-          (activity) => <String, dynamic>{
-            'code': activity['code'],
-            'name': activity['name'],
-            'is_active': true,
-          },
-        )
-        .toList(growable: false);
   }
 
   /// البحث عن نشاط بالاسم أو الرمز أو المعرّف.
