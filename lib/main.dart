@@ -54,9 +54,9 @@ Future<void> main() async {
       publishableKey: supabaseKey,
     );
     final sharedActivities = await ActivityService().getActivityNames();
-    if (sharedActivities.isNotEmpty) {
-      activityTypes = List<String>.unmodifiable(sharedActivities);
-    }
+    // The database is the single source of truth, including an intentionally
+    // empty list when all activities are hidden or inactive.
+    activityTypes = List<String>.unmodifiable(sharedActivities);
   } catch (_) {}
   runApp(const SilsilaApp());
 }
@@ -69,11 +69,7 @@ SupabaseClient? get database {
   }
 }
 
-List<String> activityTypes = List<String>.unmodifiable(
-  ActivityService.fallbackActivities
-      .map((activity) => activity['name']!)
-      .toList(growable: false),
-);
+List<String> activityTypes = const <String>[];
 
 const egyptGovernorates = [
   'القاهرة',
