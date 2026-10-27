@@ -1033,7 +1033,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   Widget _textCell(Map<String,dynamic> row,String field,{double width=145})=>SizedBox(width:width,child:TextFormField(
     key:ValueKey('${row['id']}-$field-${row[field]}-$_editMode'),initialValue:_s(row[field]),enabled:_editMode,
     decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:7,vertical:8),border:OutlineInputBorder()),
-    onChanged:(v){ if(field=='description'){ final words=v.trim().split(RegExp(r'\\s+')).where((w)=>w.isNotEmpty).take(10).toList(); row[field]=words.join(' '); } else { row[field]=v; } },
+    onChanged:(v){ if(field=='description'){ final words=v.trim().split(RegExp(r'\s+')).where((w)=>w.isNotEmpty).take(10).toList(); row[field]=words.join(' '); } else { row[field]=v; } },
   ));
 
   Future<void> _openBranchWarehousePicker(String userId) async {
