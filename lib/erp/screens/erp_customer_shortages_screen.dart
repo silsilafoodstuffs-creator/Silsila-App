@@ -49,14 +49,7 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
   Widget build(BuildContext context) {
     final customerNames = {for (final c in _customers) _s(c['id']): _s(c['party_name'])};
     final itemNames = {for (final i in _items) _s(i['id']): _s(i['item_name'])};
-    final filtered = _shortages.where((r) {
-      if (_customerId != null && _s(r['customer_id']) != _customerId) return false;
-      if (_status != 'all' && _s(r['status']) != _status) return false;
-      final item = itemNames[_s(r['item_id'])] ?? '';
-      final customer = customerNames[_s(r['customer_id'])] ?? '';
-      final q = _search.toLowerCase().trim();
-      return q.isEmpty || item.toLowerCase().contains(q) || customer.toLowerCase().contains(q) || _s(r['source_document_number']).toLowerCase().contains(q);
-    }).toList();
+    final filtered = _filteredShortages;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -160,6 +153,21 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
   final TextEditingController _searchController = TextEditingController();
   String get _search => _searchController.text;
 
+  List<Map<String, dynamic>> get _filteredShortages {
+    final customerNames = {for (final c in _customers) _s(c['id']): _s(c['party_name'])};
+    final itemNames = {for (final i in _items) _s(i['id']): _s(i['item_name'])};
+    final query = _search.toLowerCase().trim();
+    return _shortages.where((r) {
+      if (_customerId != null && _s(r['customer_id']) != _customerId) return false;
+      if (_status != 'all' && _s(r['status']) != _status) return false;
+      final item = itemNames[_s(r['item_id'])] ?? '';
+      final customer = customerNames[_s(r['customer_id'])] ?? '';
+      return query.isEmpty || item.toLowerCase().contains(query) ||
+          customer.toLowerCase().contains(query) ||
+          _s(r['source_document_number']).toLowerCase().contains(query);
+    }).toList();
+  }
+
   @override
   void dispose() { _searchController.dispose(); super.dispose(); }
 
@@ -246,7 +254,7 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
     final itemNames = {for (final i in _items) _s(i['id']): _s(i['item_name'])};
     final rows = <List<String>>[
       ['العميل','الصنف','رقم المستند','التاريخ','المطلوب','المنفذ','المتبقي','الحالة'],
-      ..._shortages.map((r) {
+      ..._filteredShortages.map((r) {
         final requested = _n(r['requested_quantity']);
         final fulfilled = _n(r['fulfilled_quantity']);
         return [customerNames[_s(r['customer_id'])] ?? '', itemNames[_s(r['item_id'])] ?? '', _s(r['source_document_number']), _s(r['source_date']), requested.toString(), fulfilled.toString(), (requested-fulfilled).clamp(0,double.infinity).toString(), _statusLabel(_s(r['status']))];
