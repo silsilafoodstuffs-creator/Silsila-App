@@ -117,16 +117,16 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   // blocked by company membership or RLS. These rows are preview-only until saved.
   List<Map<String, dynamic>> _localDefaultUserTypes() {
     const defaults = <Map<String, dynamic>>[
-      {'name_ar':'ادمن','name_en':'Admin','show_at_login':false},
-      {'name_ar':'موظف','name_en':'Employee','show_at_login':false},
-      {'name_ar':'مورد','name_en':'Supplier','show_at_login':true},
-      {'name_ar':'عميل','name_en':'Customer','show_at_login':true},
-      {'name_ar':'مندوب','name_en':'Delegate','show_at_login':true},
-      {'name_ar':'شركة شحن','name_en':'Shipping Company','show_at_login':true},
+      {'name_ar':'ادمن','name_en':'Admin','description':'إدارة النظام والصلاحيات','show_at_login':false},
+      {'name_ar':'مورد','name_en':'Supplier','description':'توريد الأصناف والأسعار','show_at_login':true},
+      {'name_ar':'عميل','name_en':'Customer','description':'شراء الأصناف ومتابعة الطلبات','show_at_login':true},
+      {'name_ar':'شركة شحن','name_en':'Shipping Company','description':'إدارة الشحن والتوصيل','show_at_login':true},
+      {'name_ar':'مندوب','name_en':'Sales Representative','description':'البيع والتوزيع والتحصيل','show_at_login':true},
     ];
     return List<Map<String, dynamic>>.generate(defaults.length, (i) => {
       'id': 'local-default-user-type-$i',
       'type_code': i + 1,
+      'type_code_display': 'UT${(i + 1).toString().padLeft(4, '0')}',
       ...defaults[i],
       'is_active': true,
       '_local_default': true,
@@ -193,12 +193,11 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         final result = await _db!.from('erp_user_types').select().eq('company_id', _company).order('type_code');
         typeList = (result as List).map((x) => Map<String, dynamic>.from(x)).toList();
         const defaults = <Map<String, dynamic>>[
-          {'name_ar':'ادمن','name_en':'Admin','show_at_login':false},
-          {'name_ar':'موظف','name_en':'Employee','show_at_login':false},
-          {'name_ar':'مورد','name_en':'Supplier','show_at_login':true},
-          {'name_ar':'عميل','name_en':'Customer','show_at_login':true},
-          {'name_ar':'مندوب','name_en':'Delegate','show_at_login':true},
-          {'name_ar':'شركة شحن','name_en':'Shipping Company','show_at_login':true},
+          {'name_ar':'ادمن','name_en':'Admin','description':'إدارة النظام والصلاحيات','show_at_login':false},
+          {'name_ar':'مورد','name_en':'Supplier','description':'توريد الأصناف والأسعار','show_at_login':true},
+          {'name_ar':'عميل','name_en':'Customer','description':'شراء الأصناف ومتابعة الطلبات','show_at_login':true},
+          {'name_ar':'شركة شحن','name_en':'Shipping Company','description':'إدارة الشحن والتوصيل','show_at_login':true},
+          {'name_ar':'مندوب','name_en':'Sales Representative','description':'البيع والتوزيع والتحصيل','show_at_login':true},
         ];
         // Repair missing defaults one at a time. A denied/duplicate insert must
         // not abort the whole screen load or hide already-saved rows.
@@ -232,7 +231,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           if (mounted) setState(() => _message =
             'تعذر جلب أنواع المستخدمين المحفوظة من قاعدة البيانات؛ يعرض الجدول الأنواع الافتراضية للمعاينة. راجع عضوية الشركة وسياسات RLS ثم اضغط تحديث.');
         }
-        const priority = {'ادمن':0,'موظف':1,'مورد':2,'عميل':3,'مندوب':4,'شركة شحن':5};
+        const priority = {'ادمن':0,'مورد':1,'عميل':2,'شركة شحن':3,'مندوب':4};
         typeList.sort((a,b) => (priority[_s(a['name_ar'])] ?? 99).compareTo(priority[_s(b['name_ar'])] ?? 99));
         } catch (e) {
           // A type-table/RLS failure must not abort loading the independent users table.
@@ -1161,13 +1160,13 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   }
 
   Widget _masterGrid(){
-    final codeField=_isType?'type_code':_isUser?'user_code':'template_code';
+    final codeField=_isType?'type_code_display':_isUser?'user_code':'template_code_display';
     return SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
       headingRowHeight: 57,dataRowMinHeight: 57,dataRowMaxHeight: 57,horizontalMargin:8,columnSpacing:12,
       headingRowColor:WidgetStateProperty.all(const Color(0xFFF0E8F8)),
       columns:[
         const DataColumn(label:Text('م')),DataColumn(label:Text(_isType?'كود النوع':_isUser?'كود المستخدم':'كود القالب')),
-        if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isUser)const DataColumn(label:Text('اسم المستخدم')),if(_isUser)const DataColumn(label:Text('كلمة المرور')),
+        if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isType)const DataColumn(label:Text('وصف مختصر (10 كلمات)')),if(_isUser)const DataColumn(label:Text('اسم المستخدم')),if(_isUser)const DataColumn(label:Text('كلمة المرور')), 
         if(_isUser)const DataColumn(label:Text('نوع المستخدم')),
         if(!_isUser)const DataColumn(label:Text('الصورة')),const DataColumn(label:Text('نشط')),if(_isUser)const DataColumn(label:Text('له خزينة فرعية')),if(_isUser)const DataColumn(label:Text('الفروع والمخازن')),
         if(_isType)const DataColumn(label:Text('يظهر للدخول')),
@@ -1178,6 +1177,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         return DataRow(selected:id==_selectedId,onSelectChanged:(v)async{setState(()=>_selectedId=v==true?id:null);if(v==true&&_isTemplate)await _loadRules();},cells:[
           DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]))),
           if(!_isUser)DataCell(_textCell(row,'name_ar')),if(!_isUser)DataCell(_textCell(row,'name_en')),
+          if(_isType)DataCell(_textCell(row,'description',width:220)),
           if(_isUser)DataCell(_textCell(row,'name_ar',width:165)),
           if(_isUser)DataCell(SizedBox(width:185,child:Row(children:[Expanded(child:TextFormField(initialValue:_s(row['_password_draft']),obscureText:row['_password_visible']!=true,decoration:const InputDecoration(hintText:'كلمة مرور جديدة',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_draft']=v)),IconButton(tooltip:'إظهار/إخفاء كلمة المرور',visualDensity:VisualDensity.compact,onPressed:()=>setState(()=>row['_password_visible']=row['_password_visible']!=true),icon:Icon(row['_password_visible']==true?Icons.visibility_off:Icons.visibility,size:18))]))),
           if(_isUser)DataCell(SizedBox(width:155,child:DropdownButtonFormField<String>(
