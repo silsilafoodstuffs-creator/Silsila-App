@@ -865,12 +865,17 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           }
         }
         if(_isPermissions){
-          for(final rule in _rules){
+          final targetIds = _permissionTargetIds;
+          if(targetIds.isEmpty) throw StateError('حدد مستخدمًا واحدًا على الأقل قبل حفظ الصلاحيات.');
+          for(final uid in targetIds) {
+            await _db!.from('erp_user_permission_matrix').delete().eq('company_id',_company).eq('user_id',uid);
+          }
+          for(final rule in _rules.where((r)=>targetIds.contains(_s(r['user_id'])))){
             final uid=_s(rule['user_id']);
             if(uid.isEmpty)continue;
             final payload=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':rule['menu_name'],'submenu_name':rule['submenu_name']??'','page_name':rule['page_name']};
             for(final field in _userAdminActionFields.values)payload[field]=rule[field]==true;
-            await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');
+            await _db!.from('erp_user_permission_matrix').insert(payload);
           }
         }
       }
@@ -1412,6 +1417,19 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     );
   }
 
+  void _changePermissionMode(String mode) {
+    setState(() {
+      _permissionMode = mode;
+      if (mode == 'manual') {
+        final targets = _permissionTargetIds.toSet();
+        _rules.removeWhere((r) => targets.contains(_s(r['user_id'])));
+        _message = 'تم بدء تحديد يدوي بصلاحيات غير محددة للمستخدمين المستهدفين.';
+      }
+      _editMode = true;
+      _error = null;
+    });
+  }
+
   Future<void> _openTemplatePicker() async {
     final picked = await showDialog<String>(context:context,builder:(ctx)=>AlertDialog(
       title:const Text('جلب قالب صلاحيات (F1)'),
@@ -1440,11 +1458,11 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         ]),
         OutlinedButton.icon(onPressed:_load,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
         Row(mainAxisSize:MainAxisSize.min,children:[
-          Checkbox(shape:const CircleBorder(),value:_permissionMode=='template',onChanged:_editMode?(v)=>setState(()=>_permissionMode=v==true?'template':'manual'):null),
+          Checkbox(shape:const CircleBorder(),value:_permissionMode=='template',onChanged:_editMode?(v)=>_changePermissionMode(v==true?'template':'manual'):null),
           const Text('تحديد قالب ثابت'),
         ]),
         Row(mainAxisSize:MainAxisSize.min,children:[
-          Checkbox(shape:const CircleBorder(),value:_permissionMode=='manual',onChanged:_editMode?(v)=>setState(()=>_permissionMode=v==true?'manual':'template'):null),
+          Checkbox(shape:const CircleBorder(),value:_permissionMode=='manual',onChanged:_editMode?(v)=>_changePermissionMode(v==true?'manual':'template'):null),
           const Text('تحديد صلاحيات يدوي'),
         ]),
         if(_permissionMode=='template') OutlinedButton.icon(
@@ -1525,9 +1543,10 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       Expanded(child:_view=='classifications'
         ? ErpUserClassificationsScreen(companyId: _company)
         : _loading ? const Center(child:CircularProgressIndicator())
+        : _isPermissions ? _ruleGrid()
         : _isHierarchy ? _hierarchyView()
         : SingleChildScrollView(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          if(_isPermissions) _ruleGrid() else if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
+          if(_isTemplate) ...[_masterGrid(),const SizedBox(height:12),_ruleGrid()] else _masterGrid(),
         ])))),
     ])));
   }
@@ -1551,17 +1570,31 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   }
 
   Future<void> _applyTemplate() async {
-    if(_selectedUserId==null||_selectedTemplateId==null)return;
-    try{
-      final source=await _db!.from('erp_permission_template_rules').select().eq('company_id',_company).eq('template_id',_selectedTemplateId!);
-      for(final item in (source as List).whereType<Map<String,dynamic>>()){
-        final payload=<String,dynamic>{'company_id':_company,'user_id':_selectedUserId,'menu_name':item['menu_name'],'submenu_name':item['submenu_name']??'','page_name':item['page_name']};
-        for(final field in _userAdminActionFields.values)payload[field]=item[field]==true;
-        await _db!.from('erp_user_permission_matrix').upsert(payload,onConflict:'user_id,menu_name,submenu_name,page_name');
-      }
-      await _loadUserRules();
-      if(mounted)setState(()=>_message='تم تطبيق قالب الصلاحيات على المستخدم المحدد.');
-    }catch(e){if(mounted)setState(()=>_error='تعذر تطبيق القالب: $e');}
+    final targets = _permissionTargetIds;
+    if(targets.isEmpty || _selectedTemplateId==null) {
+      if(mounted)setState(()=>_error='اختر المستخدمين المستهدفين ثم حدد قالب الصلاحيات.');
+      return;
+    }
+    try {
+      final source=await _db!.from('erp_permission_template_rules').select()
+        .eq('company_id',_company).eq('template_id',_selectedTemplateId!);
+      final sourceRules=(source as List).whereType<Map<String,dynamic>>().toList();
+      setState(() {
+        _rules.removeWhere((r)=>targets.contains(_s(r['user_id'])));
+        for(final uid in targets) {
+          for(final item in sourceRules) {
+            _rules.add(<String,dynamic>{
+              'company_id':_company,'user_id':uid,'menu_name':item['menu_name'],
+              'submenu_name':item['submenu_name']??'','page_name':item['page_name'],
+              for(final field in _userAdminActionFields.values) field:item[field]==true,
+            });
+          }
+        }
+        _editMode=true;
+        _error=null;
+        _message='تم تحميل القالب كمسودة على ${targets.length} مستخدم. اضغط حفظ لتثبيت الصلاحيات.';
+      });
+    } catch(e) { if(mounted)setState(()=>_error='تعذر جلب القالب: $e'); }
   }
 
   Future<void> _openUserPicker() async {
