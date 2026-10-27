@@ -13,3 +13,7 @@ REVOKE EXECUTE ON FUNCTION public.erp_enforce_sales_document_chain_policy() FROM
 REVOKE EXECUTE ON FUNCTION public.erp_guard_fiscal_period() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.erp_guard_sales_document_owner_edit() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.erp_validate_master_data_links() FROM PUBLIC, anon, authenticated;
+
+-- This policy helper is needed by authenticated RLS checks, but must not be callable anonymously.
+REVOKE EXECUTE ON FUNCTION public.erp_program_policy_applies(uuid, text, uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.erp_program_policy_applies(uuid, text, uuid) TO authenticated;
