@@ -17,6 +17,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   SupabaseClient? _db;
   List<Map<String, dynamic>> _centers = [];
   List<Map<String, dynamic>> _branches = [];
+  String? _activeCompanyId;
   final Set<String> _selectedIds = {};
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -82,6 +83,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       ]);
       if (!mounted) return;
       setState(() {
+        _activeCompanyId = company;
         _centers = (result[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _branches = (result[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _selectedIds.removeWhere((id) => !_centers.any((r) => _s(r['id']) == id));
@@ -150,8 +152,11 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
 
   Future<void> _save() async {
     final db = _db;
-    final company = (widget.companyId ?? '').trim();
-    if (db == null || company.isEmpty) return;
+    final company = (_activeCompanyId ?? widget.companyId ?? '').trim();
+    if (db == null || company.isEmpty) {
+      if (mounted) setState(() => _error = 'لا يمكن الحفظ قبل تحديد الشركة النشطة. حدّث الشاشة وتحقق من عضوية المستخدم.');
+      return;
+    }
     final codes = <String>{};
     for (final r in _centers) {
       final code = _s(r['center_code']).trim();
@@ -220,7 +225,9 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
       return;
     }
     try {
-      await _db!.from('erp_cost_centers').delete().eq('id', id).eq('company_id', (widget.companyId ?? '').trim());
+      final company = (_activeCompanyId ?? widget.companyId ?? '').trim();
+      if (company.isEmpty) throw StateError('لا توجد شركة نشطة مرتبطة بالمستخدم.');
+      await _db!.from('erp_cost_centers').delete().eq('id', id).eq('company_id', company);
       if (mounted) setState(() { _centers.removeWhere((r) => _s(r['id']) == id); _selectedIds.remove(id); _message = 'تم حذف المركز.'; _error = null; });
       await _load();
     } catch (e) {
