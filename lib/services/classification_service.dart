@@ -58,13 +58,13 @@ class ClassificationService {
     'delegate': defaultDelegateTypes,
   };
 
-  /// جلب أنواع الأنشطة من قاعدة البيانات،
-  /// مع استخدام القائمة الافتراضية عند تعذر الجلب.
-  Future<List<String>> getActivityTypes() {
-    return _loadNames(
-      table: 'activity_types',
-      fallback: defaultActivityTypes,
-    );
+  /// نفس مصدر الأنشطة المستخدم في القوائم والتبويبات داخل التطبيق.
+  /// لا نستخدم أسماء احتياطية حتى لا نظهر نشاطًا مخفيًا من شاشة الإدارة.
+  Future<List<String>> getActivityTypes() async {
+    final rows = await ActivityService(client: _client).getActivities();
+    return List<String>.unmodifiable(rows
+        .map((row) => row['name']?.toString().trim() ?? '')
+        .where((name) => name.isNotEmpty));
   }
 
   /// جلب تصنيفات الحساب حسب الدور.
