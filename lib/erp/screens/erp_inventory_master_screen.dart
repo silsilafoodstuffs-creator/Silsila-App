@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+import 'package:excel/excel.dart' hide Border;
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -302,6 +305,49 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     else { await _createItem(); }
   }
 
+  Future<void> _exportMasterExcel() async {
+    final isWarehouses = _view == 'warehouses';
+    final rows = isWarehouses ? _warehouses : _items;
+    final label = isWarehouses ? 'المخازن' : 'الأصناف';
+    if (rows.isEmpty) {
+      setState(() => _message = 'لا توجد بيانات $label مطابقة للتصدير.');
+      return;
+    }
+    setState(() { _loading = true; _error = null; _message = null; });
+    try {
+      final workbook = Excel.createExcel();
+      final sheet = workbook[isWarehouses ? 'المخازن' : 'الأصناف'];
+      final keys = isWarehouses
+        ? <String>['warehouse_code','warehouse_name','warehouse_name_en','branch_name','location','phone','address','is_active']
+        : <String>['item_code','item_name','item_name_en','barcode','base_unit','category_name','purchase_price','sale_price','tax_rate','reorder_level','is_active'];
+      final headers = isWarehouses
+        ? <String>['كود المخزن','اسم المخزن','الاسم الإنجليزي','الفرع','الموقع','الهاتف','العنوان','الحالة']
+        : <String>['كود الصنف','اسم الصنف','الاسم الإنجليزي','الباركود','الوحدة','فئة الصنف','سعر الشراء','سعر البيع','الضريبة %','حد إعادة الطلب','الحالة'];
+      sheet.appendRow(headers.map((value) => TextCellValue(value)).toList());
+      for (final row in rows) {
+        sheet.appendRow([
+          for (final key in keys)
+            TextCellValue(key == 'is_active'
+              ? (row[key] == true ? 'نشط' : 'موقوف')
+              : _s(row[key])),
+        ]);
+      }
+      final bytes = workbook.encode();
+      if (bytes == null || bytes.isEmpty) throw StateError('تعذر إنشاء ملف Excel.');
+      await FileSaver.instance.saveFile(
+        name: 'silsila_${isWarehouses ? 'warehouses' : 'items'}_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: Uint8List.fromList(bytes),
+        fileExtension: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      if (mounted) setState(() => _message = 'تم تصدير ${rows.length} سجلًا من $label إلى Excel.');
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر تصدير $label إلى Excel: $error');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _previewMasterData() async {
     final rows = _view == 'warehouses' ? _warehouses : _items;
     final label = _view == 'warehouses' ? 'المخازن' : 'الأصناف';
@@ -333,7 +379,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _saveCurrentRecord),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewMasterData),
             _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewMasterData),
-            _quickTask('استيراد Excel', Icons.file_upload_outlined, const Color(0xFF137C8B), () => setState(() => _message = 'استيراد Excel غير مفعّل في دليل الأصناف والمخازن بعد.')),
+            _quickTask('Excel', Icons.file_download_outlined, const Color(0xFF137C8B), _loading ? null : _exportMasterExcel),
             _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _previewMasterData),
           ])),
         ]),
