@@ -1234,7 +1234,19 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         if(rule==null){rule=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':key[0],'submenu_name':key[1],'page_name':key[2],for(final f in _permissionActionFields.values)f:false};_rules.add(rule);}
         rule[field]=value;
         if(field=='can_access'&&!value){for(final f in _permissionActionFields.values.where((f)=>f!='can_access'))rule[f]=false;}
-        else if(field!='can_access'&&value)rule['can_access']=true;
+        else if(value){
+          rule['can_access']=true;
+          // Any enabled child permission must also enable its parent screen groups.
+          final parentKeys=<List<String>>[
+            [menu,'*','*'],
+            if(sub!='*') [menu,sub,'*'],
+          ];
+          for(final parentKey in parentKeys){
+            var parent=_permissionRule(uid,parentKey[0],parentKey[1],parentKey[2]);
+            if(parent==null){parent=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':parentKey[0],'submenu_name':parentKey[1],'page_name':parentKey[2],for(final f in _permissionActionFields.values)f:false};_rules.add(parent);}
+            parent['can_access']=true;
+          }
+        }
       }
       _error=null;_message='تم تحديث الصلاحيات كمسودة. اضغط حفظ لتثبيت التغييرات.';
     });
@@ -1344,14 +1356,15 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:_userAdminPurple)),Text('إدارة البيانات والصلاحيات للشركة الحالية',style:TextStyle(fontSize:11,color:Colors.grey.shade700))])),
       ])),
       _toolbar(),
-      if(!_isPermissions)Padding(
+      Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
           _userTab('أنواع المستخدمين','types',Icons.badge_outlined),const SizedBox(width:6),
           _userTab('تصنيفات المستخدمين','classifications',Icons.category_outlined),const SizedBox(width:6),
           _userTab('قوالب صلاحيات المستخدمين','templates',Icons.fact_check_outlined),const SizedBox(width:6),
           _userTab('المستخدمين','users',Icons.people_alt_outlined),const SizedBox(width:6),
-          _userTab('احتياطي شاشة المستخدمين','hierarchy',Icons.account_tree_outlined),
+          _userTab('احتياطي شاشة المستخدمين','hierarchy',Icons.account_tree_outlined),const SizedBox(width:6),
+          _userTab('صلاحيات المستخدمين','permissions',Icons.admin_panel_settings_outlined),
         ])),
       ),
       if(_error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
