@@ -59,6 +59,27 @@ Uint8List _processTransparentPngInBackground(Uint8List source) {
       enqueue(x - 1, y); enqueue(x + 1, y);
       enqueue(x, y - 1); enqueue(x, y + 1);
     }
+    // Reject blank / broken placeholder images before they can be stored in the database.
+    // This protects the catalog from tiny transparent PNGs and HTML/error pages that
+    // happen to decode as an image. Count visible pixels after removing only the
+    // edge-connected near-white background, so white product packaging can remain.
+    var visiblePixels = 0;
+    var minX = width, minY = height, maxX = -1, maxY = -1;
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        if (decoded.getPixel(x, y).a.toInt() > 16) {
+          visiblePixels++;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (visiblePixels < 500 || maxX < minX || maxY < minY ||
+        (maxX - minX + 1) < 20 || (maxY - minY + 1) < 20) {
+      throw Exception('الصورة فارغة أو منخفضة الجودة بعد إزالة الخلفية؛ لن يتم حفظها. اختر صورة منتج واضحة بدقة أعلى.');
+    }
     // Do not upscale small originals; retain their actual detail and encode
     // directly after background removal to minimize CPU time and memory.
     return Uint8List.fromList(img.encodePng(decoded, level: 6));
