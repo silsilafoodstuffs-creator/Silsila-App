@@ -104,7 +104,7 @@ begin
   from public.erp_user_permissions p
   where p.company_id = new.company_id
     and p.user_id = auth.uid()
-    and p.menu_key = 'المبيعات والعملاء::حركات::إذن التسليم'
+    and p.menu_key in ('مبيعات::حركات::إذن التسليم', 'المبيعات والعملاء::حركات::إذن التسليم')
   limit 1;
   if not coalesce(v_allowed, false) then
     raise exception 'التحميل بدون تجهيز يتطلب صلاحية تعديل إذن التسليم';
