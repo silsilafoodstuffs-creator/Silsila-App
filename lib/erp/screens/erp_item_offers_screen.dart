@@ -7,8 +7,10 @@ import '../services/erp_inventory_master_repository.dart';
 import '../services/erp_parties_repository.dart';
 
 class ErpItemOffersScreen extends StatefulWidget {
-  const ErpItemOffersScreen({super.key, required this.companyId});
+  const ErpItemOffersScreen({super.key, required this.companyId, this.initialCampaignType, this.lockCampaignType = false});
   final String? companyId;
+  final String? initialCampaignType;
+  final bool lockCampaignType;
   @override
   State<ErpItemOffersScreen> createState() => _ErpItemOffersScreenState();
 }
@@ -33,7 +35,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
   String _s(dynamic v) => (v ?? '').toString();
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _date(DateTime d) => '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
-  @override void initState() { super.initState(); _load(); }
+  @override void initState() { super.initState(); if (widget.initialCampaignType != null && const {'customer_magazine','promotion','slow_moving'}.contains(widget.initialCampaignType)) _campaignType = widget.initialCampaignType!; _load(); }
   @override void dispose() { _name.dispose(); _search.dispose(); super.dispose(); }
 
   Future<void> _load() async {
@@ -106,6 +108,42 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
       );
     }));
     search.dispose();
+  }
+
+  Future<void> _deleteCampaign(Map<String, dynamic> campaign) async {
+    final campaignId = _s(campaign['id']);
+    if (campaignId.isEmpty) return;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تأكيد حذف العرض'),
+        content: Text('سيتم حذف العرض «${_s(campaign['title'])}» وبنوده المرتبطة. هل تريد المتابعة؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('نعم، احذف العرض'),
+          ),
+        ],
+      ),
+    );
+    if (yes != true) return;
+    final company = widget.companyId?.trim() ?? '';
+    if (company.isEmpty || _db == null) {
+      if (mounted) setState(() => _error = 'لا توجد شركة نشطة لحذف العرض.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      await _db!.from('erp_sales_campaigns')
+          .delete().eq('id', campaignId).eq('company_id', company);
+      if (!mounted) return;
+      setState(() { _saving = false; _message = 'تم حذف العرض وبنوده التابعة له.'; });
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() { _saving = false; _error = 'تعذر حذف العرض: $e'; });
+    }
   }
 
   Future<void> _save() async {
@@ -263,7 +301,7 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                                       DropdownMenuItem(value: 'promotion', child: Text('عرض ترويج')),
                                       DropdownMenuItem(value: 'slow_moving', child: Text('عرض الرواكد')),
                                     ],
-                                    onChanged: (v) => setState(() => _campaignType = v ?? _campaignType),
+                                    onChanged: widget.lockCampaignType ? null : (v) => setState(() => _campaignType = v ?? _campaignType),
                                   )),
                                 ),
                               ],
@@ -530,10 +568,12 @@ class _ErpItemOffersScreenState extends State<ErpItemOffersScreen> {
                         ),
                         title: Text(_s(campaign['title'])),
                         subtitle: Text('${_s(campaign['start_date'])} ← ${_s(campaign['end_date'])} | ${_s(campaign['campaign_type'])}'),
-                        trailing: Icon(
-                          _s(campaign['is_active']) == 'true' ? Icons.check_circle : Icons.pause_circle_outline,
-                          color: _s(campaign['is_active']) == 'true' ? Colors.green : Colors.grey,
-                        ),
+                        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(_s(campaign['is_active']) == 'true' ? Icons.check_circle : Icons.pause_circle_outline,
+                            color: _s(campaign['is_active']) == 'true' ? Colors.green : Colors.grey),
+                          IconButton(tooltip: 'حذف العرض', onPressed: _saving ? null : () => _deleteCampaign(campaign),
+                            icon: const Icon(Icons.delete_outline, color: Colors.red)),
+                        ]),
                       ),
                     )),
                   ],
