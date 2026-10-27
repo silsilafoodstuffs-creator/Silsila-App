@@ -21,6 +21,7 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
   DateTime _to = DateTime.now();
   bool _loading = false;
   bool _saving = false;
+  int _loadGeneration = 0;
   String? _error;
   String? _message;
   List<Map<String, dynamic>> _customers = [];
@@ -163,6 +164,7 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
   void dispose() { _searchController.dispose(); super.dispose(); }
 
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     final db = _db;
     if (db == null) { if (mounted) setState(() => _error = 'Supabase غير مهيأ.'); return; }
     setState(() { _loading = true; _error = null; _message = null; });
@@ -172,6 +174,7 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
         final userId = db.auth.currentUser?.id;
         if (userId != null) {
           final memberships = await db.from('erp_company_members').select('company_id').eq('user_id', userId).eq('is_active', true).order('created_at').limit(1);
+          if (!mounted || generation != _loadGeneration) return;
           if (memberships.isNotEmpty) company = _s(memberships.first['company_id']).trim();
         }
       }
@@ -181,7 +184,7 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
         db.from('erp_items').select('id,item_name,item_code').eq('company_id', company).order('item_name').limit(3000),
         db.from('erp_customer_shortages').select('id,company_id,customer_id,item_id,source_document_id,source_document_number,source_date,requested_quantity,fulfilled_quantity,status,created_at,closed_at').eq('company_id', company).gte('source_date', _date(_from)).lte('source_date', _date(_to)).order('source_date', ascending: false).order('created_at', ascending: false).limit(2000),
       ]);
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _companyId = company;
         _customers = (results[0] as List).map((v) => Map<String, dynamic>.from(v)).toList();
@@ -190,7 +193,7 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
         _loading = false;
       });
     } catch (e) {
-      if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل نواقص العملاء: $e'; });
+      if (mounted && generation == _loadGeneration) setState(() { _loading = false; _error = 'تعذر تحميل نواقص العملاء: $e'; });
     }
   }
 
