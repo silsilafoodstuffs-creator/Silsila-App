@@ -92,7 +92,6 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   final TextEditingController _hierarchySearchController = TextEditingController();
   String _hierarchySearch = '';
   String? _activeCompanyId;
-  String _selectedPageKey = 'إعدادات عامة|بيانات أساسية|بيانات الشركة';
   static const _typeNames = <String,String>{
     'types':'أنواع المستخدمين','users':'المستخدمين','hierarchy':'احتياطي شاشة المستخدمين','classifications':'المستخدمين','templates':'قوالب صلاحيات المستخدمين','permissions':'صلاحيات المستخدمين'
   };
