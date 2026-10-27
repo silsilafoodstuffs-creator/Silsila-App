@@ -305,7 +305,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
               DataColumn(label: Text('الحالة')), DataColumn(label: Text('إجراءات')),
             ],
             rows: _departments.map((d) {
-              final parent = _departments.where((p) => p['id']?.toString() == d['parent_id']?.toString()).firstOrNull;
+              final parent = _departments.firstWhere((p) => p['id']?.toString() == d['parent_id']?.toString(), orElse: () => <String, dynamic>{});
               final level = d['department_level'] == 'directorate' ? 'إدارة رئيسية' : d['department_level'] == 'section' ? 'قسم' : 'إدارة فرعية';
               return DataRow(cells: [
                 DataCell(Text((d['department_code'] ?? '').toString())),
