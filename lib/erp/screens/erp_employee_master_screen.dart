@@ -51,7 +51,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   SupabaseClient? get _db { try { return Supabase.instance.client; } catch (_) { return null; } }
   String _s(dynamic v) => (v ?? '').toString();
   String? _first(Iterable<String> values) { for (final v in values) { return v; } return null; }
-  List<Map<String, dynamic>> get _availableJobs => _jobs.where((j) => _dep == null || j['department_id'] == _dep).toList();
+  List<Map<String, dynamic>> get _availableJobs => _jobs.where((j) => _dep == null || j['department_id'] == _dep || j['department_id'] == _admin).toList();
 
   @override
   void initState() {
@@ -96,6 +96,18 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         _geoRows = geoRows;
         _loading = false;
       });
+      if (_admin == null) {
+        final top = _deps.where((d) => d['name_ar'] == 'الإدارة العليا').toList();
+        final central = _deps.where((d) => d['name_ar'] == 'الإدارة المركزية').toList();
+        final manager = _jobs.where((j) => j['name_ar'] == 'مدير عام').toList();
+        if (top.isNotEmpty || central.isNotEmpty || manager.isNotEmpty) {
+          setState(() {
+            _admin = top.isEmpty ? null : _s(top.first['id']);
+            _dep = central.isEmpty ? null : _s(central.first['id']);
+            _job = manager.isEmpty ? null : _s(manager.first['id']);
+          });
+        }
+      }
       await _generateNextCode();
     } catch (e) {
       if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل دليل الموظفين. طبّق ترحيل بيانات الموارد البشرية أولًا: ' + e.toString(); });
@@ -229,7 +241,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         _section('بيانات العمل والتنظيم', Icons.account_tree_outlined, [
           _drop('الإدارة', _admin, _deps.where((d) => d['department_level'] != 'section').map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _admin = v; _dep = null; _job = null; })),
           _drop('موقع العمل', _loc, _locs.map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar']) + ' • ' + _s(d['location_code'])))).toList(), (v) => setState(() { _loc = v; })),
-          _drop('القسم', _dep, _deps.where((d) => d['department_level'] == 'section' && (_admin == null || d['parent_id'] == _admin)).map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _dep = v; _job = null; })),
+          _drop('القسم', _dep, _deps.where((d) => (d['department_level'] == 'section' || d['department_level'] == 'department') && (_admin == null || d['parent_id'] == _admin)).map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _dep = v; _job = null; })),
           _drop('الوظيفة', _job, _availableJobs.map((j) => DropdownMenuItem(value: _s(j['id']), child: Text(_s(j['name_ar']) + ' • ' + _s(j['job_code'])))).toList(), (v) => setState(() { _job = v; })),
           _dateField(_hireDate, 'تاريخ التعيين'),
           _drop('حالة الموظف', _status, const [DropdownMenuItem(value: 'active', child: Text('نشط')), DropdownMenuItem(value: 'on_leave', child: Text('إجازة')), DropdownMenuItem(value: 'suspended', child: Text('موقوف')), DropdownMenuItem(value: 'terminated', child: Text('منتهي الخدمة'))], (v) => setState(() { _status = v ?? 'active'; })),
@@ -425,8 +437,9 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   String get _contractDuration {
     final start = _parseDate(_contractFrom.text); final end = _parseDate(_contractTo.text);
     if (_contractType != 'بعقد' || start == null || end == null || end.isBefore(start)) return '—';
-    var months = (end.year - start.year) * 12 + end.month - start.month;
-    if (end.day < start.day) months--; if (months < 0) months = 0;
+    final inclusiveEnd = end.add(const Duration(days: 1));
+    var months = (inclusiveEnd.year - start.year) * 12 + inclusiveEnd.month - start.month;
+    if (inclusiveEnd.day < start.day) months--; if (months < 0) months = 0;
     final years = months ~/ 12; final remaining = months % 12;
     return years > 0 ? '${years} سنة${remaining > 0 ? ' و${remaining} شهر' : ''}' : '${months} شهر';
   }
