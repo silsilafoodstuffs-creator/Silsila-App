@@ -232,7 +232,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
         DataCell(SizedBox(width: 125, child: Text((_grades.firstWhere((g) => g['id'] == j['grade_id'], orElse: () => <String,dynamic>{})['name_ar'] ?? 'غير محدد').toString()))),
         DataCell(Text((j['min_qualification'] ?? '—').toString())),
         DataCell(Text((j['min_license_class'] ?? 'لا يشترط').toString())),
-        ..._documentColumns.map((d) => DataCell(Center(child: Icon(j[d['key']] == true ? Icons.check_circle : Icons.remove_circle_outline, color: j[d['key']] == true ? Colors.green : Colors.grey, size: 18)))),
+        ..._documentColumns.map((d) => DataCell(Center(child: Checkbox(value: j[d['key']] == true, visualDensity: VisualDensity.compact, onChanged: (value) => _toggleJobRequirement(j, d['key']!, value == true)))),
         DataCell(IconButton(tooltip: 'تعديل متطلبات الوظيفة', onPressed: () => _editJobRequirements(j), icon: const Icon(Icons.edit_outlined, color: _hrStructurePurple))),
       ])).toList(),
     )))),
@@ -294,6 +294,16 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعديل الدرجة: ' + e.toString()))); }
     }
     rank.dispose();
+  }
+
+  Future<void> _toggleJobRequirement(Map<String,dynamic> job, String key, bool value) async {
+    if (_db == null) return;
+    try {
+      await _db!.from('erp_hr_jobs').update({key:value}).eq('id',job['id']).eq('company_id',_companyId);
+      await _load();
+    } catch(e) {
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تحديث متطلب التعيين: ' + e.toString())));
+    }
   }
 
   Future<void> _editJobRequirements(Map<String,dynamic> job) async {
