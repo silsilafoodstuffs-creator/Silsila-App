@@ -312,8 +312,6 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
                 ]),
               ),
           ])),
-        ]),
-        _section('بيانات العقد', Icons.assignment_outlined, [
           _drop('نوع العقد', _contractType, _contractTypes.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() => _contractType = v ?? 'بدون عقد'), width: 145),
           if (_contractType == 'بعقد') ...[
             _dateField(_contractFrom, 'تاريخ العقد من', width: 145), _dateField(_contractTo, 'تاريخ العقد إلى', width: 145),
