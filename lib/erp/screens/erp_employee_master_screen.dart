@@ -17,6 +17,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   final _code = TextEditingController();
   final _ar = TextEditingController(text: 'إدارة عليا');
   final _en = TextEditingController();
+  final _nationalId = TextEditingController();
   final _address = TextEditingController(text: 'أطلس 4 بجوار الملعب عملية 1248 بلوك 7 مدخل 1 شقة 11');
   final _map = TextEditingController();
   final _m1 = TextEditingController(text: '01121237271');
@@ -61,7 +62,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   }
   @override
   void dispose() {
-    for (final c in [_code,_ar,_en,_address,_map,_m1,_m2,_w1,_w2,_company,_hireDate,_contractFrom,_contractTo,_relativeMobile,_relativeRelation]) { c.dispose(); }
+    for (final c in [_code,_ar,_en,_nationalId,_address,_map,_m1,_m2,_w1,_w2,_company,_hireDate,_contractFrom,_contractTo,_relativeMobile,_relativeRelation]) { c.dispose(); }
     super.dispose();
   }
 
@@ -179,7 +180,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     final jobName = _first(_jobs.where((x) => x['id'] == _job).map((x) => _s(x['name_ar'])));
     final payload = <String, dynamic>{
       'company_id': _cid, 'employee_code': _code.text.trim().toUpperCase(),
-      'full_name': _ar.text.trim(), 'full_name_en': _en.text.trim(), 'country': _country,
+      'full_name': _ar.text.trim(), 'full_name_en': _en.text.trim(), 'national_id': _nationalId.text.trim(), 'country': _country,
       'governorate': _gov, 'district': _district, 'locality': _locality,
       'address': _address.text.trim(), 'map_url': _map.text.trim(),
       'mobile_1': _m1.text.trim(), 'mobile_2': _m2.text.trim(),
@@ -207,7 +208,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   }
 
   void _clear({bool generateCode = true}) {
-    for (final c in [_code,_ar,_en,_address,_map,_m1,_m2,_w1,_w2,_relativeMobile,_relativeRelation]) { c.clear(); }
+    for (final c in [_code,_ar,_en,_nationalId,_address,_map,_m1,_m2,_w1,_w2,_relativeMobile,_relativeRelation]) { c.clear(); }
     _ar.text = 'إدارة عليا'; _address.text = 'أطلس 4 بجوار الملعب عملية 1248 بلوك 7 مدخل 1 شقة 11';
     _m1.text = '01121237271'; _w1.text = '01044480160'; _relativeMobile.text = '01127283261'; _relativeRelation.text = 'أخ';
     setState(() {
@@ -226,6 +227,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         final value = (v ?? '').trim();
         if (required && value.isEmpty) return 'حقل مطلوب';
         if (c == _code && value.isNotEmpty && !RegExp(r'^[A-Za-z]+-?[0-9]+$').hasMatch(value)) return 'استخدم حروفًا إنجليزية ثم أرقامًا مثل EMP-0001';
+        if (c == _nationalId && value.isNotEmpty && !RegExp(r'^\\d{14}$').hasMatch(value)) return 'الرقم القومي يجب أن يتكون من 14 رقمًا';
         return null;
       },
     ));
@@ -266,6 +268,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         _section('بيانات أولية', Icons.badge_outlined, [
           _field(_code, 'كود الموظف التلقائي (حروف إنجليزية ثم أرقام) *', required: true),
           _field(_ar, 'اسم الموظف عربي *', required: true), _field(_en, 'اسم الموظف إنجليزي'),
+          _field(_nationalId, 'الرقم القومي (14 رقمًا) *', required: true, type: TextInputType.number),
           _drop('الدولة', _country, ['مصر','السعودية','الإمارات','أخرى'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _country = v ?? 'مصر'; })),
           _drop('المحافظة', _geoRows.isEmpty ? (_gov.isEmpty ? null : _gov) : _govGeoId,
             (_geoRows.isEmpty ? _govs.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
