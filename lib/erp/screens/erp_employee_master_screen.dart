@@ -166,9 +166,9 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     if (end.difference(today).inDays < 31) return (label: 'وشيك الانتهاء', color: _orange);
     return (label: 'ساري', color: Colors.green);
   }
-  Widget _dateField(TextEditingController controller, String label) => SizedBox(width: 245, child: TextFormField(
+  Widget _dateField(TextEditingController controller, String label, {double width = 245}) => SizedBox(width: width, child: TextFormField(
     controller: controller, keyboardType: TextInputType.datetime,
-    decoration: InputDecoration(labelText: label, hintText: 'يوم-شهر-سنة', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true),
+    decoration: InputDecoration(labelText: label, hintText: 'يوم-شهر-سنة', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12)),
     validator: (v) => (v ?? '').trim().isEmpty || _parseDate(v!) != null ? null : 'اكتب التاريخ بصيغة يوم-شهر-سنة',
     onChanged: (_) => setState(() {}),
   ));
@@ -219,8 +219,8 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     if (generateCode) _generateNextCode();
   }
 
-  Widget _field(TextEditingController c, String label, {bool required = false, TextInputType? type}) {
-    return SizedBox(width: 245, child: TextFormField(
+  Widget _field(TextEditingController c, String label, {bool required = false, TextInputType? type, double width = 245}) {
+    return SizedBox(width: width, child: TextFormField(
       controller: c, keyboardType: type,
       readOnly: c == _code,
       enableInteractiveSelection: c != _code,
@@ -268,54 +268,63 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       if (_message != null) Text(_message!, style: const TextStyle(color: Colors.green)),
       Expanded(child: SingleChildScrollView(child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _section('بيانات أولية', Icons.badge_outlined, [
-          _field(_code, 'كود الموظف التلقائي (حروف إنجليزية ثم أرقام) *', required: true),
-          _field(_ar, 'اسم الموظف عربي *', required: true), _field(_en, 'اسم الموظف إنجليزي'),
-          _field(_nationalId, 'الرقم القومي (14 رقمًا) *', required: true, type: TextInputType.number),
-          _drop('الدولة', _country, ['مصر','السعودية','الإمارات','أخرى'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _country = v ?? 'مصر'; })),
+          _field(_code, 'كود الموظف التلقائي *', required: true, width: 185),
+          _field(_ar, 'اسم الموظف عربي *', required: true, width: 220), _field(_en, 'اسم الموظف إنجليزي', width: 220),
+          _drop('الدولة', _country, ['مصر','السعودية','الإمارات','أخرى'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _country = v ?? 'مصر'; }), width: 125),
           _drop('المحافظة', _geoRows.isEmpty ? (_gov.isEmpty ? null : _gov) : _govGeoId,
             (_geoRows.isEmpty ? _govs.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
             (v) => setState(() {
               _govGeoId = _geoRows.isEmpty ? null : v;
               _gov = _geoRows.isEmpty ? (v ?? '') : (_first(_geoRows.where((g) => _s(g['id']) == v).map((g) => _s(g['name_ar']))) ?? '');
               _district = ''; _locality = ''; _districtGeoId = null;
-            })),
-          _drop('مركز أو حي', _geoRows.isEmpty ? (_district.isEmpty ? null : _district) : _districtGeoId,
+            }), width: 145),
+          _drop('مركز / حي', _geoRows.isEmpty ? (_district.isEmpty ? null : _district) : _districtGeoId,
             (_geoRows.isEmpty ? (_districts[_gov] ?? ['المركز الرئيسي','وسط المدينة','حي أول','حي ثان']).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (_govGeoId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
             (v) => setState(() {
               _districtGeoId = _geoRows.isEmpty ? null : v;
               _district = _geoRows.isEmpty ? (v ?? '') : (_first(_geoRows.where((g) => _s(g['id']) == v).map((g) => _s(g['name_ar']))) ?? '');
               _locality = '';
-            })),
-          _drop('منطقة أو قرية', _locality.isEmpty ? null : _locality,
+            }), width: 150),
+          _drop('منطقة / قرية', _locality.isEmpty ? null : _locality,
             (_geoRows.isEmpty ? <String>{_locality, 'المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'}.where((v) => v.isNotEmpty).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : ([..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtGeoId ?? '') && _s(g['name_ar']) != _locality).map((g) => DropdownMenuItem<String>(value: _s(g['name_ar']), child: Text(_s(g['name_ar'])))), if (_locality.isNotEmpty) DropdownMenuItem<String>(value: _locality, child: Text(_locality))])).toList(),
-            (v) => setState(() { _locality = v ?? ''; })),
-          _field(_address, 'العنوان التفصيلي'), _field(_map, 'رابط موقع Google Maps'),
+            (v) => setState(() { _locality = v ?? ''; }), width: 155),
+          _field(_address, 'العنوان التفصيلي', width: 285), _field(_map, 'رابط موقع Google Maps', width: 285),
           OutlinedButton.icon(onPressed: () async {
             final query = Uri.encodeComponent([_address.text, _district, _gov, _country].where((v) => v.trim().isNotEmpty).join(' '));
             final uri = Uri.tryParse(_map.text.trim().isEmpty ? 'https://www.google.com/maps/search/?api=1&query=' + query : _map.text.trim());
             if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
-          }, icon: const Icon(Icons.map_outlined), label: const Text('فتح الموقع على خرائط جوجل')),
+          }, icon: const Icon(Icons.map_outlined), label: const Text('فتح الموقع على الخرائط')),
+          _field(_nationalId, 'الرقم القومي (14 رقمًا) *', required: true, type: TextInputType.number, width: 190),
         ]),
         _section('بيانات العمل والتنظيم', Icons.account_tree_outlined, [
-          _drop('الإدارة', _admin, _deps.where((d) => d['department_level'] != 'section').map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _admin = v; _dep = null; _job = null; })),
-          _drop('موقع العمل', _loc, _locs.map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar']) + ' • ' + _s(d['location_code'])))).toList(), (v) => setState(() { _loc = v; })),
-          _drop('القسم', _dep, _deps.where((d) => (d['department_level'] == 'section' || d['department_level'] == 'department') && (_admin == null || d['parent_id'] == _admin)).map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _dep = v; _job = null; })),
-          _drop('الوظيفة', _job, _availableJobs.map((j) => DropdownMenuItem(value: _s(j['id']), child: Text(_s(j['name_ar']) + ' • ' + _s(j['job_code'])))).toList(), (v) => setState(() { _job = v; })),
-          _dateField(_hireDate, 'تاريخ التعيين'),
-          _drop('حالة الموظف', _status, const [DropdownMenuItem(value: 'active', child: Text('نشط')), DropdownMenuItem(value: 'on_leave', child: Text('إجازة')), DropdownMenuItem(value: 'suspended', child: Text('موقوف')), DropdownMenuItem(value: 'terminated', child: Text('منتهي الخدمة'))], (v) => setState(() { _status = v ?? 'active'; })),
+          _drop('الإدارة', _admin, _deps.where((d) => d['department_level'] != 'section').map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _admin = v; _dep = null; _job = null; }), width: 175),
+          _drop('القسم', _dep, _deps.where((d) => (d['department_level'] == 'section' || d['department_level'] == 'department') && (_admin == null || d['parent_id'] == _admin)).map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _dep = v; _job = null; }), width: 175),
+          _drop('موقع العمل', _loc, _locs.map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar']) + ' • ' + _s(d['location_code'])))).toList(), (v) => setState(() { _loc = v; }), width: 175),
+          _drop('الوظيفة', _job, _availableJobs.map((j) => DropdownMenuItem(value: _s(j['id']), child: Text(_s(j['name_ar']) + ' • ' + _s(j['job_code'])))).toList(), (v) => setState(() { _job = v; }), width: 175),
+          _dateField(_hireDate, 'تاريخ التعيين', width: 150),
+          SizedBox(width: 400, child: Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            for (final item in const [('active', 'نشط'), ('inactive', 'غير نشط'), ('suspended', 'موقوف مؤقتًا'), ('terminated', 'منتهي الخدمة')])
+              InkWell(
+                onTap: () => setState(() => _status = item.$1),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Checkbox(value: _status == item.$1, onChanged: (checked) { if (checked == true) setState(() => _status = item.$1); }, visualDensity: VisualDensity.compact, activeColor: _purple),
+                  Text(item.$2, style: const TextStyle(fontSize: 13)),
+                ]),
+              ),
+          ])),
         ]),
         _section('بيانات العقد', Icons.assignment_outlined, [
-          _drop('حالة العقد', _contractType, _contractTypes.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() => _contractType = v ?? 'بدون عقد')),
+          _drop('نوع العقد', _contractType, _contractTypes.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() => _contractType = v ?? 'بدون عقد'), width: 145),
           if (_contractType == 'بعقد') ...[
-            _dateField(_contractFrom, 'تاريخ العقد من'), _dateField(_contractTo, 'وإلى'),
-            SizedBox(width: 245, child: InputDecorator(decoration: InputDecoration(labelText: 'مدة العقد', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true), child: Text(_contractDuration, style: const TextStyle(fontWeight: FontWeight.w800)))),
-            SizedBox(width: 245, child: InputDecorator(decoration: InputDecoration(labelText: 'حالة العقد', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true), child: Text(_contractStatus.label, style: TextStyle(color: _contractStatus.color, fontWeight: FontWeight.w900)))),
+            _dateField(_contractFrom, 'تاريخ العقد من', width: 145), _dateField(_contractTo, 'تاريخ العقد إلى', width: 145),
+            SizedBox(width: 115, child: Padding(padding: const EdgeInsets.only(top: 14), child: Text('المدة: $_contractDuration', style: const TextStyle(fontWeight: FontWeight.w800, color: _purple)))),
+            SizedBox(width: 120, child: Padding(padding: const EdgeInsets.only(top: 14), child: Text(_contractStatus.label, style: TextStyle(color: _contractStatus.color, fontWeight: FontWeight.w900)))),
           ],
         ]),
         _section('بيانات الاتصال', Icons.phone_in_talk_outlined, [
-          _field(_m1, 'موبايل 1', type: TextInputType.phone), _field(_m2, 'موبايل 2', type: TextInputType.phone),
-          _field(_w1, 'موبايل عمل 1', type: TextInputType.phone), _field(_w2, 'موبايل عمل 2', type: TextInputType.phone),
-          _field(_relativeMobile, 'موبايل أحد الأقارب', type: TextInputType.phone), _field(_relativeRelation, 'صلة القرابة'),
+          _field(_m1, 'موبايل 1', type: TextInputType.phone, width: 155), _field(_m2, 'موبايل 2', type: TextInputType.phone, width: 155),
+          _field(_w1, 'موبايل عمل 1', type: TextInputType.phone, width: 155), _field(_w2, 'موبايل عمل 2', type: TextInputType.phone, width: 155),
+          _field(_relativeMobile, 'موبايل أحد الأقارب', type: TextInputType.phone, width: 180), _field(_relativeRelation, 'صلة القرابة', width: 130),
         ]),
         const Text('دليل الموظفين المسجلين', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: _purple)),
         if (_loading) const LinearProgressIndicator(),
