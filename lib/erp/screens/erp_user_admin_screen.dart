@@ -795,12 +795,10 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       final payload=<String,dynamic>{'company_id':_company,'is_active':true};
       if(_isType){final code=_nextNumericCode(_types.map((t)=>t['type_code']));payload.addAll({'type_code':code,'type_code_display':_standardCode('UT',code),'name_ar':_nextUniqueName('نوع مستخدم جديد'),'name_en':_nextUniqueName('New user type',field:'name_en'),'description':'','show_at_login':false});}
       else if(_isUser){
-        final code=_nextNumericCode(_users.map((u)=>RegExp(r'(\\d+)$').firstMatch(_s(u['user_code']))?.group(1)));
+        final code=_nextNumericCode(_users.map((u)=>RegExp(r'(\d+)$').firstMatch(_s(u['user_code']))?.group(1)));
         final employee=await _pickEmployee();
         if(employee==null){if(mounted)setState(()=>_error='لم تتم إضافة المستخدم. يجب اختيار موظف نشط أولًا.');return;}
         payload.addAll({'user_code':_standardCode('USR',code),'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':null,'has_sub_warehouse':false});
-        if(employee==null){if(mounted)setState(()=>_error='لم تتم إضافة المستخدم. يجب اختيار موظف نشط أولًا.');return;}
-        payload.addAll({'user_code':_standardCode('USR',code),'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':_selectedNodeKind=='type'&&_types.any((t)=>_s(t['id'])==_selectedId&&t['is_active']==true)?_selectedId:null,'has_sub_warehouse':false});
       } else {final code=_nextNumericCode(_templates.map((t)=>t['template_code']));payload.addAll({'template_code':code,'template_code_display':_standardCode('PT',code),'name_ar':_nextUniqueName('قالب صلاحيات جديد'),'name_en':_nextUniqueName('New permission template',field:'name_en')});}
       final result=await _db!.from(_table).insert(payload).select().single();
       if(!mounted)return;
