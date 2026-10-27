@@ -23,6 +23,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   String _searchQuery = '';
   String _viewMode = 'tree';
   bool _loading = false, _saving = false;
+  int _loadGeneration = 0;
   String? _error, _message;
 
   String _s(dynamic v) => (v ?? '').toString();
@@ -46,14 +47,17 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   }
 
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     var company = (widget.companyId ?? '').trim();
     if (!mounted) return;
-    // Never retain a previous company's scope while a new membership is being resolved.
+    // Invalidate previous company scope immediately. A late network response
+    // from an older load must never replace the currently selected company.
     _activeCompanyId = null;
     if (_db == null) {
       setState(() { _loading = false; _error = 'سجّل الدخول إلى Supabase أولًا.'; });
       return;
     }
+    setState(() { _loading = true; _error = null; _message = null; });
     if (company.isEmpty) {
       try {
         final userId = _db!.auth.currentUser?.id;
@@ -65,34 +69,58 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
               .eq('is_active', true)
               .order('created_at')
               .limit(1);
+          if (!mounted || generation != _loadGeneration) return;
           if (memberships.isNotEmpty) {
             company = (memberships.first['company_id'] ?? '').toString().trim();
           }
         }
-      } catch (_) {
-        // Keep the empty-company error visible when membership lookup is unavailable.
+      } catch (e) {
+        if (!mounted || generation != _loadGeneration) return;
+        setState(() {
+          _loading = false;
+          _error = 'تعذر تحديد الشركة النشطة: $e';
+        });
+        return;
       }
     }
+    if (!mounted || generation != _loadGeneration) return;
     if (company.isEmpty) {
-      setState(() { _loading = false; _error = 'لا توجد شركة نشطة مرتبطة بالمستخدم.'; });
+      setState(() {
+        _loading = false;
+        _centers = [];
+        _branches = [];
+        _error = 'لا توجد شركة نشطة مرتبطة بالمستخدم.';
+      });
       return;
     }
-    setState(() { _loading = true; _error = null; });
     try {
       final result = await Future.wait<dynamic>([
-        _db!.from('erp_cost_centers').select('id,center_code,center_name,center_name_ar,center_name_en,branch_id,parent_id,is_active').eq('company_id', company).order('center_code'),
-        _db!.from('erp_branches').select('id,branch_code,branch_name').eq('company_id', company).order('branch_code'),
+        _db!.from('erp_cost_centers')
+            .select('id,center_code,center_name,center_name_ar,center_name_en,branch_id,parent_id,is_active')
+            .eq('company_id', company).order('center_code'),
+        _db!.from('erp_branches')
+            .select('id,branch_code,branch_name')
+            .eq('company_id', company).order('branch_code'),
       ]);
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _activeCompanyId = company;
         _centers = (result[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _branches = (result[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _selectedIds.removeWhere((id) => !_centers.any((r) => _s(r['id']) == id));
         _loading = false;
+        _error = _centers.isEmpty
+            ? 'لم تُرجع قاعدة البيانات مراكز تكلفة لهذه الشركة. تحقق من الشركة النشطة وصلاحيات الوصول.'
+            : null;
+        _message = _centers.isEmpty ? null : 'تم تحميل ${_centers.length} مركز تكلفة.';
       });
     } catch (e) {
-      if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل مراكز التكلفة: $e'; });
+      if (mounted && generation == _loadGeneration) {
+        setState(() {
+          _loading = false;
+          _error = 'تعذر تحميل مراكز التكلفة: $e';
+        });
+      }
     }
   }
 
