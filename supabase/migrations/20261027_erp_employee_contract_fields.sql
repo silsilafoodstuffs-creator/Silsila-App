@@ -1,6 +1,7 @@
 -- Employee master contract and emergency contact fields.
 -- Safe to apply after the HR master-data migration.
 alter table public.erp_employees
+  add column if not exists administration_id uuid references public.erp_hr_departments(id) on delete set null,
   add column if not exists contract_type text not null default 'بدون عقد',
   add column if not exists contract_start_date date,
   add column if not exists contract_end_date date,
