@@ -549,14 +549,14 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     final level = isType ? 'نوع مستخدم' : _s(row['parent_user_id']).isEmpty ? 'مستخدم رئيسي' : 'مستخدم فرعي';
     final name = _s(row['name_ar']).trim().isEmpty ? 'بدون اسم' : _s(row['name_ar']);
     Widget statusCheck(String label, String field, {bool forceHidden = false}) {
-      final value = field == 'show_at_login' ? row[field] == true && !forceHidden : row[field] == true;
+      final value = row[field] == true;
       return Row(mainAxisSize: MainAxisSize.min, children: [
         Checkbox(
           shape: const CircleBorder(),
           visualDensity: VisualDensity.compact,
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           value: value,
-          onChanged: _editMode && !forceHidden ? (v) => setState(() => row[field] = v == true) : null,
+          onChanged: _editMode ? (v) => setState(() => row[field] = v == true) : null,
         ),
         Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
       ]);
@@ -628,7 +628,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
                       child: Wrap(spacing: 3, runSpacing: 0, crossAxisAlignment: WrapCrossAlignment.center, alignment: WrapAlignment.end, children: [
                         statusCheck('نشط', 'is_active'),
                         if (isType)
-                          statusCheck('عند الدخول', 'show_at_login', forceHidden: ['ادمن', 'موظف'].contains(_s(row['name_ar'])))
+                          statusCheck('يظهر في التطبيق', 'show_at_login')
                         else ...[
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4), minimumSize: const Size(0, 30), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
@@ -905,7 +905,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       for(final key in selected){
         if(existing.contains(key))continue;
         final parts=key.split('|');
-        _rules.add({'menu_name':parts[0],'submenu_name':parts[1],'page_name':parts[2],if(!template)'user_id':parentId,for(final field in _userAdminActionFields.values)field:false});
+        _rules.add({'menu_name':parts[0],'submenu_name':parts[1],'page_name':parts[2],if(!template)'user_id':parentId,for(final field in _userAdminActionFields.values)field:false,if(template)'can_access':true});
       }
     });
     setState(()=>_message='تم جلب القوائم المحددة. اضغط حفظ لتثبيتها.');
@@ -1389,31 +1389,5 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     }catch(e){if(mounted)setState(()=>_error='تعذر جلب القالب: $e');}
   }
 
-  Future<void> _openUserPicker() async {
-    final selected = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('جلب مستخدمين'),
-        content: SizedBox(
-          width: 500,
-          child: ListView(
-            shrinkWrap: true,
-            children: _users.map((user) => ListTile(
-              title: Text(_s(user['name_ar'])),
-              subtitle: Text(_s(user['name_en'])),
-              selected: _s(user['id']) == _selectedUserId,
-              onTap: () => Navigator.pop(dialogContext, _s(user['id'])),
-            )).toList(),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق')),
-        ],
-      ),
-    );
-    if (selected != null) {
-      setState(() => _selectedUserId = selected);
-      await _loadUserRules();
-    }
-  }
+
 }
