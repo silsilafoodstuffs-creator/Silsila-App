@@ -1153,7 +1153,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
   }
   Future<void> _openEmployeePicker(Map<String,dynamic> row) async {
     final picked=await _pickEmployee();if(picked==null||!mounted)return;
-    setState(()=>{row['employee_id']=picked['id'],row['name_ar']=picked['full_name'],row['name_en']=_s(picked['full_name_en']).isNotEmpty?picked['full_name_en']:picked['full_name'],_message='تم ربط المستخدم بموظف ${_s(picked['employee_code'])}. احفظ التعديلات لتثبيت الربط.',_error=null});
+    setState(() { row['employee_id']=picked['id']; row['name_ar']=picked['full_name']; row['name_en']=_s(picked['full_name_en']).isNotEmpty?picked['full_name_en']:picked['full_name']; _message='تم ربط المستخدم بموظف ${_s(picked['employee_code'])}. احفظ التعديلات لتثبيت الربط.'; _error=null; });
   }
   Widget _masterGrid(){
     final codeField=_isType?'type_code_display':_isUser?'user_code':'template_code_display';
@@ -1169,7 +1169,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         if(_isUser)const DataColumn(label:Text('له خزينة فرعية')),if(_isUser)const DataColumn(label:Text('الفروع والمخازن')),if(_isTemplate)const DataColumn(label:Text('قوائم وصلاحيات')),
       ],
       rows:List.generate(_rows.length,(i){final row=_rows[i];final id=_s(row['id']);return DataRow(selected:id==_selectedId,onSelectChanged:(v)async{
-        setState(()=>{_selectedId=v==true?id:null,if(_isUser){_selectedNodeKind=v==true?'user':null;_selectedUserId=v==true?id:null}});
+        setState(() { _selectedId=v==true?id:null; if(_isUser){_selectedNodeKind=v==true?'user':null;_selectedUserId=v==true?id:null;} });
         if(v==true&&_isTemplate)await _loadRules();
       },cells:[
         DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]).isNotEmpty?_s(row[codeField]):(_isType?'UT${_s(row['type_code']).padLeft(4,'0')}':_isTemplate?'PT${_s(row['template_code']).padLeft(4,'0')}':_s(row[codeField])))),
