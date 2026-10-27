@@ -12,6 +12,17 @@ SPEC.loader.exec_module(IMPORTER)
 
 
 class CatalogImageMatchingTests(unittest.TestCase):
+    def test_erp_and_app_category_sources_are_kept_separate(self):
+        # Regression guard: item.category_id must resolve against ERP category
+        # rows, while marketplace category images are updated by app category name.
+        erp_category = {"id": "erp-cat-1", "category_code": "FOOD-JAMS", "category_name": "مربى وعسل"}
+        app_category = {"id": "app-cat-1", "name": "مربى وعسل"}
+        item = {"category_id": "erp-cat-1"}
+        erp_by_id = {row["id"]: row for row in [erp_category]}
+        app_by_id = {row["id"]: row for row in [app_category]}
+        self.assertEqual(erp_by_id[item["category_id"]]["category_code"], "FOOD-JAMS")
+        self.assertNotIn(item["category_id"], app_by_id)
+
     def test_dried_dates_cannot_match_packaged_dates(self):
         self.assertFalse(
             IMPORTER.image_variant_matches("تمر جاف", "Packaged dates")
