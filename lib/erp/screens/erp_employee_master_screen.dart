@@ -39,6 +39,11 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   String _country = 'مصر', _gov = 'القاهرة', _district = 'السلام', _locality = 'أطلس 4', _status = 'active';
   String? _admin, _dep, _job, _loc, _error, _message, _govGeoId, _districtGeoId;
   bool _loading = false, _saving = false;
+  String? _selectedEmployeeId;
+  bool _editing = false;
+  final Map<String, TextEditingController> _employeeFilters = {for (final key in ['employee_code','full_name','department_name','job_title','mobile_1','is_active']) key: TextEditingController()};
+  bool get _readOnly => _selectedEmployeeId != null && !_editing;
+  List<Map<String, dynamic>> get _filteredEmployees => _employees.where((e) => _employeeFilters.entries.every((f) { final v = f.key == 'mobile_1' ? _s(_s(e['mobile_1']).isEmpty ? e['phone'] : e['mobile_1']) : f.key == 'is_active' ? (e['is_active'] == true ? 'نشط' : 'غير نشط') : _s(e[f.key]); return v.toLowerCase().contains(f.value.text.trim().toLowerCase()); })).toList();
   static const _contractTypes = ['بعقد','بدون عقد','شركة عمالة','مؤقت','يومية'];
   final _govs = const ['القاهرة','الجيزة','القليوبية','الإسكندرية','الشرقية','الدقهلية','الغربية','المنوفية','البحيرة','كفر الشيخ','دمياط','بورسعيد','الإسماعيلية','السويس','شمال سيناء','جنوب سيناء','بني سويف','الفيوم','المنيا','أسيوط','سوهاج','قنا','الأقصر','أسوان','البحر الأحمر','الوادي الجديد','مطروح'];
   final Map<String, List<String>> _districts = const {
@@ -63,6 +68,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   @override
   void dispose() {
     for (final c in [_code,_ar,_en,_nationalId,_address,_map,_m1,_m2,_w1,_w2,_company,_hireDate,_contractFrom,_contractTo,_relativeMobile,_relativeRelation]) { c.dispose(); }
+    for (final c in _employeeFilters.values) { c.dispose(); }
     super.dispose();
   }
 
@@ -197,9 +203,9 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     };
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      await _db!.from('erp_employees').insert(payload);
+      if (_selectedEmployeeId == null) { await _db!.from('erp_employees').insert(payload); } else { await _db!.from('erp_employees').update(payload).eq('id', _selectedEmployeeId!).eq('company_id', _cid); }
       if (!mounted) return;
-      setState(() { _saving = false; _message = 'تم حفظ بيانات الموظف بنجاح.'; });
+      setState(() { _saving = false; _message = _selectedEmployeeId == null ? 'تم حفظ بيانات الموظف بنجاح.' : 'تم تعديل بيانات الموظف بنجاح.'; });
       _clear(generateCode: false);
       await _load();
     } catch (e) {
@@ -208,6 +214,8 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   }
 
   void _clear({bool generateCode = true}) {
+    _selectedEmployeeId = null;
+    _editing = false;
     for (final c in [_code,_ar,_en,_nationalId,_address,_map,_m1,_m2,_w1,_w2,_relativeMobile,_relativeRelation]) { c.clear(); }
     _ar.text = 'إدارة عليا'; _address.text = 'أطلس 4 بجوار الملعب عملية 1248 بلوك 7 مدخل 1 شقة 11';
     _m1.text = '01121237271'; _w1.text = '01044480160'; _relativeMobile.text = '01127283261'; _relativeRelation.text = 'أخ';
@@ -217,6 +225,72 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       _hireDate.text = '01-01-2027'; _contractFrom.text = '01-01-2027'; _contractTo.text = '31-12-2029';
     });
     if (generateCode) _generateNextCode();
+  }
+
+
+  Future<void> _selectEmployee(Map<String, dynamic> e) async {
+    final id=_s(e['id']); if(id.isEmpty||_db==null)return;
+    setState(()=>_loading=true);
+    try {
+      final rows=await _db!.from('erp_employees').select().eq('id',id).eq('company_id',_cid).limit(1);
+      if(rows.isEmpty)throw StateError('لم يتم العثور على الموظف');
+      final r=Map<String,dynamic>.from(rows.first); String v(String k)=>_s(r[k]);
+      _code.text=v('employee_code'); _ar.text=v('full_name'); _en.text=v('full_name_en'); _nationalId.clear();
+      _address.text=v('address'); _map.text=v('map_url'); _m1.text=v('mobile_1').isEmpty?v('phone'):v('mobile_1'); _m2.text=v('mobile_2');
+      _w1.text=v('work_mobile_1'); _w2.text=v('work_mobile_2'); _relativeMobile.text=v('relative_mobile'); _relativeRelation.text=v('relative_relation');
+      String dt(String s){final d=DateTime.tryParse(s);return d==null?s:d.day.toString().padLeft(2,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.year.toString();}
+      _hireDate.text=dt(v('hire_date')); _contractFrom.text=dt(v('contract_start_date')); _contractTo.text=dt(v('contract_end_date'));
+      if(!mounted)return;
+      setState((){_selectedEmployeeId=id;_editing=false;_country=v('country').isEmpty?'مصر':v('country');_gov=v('governorate');_district=v('district');_locality=v('locality');
+        _admin=_deps.any((d)=>_s(d['id'])==v('administration_id'))?v('administration_id'):null;
+        _dep=_deps.any((d)=>_s(d['id'])==v('department_id'))?v('department_id'):null;
+        _job=_jobs.any((j)=>_s(j['id'])==v('job_id'))?v('job_id'):null;
+        _loc=_locs.any((l)=>_s(l['id'])==v('work_location_id'))?v('work_location_id'):null;
+        _status=v('employment_status').isEmpty?(r['is_active']==true?'active':'inactive'):v('employment_status');
+        _contractType=_contractTypes.contains(v('contract_type'))?v('contract_type'):'بدون عقد';_loading=false;});
+    }catch(e){if(mounted)setState(()=>_error='تعذر فتح بيانات الموظف: '+e.toString());}
+  }
+
+  Widget _employeeToolbar() {
+    Widget a(String label,IconData icon,Color color,VoidCallback? fn)=>Padding(padding:const EdgeInsetsDirectional.only(end:5),child:FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:color,foregroundColor:Colors.white,visualDensity:VisualDensity.compact,padding:const EdgeInsets.symmetric(horizontal:10,vertical:10)),onPressed:fn,icon:Icon(icon,size:17),label:Text(label,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w800))));
+    return SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+      a('تحديث',Icons.refresh_rounded,const Color(0xFF2475B8),_load),
+      a('إضافة',Icons.add_rounded,const Color(0xFF18865A),(){_clear();setState(()=>_message='أدخل بيانات الموظف الجديد ثم اضغط حفظ.');}),
+      a('حفظ',Icons.save_outlined,_purple,_saving?null:_save),
+      a('تعديل',Icons.edit_outlined,_orange,_selectedEmployeeId==null?null:()=>setState(()=>_editing=true)),
+      a('حذف',Icons.delete_outline_rounded,const Color(0xFFB42318),_selectedEmployeeId==null?null:_deleteEmployee),
+      a('معاينة',Icons.preview_outlined,const Color(0xFF6E2BA6),_previewEmployee),
+      a('طباعة',Icons.print_outlined,const Color(0xFFDB2777),_previewEmployee),
+      a('Excel',Icons.file_upload_outlined,const Color(0xFF16834A),()=>setState(()=>_message='استيراد Excel غير مفعّل في شاشة الموظفين حاليًا.')),
+      a('PDF',Icons.picture_as_pdf_outlined,const Color(0xFFD32F2F),_previewEmployee),
+    ]));
+  }
+
+  Widget _employeeGrid() {
+    const cols=< (String,String) >[('employee_code','الكود'),('full_name','اسم الموظف'),('department_name','الإدارة / القسم'),('job_title','الوظيفة'),('mobile_1','الموبايل'),('is_active','الحالة')];
+    final data=_filteredEmployees;
+    return Container(height:230,margin:const EdgeInsets.only(top:8),padding:const EdgeInsets.all(8),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFE9E1F1)),borderRadius:BorderRadius.circular(12)),child:Column(children:[
+      Row(children:[const Expanded(child:Text('دليل الموظفين المسجلين — اختر موظفًا لعرض بياناته بالأعلى',style:TextStyle(fontWeight:FontWeight.w900,color:_purple))),Text(data.length.toString()+' / '+_employees.length.toString())]),
+      Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(headingRowHeight:72,dataRowMinHeight:38,dataRowMaxHeight:44,
+        columns:cols.map((col)=>DataColumn(label:SizedBox(width:col.$1=='full_name'?175:145,child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
+          Text(col.$2,style:const TextStyle(fontWeight:FontWeight.w900)),
+          SizedBox(height:30,child:TextField(controller:_employeeFilters[col.$1],onChanged:(_)=>setState((){}),decoration:const InputDecoration(hintText:'بحث...',isDense:true,border:OutlineInputBorder(),prefixIcon:Icon(Icons.search,size:14),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:5))))
+        ])))).toList(),
+        rows:data.map((e)=>DataRow(selected:_s(e['id'])==_selectedEmployeeId,onSelectChanged:(_)=>_selectEmployee(e),cells:[
+          DataCell(Text(_s(e['employee_code']))),DataCell(Text(_s(e['full_name']))),DataCell(Text(_s(e['department_name']))),DataCell(Text(_s(e['job_title']))),DataCell(Text(_s(_s(e['mobile_1']).isEmpty?e['phone']:e['mobile_1']))),DataCell(Text(e['is_active']==true?'نشط':'غير نشط'))
+        ])).toList()))))
+    ]));
+  }
+
+  Future<void> _deleteEmployee() async {
+    final id=_selectedEmployeeId;if(id==null||_db==null)return;
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد حذف الموظف'),content:Text('هل تريد حذف '+_ar.text+'؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حذف'))]));
+    if(yes!=true)return;
+    try{await _db!.from('erp_employees').delete().eq('id',id).eq('company_id',_cid);_clear();await _load();if(mounted)setState(()=>_message='تم حذف الموظف.');}catch(e){if(mounted)setState(()=>_error='تعذر حذف الموظف: '+e.toString());}
+  }
+
+  Future<void> _previewEmployee() async {
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('معاينة بيانات الموظف'),content:Text('الكود: '+_code.text+'\nالاسم: '+_ar.text+'\nالإدارة: '+(_dep??_admin??'—')+'\nالوظيفة: '+(_job??'—')+'\nالموبايل: '+_m1.text),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]));
   }
 
   Widget _field(TextEditingController c, String label, {bool required = false, TextInputType? type, double width = 245}) {
@@ -257,16 +331,14 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
     child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [
-        const Expanded(child: Text('بيانات الموظفين', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _purple))),
-        IconButton(onPressed: _load, tooltip: 'تحديث', icon: const Icon(Icons.refresh, color: _purple)),
-        FilledButton.icon(onPressed: _saving ? null : _save, icon: const Icon(Icons.save), label: const Text('حفظ')),
-        const SizedBox(width: 8), OutlinedButton.icon(onPressed: _clear, icon: const Icon(Icons.add), label: const Text('جديد')),
-      ]),
+      const Text('بيانات الموظفين', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _purple)),
+      const SizedBox(height: 8),
+      _employeeToolbar(),
       if (_cid.isEmpty) Padding(padding: const EdgeInsets.only(bottom: 8), child: TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة UUID', border: OutlineInputBorder()), onSubmitted: (_) => _load())),
       if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
       if (_message != null) Text(_message!, style: const TextStyle(color: Colors.green)),
-      Expanded(child: SingleChildScrollView(child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      if (_readOnly) const Text('تم تحميل الموظف المحدد؛ اضغط تعديل قبل تغيير بياناته.', style: TextStyle(color: _purple,fontWeight:FontWeight.w700)),
+      Expanded(child: SingleChildScrollView(child: IgnorePointer(ignoring: _readOnly, child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _section('بيانات أولية', Icons.badge_outlined, [
           _field(_code, 'كود الموظف التلقائي *', required: true, width: 185),
           _field(_ar, 'اسم الموظف عربي *', required: true, width: 220), _field(_en, 'اسم الموظف إنجليزي', width: 220),
@@ -324,21 +396,8 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
           _field(_w1, 'موبايل عمل 1', type: TextInputType.phone, width: 155), _field(_w2, 'موبايل عمل 2', type: TextInputType.phone, width: 155),
           _field(_relativeMobile, 'موبايل أحد الأقارب', type: TextInputType.phone, width: 180), _field(_relativeRelation, 'صلة القرابة', width: 130),
         ]),
-        const Text('دليل الموظفين المسجلين', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: _purple)),
-        if (_loading) const LinearProgressIndicator(),
-        if (!_loading) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-          columns: const [DataColumn(label: Text('م')), DataColumn(label: Text('الكود')), DataColumn(label: Text('اسم الموظف')), DataColumn(label: Text('الإدارة / القسم')), DataColumn(label: Text('الوظيفة')), DataColumn(label: Text('الموبايل')), DataColumn(label: Text('الحالة'))],
-          rows: List.generate(_employees.length, (i) {
-            final e = _employees[i];
-            return DataRow(cells: [
-              DataCell(Text((i + 1).toString())), DataCell(Text(_s(e['employee_code']))), DataCell(Text(_s(e['full_name']))),
-              DataCell(Text(_s(e['department_name']))), DataCell(Text(_s(e['job_title']))),
-              DataCell(Text(_s(_s(e['mobile_1']).isEmpty ? e['phone'] : e['mobile_1']))),
-              DataCell(Text(e['is_active'] == true ? 'نشط' : 'غير نشط')),
-            ]);
-          }),
-        )),
-      ])))),
+      ]))))),
+      _employeeGrid(),
     ])),
   );
 }
