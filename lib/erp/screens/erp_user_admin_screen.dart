@@ -799,7 +799,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           'employee_id': selectedEmployee['id'],
           'name_ar': _s(selectedEmployee['full_name']),
           'name_en': _s(selectedEmployee['full_name_en']).isNotEmpty ? _s(selectedEmployee['full_name_en']) : _s(selectedEmployee['full_name']),
-          'user_type_id': _types.isEmpty ? null : _types.first['id'],
+          'user_type_id': _types.where((t)=>t['is_active']==true).isEmpty ? null : _types.firstWhere((t)=>t['is_active']==true)['id'],
           'has_sub_warehouse': false,
         });
       } else {
@@ -1260,7 +1260,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
           if(_isUser)DataCell(SizedBox(width:115,child:DropdownButtonFormField<String>(
             key:ValueKey('${id}-type-${row['user_type_id']}'),value:_types.any((t)=>_s(t['id'])==_s(row['user_type_id']))?_s(row['user_type_id']):null,isExpanded:true,
             decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),
-            items:_types.map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
+            items:_types.where((t)=>t['is_active']==true).map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
             onChanged:_editMode?(v)=>setState(()=>row['user_type_id']=v):null,
           ))),
           if(_isType)DataCell(Checkbox(shape:const CircleBorder(),value:row['show_at_login']==true,onChanged:_editMode?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
