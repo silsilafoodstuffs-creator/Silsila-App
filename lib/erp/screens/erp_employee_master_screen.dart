@@ -87,6 +87,15 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       } catch (_) {
         // Keep the built-in governorate list as a fallback if geography data has not been loaded.
       }
+      if (geoRows.isNotEmpty) {
+        if (!geoRows.any((g) => g['level'] == 'governorate' && g['name_ar'] == 'القاهرة')) {
+          geoRows.add({'id': 'manual-cairo', 'parent_id': null, 'name_ar': 'القاهرة', 'level': 'governorate', 'is_active': true});
+        }
+        final cairo = geoRows.firstWhere((g) => g['level'] == 'governorate' && g['name_ar'] == 'القاهرة');
+        if (!geoRows.any((g) => g['level'] == 'district' && g['name_ar'] == 'السلام' && _s(g['parent_id']) == _s(cairo['id']))) {
+          geoRows.add({'id': 'manual-salam', 'parent_id': cairo['id'], 'name_ar': 'السلام', 'level': 'district', 'is_active': true});
+        }
+      }
       if (!mounted) return;
       setState(() {
         _employees = List<Map<String, dynamic>>.from(x[0]);
@@ -96,6 +105,11 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         _geoRows = geoRows;
         _loading = false;
       });
+      if (geoRows.isNotEmpty) {
+        final cairo = geoRows.firstWhere((g) => g['level'] == 'governorate' && g['name_ar'] == 'القاهرة');
+        final salam = geoRows.firstWhere((g) => g['level'] == 'district' && g['name_ar'] == 'السلام' && _s(g['parent_id']) == _s(cairo['id']));
+        setState(() { _govGeoId = _s(cairo['id']); _districtGeoId = _s(salam['id']); });
+      }
       final top = _deps.where((d) => d['name_ar'] == 'الإدارة العليا').toList();
       final central = _deps.where((d) => d['name_ar'] == 'الإدارة المركزية').toList();
       final manager = _jobs.where((j) => j['name_ar'] == 'مدير عام').toList();
@@ -268,7 +282,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
               _locality = '';
             })),
           _drop('منطقة أو قرية', _locality.isEmpty ? null : _locality,
-            (_geoRows.isEmpty ? <String>{_locality, 'المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'}.where((v) => v.isNotEmpty).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtGeoId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['name_ar']), child: Text(_s(g['name_ar']))))).toList(),
+            (_geoRows.isEmpty ? <String>{_locality, 'المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'}.where((v) => v.isNotEmpty).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : ([..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtGeoId ?? '') && _s(g['name_ar']) != _locality).map((g) => DropdownMenuItem<String>(value: _s(g['name_ar']), child: Text(_s(g['name_ar'])))), if (_locality.isNotEmpty) DropdownMenuItem<String>(value: _locality, child: Text(_locality))])).toList(),
             (v) => setState(() { _locality = v ?? ''; })),
           _field(_address, 'العنوان التفصيلي'), _field(_map, 'رابط موقع Google Maps'),
           OutlinedButton.icon(onPressed: () async {
