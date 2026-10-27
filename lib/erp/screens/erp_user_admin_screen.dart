@@ -774,6 +774,48 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     ]);
   }
 
+  Future<String?> _requestExternalUserName() async {
+    final controller = TextEditingController();
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('اسم المستخدم الخارجي'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'اسم العميل أو المورد أو شركة الشحن',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (value) {
+            final name = value.trim();
+            if (name.isNotEmpty) Navigator.pop(ctx, name);
+          },
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          FilledButton(
+            onPressed: () {
+              final name = controller.text.trim();
+              if (name.isNotEmpty) Navigator.pop(ctx, name);
+            },
+            child: const Text('متابعة'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    final name = (picked ?? '').trim();
+    return name.isEmpty ? null : name;
+  }
+
+  bool _userTypeRequiresEmployee(Map<String, dynamic> type) {
+    final label = '${_s(type['name_ar'])} ${_s(type['name_en'])} ${_s(type['type_code_display'])}'.toLowerCase();
+    const externalLabels = ['مورد', 'عميل', 'شركة شحن', 'supplier', 'customer', 'shipping company'];
+    if (externalLabels.any(label.contains)) return false;
+    return true;
+  }
+
   Future<void> _add() async {
     if(_view=='hierarchy'){await _addHierarchyNode();return;}
     if(_saving||_db==null||_company.isEmpty)return;
@@ -785,9 +827,15 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
       else if(_isUser){
         final selectedType=await _pickActiveUserType();
         if(selectedType==null)return;
-        final employee=await _pickEmployee();
-        if(employee==null){if(mounted)setState(()=>_error='لم تتم إضافة المستخدم. يجب اختيار موظف نشط أولًا.');return;}
-        payload.addAll({'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':selectedType['id'],'has_sub_warehouse':false});
+        if (_userTypeRequiresEmployee(selectedType)) {
+          final employee=await _pickEmployee();
+          if(employee==null){if(mounted)setState(()=>_error='لم تتم إضافة المستخدم. يجب اختيار موظف نشط أولًا.');return;}
+          payload.addAll({'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':selectedType['id'],'has_sub_warehouse':false});
+        } else {
+          final externalName = await _requestExternalUserName();
+          if (externalName == null) return;
+          payload.addAll({'employee_id':null,'name_ar':externalName,'name_en':externalName,'user_type_id':selectedType['id'],'has_sub_warehouse':false});
+        }
       } else {payload.addAll({'name_ar':_nextUniqueName('قالب صلاحيات جديد'),'name_en':_nextUniqueName('New permission template',field:'name_en')});}
       final result=await _db!.from(_table).insert(payload).select().single();
       if(!mounted)return;
