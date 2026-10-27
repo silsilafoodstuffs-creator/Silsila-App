@@ -691,10 +691,13 @@ def main() -> int:
     else:
         print("DRY RUN: no database changes will be made. Set SILSILA_IMAGE_IMPORT_DRY_RUN=0 to write.")
 
-    categories = rest("GET", "erp_item_categories", urllib.parse.urlencode({
+    # Keep ERP category rows and marketplace/app category rows separate:
+    # item.category_id references erp_item_categories, not the public categories table.
+    erp_categories = rest("GET", "erp_item_categories", urllib.parse.urlencode({
         "company_id": f"eq.{COMPANY_ID}", "select": "id,category_code,category_name,image_data",
+        "limit": "1000",
     }))
-    categories = rest("GET", "categories", urllib.parse.urlencode({
+    app_categories = rest("GET", "categories", urllib.parse.urlencode({
         "select": "id,name,image_data", "is_active": "eq.true", "limit": "500",
     }))
     category_aliases = {
@@ -743,7 +746,7 @@ def main() -> int:
         "order": "item_name.asc",
         "limit": "500",
     }))
-    category_by_id = {g["id"]: g for g in categories}
+    category_by_id = {g["id"]: g for g in erp_categories}
     # Seed both guards from the entire ERP catalog before slicing the next
     # batch. Source-code uniqueness alone is insufficient because two records
     # may use different product codes but serve identical image bytes.
@@ -771,7 +774,7 @@ def main() -> int:
 
     items.sort(key=item_priority)
     items = items[:MAX_ITEMS]
-    print(f"ERP categories: {len(categories)}; items checked: {len(items)} (food categories prioritized)")
+    print(f"ERP categories: {len(erp_categories)}; app categories: {len(app_categories)}; items checked: {len(items)} (food categories prioritized)")
     refreshed_categories: set[str] = set()
     updated = 0
     for index, item in enumerate(items, 1):
@@ -829,7 +832,7 @@ def main() -> int:
                 # where the category name maps explicitly to this ERP category.
                 aliases = category_aliases.get(str(category.get("category_code") or ""), [])
                 normalized_aliases = {normalized(alias) for alias in aliases}
-                for category in categories:
+                for category in app_categories:
                     if normalized(str(category.get("name") or "")) not in normalized_aliases:
                         continue
                     if has_real_size_image(category.get("image_data")):
