@@ -189,6 +189,35 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     }
   }
   @override
+  void didUpdateWidget(covariant ErpOperationalDocumentsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final documentContextChanged =
+        oldWidget.kind != widget.kind ||
+        oldWidget.initialDocumentType != widget.initialDocumentType ||
+        oldWidget.initialDocumentId != widget.initialDocumentId ||
+        oldWidget.initialCompanyId != widget.initialCompanyId;
+    if (!documentContextChanged) return;
+    _company.text = widget.initialCompanyId ?? '';
+    _selectedDocumentId = widget.initialDocumentId;
+    _documentType = widget.initialDocumentType ?? 'invoice';
+    _sourceDocumentIds = <String>[];
+    _rows = <Map<String, dynamic>>[];
+    _lines = <Map<String, dynamic>>[];
+    _pendingLines = <Map<String, dynamic>>[];
+    _partyId = null;
+    _warehouseId = null;
+    _fiscalPeriodId = null;
+    _error = null;
+    _message = null;
+    if (mounted) setState(() {});
+    if (_company.text.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load();
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _company.dispose(); _documentNumber.dispose(); _fiscalYear.dispose(); _partyCode.dispose(); _notes.dispose(); _quantity.dispose();
     _unitPrice.dispose(); _discount.dispose(); _tax.dispose(); _invoiceDiscountAmount.dispose(); _invoiceDiscountPercent.dispose(); super.dispose();
