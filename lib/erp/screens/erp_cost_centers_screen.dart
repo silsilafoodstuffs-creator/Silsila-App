@@ -19,6 +19,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   List<Map<String, dynamic>> _branches = [];
   String? _activeCompanyId;
   final Set<String> _selectedIds = {};
+  final Set<String> _expandedIds = {};
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _viewMode = 'tree';
@@ -107,6 +108,10 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
         _activeCompanyId = company;
         _centers = (result[0] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _branches = (result[1] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        // Open root nodes after every refresh so users immediately see the hierarchy.
+        _expandedIds
+          ..clear()
+          ..addAll(_treeRoots.map((r) => _s(r['id'])).where((id) => id.isNotEmpty));
         _selectedIds.removeWhere((id) => !_centers.any((r) => _s(r['id']) == id));
         _loading = false;
         _error = _centers.isEmpty
@@ -329,6 +334,8 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
               _load();
             }),
             _task('عرض جدول', Icons.table_rows_outlined, _viewMode == 'grid' ? _costPurple : Colors.grey, () => setState(() => _viewMode = 'grid')),
+            _task('فتح الكل', Icons.unfold_more, _costOrange, _loading || _saving ? null : () => setState(() => _expandedIds.addAll(_centers.map((r) => _s(r['id'])).where((id) => id.isNotEmpty)))),
+            _task('طي الكل', Icons.unfold_less, Colors.grey, _loading || _saving ? null : () => setState(() => _expandedIds.clear())),
             _task('إضافة', Icons.add_circle_outline, Colors.green, _loading || _saving ? null : _addMain),
             _task('حفظ', Icons.save_outlined, _costPurple, _loading || _saving ? null : _save),
             _task('تعديل', Icons.edit_outlined, _costOrange, _selected == null ? null : _editSelected),
@@ -460,7 +467,26 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
           ),
         ),
       ),
-      ...children.where(_branchMatches).map((item) => _treeNode(item, depth + 1, visited)),
+      if (id.isNotEmpty && children.isNotEmpty)
+        Padding(
+          padding: EdgeInsetsDirectional.only(start: depth * 18 + 12),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: TextButton.icon(
+              onPressed: () => setState(() {
+                if (_expandedIds.contains(id)) {
+                  _expandedIds.remove(id);
+                } else {
+                  _expandedIds.add(id);
+                }
+              }),
+              icon: Icon(_expandedIds.contains(id) ? Icons.expand_less : Icons.expand_more, size: 17),
+              label: Text(_expandedIds.contains(id) ? 'طي الفروع' : 'عرض الفروع (${children.length})'),
+            ),
+          ),
+        ),
+      if (id.isEmpty || _expandedIds.contains(id))
+        ...children.where(_branchMatches).map((item) => _treeNode(item, depth + 1, visited)),
     ]);
   }
 
