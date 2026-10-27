@@ -1468,7 +1468,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             ]),
             const SizedBox(height: 10),
             Wrap(spacing: 5, runSpacing: 5, children: [
-              _quick('فاتورة البيع', Icons.point_of_sale_rounded, () => _open('مبيعات', 'حركات', 'فاتورة مبيعات')),
+              _quick('فاتورة البيع', Icons.point_of_sale_rounded, () => _open('مبيعات', 'حركات', 'فاتورة بيع')),
               _quick('جامع صور الأصناف', Icons.photo_library_outlined, () => _open('مخازن', 'حركات', 'جامع صور الأصناف')),
             ]),
           ]),
