@@ -5,12 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../services/erp_app_asset_storage.dart';
+import '../../services/activity_service.dart';
 import '../services/erp_app_management_service.dart';
 import '../services/erp_app_settings.dart';
 
 const _adsPurple = Color(0xFF3E007D);
 const _bannerSlots = <String>['إعلان 1', 'إعلان 2', 'إعلان 3', 'إعلان 4', 'إعلان 5'];
 const _popupSlot = 'إعلان منبثق';
+const _introSlot = 'إعلان البداية';
+const _allActivities = 'ALL';
 
 class ErpAppAdvertisementsScreen extends StatefulWidget {
   const ErpAppAdvertisementsScreen({
@@ -36,13 +39,18 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
   String? _error;
   String? _message;
   String? _busySlot;
-  int _selectedTab = 0;
+  String _selectedActivityCode = _allActivities;
+  List<Map<String, String>> _activities = const [];
   final Map<String, String> _targetTypes = {};
   final Map<String, String> _targetCodes = {};
   final Map<String, int> _durations = {};
 
-  List<String> get _adSlots => _selectedTab == 0 ? _bannerSlots : const [_popupSlot];
-  String get _assetType => _selectedTab == 0 ? 'banner_ad' : 'popup_ad';
+  List<String> get _adSlots => [..._bannerSlots, _popupSlot, _introSlot];
+
+  String _assetTypeForSlot(String slot) => _bannerSlots.contains(slot)
+      ? 'banner_ad' : slot == _popupSlot ? 'popup_ad' : 'intro_ad';
+
+  bool get _isGlobalScope => _selectedActivityCode == _allActivities;
 
   bool get _ready =>
       (widget.companyId ?? '').trim().isNotEmpty &&
@@ -51,6 +59,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
   @override
   void initState() {
     super.initState();
+    _loadActivities();
     _load();
   }
 
@@ -63,6 +72,20 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
     }
   }
 
+  Future<void> _loadActivities() async {
+    final rows = await ActivityService().getActivities();
+    if (!mounted) return;
+    setState(() {
+      _activities = rows.map((row) => <String, String>{
+        'code': row['code']?.toString() ?? '',
+        'name': row['name']?.toString() ?? '',
+      }).where((row) => row['code']!.isNotEmpty && row['name']!.isNotEmpty).toList();
+      if (_selectedActivityCode != _allActivities && !_activities.any((a) => a['code'] == _selectedActivityCode)) {
+        _selectedActivityCode = _allActivities;
+      }
+    });
+  }
+
   Future<void> _load() async {
     if (!_ready) {
       if (mounted) setState(() {
@@ -73,14 +96,15 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
     }
     setState(() { _loading = true; _error = null; });
     try {
-      final records = await _repository.listAssets(appId: widget.appId!, assetType: _assetType, limit: 100);
+      final records = await _repository.listAssets(appId: widget.appId!, limit: 300);
       if (!mounted) return;
       setState(() {
-        _assets = records;
+        _assets = records.where((record) => record.assetType == 'banner_ad' || record.assetType == 'popup_ad' || record.assetType == 'intro_ad').toList();
         for (final record in records) {
-          _targetTypes[record.displayName] = record.targetType;
-          _targetCodes[record.displayName] = record.targetCode ?? '';
-          _durations[record.displayName] = record.durationSeconds;
+          final key = _keyFor(record.displayName, record.activityCode);
+          _targetTypes[key] = record.targetType;
+          _targetCodes[key] = record.targetCode ?? '';
+          _durations[key] = record.durationSeconds;
         }
         _loading = false;
       });
@@ -93,18 +117,26 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
     }
   }
 
-  ErpAppAssetRecord? _forSlot(String slot) {
+  String? get _scopeCode => _isGlobalScope ? null : _selectedActivityCode;
+
+  String _keyFor(String slot, String? activityCode) => '${activityCode ?? _allActivities}::$slot';
+
+  ErpAppAssetRecord? _forSlot(String slot, {bool globalOnly = false}) {
+    final wantedCode = globalOnly ? null : _scopeCode;
     for (final asset in _assets) {
-      if (asset.displayName == slot) return asset;
+      if (asset.displayName == slot && asset.activityCode == wantedCode) return asset;
     }
     return null;
   }
+
+  ErpAppAssetRecord? _effectiveSlot(String slot) =>
+      _forSlot(slot) ?? (_isGlobalScope ? null : _forSlot(slot, globalOnly: true));
 
   Future<String> _signedUrl(String path) {
     return _urls.putIfAbsent(path, () => _storage.createSignedImageUrl(storagePath: path));
   }
 
-  Future<void> _chooseImage(String slot, {required bool camera}) async {
+  Future<void> _chooseImage(String slot, {required bool camera, bool video = false}) async {
     if (!_ready || _busySlot != null) return;
     setState(() { _busySlot = slot; _error = null; _message = null; });
     String? newPath;
@@ -112,7 +144,15 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
       String fileName;
       Uint8List bytes;
       String mime;
-      if (camera) {
+      if (video) {
+        final picked = camera
+            ? await _picker.pickVideo(source: ImageSource.camera, maxDuration: const Duration(seconds: 15))
+            : (await FilePicker.platform.pickFiles(type: FileType.video, allowMultiple: false, withData: true))?.files.singleOrNull;
+        if (picked == null) return;
+        fileName = picked.name;
+        bytes = await picked.readAsBytes();
+        mime = 'video/mp4';
+      } else if (camera) {
         final image = await _picker.pickImage(
           source: ImageSource.camera,
           imageQuality: 92,
@@ -137,26 +177,36 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         bytes = file.bytes!;
         mime = _mimeFor(fileName);
       }
-      if (bytes.length > 8 * 1024 * 1024) {
-        throw ArgumentError('الحد الأقصى لحجم الصورة 8 ميجابايت.');
-      }
-      newPath = await _storage.uploadImage(
+      if (video) {
+        newPath = await _storage.uploadVideo(
+          companyId: widget.companyId!, appId: widget.appId!, fileName: fileName,
+          bytes: bytes, assetType: 'intro_ad',
+        );
+      } else {
+        if (bytes.length > 8 * 1024 * 1024) {
+          throw ArgumentError('الحد الأقصى لحجم الصورة 8 ميجابايت.');
+        }
+        newPath = await _storage.uploadImage(
         companyId: widget.companyId!,
         appId: widget.appId!,
         fileName: fileName,
         bytes: bytes,
         contentType: mime,
-        assetType: _assetType,
-      );
+          assetType: _assetTypeForSlot(slot),
+        );
+      }
       final old = _forSlot(slot);
       await _repository.registerAsset(ErpAppAssetRecord(
         appId: widget.appId!,
-        assetType: _assetType,
+        assetType: _assetTypeForSlot(slot),
+        activityCode: _scopeCode,
         storagePath: newPath,
         displayName: slot,
         mimeType: mime,
         fileSizeBytes: bytes.length,
         altText: 'إعلان سلسلة - $slot',
+        targetType: 'none',
+        durationSeconds: slot == _introSlot ? 4 : slot == _popupSlot ? 5 : 2,
       ));
       // The new image is registered first. Only then remove the previous slot image.
       if (old != null && old.id != null) {
@@ -195,7 +245,8 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
       case 'png': return 'image/png';
       case 'webp': return 'image/webp';
       case 'gif': return 'image/gif';
-      default: throw ArgumentError('الصيغ المدعومة JPG وPNG وWEBP وGIF فقط.');
+      case 'mp4': return 'video/mp4';
+      default: throw ArgumentError('الصيغ المدعومة JPG وPNG وWEBP وGIF، وفيديو MP4 لإعلان البداية.');
     }
   }
 
@@ -203,9 +254,10 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
     if (asset.id == null || _busySlot != null) return;
     setState(() { _busySlot = slot; _error = null; _message = null; });
     try {
-      final type = _targetTypes[slot] ?? 'none';
-      final code = (_targetCodes[slot] ?? '').trim();
-      final duration = _durations[slot] ?? 5;
+      final key = _keyFor(slot, asset.activityCode);
+      final type = _targetTypes[key] ?? asset.targetType;
+      final code = (_targetCodes[key] ?? asset.targetCode ?? '').trim();
+      final duration = _durations[key] ?? asset.durationSeconds;
       if (type != 'none' && code.isEmpty) throw ArgumentError('اكتب كود الفئة أو المورد قبل الحفظ.');
       await _repository.updateAssetRecord(assetId: asset.id!, asset: ErpAppAssetRecord(
         id: asset.id, appId: asset.appId, assetType: asset.assetType,
@@ -213,7 +265,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         entityId: asset.entityId, mimeType: asset.mimeType,
         fileSizeBytes: asset.fileSizeBytes, altText: asset.altText,
         targetType: type, targetCode: type == 'none' ? null : code,
-        durationSeconds: duration,
+        durationSeconds: duration, activityCode: asset.activityCode,
       ));
       if (mounted) setState(() => _message = 'تم حفظ إعدادات $slot.');
       await _load();
@@ -279,19 +331,20 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('إدارة إعلانات التطبيق', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _adsPurple)),
             SizedBox(height: 4),
-            Text('إعلانات الهيدر والإعلان المنبثق مع تحديد وجهة الضغط ومدة الظهور.', style: TextStyle(color: Colors.black54, height: 1.4)),
+            Text('إعلانات الهيدر والمنبثق والبداية، مع تخصيصها حسب النشاط أو جميع الأنشطة.', style: TextStyle(color: Colors.black54, height: 1.4)),
           ])),
           IconButton(tooltip: 'تحديث الإعلانات', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
         ]),
         const SizedBox(height: 14),
-        SegmentedButton<int>(
-          segments: const [
-            ButtonSegment<int>(value: 0, icon: Icon(Icons.view_carousel_outlined), label: Text('إعلانات الهيدر (5)')),
-            ButtonSegment<int>(value: 1, icon: Icon(Icons.picture_in_picture_alt_outlined), label: Text('الإعلان المنبثق')),
+        DropdownButtonFormField<String>(
+          value: _selectedActivityCode,
+          decoration: const InputDecoration(labelText: 'نطاق عرض الإعلانات حسب النشاط', border: OutlineInputBorder(), isDense: true),
+          items: [
+            const DropdownMenuItem(value: _allActivities, child: Text('كل الأنشطة (الإعلانات العامة)')),
+            ..._activities.map((a) => DropdownMenuItem(value: a['code'], child: Text('${a['name']} — ${a['code']}'))),
           ],
-          selected: {_selectedTab},
-          onSelectionChanged: _loading ? null : (selection) {
-            setState(() { _selectedTab = selection.first; _message = null; _error = null; });
+          onChanged: _loading || _busySlot != null ? null : (value) {
+            setState(() { _selectedActivityCode = value ?? _allActivities; _message = null; _error = null; });
             _load();
           },
         ),
@@ -301,7 +354,10 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade300)),
           child: Padding(
             padding: const EdgeInsets.all(14),
-            child: Text(_selectedTab == 0 ? 'استخدم صورًا أفقية بنسبة 16:9 تقريبًا. ينتقل الهيدر تلقائيًا كل ثانيتين. الصيغ JPG وPNG وWEBP وGIF وبحد أقصى 8 ميجابايت.' : 'يظهر الإعلان المنبثق في منتصف الشاشة بحواف دائرية دون تغطية التطبيق، ويمكن إغلاقه. حدد مدة الظهور بالثواني ووجهة الضغط.', style: const TextStyle(height: 1.6)),
+            child: Text(_isGlobalScope
+              ? 'هذه الإعلانات عامة لكل الأنشطة. عند اختيار نشاط محدد يمكنك رفع إعلانات خاصة به؛ وتكون له الأولوية، ثم تُستكمل إعلانات الهيدر الناقصة من أول إعلانات النطاق العام. إعلان البداية الخاص بالنشاط يتقدم على إعلان البداية العام.'
+              : 'هذه الإعلانات مخصصة للنشاط المحدد. ما ترفعه هنا يتقدم على الإعلان العام، وأي خانات هيدر غير محددة ستُستكمل تلقائيًا من الإعلانات العامة. إعلان البداية أيضًا له أولوية النشاط ثم العام.',
+              style: const TextStyle(height: 1.6)),
           ),
         ),
         if (_message != null) _notice(_message!, Colors.green),
@@ -310,8 +366,11 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         if (_loading) const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
         else ..._adSlots.map((slot) {
           final asset = _forSlot(slot);
+          final effectiveAsset = asset ?? _effectiveSlot(slot);
+          final inherited = asset == null && effectiveAsset != null;
+          final key = _keyFor(slot, _scopeCode);
           final busy = _busySlot == slot;
-          final targetType = _targetTypes[slot] ?? asset?.targetType ?? 'none';
+          final targetType = _targetTypes[key] ?? asset?.targetType ?? 'none';
           return Card(
             elevation: 0,
             margin: const EdgeInsets.only(bottom: 12),
@@ -321,21 +380,23 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Row(children: [
                   Expanded(child: Text(slot, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _adsPurple))),
-                  Text(asset == null ? 'غير محدد' : 'محفوظ', style: TextStyle(color: asset == null ? Colors.black54 : Colors.green, fontWeight: FontWeight.w700)),
+                  Text(asset != null ? 'محفوظ لهذا النشاط' : inherited ? 'موروث من كل الأنشطة' : 'غير محدد', style: TextStyle(color: asset != null ? Colors.green : inherited ? orange : Colors.black54, fontWeight: FontWeight.w700)),
                 ]),
                 const SizedBox(height: 10),
                 AspectRatio(
                   aspectRatio: 16 / 6,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: asset == null
-                        ? Container(color: const Color(0xFFF4EFF9), child: const Center(child: Icon(Icons.add_photo_alternate_outlined, color: _adsPurple, size: 42)))
-                        : FutureBuilder<String>(
-                            future: _signedUrl(asset.storagePath),
-                            builder: (context, snap) => snap.hasData
-                                ? Image.network(snap.data!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined)))
-                                : const Center(child: CircularProgressIndicator()),
-                          ),
+                    child: effectiveAsset == null
+                        ? Container(color: const Color(0xFFF4EFF9), child: Center(child: Icon(slot == _introSlot ? Icons.movie_creation_outlined : Icons.add_photo_alternate_outlined, color: _adsPurple, size: 42)))
+                        : effectiveAsset.mimeType == 'video/mp4'
+                            ? Container(color: const Color(0xFFF4EFF9), child: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Icon(Icons.play_circle_outline, color: _adsPurple, size: 42), Text('فيديو MP4 محفوظ', style: TextStyle(color: _adsPurple))])))
+                            : FutureBuilder<String>(
+                                future: _signedUrl(effectiveAsset.storagePath),
+                                builder: (context, snap) => snap.hasData
+                                    ? Image.network(snap.data!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined)))
+                                    : const Center(child: CircularProgressIndicator()),
+                              ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -351,19 +412,19 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
-                  key: ValueKey('target-code-$slot-${_selectedTab}'),
-                  initialValue: _targetCodes[slot] ?? asset?.targetCode ?? '',
+                  key: ValueKey('target-code-$key'),
+                  initialValue: _targetCodes[key] ?? asset?.targetCode ?? '',
                   decoration: InputDecoration(labelText: targetType == 'category' ? 'كود الفئة' : targetType == 'supplier' ? 'كود المورد / معرّف حساب المورد' : 'كود الوجهة (اختياري)', hintText: 'اختياري عند اختيار بدون توجيه', border: const OutlineInputBorder(), isDense: true),
-                  onChanged: (value) => _targetCodes[slot] = value,
+                  onChanged: (value) => _targetCodes[key] = value,
                 ),
-                if (_selectedTab == 1) ...[
+                if (slot == _popupSlot || slot == _introSlot) ...[
                   const SizedBox(height: 8),
                   TextFormField(
-                    key: ValueKey('duration-$slot-${_selectedTab}'),
-                    initialValue: (_durations[slot] ?? asset?.durationSeconds ?? 5).toString(),
+                    key: ValueKey('duration-$key'),
+                    initialValue: (_durations[key] ?? asset?.durationSeconds ?? (slot == _introSlot ? 4 : 5)).toString(),
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'مدة ظهور الإعلان بالثواني (1 إلى 120)', border: OutlineInputBorder(), isDense: true),
-                    onChanged: (value) => _durations[slot] = int.tryParse(value) ?? 5,
+                    decoration: InputDecoration(labelText: slot == _introSlot ? 'مدة فيديو / صورة البداية بالثواني' : 'مدة ظهور الإعلان المنبثق بالثواني', border: const OutlineInputBorder(), isDense: true),
+                    onChanged: (value) => _durations[key] = int.tryParse(value) ?? 5,
                   ),
                 ],
                 const SizedBox(height: 10),
@@ -371,14 +432,28 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                   FilledButton.icon(
                     onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false),
                     icon: const Icon(Icons.folder_open_outlined),
-                    label: const Text('استيراد من الجهاز'),
+                    label: Text(slot == _introSlot ? 'صورة من الجهاز' : 'استيراد صورة من الجهاز'),
                     style: FilledButton.styleFrom(backgroundColor: _adsPurple),
                   ),
                   OutlinedButton.icon(
                     onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true),
                     icon: const Icon(Icons.photo_camera_outlined),
-                    label: const Text('تصوير بالكاميرا'),
+                    label: Text(slot == _introSlot ? 'تصوير صورة بالكاميرا' : 'تصوير بالكاميرا'),
                   ),
+                  if (slot == _introSlot) ...[
+                    FilledButton.icon(
+                      onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false, video: true),
+                      icon: const Icon(Icons.video_library_outlined),
+                      label: const Text('فيديو من الجهاز (MP4)'),
+                      style: FilledButton.styleFrom(backgroundColor: orange, foregroundColor: _adsPurple),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true, video: true),
+                      icon: const Icon(Icons.videocam_outlined),
+                      label: const Text('تصوير فيديو بالكاميرا'),
+                    ),
+                  ],
+
                   if (asset != null)
                     OutlinedButton.icon(
                       onPressed: _busySlot != null ? null : () => _saveMetadata(slot, asset),
