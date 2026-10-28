@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -221,8 +222,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         border: Border.all(color: const Color(0xFFD8CBE7)),
       ),
       child: bytes != null && bytes.isNotEmpty
-          ? Image.memory(bytes, fit: BoxFit.cover, width: size, height: size,
-              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
+          ? (_s(row['image_mime_type']) == 'image/svg+xml'
+              ? SvgPicture.memory(bytes, fit: BoxFit.contain, width: size, height: size)
+              : Image.memory(bytes, fit: BoxFit.cover, width: size, height: size,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38)))
           : const Icon(Icons.category_outlined, color: Color(0xFF9A86B5), size: 25),
     );
   }
