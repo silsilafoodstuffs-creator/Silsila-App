@@ -311,6 +311,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         else ..._adSlots.map((slot) {
           final asset = _forSlot(slot);
           final busy = _busySlot == slot;
+          final targetType = _targetTypes[slot] ?? asset?.targetType ?? 'none';
           return Card(
             elevation: 0,
             margin: const EdgeInsets.only(bottom: 12),
@@ -339,7 +340,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
-                  value: _targetTypes[slot] ?? asset?.targetType ?? 'none',
+                  value: targetType,
                   decoration: const InputDecoration(labelText: 'التوجه عند الضغط على الصورة', border: OutlineInputBorder(), isDense: true),
                   items: const [
                     DropdownMenuItem(value: 'none', child: Text('بدون توجيه')),
@@ -352,7 +353,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                 TextFormField(
                   key: ValueKey('target-code-$slot-${_selectedTab}'),
                   initialValue: _targetCodes[slot] ?? asset?.targetCode ?? '',
-                  decoration: InputDecoration(labelText: (_targetTypes[slot] ?? asset?.targetType ?? 'none') == 'category' ? 'كود الفئة' : 'كود المورد / معرّف حساب المورد', hintText: 'اختياري عند اختيار بدون توجيه', border: const OutlineInputBorder(), isDense: true),
+                  decoration: InputDecoration(labelText: targetType == 'category' ? 'كود الفئة' : targetType == 'supplier' ? 'كود المورد / معرّف حساب المورد' : 'كود الوجهة (اختياري)', hintText: 'اختياري عند اختيار بدون توجيه', border: const OutlineInputBorder(), isDense: true),
                   onChanged: (value) => _targetCodes[slot] = value,
                 ),
                 if (_selectedTab == 1) ...[
