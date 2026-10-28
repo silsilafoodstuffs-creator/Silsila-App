@@ -174,7 +174,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final value = data?.text?.trim();
     if (value != null && value.isNotEmpty && mounted) {
-      setState(() { _url.text = value; _status = 'تم لصق الرابط. اضغط استكشاف الموقع للبدء.'; });
+      setState(() { _url.text = value; _status = 'تم لصق الرابط. اضغط فرز الموقع بالكامل للبدء.'; });
     }
   }
   void _resetExploration() {
@@ -324,11 +324,6 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       if (mounted) setState(() { _busy = false; _crawling = false; });
     }
   }
-  String _suggestName(String path) {
-    var base=path.split('/').last.split('?').first.replaceAll(RegExp(r'\.(jpg|jpeg|png|webp|gif|avif)$',caseSensitive:false),'');
-    base=base.replaceAll(RegExp(r'[-_]+'),' ').replaceAll(RegExp(r'\d{3,}'),' ').trim();
-    return base.isEmpty?'اسم يحتاج مراجعة':base;
-  }
   Future<void> _downloadExcel() async {
     if (_rows.isEmpty) { setState(() => _status = 'لا توجد بيانات لحفظها. ابدأ فرز الموقع أولًا.'); return; }
     final selected = _rows.where((r) => r.selected).toList();
@@ -360,20 +355,6 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
-  Future<Uint8List?> _fetchImage(String url) async {
-    try {
-      final response = await Supabase.instance.client.functions.invoke(
-        'silsila-image-collector',
-        body: {'action': 'download', 'url': url, 'referer': _url.text.trim()},
-      );
-      final payload = response.data;
-      if (response.status >= 400 || payload is! Map || payload['base64'] == null) return null;
-      return Uint8List.fromList(base64Decode(payload['base64'].toString()));
-    } catch (_) {
-      return null;
-    }
-  }
-  String _extension(String url){final p=Uri.tryParse(url)?.path.toLowerCase()??'';for(final e in ['png','webp','gif','avif','jpeg']){if(p.endsWith('.$e'))return e;}return 'jpg';}
   void _preview(_ImportRow row){showDialog<void>(context:context,builder:(ctx)=>Dialog(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[Row(children:[const Expanded(child:Text('معاينة الصورة',style:TextStyle(fontWeight:FontWeight.bold))),IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close))]),Flexible(child:InteractiveViewer(child:Image.network(row.imageUrl,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image,size:80),fit:BoxFit.contain))),const SizedBox(height:8),Text(row.name)]))));}
   @override
   Widget build(BuildContext context) {
@@ -421,7 +402,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                : DataTable2(
                     fixedTopRows: 1,
                     fixedLeftColumns: 4,
-                    minWidth: 1700,
+                    minWidth: 2350,
                     columnSpacing: 8,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                     columns: [
@@ -463,6 +444,11 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       
                       const DataColumn(label: Text('الفئة الرئيسية')),
                       const DataColumn(label: Text('الفئة الفرعية')),
+                      const DataColumn(label: Text('البراند / الماركة')),
+                      const DataColumn(label: Text('الباركود')),
+                      const DataColumn(label: Text('السعر')),
+                      const DataColumn(label: Text('الوصف')),
+                      const DataColumn(label: Text('صفحة المصدر')),
                       const DataColumn(label: Text('الوحدة الكبرى')),
                       const DataColumn(label: Text('العدد الداخلي')),
                       const DataColumn(label: Text('الوحدة الصغرى')),
@@ -474,7 +460,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                     rows: _rows.map((r) => DataRow(cells: [
                       DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
                       DataCell(Text('${_rows.indexOf(r) + 1}')),
-                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                      DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.imageUrl.isEmpty ? const Icon(Icons.category_outlined) : Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
                       DataCell(_kindCell(r, () => setState(() {}))),
                     DataCell(_codeModeCell(r, () => setState(() {}))),
                     DataCell(IconButton(tooltip: 'بحث F1 في قائمة الصنف أو الفئة', onPressed: () async {
@@ -485,6 +471,11 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                     DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.category, onChanged: (v) => r.category = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.subcategory, onChanged: (v) => r.subcategory = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.brand, onChanged: (v) => r.brand = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 120, child: TextFormField(initialValue: r.barcode, onChanged: (v) => r.barcode = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 90, child: TextFormField(initialValue: r.salePrice, onChanged: (v) => r.salePrice = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 180, child: TextFormField(initialValue: r.description, onChanged: (v) => r.description = v, maxLines: 1, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 210, child: Tooltip(message: r.sourcePage, child: Text(r.sourcePage, maxLines: 1, overflow: TextOverflow.ellipsis)))),
                       DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.majorUnit, onChanged: (v) => r.majorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 85, child: TextFormField(initialValue: r.innerCount, onChanged: (v) => r.innerCount = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.minorUnit, onChanged: (v) => r.minorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
