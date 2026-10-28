@@ -381,7 +381,38 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     }
   }
 
+  Map<_ImportRow, String> _imageArchiveNames(List<_ImportRow> selected) {
+    final usedNames = <String>{};
+    final names = <_ImportRow, String>{};
+    for (final row in selected) {
+      final bytes = row.bytes;
+      if (bytes == null || bytes.isEmpty) continue;
+      final ext = _imageExtension(bytes);
+      final base = _safeImageBaseName(row.name);
+      var filename = '$base.$ext';
+      var suffix = 2;
+      while (!usedNames.add(filename.toLowerCase())) {
+        filename = base + '_' + suffix.toString() + '.' + ext;
+        suffix++;
+      }
+      names[row] = 'images/$filename';
+    }
+    return names;
+  }
+
   Future<Uint8List> _createExcelBytes(List<_ImportRow> selected, {bool includeImages = true}) async {
+    var downloaded = 0;
+    for (final row in selected) {
+      if (includeImages && row.imageUrl.isNotEmpty) {
+        await _downloadImageBytes(row);
+      }
+      downloaded++;
+      if (downloaded % 20 == 0 && mounted) {
+        final found = selected.where((r) => r.bytes != null && r.bytes!.isNotEmpty).length;
+        setState(() => _status = 'تنزيل الصور وتجهيز Excel: $downloaded / ${selected.length}، صور تم تنزيلها $found');
+      }
+    }
+    final imagePaths = _imageArchiveNames(selected);
     final book = Excel.createExcel();
     final sheet = book['بيانات الأصناف'];
     sheet.appendRow(_headerLabels.map((h) => TextCellValue(h)).toList());
@@ -389,18 +420,18 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     var done = 0;
     var imageCount = 0;
     for (final row in selected) {
-      final imageBytes = includeImages ? await _downloadImageBytes(row) : row.bytes;
       final data = row.toMap();
       final cells = <CellValue>[];
       for (final header in _headers) {
         if (header == 'image_file') {
-          cells.add(TextCellValue(imageBytes == null ? '' : 'مضمّنة داخل الشيت'));
+          cells.add(TextCellValue(imagePaths[row] ?? ''));
         } else {
           cells.add(TextCellValue(data[header] ?? ''));
         }
       }
       sheet.appendRow(cells);
       sheet.setRowHeight(done + 1, 60);
+      final imageBytes = row.bytes;
       if (imageBytes != null && imageBytes.isNotEmpty) {
         try {
           sheet.insertImage(
@@ -416,7 +447,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       }
       done++;
       if (done % 20 == 0 && mounted) {
-        setState(() => _status = 'تجهيز ملف Excel والصور: $done / ${selected.length}، صور مضمّنة $imageCount');
+        setState(() => _status = 'إنشاء ملف Excel: $done / ${selected.length}، صور مضمّنة $imageCount');
       }
     }
     final bytes = book.encode();
@@ -455,20 +486,13 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       final xlsxBytes = await _createExcelBytes(selected);
       final archive = Archive();
       archive.addFile(ArchiveFile('بيانات الأصناف.xlsx', xlsxBytes.length, xlsxBytes));
-      final usedNames = <String>{};
+      final imagePaths = _imageArchiveNames(selected);
       var savedImages = 0;
       for (final row in selected) {
+        final path = imagePaths[row];
         final bytes = row.bytes;
-        if (bytes == null || bytes.isEmpty) continue;
-        final ext = _imageExtension(bytes);
-        final base = _safeImageBaseName(row.name);
-        var filename = '$base.$ext';
-        var suffix = 2;
-        while (!usedNames.add(filename.toLowerCase())) {
-          filename = '${base}_$suffix.$ext';
-          suffix++;
-        }
-        archive.addFile(ArchiveFile('صور الأصناف/$filename', bytes.length, bytes));
+        if (path == null || bytes == null || bytes.isEmpty) continue;
+        archive.addFile(ArchiveFile(path, bytes.length, bytes));
         savedImages++;
       }
       final zipped = ZipEncoder().encode(archive);
@@ -479,7 +503,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
         fileExtension: 'zip',
         mimeType: MimeType.zip,
       );
-      if (mounted) setState(() => _status = 'تم تنزيل ZIP يحتوي على ملف Excel بصور مضمّنة ومجلد صور فعلية بأسماء الأصناف. السجلات: ${selected.length}، صور منفصلة: $savedImages.');
+      if (mounted) setState(() => _status = 'تم تنزيل ZIP يحتوي على Excel بصور مضمّنة ومجلد images بأسماء الأصناف الفعلية. السجلات: ${selected.length}، صور منفصلة: $savedImages.');
     } catch (e) {
       if (mounted) setState(() => _status = 'تعذر حفظ ZIP: $e');
     } finally {
