@@ -216,9 +216,9 @@ function contextualEntityName(html: string, imageIndex: number): string {
 
 function internalLinks(html: string, base: URL): string[] {
   const found = new Set<string>();
-  const ignoredPath = /\\.(?:jpg|jpeg|png|webp|gif|avif|bmp|svg|css|js|mjs|map|pdf|zip|rar|7z|woff2?|ttf|eot|mp4|webm|ico)(?:$|[?#])/i;
-  const ignoredRoute = /(?:^|\\/)(?:cart|checkout|my-account|account|login|logout|register|wishlist|compare|privacy|terms|contact|about-us|wp-json|feed|author|tag)(?:\\/|$)/i;
-  for (const match of html.matchAll(/<a\\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>/gi)) {
+  const ignoredPath = /\.(?:jpg|jpeg|png|webp|gif|avif|bmp|svg|css|js|mjs|map|pdf|zip|rar|7z|woff2?|ttf|eot|mp4|webm|ico)(?:$|[?#])/i;
+  const ignoredRoute = /(?:^|\/)(?:cart|checkout|my-account|account|login|logout|register|wishlist|compare|privacy|terms|contact|about-us|wp-json|feed|author|tag)(?:\/|$)/i;
+  for (const match of html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/gi)) {
     const raw = decodeEntities(match[1]).trim();
     if (!raw || raw.startsWith("#") || /^(?:mailto:|tel:|javascript:|data:)/i.test(raw)) continue;
     try {
@@ -404,7 +404,7 @@ Deno.serve(async (req: Request) => {
         products: metadata.products,
         categories,
         links,
-        pagination: links.filter((link) => /(?:[?&](?:page|paged|pageno|page_no|pg)=\\d+|\\/page\\/\\d+\\/?$|[?&]p=\\d+)/i.test(link)),
+        pagination: links.filter((link) => /(?:[?&](?:page|paged|pageno|page_no|pg)=\d+|\/page\/\d+\/?$|[?&]p=\d+)/i.test(link)),
       });
     }
     if (action === "download") {
