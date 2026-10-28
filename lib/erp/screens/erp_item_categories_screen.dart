@@ -84,6 +84,25 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         {'code':'ACT005','name':'سيارات ومعدات'}, {'code':'ACT006','name':'خدمات شحن ونقل'},
         {'code':'ACT007','name':'أثاث وديكورات'},
       ];
+      const catalogActivityNames = <String,String>{
+        'ACT001':'مواد غذائية','ACT002':'لوازم بناء','ACT003':'ملابس واكسسوارات',
+        'ACT004':'أجهزة وإلكترونيات','ACT005':'سيارات ومعدات','ACT006':'خدمات شحن ونقل',
+        'ACT007':'أثاث وديكورات','ACT008':'أدوات كهربائية','ACT009':'مكتبات وقرطاسية',
+        'ACT010':'مستلزمات طبية','ACT011':'مستحضرات تجميل وعناية','ACT012':'زراعة ومستلزمات زراعية',
+        'ACT013':'قطع غيار ومستلزمات صيانة','ACT014':'مستلزمات فندقية ومطاعم',
+        'ACT015':'تعبئة وتغليف','ACT016':'منظفات ومستلزمات نظافة',
+        'ACT017':'مستلزمات حيوانات وأعلاف','ACT018':'خدمات نقل وتوصيل',
+        'ACT019':'خدمات عامة ومستلزمات متنوعة','ACT020':'كتب ومطبوعات',
+      };
+      final categoryActivityRows = await _db!.from('erp_item_categories')
+        .select('activity_code').eq('company_id', company).not('activity_code', 'is', null);
+      final knownCodes = _activities.map((a) => a['code']).toSet();
+      for (final categoryActivity in (categoryActivityRows as List)) {
+        final code = _s(categoryActivity['activity_code']);
+        if (code.isNotEmpty && knownCodes.add(code)) {
+          _activities.add(<String,String>{'code':code,'name':catalogActivityNames[code] ?? 'نشاط $code'});
+        }
+      }
       if (!_activities.any((a) => a['code'] == _selectedActivityCode)) _selectedActivityCode = _activities.first['code']!;
       final result = await _db!.from('erp_item_categories')
         .select('id,company_id,activity_code,category_code,category_name,category_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type')
@@ -118,16 +137,21 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     setState(() { _saving = true; _error = null; _message = 'جارٍ تجهيز استيراد الصور الحقيقية…'; });
     var imported = 0, notFound = 0, errors = 0, alreadyReal = 0, completed = 0, total = 0;
     try {
-      final activities = _activities.toList();
-      for (final activity in activities) {
-        final activityCode = (activity['code'] ?? '').trim();
-        if (activityCode.isEmpty) continue;
-        final rows = await _db!.from('erp_item_categories')
-          .select('id')
-          .eq('company_id', _company!)
-          .eq('activity_code', activityCode)
-          .order('category_code');
-        final count = (rows as List).length;
+      final catalogRows = await _db!.from('erp_item_categories')
+        .select('activity_code,category_code')
+        .eq('company_id', _company!)
+        .not('activity_code', 'is', null)
+        .order('activity_code').order('category_code');
+      final catalogGroups = <String,List<Map<String,dynamic>>>{};
+      for (final raw in (catalogRows as List)) {
+        final row = Map<String,dynamic>.from(raw);
+        final code = _s(row['activity_code']);
+        if (code.isEmpty) continue;
+        catalogGroups.putIfAbsent(code, () => <Map<String,dynamic>>[]).add(row);
+      }
+      for (final entry in catalogGroups.entries) {
+        final activityCode = entry.key;
+        final count = entry.value.length;
         total += count;
         for (var offset = 0; offset < count; offset += 12) {
           if (!mounted) return;
