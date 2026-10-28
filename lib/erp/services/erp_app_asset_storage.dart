@@ -86,7 +86,7 @@ class ErpAppAssetStorage {
     final timestamp = DateTime.now().toUtc().microsecondsSinceEpoch;
     final path = '$company/$app/$type/${timestamp}_${stem.isEmpty ? 'image' : stem}.$extension';
 
-    final targetBucket = type == 'banner_ad' || type == 'popup_ad' ? 'silsila-public-ads' : bucket;
+    final targetBucket = type == 'banner_ad' || type == 'popup_ad' || type == 'intro_ad' ? 'silsila-public-ads' : bucket;
     await _db.storage.from(targetBucket).uploadBinary(
       path,
       bytes,
@@ -94,6 +94,41 @@ class ErpAppAssetStorage {
         contentType: contentType.toLowerCase().trim(),
         upsert: false,
       ),
+    );
+    return path;
+  }
+
+  /// Uploads a short MP4 intro clip to the public app-ad bucket.
+  Future<String> uploadVideo({
+    required String companyId,
+    required String appId,
+    required String fileName,
+    required Uint8List bytes,
+    String? assetType,
+  }) async {
+    if (companyId.trim().isEmpty || appId.trim().isEmpty) {
+      throw ArgumentError('معرّف الشركة والتطبيق مطلوبان.');
+    }
+    if (bytes.isEmpty) throw ArgumentError('ملف الفيديو فارغ.');
+    if (bytes.length > 50 * 1024 * 1024) {
+      throw ArgumentError('الحد الأقصى لحجم فيديو البداية 50 ميجابايت.');
+    }
+    if (!fileName.toLowerCase().endsWith('.mp4') ||
+        bytes.length < 12 ||
+        String.fromCharCodes(bytes.sublist(4, 8)) != 'ftyp') {
+      throw ArgumentError('استخدم فيديو MP4 صالحًا.');
+    }
+    if (assetType != 'intro_ad') throw ArgumentError('الفيديو مسموح به لإعلان البداية فقط.');
+    final company = _safeSegment(companyId);
+    final app = _safeSegment(appId);
+    final original = fileName.split(RegExp(r'[/\\\\]')).last;
+    final stem = original.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+    final timestamp = DateTime.now().toUtc().microsecondsSinceEpoch;
+    final path = '$company/$app/intro_ad/${timestamp}_${stem.isEmpty ? 'intro' : stem}.mp4';
+    await _db.storage.from('silsila-public-ads').uploadBinary(
+      path,
+      bytes,
+      fileOptions: const FileOptions(contentType: 'video/mp4', upsert: false),
     );
     return path;
   }
@@ -129,7 +164,7 @@ class ErpAppAssetStorage {
 
   String _bucketForPath(String storagePath) {
     final segments = storagePath.split('/');
-    return segments.length >= 3 && (segments[2] == 'banner_ad' || segments[2] == 'popup_ad')
+    return segments.length >= 3 && (segments[2] == 'banner_ad' || segments[2] == 'popup_ad' || segments[2] == 'intro_ad')
         ? 'silsila-public-ads'
         : bucket;
   }
