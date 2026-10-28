@@ -1224,6 +1224,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     label: const Text('استكشاف الموقع'),
                     style: FilledButton.styleFrom(backgroundColor: _purple, padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13)),
                   ),
+                  FilledButton.icon(
+                    onPressed: _loading ? null : _importRealProductImages,
+                    icon: const Icon(Icons.cloud_download_outlined),
+                    label: const Text('استيراد الصور الحقيقية وحفظها في قاعدة البيانات'),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF197A52), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13)),
+                  ),
                   OutlinedButton.icon(
                     onPressed: _loading || _images.isEmpty ? null : _selectAll,
                     icon: Icon(allSelected ? Icons.deselect : Icons.select_all),
