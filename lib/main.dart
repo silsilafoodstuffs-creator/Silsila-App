@@ -5848,7 +5848,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else if (mounted && response.session != null) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const MainShell()),
+          MaterialPageRoute(builder: (_) => MainShell(initialActivity: activity)),
           (route) => false,
         );
       } else if (mounted) {
@@ -6355,7 +6355,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const MainShell()),
+          MaterialPageRoute(builder: (_) => MainShell(initialActivity: activity)),
           (route) => false,
         );
       }
