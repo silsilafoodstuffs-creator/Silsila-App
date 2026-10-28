@@ -151,12 +151,12 @@ Widget _codeModeCell(_ImportRow row, VoidCallback refresh) => SizedBox(
 );
 
 class _ImportRow {
-  _ImportRow({required this.id, required this.imageUrl, this.bytes, this.name = '', this.kind = 'صنف', this.codeMode = 'جديد', this.code = '', this.category = '', this.subcategory = '', this.majorUnit = '', this.innerCount = '', this.minorUnit = '', this.weight = '', this.length = '', this.width = '', this.height = '', this.brand = '', this.barcode = '', this.salePrice = '', this.description = '', this.sourcePage = '', this.selected = true});
+  _ImportRow({required this.id, required this.imageUrl, this.bytes, this.name = '', this.kind = 'صنف', this.codeMode = 'جديد', this.code = '', this.category = '', this.subcategory = '', this.thirdCategory = '', this.majorUnit = '', this.innerCount = '', this.minorUnit = '', this.otherUnits = '', this.weight = '', this.length = '', this.width = '', this.height = '', this.brand = '', this.barcode = '', this.salePrice = '', this.description = '', this.sourcePage = '', this.selected = true});
   final String id;
-  String imageUrl, name, kind, codeMode, code, category, subcategory, majorUnit, innerCount, minorUnit, weight, length, width, height, brand, barcode, salePrice, description, sourcePage;
+  String imageUrl, name, kind, codeMode, code, category, subcategory, thirdCategory, majorUnit, innerCount, minorUnit, otherUnits, weight, length, width, height, brand, barcode, salePrice, description, sourcePage;
   Uint8List? bytes;
   bool selected;
-  Map<String,String> toMap() => {'id':id,'image_file':'images/$id.jpg','image_url':imageUrl,'name_ar':name,'record_type':kind,'code_mode':codeMode,'item_code':code,'category':category,'subcategory':subcategory,'major_unit':majorUnit,'inner_count':innerCount,'minor_unit':minorUnit,'weight':weight,'length':length,'width':width,'height':height,'brand':brand,'barcode':barcode,'sale_price':salePrice,'description':description,'source_page':sourcePage};
+  Map<String,String> toMap() => {'id':id,'image_file':'images/$id.jpg','image_url':imageUrl,'name_ar':name,'record_type':kind,'code_mode':codeMode,'item_code':code,'category':category,'subcategory':subcategory,'third_category':thirdCategory,'major_unit':majorUnit,'inner_count':innerCount,'minor_unit':minorUnit,'other_units':otherUnits,'weight':weight,'length':length,'width':width,'height':height,'brand':brand,'barcode':barcode,'sale_price':salePrice,'description':description,'source_page':sourcePage};
 }
 
 class ErpItemDataImportScreen extends StatefulWidget {
@@ -168,8 +168,8 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   final List<_ImportRow> _rows = [];
   bool _busy = false, _selectAll = true, _crawling = false, _cancelCrawl = false;
   String _status = 'أدخل رابط الموقع لفرز جميع الصفحات والمنتجات والفئات.';
-  static const _headers = ['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','brand','barcode','sale_price','major_unit','inner_count','minor_unit','weight','length','width','height','description','source_page'];
-  static const _headerLabels = ['المعرف','الصورة','رابط الصورة','اسم الصنف / الفئة','نوع السجل','نوع الكود','كود الصنف / الفئة','الفئة الرئيسية','الفئة الفرعية','البراند / الماركة','الباركود','السعر','الوحدة الكبرى','العدد الداخلي','الوحدة الصغرى','الوزن','الطول','العرض','الارتفاع','الوصف','صفحة المصدر'];
+  static const _headers = ['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','third_category','brand','barcode','sale_price','major_unit','inner_count','minor_unit','other_units','weight','length','width','height','description','source_page'];
+  static const _headerLabels = ['المعرف','الصورة','رابط الصورة','اسم الصنف / الفئة','نوع السجل','نوع الكود','كود الصنف / الفئة','الفئة الرئيسية','الفئة الفرعية','الفئة الثانوية','البراند / الماركة','الباركود','السعر','الوحدة الكبرى','العدد الداخلي','الوحدة الصغرى','وحدات أخرى','الوزن','الطول','العرض','الارتفاع','الوصف','صفحة المصدر'];
   @override void dispose(){_url.dispose();super.dispose();}
   Future<void> _pasteUrl() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
@@ -252,9 +252,11 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                 code: 'ITM${(_rows.length + 1).toString().padLeft(5, '0')}',
                 category: textOf(product['main_category']),
                 subcategory: textOf(product['subcategory']),
+                thirdCategory: textOf(product['third_category']),
                 majorUnit: textOf(product['major_unit']),
                 innerCount: textOf(product['internal_count']),
                 minorUnit: textOf(product['minor_unit']),
+                otherUnits: textOf(product['other_units']),
                 weight: textOf(product['weight']),
                 brand: brand, barcode: barcode,
                 salePrice: textOf(product['sale_price']),
@@ -278,9 +280,11 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                 code: 'ITM${(_rows.length + 1).toString().padLeft(5, '0')}',
                 category: textOf(image['main_category']),
                 subcategory: textOf(image['subcategory']),
+                thirdCategory: textOf(image['third_category']),
                 majorUnit: textOf(image['major_unit']),
                 innerCount: textOf(image['internal_count']),
                 minorUnit: textOf(image['minor_unit']),
+                otherUnits: textOf(image['other_units']),
                 weight: textOf(image['weight']),
                 brand: textOf(image['brand']),
                 barcode: textOf(image['barcode']),
@@ -472,6 +476,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       
                       const DataColumn(label: Text('الفئة الرئيسية')),
                       const DataColumn(label: Text('الفئة الفرعية')),
+                      const DataColumn(label: Text('الفئة الثانوية')),
                       const DataColumn(label: Text('البراند / الماركة')),
                       const DataColumn(label: Text('الباركود')),
                       const DataColumn(label: Text('السعر')),
@@ -480,6 +485,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       const DataColumn(label: Text('الوحدة الكبرى')),
                       const DataColumn(label: Text('العدد الداخلي')),
                       const DataColumn(label: Text('الوحدة الصغرى')),
+                      const DataColumn(label: Text('وحدات أخرى')),
                       const DataColumn(label: Text('الوزن')),
                       const DataColumn(label: Text('الطول')),
                       const DataColumn(label: Text('العرض')),
@@ -499,6 +505,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                     DataCell(SizedBox(width: 190, child: TextFormField(initialValue: r.name, onChanged: (v) => r.name = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.category, onChanged: (v) => r.category = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.subcategory, onChanged: (v) => r.subcategory = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.thirdCategory, onChanged: (v) => r.thirdCategory = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 130, child: TextFormField(initialValue: r.brand, onChanged: (v) => r.brand = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 120, child: TextFormField(initialValue: r.barcode, onChanged: (v) => r.barcode = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 90, child: TextFormField(initialValue: r.salePrice, onChanged: (v) => r.salePrice = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
@@ -507,6 +514,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.majorUnit, onChanged: (v) => r.majorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 85, child: TextFormField(initialValue: r.innerCount, onChanged: (v) => r.innerCount = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(SizedBox(width: 110, child: TextFormField(initialValue: r.minorUnit, onChanged: (v) => r.minorUnit = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
+                      DataCell(SizedBox(width: 120, child: TextFormField(initialValue: r.otherUnits, onChanged: (v) => r.otherUnits = v, decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                       DataCell(_field(r.weight, (v) => r.weight = v)),
                       DataCell(_field(r.length, (v) => r.length = v)),
                       DataCell(_field(r.width, (v) => r.width = v)),
