@@ -235,7 +235,7 @@ function internalLinks(html: string, base: URL): string[] {
   }
   // Also recognize "load more" and rel=next controls that expose their
   // destination through data attributes instead of a normal anchor.
-  for (const match of html.matchAll(/(?:data-next|data-url|data-href|data-load-more-url|data-next-page|data-page-url)=[\"']([^\"']+)[\"']/gi)) {
+  for (const match of html.matchAll(/(?:data-next|data-next-url|data-next-page-url|data-url|data-href|data-load-more|data-load-more-url|data-next-page|data-page-url|data-ajax-url)=[\"']([^\"']+)[\"']/gi)) {
     const raw = decodeEntities(match[1]).trim();
     try {
       const u = safeUrl(new URL(raw, base).href);
