@@ -17,6 +17,7 @@ CREATE INDEX IF NOT EXISTS erp_app_assets_public_ads_idx
   ON public.erp_app_assets(asset_type, display_name, created_at DESC)
   WHERE asset_type IN ('banner_ad','popup_ad');
 
+DROP FUNCTION IF EXISTS public.get_silsila_public_ads();
 CREATE OR REPLACE FUNCTION public.get_silsila_public_ads()
 RETURNS TABLE(
   display_name text,
