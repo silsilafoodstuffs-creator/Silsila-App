@@ -26,7 +26,7 @@ RETURNS TABLE(
   target_code text,
   duration_seconds integer
 )
-LANGUAGE sql STABLE SECURITY DEFINER
+LANGUAGE sql STABLE SECURITY INVOKER
 SET search_path TO 'public'
 AS $function$
   WITH ranked_ads AS (
