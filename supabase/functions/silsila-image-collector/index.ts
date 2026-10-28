@@ -236,6 +236,25 @@ function internalLinks(html: string, base: URL): string[] {
   return [...found].slice(0, 800);
 }
 
+function categoryEntities(html: string, base: URL): Array<{ name: string; url: string }> {
+  const found = new Map<string, { name: string; url: string }>();
+  const rx = /<a\\b([^>]*href=[\"']([^\"']+)[\"'][^>]*)>([\\s\\S]{1,700}?)<\\/a>/gi;
+  for (const m of html.matchAll(rx)) {
+    const attrs = m[1];
+    const rawUrl = decodeEntities(m[2]).trim();
+    const name = readableText(m[3]).slice(0, 180);
+    if (!usableEntityName(name)) continue;
+    if (!/(?:product[-_ ]?category|category[-_ ]?(?:item|link|title)|cat-item|collection|shop-by-category|category)/i.test(attrs + " " + rawUrl)) continue;
+    try {
+      const u = safeUrl(new URL(rawUrl, base).href);
+      if (u.origin !== base.origin) continue;
+      u.hash = "";
+      found.set(u.href, { name, url: u.href });
+    } catch { /* ignore unsafe category links */ }
+  }
+  return [...found.values()].slice(0, 500);
+}
+
 function pageImages(html: string, base: URL) {
   const found = new Map<string, Record<string, unknown>>();
   const metadata = productMetadata(html, base);
@@ -377,11 +396,13 @@ Deno.serve(async (req: Request) => {
       const images = pageImages(html, target);
       const metadata = productMetadata(html, target);
       const links = internalLinks(html, target);
+      const categories = categoryEntities(html, target);
       return json({
         page: target.href,
         count: images.length,
         images,
         products: metadata.products,
+        categories,
         links,
         pagination: links.filter((link) => /(?:[?&](?:page|paged|pageno|page_no|pg)=\\d+|\\/page\\/\\d+\\/?$|[?&]p=\\d+)/i.test(link)),
       });
