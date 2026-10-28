@@ -151,12 +151,12 @@ Widget _codeModeCell(_ImportRow row, VoidCallback refresh) => SizedBox(
 );
 
 class _ImportRow {
-  _ImportRow({required this.id, required this.imageUrl, this.bytes, this.name = '', this.kind = 'صنف', this.codeMode = 'جديد', this.code = '', this.category = '', this.subcategory = '', this.majorUnit = '', this.innerCount = '', this.minorUnit = '', this.weight = '', this.length = '', this.width = '', this.height = '', this.selected = true});
+  _ImportRow({required this.id, required this.imageUrl, this.bytes, this.name = '', this.kind = 'صنف', this.codeMode = 'جديد', this.code = '', this.category = '', this.subcategory = '', this.majorUnit = '', this.innerCount = '', this.minorUnit = '', this.weight = '', this.length = '', this.width = '', this.height = '', this.brand = '', this.barcode = '', this.salePrice = '', this.description = '', this.sourcePage = '', this.selected = true});
   final String id;
-  String imageUrl, name, kind, codeMode, code, category, subcategory, majorUnit, innerCount, minorUnit, weight, length, width, height;
+  String imageUrl, name, kind, codeMode, code, category, subcategory, majorUnit, innerCount, minorUnit, weight, length, width, height, brand, barcode, salePrice, description, sourcePage;
   Uint8List? bytes;
   bool selected;
-  Map<String,String> toMap() => {'id':id,'image_file':'images/$id.jpg','image_url':imageUrl,'name_ar':name,'record_type':kind,'code_mode':codeMode,'item_code':code,'category':category,'subcategory':subcategory,'major_unit':majorUnit,'inner_count':innerCount,'minor_unit':minorUnit,'weight':weight,'length':length,'width':width,'height':height};
+  Map<String,String> toMap() => {'id':id,'image_file':'images/$id.jpg','image_url':imageUrl,'name_ar':name,'record_type':kind,'code_mode':codeMode,'item_code':code,'category':category,'subcategory':subcategory,'major_unit':majorUnit,'inner_count':innerCount,'minor_unit':minorUnit,'weight':weight,'length':length,'width':width,'height':height,'brand':brand,'barcode':barcode,'sale_price':salePrice,'description':description,'source_page':sourcePage};
 }
 
 class ErpItemDataImportScreen extends StatefulWidget {
@@ -166,9 +166,9 @@ class ErpItemDataImportScreen extends StatefulWidget {
 class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   final _url = TextEditingController();
   final List<_ImportRow> _rows = [];
-  bool _busy = false, _selectAll = true;
-  String _status = 'أدخل رابط موقع لبدء اكتشاف الصفحات والصور.';
-  static const _headers = ['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','major_unit','inner_count','minor_unit','weight','length','width','height'];
+  bool _busy = false, _selectAll = true, _crawling = false, _cancelCrawl = false;
+  String _status = 'أدخل رابط الموقع لفرز جميع الصفحات والمنتجات والفئات.';
+  static const _headers = ['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','brand','barcode','sale_price','major_unit','inner_count','minor_unit','weight','length','width','height','description','source_page'];
   @override void dispose(){_url.dispose();super.dispose();}
   Future<void> _pasteUrl() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
@@ -187,58 +187,141 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       setState(() => _status = 'أدخل رابطًا صحيحًا يبدأ بـ https:// أو http://');
       return;
     }
-    setState(() { _busy = true; _status = 'جاري فحص الصفحة واستخراج بيانات الصور من خدمة سلسلة...'; _rows.clear(); });
+    setState(() {
+      _busy = true; _crawling = true; _cancelCrawl = false; _selectAll = true;
+      _status = 'بدأ فرز الموقع بالكامل؛ سيتم تتبع صفحات الفئات والمنتجات وروابط المزيد والترقيم.';
+      _rows.clear();
+    });
+    final queue = <String>[uri.toString()];
+    final queued = <String>{uri.toString()};
+    final visited = <String>{};
+    final seenRecords = <String>{};
+    var foundProducts = 0, foundCategories = 0, foundImages = 0, pageErrors = 0;
+    final rootHost = uri.host.toLowerCase();
     try {
-      // Use the server-side collector so browser CORS restrictions do not
-      // silently leave the screen empty when a shop blocks direct requests.
-      final response = await Supabase.instance.client.functions.invoke(
-        'silsila-image-collector',
-        body: {'action': 'scan', 'url': uri.toString()},
-      );
-      final payload = response.data;
-      if (response.status >= 400 || payload is! Map || payload['error'] != null) {
-        final message = payload is Map ? (payload['error']?.toString() ?? 'تعذر استكشاف الموقع.') : 'استجابة غير مفهومة من خدمة الاستكشاف.';
-        throw Exception(message);
-      }
-      final list = payload['images'];
-      if (list is! List) throw Exception('لم تُرجع خدمة الاستكشاف قائمة صور صالحة.');
-      final seen = <String>{};
-      var index = 0;
-      for (final entry in list) {
-        if (entry is! Map) continue;
-        final imageUrl = (entry['url'] ?? '').toString().trim();
-        if (imageUrl.isEmpty || !seen.add(imageUrl)) continue;
-        final path = Uri.tryParse(imageUrl)?.path.toLowerCase() ?? '';
-        final suppliedName = (entry['product_name'] ?? entry['context_name'] ?? entry['alt'] ?? '').toString().trim();
-        final name = suppliedName.isNotEmpty ? suppliedName : _suggestName(path);
-        index++;
-        _rows.add(_ImportRow(
-          id: 'IMG${index.toString().padLeft(5, '0')}',
-          code: 'ITM${index.toString().padLeft(5, '0')}',
-          imageUrl: imageUrl,
-          name: name,
-          kind: (entry['record_type'] ?? 'صنف').toString() == 'فئة' ? 'فئة' : 'صنف',
-          category: (entry['main_category'] ?? '').toString(),
-          subcategory: (entry['subcategory'] ?? '').toString(),
-          majorUnit: (entry['major_unit'] ?? '').toString(),
-          innerCount: (entry['internal_count'] ?? '').toString(),
-          minorUnit: (entry['minor_unit'] ?? '').toString(),
-          weight: (entry['weight'] ?? '').toString(),
-          selected: true,
-        ));
-      }
-      if (mounted) {
-        setState(() {
-          _selectAll = true;
-          _status = _rows.isEmpty
-            ? 'تم فحص الصفحة، لكن لم تُكتشف صور أصناف مسماة. جرّب رابط صفحة فئة أو صفحة منتجات مباشرة.'
-            : 'تم فحص الصفحة: ${_rows.length} صورة/صنف مرشح. راجع الجدول ثم أنشئ ZIP.';
+      while (queue.isNotEmpty && visited.length < 4000 && !_cancelCrawl) {
+        final next = queue.removeAt(0);
+        if (!visited.add(next)) continue;
+        try {
+          final response = await Supabase.instance.client.functions.invoke(
+            'silsila-image-collector',
+            body: {'action': 'scan', 'url': next},
+          );
+          final payload = response.data;
+          if (response.status >= 400 || payload is! Map || payload['error'] != null) {
+            pageErrors++;
+          } else {
+            final pageProducts = payload['products'];
+            final pageImages = payload['images'];
+            final pageCategories = payload['categories'];
+            final pageLinks = payload['links'];
+            final images = pageImages is List ? pageImages.whereType<Map>().toList() : <Map>[];
+            final products = pageProducts is List ? pageProducts.whereType<Map>().toList() : <Map>[];
+            final categories = pageCategories is List ? pageCategories.whereType<Map>().toList() : <Map>[];
+            final links = pageLinks is List ? pageLinks : const [];
+            foundImages += images.length;
+
+            String textOf(dynamic value) => value?.toString().trim() ?? '';
+            String normalize(String value) => value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9\u0600-\u06ff]+'), ' ').trim();
+            String imageFor(Map product) {
+              final productImages = product['images'];
+              if (productImages is List && productImages.isNotEmpty) return textOf(productImages.first);
+              final productName = normalize(textOf(product['product_full_name'] ?? product['product_name']));
+              for (final image in images) {
+                if (normalize(textOf(image['product_name'] ?? image['context_name'])) == productName && productName.isNotEmpty) return textOf(image['url']);
+              }
+              return '';
+            }
+
+            for (final product in products) {
+              final name = textOf(product['product_full_name'] ?? product['product_name']);
+              final barcode = textOf(product['barcode']);
+              final brand = textOf(product['brand']);
+              final imageUrl = imageFor(product);
+              final identity = barcode.isNotEmpty ? 'barcode:$barcode' : '${normalize(name)}|${normalize(brand)}';
+              if (name.isEmpty || !seenRecords.add('product:$identity')) continue;
+              foundProducts++;
+              _rows.add(_ImportRow(
+                id: 'WEB${(_rows.length + 1).toString().padLeft(6, '0')}',
+                imageUrl: imageUrl, name: name, kind: 'صنف',
+                code: 'ITM${(_rows.length + 1).toString().padLeft(5, '0')}',
+                category: textOf(product['main_category']),
+                subcategory: textOf(product['subcategory']),
+                majorUnit: textOf(product['major_unit']),
+                innerCount: textOf(product['internal_count']),
+                minorUnit: textOf(product['minor_unit']),
+                weight: textOf(product['weight']),
+                brand: brand, barcode: barcode,
+                salePrice: textOf(product['sale_price']),
+                description: textOf(product['description']),
+                sourcePage: next,
+              ));
+            }
+
+            // Fallback for sites without structured Product schema.
+            for (final image in images) {
+              final name = textOf(image['product_full_name'] ?? image['product_name'] ?? image['context_name'] ?? image['alt']);
+              final imageUrl = textOf(image['url']);
+              if (imageUrl.isEmpty || name.isEmpty) continue;
+              final key = 'image:${normalize(name)}|$imageUrl';
+              if (!seenRecords.add(key)) continue;
+              foundProducts++;
+              _rows.add(_ImportRow(
+                id: 'WEB${(_rows.length + 1).toString().padLeft(6, '0')}',
+                imageUrl: imageUrl, name: name,
+                kind: textOf(image['record_type']) == 'فئة' ? 'فئة' : 'صنف',
+                code: 'ITM${(_rows.length + 1).toString().padLeft(5, '0')}',
+                category: textOf(image['main_category']),
+                subcategory: textOf(image['subcategory']),
+                majorUnit: textOf(image['major_unit']),
+                innerCount: textOf(image['internal_count']),
+                minorUnit: textOf(image['minor_unit']),
+                weight: textOf(image['weight']),
+                brand: textOf(image['brand']),
+                barcode: textOf(image['barcode']),
+                salePrice: textOf(image['sale_price']),
+                description: textOf(image['description']),
+                sourcePage: next,
+              ));
+            }
+
+            for (final category in categories) {
+              final name = textOf(category['name']);
+              final categoryUrl = textOf(category['url']);
+              if (name.isEmpty || categoryUrl.isEmpty || !seenRecords.add('category:$categoryUrl')) continue;
+              foundCategories++;
+              _rows.add(_ImportRow(
+                id: 'CAT${(_rows.length + 1).toString().padLeft(6, '0')}',
+                imageUrl: '', name: name, kind: 'فئة',
+                code: 'CAT${(_rows.length + 1).toString().padLeft(5, '0')}',
+                sourcePage: categoryUrl,
+              ));
+            }
+
+            for (final value in links) {
+              final link = textOf(value);
+              final parsed = Uri.tryParse(link);
+              if (parsed == null || !parsed.hasScheme || !['http', 'https'].contains(parsed.scheme) || parsed.host.toLowerCase() != rootHost) continue;
+              if (queued.add(link) && !visited.contains(link) && queue.length + visited.length < 4000) queue.add(link);
+            }
+          }
+        } catch (_) {
+          pageErrors++;
+        }
+        if (mounted) setState(() {
+          _status = 'فرز شامل جارٍ: صفحات مفحوصة ${visited.length} / 4000، سجلات ${_rows.length}، فئات $foundCategories، صور مرشحة $foundImages، أخطاء $pageErrors، متبقي ${queue.length}.';
         });
+        await Future<void>.delayed(const Duration(milliseconds: 1));
       }
+      if (mounted) setState(() {
+        _selectAll = true;
+        final summary = _cancelCrawl ? 'تم إيقاف الفحص بناءً على الطلب' : (visited.length >= 4000 ? 'وصل الفحص إلى حد 4000 صفحة في هذه الجولة' : 'اكتمل المرور على الروابط الداخلية التي أمكن اكتشافها');
+        _status = '$summary. صفحات مفحوصة ${visited.length}، سجلات ${_rows.length}، فئات $foundCategories، أخطاء $pageErrors. راجع البيانات ثم اضغط «حفظ اكسيل».';
+      });
     } catch (e) {
-      if (mounted) setState(() => _status = 'فشل الاستكشاف: ${e.toString().replaceFirst('Exception: ', '')}');
+      if (mounted) setState(() => _status = 'توقف الفرز: $e');
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) setState(() { _busy = false; _crawling = false; });
     }
   }
   String _suggestName(String path) {
@@ -246,34 +329,36 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     base=base.replaceAll(RegExp(r'[-_]+'),' ').replaceAll(RegExp(r'\d{3,}'),' ').trim();
     return base.isEmpty?'اسم يحتاج مراجعة':base;
   }
-  Future<void> _downloadZip() async {
-    final selected=_rows.where((r)=>r.selected).toList();
-    if(selected.isEmpty){setState(()=>_status='حدد صفًا واحدًا على الأقل.');return;}
-    setState(()=>_busy=true);
-    try{
-      final archive=Archive(); final book=Excel.createExcel(); final sheet=book['بيانات الأصناف'];
-      sheet.appendRow(_headers.map((e)=>TextCellValue(e)).toList());
-      var done=0;
-      for(final row in selected){
-        row.bytes ??= await _fetchImage(row.imageUrl);
-        final ext=_extension(row.imageUrl);
-        final fileName='images/${row.id}.$ext';
-        final data=row.toMap()..['image_file']=fileName;
-        sheet.appendRow(_headers.map((h)=>TextCellValue(data[h]??'')).toList());
-        if(row.bytes!=null) archive.addFile(ArchiveFile(fileName,row.bytes!.length,row.bytes!));
-        done++; if(mounted)setState(()=>_status='تجهيز ZIP: $done / ${selected.length}');
+  Future<void> _downloadExcel() async {
+    if (_rows.isEmpty) { setState(() => _status = 'لا توجد بيانات لحفظها. ابدأ فرز الموقع أولًا.'); return; }
+    final selected = _rows.where((r) => r.selected).toList();
+    if (selected.isEmpty) { setState(() => _status = 'حدد صفًا واحدًا على الأقل.'); return; }
+    setState(() => _busy = true);
+    try {
+      final book = Excel.createExcel();
+      final sheet = book['بيانات الأصناف'];
+      sheet.appendRow(_headers.map((h) => TextCellValue(h)).toList());
+      var done = 0;
+      for (final row in selected) {
+        final data = row.toMap();
+        sheet.appendRow(_headers.map((h) => TextCellValue(data[h] ?? '')).toList());
+        done++;
+        if (done % 100 == 0 && mounted) setState(() => _status = 'تجهيز ملف Excel: $done / ${selected.length}');
       }
-      final xlsx=book.encode();
-      if(xlsx==null)throw Exception('تعذر إنشاء ملف Excel');
-      archive.addFile(ArchiveFile('items.xlsx',xlsx.length,xlsx));
-      final manifest=utf8.encode(jsonEncode({'format':'silsila-items-zip-v1','created_at':DateTime.now().toIso8601String(),'rows':selected.length,'images_included':selected.where((r)=>r.bytes!=null).length,'columns':_headers}));
-      archive.addFile(ArchiveFile('manifest.json',manifest.length,manifest));
-      final zipped=ZipEncoder().encode(archive);
-      if(zipped==null)throw Exception('تعذر ضغط الملف');
-      await FileSaver.instance.saveFile(name:'silsila_items_import',bytes:Uint8List.fromList(zipped),fileExtension:'zip',mimeType:MimeType.zip);
-      if(mounted)setState(()=>_status='تم إنشاء ملف ZIP للتنزيل. لم يتم حفظ أي بيانات أو صور في قاعدة البيانات.');
-    }catch(e){if(mounted)setState(()=>_status='تعذر إنشاء الملف: $e');}
-    finally{if(mounted)setState(()=>_busy=false);}
+      final bytes = book.encode();
+      if (bytes == null) throw Exception('تعذر إنشاء ملف Excel.');
+      await FileSaver.instance.saveFile(
+        name: 'silsila_full_catalog_${DateTime.now().toIso8601String().substring(0, 10)}',
+        bytes: Uint8List.fromList(bytes),
+        fileExtension: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      if (mounted) setState(() => _status = 'تم تجهيز Excel وتنزيله على الجهاز. الصفوف: ${selected.length}. يتضمن بيانات الأصناف والفئات والعلامات التجارية والوحدات والأعداد والباركود والأسعار والوصف وروابط الصور وصفحات المصدر.');
+    } catch (e) {
+      if (mounted) setState(() => _status = 'تعذر حفظ Excel: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
   Future<Uint8List?> _fetchImage(String url) async {
     try {
@@ -318,11 +403,12 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                     controller: _url,
                     decoration: const InputDecoration(labelText: 'رابط الموقع', hintText: 'https://example.com', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 10)),
                   )),
-                  FilledButton.icon(onPressed: _busy ? null : _crawl, icon: const Icon(Icons.travel_explore, size: 18), label: const Text('استكشاف الموقع')),
+                  FilledButton.icon(onPressed: _busy ? null : _crawl, icon: const Icon(Icons.travel_explore, size: 18), label: const Text('فرز الموقع بالكامل')),
                   OutlinedButton.icon(onPressed: _busy ? null : _pasteUrl, icon: const Icon(Icons.content_paste, size: 18), label: const Text('لصق الرابط')),
                   OutlinedButton.icon(onPressed: _busy ? null : () => setState(() { _url.clear(); _status = 'تم مسح الرابط.'; }), icon: const Icon(Icons.clear, size: 18), label: const Text('مسح الرابط')),
                   OutlinedButton.icon(onPressed: _busy ? null : _resetExploration, icon: const Icon(Icons.restart_alt, size: 18), label: const Text('إعادة ضبط استكشاف')),
-                  FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black), onPressed: _busy || _rows.isEmpty ? null : _downloadZip, icon: const Icon(Icons.folder_zip, size: 18), label: const Text('إنشاء ZIP')),
+                  FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black), onPressed: _busy || _rows.isEmpty ? null : _downloadExcel, icon: const Icon(Icons.file_download_outlined, size: 18), label: const Text('حفظ اكسيل')),
+                  if (_crawling) OutlinedButton.icon(onPressed: () => setState(() => _cancelCrawl = true), icon: const Icon(Icons.stop_circle_outlined, size: 18), label: const Text('إيقاف الفحص')),
                 ],
               ),
               const SizedBox(height: 6),
@@ -331,7 +417,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
           ),
           Expanded(
             child: _rows.isEmpty
-              ? const Center(child: Text('ستظهر الصور المكتشفة هنا بعد استكشاف الموقع.'))
+              ? const Center(child: Text('ستظهر بيانات الأصناف والفئات والصور بعد بدء الفرز الشامل.'))
                : DataTable2(
                     fixedTopRows: 1,
                     fixedLeftColumns: 4,
