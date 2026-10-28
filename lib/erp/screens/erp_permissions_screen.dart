@@ -478,7 +478,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
   }
   Widget _row(String key,String label,{bool nested=false})=>Container(margin:EdgeInsetsDirectional.only(start:nested?12:0,bottom:19),padding:const EdgeInsets.symmetric(horizontal:6,vertical:8),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:Colors.black12),borderRadius:BorderRadius.circular(8)),child:Row(children:[
     Expanded(flex:3,child:Text(label,style:TextStyle(fontSize:11,fontWeight:nested?FontWeight.w600:FontWeight.w800))),
-    for(final a in _actions)Expanded(flex:1,child:Center(child:Checkbox(value:_cell(key,a),onChanged:_saving?null:(v)=>_setCell(key,a,v??false),activeColor:_permPurple,visualDensity:VisualDensity.compact))),
+    for(final a in _actions)SizedBox(width:48,child:Center(child:Checkbox(shape:const CircleBorder(),value:_cell(key,a),onChanged:_saving?null:(v)=>_setCell(key,a,v??false),activeColor:_permPurple,visualDensity:VisualDensity.compact))),
   ]));
   Widget _section(String main,String section,List<String> pages){
     final k=main+'::'+section,open=_expanded[k]??false;
