@@ -865,7 +865,7 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
           };
         }
       }
-      if (!mounted || bySlot.isEmpty) return;
+      if (!mounted) return;
       final loaded = List<_AdvertisementSlide>.generate(5, (i) {
         final fallback = _fallbackAds[i];
         final data = bySlot['إعلان ${i + 1}'];
@@ -891,8 +891,9 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
     _popupAttempted = true;
     final client = database;
     if (client == null) return;
+    final requestedActivityCode = widget.activityCode;
     try {
-      final rows = await client.rpc('get_silsila_public_popup_ads', params: {'p_activity_code': widget.activityCode});
+      final rows = await client.rpc('get_silsila_public_popup_ads', params: {'p_activity_code': requestedActivityCode});
       final candidates = (rows as List).whereType<Map<String, dynamic>>();
       if (candidates.isEmpty || !mounted) return;
       final row = candidates.first;
@@ -903,7 +904,7 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
       final code = row['target_code']?.toString();
       final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 5).clamp(1, 120).toInt();
       await Future<void>.delayed(const Duration(seconds: 5));
-      if (!mounted) return;
+      if (!mounted || requestedActivityCode != widget.activityCode) return;
       _popupEntry = OverlayEntry(builder: (overlayContext) => Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
