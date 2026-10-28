@@ -98,6 +98,74 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     } finally { if (mounted) setState(() => _loading = false); }
   }
 
+  Future<void> _importRealCategoryImages() async {
+    if (_db == null || (_company ?? '').isEmpty) {
+      setState(() => _error = 'حدد الشركة وسجل الدخول أولًا.');
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('استيراد صور حقيقية للفئات'),
+        content: const Text('سيتم البحث عن صور فوتوغرافية مناسبة من Wikimedia Commons لكل فئات جميع الأنشطة، وحفظ الصورة ومصدرها وبيانات الترخيص داخل قاعدة البيانات. الصور الحقيقية الموجودة لن يتم استبدالها. قد تستغرق العملية وقتًا حسب عدد الفئات وتوفر الصور المطابقة.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('ابدأ الاستيراد')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() { _saving = true; _error = null; _message = 'جارٍ تجهيز استيراد الصور الحقيقية…'; });
+    var imported = 0, notFound = 0, errors = 0, alreadyReal = 0, completed = 0, total = 0;
+    try {
+      final activities = _activities.toList();
+      for (final activity in activities) {
+        final activityCode = (activity['code'] ?? '').trim();
+        if (activityCode.isEmpty) continue;
+        final rows = await _db!.from('erp_item_categories')
+          .select('id')
+          .eq('company_id', _company!)
+          .eq('activity_code', activityCode)
+          .order('category_code');
+        final count = (rows as List).length;
+        total += count;
+        for (var offset = 0; offset < count; offset += 12) {
+          if (!mounted) return;
+          final response = await _db!.functions.invoke(
+            'import-real-category-images',
+            body: <String, dynamic>{
+              'company_id': _company,
+              'activity_code': activityCode,
+              'offset': offset,
+              'limit': 12,
+            },
+          );
+          if (response.status < 200 || response.status >= 300) {
+            throw StateError('تعذر استيراد صور نشاط $activityCode (HTTP ${response.status}): ${response.data}');
+          }
+          final data = response.data;
+          if (data is Map) {
+            imported += int.tryParse('${data['imported'] ?? 0}') ?? 0;
+            notFound += int.tryParse('${data['not_found'] ?? 0}') ?? 0;
+            errors += int.tryParse('${data['errors'] ?? 0}') ?? 0;
+            alreadyReal += int.tryParse('${data['already_real'] ?? 0}') ?? 0;
+          }
+          completed += (count - offset) >= 12 ? 12 : (count - offset);
+          if (mounted) setState(() => _message =
+            'استيراد صور الفئات الحقيقية: $completed من $total فئة تم فحصها حتى الآن. تم استيراد $imported صورة فوتوغرافية؛ غير المتاحة $notFound.');
+          await Future<void>.delayed(const Duration(milliseconds: 250));
+        }
+      }
+      await _load();
+      if (mounted) setState(() => _message =
+        'انتهى فحص الفئات: تم استيراد $imported صورة حقيقية، و$alreadyReal صورة حقيقية كانت موجودة، و$notFound فئة لم يُعثر لها على صورة مناسبة، و$errors أخطاء استيراد. صور المصدر والترخيص محفوظة مع الصورة.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'توقف استيراد الصور الحقيقية: $e. يمكنك إعادة المحاولة؛ الصور التي تم حفظها لن تُستبدل.');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _migrateImages() async {
     if (_db == null) {
       setState(() => _error = 'اتصال قاعدة البيانات غير متاح.');
@@ -447,6 +515,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           _task('عرض شجرة',Icons.account_tree_outlined,()=>setState(()=>_viewMode='tree')),
           _task('عرض جدول',Icons.table_rows_outlined,()=>setState(()=>_viewMode='grid')),
           _task('نقل الصور للقاعدة',Icons.cloud_download_outlined,_saving || _loading ? null : _migrateImages),
+          _task('صور حقيقية',Icons.photo_library_outlined,_saving || _loading ? null : _importRealCategoryImages),
           _task('إضافة جديد',Icons.add,_saving ? null : _add),
           _task('حفظ',Icons.save,_saving || !_editing ? null:_save),
           _task('تعديل',Icons.edit,_saving || _editing ? null:()=>setState(()=>_editing=true)),
