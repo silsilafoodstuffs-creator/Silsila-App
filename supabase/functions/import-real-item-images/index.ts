@@ -31,33 +31,38 @@ async function findCommonsImage(query: string): Promise<{bytes:Uint8Array; mime:
   url.searchParams.set("generator","search");
   url.searchParams.set("gsrsearch", query + " filetype:bitmap");
   url.searchParams.set("gsrnamespace","6");
-  url.searchParams.set("gsrlimit","10");
+  url.searchParams.set("gsrlimit","6");
   url.searchParams.set("prop","imageinfo");
   url.searchParams.set("iiprop","url|mime|size|extmetadata");
   url.searchParams.set("iiurlwidth","800");
   url.searchParams.set("format","json");
-  const sr = await fetch(url,{headers:{"User-Agent":"SilsilaERP/1.0 (catalog image import)"},signal:AbortSignal.timeout(12000)});
+  const sr = await fetch(url,{headers:{"User-Agent":"SilsilaERP/1.0 (catalog image import)"},signal:AbortSignal.timeout(10000)});
   if (!sr.ok) throw new Error("Wikimedia search HTTP " + sr.status);
   const json = await sr.json();
   const pages = Object.values(json?.query?.pages ?? {}) as Array<Record<string,unknown>>;
-  for (const page of pages) {
+  const candidates = pages.map(page => {
     const info = (page.imageinfo as Array<Record<string,unknown>>|undefined)?.[0];
-    if (!info || !String(info.mime ?? "").startsWith("image/")) continue;
-    const sourceUrl = String(info.thumburl ?? info.url ?? "");
-    if (!sourceUrl.startsWith("https://")) continue;
-    const response = await fetch(sourceUrl,{headers:{"User-Agent":"SilsilaERP/1.0 (catalog image import)"},signal:AbortSignal.timeout(15000)});
-    if (!response.ok) continue;
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.length < 5000 || bytes.length > 5*1024*1024) continue;
-    const mime = rasterMime(bytes);
-    if (!mime) continue;
-    const meta = (info.extmetadata ?? {}) as Record<string,{value?:string}>;
-    const license = clean(meta.LicenseShortName?.value ?? "Wikimedia Commons");
-    const artist = clean(meta.Artist?.value ?? meta.Credit?.value ?? "Wikimedia Commons contributor").slice(0,250);
-    const licenseUrl = clean(meta.LicenseUrl?.value ?? "https://commons.wikimedia.org/");
-    return {bytes,mime,source:String(info.descriptionurl ?? page.title ?? sourceUrl),attribution:artist+" — "+license+" ("+licenseUrl+")"};
-  }
-  return null;
+    return info ? {page,info} : null;
+  }).filter((x): x is {page:Record<string,unknown>;info:Record<string,unknown>} => !!x)
+    .filter(({info}) => String(info.mime ?? "").startsWith("image/") && String(info.thumburl ?? info.url ?? "").startsWith("https://"))
+    .slice(0,4);
+  const matches = await Promise.all(candidates.map(async ({page,info}) => {
+    try {
+      const sourceUrl = String(info.thumburl ?? info.url ?? "");
+      const response = await fetch(sourceUrl,{headers:{"User-Agent":"SilsilaERP/1.0 (catalog image import)"},signal:AbortSignal.timeout(12000)});
+      if (!response.ok) return null;
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.length < 5000 || bytes.length > 5*1024*1024) return null;
+      const mime = rasterMime(bytes);
+      if (!mime) return null;
+      const meta = (info.extmetadata ?? {}) as Record<string,{value?:string}>;
+      const license = clean(meta.LicenseShortName?.value ?? "Wikimedia Commons");
+      const artist = clean(meta.Artist?.value ?? meta.Credit?.value ?? "Wikimedia Commons contributor").slice(0,250);
+      const licenseUrl = clean(meta.LicenseUrl?.value ?? "https://commons.wikimedia.org/");
+      return {bytes,mime,source:String(info.descriptionurl ?? page.title ?? sourceUrl),attribution:artist+" — "+license+" ("+licenseUrl+")"};
+    } catch { return null; }
+  }));
+  return matches.find((x): x is NonNullable<typeof x> => x !== null) ?? null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -76,7 +81,7 @@ Deno.serve(async (req: Request) => {
   try { body = await req.json(); } catch { return respond({error:"بيانات الطلب غير صالحة."},400); }
   const companyId = String(body.company_id ?? "");
   const offset = Math.max(0,Math.floor(Number(body.offset ?? 0)));
-  const limit = Math.min(8,Math.max(1,Math.floor(Number(body.limit ?? 8))));
+  const limit = Math.min(4,Math.max(1,Math.floor(Number(body.limit ?? 4))));
   if (!/^[0-9a-f-]{36}$/i.test(companyId)) return respond({error:"معرّف الشركة غير صالح."},400);
   const admin = createClient(supabaseUrl,serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:membership,error:membershipError} = await admin.from("erp_company_members").select("company_id")
