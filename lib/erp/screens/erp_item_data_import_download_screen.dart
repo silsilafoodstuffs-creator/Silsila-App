@@ -212,7 +212,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
           if (response.status >= 400 || payload is! Map || payload['error'] != null) {
             pageErrors++;
           } else {
-            final actualPage = Uri.tryParse(textOf(payload['page']));
+            final actualPage = Uri.tryParse(payload['page']?.toString() ?? '');
             if (actualPage != null) siteHosts.add(actualPage.host.toLowerCase());
             final pageProducts = payload['products'];
             final pageImages = payload['images'];
