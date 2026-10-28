@@ -326,7 +326,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
           pageErrors++;
         }
         if (mounted) setState(() {
-          _status = 'فرز شامل جارٍ: صفحات مفحوصة ${visited.length} / 4000، سجلات ${_rows.length}، فئات $foundCategories، صور مرشحة $foundImages، أخطاء $pageErrors، متبقي ${queue.length}.';
+          _status = 'فرز شامل جارٍ: صفحات مفحوصة ${visited.length} / 4000، أصناف مرشحة $foundProducts، إجمالي السجلات ${_rows.length}، فئات $foundCategories، صور مرشحة $foundImages، أخطاء $pageErrors، متبقي ${queue.length}.';
         });
         await Future<void>.delayed(const Duration(milliseconds: 1));
       }
