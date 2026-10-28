@@ -72,7 +72,7 @@ class ErpAppAssetStorage {
     }
     const supportedAssetTypes = {
       'app_logo', 'splash', 'app_icon', 'category', 'item',
-      'supplier', 'customer', 'shipping_company', 'banner_ad', 'popup_ad', 'other',
+      'supplier', 'customer', 'shipping_company', 'banner_ad', 'popup_ad', 'intro_ad', 'other',
     };
     final type = assetType ?? 'other';
     if (!supportedAssetTypes.contains(type)) {
