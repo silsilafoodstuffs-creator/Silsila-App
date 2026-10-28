@@ -526,19 +526,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       sheet.appendRow(cells);
       sheet.setRowHeight(done + 1, 60);
       final imageBytes = row.bytes;
-      if (imageBytes != null && imageBytes.isNotEmpty) {
-        try {
-          sheet.insertImage(
-            imageBytes,
-            anchor: CellIndex.indexByString('B${done + 2}'),
-            width: 76,
-            height: 76,
-          );
-          imageCount++;
-        } catch (_) {
-          // Keep the row and its downloadable image even if a format is unsupported.
-        }
-      }
+      if (imageBytes != null && imageBytes.isNotEmpty) imageCount++;
       done++;
       if (done % 20 == 0 && mounted) {
         setState(() => _status = 'إنشاء ملف Excel: $done / ${selected.length}، صور مضمّنة $imageCount');
