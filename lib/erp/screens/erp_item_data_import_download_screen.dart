@@ -352,15 +352,23 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     return base.length > 100 ? base.substring(0, 100).trim() : base;
   }
 
-  String _imageExtension(Uint8List bytes) {
-    if (bytes.length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50) return 'png';
+  String? _verifiedImageExtension(Uint8List bytes) {
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4e &&
+        bytes[3] == 0x47 && bytes[4] == 0x0d && bytes[5] == 0x0a &&
+        bytes[6] == 0x1a && bytes[7] == 0x0a) return 'png';
     if (bytes.length >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff) return 'jpg';
-    if (bytes.length >= 6 && String.fromCharCodes(bytes.take(6)) == 'GIF89a') return 'gif';
+    if (bytes.length >= 6 &&
+        (String.fromCharCodes(bytes.take(6)) == 'GIF87a' ||
+         String.fromCharCodes(bytes.take(6)) == 'GIF89a')) return 'gif';
     if (bytes.length >= 2 && bytes[0] == 0x42 && bytes[1] == 0x4d) return 'bmp';
     if (bytes.length >= 12 && String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF' &&
         String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP') return 'webp';
-    return 'jpg';
+    return null;
   }
+
+  String _imageExtension(Uint8List bytes) =>
+      _verifiedImageExtension(bytes) ?? 'jpg';
 
   Future<Uint8List?> _downloadImageBytes(_ImportRow row) async {
     if (row.bytes != null && row.bytes!.isNotEmpty) return row.bytes;
@@ -373,7 +381,9 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       final payload = response.data;
       if (response.status >= 400 || payload is! Map || payload['base64'] is! String) return null;
       final bytes = Uint8List.fromList(base64Decode(payload['base64'] as String));
-      if (bytes.isEmpty) return null;
+      // Some source sites return an HTML challenge/error page with HTTP 200.
+      // Never embed or archive those bytes as if they were a real product image.
+      if (_verifiedImageExtension(bytes) == null) return null;
       row.bytes = bytes;
       return bytes;
     } catch (_) {
