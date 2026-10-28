@@ -175,10 +175,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
   }
 
-  Future<void> _pickImage(Map<String,dynamic> row) async {
+  Future<void> _pickImage(Map<String,dynamic> row, {ImageSource? source}) async {
     final id = _s(row['id']);
     try {
-      final source = await showModalBottomSheet<ImageSource>(context: context, builder: (c) => SafeArea(child: Column(
+      source ??= await showModalBottomSheet<ImageSource>(context: context, builder: (c) => SafeArea(child: Column(
         mainAxisSize: MainAxisSize.min, children: [
           ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('اختيار صورة من الجهاز'), onTap: () => Navigator.pop(c, ImageSource.gallery)),
           ListTile(leading: const Icon(Icons.photo_camera_outlined), title: const Text('تصوير صورة للفئة'), onTap: () => Navigator.pop(c, ImageSource.camera)),
@@ -204,6 +204,40 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         (i) => int.parse(raw.substring(prefixLength + i * 2, prefixLength + 2 + i * 2), radix: 16),
       ));
     } catch (_) { return null; }
+  }
+
+  Uint8List? _categoryImageBytes(Map<String,dynamic> row) =>
+      _imageBytes[_s(row['id'])] ?? _decodeBytea(row['image_data']);
+
+  Widget _imagePreview(Map<String,dynamic> row, {double size = 54}) {
+    final bytes = _categoryImageBytes(row);
+    return Container(
+      width: size, height: size,
+      alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFD8CBE7)),
+      ),
+      child: bytes != null && bytes.isNotEmpty
+          ? Image.memory(bytes, fit: BoxFit.cover, width: size, height: size,
+              errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38))
+          : const Icon(Icons.category_outlined, color: Color(0xFF9A86B5), size: 25),
+    );
+  }
+
+  void _removeImage(Map<String,dynamic> row) {
+    final id = _s(row['id']);
+    setState(() {
+      _imageBytes.remove(id);
+      _imageNames.remove(id);
+      row['image_data'] = null;
+      row['image_mime_type'] = null;
+      row['image_url'] = null;
+      row['_remove_image'] = true;
+      _selectedId = id;
+    });
   }
 
   String? _imageMime(Map<String,dynamic> row) {
@@ -247,7 +281,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         final payload = <String,dynamic>{
           'company_id':_company, 'activity_code':_selectedActivityCode, 'category_code':_s(row['category_code']), 'category_name':ar,
           'category_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
-          'show_in_app':row['show_in_app'] == true, 'image_url':selectedBytes != null ? null : row['image_url'],
+          'show_in_app':row['show_in_app'] == true,
+          'image_url':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_url'],
+          if (row['_remove_image'] == true) ...{'image_data':null, 'image_mime_type':null},
           if (selectedBytes != null && selectedBytes.isNotEmpty) ...{
             'image_data':_byteaHex(selectedBytes), 'image_mime_type':_imageMime(row),
           },
@@ -328,12 +364,17 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           Expanded(flex: 2, child: TextField(controller: en, enabled: _editing,
             decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة إنجليزي'),
             onTap: () => setState(() => _selectedId = id))),
+          _imagePreview(row, size: 48),
           Tooltip(message: 'نشط', child: Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, activeColor: _catPurple,
             onChanged: _editing ? (v) => setState(() => row['is_active'] = v == true) : null)),
           Tooltip(message: 'ظهور في التطبيق', child: Checkbox(shape: const CircleBorder(), value: row['show_in_app'] == true, activeColor: _catOrange,
             onChanged: _editing ? (v) => setState(() => row['show_in_app'] = v == true) : null)),
-          IconButton(tooltip: 'اختيار أو تصوير صورة', onPressed: _editing ? () => _pickImage(row) : null,
-            icon: Icon(_imageBytes[id] != null || _decodeBytea(row['image_data']) != null ? Icons.image : Icons.add_a_photo_outlined, color: _catPurple)),
+          IconButton(tooltip: 'استيراد صورة من الجهاز', onPressed: _editing ? () => _pickImage(row, source: ImageSource.gallery) : null,
+            icon: const Icon(Icons.photo_library_outlined, color: _catPurple)),
+          IconButton(tooltip: 'تصوير صورة بالكاميرا', onPressed: _editing ? () => _pickImage(row, source: ImageSource.camera) : null,
+            icon: const Icon(Icons.photo_camera_outlined, color: _catOrange)),
+          IconButton(tooltip: 'حذف الصورة', onPressed: _editing && _categoryImageBytes(row) != null ? () => _removeImage(row) : null,
+            icon: const Icon(Icons.hide_image_outlined, color: Colors.redAccent)),
           if (level < 2) IconButton(tooltip: level == 0 ? 'إضافة فئة فرعية' : 'إضافة فئة ثانوية',
             onPressed: _saving ? null : () { setState(() { _level = level + 1; _editing = true; }); _add(parentIdOverride: id); },
             icon: const Icon(Icons.add_circle_outline, color: _catPurple)),
@@ -396,14 +437,34 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
                 .map((root) => _treeNode(root, 0)).toList())
           : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
               headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-              columns: const [DataColumn(label: Text('كود الفئة')), DataColumn(label: Text('اسم الفئة عربي')), DataColumn(label: Text('اسم الفئة إنجليزي')), DataColumn(label: Text('المستوى')), DataColumn(label: Text('نشط')), DataColumn(label: Text('في التطبيق'))],
-              rows: _all.where((r) => _matchesSearch(r)).map((r) => DataRow(
-                color: WidgetStateProperty.all(_rowLevel(r) == 0 ? const Color(0xFFEDE1F8) : _rowLevel(r) == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3)),
-                cells: [
-                  DataCell(Text(_s(r['category_code']))), DataCell(Text(_s(r['category_name']))), DataCell(Text(_s(r['category_name_en']))),
-                  DataCell(Text(['رئيسية','فرعية','ثانوية'][_rowLevel(r)])),
-                  DataCell(Text(r['is_active'] == true ? 'نشط' : 'غير نشط')), DataCell(Text(r['show_in_app'] == true ? 'نعم' : 'لا')),
-                ])).toList(),
+              columns: const [
+                DataColumn(label: Text('كود الفئة')), DataColumn(label: Text('اسم الفئة عربي')),
+                DataColumn(label: Text('اسم الفئة إنجليزي')), DataColumn(label: Text('الصورة')),
+                DataColumn(label: Text('المستوى')), DataColumn(label: Text('نشط')),
+                DataColumn(label: Text('ظهور في التطبيق')), DataColumn(label: Text('إدارة الصورة')),
+              ],
+              rows: _all.where((r) => _matchesSearch(r)).map((r) {
+                final id = _s(r['id']);
+                return DataRow(
+                  selected: _selectedId == id,
+                  onSelectChanged: (_) => setState(() => _selectedId = id),
+                  color: WidgetStateProperty.all(_rowLevel(r) == 0 ? const Color(0xFFEDE1F8) : _rowLevel(r) == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3)),
+                  cells: [
+                    DataCell(Text(_s(r['category_code']))),
+                    DataCell(SizedBox(width: 170, child: TextField(controller: _ar.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
+                    DataCell(SizedBox(width: 150, child: TextField(controller: _en.putIfAbsent(id, () => TextEditingController(text: _s(r['category_name_en']))), enabled: _editing, decoration: const InputDecoration(isDense: true, border: InputBorder.none)))),
+                    DataCell(_imagePreview(r, size: 48)),
+                    DataCell(Text(['رئيسية','فرعية','ثانوية'][_rowLevel(r)])),
+                    DataCell(Checkbox(shape: const CircleBorder(), value: r['is_active'] == true, activeColor: _catPurple, onChanged: _editing ? (v) => setState(() => r['is_active'] = v == true) : null)),
+                    DataCell(Checkbox(shape: const CircleBorder(), value: r['show_in_app'] == true, activeColor: _catOrange, onChanged: _editing ? (v) => setState(() => r['show_in_app'] = v == true) : null)),
+                    DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
+                      IconButton(tooltip: 'استيراد صورة', onPressed: _editing ? () => _pickImage(r, source: ImageSource.gallery) : null, icon: const Icon(Icons.photo_library_outlined, color: _catPurple)),
+                      IconButton(tooltip: 'تصوير بالكاميرا', onPressed: _editing ? () => _pickImage(r, source: ImageSource.camera) : null, icon: const Icon(Icons.photo_camera_outlined, color: _catOrange)),
+                      IconButton(tooltip: 'حذف الصورة', onPressed: _editing && _categoryImageBytes(r) != null ? () => _removeImage(r) : null, icon: const Icon(Icons.hide_image_outlined, color: Colors.redAccent)),
+                    ])),
+                  ],
+                );
+              }).toList(),
             )))),
     ],
   ));
