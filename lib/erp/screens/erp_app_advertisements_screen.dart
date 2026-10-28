@@ -299,9 +299,9 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         Card(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade300)),
-          child: const Padding(
-            padding: EdgeInsets.all(14),
-            child: Text(_selectedTab == 0 ? 'استخدم صورًا أفقية بنسبة 16:9 تقريبًا. ينتقل الهيدر تلقائيًا كل ثانيتين. الصيغ JPG وPNG وWEBP وGIF وبحد أقصى 8 ميجابايت.' : 'يظهر الإعلان المنبثق في منتصف الشاشة بحواف دائرية دون تغطية التطبيق، ويمكن إغلاقه. حدد مدة الظهور بالثواني ووجهة الضغط.', style: TextStyle(height: 1.6)),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Text(_selectedTab == 0 ? 'استخدم صورًا أفقية بنسبة 16:9 تقريبًا. ينتقل الهيدر تلقائيًا كل ثانيتين. الصيغ JPG وPNG وWEBP وGIF وبحد أقصى 8 ميجابايت.' : 'يظهر الإعلان المنبثق في منتصف الشاشة بحواف دائرية دون تغطية التطبيق، ويمكن إغلاقه. حدد مدة الظهور بالثواني ووجهة الضغط.', style: const TextStyle(height: 1.6)),
           ),
         ),
         if (_message != null) _notice(_message!, Colors.green),
@@ -355,14 +355,16 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                   decoration: InputDecoration(labelText: (_targetTypes[slot] ?? asset?.targetType ?? 'none') == 'category' ? 'كود الفئة' : 'كود المورد', hintText: 'اختياري عند اختيار بدون توجيه', border: const OutlineInputBorder(), isDense: true),
                   onChanged: (value) => _targetCodes[slot] = value,
                 ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  key: ValueKey('duration-$slot-${_selectedTab}'),
-                  initialValue: (_durations[slot] ?? asset?.durationSeconds ?? 5).toString(),
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(labelText: _selectedTab == 1 ? 'مدة ظهور الإعلان بالثواني' : 'مدة الانتقال بالثواني', border: const OutlineInputBorder(), isDense: true),
-                  onChanged: (value) => _durations[slot] = int.tryParse(value) ?? 5,
-                ),
+                if (_selectedTab == 1) ...[
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    key: ValueKey('duration-$slot-${_selectedTab}'),
+                    initialValue: (_durations[slot] ?? asset?.durationSeconds ?? 5).toString(),
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'مدة ظهور الإعلان بالثواني (1 إلى 120)', border: OutlineInputBorder(), isDense: true),
+                    onChanged: (value) => _durations[slot] = int.tryParse(value) ?? 5,
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   FilledButton.icon(
