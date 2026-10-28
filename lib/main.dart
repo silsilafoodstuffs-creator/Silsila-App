@@ -70,6 +70,7 @@ SupabaseClient? get database {
 }
 
 List<String> activityTypes = const <String>[];
+bool _startupAdvertisementActive = false;
 
 const egyptGovernorates = [
   'القاهرة',
@@ -895,15 +896,18 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
     try {
       final rows = await client.rpc('get_silsila_public_popup_ads', params: {'p_activity_code': requestedActivityCode});
       final candidates = (rows as List).whereType<Map<String, dynamic>>();
-      if (candidates.isEmpty || !mounted) return;
+      if (candidates.isEmpty || !mounted) { _startupAdvertisementActive = false; return; }
       final row = candidates.first;
       final path = row['storage_path']?.toString() ?? '';
-      if (path.isEmpty) return;
+      if (path.isEmpty) { _startupAdvertisementActive = false; return; }
       final url = client.storage.from('silsila-public-ads').getPublicUrl(path);
       final type = row['target_type']?.toString() ?? 'none';
       final code = row['target_code']?.toString();
       final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 5).clamp(1, 120).toInt();
-      await Future<void>.delayed(const Duration(seconds: 5));
+      while (_startupAdvertisementActive && mounted) {
+        await Future<void>.delayed(const Duration(milliseconds: 250));
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 700));
       if (!mounted || requestedActivityCode != widget.activityCode) return;
       _popupEntry = OverlayEntry(builder: (overlayContext) => Center(
             child: Padding(
@@ -1129,9 +1133,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
-    _introAdTimer?.cancel();
-    _introAdEntry?.remove();
-    _introVideoController?.dispose();
+    _closeStartupAdvertisement();
     searchController.dispose();
     super.dispose();
   }
@@ -1163,7 +1165,8 @@ class _MainShellState extends State<MainShell> {
 
   Future<void> _showStartupAdvertisement(String? activityCode) async {
     final client = database;
-    if (client == null) return;
+    _startupAdvertisementActive = true;
+    if (client == null) { _startupAdvertisementActive = false; return; }
     try {
       final rows = await client.rpc('get_silsila_public_intro_ad', params: {
         'p_activity_code': activityCode,
@@ -1183,7 +1186,7 @@ class _MainShellState extends State<MainShell> {
         await video.setLooping(true);
         await video.setVolume(0);
         await video.play();
-        if (!mounted) { await video.dispose(); return; }
+        if (!mounted) { await video.dispose(); _startupAdvertisementActive = false; return; }
         _introVideoController = video;
       }
       await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -1243,6 +1246,7 @@ class _MainShellState extends State<MainShell> {
     _introAdEntry = null;
     _introVideoController?.dispose();
     _introVideoController = null;
+    _startupAdvertisementActive = false;
   }
 
   Future<void> _changeActivity(String nextActivity) async {
