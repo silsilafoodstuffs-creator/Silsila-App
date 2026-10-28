@@ -112,6 +112,10 @@ function productMetadata(html: string, base: URL) {
       const weightRaw = obj.weight;
       const weight = weightRaw && typeof weightRaw === "object" ? String((weightRaw as Record<string, unknown>).value ?? "") + " " + String(((weightRaw as Record<string, unknown>).unitCode ?? (weightRaw as Record<string, unknown>).unitText) ?? "") : String(weightRaw ?? obj.size ?? "");
       const productName = String(obj.name ?? "").trim();
+      const categoryRaw = typeof obj.category === "string" ? obj.category :
+        Array.isArray(obj.category) ? obj.category.map((x) => typeof x === "string" ? x : String((x as Record<string, unknown>)?.name ?? "")).filter(Boolean).join(" > ") :
+        obj.category && typeof obj.category === "object" ? String((obj.category as Record<string, unknown>).name ?? "") : "";
+      const categoryParts = categoryRaw.split(/\\s*(?:>|\\/|\\||»|›)\\s*/).map((x) => x.trim()).filter(Boolean);
       const mainUnit = String(obj.unitText ?? obj.unit ?? propertyValue(obj, ["mainunit", "sellingunit", "unitname", "وحدةرئيسية", "وحدةالبيع"])).trim();
       const subUnit = propertyValue(obj, ["minorunit", "subunit", "smallunit", "وحدةفرعية"]);
       const internalCount = propertyValue(obj, [
@@ -131,8 +135,10 @@ function productMetadata(html: string, base: URL) {
         internal_count: internalCount,
         other_units: propertyValue(obj, ["otherunits", "units", "وحداتأخرى"]),
         sale_price: String(offer.price ?? offer.lowPrice ?? ""),
-        main_category: String(obj.category ?? ""),
-        subcategory: "",
+        category_path: categoryParts.join(" > "),
+        main_category: categoryParts[0] ?? categoryRaw,
+        subcategory: categoryParts[1] ?? "",
+        third_category: categoryParts[2] ?? "",
         brand,
         weight: weight.trim(),
         description: String(obj.description ?? ""),
