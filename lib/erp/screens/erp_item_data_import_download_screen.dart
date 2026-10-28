@@ -169,6 +169,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   bool _busy = false, _selectAll = true, _crawling = false, _cancelCrawl = false;
   String _status = 'أدخل رابط الموقع لفرز جميع الصفحات والمنتجات والفئات.';
   static const _headers = ['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','brand','barcode','sale_price','major_unit','inner_count','minor_unit','weight','length','width','height','description','source_page'];
+  static const _headerLabels = ['المعرف','الصورة','رابط الصورة','اسم الصنف / الفئة','نوع السجل','نوع الكود','كود الصنف / الفئة','الفئة الرئيسية','الفئة الفرعية','البراند / الماركة','الباركود','السعر','الوحدة الكبرى','العدد الداخلي','الوحدة الصغرى','الوزن','الطول','العرض','الارتفاع','الوصف','صفحة المصدر'];
   @override void dispose(){_url.dispose();super.dispose();}
   Future<void> _pasteUrl() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
@@ -340,11 +341,22 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     try {
       final book = Excel.createExcel();
       final sheet = book['بيانات الأصناف'];
-      sheet.appendRow(_headers.map((h) => TextCellValue(h)).toList());
+      sheet.appendRow(_headerLabels.map((h) => TextCellValue(h)).toList());
       var done = 0;
       for (final row in selected) {
         final data = row.toMap();
-        sheet.appendRow(_headers.map((h) => TextCellValue(data[h] ?? '')).toList());
+        final cells = <CellValue>[];
+        for (final header in _headers) {
+          if (header == 'image_file' && row.imageUrl.isNotEmpty) {
+            final safeImageUrl = row.imageUrl.replaceAll('"', '""');
+            // Excel 365 renders the source image in the worksheet; the adjacent
+            // URL column preserves the direct source for other spreadsheet apps.
+            cells.add(FormulaCellValue('IMAGE("$safeImageUrl")'));
+          } else {
+            cells.add(TextCellValue(data[header] ?? ''));
+          }
+        }
+        sheet.appendRow(cells);
         done++;
         if (done % 100 == 0 && mounted) setState(() => _status = 'تجهيز ملف Excel: $done / ${selected.length}');
       }
