@@ -1255,6 +1255,11 @@ class _MainShellState extends State<MainShell> {
       adSupplierTargetId = null;
       currentActivityCode = null;
     });
+    loadLiveProducts();
+    loadLiveSuppliers();
+    loadLiveCustomers();
+    loadLiveShippingCompanies();
+    loadLiveCategories();
     final selected = await ActivityService().findActivity(nextActivity);
     if (!mounted) return;
     setState(() => currentActivityCode = selected?['code']?.toString());
@@ -1992,18 +1997,6 @@ class _MainShellState extends State<MainShell> {
                   onSelected: (_) {
                     if (activity == type) return;
                     _changeActivity(type);
-                    /*setState(() {
-                      activity = type;
-                      selectedCategory = 'الكل';
-                      liveProducts = [];
-                      liveSuppliers = [];
-                      liveCategoryNames = [];
-                    });
-                    loadLiveProducts();
-                    loadLiveSuppliers();
-                    loadLiveCustomers();
-                    loadLiveShippingCompanies();
-                    loadLiveCategories();
                   },
                 ),
               );
