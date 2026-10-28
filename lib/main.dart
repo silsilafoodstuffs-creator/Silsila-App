@@ -5525,7 +5525,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         : 'عميل';
     activity = activityTypes.contains(widget.initialActivity)
         ? widget.initialActivity
-        : activityTypes.first;
+        : (activityTypes.isNotEmpty ? activityTypes.first : '');
   }
   String? customerType;
   String? supplierType;
@@ -6017,7 +6017,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool busy = false;
   bool obscurePassword = true;
   bool rememberEmail = false;
-  String activity = activityTypes.first;
+  String activity = activityTypes.isNotEmpty ? activityTypes.first : '';
   String accountType = 'عميل';
   String activityUserType = 'مستخدم رئيسي للنشاط';
 
@@ -6254,7 +6254,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
-                    value: activity,
+                    value: activityTypes.contains(activity) ? activity : null,
                     isExpanded: true,
                     decoration: const InputDecoration(
                       labelText: 'نوع النشاط',
