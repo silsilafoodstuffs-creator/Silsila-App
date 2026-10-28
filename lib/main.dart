@@ -888,13 +888,10 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
       final url = client.storage.from('silsila-public-ads').getPublicUrl(path);
       final type = row['target_type']?.toString() ?? 'none';
       final code = row['target_code']?.toString();
-      final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 5).clamp(1, 120);
+      final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 5).clamp(1, 120).toInt();
       await Future<void>.delayed(const Duration(milliseconds: 700));
       if (!mounted) return;
-      _popupEntry = OverlayEntry(builder: (overlayContext) => Positioned.fill(
-        child: Material(
-          color: Colors.transparent,
-          child: Center(
+      _popupEntry = OverlayEntry(builder: (overlayContext) => Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
               child: ConstrainedBox(
@@ -931,9 +928,7 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
                 ),
               ),
             ),
-          ),
-        ),
-      ));
+          ));
       Overlay.of(context).insert(_popupEntry!);
       _popupTimer?.cancel();
       _popupTimer = Timer(Duration(seconds: duration), _closePopup);
@@ -1071,6 +1066,7 @@ class _MainShellState extends State<MainShell> {
   final Set<String> expandedCatalogBrands = <String>{};
   String activity = activityTypes.isNotEmpty ? activityTypes.first : 'مواد غذائية';
   String selectedCategory = 'الكل';
+  String? adSupplierTargetId;
   String search = '';
   String accountName = 'تاجر سلسلة';
   final favorites = <String>{};
@@ -1792,11 +1788,31 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
         const SizedBox(height: 8),
-        _HomeAdvertisementsCarousel(onDestinationTap: (type, code) {
+        _HomeAdvertisementsCarousel(onDestinationTap: (type, code) async {
           if (type == 'category') {
-            setState(() { selectedEntity = 'فئات'; selectedCategory = code ?? ''; browseSubcategory = code ?? 'الكل'; });
+            try {
+              final rows = await categoryService.getCategories(limit: 500);
+              final match = rows.where((row) => (row['category_code'] ?? row['code'] ?? '').toString().trim() == (code ?? '').trim()).firstOrNull;
+              final name = match?['category_name']?.toString() ?? match?['name']?.toString();
+              if (!mounted) return;
+              setState(() {
+                selectedEntity = 'فئات';
+                selectedCategory = name ?? 'الكل';
+                browseSubcategory = name ?? 'الكل';
+                adSupplierTargetId = null;
+              });
+            } catch (_) {
+              if (!mounted) return;
+              setState(() { selectedEntity = 'فئات'; selectedCategory = 'الكل'; browseSubcategory = 'الكل'; });
+            }
           } else if (type == 'supplier') {
-            setState(() { selectedEntity = 'موردين'; browseSubcategory = 'الكل'; });
+            if (!mounted) return;
+            setState(() {
+              selectedEntity = 'موردين';
+              browseSubcategory = 'الكل';
+              adSupplierTargetId = (code ?? '').trim().isEmpty ? null : code!.trim();
+              search = '';
+            });
           }
         }),
         const SizedBox(height: 12),
@@ -2109,7 +2125,9 @@ class _MainShellState extends State<MainShell> {
                   supplier['classification_name'] ?? supplier['classification'] ?? '').toString();
               final classificationMatch = browseSubcategory == 'الكل' ||
                   classification == browseSubcategory;
-              return classificationMatch &&
+              final targetMatch = adSupplierTargetId == null ||
+                  (supplier['id'] ?? '').toString() == adSupplierTargetId;
+              return classificationMatch && targetMatch &&
                   (search.isEmpty || name.contains(search.toLowerCase()));
             }).toList()
               ..sort((a, b) => (a['full_name'] ?? '').toString().toLowerCase()
