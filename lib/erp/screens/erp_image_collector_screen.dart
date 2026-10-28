@@ -735,7 +735,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     var alreadyReal = 0;
     var notFound = 0;
     var errors = 0;
-    const batchSize = 12;
+    const batchSize = 8;
     try {
       final company = await _activeCompanyId();
       while (true) {
