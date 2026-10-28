@@ -111,37 +111,6 @@ class ClassificationService {
     }
   }
 
-  /// تحميل أسماء من جدول يحتوي على حقل name.
-  Future<List<String>> _loadNames({
-    required String table,
-    required List<String> fallback,
-  }) async {
-    final client = _client;
-
-    if (client == null) {
-      return List<String>.unmodifiable(fallback);
-    }
-
-    try {
-      final response = await client
-          .from(table)
-          .select('name')
-          .eq('is_active', true)
-          .order('sort_order');
-
-      final names = _extractNames(
-        response,
-        field: 'name',
-      );
-
-      return names.isEmpty
-          ? List<String>.unmodifiable(fallback)
-          : names;
-    } catch (_) {
-      return List<String>.unmodifiable(fallback);
-    }
-  }
-
   /// تنظيف الأسماء وإزالة القيم الفارغة والتكرارات،
   /// مع الحفاظ على ترتيب النتائج القادمة من قاعدة البيانات.
   List<String> _extractNames(
