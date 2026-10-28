@@ -1,6 +1,7 @@
 import 'dart:typed_data';
+import 'dart:convert';
 import 'package:archive/archive.dart';
-import 'package:excel/excel.dart' hide Border;
+import 'package:excel_plus/excel_plus.dart' hide Border;
 import 'package:data_table_2/data_table_2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
@@ -341,48 +342,145 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       if (mounted) setState(() { _busy = false; _crawling = false; });
     }
   }
+  String _safeImageBaseName(String value) {
+    final cleaned = value
+        .replaceAll(RegExp(r'[<>:"/\\|?*\x00-\x1F]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim()
+        .replaceAll(RegExp(r'[. ]+$'), '');
+    final base = cleaned.isEmpty ? 'صنف_بدون_اسم' : cleaned;
+    return base.length > 100 ? base.substring(0, 100).trim() : base;
+  }
+
+  String _imageExtension(Uint8List bytes) {
+    if (bytes.length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50) return 'png';
+    if (bytes.length >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff) return 'jpg';
+    if (bytes.length >= 6 && String.fromCharCodes(bytes.take(6)) == 'GIF89a') return 'gif';
+    if (bytes.length >= 12 && String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF' &&
+        String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP') return 'webp';
+    return 'jpg';
+  }
+
+  Future<Uint8List?> _downloadImageBytes(_ImportRow row) async {
+    if (row.bytes != null && row.bytes!.isNotEmpty) return row.bytes;
+    if (row.imageUrl.trim().isEmpty) return null;
+    try {
+      final response = await Supabase.instance.client.functions.invoke(
+        'silsila-image-collector',
+        body: {'action': 'download', 'url': row.imageUrl, 'referer': row.sourcePage},
+      );
+      final payload = response.data;
+      if (response.status >= 400 || payload is! Map || payload['base64'] is! String) return null;
+      final bytes = Uint8List.fromList(base64Decode(payload['base64'] as String));
+      if (bytes.isEmpty) return null;
+      row.bytes = bytes;
+      return bytes;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Uint8List> _createExcelBytes(List<_ImportRow> selected, {bool includeImages = true}) async {
+    final book = Excel.createExcel();
+    final sheet = book['بيانات الأصناف'];
+    sheet.appendRow(_headerLabels.map((h) => TextCellValue(h)).toList());
+    var done = 0;
+    var imageCount = 0;
+    for (final row in selected) {
+      final data = row.toMap();
+      final cells = <CellValue>[];
+      for (final header in _headers) {
+        if (header == 'image_file') {
+          cells.add(TextCellValue(row.bytes == null ? '' : 'embedded:\${_safeImageBaseName(row.name)}.\${_imageExtension(row.bytes!)}'));
+        } else {
+          cells.add(TextCellValue(data[header] ?? ''));
+        }
+      }
+      sheet.appendRow(cells);
+      if (includeImages && row.imageUrl.isNotEmpty) {
+        final bytes = await _downloadImageBytes(row);
+        if (bytes != null && bytes.isNotEmpty) {
+          try {
+            sheet.insertImage(
+              bytes,
+              anchor: CellIndex.indexByString('B\${done + 2}'),
+              width: 76,
+              height: 76,
+            );
+            imageCount++;
+          } catch (_) {
+            // Keep the row and its downloadable image even if a format is unsupported.
+          }
+        }
+      }
+      done++;
+      if (done % 20 == 0 && mounted) {
+        setState(() => _status = 'تجهيز ملف Excel والصور: $done / \${selected.length}، صور مضمّنة $imageCount');
+      }
+    }
+    final bytes = book.encode();
+    if (bytes == null) throw Exception('تعذر إنشاء ملف Excel.');
+    return Uint8List.fromList(bytes);
+  }
+
   Future<void> _downloadExcel() async {
     if (_rows.isEmpty) { setState(() => _status = 'لا توجد بيانات لحفظها. ابدأ فرز الموقع أولًا.'); return; }
     final selected = _rows.where((r) => r.selected).toList();
     if (selected.isEmpty) { setState(() => _status = 'حدد صفًا واحدًا على الأقل.'); return; }
     setState(() => _busy = true);
     try {
-      final book = Excel.createExcel();
-      final sheet = book['بيانات الأصناف'];
-      sheet.appendRow(_headerLabels.map((h) => TextCellValue(h)).toList());
-      var done = 0;
-      for (final row in selected) {
-        final data = row.toMap();
-        final cells = <CellValue>[];
-        for (final header in _headers) {
-          if (header == 'image_file') {
-            if (row.imageUrl.isEmpty) {
-              cells.add(TextCellValue(''));
-            } else {
-              final safeImageUrl = row.imageUrl.replaceAll('"', '""');
-              // Excel 365 renders the source image in the worksheet; the adjacent
-              // URL column preserves the direct source for other spreadsheet apps.
-              cells.add(FormulaCellValue('IMAGE("$safeImageUrl")'));
-            }
-          } else {
-            cells.add(TextCellValue(data[header] ?? ''));
-          }
-        }
-        sheet.appendRow(cells);
-        done++;
-        if (done % 100 == 0 && mounted) setState(() => _status = 'تجهيز ملف Excel: $done / ${selected.length}');
-      }
-      final bytes = book.encode();
-      if (bytes == null) throw Exception('تعذر إنشاء ملف Excel.');
+      final bytes = await _createExcelBytes(selected);
       await FileSaver.instance.saveFile(
-        name: 'silsila_full_catalog_${DateTime.now().toIso8601String().substring(0, 10)}',
-        bytes: Uint8List.fromList(bytes),
+        name: 'silsila_full_catalog_\${DateTime.now().toIso8601String().substring(0, 10)}',
+        bytes: bytes,
         fileExtension: 'xlsx',
         mimeType: MimeType.microsoftExcel,
       );
-      if (mounted) setState(() => _status = 'تم تجهيز Excel وتنزيله على الجهاز. الصفوف: ${selected.length}. يتضمن بيانات الأصناف والفئات والعلامات التجارية والوحدات والأعداد والباركود والأسعار والوصف وروابط الصور وصفحات المصدر.');
+      final images = selected.where((r) => r.bytes != null && r.bytes!.isNotEmpty).length;
+      if (mounted) setState(() => _status = 'تم تنزيل Excel وفيه الصور الفعلية المضمّنة داخل الشيت. السجلات: \${selected.length}، صور مضمّنة: $images. الصور التي رفض مصدرها التنزيل ستظل بياناتها موجودة دون صورة.');
     } catch (e) {
       if (mounted) setState(() => _status = 'تعذر حفظ Excel: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _downloadImagesZip() async {
+    if (_rows.isEmpty) { setState(() => _status = 'لا توجد بيانات لحفظها. ابدأ فرز الموقع أولًا.'); return; }
+    final selected = _rows.where((r) => r.selected).toList();
+    if (selected.isEmpty) { setState(() => _status = 'حدد صفًا واحدًا على الأقل.'); return; }
+    setState(() => _busy = true);
+    try {
+      final xlsxBytes = await _createExcelBytes(selected);
+      final archive = Archive();
+      archive.addFile(ArchiveFile('بيانات الأصناف.xlsx', xlsxBytes.length, xlsxBytes));
+      final usedNames = <String>{};
+      var savedImages = 0;
+      for (final row in selected) {
+        final bytes = row.bytes;
+        if (bytes == null || bytes.isEmpty) continue;
+        final ext = _imageExtension(bytes);
+        final base = _safeImageBaseName(row.name);
+        var filename = '$base.$ext';
+        var suffix = 2;
+        while (!usedNames.add(filename.toLowerCase())) {
+          filename = '\${base}_$suffix.$ext';
+          suffix++;
+        }
+        archive.addFile(ArchiveFile('صور الأصناف/$filename', bytes.length, bytes));
+        savedImages++;
+      }
+      final zipped = ZipEncoder().encode(archive);
+      if (zipped == null) throw Exception('تعذر إنشاء ملف ZIP.');
+      await FileSaver.instance.saveFile(
+        name: 'silsila_catalog_with_named_images_\${DateTime.now().toIso8601String().substring(0, 10)}',
+        bytes: Uint8List.fromList(zipped),
+        fileExtension: 'zip',
+        mimeType: MimeType.zip,
+      );
+      if (mounted) setState(() => _status = 'تم تنزيل ZIP يحتوي على ملف Excel بصور مضمّنة ومجلد صور فعلية بأسماء الأصناف. السجلات: \${selected.length}، صور منفصلة: $savedImages.');
+    } catch (e) {
+      if (mounted) setState(() => _status = 'تعذر حفظ ZIP: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -421,6 +519,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                   OutlinedButton.icon(onPressed: _busy ? null : () => setState(() { _url.clear(); _status = 'تم مسح الرابط.'; }), icon: const Icon(Icons.clear, size: 18), label: const Text('مسح الرابط')),
                   OutlinedButton.icon(onPressed: _busy ? null : _resetExploration, icon: const Icon(Icons.restart_alt, size: 18), label: const Text('إعادة ضبط استكشاف')),
                   FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black), onPressed: _busy || _rows.isEmpty ? null : _downloadExcel, icon: const Icon(Icons.file_download_outlined, size: 18), label: const Text('حفظ اكسيل')),
+                  OutlinedButton.icon(onPressed: _busy || _rows.isEmpty ? null : _downloadImagesZip, icon: const Icon(Icons.folder_zip, size: 18), label: const Text('حفظ Excel + صور ZIP')),
                   if (_crawling) OutlinedButton.icon(onPressed: () => setState(() => _cancelCrawl = true), icon: const Icon(Icons.stop_circle_outlined, size: 18), label: const Text('إيقاف الفحص')),
                 ],
               ),
