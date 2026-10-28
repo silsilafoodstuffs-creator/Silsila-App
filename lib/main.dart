@@ -778,15 +778,20 @@ class _AdvertisementSlide {
     required this.title,
     required this.subtitle,
     this.imageUrl,
+    this.targetType = 'none',
+    this.targetCode,
   });
   final IconData icon;
   final String title;
   final String subtitle;
   final String? imageUrl;
+  final String targetType;
+  final String? targetCode;
 }
 
 class _HomeAdvertisementsCarousel extends StatefulWidget {
-  const _HomeAdvertisementsCarousel();
+  const _HomeAdvertisementsCarousel({required this.onDestinationTap});
+  final void Function(String targetType, String? targetCode) onDestinationTap;
 
   @override
   State<_HomeAdvertisementsCarousel> createState() => _HomeAdvertisementsCarouselState();
@@ -806,11 +811,15 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
   int _index = 0;
   List<_AdvertisementSlide> _ads = _fallbackAds;
   bool _loadingAds = false;
+  bool _popupAttempted = false;
+  OverlayEntry? _popupEntry;
+  Timer? _popupTimer;
 
   @override
   void initState() {
     super.initState();
     _loadManagedAdvertisements();
+    _loadPopupAdvertisement();
     _timer = Timer.periodic(const Duration(seconds: 2), (_) {
       if (!mounted || !_controller.hasClients) return;
       final next = (_index + 1) % _ads.length;
@@ -830,23 +839,30 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
       // This read-only RPC exposes only the five public Silsila banner slots,
       // so customers do not need to belong to the ERP-owning company.
       final rows = await client.rpc('get_silsila_public_ads');
-      final bySlot = <String, String>{};
+      final bySlot = <String, Map<String, dynamic>>{};
       for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
         final slot = row['display_name']?.toString() ?? '';
         final path = row['storage_path']?.toString() ?? '';
         if (const ['إعلان 1', 'إعلان 2', 'إعلان 3', 'إعلان 4', 'إعلان 5'].contains(slot) &&
             path.isNotEmpty && !bySlot.containsKey(slot)) {
-          bySlot[slot] = client.storage.from('silsila-public-ads').getPublicUrl(path);
+          bySlot[slot] = {
+            'url': client.storage.from('silsila-public-ads').getPublicUrl(path),
+            'target_type': row['target_type']?.toString() ?? 'none',
+            'target_code': row['target_code']?.toString(),
+          };
         }
       }
       if (!mounted || bySlot.isEmpty) return;
       final loaded = List<_AdvertisementSlide>.generate(5, (i) {
         final fallback = _fallbackAds[i];
+        final data = bySlot['إعلان ${i + 1}'];
         return _AdvertisementSlide(
           icon: fallback.icon,
           title: fallback.title,
           subtitle: fallback.subtitle,
-          imageUrl: bySlot['إعلان ${i + 1}'],
+          imageUrl: data?['url'] as String?,
+          targetType: data?['target_type']?.toString() ?? 'none',
+          targetCode: data?['target_code']?.toString(),
         );
       });
       setState(() => _ads = loaded);
@@ -857,9 +873,87 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
     }
   }
 
+  Future<void> _loadPopupAdvertisement() async {
+    if (_popupAttempted) return;
+    _popupAttempted = true;
+    final client = database;
+    if (client == null) return;
+    try {
+      final rows = await client.rpc('get_silsila_public_popup_ads');
+      final candidates = (rows as List).whereType<Map<String, dynamic>>();
+      if (candidates.isEmpty || !mounted) return;
+      final row = candidates.first;
+      final path = row['storage_path']?.toString() ?? '';
+      if (path.isEmpty) return;
+      final url = client.storage.from('silsila-public-ads').getPublicUrl(path);
+      final type = row['target_type']?.toString() ?? 'none';
+      final code = row['target_code']?.toString();
+      final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 5).clamp(1, 120);
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      if (!mounted) return;
+      _popupEntry = OverlayEntry(builder: (overlayContext) => Positioned.fill(
+        child: Material(
+          color: Colors.transparent,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560, maxHeight: 420),
+                child: Material(
+                  color: Colors.white,
+                  elevation: 18,
+                  borderRadius: BorderRadius.circular(24),
+                  clipBehavior: Clip.antiAlias,
+                  child: Stack(children: [
+                    Positioned.fill(
+                      child: InkWell(
+                        onTap: () {
+                          _closePopup();
+                          widget.onDestinationTap(type, code);
+                        },
+                        child: Image.network(url, fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, size: 56, color: purple))),
+                      ),
+                    ),
+                    Positioned(
+                      top: 7, left: 7,
+                      child: Material(
+                        color: Colors.white.withValues(alpha: .94),
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          tooltip: 'إغلاق الإعلان',
+                          onPressed: _closePopup,
+                          icon: const Icon(Icons.close_rounded, color: purple),
+                        ),
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ));
+      Overlay.of(context).insert(_popupEntry!);
+      _popupTimer?.cancel();
+      _popupTimer = Timer(Duration(seconds: duration), _closePopup);
+    } catch (_) {
+      // Popup ads are optional; the app remains usable if the feed is unavailable.
+    }
+  }
+
+  void _closePopup() {
+    _popupTimer?.cancel();
+    _popupTimer = null;
+    _popupEntry?.remove();
+    _popupEntry = null;
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
+    _popupTimer?.cancel();
+    _popupEntry?.remove();
     _controller.dispose();
     super.dispose();
   }
@@ -879,14 +973,17 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
               onPageChanged: (value) => setState(() => _index = value),
               itemBuilder: (context, index) {
                 final ad = _ads[index];
-                if (ad.imageUrl != null) {
-                  return Image.network(
-                    ad.imageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _fallbackSlide(ad),
-                  );
-                }
-                return _fallbackSlide(ad);
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => widget.onDestinationTap(ad.targetType, ad.targetCode),
+                  child: ad.imageUrl != null
+                      ? Image.network(
+                          ad.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _fallbackSlide(ad),
+                        )
+                      : _fallbackSlide(ad),
+                );
               },
             ),
             Positioned(
@@ -1695,7 +1792,13 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
         const SizedBox(height: 8),
-        const _HomeAdvertisementsCarousel(),
+        _HomeAdvertisementsCarousel(onDestinationTap: (type, code) {
+          if (type == 'category') {
+            setState(() { selectedEntity = 'فئات'; selectedCategory = code ?? ''; browseSubcategory = code ?? 'الكل'; });
+          } else if (type == 'supplier') {
+            setState(() { selectedEntity = 'موردين'; browseSubcategory = 'الكل'; });
+          }
+        }),
         const SizedBox(height: 12),
         Text(silsilaText('نوع النشاط'),
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
