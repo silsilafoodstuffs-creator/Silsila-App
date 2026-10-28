@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'dart:convert';
 import 'package:archive/archive.dart';
-import 'package:excel_plus/excel_plus.dart' hide Border;
+import 'package:excel/excel.dart' hide Border;
 import 'package:data_table_2/data_table_2.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
@@ -400,6 +400,100 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     return names;
   }
 
+  Uint8List _embedImagesInWorkbook(Uint8List workbookBytes, List<_ImportRow> selected, Map<_ImportRow, String> imagePaths) {
+    final archive = ZipDecoder().decodeBytes(workbookBytes);
+    ArchiveFile? findFile(String name) {
+      for (final file in archive.files) {
+        if (file.isFile && file.name == name) return file;
+      }
+      return null;
+    }
+    String readText(String name) {
+      final file = findFile(name);
+      if (file == null) throw Exception('ملف Excel الداخلي غير موجود: $name');
+      return utf8.decode(file.content as List<int>);
+    }
+    void replaceText(String name, String value) {
+      final bytes = utf8.encode(value);
+      archive.files.removeWhere((file) => file.name == name);
+      archive.addFile(ArchiveFile(name, bytes.length, bytes));
+    }
+
+    final workbookXml = readText('xl/workbook.xml');
+    final sheetTag = RegExp(r'<sheet\b[^>]*\bname="بيانات الأصناف"[^>]*/?>').firstMatch(workbookXml);
+    if (sheetTag == null) throw Exception('تعذر تحديد ورقة بيانات الأصناف داخل Excel.');
+    final sheetRid = RegExp(r'\br:id="([^"]+)"').firstMatch(sheetTag.group(0)!)?.group(1);
+    if (sheetRid == null) throw Exception('تعذر تحديد علاقة ورقة Excel.');
+    final workbookRels = readText('xl/_rels/workbook.xml.rels');
+    final sheetRelTag = RegExp('<Relationship\\b(?=[^>]*\\bId="$sheetRid")[^>]*/>').firstMatch(workbookRels);
+    if (sheetRelTag == null) throw Exception('تعذر تحديد ملف ورقة Excel.');
+    final target = RegExp(r'\bTarget="([^"]+)"').firstMatch(sheetRelTag.group(0)!)?.group(1);
+    if (target == null) throw Exception('مسار ورقة Excel غير معروف.');
+    final sheetPath = target.startsWith('/') ? target.substring(1) : (target.startsWith('xl/') ? target : 'xl/$target');
+    var sheetXml = readText(sheetPath);
+    final worksheetRelsPath = sheetPath.substring(0, sheetPath.lastIndexOf('/') + 1) +
+        '_rels/' + sheetPath.substring(sheetPath.lastIndexOf('/') + 1) + '.rels';
+    var worksheetRels = findFile(worksheetRelsPath) == null
+        ? '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'
+        : readText(worksheetRelsPath);
+    final relationIds = RegExp(r'\bId="rId(\d+)"').allMatches(worksheetRels)
+        .map((m) => int.tryParse(m.group(1)!) ?? 0).toList();
+    final maxRid = relationIds.isEmpty ? 0 : relationIds.reduce((a, b) => a > b ? a : b);
+    final drawingRid = 'rId${maxRid + 1}';
+    const drawingPath = 'xl/drawings/drawing1.xml';
+    const drawingRelsPath = 'xl/drawings/_rels/drawing1.xml.rels';
+    final anchors = <String>[];
+    final drawingRelationships = <String>[];
+    var imageIndex = 0;
+    final usedExtensions = <String>{};
+    for (var rowIndex = 0; rowIndex < selected.length; rowIndex++) {
+      final row = selected[rowIndex];
+      final bytes = row.bytes;
+      if (bytes == null || bytes.isEmpty || imagePaths[row] == null) continue;
+      imageIndex++;
+      final ext = _imageExtension(bytes);
+      usedExtensions.add(ext);
+      final mediaPath = 'xl/media/image${imageIndex}.$ext';
+      archive.addFile(ArchiveFile(mediaPath, bytes.length, bytes));
+      drawingRelationships.add('<Relationship Id="rId${imageIndex}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${imageIndex}.$ext"/>');
+      final excelRow = rowIndex + 1;
+      const sizeEmu = 723900;
+      anchors.add('<xdr:oneCellAnchor><xdr:from><xdr:col>1</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>$excelRow</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="$sizeEmu" cy="$sizeEmu"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="$imageIndex" name="Product image $imageIndex"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId$imageIndex"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="$sizeEmu" cy="$sizeEmu"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor>');
+    }
+    if (imageIndex == 0) return Uint8List.fromList(ZipEncoder().encode(archive)!);
+
+    var contentTypes = readText('[Content_Types].xml');
+    if (!RegExp(r'<Override\b[^>]*\bPartName="/xl/drawings/drawing1\.xml"').hasMatch(contentTypes)) {
+      contentTypes = contentTypes.replaceFirst('</Types>', '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');
+    }
+    for (final ext in usedExtensions) {
+      final mime = switch (ext) {
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        'bmp' => 'image/bmp',
+        _ => 'image/jpeg',
+      };
+      if (!RegExp('<Default\\b(?=[^>]*\\bExtension="$ext")[^>]*/>').hasMatch(contentTypes)) {
+        contentTypes = contentTypes.replaceFirst('</Types>', '<Default Extension="$ext" ContentType="$mime"/></Types>');
+      }
+    }
+    replaceText('[Content_Types].xml', contentTypes);
+    worksheetRels = worksheetRels.replaceFirst('</Relationships>', '<Relationship Id="$drawingRid" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>');
+    replaceText(worksheetRelsPath, worksheetRels);
+    if (!sheetXml.contains('xmlns:r=')) {
+      sheetXml = sheetXml.replaceFirst('<worksheet', '<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"');
+    }
+    sheetXml = sheetXml.replaceFirst('</worksheet>', '<drawing r:id="$drawingRid"/></worksheet>');
+    replaceText(sheetPath, sheetXml);
+    const drawingXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
+    replaceText(drawingPath, drawingXml + anchors.join() + '</xdr:wsDr>');
+    replaceText(drawingRelsPath, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + drawingRelationships.join() + '</Relationships>');
+    final zipped = ZipEncoder().encode(archive);
+    if (zipped == null) throw Exception('تعذر تضمين الصور داخل ملف Excel.');
+    return Uint8List.fromList(zipped);
+  }
+
   Future<Uint8List> _createExcelBytes(List<_ImportRow> selected, {bool includeImages = true}) async {
     var downloaded = 0;
     for (final row in selected) {
@@ -452,7 +546,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     }
     final bytes = book.encode();
     if (bytes == null) throw Exception('تعذر إنشاء ملف Excel.');
-    return Uint8List.fromList(bytes);
+    return _embedImagesInWorkbook(Uint8List.fromList(bytes), selected, imagePaths);
   }
 
   Future<void> _downloadExcel() async {
