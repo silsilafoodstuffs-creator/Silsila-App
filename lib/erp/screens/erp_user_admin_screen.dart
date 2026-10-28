@@ -1300,7 +1300,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     });
   }
   Widget _permissionRuleCells(String menu,String sub,String page)=>Row(mainAxisSize:MainAxisSize.min,children:[
-    for(final entry in _permissionActionFields.entries)SizedBox(width:72,child:Center(child:Checkbox(shape:const CircleBorder(),value:_permissionChecked(menu,sub,page,entry.value),onChanged:_editMode?(v)=>_setPermissionTreeValue(menu,sub,page,entry.value,v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
+    for(final entry in _permissionActionFields.entries)SizedBox(width:48,child:Center(child:Checkbox(shape:const CircleBorder(),value:_permissionChecked(menu,sub,page,entry.value),onChanged:_editMode?(v)=>_setPermissionTreeValue(menu,sub,page,entry.value,v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
   ]);
   Widget _permissionTreeRow(String label,String menu,String sub,String page,{bool strong=false})=>Container(color:strong?const Color(0xFFF0E8F8):Colors.white,padding:const EdgeInsetsDirectional.only(start:8,end:4,top:3,bottom:3),child:Row(children:[
     Expanded(flex:3,child:Text(label,style:TextStyle(fontWeight:strong?FontWeight.w900:FontWeight.w600,fontSize:12,color:strong?_userAdminPurple:Colors.black87))),
@@ -1378,7 +1378,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       const SizedBox(height:8),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
         headingRowHeight: 57,dataRowMinHeight: 57,dataRowMaxHeight: 57,horizontalMargin:7,columnSpacing:8,
-        columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:80,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
+        columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:48,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
         rows:_rules.map((rule)=>DataRow(cells:[
           DataCell(SizedBox(width:250,child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis))),
           for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:_editMode?(v)=>setState(()=>rule[field]=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
