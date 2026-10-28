@@ -745,18 +745,18 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         );
         final data = response.data;
         if (data is! Map) throw Exception('استجابة خدمة استيراد الصور غير صالحة.');
-        final requested = int.tryParse('\${data['requested'] ?? 0}') ?? 0;
-        imported += int.tryParse('\${data['imported'] ?? 0}') ?? 0;
-        alreadyReal += int.tryParse('\${data['already_real'] ?? 0}') ?? 0;
-        notFound += int.tryParse('\${data['not_found'] ?? 0}') ?? 0;
-        errors += int.tryParse('\${data['errors'] ?? 0}') ?? 0;
-        if (mounted) setState(() => _status = 'استيراد الصور الحقيقية من قاعدة البيانات: تم فحص \${offset + requested} صنفًا؛ صور محفوظة جديدة: $imported، صور سليمة موجودة: $alreadyReal، لم يُعثر على صورة مناسبة: $notFound، أخطاء: $errors. الصور الناجحة محفوظة كبيانات ثنائية داخل قاعدة البيانات وليست روابط.');
+        final requested = int.tryParse('${data['requested'] ?? 0}') ?? 0;
+        imported += int.tryParse('${data['imported'] ?? 0}') ?? 0;
+        alreadyReal += int.tryParse('${data['already_real'] ?? 0}') ?? 0;
+        notFound += int.tryParse('${data['not_found'] ?? 0}') ?? 0;
+        errors += int.tryParse('${data['errors'] ?? 0}') ?? 0;
+        if (mounted) setState(() => _status = 'استيراد الصور الحقيقية من قاعدة البيانات: تم فحص ${offset + requested} صنفًا؛ صور محفوظة جديدة: $imported، صور سليمة موجودة: $alreadyReal، لم يُعثر على صورة مناسبة: $notFound، أخطاء: $errors. الصور الناجحة محفوظة كبيانات ثنائية داخل قاعدة البيانات وليست روابط.');
         if (requested == 0 || requested < batchSize) break;
         offset += requested;
       }
       if (mounted) setState(() => _status = 'انتهى فحص الأصناف. صور حقيقية جديدة محفوظة داخل قاعدة البيانات: $imported؛ صور سليمة كانت موجودة: $alreadyReal؛ لم يُعثر على صورة مناسبة: $notFound؛ أخطاء: $errors. لم تُحفظ روابط صور بدل البيانات الثنائية.');
     } catch (e) {
-      if (mounted) setState(() => _error = 'توقف استيراد الصور عند الدفعة التالية: \${e.toString()}');
+      if (mounted) setState(() => _error = 'توقف استيراد الصور عند الدفعة التالية: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
