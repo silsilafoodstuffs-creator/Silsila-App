@@ -184,6 +184,9 @@ class ErpAppManagementService {
               mimeType: row['mime_type']?.toString(),
               fileSizeBytes: (row['file_size_bytes'] as num?)?.toInt(),
               altText: row['alt_text']?.toString(),
+              targetType: row['target_type']?.toString() ?? 'none',
+              targetCode: row['target_code']?.toString(),
+              durationSeconds: (row['duration_seconds'] as num?)?.toInt() ?? 5,
             ))
         .toList(growable: false);
   }
@@ -232,6 +235,9 @@ class ErpAppManagementService {
       'display_name': asset.displayName.trim(),
       'entity_id': _clean(asset.entityId),
       'alt_text': _clean(asset.altText),
+      'target_type': asset.targetType,
+      'target_code': _clean(asset.targetCode),
+      'duration_seconds': asset.durationSeconds,
     }).eq('id', assetId).eq('app_id', asset.appId);
   }
 
@@ -343,6 +349,7 @@ class ErpAppManagementService {
     'customer',
     'shipping_company',
     'banner_ad',
+    'popup_ad',
     'other',
   };
 
