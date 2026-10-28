@@ -244,7 +244,7 @@ function internalLinks(html: string, base: URL): string[] {
       found.add(u.href);
     } catch { /* ignore malformed load-more targets */ }
   }
-  for (const match of html.matchAll(/<link\\b[^>]*rel=[\"']next[\"'][^>]*href=[\"']([^\"']+)[\"'][^>]*>/gi)) {
+  for (const match of html.matchAll(/<link\b[^>]*rel=["']next["'][^>]*href=["']([^"']+)["'][^>]*>/gi)) {
     try {
       const u = safeUrl(new URL(decodeEntities(match[1]), base).href);
       if (u.origin === base.origin && !ignoredPath.test(u.pathname) && !ignoredRoute.test(u.pathname)) {
