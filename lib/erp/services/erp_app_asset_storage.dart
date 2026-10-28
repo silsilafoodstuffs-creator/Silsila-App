@@ -72,7 +72,7 @@ class ErpAppAssetStorage {
     }
     const supportedAssetTypes = {
       'app_logo', 'splash', 'app_icon', 'category', 'item',
-      'supplier', 'customer', 'shipping_company', 'banner_ad', 'other',
+      'supplier', 'customer', 'shipping_company', 'banner_ad', 'popup_ad', 'other',
     };
     final type = assetType ?? 'other';
     if (!supportedAssetTypes.contains(type)) {
@@ -86,7 +86,7 @@ class ErpAppAssetStorage {
     final timestamp = DateTime.now().toUtc().microsecondsSinceEpoch;
     final path = '$company/$app/$type/${timestamp}_${stem.isEmpty ? 'image' : stem}.$extension';
 
-    final targetBucket = type == 'banner_ad' ? 'silsila-public-ads' : bucket;
+    final targetBucket = type == 'banner_ad' || type == 'popup_ad' ? 'silsila-public-ads' : bucket;
     await _db.storage.from(targetBucket).uploadBinary(
       path,
       bytes,
@@ -129,7 +129,7 @@ class ErpAppAssetStorage {
 
   String _bucketForPath(String storagePath) {
     final segments = storagePath.split('/');
-    return segments.length >= 3 && segments[2] == 'banner_ad'
+    return segments.length >= 3 && (segments[2] == 'banner_ad' || segments[2] == 'popup_ad')
         ? 'silsila-public-ads'
         : bucket;
   }
