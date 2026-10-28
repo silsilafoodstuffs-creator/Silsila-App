@@ -99,7 +99,8 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authorization } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data: { user }, error: authError } = await userClient.auth.getUser();
+  const accessToken = authorization.replace(/^Bearer\\s+/i, '');
+  const { data: { user }, error: authError } = await userClient.auth.getUser(accessToken);
   if (authError || !user) return respond({ error: "جلسة الدخول غير صالحة." }, 401);
 
   let body: Record<string, unknown>;
