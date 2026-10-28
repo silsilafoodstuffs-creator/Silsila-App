@@ -5636,7 +5636,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             children: [
               DropdownButtonFormField<String>(
-                value: activity,
+                value: activityTypes.contains(activity) ? activity : null,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'نوع النشاط',
