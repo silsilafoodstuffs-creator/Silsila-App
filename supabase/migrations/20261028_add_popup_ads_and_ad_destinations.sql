@@ -69,3 +69,34 @@ AS $function$
   FROM ranked_ads WHERE slot_rank = 1;
 $function$;
 GRANT EXECUTE ON FUNCTION public.get_silsila_public_popup_ads() TO anon, authenticated;
+
+-- Permit trusted company administrators to upload/delete popup ad objects as well.
+DROP POLICY IF EXISTS silsila_public_ads_insert_admin ON storage.objects;
+CREATE POLICY silsila_public_ads_insert_admin
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK (
+  bucket_id = 'silsila-public-ads'
+  AND (storage.foldername(name))[3] IN ('banner_ad','popup_ad')
+  AND EXISTS (
+    SELECT 1 FROM public.erp_managed_apps a
+    WHERE a.id::text = (storage.foldername(name))[2]
+      AND a.company_id::text = (storage.foldername(name))[1]
+      AND a.app_key = 'silsila'
+      AND public.erp_user_has_company_role(a.company_id, ARRAY['owner','admin']::text[])
+  )
+);
+
+DROP POLICY IF EXISTS silsila_public_ads_delete_admin ON storage.objects;
+CREATE POLICY silsila_public_ads_delete_admin
+ON storage.objects FOR DELETE TO authenticated
+USING (
+  bucket_id = 'silsila-public-ads'
+  AND (storage.foldername(name))[3] IN ('banner_ad','popup_ad')
+  AND EXISTS (
+    SELECT 1 FROM public.erp_managed_apps a
+    WHERE a.id::text = (storage.foldername(name))[2]
+      AND a.company_id::text = (storage.foldername(name))[1]
+      AND a.app_key = 'silsila'
+      AND public.erp_user_has_company_role(a.company_id, ARRAY['owner','admin']::text[])
+  )
+);
