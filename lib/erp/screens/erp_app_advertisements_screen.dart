@@ -145,12 +145,28 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
       Uint8List bytes;
       String mime;
       if (video) {
-        final picked = camera
-            ? await _picker.pickVideo(source: ImageSource.camera, maxDuration: const Duration(seconds: 15))
-            : (await FilePicker.platform.pickFiles(type: FileType.video, allowMultiple: false, withData: true))?.files.singleOrNull;
-        if (picked == null) return;
-        fileName = picked.name;
-        bytes = await picked.readAsBytes();
+        if (camera) {
+          final picked = await _picker.pickVideo(
+            source: ImageSource.camera,
+            maxDuration: const Duration(seconds: 15),
+          );
+          if (picked == null) return;
+          fileName = picked.name;
+          bytes = await picked.readAsBytes();
+        } else {
+          final result = await FilePicker.platform.pickFiles(
+            type: FileType.video,
+            allowMultiple: false,
+            withData: true,
+          );
+          if (result == null || result.files.isEmpty) return;
+          final picked = result.files.single;
+          if (picked.bytes == null || picked.bytes!.isEmpty) {
+            throw StateError('تعذر قراءة الفيديو؛ اختر الملف مرة أخرى.');
+          }
+          fileName = picked.name;
+          bytes = picked.bytes!;
+        }
         mime = 'video/mp4';
       } else if (camera) {
         final image = await _picker.pickImage(
