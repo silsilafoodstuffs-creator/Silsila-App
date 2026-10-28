@@ -352,7 +352,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                 TextFormField(
                   key: ValueKey('target-code-$slot-${_selectedTab}'),
                   initialValue: _targetCodes[slot] ?? asset?.targetCode ?? '',
-                  decoration: InputDecoration(labelText: (_targetTypes[slot] ?? asset?.targetType ?? 'none') == 'category' ? 'كود الفئة' : 'كود المورد', hintText: 'اختياري عند اختيار بدون توجيه', border: const OutlineInputBorder(), isDense: true),
+                  decoration: InputDecoration(labelText: (_targetTypes[slot] ?? asset?.targetType ?? 'none') == 'category' ? 'كود الفئة' : 'كود المورد / معرّف حساب المورد', hintText: 'اختياري عند اختيار بدون توجيه', border: const OutlineInputBorder(), isDense: true),
                   onChanged: (value) => _targetCodes[slot] = value,
                 ),
                 if (_selectedTab == 1) ...[
