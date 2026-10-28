@@ -187,6 +187,7 @@ class ErpAppManagementService {
               targetType: row['target_type']?.toString() ?? 'none',
               targetCode: row['target_code']?.toString(),
               durationSeconds: (row['duration_seconds'] as num?)?.toInt() ?? 5,
+              activityCode: row['activity_code']?.toString(),
             ))
         .toList(growable: false);
   }
@@ -350,6 +351,7 @@ class ErpAppManagementService {
     'shipping_company',
     'banner_ad',
     'popup_ad',
+    'intro_ad',
     'other',
   };
 
