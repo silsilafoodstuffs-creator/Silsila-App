@@ -115,7 +115,7 @@ function productMetadata(html: string, base: URL) {
       const categoryRaw = typeof obj.category === "string" ? obj.category :
         Array.isArray(obj.category) ? obj.category.map((x) => typeof x === "string" ? x : String((x as Record<string, unknown>)?.name ?? "")).filter(Boolean).join(" > ") :
         obj.category && typeof obj.category === "object" ? String((obj.category as Record<string, unknown>).name ?? "") : "";
-      const categoryParts = categoryRaw.split(/\\s*(?:>|\\/|\\||»|›)\\s*/).map((x) => x.trim()).filter(Boolean);
+      const categoryParts = categoryRaw.split(/\s*(?:>|\/|\||»|›)\s*/).map((x) => x.trim()).filter(Boolean);
       const mainUnit = String(obj.unitText ?? obj.unit ?? propertyValue(obj, ["mainunit", "sellingunit", "unitname", "وحدةرئيسية", "وحدةالبيع"])).trim();
       const subUnit = propertyValue(obj, ["minorunit", "subunit", "smallunit", "وحدةفرعية"]);
       const internalCount = propertyValue(obj, [
