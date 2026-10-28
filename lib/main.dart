@@ -790,8 +790,9 @@ class _AdvertisementSlide {
 }
 
 class _HomeAdvertisementsCarousel extends StatefulWidget {
-  const _HomeAdvertisementsCarousel({required this.onDestinationTap});
+  const _HomeAdvertisementsCarousel({required this.onDestinationTap, this.activityCode});
   final void Function(String targetType, String? targetCode) onDestinationTap;
+  final String? activityCode;
 
   @override
   State<_HomeAdvertisementsCarousel> createState() => _HomeAdvertisementsCarouselState();
@@ -816,6 +817,18 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
   Timer? _popupTimer;
 
   @override
+  void didUpdateWidget(covariant _HomeAdvertisementsCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.activityCode != widget.activityCode) {
+      _closePopup();
+      _loadingAds = false;
+      _popupAttempted = false;
+      _loadManagedAdvertisements();
+      _loadPopupAdvertisement();
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     _loadManagedAdvertisements();
@@ -838,7 +851,7 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
     try {
       // This read-only RPC exposes only the five public Silsila banner slots,
       // so customers do not need to belong to the ERP-owning company.
-      final rows = await client.rpc('get_silsila_public_ads');
+      final rows = await client.rpc('get_silsila_public_ads', params: {'p_activity_code': widget.activityCode});
       final bySlot = <String, Map<String, dynamic>>{};
       for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
         final slot = row['display_name']?.toString() ?? '';
@@ -879,7 +892,7 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
     final client = database;
     if (client == null) return;
     try {
-      final rows = await client.rpc('get_silsila_public_popup_ads');
+      final rows = await client.rpc('get_silsila_public_popup_ads', params: {'p_activity_code': widget.activityCode});
       final candidates = (rows as List).whereType<Map<String, dynamic>>();
       if (candidates.isEmpty || !mounted) return;
       final row = candidates.first;
@@ -889,7 +902,7 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
       final type = row['target_type']?.toString() ?? 'none';
       final code = row['target_code']?.toString();
       final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 5).clamp(1, 120).toInt();
-      await Future<void>.delayed(const Duration(milliseconds: 700));
+      await Future<void>.delayed(const Duration(seconds: 5));
       if (!mounted) return;
       _popupEntry = OverlayEntry(builder: (overlayContext) => Center(
             child: Padding(
@@ -1050,10 +1063,12 @@ class MainShell extends StatefulWidget {
     super.key,
     this.testRole,
     this.testAccountName,
+    this.initialActivity,
   });
 
   final String? testRole;
   final String? testAccountName;
+  final String? initialActivity;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -1069,6 +1084,10 @@ class _MainShellState extends State<MainShell> {
   final Set<String> expandedCatalogSubcategories = <String>{};
   final Set<String> expandedCatalogBrands = <String>{};
   String activity = activityTypes.isNotEmpty ? activityTypes.first : 'مواد غذائية';
+  String? currentActivityCode;
+  OverlayEntry? _introAdEntry;
+  Timer? _introAdTimer;
+  VideoPlayerController? _introVideoController;
   String selectedCategory = 'الكل';
   String? adSupplierTargetId;
   String search = '';
@@ -1109,6 +1128,9 @@ class _MainShellState extends State<MainShell> {
 
   @override
   void dispose() {
+    _introAdTimer?.cancel();
+    _introAdEntry?.remove();
+    _introVideoController?.dispose();
     searchController.dispose();
     super.dispose();
   }
@@ -1116,6 +1138,10 @@ class _MainShellState extends State<MainShell> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialActivity != null && activityTypes.contains(widget.initialActivity)) {
+      activity = widget.initialActivity!;
+    }
+    _loadActivityCodeAndIntroAd();
     loadLiveProducts();
     loadLiveSuppliers();
     loadLiveCustomers();
@@ -1124,6 +1150,114 @@ class _MainShellState extends State<MainShell> {
     loadCurrentRole();
     loadFavoriteKeys();
     loadUnreadNotifications();
+  }
+
+  Future<void> _loadActivityCodeAndIntroAd() async {
+    final selected = await ActivityService().findActivity(activity);
+    if (!mounted) return;
+    final code = selected?['code']?.toString();
+    setState(() => currentActivityCode = code);
+    await _showStartupAdvertisement(code);
+  }
+
+  Future<void> _showStartupAdvertisement(String? activityCode) async {
+    final client = database;
+    if (client == null) return;
+    try {
+      final rows = await client.rpc('get_silsila_public_intro_ad', params: {
+        'p_activity_code': activityCode,
+      });
+      final candidates = (rows as List).whereType<Map<String, dynamic>>();
+      if (candidates.isEmpty || !mounted) return;
+      final row = candidates.first;
+      final path = row['storage_path']?.toString() ?? '';
+      final mime = row['mime_type']?.toString() ?? '';
+      if (path.isEmpty) return;
+      final url = client.storage.from('silsila-public-ads').getPublicUrl(path);
+      final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 4).clamp(1, 120).toInt();
+      VideoPlayerController? video;
+      if (mime == 'video/mp4' || path.toLowerCase().endsWith('.mp4')) {
+        video = VideoPlayerController.networkUrl(Uri.parse(url));
+        await video.initialize();
+        await video.setLooping(true);
+        await video.setVolume(0);
+        await video.play();
+        if (!mounted) { await video.dispose(); return; }
+        _introVideoController = video;
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+      if (!mounted) return;
+      _introAdEntry = OverlayEntry(builder: (overlayContext) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(overlayContext).size.width * .88,
+                maxHeight: MediaQuery.of(overlayContext).size.height * .72,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (video != null)
+                      AspectRatio(
+                        aspectRatio: video.value.aspectRatio > 0 ? video.value.aspectRatio : 16 / 9,
+                        child: VideoPlayer(video),
+                      )
+                    else
+                      Image.network(url, fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                    if (video != null)
+                      Positioned(
+                        bottom: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                          decoration: BoxDecoration(color: Colors.white.withValues(alpha: .94), borderRadius: BorderRadius.circular(16)),
+                          child: Image.asset('assets/images/silsila_logo.png', height: 48,
+                            errorBuilder: (_, __, ___) => const Text('سلسلة', style: TextStyle(fontWeight: FontWeight.w900, color: purple, fontSize: 24))),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ));
+      Overlay.of(context, rootOverlay: true).insert(_introAdEntry!);
+      _introAdTimer = Timer(Duration(seconds: duration), _closeStartupAdvertisement);
+    } catch (_) {
+      // Startup media is optional and must never block app entry.
+      _closeStartupAdvertisement();
+    }
+  }
+
+  void _closeStartupAdvertisement() {
+    _introAdTimer?.cancel();
+    _introAdTimer = null;
+    _introAdEntry?.remove();
+    _introAdEntry = null;
+    _introVideoController?.dispose();
+    _introVideoController = null;
+  }
+
+  Future<void> _changeActivity(String nextActivity) async {
+    if (nextActivity == activity) return;
+    setState(() {
+      activity = nextActivity;
+      selectedCategory = 'الكل';
+      browseSubcategory = 'الكل';
+      liveProducts = [];
+      liveSuppliers = [];
+      adSupplierTargetId = null;
+      currentActivityCode = null;
+    });
+    final selected = await ActivityService().findActivity(nextActivity);
+    if (!mounted) return;
+    setState(() => currentActivityCode = selected?['code']?.toString());
   }
 
   Future<void> loadUnreadNotifications() async {
@@ -1792,7 +1926,7 @@ class _MainShellState extends State<MainShell> {
           ),
         ),
         const SizedBox(height: 8),
-        _HomeAdvertisementsCarousel(onDestinationTap: (type, code) async {
+        _HomeAdvertisementsCarousel(activityCode: currentActivityCode, onDestinationTap: (type, code) async {
           if (type == 'category') {
             try {
               final rows = await categoryService.getCategories(limit: 500);
@@ -1857,7 +1991,8 @@ class _MainShellState extends State<MainShell> {
                   ),
                   onSelected: (_) {
                     if (activity == type) return;
-                    setState(() {
+                    _changeActivity(type);
+                    /*setState(() {
                       activity = type;
                       selectedCategory = 'الكل';
                       liveProducts = [];
