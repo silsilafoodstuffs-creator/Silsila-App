@@ -279,8 +279,9 @@ class SilsilaApp extends StatelessWidget {
       // Keep an Overlay above SelectionArea. MaterialApp's navigator overlay
       // is inside `child`, so SelectionArea cannot find it when placed outside
       // the navigator unless we provide this ancestor overlay.
-      builder: (context, child) => Overlay(
-        initialEntries: [
+      builder: (context, child) => SizedBox.expand(
+        child: Overlay(
+          initialEntries: [
           OverlayEntry(
             builder: (overlayContext) => SelectionArea(
               child: Directionality(
@@ -292,7 +293,8 @@ class SilsilaApp extends StatelessWidget {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
       title: 'سلسلة Silsila',
       debugShowCheckedModeBanner: false,
