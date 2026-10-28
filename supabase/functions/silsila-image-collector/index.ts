@@ -238,7 +238,7 @@ function internalLinks(html: string, base: URL): string[] {
 
 function categoryEntities(html: string, base: URL): Array<{ name: string; url: string }> {
   const found = new Map<string, { name: string; url: string }>();
-  const rx = /<a\\b([^>]*href=[\"']([^\"']+)[\"'][^>]*)>([\\s\\S]{1,700}?)<\\/a>/gi;
+  const rx = /<a\b([^>]*href=["']([^"']+)["'][^>]*)>([\s\S]{1,700}?)<\/a>/gi;
   for (const m of html.matchAll(rx)) {
     const attrs = m[1];
     const rawUrl = decodeEntities(m[2]).trim();
