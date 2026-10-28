@@ -547,10 +547,30 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
       final workbook=Excel.decodeBytes(workbookFile.content as List<int>);final sheet=workbook.tables['بيانات الأصناف'];
       if(sheet==null||sheet.rows.isEmpty)throw Exception('جدول بيانات الأصناف فارغ');
       String cell(List<dynamic> row,int i)=>i<row.length?(row[i]?.value?.toString()??''):'';
+      final modernFormat = sheet.rows.first.length > 20;
       final loaded=< _ImportRow >[];
       for(final row in sheet.rows.skip(1)){
         final id=cell(row,0);if(id.isEmpty)continue;final imagePath=cell(row,1);
-        loaded.add(_ImportRow(id:id,imageUrl:cell(row,2),name:cell(row,3),kind:cell(row,4).isEmpty?'صنف':cell(row,4),codeMode:cell(row,5).isEmpty?'جديد':cell(row,5),code:cell(row,6),category:cell(row,7),subcategory:cell(row,8),majorUnit:cell(row,9),innerCount:cell(row,10),minorUnit:cell(row,11),weight:cell(row,12),length:cell(row,13),width:cell(row,14),height:cell(row,15),bytes:files[imagePath],selected:true));
+        loaded.add(_ImportRow(
+          id:id,imageUrl:cell(row,2),name:cell(row,3),
+          kind:cell(row,4).isEmpty?'صنف':cell(row,4),
+          codeMode:cell(row,5).isEmpty?'جديد':cell(row,5),code:cell(row,6),
+          category:cell(row,7),subcategory:cell(row,8),
+          thirdCategory:modernFormat?cell(row,9):'',
+          brand:modernFormat?cell(row,10):'',
+          barcode:modernFormat?cell(row,11):'',
+          salePrice:modernFormat?cell(row,12):'',
+          majorUnit:cell(row,modernFormat?13:9),
+          innerCount:cell(row,modernFormat?14:10),
+          minorUnit:cell(row,modernFormat?15:11),
+          otherUnits:modernFormat?cell(row,16):'',
+          weight:cell(row,modernFormat?17:12),
+          length:cell(row,modernFormat?18:13),
+          width:cell(row,modernFormat?19:14),
+          height:cell(row,modernFormat?20:15),
+          description:modernFormat?cell(row,21):'',
+          sourcePage:modernFormat?cell(row,22):'',
+          bytes:files[imagePath],selected:true));
       }
       setState(() { _rows=loaded; _status='تم فتح ${loaded.length} صفًا. التعديلات محلية ولن تُحفظ في قاعدة البيانات.'; });
     }catch(e){setState(()=>_status='تعذر فتح ZIP: $e');}
@@ -559,7 +579,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
   Future<void> _exportZip()async{
     setState(()=>_busy=true);
     try{
-      final selected=_rows.where((r)=>r.selected).toList(); if(selected.isEmpty) throw Exception('حدد صفًا واحدًا على الأقل للتصدير'); final archive=Archive();final book=Excel.createExcel();final sheet=book['بيانات الأصناف'];const headers=['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','major_unit','inner_count','minor_unit','weight','length','width','height'];sheet.appendRow(headers.map((h)=>TextCellValue(h)).toList());
+      final selected=_rows.where((r)=>r.selected).toList(); if(selected.isEmpty) throw Exception('حدد صفًا واحدًا على الأقل للتصدير'); final archive=Archive();final book=Excel.createExcel();final sheet=book['بيانات الأصناف'];final headers=_headers;sheet.appendRow(_headerLabels.map((h)=>TextCellValue(h)).toList());
       for(final r in selected){final imageFile=r.bytes==null?'':'images/${r.id}.${_ext(r.imageUrl)}';final m=r.toMap()..['image_file']=imageFile;sheet.appendRow(headers.map((h)=>TextCellValue(m[h]??'')).toList());if(r.bytes!=null)archive.addFile(ArchiveFile(imageFile,r.bytes!.length,r.bytes!));}
       final x=book.encode()!;archive.addFile(ArchiveFile('items.xlsx',x.length,x));final zipped=ZipEncoder().encode(archive)!;
       await FileSaver.instance.saveFile(name:'silsila_items_edited',bytes:Uint8List.fromList(zipped),fileExtension:'zip',mimeType:MimeType.zip);
