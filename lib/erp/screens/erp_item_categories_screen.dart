@@ -351,41 +351,83 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     final ar = _ar.putIfAbsent(id, () => TextEditingController(text: _s(row['category_name'])));
     final en = _en.putIfAbsent(id, () => TextEditingController(text: _s(row['category_name_en'])));
     final level = _rowLevel(row);
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Container(margin: EdgeInsetsDirectional.only(start: depth * 24, bottom: 5),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        decoration: BoxDecoration(color: _selectedId == id ? const Color(0xFFF0E7FA) : level == 0 ? const Color(0xFFEDE1F8) : level == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
-          borderRadius: BorderRadius.circular(10), border: Border.all(color: _selectedId == id ? _catPurple : const Color(0xFFE8E1EF))),
-        child: Row(children: [
-          IconButton(visualDensity: VisualDensity.compact, onPressed: children.isEmpty ? null : () => setState(() {
-            if (expanded) { _expandedIds.remove(id); } else { _expandedIds.add(id); }
-          }), icon: Icon(children.isEmpty ? Icons.circle_outlined : expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _catPurple)),
-          SizedBox(width: 84, child: Text(_s(row['category_code']), style: const TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
-          Expanded(flex: 3, child: TextField(controller: ar, enabled: _editing,
-            decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة عربي'),
-            onTap: () => setState(() => _selectedId = id))),
-          Expanded(flex: 2, child: TextField(controller: en, enabled: _editing,
-            decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة إنجليزي'),
-            onTap: () => setState(() => _selectedId = id))),
-          _imagePreview(row, size: 48),
-          Tooltip(message: 'نشط', child: Checkbox(shape: const CircleBorder(), value: row['is_active'] == true, activeColor: _catPurple,
-            onChanged: _editing ? (v) => setState(() => row['is_active'] = v == true) : null)),
-          Tooltip(message: 'ظهور في التطبيق', child: Checkbox(shape: const CircleBorder(), value: row['show_in_app'] == true, activeColor: _catOrange,
-            onChanged: _editing ? (v) => setState(() => row['show_in_app'] = v == true) : null)),
-          IconButton(tooltip: 'استيراد صورة من الجهاز', onPressed: _editing ? () => _pickImage(row, source: ImageSource.gallery) : null,
-            icon: const Icon(Icons.photo_library_outlined, color: _catPurple)),
-          IconButton(tooltip: 'تصوير صورة بالكاميرا', onPressed: _editing ? () => _pickImage(row, source: ImageSource.camera) : null,
-            icon: const Icon(Icons.photo_camera_outlined, color: _catOrange)),
-          IconButton(tooltip: 'حذف الصورة', onPressed: _editing && _categoryImageBytes(row) != null ? () => _removeImage(row) : null,
-            icon: const Icon(Icons.hide_image_outlined, color: Colors.redAccent)),
-          if (level < 2) IconButton(tooltip: level == 0 ? 'إضافة فئة فرعية' : 'إضافة فئة ثانوية',
-            onPressed: _saving ? null : () { setState(() { _level = level + 1; _editing = true; }); _add(parentIdOverride: id); },
-            icon: const Icon(Icons.add_circle_outline, color: _catPurple)),
-          IconButton(tooltip: 'تحديد الفئة', onPressed: () => setState(() => _selectedId = id),
-            icon: Icon(Icons.radio_button_checked, color: _selectedId == id ? _catPurple : Colors.black26)),
-        ])),
-      if (expanded) ...children.where(_branchMatches).map((child) => _treeNode(child, depth + 1)),
-    ]);
+    final active = row['is_active'] == true;
+    final visible = row['show_in_app'] == true;
+    return Padding(
+      padding: EdgeInsetsDirectional.only(start: depth * 18, bottom: 6),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+        decoration: BoxDecoration(
+          color: _selectedId == id ? const Color(0xFFF0E7FA) : level == 0 ? const Color(0xFFEDE1F8) : level == 1 ? const Color(0xFFFFE4BE) : const Color(0xFFFFDDF3),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _selectedId == id ? _catPurple : const Color(0xFFE8E1EF)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            SizedBox(width: 34, child: IconButton(
+              padding: EdgeInsets.zero, visualDensity: VisualDensity.compact,
+              tooltip: expanded ? 'طي الفئات التابعة' : 'عرض الفئات التابعة',
+              onPressed: children.isEmpty ? null : () => setState(() {
+                if (expanded) { _expandedIds.remove(id); } else { _expandedIds.add(id); }
+              }),
+              icon: Icon(children.isEmpty ? Icons.circle_outlined : expanded ? Icons.keyboard_arrow_down : Icons.chevron_left, color: _catPurple),
+            )),
+            SizedBox(width: 105, child: Text(_s(row['category_code']), overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w900, color: _catPurple, fontSize: 12))),
+            Expanded(child: TextField(controller: ar, enabled: _editing,
+              decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم الفئة عربي'),
+              onTap: () => setState(() => _selectedId = id))),
+            const SizedBox(width: 8),
+            _imagePreview(row, size: 48),
+          ]),
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 34, top: 4),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 4, runSpacing: 2,
+              children: [
+                SizedBox(width: 165, child: TextField(controller: en, enabled: _editing,
+                  decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'English category name'),
+                  onTap: () => setState(() => _selectedId = id))),
+                Tooltip(message: 'نشط', child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Checkbox(shape: const CircleBorder(), value: active, activeColor: _catPurple,
+                    visualDensity: VisualDensity.compact,
+                    onChanged: _editing ? (v) => setState(() => row['is_active'] = v == true) : null),
+                  const Text('نشط', style: TextStyle(fontSize: 11)),
+                ])),
+                Tooltip(message: 'ظهور في التطبيق', child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Checkbox(shape: const CircleBorder(), value: visible, activeColor: _catOrange,
+                    visualDensity: VisualDensity.compact,
+                    onChanged: _editing ? (v) => setState(() => row['show_in_app'] = v == true) : null),
+                  const Text('في التطبيق', style: TextStyle(fontSize: 11)),
+                ])),
+                IconButton(visualDensity: VisualDensity.compact, tooltip: 'استيراد صورة حقيقية من الجهاز',
+                  onPressed: _editing ? () => _pickImage(row, source: ImageSource.gallery) : null,
+                  icon: const Icon(Icons.photo_library_outlined, color: _catPurple)),
+                IconButton(visualDensity: VisualDensity.compact, tooltip: 'التقاط صورة بالكاميرا',
+                  onPressed: _editing ? () => _pickImage(row, source: ImageSource.camera) : null,
+                  icon: const Icon(Icons.photo_camera_outlined, color: _catOrange)),
+                IconButton(visualDensity: VisualDensity.compact, tooltip: 'حذف الصورة',
+                  onPressed: _editing && _categoryImageBytes(row) != null ? () => _removeImage(row) : null,
+                  icon: const Icon(Icons.hide_image_outlined, color: Colors.redAccent)),
+                if (level < 2) IconButton(visualDensity: VisualDensity.compact,
+                  tooltip: level == 0 ? 'إضافة فئة فرعية' : 'إضافة فئة ثانوية',
+                  onPressed: _saving ? null : () { setState(() { _level = level + 1; _editing = true; }); _add(parentIdOverride: id); },
+                  icon: const Icon(Icons.add_circle_outline, color: _catPurple)),
+                IconButton(visualDensity: VisualDensity.compact, tooltip: 'تحديد الفئة',
+                  onPressed: () => setState(() => _selectedId = id),
+                  icon: Icon(Icons.radio_button_checked, color: _selectedId == id ? _catPurple : Colors.black26)),
+              ],
+            ),
+          ),
+          if (children.isNotEmpty)
+            Padding(padding: const EdgeInsetsDirectional.only(start: 42, top: 1),
+              child: Text('${children.length} فئة تابعة • ${level == 0 ? 'رئيسية' : level == 1 ? 'فرعية' : 'ثانوية'}',
+                style: const TextStyle(fontSize: 10, color: Colors.black54))),
+          if (expanded) ...children.where(_branchMatches).map((child) => _treeNode(child, depth + 1)),
+        ]),
+      ),
+    );
   }
 
   @override
@@ -426,11 +468,14 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       ])),
       if(_error!=null) Padding(padding:const EdgeInsets.all(7),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:12))),
       if(_message!=null) Padding(padding:const EdgeInsets.all(7),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:12))),
-      if (_viewMode == 'tree') Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), child: Row(children: const [
+      if (_viewMode == 'tree') Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7), child: Row(children: [
         SizedBox(width: 84, child: Text('كود الفئة', style: TextStyle(fontWeight: FontWeight.w800))),
         Expanded(flex: 3, child: Text('اسم الفئة عربي', style: TextStyle(fontWeight: FontWeight.w800))),
         Expanded(flex: 2, child: Text('اسم الفئة إنجليزي', style: TextStyle(fontWeight: FontWeight.w800))),
-        Text('نشط'), SizedBox(width: 8), Text('في التطبيق'), SizedBox(width: 8), Text('الصورة'), SizedBox(width: 24),
+        Text('نشط'), SizedBox(width: 8), Text('في التطبيق'), SizedBox(width: 8), Text('الصورة'),
+        const Spacer(),
+        TextButton.icon(onPressed: _loading || _all.isEmpty ? null : () => setState(() => _expandedIds.addAll(_all.map((r) => _s(r['id'])))), icon: const Icon(Icons.unfold_more, size: 18), label: const Text('فتح الكل')),
+        TextButton.icon(onPressed: _loading ? null : () => setState(() => _expandedIds.clear()), icon: const Icon(Icons.unfold_less, size: 18), label: const Text('طي الكل')),
       ])),
       Expanded(child: _loading ? const Center(child:CircularProgressIndicator()) :
         _viewMode == 'tree'
