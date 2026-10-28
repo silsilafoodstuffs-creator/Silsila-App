@@ -282,17 +282,17 @@ class SilsilaApp extends StatelessWidget {
       builder: (context, child) => SizedBox.expand(
         child: Overlay(
           initialEntries: [
-          OverlayEntry(
-            builder: (overlayContext) => SelectionArea(
-              child: Directionality(
-                textDirection: currentLocale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-                child: Stack(children: [
-                  Positioned.fill(child: child ?? const SizedBox.shrink()),
-                  const Positioned(left: 8, top: 8, child: SafeArea(child: SilsilaLanguageToggle())),
-                ]),
+            OverlayEntry(
+              builder: (overlayContext) => SelectionArea(
+                child: Directionality(
+                  textDirection: currentLocale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                  child: Stack(children: [
+                    Positioned.fill(child: child ?? const SizedBox.shrink()),
+                    const Positioned(left: 8, top: 8, child: SafeArea(child: SilsilaLanguageToggle())),
+                  ]),
+                ),
               ),
             ),
-          ),
           ],
         ),
       ),
