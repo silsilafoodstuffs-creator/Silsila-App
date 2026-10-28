@@ -726,6 +726,42 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     return rows.first['company_id'].toString();
   }
 
+
+  Future<void> _importRealProductImages() async {
+    if (_loading) return;
+    setState(() { _loading = true; _error = null; _status = 'جارٍ فحص صور الأصناف واستبدال الصور الرمزية بصور فعلية تُحفظ داخل قاعدة البيانات...'; });
+    var offset = 0;
+    var imported = 0;
+    var alreadyReal = 0;
+    var notFound = 0;
+    var errors = 0;
+    const batchSize = 12;
+    try {
+      final company = await _activeCompanyId();
+      while (true) {
+        final response = await Supabase.instance.client.functions.invoke(
+          'import-real-item-images',
+          body: {'company_id': company, 'offset': offset, 'limit': batchSize},
+        );
+        final data = response.data;
+        if (data is! Map) throw Exception('استجابة خدمة استيراد الصور غير صالحة.');
+        final requested = int.tryParse('\${data['requested'] ?? 0}') ?? 0;
+        imported += int.tryParse('\${data['imported'] ?? 0}') ?? 0;
+        alreadyReal += int.tryParse('\${data['already_real'] ?? 0}') ?? 0;
+        notFound += int.tryParse('\${data['not_found'] ?? 0}') ?? 0;
+        errors += int.tryParse('\${data['errors'] ?? 0}') ?? 0;
+        if (mounted) setState(() => _status = 'استيراد الصور الحقيقية من قاعدة البيانات: تم فحص \${offset + requested} صنفًا؛ صور محفوظة جديدة: $imported، صور سليمة موجودة: $alreadyReal، لم يُعثر على صورة مناسبة: $notFound، أخطاء: $errors. الصور الناجحة محفوظة كبيانات ثنائية داخل قاعدة البيانات وليست روابط.');
+        if (requested == 0 || requested < batchSize) break;
+        offset += requested;
+      }
+      if (mounted) setState(() => _status = 'انتهى فحص الأصناف. صور حقيقية جديدة محفوظة داخل قاعدة البيانات: $imported؛ صور سليمة كانت موجودة: $alreadyReal؛ لم يُعثر على صورة مناسبة: $notFound؛ أخطاء: $errors. لم تُحفظ روابط صور بدل البيانات الثنائية.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'توقف استيراد الصور عند الدفعة التالية: \${e.toString()}');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   String _byteaHex(Uint8List bytes) =>
       '\\x' + bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
