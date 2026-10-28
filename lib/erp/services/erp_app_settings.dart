@@ -127,6 +127,7 @@ class ErpAppAssetRecord {
     this.targetType = 'none',
     this.targetCode,
     this.durationSeconds = 5,
+    this.activityCode,
   });
 
   final String appId;
@@ -141,6 +142,7 @@ class ErpAppAssetRecord {
   final String targetType;
   final String? targetCode;
   final int durationSeconds;
+  final String? activityCode;
 
   List<String> validate() {
     final errors = <String>[];
@@ -156,6 +158,7 @@ class ErpAppAssetRecord {
       'shipping_company',
       'banner_ad',
       'popup_ad',
+      'intro_ad',
       'other',
     }.contains(assetType)) {
       errors.add('نوع الملف غير مدعوم.');
@@ -183,6 +186,7 @@ class ErpAppAssetRecord {
         'target_type': targetType,
         'target_code': targetCode,
         'duration_seconds': durationSeconds,
+        'activity_code': activityCode,
       };
 }
 
