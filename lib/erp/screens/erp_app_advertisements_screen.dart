@@ -221,8 +221,9 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         mimeType: mime,
         fileSizeBytes: bytes.length,
         altText: 'إعلان سلسلة - $slot',
-        targetType: 'none',
-        durationSeconds: slot == _introSlot ? 4 : slot == _popupSlot ? 5 : 2,
+        targetType: _targetTypes[_keyFor(slot, _scopeCode)] ?? 'none',
+        targetCode: (_targetCodes[_keyFor(slot, _scopeCode)] ?? '').trim().isEmpty ? null : _targetCodes[_keyFor(slot, _scopeCode)]!.trim(),
+        durationSeconds: _durations[_keyFor(slot, _scopeCode)] ?? (slot == _introSlot ? 4 : slot == _popupSlot ? 5 : 2),
       ));
       // The new image is registered first. Only then remove the previous slot image.
       if (old != null && old.id != null) {
@@ -424,7 +425,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                     DropdownMenuItem(value: 'category', child: Text('فتح فئة أصناف')),
                     DropdownMenuItem(value: 'supplier', child: Text('فتح مورد')),
                   ],
-                  onChanged: _busySlot != null ? null : (value) => setState(() => _targetTypes[slot] = value ?? 'none'),
+                  onChanged: _busySlot != null ? null : (value) => setState(() => _targetTypes[key] = value ?? 'none'),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
