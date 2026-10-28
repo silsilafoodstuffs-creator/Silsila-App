@@ -1,4 +1,12 @@
 -- Popup ads and click-through destinations for the five header ads.
+GRANT SELECT ON public.erp_app_assets TO anon, authenticated;
+DROP POLICY IF EXISTS erp_app_assets_public_banner_read ON public.erp_app_assets;
+CREATE POLICY erp_app_assets_public_banner_read
+ON public.erp_app_assets FOR SELECT TO anon, authenticated
+USING (
+  (asset_type = 'banner_ad' AND display_name IN ('إعلان 1','إعلان 2','إعلان 3','إعلان 4','إعلان 5'))
+  OR (asset_type = 'popup_ad' AND display_name = 'إعلان منبثق')
+);
 ALTER TABLE public.erp_app_assets
   ADD COLUMN IF NOT EXISTS target_type text NOT NULL DEFAULT 'none'
     CHECK (target_type IN ('none','category','supplier')),
@@ -53,7 +61,7 @@ RETURNS TABLE(
   target_code text,
   duration_seconds integer
 )
-LANGUAGE sql STABLE SECURITY DEFINER
+LANGUAGE sql STABLE SECURITY INVOKER
 SET search_path TO 'public'
 AS $function$
   WITH ranked_ads AS (
