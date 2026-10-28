@@ -748,8 +748,8 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
     try{
       final archive=ZipDecoder().decodeBytes(result.files.single.bytes!);final files=<String,Uint8List>{};
       for(final f in archive.files){if(f.isFile&&f.name.startsWith('images/'))files[f.name]=Uint8List.fromList(f.content as List<int>);}
-      final workbookFile=archive.files.where((f)=>f.isFile&&f.name=='items.xlsx').firstOrNull;
-      if(workbookFile==null)throw Exception('ملف items.xlsx غير موجود داخل ZIP');
+      final workbookFile=archive.files.where((f)=>f.isFile&&(f.name=='items.xlsx'||f.name=='بيانات الأصناف.xlsx')).firstOrNull;
+      if(workbookFile==null)throw Exception('ملف items.xlsx أو بيانات الأصناف.xlsx غير موجود داخل ZIP');
       final workbook=Excel.decodeBytes(workbookFile.content as List<int>);final sheet=workbook.tables['بيانات الأصناف'];
       if(sheet==null||sheet.rows.isEmpty)throw Exception('جدول بيانات الأصناف فارغ');
       String cell(List<dynamic> row,int i)=>i<row.length?(row[i]?.value?.toString()??''):'';
@@ -786,13 +786,13 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
     setState(()=>_busy=true);
     try{
       final selected=_rows.where((r)=>r.selected).toList(); if(selected.isEmpty) throw Exception('حدد صفًا واحدًا على الأقل للتصدير'); final archive=Archive();final book=Excel.createExcel();final sheet=book['بيانات الأصناف'];final headers=_ErpItemDataImportScreenState._headers;sheet.appendRow(_ErpItemDataImportScreenState._headerLabels.map((h)=>TextCellValue(h)).toList());
-      for(final r in selected){final imageFile=r.bytes==null?'':'images/${r.id}.${_ext(r.imageUrl)}';final m=r.toMap()..['image_file']=imageFile;sheet.appendRow(headers.map((h)=>TextCellValue(m[h]??'')).toList());if(r.bytes!=null)archive.addFile(ArchiveFile(imageFile,r.bytes!.length,r.bytes!));}
+      for(final r in selected){final imageFile=r.bytes==null?'':'images/${r.id}.${_ext(r.imageUrl, r.bytes)}';final m=r.toMap()..['image_file']=imageFile;sheet.appendRow(headers.map((h)=>TextCellValue(m[h]??'')).toList());if(r.bytes!=null)archive.addFile(ArchiveFile(imageFile,r.bytes!.length,r.bytes!));}
       final x=book.encode()!;archive.addFile(ArchiveFile('items.xlsx',x.length,x));final zipped=ZipEncoder().encode(archive)!;
       await FileSaver.instance.saveFile(name:'silsila_items_edited',bytes:Uint8List.fromList(zipped),fileExtension:'zip',mimeType:MimeType.zip);
       setState(()=>_status='تم تصدير ZIP المعدل دون أي كتابة في قاعدة البيانات.');
     }catch(e){setState(()=>_status='فشل التصدير: $e');}finally{if(mounted)setState(()=>_busy=false);}
   }
-  String _ext(String url){final p=Uri.tryParse(url)?.path.toLowerCase()??'';for(final e in ['png','webp','gif','avif','jpeg']){if(p.endsWith('.$e'))return e;}return 'jpg';}
+  String _ext(String url, [Uint8List? bytes]){if(bytes!=null&&bytes.isNotEmpty){if(bytes.length>=8&&bytes[0]==0x89&&bytes[1]==0x50)return 'png';if(bytes.length>=3&&bytes[0]==0xff&&bytes[1]==0xd8&&bytes[2]==0xff)return 'jpg';if(bytes.length>=6&&String.fromCharCodes(bytes.take(6))=='GIF89a')return 'gif';if(bytes.length>=2&&bytes[0]==0x42&&bytes[1]==0x4d)return 'bmp';if(bytes.length>=12&&String.fromCharCodes(bytes.sublist(0,4))=='RIFF'&&String.fromCharCodes(bytes.sublist(8,12))=='WEBP')return 'webp';}final p=Uri.tryParse(url)?.path.toLowerCase()??'';for(final e in ['png','webp','gif','avif','jpeg']){if(p.endsWith('.$e'))return e;}return 'jpg';}
   void _preview(_ImportRow r){showDialog<void>(context:context,builder:(c)=>Dialog(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[Align(alignment:Alignment.centerRight,child:IconButton(onPressed:()=>Navigator.pop(c),icon:const Icon(Icons.close))),Flexible(child:r.bytes!=null?InteractiveViewer(child:Image.memory(r.bytes!,fit:BoxFit.contain)):Image.network(r.imageUrl,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image))),Text(r.name)]))));}
   @override
   Widget build(BuildContext context) {
