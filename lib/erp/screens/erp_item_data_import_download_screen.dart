@@ -259,7 +259,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
             }
 
             // Fallback for sites without structured Product schema.
-            for (final image in images) {
+            if (products.isEmpty) for (final image in images) {
               final name = textOf(image['product_full_name'] ?? image['product_name'] ?? image['context_name'] ?? image['alt']);
               final imageUrl = textOf(image['url']);
               if (imageUrl.isEmpty || name.isEmpty) continue;
@@ -290,9 +290,17 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
               final categoryUrl = textOf(category['url']);
               if (name.isEmpty || categoryUrl.isEmpty || !seenRecords.add('category:$categoryUrl')) continue;
               foundCategories++;
+              var categoryImage = '';
+              for (final image in images) {
+                final imageName = textOf(image['product_name'] ?? image['context_name'] ?? image['alt']).toLowerCase();
+                if (imageName.contains(name.toLowerCase()) || name.toLowerCase().contains(imageName)) {
+                  categoryImage = textOf(image['url']);
+                  if (categoryImage.isNotEmpty) break;
+                }
+              }
               _rows.add(_ImportRow(
                 id: 'CAT${(_rows.length + 1).toString().padLeft(6, '0')}',
-                imageUrl: '', name: name, kind: 'فئة',
+                imageUrl: categoryImage, name: name, kind: 'فئة',
                 code: 'CAT${(_rows.length + 1).toString().padLeft(5, '0')}',
                 sourcePage: categoryUrl,
               ));
@@ -355,7 +363,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       if (mounted) setState(() => _busy = false);
     }
   }
-  void _preview(_ImportRow row){showDialog<void>(context:context,builder:(ctx)=>Dialog(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[Row(children:[const Expanded(child:Text('معاينة الصورة',style:TextStyle(fontWeight:FontWeight.bold))),IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close))]),Flexible(child:InteractiveViewer(child:Image.network(row.imageUrl,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image,size:80),fit:BoxFit.contain))),const SizedBox(height:8),Text(row.name)]))));}
+  void _preview(_ImportRow row){showDialog<void>(context:context,builder:(ctx)=>Dialog(child:Padding(padding:const EdgeInsets.all(12),child:Column(mainAxisSize:MainAxisSize.min,children:[Row(children:[const Expanded(child:Text('معاينة الصورة',style:TextStyle(fontWeight:FontWeight.bold))),IconButton(onPressed:()=>Navigator.pop(ctx),icon:const Icon(Icons.close))]),Flexible(child:InteractiveViewer(child:row.imageUrl.isEmpty ? const Icon(Icons.category_outlined,size:80) : Image.network(row.imageUrl,errorBuilder:(_,__,___)=>const Icon(Icons.broken_image,size:80),fit:BoxFit.contain))),const SizedBox(height:8),Text(row.name)]))));}
   @override
   Widget build(BuildContext context) {
     return Directionality(
