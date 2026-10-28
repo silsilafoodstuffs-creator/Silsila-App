@@ -233,6 +233,26 @@ function internalLinks(html: string, base: URL): string[] {
       found.add(u.href);
     } catch { /* ignore unsafe, malformed, and external links */ }
   }
+  // Also recognize "load more" and rel=next controls that expose their
+  // destination through data attributes instead of a normal anchor.
+  for (const match of html.matchAll(/(?:data-next|data-url|data-href|data-load-more-url|data-next-page|data-page-url)=[\"']([^\"']+)[\"']/gi)) {
+    const raw = decodeEntities(match[1]).trim();
+    try {
+      const u = safeUrl(new URL(raw, base).href);
+      if (u.origin !== base.origin || ignoredPath.test(u.pathname) || ignoredRoute.test(u.pathname)) continue;
+      u.hash = "";
+      found.add(u.href);
+    } catch { /* ignore malformed load-more targets */ }
+  }
+  for (const match of html.matchAll(/<link\\b[^>]*rel=[\"']next[\"'][^>]*href=[\"']([^\"']+)[\"'][^>]*>/gi)) {
+    try {
+      const u = safeUrl(new URL(decodeEntities(match[1]), base).href);
+      if (u.origin === base.origin && !ignoredPath.test(u.pathname) && !ignoredRoute.test(u.pathname)) {
+        u.hash = "";
+        found.add(u.href);
+      }
+    } catch { /* ignore malformed rel=next targets */ }
+  }
   return [...found].slice(0, 800);
 }
 
