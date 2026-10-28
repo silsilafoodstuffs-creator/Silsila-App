@@ -234,11 +234,13 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
               return '';
             }
 
+            final pageProductImages = <String>{};
             for (final product in products) {
               final name = textOf(product['product_full_name'] ?? product['product_name']);
               final barcode = textOf(product['barcode']);
               final brand = textOf(product['brand']);
               final imageUrl = imageFor(product);
+              if (imageUrl.isNotEmpty) pageProductImages.add(imageUrl);
               final identity = barcode.isNotEmpty ? 'barcode:$barcode' : '${normalize(name)}|${normalize(brand)}';
               if (name.isEmpty || !seenRecords.add('product:$identity')) continue;
               foundProducts++;
@@ -259,11 +261,11 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
               ));
             }
 
-            // Fallback for sites without structured Product schema.
-            if (products.isEmpty) for (final image in images) {
+            // Fallback for image cards not represented in structured Product data.
+            for (final image in images) {
               final name = textOf(image['product_full_name'] ?? image['product_name'] ?? image['context_name'] ?? image['alt']);
               final imageUrl = textOf(image['url']);
-              if (imageUrl.isEmpty || name.isEmpty) continue;
+              if (imageUrl.isEmpty || name.isEmpty || pageProductImages.contains(imageUrl)) continue;
               final key = 'image:${normalize(name)}|$imageUrl';
               if (!seenRecords.add(key)) continue;
               foundProducts++;
@@ -347,11 +349,15 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
         final data = row.toMap();
         final cells = <CellValue>[];
         for (final header in _headers) {
-          if (header == 'image_file' && row.imageUrl.isNotEmpty) {
-            final safeImageUrl = row.imageUrl.replaceAll('"', '""');
-            // Excel 365 renders the source image in the worksheet; the adjacent
-            // URL column preserves the direct source for other spreadsheet apps.
-            cells.add(FormulaCellValue('IMAGE("$safeImageUrl")'));
+          if (header == 'image_file') {
+            if (row.imageUrl.isEmpty) {
+              cells.add(TextCellValue(''));
+            } else {
+              final safeImageUrl = row.imageUrl.replaceAll('"', '""');
+              // Excel 365 renders the source image in the worksheet; the adjacent
+              // URL column preserves the direct source for other spreadsheet apps.
+              cells.add(FormulaCellValue('IMAGE("$safeImageUrl")'));
+            }
           } else {
             cells.add(TextCellValue(data[header] ?? ''));
           }
@@ -621,7 +627,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                   rows: _rows.map((r) => DataRow(cells: [
                     DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
                     DataCell(Text('${_rows.indexOf(r) + 1}')),
-                    DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
+                    DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.bytes != null ? Image.memory(r.bytes!, fit: BoxFit.contain) : (r.imageUrl.isEmpty ? const Icon(Icons.category_outlined) : Image.network(r.imageUrl, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image)))))),
                     DataCell(_kindCell(r, () => setState(() {}))),
                     DataCell(_codeModeCell(r, () => setState(() {}))),
                     DataCell(IconButton(tooltip: 'بحث F1 في قائمة الصنف أو الفئة', onPressed: () async {
