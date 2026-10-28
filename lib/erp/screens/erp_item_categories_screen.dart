@@ -105,7 +105,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       }
       if (!_activities.any((a) => a['code'] == _selectedActivityCode)) _selectedActivityCode = _activities.first['code']!;
       final result = await _db!.from('erp_item_categories')
-        .select('id,company_id,activity_code,category_code,category_name,category_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type')
+        .select('id,company_id,activity_code,category_code,category_name,category_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type,image_source_url,image_attribution')
         .eq('company_id', company).eq('activity_code', _selectedActivityCode).order('category_code').limit(3000);
       _all = (result as List).map((e) => Map<String,dynamic>.from(e)).toList();
       _expandedIds.addAll(_all.map((r) => _s(r['id'])));
@@ -304,7 +304,9 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
 
   Widget _imagePreview(Map<String,dynamic> row, {double size = 54}) {
     final bytes = _categoryImageBytes(row);
-    return Container(
+    final attribution = _s(row['image_attribution']).trim();
+    final source = _s(row['image_source_url']).trim();
+    return Tooltip(message: attribution.isNotEmpty ? attribution : source.isNotEmpty ? source : 'صورة الفئة', child: Container(
       width: size, height: size,
       alignment: Alignment.center,
       clipBehavior: Clip.antiAlias,
@@ -319,7 +321,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               : Image.memory(bytes, fit: BoxFit.cover, width: size, height: size,
                   errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.black38)))
           : const Icon(Icons.category_outlined, color: Color(0xFF9A86B5), size: 25),
-    );
+    ));
   }
 
   void _removeImage(Map<String,dynamic> row) {
@@ -330,6 +332,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       row['image_data'] = null;
       row['image_mime_type'] = null;
       row['image_url'] = null;
+      row['image_source_url'] = null;
+      row['image_attribution'] = null;
       row['_remove_image'] = true;
       _selectedId = id;
     });
@@ -378,6 +382,8 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
           'category_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
           'show_in_app':row['show_in_app'] == true,
           'image_url':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_url'],
+          'image_source_url':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_source_url'],
+          'image_attribution':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_attribution'],
           if (row['_remove_image'] == true) ...{'image_data':null, 'image_mime_type':null},
           if (selectedBytes != null && selectedBytes.isNotEmpty) ...{
             'image_data':_byteaHex(selectedBytes), 'image_mime_type':_imageMime(row),
