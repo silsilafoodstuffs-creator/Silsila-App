@@ -10,6 +10,7 @@ import '../services/erp_app_management_service.dart';
 import '../services/erp_app_settings.dart';
 
 const _adsPurple = Color(0xFF3E007D);
+const _adsOrange = Color(0xFFFFA015);
 const _bannerSlots = <String>['إعلان 1', 'إعلان 2', 'إعلان 3', 'إعلان 4', 'إعلان 5'];
 const _popupSlot = 'إعلان منبثق';
 const _introSlot = 'إعلان البداية';
@@ -397,7 +398,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Row(children: [
                   Expanded(child: Text(slot, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: _adsPurple))),
-                  Text(asset != null ? 'محفوظ لهذا النشاط' : inherited ? 'موروث من كل الأنشطة' : 'غير محدد', style: TextStyle(color: asset != null ? Colors.green : inherited ? orange : Colors.black54, fontWeight: FontWeight.w700)),
+                  Text(asset != null ? 'محفوظ لهذا النشاط' : inherited ? 'موروث من كل الأنشطة' : 'غير محدد', style: TextStyle(color: asset != null ? Colors.green : inherited ? _adsOrange : Colors.black54, fontWeight: FontWeight.w700)),
                 ]),
                 const SizedBox(height: 10),
                 AspectRatio(
@@ -462,7 +463,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                       onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false, video: true),
                       icon: const Icon(Icons.video_library_outlined),
                       label: const Text('فيديو من الجهاز (MP4)'),
-                      style: FilledButton.styleFrom(backgroundColor: orange, foregroundColor: _adsPurple),
+                      style: FilledButton.styleFrom(backgroundColor: _adsOrange, foregroundColor: _adsPurple),
                     ),
                     OutlinedButton.icon(
                       onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: true, video: true),
