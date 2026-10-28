@@ -151,7 +151,14 @@ function productMetadata(html: string, base: URL) {
   for (const product of products) {
     for (const key of product._images as string[]) if (key && !byImage.has(key)) byImage.set(key, product);
   }
-  return { byImage, normalizeImage };
+  return {
+    byImage,
+    normalizeImage,
+    products: products.map((product) => {
+      const { _images, ...fields } = product;
+      return { ...fields, images: _images };
+    }),
+  };
 }
 
 function readableText(fragment: string): string {
@@ -205,6 +212,28 @@ function contextualEntityName(html: string, imageIndex: number): string {
     if (usableEntityName(name)) return name;
   }
   return "";
+}
+
+function internalLinks(html: string, base: URL): string[] {
+  const found = new Set<string>();
+  const ignoredPath = /\\.(?:jpg|jpeg|png|webp|gif|avif|bmp|svg|css|js|mjs|map|pdf|zip|rar|7z|woff2?|ttf|eot|mp4|webm|ico)(?:$|[?#])/i;
+  const ignoredRoute = /(?:^|\\/)(?:cart|checkout|my-account|account|login|logout|register|wishlist|compare|privacy|terms|contact|about-us|wp-json|feed|author|tag)(?:\\/|$)/i;
+  for (const match of html.matchAll(/<a\\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>/gi)) {
+    const raw = decodeEntities(match[1]).trim();
+    if (!raw || raw.startsWith("#") || /^(?:mailto:|tel:|javascript:|data:)/i.test(raw)) continue;
+    try {
+      const u = safeUrl(new URL(raw, base).href);
+      if (u.origin !== base.origin || ignoredPath.test(u.pathname) || ignoredRoute.test(u.pathname)) continue;
+      u.hash = "";
+      for (const key of [...u.searchParams.keys()]) {
+        if (/^(?:utm_|fbclid|gclid|yclid|session|sid|add-to-cart|remove_item|orderby|filter|rating_filter)/i.test(key)) u.searchParams.delete(key);
+      }
+      // Keep real pagination and category/filter URLs, but discard duplicate
+      // tracking variants. The visited set in the client handles cycles.
+      found.add(u.href);
+    } catch { /* ignore unsafe, malformed, and external links */ }
+  }
+  return [...found].slice(0, 800);
 }
 
 function pageImages(html: string, base: URL) {
@@ -346,7 +375,16 @@ Deno.serve(async (req: Request) => {
         return json({ error: "أمازون أعاد صفحة تحقق آلي بدل نتائج المنتجات؛ لم تُستخرج الصور من صفحة التحقق." }, 422);
       }
       const images = pageImages(html, target);
-      return json({ page: target.href, count: images.length, images });
+      const metadata = productMetadata(html, target);
+      const links = internalLinks(html, target);
+      return json({
+        page: target.href,
+        count: images.length,
+        images,
+        products: metadata.products,
+        links,
+        pagination: links.filter((link) => /(?:[?&](?:page|paged|pageno|page_no|pg)=\\d+|\\/page\\/\\d+\\/?$|[?&]p=\\d+)/i.test(link)),
+      });
     }
     if (action === "download") {
       let target = safeUrl(String(body.url ?? ""));
