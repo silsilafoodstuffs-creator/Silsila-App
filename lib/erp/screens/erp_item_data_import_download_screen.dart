@@ -198,7 +198,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     final visited = <String>{};
     final seenRecords = <String>{};
     var foundProducts = 0, foundCategories = 0, foundImages = 0, pageErrors = 0;
-    final rootHost = uri.host.toLowerCase();
+    final siteHosts = <String>{uri.host.toLowerCase()};
     try {
       while (queue.isNotEmpty && visited.length < 4000 && !_cancelCrawl) {
         final next = queue.removeAt(0);
@@ -212,6 +212,8 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
           if (response.status >= 400 || payload is! Map || payload['error'] != null) {
             pageErrors++;
           } else {
+            final actualPage = Uri.tryParse(textOf(payload['page']));
+            if (actualPage != null) siteHosts.add(actualPage.host.toLowerCase());
             final pageProducts = payload['products'];
             final pageImages = payload['images'];
             final pageCategories = payload['categories'];
@@ -312,7 +314,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
             for (final value in links) {
               final link = textOf(value);
               final parsed = Uri.tryParse(link);
-              if (parsed == null || !parsed.hasScheme || !['http', 'https'].contains(parsed.scheme) || parsed.host.toLowerCase() != rootHost) continue;
+              if (parsed == null || !parsed.hasScheme || !['http', 'https'].contains(parsed.scheme) || !siteHosts.contains(parsed.host.toLowerCase())) continue;
               if (queued.add(link) && !visited.contains(link) && queue.length + visited.length < 4000) queue.add(link);
             }
           }
