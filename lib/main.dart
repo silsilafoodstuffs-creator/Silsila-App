@@ -896,6 +896,9 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 560, maxHeight: 420),
+                child: SizedBox(
+                width: MediaQuery.of(context).size.width * .82,
+                height: MediaQuery.of(context).size.height * .46,
                 child: Material(
                   color: Colors.white,
                   elevation: 18,
@@ -926,6 +929,7 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
                     ),
                   ]),
                 ),
+              ),
               ),
             ),
           ));
@@ -1792,7 +1796,8 @@ class _MainShellState extends State<MainShell> {
           if (type == 'category') {
             try {
               final rows = await categoryService.getCategories(limit: 500);
-              final match = rows.where((row) => (row['category_code'] ?? row['code'] ?? '').toString().trim() == (code ?? '').trim()).firstOrNull;
+              final matches = rows.where((row) => (row['category_code'] ?? row['code'] ?? '').toString().trim() == (code ?? '').trim()).toList();
+              final match = matches.isEmpty ? null : matches.first;
               final name = match?['category_name']?.toString() ?? match?['name']?.toString();
               if (!mounted) return;
               setState(() {
