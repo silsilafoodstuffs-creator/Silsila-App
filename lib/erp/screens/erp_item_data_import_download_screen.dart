@@ -356,6 +356,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     if (bytes.length >= 8 && bytes[0] == 0x89 && bytes[1] == 0x50) return 'png';
     if (bytes.length >= 3 && bytes[0] == 0xff && bytes[1] == 0xd8 && bytes[2] == 0xff) return 'jpg';
     if (bytes.length >= 6 && String.fromCharCodes(bytes.take(6)) == 'GIF89a') return 'gif';
+    if (bytes.length >= 2 && bytes[0] == 0x42 && bytes[1] == 0x4d) return 'bmp';
     if (bytes.length >= 12 && String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF' &&
         String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP') return 'webp';
     return 'jpg';
@@ -384,6 +385,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     final book = Excel.createExcel();
     final sheet = book['بيانات الأصناف'];
     sheet.appendRow(_headerLabels.map((h) => TextCellValue(h)).toList());
+    sheet.setColumnWidth(1, 14);
     var done = 0;
     var imageCount = 0;
     for (final row in selected) {
@@ -398,6 +400,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
         }
       }
       sheet.appendRow(cells);
+      sheet.setRowHeight(done + 1, 60);
       if (imageBytes != null && imageBytes.isNotEmpty) {
         try {
           sheet.insertImage(
