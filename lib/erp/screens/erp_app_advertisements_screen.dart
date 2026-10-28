@@ -9,7 +9,8 @@ import '../services/erp_app_management_service.dart';
 import '../services/erp_app_settings.dart';
 
 const _adsPurple = Color(0xFF3E007D);
-const _adSlots = <String>['إعلان 1', 'إعلان 2', 'إعلان 3', 'إعلان 4', 'إعلان 5'];
+const _bannerSlots = <String>['إعلان 1', 'إعلان 2', 'إعلان 3', 'إعلان 4', 'إعلان 5'];
+const _popupSlot = 'إعلان منبثق';
 
 class ErpAppAdvertisementsScreen extends StatefulWidget {
   const ErpAppAdvertisementsScreen({
@@ -35,6 +36,13 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
   String? _error;
   String? _message;
   String? _busySlot;
+  int _selectedTab = 0;
+  final Map<String, String> _targetTypes = {};
+  final Map<String, String> _targetCodes = {};
+  final Map<String, int> _durations = {};
+
+  List<String> get _adSlots => _selectedTab == 0 ? _bannerSlots : const [_popupSlot];
+  String get _assetType => _selectedTab == 0 ? 'banner_ad' : 'popup_ad';
 
   bool get _ready =>
       (widget.companyId ?? '').trim().isNotEmpty &&
@@ -65,9 +73,17 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
     }
     setState(() { _loading = true; _error = null; });
     try {
-      final records = await _repository.listAssets(appId: widget.appId!, assetType: 'banner_ad', limit: 100);
+      final records = await _repository.listAssets(appId: widget.appId!, assetType: _assetType, limit: 100);
       if (!mounted) return;
-      setState(() { _assets = records; _loading = false; });
+      setState(() {
+        _assets = records;
+        for (final record in records) {
+          _targetTypes[record.displayName] = record.targetType;
+          _targetCodes[record.displayName] = record.targetCode ?? '';
+          _durations[record.displayName] = record.durationSeconds;
+        }
+        _loading = false;
+      });
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -130,12 +146,12 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
         fileName: fileName,
         bytes: bytes,
         contentType: mime,
-        assetType: 'banner_ad',
+        assetType: _assetType,
       );
       final old = _forSlot(slot);
       await _repository.registerAsset(ErpAppAssetRecord(
         appId: widget.appId!,
-        assetType: 'banner_ad',
+        assetType: _assetType,
         storagePath: newPath,
         displayName: slot,
         mimeType: mime,
@@ -180,6 +196,31 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
       case 'webp': return 'image/webp';
       case 'gif': return 'image/gif';
       default: throw ArgumentError('الصيغ المدعومة JPG وPNG وWEBP وGIF فقط.');
+    }
+  }
+
+  Future<void> _saveMetadata(String slot, ErpAppAssetRecord asset) async {
+    if (asset.id == null || _busySlot != null) return;
+    setState(() { _busySlot = slot; _error = null; _message = null; });
+    try {
+      final type = _targetTypes[slot] ?? 'none';
+      final code = (_targetCodes[slot] ?? '').trim();
+      final duration = _durations[slot] ?? 5;
+      if (type != 'none' && code.isEmpty) throw ArgumentError('اكتب كود الفئة أو المورد قبل الحفظ.');
+      await _repository.updateAssetRecord(assetId: asset.id!, asset: ErpAppAssetRecord(
+        id: asset.id, appId: asset.appId, assetType: asset.assetType,
+        storagePath: asset.storagePath, displayName: asset.displayName,
+        entityId: asset.entityId, mimeType: asset.mimeType,
+        fileSizeBytes: asset.fileSizeBytes, altText: asset.altText,
+        targetType: type, targetCode: type == 'none' ? null : code,
+        durationSeconds: duration,
+      ));
+      if (mounted) setState(() => _message = 'تم حفظ إعدادات $slot.');
+      await _load();
+    } catch (error) {
+      if (mounted) setState(() => _error = 'تعذر حفظ إعدادات الإعلان: $error');
+    } finally {
+      if (mounted) setState(() => _busySlot = null);
     }
   }
 
@@ -238,17 +279,29 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('إدارة إعلانات التطبيق', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _adsPurple)),
             SizedBox(height: 4),
-            Text('إدارة خمس صور إعلانية متتابعة؛ ينتقل التطبيق تلقائيًا كل ثانيتين.', style: TextStyle(color: Colors.black54, height: 1.4)),
+            Text('إعلانات الهيدر والإعلان المنبثق مع تحديد وجهة الضغط ومدة الظهور.', style: TextStyle(color: Colors.black54, height: 1.4)),
           ])),
           IconButton(tooltip: 'تحديث الإعلانات', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
         ]),
+        const SizedBox(height: 14),
+        SegmentedButton<int>(
+          segments: const [
+            ButtonSegment<int>(value: 0, icon: Icon(Icons.view_carousel_outlined), label: Text('إعلانات الهيدر (5)')),
+            ButtonSegment<int>(value: 1, icon: Icon(Icons.picture_in_picture_alt_outlined), label: Text('الإعلان المنبثق')),
+          ],
+          selected: {_selectedTab},
+          onSelectionChanged: _loading ? null : (selection) {
+            setState(() { _selectedTab = selection.first; _message = null; _error = null; });
+            _load();
+          },
+        ),
         const SizedBox(height: 14),
         Card(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: Colors.grey.shade300)),
           child: const Padding(
             padding: EdgeInsets.all(14),
-            child: Text('استخدم صورًا أفقية بنسبة 16:9 تقريبًا، مع كتابة واضحة بعيدًا عن الحواف. الصيغ المدعومة JPG وPNG وWEBP وGIF، وبحد أقصى 8 ميجابايت للصورة.', style: TextStyle(height: 1.6)),
+            child: Text(_selectedTab == 0 ? 'استخدم صورًا أفقية بنسبة 16:9 تقريبًا. ينتقل الهيدر تلقائيًا كل ثانيتين. الصيغ JPG وPNG وWEBP وGIF وبحد أقصى 8 ميجابايت.' : 'يظهر الإعلان المنبثق في منتصف الشاشة بحواف دائرية دون تغطية التطبيق، ويمكن إغلاقه. حدد مدة الظهور بالثواني ووجهة الضغط.', style: TextStyle(height: 1.6)),
           ),
         ),
         if (_message != null) _notice(_message!, Colors.green),
@@ -285,6 +338,32 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                   ),
                 ),
                 const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: _targetTypes[slot] ?? asset?.targetType ?? 'none',
+                  decoration: const InputDecoration(labelText: 'التوجه عند الضغط على الصورة', border: OutlineInputBorder(), isDense: true),
+                  items: const [
+                    DropdownMenuItem(value: 'none', child: Text('بدون توجيه')),
+                    DropdownMenuItem(value: 'category', child: Text('فتح فئة أصناف')),
+                    DropdownMenuItem(value: 'supplier', child: Text('فتح مورد')),
+                  ],
+                  onChanged: _busySlot != null ? null : (value) => setState(() => _targetTypes[slot] = value ?? 'none'),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  key: ValueKey('target-code-$slot-${_selectedTab}'),
+                  initialValue: _targetCodes[slot] ?? asset?.targetCode ?? '',
+                  decoration: InputDecoration(labelText: (_targetTypes[slot] ?? asset?.targetType ?? 'none') == 'category' ? 'كود الفئة' : 'كود المورد', hintText: 'اختياري عند اختيار بدون توجيه', border: const OutlineInputBorder(), isDense: true),
+                  onChanged: (value) => _targetCodes[slot] = value,
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  key: ValueKey('duration-$slot-${_selectedTab}'),
+                  initialValue: (_durations[slot] ?? asset?.durationSeconds ?? 5).toString(),
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: _selectedTab == 1 ? 'مدة ظهور الإعلان بالثواني' : 'مدة الانتقال بالثواني', border: const OutlineInputBorder(), isDense: true),
+                  onChanged: (value) => _durations[slot] = int.tryParse(value) ?? 5,
+                ),
+                const SizedBox(height: 10),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   FilledButton.icon(
                     onPressed: !_ready || _busySlot != null ? null : () => _chooseImage(slot, camera: false),
@@ -297,6 +376,12 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                     icon: const Icon(Icons.photo_camera_outlined),
                     label: const Text('تصوير بالكاميرا'),
                   ),
+                  if (asset != null)
+                    OutlinedButton.icon(
+                      onPressed: _busySlot != null ? null : () => _saveMetadata(slot, asset),
+                      icon: const Icon(Icons.save_outlined),
+                      label: const Text('حفظ إعدادات الإعلان'),
+                    ),
                   if (asset != null)
                     TextButton.icon(
                       onPressed: _busySlot != null ? null : () => _deleteSlot(slot),
