@@ -124,6 +124,9 @@ class ErpAppAssetRecord {
     this.mimeType,
     this.fileSizeBytes,
     this.altText,
+    this.targetType = 'none',
+    this.targetCode,
+    this.durationSeconds = 5,
   });
 
   final String appId;
@@ -135,6 +138,9 @@ class ErpAppAssetRecord {
   final String? mimeType;
   final int? fileSizeBytes;
   final String? altText;
+  final String targetType;
+  final String? targetCode;
+  final int durationSeconds;
 
   List<String> validate() {
     final errors = <String>[];
@@ -149,10 +155,14 @@ class ErpAppAssetRecord {
       'customer',
       'shipping_company',
       'banner_ad',
+      'popup_ad',
       'other',
     }.contains(assetType)) {
       errors.add('نوع الملف غير مدعوم.');
     }
+    if (!const {'none', 'category', 'supplier'}.contains(targetType)) errors.add('نوع وجهة الإعلان غير صالح.');
+    if (targetType != 'none' && (targetCode ?? '').trim().isEmpty) errors.add('كود وجهة الإعلان مطلوب.');
+    if (durationSeconds < 1 || durationSeconds > 120) errors.add('مدة الإعلان يجب أن تكون بين ثانية و120 ثانية.');
     if (storagePath.trim().isEmpty) errors.add('مسار الملف مطلوب.');
     if (displayName.trim().isEmpty) errors.add('اسم الملف مطلوب.');
     if (fileSizeBytes != null && fileSizeBytes! < 0) {
@@ -170,6 +180,9 @@ class ErpAppAssetRecord {
         'mime_type': mimeType,
         'file_size_bytes': fileSizeBytes,
         'alt_text': altText,
+        'target_type': targetType,
+        'target_code': targetCode,
+        'duration_seconds': durationSeconds,
       };
 }
 
