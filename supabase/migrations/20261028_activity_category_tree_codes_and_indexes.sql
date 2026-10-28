@@ -29,6 +29,7 @@ DECLARE
   parent_company uuid;
   parent_activity text;
   parent_parent_id uuid;
+  parent_grandparent_id uuid;
   next_number bigint;
 BEGIN
   IF NEW.category_code IS NULL OR btrim(NEW.category_code) = '' THEN
@@ -44,10 +45,11 @@ BEGIN
   END IF;
 
   IF NEW.parent_id IS NOT NULL THEN
-    SELECT company_id, activity_code, parent_id
-      INTO parent_company, parent_activity, parent_parent_id
-      FROM public.erp_item_categories
-      WHERE id = NEW.parent_id;
+    SELECT p.company_id, p.activity_code, p.parent_id, gp.parent_id
+      INTO parent_company, parent_activity, parent_parent_id, parent_grandparent_id
+      FROM public.erp_item_categories p
+      LEFT JOIN public.erp_item_categories gp ON gp.id = p.parent_id
+      WHERE p.id = NEW.parent_id;
 
     IF NOT FOUND THEN
       -- Allows a parent inserted earlier in the same save sequence only; a missing parent is invalid.
@@ -57,7 +59,7 @@ BEGIN
        OR parent_activity IS DISTINCT FROM NEW.activity_code THEN
       RAISE EXCEPTION 'يجب أن تنتمي الفئة وأصلها إلى الشركة والنشاط نفسيهما.';
     END IF;
-    IF parent_parent_id IS NOT NULL THEN
+    IF parent_parent_id IS NOT NULL AND parent_grandparent_id IS NOT NULL THEN
       RAISE EXCEPTION 'يسمح بثلاثة مستويات فقط: رئيسية وفرعية وثانوية.';
     END IF;
     IF NEW.parent_id = NEW.id THEN
