@@ -17,26 +17,42 @@ class ErpOperationalDocumentsRepository {
   Future<List<Map<String, dynamic>>> fetchDocuments({
     required String companyId,
     required ErpOperationalKind kind,
+    int offset = 0,
+    int pageSize = 300,
+    String search = '',
   }) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 1000) {
+      throw ArgumentError('نطاق صفحة المستندات غير صالح.');
+    }
     final table = kind == ErpOperationalKind.purchase
       ? 'erp_purchase_documents' : 'erp_sales_documents';
     final columns = kind == ErpOperationalKind.purchase
       ? 'id, company_id, branch_id, warehouse_id, supplier_id, auto_number, document_number, document_date, document_timestamp, document_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes, source_document_ids'
       : 'id, company_id, branch_id, warehouse_id, customer_id, sales_rep_id, is_tax_invoice, auto_number, document_number, document_date, document_timestamp, document_type, fiscal_year, fiscal_period_id, payment_type, status, subtotal, discount_total, tax_total, grand_total, paid_total, notes, source_channel, source_document_ids';
-    final rows = await _db.from(table)
+    var query = _db.from(table)
       .select(columns)
-      .eq('company_id', companyId.trim())
+      .eq('company_id', companyId.trim());
+    final normalizedSearch = search.trim();
+    if (normalizedSearch.isNotEmpty) {
+      query = query.ilike('document_number', '%$normalizedSearch%');
+    }
+    final rows = await query
       .order('document_date', ascending: false)
-      .limit(300);
+      .range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchParties(String companyId, ErpOperationalKind kind) async {
-    final rows = await _db.from('erp_parties')
+  Future<List<Map<String, dynamic>>> fetchParties(String companyId, ErpOperationalKind kind, {int offset = 0, int pageSize = 500, String search = ''}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الأطراف غير صالح.');
+    var query = _db.from('erp_parties')
       .select('id, party_code, party_name, party_name_en, party_kind, transaction_type, customer_type, business_classification, sales_rep_id, sales_rep_employee_id, default_warehouse_id')
       .eq('company_id', companyId.trim()).eq('is_active', true)
-      .inFilter('party_kind', kind == ErpOperationalKind.purchase ? ['supplier','both'] : ['customer','both'])
-      .order('party_name').limit(2000);
+      .inFilter('party_kind', kind == ErpOperationalKind.purchase ? ['supplier','both'] : ['customer','both']);
+    final normalizedSearch = search.trim();
+    if (normalizedSearch.isNotEmpty) {
+      query = query.or('party_name.ilike.%$normalizedSearch%,party_code.ilike.%$normalizedSearch%');
+    }
+    final rows = await query.order('party_name').range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
@@ -66,10 +82,16 @@ class ErpOperationalDocumentsRepository {
       .where((id) => id.isNotEmpty).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
-    final rows = await _db.from('erp_items')
+  Future<List<Map<String, dynamic>>> fetchItems(String companyId, {int offset = 0, int pageSize = 500, String search = ''}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الأصناف غير صالح.');
+    var query = _db.from('erp_items')
       .select('id, item_code, item_name, barcode, base_unit, purchase_price, sale_price, tax_rate, discount_limit')
-      .eq('company_id', companyId.trim()).eq('is_active', true).order('item_name').limit(2000);
+      .eq('company_id', companyId.trim()).eq('is_active', true);
+    final normalizedSearch = search.trim();
+    if (normalizedSearch.isNotEmpty) {
+      query = query.or('item_name.ilike.%$normalizedSearch%,item_code.ilike.%$normalizedSearch%,barcode.ilike.%$normalizedSearch%');
+    }
+    final rows = await query.order('item_name').range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
