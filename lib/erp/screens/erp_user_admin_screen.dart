@@ -498,6 +498,17 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     if (_saving || _db == null) return;
     setState(() { _saving = true; _error = null; });
     try {
+      // Validate the entire hierarchy before the first write so a weak password or missing
+      // employee link cannot leave an avoidable half-saved batch.
+      for (final user in _users) {
+        final type = _types.where((t) => _s(t['id']) == _s(user['user_type_id'])).firstOrNull;
+        if (type == null || type['is_active'] != true) throw StateError('اختر نوع مستخدم نشطًا للسجل «${_s(user['name_ar'])}».');
+        if (_userTypeRequiresEmployee(type) && _s(user['employee_id']).isEmpty) throw StateError('يجب ربط المستخدم ${_s(user['name_ar'])} بموظف نشط باستخدام F1.');
+        final classificationId = _s(user['classification_id']);
+        if (classificationId.isNotEmpty && !_classifications.any((x) => _s(x['id']) == classificationId && _s(x['user_type_id']) == _s(user['user_type_id']) && x['is_active'] == true)) throw StateError('اختر تصنيفًا نشطًا تابعًا لنوع المستخدم المحدد.');
+        final password = _s(user['_password_draft']);
+        if (password.isNotEmpty && password.length < 8) throw StateError('كلمة المرور للمستخدم ${_s(user['name_ar'])} يجب ألا تقل عن 8 أحرف.');
+      }
       for (final type in _types) {
         final id = _s(type['id']);
         if (id.isEmpty || type['_local_default'] == true) continue;
@@ -907,6 +918,19 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
     if(_saving||_db==null)return;
     setState(()=>_saving=true);
     try{
+      // Preflight all user rows before writing any row to reduce partial saves.
+      if (_isUser) {
+        for (final row in _rows) {
+          if (!_types.any((t)=>_s(t['id'])==_s(row['user_type_id'])&&t['is_active']==true)) throw StateError('اختر نوع مستخدم نشطًا للسجل «${_s(row['name_ar'])}».');
+          final type = _types.firstWhere((t)=>_s(t['id'])==_s(row['user_type_id']));
+          if (_userTypeRequiresEmployee(type) && _s(row['employee_id']).isEmpty) throw StateError('يجب ربط المستخدم ${_s(row['name_ar'])} بموظف نشط باستخدام F1.');
+          final cid = _s(row['classification_id']);
+          if (cid.isNotEmpty && !_classifications.any((x)=>_s(x['id'])==cid&&_s(x['user_type_id'])==_s(row['user_type_id'])&&x['is_active']==true)) throw StateError('اختر تصنيفًا نشطًا تابعًا لنوع المستخدم المحدد.');
+          final password = _s(row['_password_draft']), confirm = _s(row['_password_confirmation_draft']);
+          if (password.isNotEmpty || confirm.isNotEmpty) { if (password.isEmpty || password != confirm) throw StateError('كلمتا المرور غير متطابقتين للمستخدم ${_s(row['name_ar'])}.'); if (password.length < 8) throw StateError('كلمة المرور للمستخدم ${_s(row['name_ar'])} يجب ألا تقل عن 8 أحرف.'); }
+          if (_s(row['name_ar']).trim().isEmpty) throw StateError('الاسم العربي مطلوب لكل مستخدم.');
+        }
+      }
       if(_isType||_isUser||_isTemplate){
         for(final row in _rows){
           final id=_s(row['id']);if(id.isEmpty)continue;
