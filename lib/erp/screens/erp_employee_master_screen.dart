@@ -800,8 +800,9 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
           _field(_w1, 'موبايل عمل 1', type: TextInputType.phone, width: 155), _field(_w2, 'موبايل عمل 2', type: TextInputType.phone, width: 155),
           _field(_relativeMobile, 'موبايل أحد الأقارب', type: TextInputType.phone, width: 180), _field(_relativeRelation, 'صلة القرابة', width: 130),
         ]),
-        _employeeDocumentsSection(),
-      ]))))),
+      ]))),
+      _employeeDocumentsSection(),
+      ]))),
       _employeeGrid(),
     ])),
   );
