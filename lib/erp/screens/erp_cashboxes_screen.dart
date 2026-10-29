@@ -157,7 +157,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
       for (final target in targets) {
         final branchId = target['branchId'] as String?;
         final exists = rows.any((row) =>
-            row['is_bank_account'] != true &&
+            row['is_bank_account'] != true && row['is_active'] == true &&
             (branchId == null
                 ? _s(row['branch_id']).isEmpty
                 : _s(row['branch_id']) == branchId));
