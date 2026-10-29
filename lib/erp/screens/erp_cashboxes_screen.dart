@@ -122,6 +122,72 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
     }
   }
 
+  Future<void> _seedDefaultCashboxes() async {
+    if (_saving || _loading || _company.text.trim().isEmpty) return;
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final companyId = _company.text.trim();
+      final accounts = await _repo.fetchAccounts(companyId);
+      if (accounts.isEmpty) {
+        throw StateError('لا يوجد حساب أستاذ عام نشط وقابل للترحيل. أنشئ حساب الخزينة أولًا ثم أعد المحاولة.');
+      }
+      final branches = (await _repo.fetchBranches(companyId))
+          .where((b) => _s(b['branch_code']).isNotEmpty)
+          .toList()
+        ..sort((a, b) => _s(a['branch_code']).compareTo(_s(b['branch_code'])));
+      if (branches.isEmpty) {
+        throw StateError('لا توجد فروع نشطة. يجب إعداد الفروع أولًا.');
+      }
+      final rows = await _repo.fetchCashboxes(companyId);
+      var next = 0;
+      for (final row in rows) {
+        final digits = _s(row['cashbox_code']).replaceAll(RegExp('[^0-9]'), '');
+        final n = int.tryParse(digits) ?? 0;
+        if (n > next) next = n;
+      }
+      final targets = <Map<String, dynamic>>[
+        {'branchId': null, 'ar': 'الخزينة الرئيسية - الإدارة المركزية', 'en': 'Central Administration Main Treasury'},
+        ...branches.take(3).map((b) => {
+          'branchId': _s(b['id']),
+          'ar': 'خزينة فرع ${_s(b['branch_name'])}',
+          'en': '${_s(b['branch_name'])} Branch Treasury',
+        }),
+      ];
+      var created = 0;
+      for (final target in targets) {
+        final branchId = target['branchId'] as String?;
+        final exists = rows.any((row) =>
+            row['is_bank_account'] != true && row['is_active'] == true &&
+            (branchId == null
+                ? _s(row['branch_id']).isEmpty
+                : _s(row['branch_id']) == branchId));
+        if (exists) continue;
+        next++;
+        await _repo.createCashbox(
+          companyId: companyId,
+          code: 'CSH-${next.toString().padLeft(4, '0')}',
+          name: _s(target['ar']),
+          nameEn: _s(target['en']),
+          accountId: _s(accounts.first['id']),
+          branchId: branchId,
+          isBank: false,
+        );
+        created++;
+      }
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _message = created == 0
+            ? 'الخزائن الافتراضية موجودة بالفعل؛ لم يتم تكرار أي سجل.'
+            : 'تم إنشاء ${created} خزينة افتراضية. لم يتم حذف أو تغيير أي خزينة موجودة.';
+      });
+      await _load(clearMessage: false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _saving = false; _error = 'تعذرت تهيئة الخزائن: $e'; });
+    }
+  }
+
   Future<void> _setBranch(Map<String, dynamic> row, String? branchId) async {
     if (_saving) return;
     setState(() { _saving = true; _error = null; _message = null; });
@@ -193,6 +259,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
               _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : _newCashbox),
               _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving ? null : _create),
               _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), () => _previewRecords(widget.initialBankOnly ? 'معاينة الحسابات البنكية' : 'معاينة الخزائن')),
+              if (!widget.initialBankOnly) _quickTask('تهيئة الخزائن', Icons.account_balance_wallet_outlined, const Color(0xFF168447), _saving || _loading ? null : _seedDefaultCashboxes),
             ])),
           ]),
         )),

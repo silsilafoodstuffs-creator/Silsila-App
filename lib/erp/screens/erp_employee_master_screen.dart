@@ -354,10 +354,16 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       final locations = _locs.map((r) => Map<String,dynamic>.from(r)).toList();
       final branches = (await db.from('erp_branches').select('id,branch_code').eq('company_id', _cid).eq('is_active', true)).map((r) => Map<String,dynamic>.from(r)).toList();
       final types = (await db.from('erp_user_types').select('id,name_ar').eq('company_id', _cid)).map((r) => Map<String,dynamic>.from(r)).toList();
-      final typeRows = types.where((r) => _s(r['name_ar']) == 'موظف').toList();
-      if (typeRows.isEmpty) throw StateError('نوع المستخدم الداخلي موظف غير موجود.');
+      var typeRows = types.where((r) => _s(r['name_ar']) == 'موظف').toList();
+      if (typeRows.isEmpty) {
+        final createdType = await db.from('erp_user_types').insert({
+          'company_id': _cid, 'name_ar': 'موظف', 'name_en': 'Employee',
+          'description': 'مستخدم داخلي للموظفين', 'is_active': true, 'show_at_login': false,
+        }).select('id,name_ar').single();
+        typeRows = [Map<String, dynamic>.from(createdType)];
+      }
       final employeeType = typeRows.first;
-      final cashboxes = (await db.from('erp_cashboxes').select('id,cashbox_code').eq('company_id', _cid)).map((r) => Map<String,dynamic>.from(r)).toList();
+      final cashboxes = (await db.from('erp_cashboxes').select('id,cashbox_code,branch_id,is_bank_account').eq('company_id', _cid).eq('is_active', true).order('cashbox_code')).map((r) => Map<String,dynamic>.from(r)).toList();
       final data = <Map<String,dynamic>>[
         {'name':'علياء مجدي','en':'Alia Magdy','job':'مسئول مشتريات','dep':'مشتريات شركات','dc':'PUR-SEC-05','jc':'JOB-041','loc':'LOC-001','area':'أطلس 4','central':true},
         {'name':'أمنية جمال','en':'Omnia Gamal','job':'مسئول مشتريات','dep':'مشتريات تجار','dc':'PUR-SEC-06','jc':'JOB-041','loc':'LOC-001','area':'جمال عبد الناصر','central':true},
@@ -431,7 +437,16 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         final employeeId = idsByName[_s(item['name'])];
         if (employeeId == null) continue;
         final existingUserRows = users.where((u)=>_s(u['employee_id'])==employeeId).toList();
-        final cb = cashboxes.where((r)=>_s(r['cashbox_code'])==_s(item['cashbox'])).toList();
+        final isCashier = _s(item['job']) == 'أمين خزينة';
+        final targetBranchRows = branches.where((b) => _s(b['branch_code']) == _s(item['branch'])).toList();
+        final targetBranchId = targetBranchRows.isEmpty ? null : _s(targetBranchRows.first['id']);
+        final cb = isCashier ? cashboxes.where((r) =>
+            r['is_bank_account'] != true &&
+            (targetBranchId == null ? _s(r['branch_id']).isEmpty : _s(r['branch_id']) == targetBranchId)
+          ).toList() : <Map<String, dynamic>>[];
+        if (isCashier && cb.isEmpty) {
+          throw StateError('لا توجد خزينة نشطة مرتبطة بموقع أمين الخزينة ' + _s(item['name']) + '. افتح شاشة الخزائن واضغط «تهيئة الخزائن» أولًا.');
+        }
         late Map<String,dynamic> user;
         if (existingUserRows.isEmpty) {
           maxUser++;
@@ -439,13 +454,13 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
             'company_id':_cid,'user_code':'USR' + maxUser.toString().padLeft(4,'0'),
             'name_ar':item['name'],'name_en':item['en'],'user_type_id':employeeType['id'],
             'employee_id':employeeId,'is_active':true,'has_sub_warehouse':false,
-            'cashbox_id':cb.isEmpty ? null : cb.first['id'],
+            'cashbox_id':isCashier ? cb.first['id'] : null,
           }).select('id,user_code,employee_id,cashbox_id').single());
           users.add(user);
           createdUsers++;
         } else {
           user = existingUserRows.first;
-          if (item['cashbox'] != null && cb.isNotEmpty && _s(user['cashbox_id']) != _s(cb.first['id'])) {
+          if (isCashier && cb.isNotEmpty && _s(user['cashbox_id']) != _s(cb.first['id'])) {
             await db.from('erp_users').update({'cashbox_id':cb.first['id']}).eq('id',user['id']).eq('company_id',_cid);
           }
         }
