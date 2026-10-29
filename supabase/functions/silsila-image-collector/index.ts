@@ -392,7 +392,6 @@ Deno.serve(async (req: Request) => {
       const start = safeUrl(String(body.url ?? ""));
       const origin = start.origin;
       const maxPages = Math.min(80, Math.max(20, Number(body.maxPages ?? 60) || 60));
-      const visited = new Set<string>();
       const discovered = new Set<string>([start.href]);
       let frontier: string[] = [start.href];
       const canonical = (raw: string, base: URL): string | null => {
@@ -439,11 +438,14 @@ Deno.serve(async (req: Request) => {
           candidates.push(...result.pagination, ...result.links);
         }
         const next: string[] = [];
+        // Add only a small wave of new pages at a time, so the discovery
+        // explores deeper categories instead of filling the whole queue from
+        // a large navigation menu on the first page.
         for (const link of candidates) {
           if (discovered.has(link)) continue;
           discovered.add(link);
           next.push(link);
-          if (discovered.size >= maxPages) break;
+          if (next.length >= 8 || discovered.size >= maxPages) break;
         }
         frontier = next;
       }
