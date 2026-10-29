@@ -55,5 +55,9 @@ class ErpCashboxesRepository {
   Future<void> setActive(String id, bool active) async {
     await _db.from('erp_cashboxes').update({'is_active': active}).eq('id', id);
   }
+
+  Future<void> setBranch(String id, String? branchId) async {
+    await _db.from('erp_cashboxes').update({'branch_id': branchId}).eq('id', id);
+  }
   static String? _blank(String? value) => value == null || value.trim().isEmpty ? null : value.trim();
 }
