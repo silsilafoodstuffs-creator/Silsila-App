@@ -51,8 +51,8 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
   }).toList();
 
   Future<Uint8List> _leavePdfBytes() async {
-    final headers = _leaveHeaders();
-    final rows = _leaveRows();
+    final headers = _leaveHeaders().reversed.toList();
+    final rows = _leaveRows().map((row) => row.reversed.toList()).toList();
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
     final pdf = pw.Document();
     pdf.addPage(pw.MultiPage(
@@ -60,14 +60,12 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
       margin: const pw.EdgeInsets.all(20),
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
-        pw.Directionality(textDirection: pw.TextDirection.rtl, child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-          pw.Text('سلسلة — الإجازات والأذونات', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-          pw.SizedBox(height: 5),
-          pw.Text('الشركة: ${_company.text.trim()}    •    تاريخ التقرير: ${date(DateTime.now())}    •    عدد الطلبات: ${rows.length}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
-          pw.SizedBox(height: 12),
-          if (rows.isEmpty) pw.Text('لا توجد طلبات إجازة.', textAlign: pw.TextAlign.right)
-          else pw.TableHelper.fromTextArray(headers: headers, data: rows, headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 8), cellAlignment: pw.Alignment.centerRight, headerAlignment: pw.Alignment.centerRight),
-        ])),
+        pw.Text('سلسلة — الإجازات والأذونات', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 5),
+        pw.Text('الشركة: ${_company.text.trim()}    •    تاريخ التقرير: ${date(DateTime.now())}    •    عدد الطلبات: ${rows.length}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
+        pw.SizedBox(height: 12),
+        if (rows.isEmpty) pw.Text('لا توجد طلبات إجازة.', textAlign: pw.TextAlign.right)
+        else pw.TableHelper.fromTextArray(headers: headers, data: rows, headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 8), cellAlignment: pw.Alignment.centerRight, headerAlignment: pw.Alignment.centerRight),
       ],
     ));
     return Uint8List.fromList(await pdf.save());
