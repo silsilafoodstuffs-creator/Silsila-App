@@ -843,7 +843,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _openItemPicker({List<Map<String, dynamic>>? sourceItems, String? sourceTitle}) async {
-    final pickerItems = sourceItems ?? _items;
+    List<Map<String, dynamic>> pickerItems = List<Map<String, dynamic>>.from(sourceItems ?? _items);
     if (_saving || _loading) return;
     var selectedDoc = _rows.where((r) => _s(r['id']) == _selectedDocumentId);
     if (selectedDoc.isEmpty || _s(selectedDoc.first['status']) != 'draft') {
@@ -929,8 +929,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
     final selectedUnits = <String, String>{};
     final search = TextEditingController();
     final searchFocusNode = FocusNode();
-    for (final item in pickerItems) {
+    bool pickerSearchLoading = false;
+    void ensurePickerItem(Map<String, dynamic> item) {
       final id = _s(item['id']);
+      if (quantities.containsKey(id)) return;
       final suggestedQuantity = sourceTitle == 'نواقص العميل'
           ? (_n(item['requested_quantity']) - _n(item['fulfilled_quantity'])).clamp(0, double.infinity)
           : 0.0;
@@ -940,6 +942,9 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       final options = unitsByItem[id] ?? [];
       final base = options.where((unit) => unit['is_base_unit'] == true);
       selectedUnits[id] = base.isNotEmpty ? _s(base.first['id']) : (options.isNotEmpty ? _s(options.first['id']) : '');
+    }
+    for (final item in pickerItems) {
+      ensurePickerItem(item);
     }
 
     List<Map<String, dynamic>>? picked;
@@ -1035,15 +1040,38 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   controller: search,
                   focusNode: searchFocusNode,
                   autofocus: true,
-                  textInputAction: TextInputAction.next,
-                  onSubmitted: (_) => focusQuantityAt(0),
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (_) async {
+                    if (sourceItems != null) { focusQuantityAt(0); return; }
+                    final term = search.text.trim();
+                    refresh(() => pickerSearchLoading = true);
+                    try {
+                      final matches = await _repo.fetchItems(_company.text.trim(), pageSize: 500, search: term);
+                      final units = await _repo.fetchUnits(
+                        companyId: _company.text.trim(),
+                        itemIds: matches.map((item) => _s(item['id'])).where((id) => id.isNotEmpty).toList(),
+                      );
+                      refresh(() {
+                        for (final unit in units) {
+                          unitsByItem.putIfAbsent(_s(unit['item_id']), () => []).add(unit);
+                        }
+                        for (final item in matches) { ensurePickerItem(item); }
+                        pickerItems = matches;
+                        pickerSearchLoading = false;
+                      });
+                    } catch (error) {
+                      refresh(() => pickerSearchLoading = false);
+                      if (mounted) setState(() => _error = 'تعذر البحث عن الأصناف على الخادم: $error');
+                    }
+                  },
                   onChanged: (_) => refresh(() {}),
                   decoration: const InputDecoration(
-                    labelText: 'بحث بكود الصنف أو الاسم أو الباركود',
+                    labelText: 'ابحث بالاسم أو الكود أو الباركود ثم اضغط Enter للبحث في كل الأصناف',
                     prefixIcon: Icon(Icons.search),
                     isDense: true,
                   ),
                 ),
+                if (pickerSearchLoading) const LinearProgressIndicator(),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
