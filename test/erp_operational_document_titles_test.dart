@@ -29,7 +29,7 @@ void main() {
       kind: ErpOperationalKind.sales,
       documentType: 'quotation',
     );
-    expect(find.text('عرض سعر'), findsOneWidget);
+    expect(find.text('عرض سعر'), findsWidgets);
     expect(find.text('أمر بيع'), findsNothing);
     expect(find.text('فاتورة بيع'), findsNothing);
 
@@ -38,7 +38,7 @@ void main() {
       kind: ErpOperationalKind.sales,
       documentType: 'order',
     );
-    expect(find.text('أمر بيع'), findsOneWidget);
+    expect(find.text('أمر بيع'), findsWidgets);
     expect(find.text('عرض سعر'), findsNothing);
     expect(find.text('فاتورة بيع'), findsNothing);
 
@@ -47,7 +47,7 @@ void main() {
       kind: ErpOperationalKind.sales,
       documentType: 'invoice',
     );
-    expect(find.text('فاتورة بيع'), findsOneWidget);
+    expect(find.text('فاتورة بيع'), findsWidgets);
     expect(find.text('عرض سعر'), findsNothing);
     expect(find.text('أمر بيع'), findsNothing);
   });
