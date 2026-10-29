@@ -14,6 +14,9 @@ create table if not exists public.erp_user_classifications (
   unique(company_id, classification_code),
   unique(user_type_id, name_ar)
 );
+-- Link each ERP user to an optional classification of their selected user type.
+alter table public.erp_users add column if not exists classification_id uuid references public.erp_user_classifications(id) on delete set null;
+
 create index if not exists erp_user_classifications_type_idx
   on public.erp_user_classifications(company_id, user_type_id, classification_code);
 alter table public.erp_user_classifications enable row level security;
