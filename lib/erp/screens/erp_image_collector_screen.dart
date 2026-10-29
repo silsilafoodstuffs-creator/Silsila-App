@@ -41,7 +41,15 @@ Uint8List _processTransparentPngInBackground(Object input) {
             interpolation: img.Interpolation.average)
         : decodedSource;
     final decoded = img.Image(width: sourceImage.width, height: sourceImage.height, numChannels: 4);
-    img.compositeImage(decoded, sourceImage);
+    // Copy pixels into our own mutable image. Some decoded formats expose
+    // frame/pixel collections that cannot be modified by compositeImage.
+    for (var y = 0; y < sourceImage.height; y++) {
+      for (var x = 0; x < sourceImage.width; x++) {
+        final p = sourceImage.getPixel(x, y);
+        decoded.setPixelRgba(x, y, p.r.toInt(), p.g.toInt(),
+            p.b.toInt(), p.a.toInt());
+      }
+    }
     final int width = decoded.width;
     final int height = decoded.height;
     final visited = Uint8List(width * height);
@@ -925,7 +933,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         final encoded = downloaded['base64']?.toString();
         if (encoded == null || encoded.isEmpty) continue;
         final sourceBytes = Uint8List.fromList(base64Decode(encoded));
-        final bytes = _processTransparentPng(sourceBytes);
+        // Run CPU-heavy image processing away from the UI isolate.
+        final bytes = await compute(_processTransparentPngInBackground, sourceBytes);
         const extension = '.png';
         final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
         final fileName = _uniqueFileName(title, extension, usedFileNames);
@@ -934,8 +943,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         if (mounted) setState(() => _status = 'تم تجهيز $index من ${_selected.length} صورة...');
       }
       if (archive.isEmpty) throw Exception('لم يمكن تنزيل أي صورة من الاختيارات.');
+      // Include only images successfully added to the archive in Excel.
       final selectedImages = _images
-          .where((item) => _selected.contains(item['url']?.toString() ?? ''))
+          .where((item) => savedImageKeys.contains(_imageKey(item['url']?.toString() ?? '')))
           .toList();
       final excelBytes = _buildProductDataExcel(selectedImages);
       archive.addFile(ArchiveFile('بيانات_الأصناف.xlsx', excelBytes.length, excelBytes));
@@ -1012,6 +1022,12 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   }
 
   Future<Uint8List?> _previewImageBytes(String url) {
+    // Bound retained preview futures/bytes while users browse many pages.
+    while (_previewFutures.length >= 30) {
+      final oldestUrl = _previewFutures.keys.first;
+      _previewFutures.remove(oldestUrl);
+      _previewErrors.remove(oldestUrl);
+    }
     return _previewFutures.putIfAbsent(url, () async {
       try {
         final result = await _invoke({
