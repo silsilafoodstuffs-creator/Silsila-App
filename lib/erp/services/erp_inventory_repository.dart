@@ -27,27 +27,36 @@ class ErpInventoryRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
-    final rows = await _db.from('erp_items')
+  Future<List<Map<String, dynamic>>> fetchItems(String companyId, {int offset = 0, int pageSize = 2000, String search = ''}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 2000) throw ArgumentError('نطاق صفحة الأصناف غير صالح.');
+    var query = _db.from('erp_items')
         .select('id, item_code, item_name, base_unit, purchase_price, sale_price')
-        .eq('company_id', companyId.trim()).eq('is_active', true)
-        .order('item_name').limit(2000);
+        .eq('company_id', companyId.trim()).eq('is_active', true);
+    final normalizedSearch = search.trim();
+    if (normalizedSearch.isNotEmpty) {
+      query = query.or('item_name.ilike.%$normalizedSearch%,item_code.ilike.%$normalizedSearch%');
+    }
+    final rows = await query.order('item_name').range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchBalances(String companyId) async {
+  Future<List<Map<String, dynamic>>> fetchBalances(String companyId, {int offset = 0, int pageSize = 1000}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 2000) throw ArgumentError('نطاق صفحة الأرصدة غير صالح.');
     final rows = await _db.from('erp_stock_balances')
         .select('company_id, branch_id, warehouse_id, item_id, quantity_on_hand, last_movement_at, inventory_value, average_unit_cost')
         .eq('company_id', companyId.trim())
-        .order('last_movement_at', ascending: false).limit(1000);
+        .order('last_movement_at', ascending: false).range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchMovements(String companyId) async {
-    final rows = await _db.from('erp_inventory_movements')
+  Future<List<Map<String, dynamic>>> fetchMovements(String companyId, {int offset = 0, int pageSize = 100, String? itemId, String? warehouseId}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الحركات غير صالح.');
+    var query = _db.from('erp_inventory_movements')
         .select('id, movement_date, movement_type, warehouse_id, item_id, quantity_in, quantity_out, unit_cost, notes, batch_number')
-        .eq('company_id', companyId.trim())
-        .order('movement_date', ascending: false).limit(100);
+        .eq('company_id', companyId.trim());
+    if (itemId != null && itemId.trim().isNotEmpty) query = query.eq('item_id', itemId.trim());
+    if (warehouseId != null && warehouseId.trim().isNotEmpty) query = query.eq('warehouse_id', warehouseId.trim());
+    final rows = await query.order('movement_date', ascending: false).range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
