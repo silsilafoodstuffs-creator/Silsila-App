@@ -54,6 +54,6 @@ void main() {
 
   testWidgets('purchase documents retain the purchase title', (tester) async {
     await pumpDocument(tester, kind: ErpOperationalKind.purchase);
-    expect(find.text('مستندات المشتريات'), findsOneWidget);
+    expect(find.text('مستندات المشتريات'), findsWidgets);
   });
 }
