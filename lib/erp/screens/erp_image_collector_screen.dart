@@ -144,6 +144,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   final ScrollController _imagesScrollController = ScrollController();
   static const int _imagesPageSize = 10;
   int _imagesPage = 0;
+  final List<String> _crawlPages = <String>[];
+  final Set<String> _queuedCrawlPages = <String>{};
+  final Set<String> _scannedCrawlPages = <String>{};
+  int _crawlPageFailures = 0;
 
   @override
   void initState() {
@@ -302,6 +306,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       _selected.clear();
       _pageUrl = null;
       _imagesPage = 0;
+      _crawlPages.clear();
+      _queuedCrawlPages.clear();
+      _scannedCrawlPages.clear();
+      _crawlPageFailures = 0;
       _duplicateCount = 0;
       _previouslyImportedCount = 0;
       _previewFutures.clear();
@@ -481,12 +489,29 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       _images = [];
       _previewFutures.clear();
       _previewErrors.clear();
+      _crawlPages.clear();
+      _queuedCrawlPages.clear();
+      _scannedCrawlPages.clear();
+      _crawlPageFailures = 0;
     });
     try {
       await _loadCategoryOptions();
       final scope = _sourceScope(parsed.toString());
       if (_importedScope != scope) await _loadImportedForScope(scope);
       final result = await _invoke({'action': 'scan', 'url': parsed.toString()});
+      final discovered = (result['pagination'] as List? ?? const [])
+          .map((x) => x is Map ? (x['url'] ?? x['href'] ?? '').toString() : x.toString())
+          .where((x) => x.isNotEmpty)
+          .map((x) => Uri.tryParse(x))
+          .whereType<Uri>()
+          .map((x) => x.hasScheme ? x : parsed.resolveUri(x))
+          .map((x) => x.replace(fragment: '').toString())
+          .where((x) => Uri.tryParse(x)?.host == parsed.host && x != parsed.replace(fragment: '').toString())
+          .toSet().toList();
+      _scannedCrawlPages.add(parsed.replace(fragment: '').toString());
+      for (final page in discovered) {
+        if (_queuedCrawlPages.add(page)) _crawlPages.add(page);
+      }
       final rawImages = (result['images'] as List? ?? const []);
       final candidates = rawImages.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
       for (final image in candidates) { image['save_as'] = _imageKind; }
@@ -536,6 +561,50 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _scanCrawlPage(String pageUrl) async {
+    if (_loading || _scannedCrawlPages.contains(pageUrl)) return;
+    setState(() { _loading = true; _error = null; _status = 'جارٍ تحميل صفحة ${_crawlPages.indexOf(pageUrl) + 2} دون إعادة تحميل الصور السابقة...'; });
+    try {
+      final parsed = Uri.parse(pageUrl);
+      final result = await _invoke({'action': 'scan', 'url': pageUrl});
+      final rawImages = (result['images'] as List? ?? const []);
+      final existing = _images.map((x) => _imageKey((x['url'] ?? '').toString())).toSet();
+      final added = <Map<String, dynamic>>[];
+      var duplicates = 0;
+      var imported = 0;
+      for (final raw in rawImages) {
+        if (raw is! Map) continue;
+        final image = Map<String, dynamic>.from(raw);
+        final url = (image['url'] ?? '').toString();
+        if (url.isEmpty) continue;
+        final key = _imageKey(url);
+        if (!existing.add(key)) { duplicates++; continue; }
+        image['save_as'] = _imageKind;
+        final wasImported = _importedImageKeys.contains(key);
+        image['_previously_imported'] = wasImported;
+        if (wasImported) imported++;
+        added.add(image);
+      }
+      final next = (result['pagination'] as List? ?? const [])
+          .map((x) => x is Map ? (x['url'] ?? x['href'] ?? '').toString() : x.toString())
+          .where((x) => x.isNotEmpty).map((x) => Uri.tryParse(x)).whereType<Uri>()
+          .map((x) => x.hasScheme ? x : parsed.resolveUri(x)).map((x) => x.replace(fragment: '').toString())
+          .where((x) => Uri.tryParse(x)?.host == parsed.host && !_scannedCrawlPages.contains(x) && !_queuedCrawlPages.contains(x)).toSet();
+      if (!mounted) return;
+      setState(() {
+        _scannedCrawlPages.add(pageUrl);
+        _images.addAll(added);
+        _selected.addAll(added.where((x) => x['_previously_imported'] != true).map((x) => x['url'].toString()));
+        _previouslyImportedCount += imported;
+        _duplicateCount += duplicates;
+        for (final page in next) { _queuedCrawlPages.add(page); _crawlPages.add(page); }
+        _status = 'تم فحص الصفحة وإضافة ${added.length} صورة جديدة؛ إجمالي الصور ${_images.length}. يمكنك متابعة أي صفحة مرقمة أخرى.';
+      });
+    } catch (e) {
+      if (mounted) setState(() { _crawlPageFailures++; _error = 'تعذر فحص الصفحة: ' + e.toString().replaceFirst('Exception: ', ''); });
+    } finally { if (mounted) setState(() => _loading = false); }
   }
 
   void _toggle(String url, bool? value) {
@@ -1281,6 +1350,30 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 ),
                 if (_pageUrl != null) ...[
                   const SizedBox(height: 10),
+                ],
+                if (_pageUrl != null && _crawlPages.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: _purple.withValues(alpha: .05), borderRadius: BorderRadius.circular(12), border: Border.all(color: _purple.withValues(alpha: .18))),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('دفعات صفحات الموقع', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                      const SizedBox(height: 5),
+                      Text('تم فحص ${_scannedCrawlPages.length} صفحة • متبقي ${_crawlPages.where((p) => !_scannedCrawlPages.contains(p)).length} صفحة • ${_images.length} صورة مجمعة • فشل ${_crawlPageFailures}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 6, runSpacing: 6, children: [
+                        for (var i = 0; i < _crawlPages.length && i < 24; i++)
+                          OutlinedButton(
+                            onPressed: _loading || _scannedCrawlPages.contains(_crawlPages[i]) ? null : () => _scanCrawlPage(_crawlPages[i]),
+                            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), visualDensity: VisualDensity.compact),
+                            child: Text(_scannedCrawlPages.contains(_crawlPages[i]) ? '✓ ${i + 2}' : 'تحميل ${i + 2}'),
+                          ),
+                      ]),
+                      if (_crawlPages.length > 24) const Text('تُعرض أول 24 صفحة مكتشفة فقط لتجنب ازدحام الشاشة.', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                      if (_crawlPages.every((p) => _scannedCrawlPages.contains(p))) const Padding(padding: EdgeInsets.only(top: 6), child: Text('اكتمل فحص كل صفحات الترقيم التي اكتشفها الموقع. قد توجد صفحات أخرى غير مرتبطة بروابط ترقيم واضحة.', style: TextStyle(fontSize: 11, color: Colors.green))),
+                    ]),
+                  ),
                 ],
                 if (_status.isNotEmpty) ...[
                   const SizedBox(height: 10),
