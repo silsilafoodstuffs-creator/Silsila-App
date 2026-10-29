@@ -657,7 +657,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   }
 
 
-  Uint8List _processTransparentPng(Uint8List source) => _processTransparentPngInBackground(source);
 
   Uint8List _buildProductDataExcel(List<Map<String, dynamic>> selectedImages) {
       final excel = Excel.createExcel();
