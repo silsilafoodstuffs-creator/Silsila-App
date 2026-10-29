@@ -676,9 +676,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final Set<String> _workspacePageLoadsInProgress = <String>{};
 
   List<Map<String, String>> get _rows {
-    final rows = _cloudLoadedWorkspacePages.contains(_page)
-        ? (_saved[_page] ?? <Map<String, String>>[])
-        : (_saved[_page] ?? _sampleRows(_page));
+    final rows = _saved[_page] ?? <Map<String, String>>[];
     if (_search.trim().isEmpty) return rows;
     return rows.where((r) => r.values.any((v) => v.toLowerCase().contains(_search.toLowerCase()))).toList();
   }
@@ -691,78 +689,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       return const ['م', 'كود الهيكل', 'المسمى الوظيفي', 'الإدارة / القسم', 'يتبع إلى', 'المستوى الإداري', 'الحالة'];
     }
     return const [];
-  }
-
-  List<Map<String, String>> _sampleRows(String page) {
-    if (page == 'الهيكل الوظيفي') {
-      return [
-        {'م': '1', 'كود الهيكل': 'ORG-001', 'المسمى الوظيفي': 'المدير العام', 'الإدارة / القسم': 'الإدارة العامة', 'يتبع إلى': '—', 'المستوى الإداري': 'إدارة عليا', 'الحالة': 'نموذج تجريبي'},
-        {'م': '2', 'كود الهيكل': 'ORG-002', 'المسمى الوظيفي': 'مدير المبيعات', 'الإدارة / القسم': 'المبيعات', 'يتبع إلى': 'المدير العام', 'المستوى الإداري': 'إدارة وسطى', 'الحالة': 'نموذج تجريبي'},
-        {'م': '3', 'كود الهيكل': 'ORG-003', 'المسمى الوظيفي': 'مدير المخازن', 'الإدارة / القسم': 'المخازن', 'يتبع إلى': 'المدير العام', 'المستوى الإداري': 'إدارة وسطى', 'الحالة': 'نموذج تجريبي'},
-        {'م': '4', 'كود الهيكل': 'ORG-004', 'المسمى الوظيفي': 'مسؤول الحسابات', 'الإدارة / القسم': 'حسابات مالية', 'يتبع إلى': 'المدير العام', 'المستوى الإداري': 'وظيفة تنفيذية', 'الحالة': 'نموذج تجريبي'},
-      ];
-    }
-    if (page == 'شجرة الحسابات') {
-      return [
-        {'الكود': '1', 'اسم الحساب': 'الأصول', 'المستوى': 'رئيسي', 'الطبيعة': 'مدين', 'الحالة': 'نشط'},
-        {'الكود': '11', 'اسم الحساب': 'الأصول المتداولة', 'المستوى': 'فرعي', 'الطبيعة': 'مدين', 'الحالة': 'نشط'},
-        {'الكود': '111', 'اسم الحساب': 'الخزائن', 'المستوى': 'فرعي', 'الطبيعة': 'مدين', 'الحالة': 'نشط'},
-        {'الكود': '11101', 'اسم الحساب': 'الخزينة الرئيسية', 'المستوى': 'تحليلي', 'الطبيعة': 'مدين', 'الحالة': 'نشط'},
-        {'الكود': '2', 'اسم الحساب': 'الالتزامات', 'المستوى': 'رئيسي', 'الطبيعة': 'دائن', 'الحالة': 'نشط'},
-        {'الكود': '3', 'اسم الحساب': 'حقوق الملكية', 'المستوى': 'رئيسي', 'الطبيعة': 'دائن', 'الحالة': 'نشط'},
-        {'الكود': '4', 'اسم الحساب': 'الإيرادات', 'المستوى': 'رئيسي', 'الطبيعة': 'دائن', 'الحالة': 'نشط'},
-        {'الكود': '5', 'اسم الحساب': 'المصروفات', 'المستوى': 'رئيسي', 'الطبيعة': 'مدين', 'الحالة': 'نشط'},
-      ];
-    }
-    if (page.contains('خزائن')) {
-      return [
-        {'الكود': 'CASH-001', 'الاسم': 'الخزينة الرئيسية', 'النوع': 'رئيسية', 'الفرع': 'الإدارة العامة', 'الرصيد': '125,450 ج.م', 'الحالة': 'نشط'},
-        {'الكود': 'CASH-002', 'الاسم': 'خزينة فرع العبور', 'النوع': 'فرعية', 'الفرع': 'العبور', 'الرصيد': '24,800 ج.م', 'الحالة': 'نشط'},
-      ];
-    }
-    if (page.contains('إعادة الطلب') || page.contains('النفاد')) {
-      return [
-        {'الصنف': 'زيت عباد الشمس', 'المخزن': 'المخزن الرئيسي', 'الرصيد الحالي': '12 كرتونة', 'الحد الأدنى': '20 كرتونة', 'الكمية المقترحة': '28 كرتونة', 'الحالة': 'تنبيه تجريبي'},
-        {'الصنف': 'مكرونة 400 جم', 'المخزن': 'المخزن الرئيسي', 'الرصيد الحالي': '8 كراتين', 'الحد الأدنى': '15 كرتونة', 'الكمية المقترحة': '22 كرتونة', 'الحالة': 'تنبيه تجريبي'},
-      ];
-    }
-    if (page.contains('الصلاحية') || page.contains('التشغيلات')) {
-      return [
-        {'الصنف': 'عصير معبأ', 'رقم التشغيلة': 'BATCH-DEMO-01', 'تاريخ الصلاحية': 'بيانات توضيحية', 'الرصيد': '6 كراتين', 'الحالة': 'يتطلب متابعة'},
-      ];
-    }
-    if (page.contains('الجرد') || page == 'جرد فعلي') {
-      return [
-        {'رقم المحضر': 'COUNT-DEMO-001', 'المخزن': 'المخزن الرئيسي', 'التاريخ': '—', 'عدد الأصناف': '—', 'الحالة': 'مسودة تجريبية'},
-      ];
-    }
-    if (page.contains('الأصناف') || page == 'دليل الأصناف') {
-      return [
-        {'الكود': 'SKU-001', 'الاسم': 'زيت عباد الشمس', 'الفئة': 'زيوت', 'الوحدة': 'كرتونة', 'المخزون': '120', 'الحالة': 'نشط'},
-        {'الكود': 'SKU-002', 'الاسم': 'مكرونة 400 جم', 'الفئة': 'مكرونات', 'الوحدة': 'كرتونة', 'المخزون': '85', 'الحالة': 'نشط'},
-        {'الكود': 'SKU-003', 'الاسم': 'سمن نباتي', 'الفئة': 'سمنات', 'الوحدة': 'كرتونة', 'المخزون': '42', 'الحالة': 'نشط'},
-      ];
-    }
-    if (page.contains('API') || page.contains('الربط الخارجي') || page.contains('التكامل')) {
-      return [
-        {'البند': 'حالة واجهة API', 'القيمة': 'غير مفعّلة', 'التفاصيل': 'تحتاج إعداد الخادم والمصادقة', 'الحالة': 'تجهيز'},
-        {'البند': 'نمط الربط', 'القيمة': 'REST / JSON', 'التفاصيل': 'قابل للتحديد عند التنفيذ', 'الحالة': 'تصميم'},
-        {'البند': 'سجل الطلبات', 'القيمة': 'غير متصل', 'التفاصيل': 'لن تُحفظ طلبات فعلية قبل ربط الخادم', 'الحالة': 'غير متصل'},
-      ];
-    }
-    if (page.contains('المورد')) {
-      return [{'الكود': 'SUP-001', 'الاسم': 'مورد تجريبي', 'التصنيف': 'موزع رئيسي', 'الهاتف': '01000000000', 'الرصيد': '0 ج.م', 'الحالة': 'نشط'}];
-    }
-    if (page.contains('العملاء') || page.contains('العميل')) {
-      return [{'الكود': 'CUS-001', 'الاسم': 'عميل تجريبي', 'التصنيف': 'تاجر جملة', 'الهاتف': '01000000000', 'الرصيد': '0 ج.م', 'الحالة': 'نشط'}];
-    }
-    if (_group == 'تقارير') {
-      return [{'المؤشر': 'حالة التقرير', 'القيمة': 'نموذج عرض', 'ملاحظة': 'غير مرتبط بقاعدة البيانات بعد'}];
-    }
-    return [
-      {'الكود': 'DEMO-001', 'الاسم': page, 'الوصف': 'سجل توضيحي للواجهة', 'الحالة': 'نموذج'},
-      {'الكود': 'DEMO-002', 'الاسم': 'مثال إضافي', 'الوصف': 'بيانات تجريبية فقط', 'الحالة': 'نموذج'},
-    ];
   }
 
   void _openAddDialog() {
@@ -793,7 +719,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           TextButton(onPressed: () => Navigator.pop(dctx), child: Text(silsilaText('No / لا'))),
           FilledButton(onPressed: () async {
             if (name.text.trim().isEmpty) return;
-            final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
+            final rows = List<Map<String, String>>.from(_saved[_page] ?? <Map<String, String>>[]);
             final generatedCode = code.text.trim().isEmpty ? 'NEW-${rows.length + 1}' : code.text.trim();
             final Map<String, String> row = isOrgChart
                 ? {'م': '${rows.length + 1}', 'كود الهيكل': generatedCode, 'المسمى الوظيفي': name.text.trim(), 'الإدارة / القسم': details.text.trim(), 'يتبع إلى': parent.text.trim().isEmpty ? '—' : parent.text.trim(), 'المستوى الإداري': level.text.trim().isEmpty ? 'غير محدد' : level.text.trim(), 'الحالة': 'نشط'}
@@ -861,7 +787,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   }
 
   void _editCurrentRecord() {
-    final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
+    final rows = List<Map<String, String>>.from(_saved[_page] ?? <Map<String, String>>[]);
     if (rows.isEmpty) { _showActionMessage('لا يوجد سجل لتعديله في شاشة $_page'); return; }
     final selected = _selectedRecord;
     final selectedIndex = selected == null ? 0 : rows.indexWhere((row) => _sameRecord(row, selected));
@@ -951,7 +877,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (companyId != null && companyId.trim().isNotEmpty) {
         await _workspaceRecordsService.deleteRecord(companyId: companyId, pageKey: _page, recordKey: recordKey);
       }
-      final rows = List<Map<String, String>>.from(_saved[_page] ?? _sampleRows(_page));
+      final rows = List<Map<String, String>>.from(_saved[_page] ?? <Map<String, String>>[]);
       rows.removeWhere((row) => _sameRecord(row, selected));
       setState(() {
         _saved[_page] = rows;
