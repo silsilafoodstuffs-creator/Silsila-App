@@ -30,24 +30,33 @@ class ErpPriceListsRepository {
       return <Map<String, dynamic>>[];
     }
   }
-  Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
-    final rows = await _db.from('erp_items')
+  Future<List<Map<String, dynamic>>> fetchItems(String companyId, {int offset = 0, int pageSize = 1000, String search = ''}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الأصناف غير صالح.');
+    var query = _db.from('erp_items')
       .select('id, item_code, item_name, base_unit, sale_price, purchase_price, is_active')
-      .eq('company_id', companyId.trim()).eq('is_active', true).order('item_code').limit(2000);
+      .eq('company_id', companyId.trim()).eq('is_active', true);
+    final term = search.trim();
+    if (term.isNotEmpty) query = query.or('item_name.ilike.%$term%,item_code.ilike.%$term%');
+    final rows = await query.order('item_code').range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
-  Future<List<Map<String, dynamic>>> fetchParties(String companyId, String kind) async {
-    final rows = await _db.from('erp_parties')
+  Future<List<Map<String, dynamic>>> fetchParties(String companyId, String kind, {int offset = 0, int pageSize = 1000, String search = ''}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الأطراف غير صالح.');
+    var query = _db.from('erp_parties')
       .select('id, party_code, party_name, party_kind, is_active')
       .eq('company_id', companyId.trim()).eq('is_active', true)
-      .inFilter('party_kind', [kind, 'both']).order('party_name').limit(2000);
+      .inFilter('party_kind', [kind, 'both']);
+    final term = search.trim();
+    if (term.isNotEmpty) query = query.or('party_name.ilike.%$term%,party_code.ilike.%$term%');
+    final rows = await query.order('party_name').range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
-  Future<List<Map<String, dynamic>>> fetchLines(String companyId, String listId) async {
+  Future<List<Map<String, dynamic>>> fetchLines(String companyId, String listId, {int offset = 0, int pageSize = 1000}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة تفاصيل قائمة الأسعار غير صالح.');
     final rows = await _db.from('erp_price_list_lines')
       .select('id, item_id, min_quantity, unit_price, discount_percent, starts_on, ends_on')
       .eq('company_id', companyId.trim()).eq('price_list_id', listId)
-      .order('item_id').limit(2000);
+      .order('item_id').range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
   Future<void> createList({
