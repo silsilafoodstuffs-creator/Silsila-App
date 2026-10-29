@@ -1051,12 +1051,18 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                         companyId: _company.text.trim(),
                         itemIds: matches.map((item) => _s(item['id'])).where((id) => id.isNotEmpty).toList(),
                       );
+                      final selectedBeforeSearch = pickerItems.where((item) {
+                        final controller = quantities[_s(item['id'])];
+                        return controller != null && (double.tryParse(controller.text.trim()) ?? 0) > 0;
+                      }).toList();
                       refresh(() {
+                        for (final item in matches) { unitsByItem[_s(item['id'])] = <Map<String, dynamic>>[]; }
                         for (final unit in units) {
                           unitsByItem.putIfAbsent(_s(unit['item_id']), () => []).add(unit);
                         }
                         for (final item in matches) { ensurePickerItem(item); }
-                        pickerItems = matches;
+                        final matchedIds = matches.map((item) => _s(item['id'])).toSet();
+                        pickerItems = <Map<String, dynamic>>[...matches, ...selectedBeforeSearch.where((item) => !matchedIds.contains(_s(item['id'])))];
                         pickerSearchLoading = false;
                       });
                     } catch (error) {
