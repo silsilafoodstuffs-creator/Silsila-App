@@ -81,7 +81,7 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   bool _loading = false, _saving = false, _editMode = false;
   String? _error, _message, _selectedId, _selectedUserId;
   List<Map<String,dynamic>> _rows = [], _types = [], _users = [], _templates = [], _rules = [];
-  List<Map<String,dynamic>> _branches = [], _warehouses = [], _employees = [];
+  List<Map<String,dynamic>> _branches = [], _warehouses = [], _employees = [], _classifications = [];
   bool _permissionAllUsers = true;
   String _permissionMode = 'template';
   final Set<String> _permissionSelectedUserIds = <String>{};
@@ -259,6 +259,10 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         }
         userList.sort((a, b) => codeNumber(a).compareTo(codeNumber(b)));
         if (_isUser || _isHierarchy) {
+          try {
+            final classifications = await _db!.from('erp_user_classifications').select('id,company_id,user_type_id,classification_code,name_ar,name_en,is_active').eq('company_id', _company).order('classification_code');
+            _classifications = (classifications as List).map((x) => Map<String, dynamic>.from(x)).toList();
+          } catch (_) { _classifications = []; }
           try {
             final e = await _db!.from('erp_employees').select('id,employee_code,full_name,full_name_en,is_active').eq('company_id', _company).eq('is_active', true).order('employee_code');
             _employees = (e as List).map((x) => Map<String,dynamic>.from(x)).toList();
@@ -865,11 +869,11 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         if (_userTypeRequiresEmployee(selectedType)) {
           final employee=await _pickEmployee();
           if(employee==null){if(mounted)setState(()=>_error='لم تتم إضافة المستخدم. يجب اختيار موظف نشط أولًا.');return;}
-          payload.addAll({'employee_id':employee['id'],'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':selectedType['id'],'has_sub_warehouse':false});
+          payload.addAll({'employee_id':employee['id'],'classification_id':null,'name_ar':_s(employee['full_name']),'name_en':_s(employee['full_name_en']).isNotEmpty?employee['full_name_en']:employee['full_name'],'user_type_id':selectedType['id'],'has_sub_warehouse':false});
         } else {
           final externalName = await _requestExternalUserName();
           if (externalName == null) return;
-          payload.addAll({'employee_id':null,'name_ar':externalName,'name_en':externalName,'user_type_id':selectedType['id'],'has_sub_warehouse':false});
+          payload.addAll({'employee_id':null,'classification_id':null,'name_ar':externalName,'name_en':externalName,'user_type_id':selectedType['id'],'has_sub_warehouse':false});
         }
       } else {payload.addAll({'name_ar':_nextUniqueName('قالب صلاحيات جديد'),'name_en':_nextUniqueName('New permission template',field:'name_en')});}
       final result=await _db!.from(_table).insert(payload).select().single();
@@ -899,10 +903,14 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
             payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'description':desc,'image_data':row['image_data'],'is_active':row['is_active']==true,'show_at_login':row['show_at_login']==true});
           }
           if(_isUser){
-            if(!_types.any((t)=>_s(t['id'])==_s(row['user_type_id'])))throw StateError('اختر نوع مستخدم موجودًا للسجل «${_s(row['name_ar'])}».');
+            if(!_types.any((t)=>_s(t['id'])==_s(row['user_type_id'])&&t['is_active']==true))throw StateError('اختر نوع مستخدم نشطًا للسجل «${_s(row['name_ar'])}».');
+            final selectedType=_types.firstWhere((t)=>_s(t['id'])==_s(row['user_type_id']));
+            if(_userTypeRequiresEmployee(selectedType)&&_s(row['employee_id']).isEmpty)throw StateError('يجب ربط المستخدم ${_s(row['name_ar'])} بموظف نشط باستخدام F1.');
+            final classificationId=_s(row['classification_id']);
+            if(classificationId.isNotEmpty&&!_classifications.any((x)=>_s(x['id'])==classificationId&&_s(x['user_type_id'])==_s(row['user_type_id'])&&x['is_active']==true))throw StateError('اختر تصنيفًا نشطًا تابعًا لنوع المستخدم المحدد.');
             final password=_s(row['_password_draft']),confirm=_s(row['_password_confirmation_draft']);
             if(password.isNotEmpty||confirm.isNotEmpty){if(password.isEmpty||password!=confirm)throw StateError('كلمتا المرور غير متطابقتين للمستخدم ${_s(row['name_ar'])}.');}
-            payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'employee_id':row['employee_id'],'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],'has_sub_warehouse':row['has_sub_warehouse']==true});
+            payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'employee_id':row['employee_id'],'classification_id':row['classification_id'],'image_data':row['image_data'],'is_active':row['is_active']==true,'user_type_id':row['user_type_id'],'has_sub_warehouse':row['has_sub_warehouse']==true});
           }
           if(_isTemplate)payload.addAll({'name_ar':_s(row['name_ar']).trim(),'name_en':_s(row['name_en']).trim(),'image_data':row['image_data'],'is_active':row['is_active']==true});
           await _db!.from(_table).update(payload).eq('company_id',_company).eq('id',id);
@@ -1260,7 +1268,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       columns:[
         const DataColumn(label:Text('م')),DataColumn(label:Text(_isType?'كود النوع':_isUser?'كود المستخدم':'كود القالب')),
         if(!_isUser)const DataColumn(label:Text('اسم عربي')),if(!_isUser)const DataColumn(label:Text('اسم إنجليزي')),
-        if(_isUser)const DataColumn(label:Text('اسم عربي')),if(_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isUser)const DataColumn(label:Text('كود الموظف (F1)')),
+        if(_isUser)const DataColumn(label:Text('اسم عربي')),if(_isUser)const DataColumn(label:Text('اسم إنجليزي')),if(_isUser)const DataColumn(label:Text('كود الموظف (F1)')),if(_isUser)const DataColumn(label:Text('تصنيف المستخدم')),
         if(_isUser)const DataColumn(label:Text('كلمة المرور')),if(_isUser)const DataColumn(label:Text('تأكيد كلمة المرور')),if(_isUser)const DataColumn(label:Text('نوع المستخدم')),
         if(_isType)const DataColumn(label:Text('يظهر في التطبيق')),if(!_isUser&&!_isType)const DataColumn(label:Text('الصورة')),
         const DataColumn(label:Text('نشط')),if(_isType)const DataColumn(label:Text('وصف مختصر (10 كلمات)')),
@@ -1273,9 +1281,10 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         DataCell(Text('${i+1}')),DataCell(Text(_s(row[codeField]).isNotEmpty?_s(row[codeField]):(_isType?'UT${_s(row['type_code']).padLeft(4,'0')}':_isTemplate?'PT${_s(row['template_code']).padLeft(4,'0')}':_s(row[codeField])))),
         if(!_isUser)DataCell(_textCell(row,'name_ar')),if(!_isUser)DataCell(_textCell(row,'name_en')),if(_isUser)DataCell(_textCell(row,'name_ar',width:165)),if(_isUser)DataCell(_textCell(row,'name_en',width:150)),
         if(_isUser)DataCell(SizedBox(width:175,child:Row(children:[Expanded(child:Text(_employeeLabel(_s(row['employee_id'])),maxLines:2,overflow:TextOverflow.ellipsis)),IconButton(tooltip:'بحث عن موظف (F1)',visualDensity:VisualDensity.compact,onPressed:_editMode?()=>_openEmployeePicker(row):null,icon:const Icon(Icons.search,size:18))]))),
+        if(_isUser)DataCell(SizedBox(width:190,child:DropdownButtonFormField<String>(key:ValueKey('${id}-classification-${row['classification_id']}-${row['user_type_id']}-${_editMode}'),value:_classifications.any((x)=>_s(x['id'])==_s(row['classification_id'])&&_s(x['user_type_id'])==_s(row['user_type_id'])&&x['is_active']==true)?_s(row['classification_id']):null,isExpanded:true,decoration:const InputDecoration(isDense:true,labelText:'تصنيف (اختياري)',contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:_classifications.where((x)=>_s(x['user_type_id'])==_s(row['user_type_id'])&&x['is_active']==true).map((x)=>DropdownMenuItem(value:_s(x['id']),child:Text(_s(x['name_ar']),overflow:TextOverflow.ellipsis))).toList(),onChanged:_editMode?(v)=>setState(()=>row['classification_id']=v):null))),
         if(_isUser)DataCell(SizedBox(width:175,child:Row(children:[Expanded(child:TextFormField(initialValue:_s(row['_password_draft']),obscureText:row['_password_visible']!=true,enabled:_editMode,decoration:const InputDecoration(hintText:'كلمة مرور',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_draft']=v)),IconButton(tooltip:'إظهار/إخفاء كلمة المرور',visualDensity:VisualDensity.compact,onPressed:_editMode?()=>setState(()=>row['_password_visible']=row['_password_visible']!=true):null,icon:Icon(row['_password_visible']==true?Icons.visibility_off:Icons.visibility,size:18))]))),
         if(_isUser)DataCell(SizedBox(width:155,child:TextFormField(initialValue:_s(row['_password_confirmation_draft']),obscureText:row['_password_visible']!=true,enabled:_editMode,decoration:const InputDecoration(hintText:'تأكيد كلمة المرور',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_confirmation_draft']=v))),
-        if(_isUser)DataCell(SizedBox(width:120,child:DropdownButtonFormField<String>(key:ValueKey('${id}-type-${row['user_type_id']}-${_editMode}'),value:_types.any((t)=>_s(t['id'])==_s(row['user_type_id'])&&t['is_active']==true)?_s(row['user_type_id']):null,isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:_types.where((t)=>t['is_active']==true).map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),onChanged:_editMode?(v)=>setState(()=>row['user_type_id']=v):null))),
+        if(_isUser)DataCell(SizedBox(width:120,child:DropdownButtonFormField<String>(key:ValueKey('${id}-type-${row['user_type_id']}-${_editMode}'),value:_types.any((t)=>_s(t['id'])==_s(row['user_type_id'])&&t['is_active']==true)?_s(row['user_type_id']):null,isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:_types.where((t)=>t['is_active']==true).map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),onChanged:_editMode?(v)=>setState(()=>{row['user_type_id']=v,row['classification_id']=null}):null))),
         if(_isType)DataCell(Checkbox(shape:const CircleBorder(),value:row['show_at_login']==true,onChanged:_editMode?(v)=>setState(()=>row['show_at_login']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
         if(!_isUser&&!_isType)DataCell(_imageCell(row)),DataCell(Checkbox(shape:const CircleBorder(),value:row['is_active']==true,onChanged:_editMode?(v)=>setState(()=>row['is_active']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
         if(_isType)DataCell(_textCell(row,'description',width:220)),if(_isUser)DataCell(Checkbox(shape:const CircleBorder(),value:row['has_sub_warehouse']==true,onChanged:_editMode?(v)=>setState(()=>row['has_sub_warehouse']=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple)),
