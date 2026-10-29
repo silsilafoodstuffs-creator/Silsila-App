@@ -919,37 +919,48 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       _error = null;
       _status = 'جارٍ تنزيل الصور المحددة وتجهيز ملف ZIP والصورة وExcel...';
     });
+    var exportStage = 'تهيئة ملف ZIP';
     try {
       final archive = Archive();
       var index = 0;
       final usedFileNames = <String>{};
       final savedImageKeys = <String>{};
-      for (final image in _images.where((x) => _selected.contains(x['url'].toString()))) {
+      final selectedForExport = List<Map<String, dynamic>>.from(
+        _images.where((x) => _selected.contains(x['url'].toString())),
+      );
+      for (final image in selectedForExport) {
         final imageIndex = _images.indexOf(image);
         index++;
         final url = image['url'].toString();
+        exportStage = 'تنزيل الصورة $index من ${selectedForExport.length}';
         final downloaded = await _invoke({'action': 'download', 'url': url});
         final encoded = downloaded['base64']?.toString();
         if (encoded == null || encoded.isEmpty) continue;
         final sourceBytes = Uint8List.fromList(base64Decode(encoded));
+        exportStage = 'معالجة الصورة $index من ${selectedForExport.length}';
         // Run CPU-heavy image processing away from the UI isolate.
         final bytes = await compute(_processTransparentPngInBackground, sourceBytes);
         const extension = '.png';
         final title = _imageBaseName(image, imageIndex < 0 ? index - 1 : imageIndex);
         final fileName = _uniqueFileName(title, extension, usedFileNames);
-        archive.addFile(ArchiveFile(fileName, bytes.length, bytes));
+        exportStage = 'إضافة الصورة إلى ملف ZIP';
+        archive.addFile(ArchiveFile(fileName, bytes.length, Uint8List.fromList(bytes)));
         savedImageKeys.add(_imageKey(url));
-        if (mounted) setState(() => _status = 'تم تجهيز $index من ${_selected.length} صورة...');
+        if (mounted) setState(() => _status = 'تم تجهيز $index من ${selectedForExport.length} صورة...');
       }
       if (archive.isEmpty) throw Exception('لم يمكن تنزيل أي صورة من الاختيارات.');
       // Include only images successfully added to the archive in Excel.
-      final selectedImages = _images
-          .where((item) => savedImageKeys.contains(_imageKey(item['url']?.toString() ?? '')))
-          .toList();
+      exportStage = 'تجهيز بيانات Excel';
+      final selectedImages = List<Map<String, dynamic>>.from(
+        _images.where((item) => savedImageKeys.contains(_imageKey(item['url']?.toString() ?? ''))),
+      );
       final excelBytes = _buildProductDataExcel(selectedImages);
-      archive.addFile(ArchiveFile('بيانات_الأصناف.xlsx', excelBytes.length, excelBytes));
+      exportStage = 'إضافة ملف Excel إلى ZIP';
+      archive.addFile(ArchiveFile('بيانات_الأصناف.xlsx', excelBytes.length, Uint8List.fromList(excelBytes)));
+      exportStage = 'ضغط ملفات ZIP';
       final zipped = ZipEncoder().encode(archive);
       if (zipped == null || zipped.isEmpty) throw Exception('تعذر إنشاء ملف ZIP.');
+      exportStage = 'حفظ ملف ZIP على الجهاز';
       await FileSaver.instance.saveFile(
         name: 'silsila_images_${DateTime.now().millisecondsSinceEpoch}',
         bytes: Uint8List.fromList(zipped),
@@ -969,7 +980,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      if (mounted) setState(() => _error = 'فشل التصدير أثناء مرحلة: $exportStage. التفاصيل: ${e.toString().replaceFirst('Exception: ', '')}');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
