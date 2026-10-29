@@ -12,5 +12,4 @@ create index if not exists erp_sales_documents_company_status_date_idx on public
 create index if not exists erp_purchase_documents_company_status_date_idx on public.erp_purchase_documents(company_id, status, document_date desc);
 create index if not exists erp_inventory_movements_company_item_date_idx on public.erp_inventory_movements(company_id, item_id, movement_date desc);
 create index if not exists erp_inventory_movements_company_warehouse_date_idx on public.erp_inventory_movements(company_id, warehouse_id, movement_date desc);
-create index if not exists erp_stock_balances_company_warehouse_item_idx on public.erp_stock_balances(company_id, warehouse_id, item_id);
 create index if not exists erp_workspace_records_company_page_created_idx on public.erp_workspace_records(company_id, page_key, created_at desc);
