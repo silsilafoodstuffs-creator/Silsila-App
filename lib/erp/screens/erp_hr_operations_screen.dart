@@ -1,390 +1,94 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
-import '../services/erp_hr_repository.dart';
 
 class ErpHrOperationsScreen extends StatefulWidget {
-  const ErpHrOperationsScreen({super.key, this.initialCompanyId});
+  const ErpHrOperationsScreen({super.key,this.initialCompanyId});
   final String? initialCompanyId;
-
-  @override
-  State<ErpHrOperationsScreen> createState() => _ErpHrOperationsScreenState();
+  @override State<ErpHrOperationsScreen> createState()=>_ErpHrOperationsScreenState();
 }
-
-class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> {
-  final _repo = ErpHrRepository();
-  final _company = TextEditingController();
-  List<Map<String, dynamic>> _employees = [];
-  List<Map<String, dynamic>> _attendance = [];
-  List<Map<String, dynamic>> _leaveRequests = [];
-  bool _loading = false;
-  bool _saving = false;
-  String? _error;
-  String? _message;
-  String _view = 'employees';
-
-  @override
-  void initState() {
-    super.initState();
-    _company.text = widget.initialCompanyId ?? '';
-    if (_company.text.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
-    }
-  }
-
-  @override
-  void dispose() {
-    _company.dispose();
-    super.dispose();
-  }
-
-  String _s(dynamic v) => (v ?? '').toString();
-
-  Future<void> _load() async {
-    if (_company.text.trim().isEmpty) {
-      setState(() => _error = 'أدخل معرّف الشركة أولًا.');
-      return;
-    }
-    setState(() { _loading = true; _error = null; _message = null; });
-    try {
-      final values = await Future.wait([
-        _repo.fetchEmployees(_company.text),
-        _repo.fetchAttendance(_company.text),
-        _repo.fetchLeaveRequests(_company.text),
+class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with SingleTickerProviderStateMixin {
+  final _db=Supabase.instance.client;
+  final _company=TextEditingController();
+  late final TabController _tabs;
+  List<Map<String,dynamic>> employees=[],locations=[],departments=[],jobs=[],branches=[],attendance=[],devices=[],events=[],payroll=[];
+  final Map<String,Map<String,dynamic>> daily={};
+  bool loading=false,saving=false,locked=false;
+  String? error,message;
+  DateTime day=DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day);
+  static const purple=Color(0xFF3E007D),orange=Color(0xFFFFA015);
+  static const fractions=<String,double>{'يوم كامل':1,'3/4 يوم':.75,'1/2 يوم':.5,'1/4 يوم':.25};
+  static const absenceTypes=['عطلة أسبوعية','إجازة رسمية','إجازة مرضية','إجازة إصابة عمل','إجازة سنوية','غياب بإذن','غياب بدون إذن'];
+  static const penalties=<String,double>{'بدون جزاء':0,'0.25 يوم':.25,'0.5 يوم':.5,'0.75 يوم':.75,'1 يوم':1,'1.25 يوم':1.25,'1.5 يوم':1.5,'1.75 يوم':1.75,'2 يوم':2,'2.25 يوم':2.25,'2.5 يوم':2.5,'2.75 يوم':2.75,'3 يوم':3,'3.25 يوم':3.25,'3.5 يوم':3.5,'3.75 يوم':3.75,'4 يوم':4,'4.25 يوم':4.25,'4.5 يوم':4.5,'4.75 يوم':4.75,'5 يوم':5};
+  @override void initState(){super.initState();_company.text=widget.initialCompanyId??'';_tabs=TabController(length:3,vsync:this);if(_company.text.isNotEmpty)WidgetsBinding.instance.addPostFrameCallback((_)=>load());}
+  @override void dispose(){_tabs.dispose();_company.dispose();super.dispose();}
+  String s(dynamic v)=>(v??'').toString();
+  String date(DateTime d)=>'${d.year.toString().padLeft(4,'0')}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+  String weekday(DateTime d)=>const ['الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت','الأحد'][d.weekday-1];
+  Map<String,dynamic>? emp(String id){for(final e in employees){if(s(e['id'])==id)return e;}return null;}
+  String empName(dynamic id){final e=emp(s(id));return e==null?s(id):'${s(e['employee_code'])} — ${s(e['full_name'])}';}
+  Future<void> load() async {
+    if(_company.text.trim().isEmpty){setState(()=>error='أدخل معرّف الشركة أولًا.');return;}
+    setState((){loading=true;error=null;message=null;});
+    try{
+      final c=_company.text.trim(),start=date(DateTime(day.year,day.month,1)),end=date(DateTime(day.year,day.month+1,0));
+      final v=await Future.wait([
+        _db.from('erp_employees').select('id,employee_code,full_name,full_name_en,job_title,department_name,department_id,job_id,work_location_id,administration_id,branch_id,employment_status,is_active,governorate,district,locality').eq('company_id',c).order('employee_code'),
+        _db.from('erp_hr_work_locations').select().eq('company_id',c).order('location_code'),
+        _db.from('erp_hr_departments').select().eq('company_id',c).order('department_code'),
+        _db.from('erp_hr_jobs').select().eq('company_id',c).order('job_code'),
+        _db.from('erp_branches').select('id,branch_code,branch_name').eq('company_id',c).order('branch_code'),
+        _db.from('erp_attendance_records').select().eq('company_id',c).gte('work_date',start).lte('work_date',end).order('work_date'),
+        _db.from('erp_hr_fingerprint_devices').select().eq('company_id',c).order('device_name'),
+        _db.from('erp_hr_attendance_events').select().eq('company_id',c).gte('event_at',start).lt('event_at',date(DateTime(day.year,day.month+1,1))).order('event_at',ascending:false).limit(1200),
+        _db.from('erp_payroll_runs').select('id,run_code,period_start,period_end,status').eq('company_id',c).order('period_start',ascending:false),
       ]);
-      if (!mounted) return;
-      setState(() {
-        _employees = values[0];
-        _attendance = values[1];
-        _leaveRequests = values[2];
-        _loading = false;
+      if(!mounted)return;
+      setState((){
+        employees=List<Map<String,dynamic>>.from(v[0]);locations=List<Map<String,dynamic>>.from(v[1]);departments=List<Map<String,dynamic>>.from(v[2]);jobs=List<Map<String,dynamic>>.from(v[3]);branches=List<Map<String,dynamic>>.from(v[4]);attendance=List<Map<String,dynamic>>.from(v[5]);devices=List<Map<String,dynamic>>.from(v[6]);events=List<Map<String,dynamic>>.from(v[7]);payroll=List<Map<String,dynamic>>.from(v[8]);
+        final month='${day.year.toString().padLeft(4,'0')}-${day.month.toString().padLeft(2,'0')}';
+        locked=payroll.any((r)=>s(r['period_start']).startsWith(month)&&const ['approved','posted','paid'].contains(s(r['status']).toLowerCase()));
+        rebuild();loading=false;
       });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() { _loading = false; _error = 'تعذر تحميل بيانات الموارد البشرية: $e'; });
-    }
+    }catch(e){if(mounted)setState((){loading=false;error='تعذر تحميل البيانات. قد يلزم تطبيق ترحيل حقول الحضور الجديد: $e';});}
   }
-
-  Future<void> _addEmployee() async {
-    final code = TextEditingController();
-    final name = TextEditingController();
-    final phone = TextEditingController();
-    final nationalId = TextEditingController();
-    final job = TextEditingController();
-    final dept = TextEditingController();
-    final salary = TextEditingController(text: '0');
-    String? localError;
-    bool nationalIdRequired = true;
-    try {
-      nationalIdRequired = await _repo.isNationalIdRequired(_company.text);
-    } catch (e) {
-      if (mounted) setState(() => _error = 'تعذر قراءة سياسة الرقم القومي: $e');
-      code.dispose(); name.dispose(); phone.dispose(); nationalId.dispose(); job.dispose(); dept.dispose(); salary.dispose();
-      return;
-    }
-    await showDialog<void>(context: context, barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
-        title: const Text('إضافة موظف'),
-        content: SizedBox(width: 520, child: SingleChildScrollView(child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: code, decoration: const InputDecoration(labelText: 'كود الموظف *')),
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الموظف *')),
-            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'الهاتف')),
-            TextField(
-              controller: nationalId,
-              keyboardType: TextInputType.number,
-              maxLength: 14,
-              decoration: InputDecoration(
-                labelText: nationalIdRequired ? 'الرقم القومي *' : 'الرقم القومي (اختياري)',
-                helperText: '14 رقمًا؛ يُحفظ في سجل الموارد البشرية المقيد بالصلاحيات.',
-              ),
-            ),
-            TextField(controller: job, decoration: const InputDecoration(labelText: 'المسمى الوظيفي')),
-            TextField(controller: dept, decoration: const InputDecoration(labelText: 'الإدارة / القسم')),
-            TextField(controller: salary, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'الراتب الأساسي')),
-            if (localError != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(localError!, style: const TextStyle(color: Colors.red))),
-          ],
-        ))),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-          FilledButton(onPressed: () async {
-            final amount = double.tryParse(salary.text.trim());
-            final idValue = nationalId.text.trim();
-            if (code.text.trim().isEmpty || name.text.trim().isEmpty || amount == null || amount < 0) {
-              refresh(() => localError = 'راجع كود الموظف والاسم والراتب.');
-              return;
-            }
-            if ((nationalIdRequired && idValue.isEmpty) ||
-                (idValue.isNotEmpty && !RegExp(r'^[0-9]{14}$').hasMatch(idValue))) {
-              refresh(() => localError = nationalIdRequired
-                  ? 'الرقم القومي إلزامي ويجب أن يتكون من 14 رقمًا.'
-                  : 'إذا أدخلت الرقم القومي فيجب أن يتكون من 14 رقمًا.');
-              return;
-            }
-            Navigator.pop(ctx);
-            setState(() { _saving = true; _error = null; });
-            try {
-              await _repo.addEmployee(companyId: _company.text, employeeCode: code.text,
-                fullName: name.text, nationalId: nationalId.text, phone: phone.text, jobTitle: job.text,
-                department: dept.text, baseSalary: amount);
-              if (!mounted) return;
-              setState(() { _saving = false; _message = 'تمت إضافة الموظف.'; });
-              await _load();
-            } catch (e) {
-              if (!mounted) return;
-              setState(() { _saving = false; _error = 'تعذرت إضافة الموظف: $e'; });
-            }
-          }, child: const Text('حفظ الموظف')),
-        ],
-      )));
-    code.dispose(); name.dispose(); phone.dispose(); nationalId.dispose(); job.dispose(); dept.dispose(); salary.dispose();
+  void rebuild(){daily.clear();for(final r in attendance.where((x)=>s(x['work_date'])==date(day))){daily[s(r['employee_id'])]={'employeeId':s(r['employee_id']),'jobId':s(r['job_id']),'present':s(r['attendance_status'])!='absent','absent':s(r['attendance_status'])=='absent','fraction':fractions.entries.firstWhere((x)=>x.value==((r['attendance_fraction'] as num?)?.toDouble()??1),orElse:()=>fractions.entries.first).key,'absenceType':s(r['absence_type']).isEmpty?'غياب بدون إذن':s(r['absence_type']),'penalty':penalties.entries.firstWhere((x)=>x.value==((r['absence_penalty_days'] as num?)?.toDouble()??0),orElse:()=>penalties.entries.first).key};}}
+  Widget task(String l,IconData i,Color c,VoidCallback? f)=>ErpQuickTaskButton(label:l,icon:i,onPressed:f,fallbackColor:c);
+  Widget notice(String t,Color c)=>Container(margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(9),decoration:BoxDecoration(color:c.withValues(alpha:.09),borderRadius:BorderRadius.circular(9)),child:Text(t,style:TextStyle(color:c)));
+  Future<void> masterDialog(String kind,{Map<String,dynamic>? row,String? parentId})async{
+    final isJob=kind=='job',isLoc=kind=='location';
+    final code=TextEditingController(text:s(row?[isJob?'job_code':isLoc?'location_code':'department_code'])),ar=TextEditingController(text:s(row?['name_ar'])),en=TextEditingController(text:s(row?['name_en']));
+    var level=s(row?['department_level']).isEmpty?'directorate':s(row?['department_level']);var locType=s(row?['location_type']).isEmpty?'branch':s(row?['location_type']);String? parent=s(row?['parent_id']).isNotEmpty?s(row?['parent_id']):parentId;String? dep=s(row?['department_id']).isNotEmpty?s(row?['department_id']):parentId;String? err;
+    await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(title:Text('${row==null?'إضافة':'تعديل'} ${isJob?'وظيفة':isLoc?'موقع عمل':'إدارة / قسم'}'),content:SizedBox(width:500,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+      TextField(controller:code,decoration:const InputDecoration(labelText:'الكود *')),TextField(controller:ar,decoration:const InputDecoration(labelText:'الاسم بالعربية *')),if(!isLoc)TextField(controller:en,decoration:const InputDecoration(labelText:'الاسم بالإنجليزية')),
+      if(isLoc)DropdownButtonFormField<String>(value:locType,decoration:const InputDecoration(labelText:'نوع الموقع'),items:const [DropdownMenuItem(value:'central',child:Text('إدارة مركزية')),DropdownMenuItem(value:'branch',child:Text('فرع'))],onChanged:(v)=>refresh(()=>locType=v??locType)),
+      if(!isLoc&&!isJob)DropdownButtonFormField<String>(value:level,decoration:const InputDecoration(labelText:'المستوى'),items:const [DropdownMenuItem(value:'directorate',child:Text('إدارة رئيسية')),DropdownMenuItem(value:'department',child:Text('إدارة فرعية')),DropdownMenuItem(value:'section',child:Text('قسم'))],onChanged:(v)=>refresh(()=>level=v??level)),
+      if(!isLoc&&!isJob&&level!='directorate')DropdownButtonFormField<String>(value:departments.any((d)=>s(d['id'])==parent)?parent:null,decoration:const InputDecoration(labelText:'يتبع الإدارة'),items:departments.where((d)=>s(d['id'])!=s(row?['id'])&&s(d['department_level'])!='section'&&d['is_active']!=false).map((d)=>DropdownMenuItem<String>(value:s(d['id']),child:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>parent=v)),
+      if(isJob)DropdownButtonFormField<String>(value:departments.any((d)=>s(d['id'])==dep)?dep:null,decoration:const InputDecoration(labelText:'القسم *'),items:departments.where((d)=>d['is_active']!=false).map((d)=>DropdownMenuItem<String>(value:s(d['id']),child:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>dep=v)),
+      if(err!=null)notice(err!,Colors.red),
+    ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()async{
+      if(code.text.trim().isEmpty||ar.text.trim().isEmpty||(isJob&&dep==null)||(!isJob&&!isLoc&&level!='directorate'&&parent==null)){refresh(()=>err='أكمل الكود والاسم والارتباط التنظيمي.');return;}
+      try{final c=_company.text.trim();if(isLoc){final x={'company_id':c,'location_code':code.text.trim().toUpperCase(),'name_ar':ar.text.trim(),'location_type':locType,'is_active':true};if(row==null)await _db.from('erp_hr_work_locations').insert(x);else await _db.from('erp_hr_work_locations').update(x).eq('id',s(row['id']));}
+      else if(isJob){final x={'company_id':c,'job_code':code.text.trim().toUpperCase(),'name_ar':ar.text.trim(),'name_en':en.text.trim(),'department_id':dep,'is_active':true};if(row==null)await _db.from('erp_hr_jobs').insert(x);else await _db.from('erp_hr_jobs').update(x).eq('id',s(row['id']));}
+      else{final x={'company_id':c,'department_code':code.text.trim().toUpperCase(),'name_ar':ar.text.trim(),'name_en':en.text.trim(),'department_level':level,'parent_id':level=='directorate'?null:parent,'is_active':true};if(row==null)await _db.from('erp_hr_departments').insert(x);else await _db.from('erp_hr_departments').update(x).eq('id',s(row['id']));}
+      if(ctx.mounted)Navigator.pop(ctx);await load();if(mounted)setState(()=>message='تم حفظ البيانات التنظيمية.');
+      }catch(e){refresh(()=>err='تعذر الحفظ: $e');}
+    },child:const Text('حفظ'))]));
+    code.dispose();ar.dispose();en.dispose();
   }
-
-  Future<void> _checkIn(Map<String, dynamic> employee) async {
-    setState(() { _saving = true; _error = null; _message = null; });
-    try {
-      await _repo.checkIn(companyId: _company.text, employeeId: _s(employee['id']));
-      if (!mounted) return;
-      setState(() { _saving = false; _message = 'تم تسجيل حضور ${_s(employee['full_name'])}.'; });
-      await _load();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() { _saving = false; _error = 'تعذر تسجيل الحضور: $e'; });
-    }
-  }
-
-  Future<void> _checkOut(Map<String, dynamic> record) async {
-    setState(() { _saving = true; _error = null; _message = null; });
-    try {
-      await _repo.checkOut(_s(record['id']));
-      if (!mounted) return;
-      setState(() { _saving = false; _message = 'تم تسجيل الانصراف.'; });
-      await _load();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() { _saving = false; _error = 'تعذر تسجيل الانصراف: $e'; });
-    }
-  }
-
-  Future<void> _showLeaveDialog() async {
-    if (_employees.isEmpty) {
-      setState(() => _error = 'حمّل دليل الموظفين أولًا قبل إنشاء طلب إجازة.');
-      return;
-    }
-    String? employeeId = _employees.isEmpty ? null : _s(_employees.first['id']);
-    String leaveType = 'سنوية';
-    DateTime start = DateTime.now();
-    DateTime end = DateTime.now();
-    final reason = TextEditingController();
-    String? localError;
-    await showDialog<void>(context: context, barrierDismissible: false,
-      builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
-        title: const Text('طلب إجازة جديد'),
-        content: SizedBox(width: 520, child: SingleChildScrollView(child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              value: employeeId, isExpanded: true,
-              decoration: const InputDecoration(labelText: 'الموظف'),
-              items: _employees.map((e) => DropdownMenuItem<String>(
-                value: _s(e['id']), child: Text(_employeeName(_s(e['id'])), overflow: TextOverflow.ellipsis))).toList(),
-              onChanged: (v) => refresh(() => employeeId = v),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              value: leaveType,
-              decoration: const InputDecoration(labelText: 'نوع الإجازة'),
-              items: const [
-                DropdownMenuItem(value: 'سنوية', child: Text('سنوية')),
-                DropdownMenuItem(value: 'عارضة', child: Text('عارضة')),
-                DropdownMenuItem(value: 'مرضية', child: Text('مرضية')),
-                DropdownMenuItem(value: 'بدون أجر', child: Text('بدون أجر')),
-              ],
-              onChanged: (v) => refresh(() => leaveType = v ?? leaveType),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(onPressed: () async {
-              final picked = await showDatePicker(context: ctx, initialDate: start, firstDate: DateTime(2000), lastDate: DateTime(2100));
-              if (picked != null) refresh(() => start = picked);
-            }, child: Text('من: ' + _dateOnly(start))),
-            OutlinedButton(onPressed: () async {
-              final picked = await showDatePicker(context: ctx, initialDate: end, firstDate: DateTime(2000), lastDate: DateTime(2100));
-              if (picked != null) refresh(() => end = picked);
-            }, child: Text('إلى: ' + _dateOnly(end))),
-            TextField(controller: reason, maxLines: 2, decoration: const InputDecoration(labelText: 'السبب / الملاحظات')),
-            if (localError != null) Text(localError!, style: const TextStyle(color: Colors.red)),
-          ],
-        ))),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-          FilledButton(onPressed: () async {
-            if (employeeId == null || start.isAfter(end)) {
-              refresh(() => localError = 'اختر الموظف وتأكد من ترتيب التاريخين.');
-              return;
-            }
-            Navigator.pop(ctx);
-            setState(() { _saving = true; _error = null; _message = null; });
-            try {
-              await _repo.createLeaveRequest(companyId: _company.text, employeeId: employeeId!,
-                leaveType: leaveType, start: start, end: end, reason: reason.text);
-              if (!mounted) return;
-              setState(() { _saving = false; _message = 'تم إنشاء طلب الإجازة بحالة انتظار الاعتماد.'; });
-              await _load();
-            } catch (e) {
-              if (!mounted) return;
-              setState(() { _saving = false; _error = 'تعذر إنشاء طلب الإجازة: $e'; });
-            }
-          }, child: const Text('حفظ الطلب')),
-        ],
-      )));
-    reason.dispose();
-  }
-
-  Future<void> _decideLeave(Map<String, dynamic> request, String decision) async {
-    setState(() { _saving = true; _error = null; _message = null; });
-    try {
-      await _repo.decideLeave(_s(request['id']), decision);
-      if (!mounted) return;
-      setState(() { _saving = false; _message = decision == 'approved' ? 'تم اعتماد طلب الإجازة.' : 'تم رفض طلب الإجازة.'; });
-      await _load();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() { _saving = false; _error = 'تعذر اتخاذ القرار: $e'; });
-    }
-  }
-
-  String _dateOnly(DateTime date) => date.year.toString().padLeft(4, '0') + '-' +
-      date.month.toString().padLeft(2, '0') + '-' + date.day.toString().padLeft(2, '0');
-
-  String _employeeName(String id) {
-    final matches = _employees.where((e) => _s(e['id']) == id);
-    return matches.isEmpty ? id : '${_s(matches.first['employee_code'])} — ${_s(matches.first['full_name'])}';
-  }
-
-  Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action) =>
-      ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
-
-  Future<void> _previewHrRecords(String title, List<Map<String, dynamic>> rows) async {
-    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-      title: Text(title),
-      content: SizedBox(width: 760, child: rows.isEmpty ? const Text('لا توجد بيانات محمّلة.')
-        : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: rows.take(100).map((r) => ListTile(
-          dense: true,
-          title: Text('${r['full_name'] ?? r['employee_name'] ?? r['name'] ?? r['request_type'] ?? 'سجل'}'),
-          subtitle: Text('${r['employee_code'] ?? r['status'] ?? r['attendance_date'] ?? ''}'),
-        )).toList()))),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
-    ));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final today = DateTime.now();
-    final dateLabel = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-    final presentIds = _attendance.map((r) => _s(r['employee_id'])).toSet();
-    final activeEmployees = _employees.where((e) => _s(e['employment_status']) == 'active' && e['is_active'] != false).toList();
-    return Directionality(textDirection: TextDirection.rtl, child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Card(color: const Color(0xFF3E007D), child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Text('الموارد البشرية', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
-            const Text('دليل الموظفين والحضور والانصراف والإجازات. صلاحيات الرواتب منفصلة.', style: TextStyle(color: Colors.white70, height: 1.5)),
-            const SizedBox(height: 8),
-            SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
-              _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
-              _quickTask('إضافة موظف', Icons.person_add_alt_1, const Color(0xFF168447), _saving ? null : _addEmployee),
-              _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), () => _previewHrRecords(
-                _view == 'employees' ? 'معاينة الموظفين' : _view == 'attendance' ? 'معاينة الحضور' : 'معاينة الإجازات',
-                _view == 'employees' ? _employees : _view == 'attendance' ? _attendance : _leaveRequests)),
-            ])),
-          ]),
-        )),
-        const SizedBox(height: 12),
-        TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.business))),
-        const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          FilledButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh), label: const Text('تحميل البيانات')),
-          OutlinedButton.icon(onPressed: _saving ? null : _addEmployee, icon: const Icon(Icons.person_add_alt_1), label: const Text('إضافة موظف')),
-        ]),
-        if (_error != null) _notice(_error!, Colors.red),
-        if (_message != null) _notice(_message!, Colors.green),
-        if (_loading || _saving) const LinearProgressIndicator(),
-        const SizedBox(height: 10),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'employees', label: Text('الموظفون'), icon: Icon(Icons.badge_outlined)),
-            ButtonSegment(value: 'attendance', label: Text('الحضور اليوم'), icon: Icon(Icons.access_time)),
-            ButtonSegment(value: 'leave', label: Text('الإجازات'), icon: Icon(Icons.event_available)),
-          ],
-          selected: {_view},
-          onSelectionChanged: (v) => setState(() => _view = v.first),
-        ),
-        const SizedBox(height: 10),
-        if (_view == 'employees') ...[
-          Text('دليل الموظفين • ${_employees.length}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-          if (_employees.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد بيانات موظفين محمّلة.')),
-          ..._employees.map((e) => Card(child: ListTile(
-            leading: const CircleAvatar(backgroundColor: Color(0xFFF0E8FA), child: Icon(Icons.person, color: Color(0xFF3E007D))),
-            title: Text('${_s(e['employee_code'])} — ${_s(e['full_name'])}'),
-            subtitle: Text('${_s(e['job_title']).isEmpty ? 'بدون مسمى وظيفي' : _s(e['job_title'])} • ${_s(e['department_name'])}\nالحالة: ${_s(e['employment_status'])}'),
-            isThreeLine: true,
-          ))),
-        ] else if (_view == 'attendance') ...[
-          Text('الحضور والانصراف • $dateLabel', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-          if (_employees.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('حمّل دليل الموظفين أولًا.')),
-          ...activeEmployees.where((e) => !presentIds.contains(_s(e['id']))).map((e) => Card(child: ListTile(
-            title: Text(_employeeName(_s(e['id']))),
-            subtitle: const Text('لم يسجل حضور اليوم'),
-            trailing: FilledButton(onPressed: _saving ? null : () => _checkIn(e), child: const Text('تسجيل حضور')),
-          ))),
-          ..._attendance.map((r) {
-            final checkedOut = _s(r['check_out']).isNotEmpty;
-            return Card(child: ListTile(
-              leading: Icon(checkedOut ? Icons.check_circle : Icons.timelapse, color: checkedOut ? Colors.green : const Color(0xFFFFA015)),
-              title: Text(_employeeName(_s(r['employee_id']))),
-              subtitle: Text('حضور: ${_s(r['check_in']).isEmpty ? '—' : _s(r['check_in']).replaceFirst('T', ' ')}\nانصراف: ${checkedOut ? _s(r['check_out']).replaceFirst('T', ' ') : 'لم يسجل بعد'}'),
-              isThreeLine: true,
-              trailing: checkedOut ? const Icon(Icons.verified, color: Colors.green) : OutlinedButton(onPressed: _saving ? null : () => _checkOut(r), child: const Text('تسجيل انصراف')),
-            ));
-          }),
-        ] else ...[
-          Row(children: [
-            Expanded(child: Text('طلبات الإجازات • ' + _leaveRequests.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17))),
-            FilledButton.icon(onPressed: _saving ? null : _showLeaveDialog, icon: const Icon(Icons.add), label: const Text('طلب جديد')),
-          ]),
-          if (_leaveRequests.isEmpty) const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد طلبات إجازة مسجلة.')),
-          ..._leaveRequests.map((request) {
-            final status = _s(request['status']);
-            return Card(child: Padding(padding: const EdgeInsets.all(10), child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(_employeeName(_s(request['employee_id'])), style: const TextStyle(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 4),
-                Text(_s(request['leave_type']) + ' • ' + _s(request['starts_on']) + ' إلى ' + _s(request['ends_on']) +
-                  ' • ' + _s(request['requested_days']) + ' يوم'),
-                if (_s(request['reason']).isNotEmpty) Text('السبب: ' + _s(request['reason'])),
-                Row(children: [
-                  Chip(label: Text(status)),
-                  const Spacer(),
-                  if (status == 'pending') ...[
-                    TextButton(onPressed: _saving ? null : () => _decideLeave(request, 'rejected'), child: const Text('رفض')),
-                    const SizedBox(width: 6),
-                    FilledButton(onPressed: _saving ? null : () => _decideLeave(request, 'approved'), child: const Text('اعتماد')),
-                  ],
-                ]),
-              ],
-            )));
-          }),
-        ],
-      ],
-    ));
-  }
-
-  Widget _notice(String text, Color color) => Container(
-    margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(color: color.withValues(alpha: .09), borderRadius: BorderRadius.circular(10)),
-    child: Text(text, style: TextStyle(color: color)),
-  );
+  Future<void> deleteRow(String kind,Map<String,dynamic> row)async{final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('تأكيد الحذف'),content:const Text('هل تريد الحذف؟ قد تمنع العلاقات المرتبطة الحذف حفاظًا على البيانات.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نعم'))]));if(ok!=true)return;try{await _db.from(kind=='job'?'erp_hr_jobs':kind=='location'?'erp_hr_work_locations':'erp_hr_departments').delete().eq('id',s(row['id'])).eq('company_id',_company.text.trim());await load();}catch(e){if(mounted)setState(()=>error='تعذر الحذف: $e');}}
+  Widget deptNode(Map<String,dynamic> d){final children=departments.where((x)=>s(x['parent_id'])==s(d['id'])).toList(),js=jobs.where((x)=>s(x['department_id'])==s(d['id'])).toList();return Padding(padding:const EdgeInsetsDirectional.only(start:12),child:ExpansionTile(leading:const Icon(Icons.account_tree_outlined,color:orange),title:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'),trailing:Wrap(mainAxisSize:MainAxisSize.min,children:[IconButton(onPressed:()=>masterDialog('department',parentId:s(d['id'])),icon:const Icon(Icons.add)),IconButton(onPressed:()=>masterDialog('department',row:d),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>deleteRow('department',d),icon:const Icon(Icons.delete_outline,color:Colors.red))]),children:[...children.map(deptNode),...js.map((j)=>ListTile(dense:true,title:Text('${s(j['job_code'])} • ${s(j['name_ar'])}'),subtitle:Text(s(j['name_en'])),trailing:Wrap(mainAxisSize:MainAxisSize.min,children:[IconButton(onPressed:()=>masterDialog('job',row:j),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>deleteRow('job',j),icon:const Icon(Icons.delete_outline,color:Colors.red))]))),Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(onPressed:()=>masterDialog('job',parentId:s(d['id'])),icon:const Icon(Icons.add),label:const Text('إضافة وظيفة')))]));}
+  Widget workforce(){final roots=departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['department_level'])=='directorate').toList();return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Expanded(child:Text('قوة العمل • ${locations.length} موقع • ${jobs.length} وظيفة',style:const TextStyle(fontWeight:FontWeight.w900))),FilledButton.icon(onPressed:()=>masterDialog('location'),icon:const Icon(Icons.add),label:const Text('موقع')),FilledButton.icon(onPressed:()=>masterDialog('department'),icon:const Icon(Icons.add),label:const Text('إدارة'))]),...locations.map((l)=>Card(child:ExpansionTile(leading:const Icon(Icons.location_city,color:purple),title:Text('${s(l['location_code'])} • ${s(l['name_ar'])}'),subtitle:Text(s(l['location_type'])=='central'?'إدارة مركزية':'فرع'),trailing:Wrap(mainAxisSize:MainAxisSize.min,children:[IconButton(onPressed:()=>masterDialog('location',row:l),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>deleteRow('location',l),icon:const Icon(Icons.delete_outline,color:Colors.red))]),children:roots.map(deptNode).toList()))),const SizedBox(height:8),const Text('دليل الوظائف',style:TextStyle(fontWeight:FontWeight.w900)),SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(columns:const [DataColumn(label:Text('كود الوظيفة')),DataColumn(label:Text('عربي')),DataColumn(label:Text('English')),DataColumn(label:Text('إجراءات'))],rows:jobs.map((j)=>DataRow(cells:[DataCell(Text(s(j['job_code']))),DataCell(Text(s(j['name_ar']))),DataCell(Text(s(j['name_en']))),DataCell(Row(children:[IconButton(onPressed:()=>masterDialog('job',row:j),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>deleteRow('job',j),icon:const Icon(Icons.delete_outline,color:Colors.red))]))])).toList()))]);}
+  Future<Map<String,dynamic>?> search(bool job)async{final q=TextEditingController();Map<String,dynamic>? chosen;final source=job?jobs:employees;await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){final term=q.text.toLowerCase().trim();final rows=source.where((x){final fields=job?[x['job_code'],x['name_ar'],x['name_en']]:[x['employee_code'],x['full_name'],x['full_name_en'],x['job_title'],x['department_name'],x['governorate'],x['district'],x['locality'],branches.where((b)=>s(b['id'])==s(x['branch_id'])).map((b)=>s(b['branch_name'])).join()];return term.isEmpty||fields.any((v)=>s(v).toLowerCase().contains(term));}).toList();return AlertDialog(title:Text(job?'بحث الوظائف':'بحث الموظفين'),content:SizedBox(width:650,height:430,child:Column(children:[TextField(controller:q,autofocus:true,decoration:InputDecoration(labelText:job?'ابحث بالكود أو الاسم عربي/إنجليزي':'كود أو اسم أو فرع أو إدارة أو قسم أو موقع',prefixIcon:const Icon(Icons.search)),onChanged:(_)=>refresh((){})),Expanded(child:ListView(children:rows.map((x)=>ListTile(title:Text(job?'${s(x['job_code'])} • ${s(x['name_ar'])}':'${s(x['employee_code'])} • ${s(x['full_name'])}'),subtitle:Text(job?s(x['name_en']):'${s(x['department_name'])} • ${s(x['district'])}'),onTap:(){chosen=x;Navigator.pop(ctx);})).toList()))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]);}));q.dispose();return chosen;}
+  void addEmployee(Map<String,dynamic> e,{String? jobId}){final id=s(e['id']);if(!daily.containsKey(id))daily[id]={'employeeId':id,'jobId':jobId??s(e['job_id']),'present':false,'absent':false,'fraction':'يوم كامل','absenceType':'غياب بدون إذن','penalty':'بدون جزاء'};}
+  Future<void> yesterday()async{if(locked)return;try{final rows=await _db.from('erp_attendance_records').select().eq('company_id',_company.text.trim()).eq('work_date',date(day.subtract(const Duration(days:1))));setState((){daily.clear();for(final raw in rows){final r=Map<String,dynamic>.from(raw);daily[s(r['employee_id'])]={'employeeId':s(r['employee_id']),'jobId':s(r['job_id']),'present':s(r['attendance_status'])!='absent','absent':s(r['attendance_status'])=='absent','fraction':fractions.entries.firstWhere((x)=>x.value==((r['attendance_fraction'] as num?)?.toDouble()??1),orElse:()=>fractions.entries.first).key,'absenceType':s(r['absence_type']).isEmpty?'غياب بدون إذن':s(r['absence_type']),'penalty':penalties.entries.firstWhere((x)=>x.value==((r['absence_penalty_days'] as num?)?.toDouble()??0),orElse:()=>penalties.entries.first).key};}message='تم استدعاء كشف أمس؛ راجعه ثم احفظ.';});}catch(e){if(mounted)setState(()=>error='تعذر استدعاء أمس: $e');}}
+  Future<void> saveAttendance()async{if(locked){setState(()=>error='الشهر مقفل بالرواتب.');return;}setState(()=>saving=true);try{for(final x in daily.values){final e=emp(s(x['employeeId']));if(e==null)continue;final absent=x['absent']==true,present=x['present']==true&&!absent,absence=s(x['absenceType']);final old=attendance.where((r)=>s(r['employee_id'])==s(e['id'])&&s(r['work_date'])==date(day));await _db.from('erp_attendance_records').upsert({'company_id':_company.text.trim(),'employee_id':e['id'],'work_date':date(day),'check_in':present?(old.isEmpty?DateTime(day.year,day.month,day.day,9).toIso8601String():old.first['check_in']):null,'check_out':old.isEmpty?null:old.first['check_out'],'attendance_status':absent?'absent':present?'present':'excused','attendance_fraction':present?(fractions[s(x['fraction'])]??1):0,'absence_type':absent?absence:null,'absence_penalty_days':absent&&absence=='غياب بدون إذن'?(penalties[s(x['penalty'])]??0):0,'attendance_source':'manual','job_id':s(x['jobId']).isEmpty?e['job_id']:x['jobId'],'notes':present?'تسجيل حضور يدوي':absent?'حالة غياب: $absence':'لم يسجل حضور'},onConflict:'employee_id,work_date');}if(mounted)setState(()=>message='تم حفظ ${daily.length} سجلًا ليوم ${date(day)}.');await load();}catch(e){if(mounted)setState(()=>error='تعذر حفظ الحضور: $e');}finally{if(mounted)setState(()=>saving=false);}}
+  Future<void> direct(Map<String,dynamic> e)async{if(locked)return;try{await _db.from('erp_attendance_records').upsert({'company_id':_company.text.trim(),'employee_id':e['id'],'work_date':date(day),'check_in':DateTime.now().toIso8601String(),'attendance_status':'present','attendance_fraction':1,'absence_type':null,'absence_penalty_days':0,'attendance_source':'direct','notes':'تسجيل حضور مباشر فقط'},onConflict:'employee_id,work_date');if(mounted)setState(()=>message='تم تسجيل حضور مباشر فقط للموظف ${s(e['full_name'])}.');await load();}catch(e){if(mounted)setState(()=>error='تعذر تسجيل الحضور: $e');}}
+  Widget attendanceRow(Map<String,dynamic> x){final e=emp(s(x['employeeId']));if(e==null)return const SizedBox.shrink();final jid=s(x['jobId']).isEmpty?s(e['job_id']):s(x['jobId']);final found=jobs.where((j)=>s(j['id'])==jid),j=found.isEmpty?null:found.first,abs=x['absent']==true;return Card(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[SizedBox(width:95,child:Text(s(j?['job_code']),style:const TextStyle(fontWeight:FontWeight.w900))),Expanded(child:Text(s(j?['name_ar']).isEmpty?s(e['job_title']):s(j?['name_ar']),style:const TextStyle(fontWeight:FontWeight.w800))),IconButton(onPressed:locked?null:()=>setState(()=>daily.remove(s(e['id']))),icon:const Icon(Icons.remove_circle_outline,color:Colors.red))]),Row(children:[SizedBox(width:115,child:Text(s(e['employee_code']),style:const TextStyle(color:purple,fontWeight:FontWeight.w900))),Expanded(child:Text(s(e['full_name']))),Checkbox(value:x['present']==true&&!abs,onChanged:locked?null:(v)=>setState(()=>{x['present']=v==true,x['absent']=false})),const Text('حضور')]),Wrap(spacing:7,runSpacing:5,children:[const Text('نوع الحضور'),SizedBox(width:120,child:DropdownButtonFormField<String>(value:fractions.containsKey(s(x['fraction']))?s(x['fraction']):'يوم كامل',isExpanded:true,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder()),items:fractions.keys.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:locked||abs?null:(v)=>setState(()=>x['fraction']=v??'يوم كامل'))),Checkbox(value:abs,onChanged:locked?null:(v)=>setState(()=>{x['absent']=v==true,x['present']=false,if(v!=true)x['penalty']='بدون جزاء'})),const Text('غياب'),SizedBox(width:170,child:DropdownButtonFormField<String>(value:absenceTypes.contains(s(x['absenceType']))?s(x['absenceType']):'غياب بدون إذن',isExpanded:true,decoration:const InputDecoration(labelText:'حالة الغياب',isDense:true,border:OutlineInputBorder()),items:absenceTypes.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(),onChanged:locked||!abs?null:(v)=>setState(()=>{x['absenceType']=v??'غياب بدون إذن',if(v!='غياب بدون إذن')x['penalty']='بدون جزاء'}))),SizedBox(width:140,child:DropdownButtonFormField<String>(value:penalties.containsKey(s(x['penalty']))?s(x['penalty']):'بدون جزاء',isExpanded:true,decoration:const InputDecoration(labelText:'جزاء الغياب',isDense:true,border:OutlineInputBorder()),items:penalties.keys.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:locked||!abs||s(x['absenceType'])!='غياب بدون إذن'?null:(v)=>setState(()=>x['penalty']=v??'بدون جزاء'))),FilledButton.tonal(onPressed:locked?null:()=>direct(e),child:const Text('تسجيل حضور مباشر'))])])));}
+  Widget manual(){final days=DateTime(day.year,day.month+1,0).day;return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Expanded(child:Text('الحضور اليدوي • ${date(day)} • ${locked?'مقفل':'مفتوح'}',style:const TextStyle(fontWeight:FontWeight.w900))),OutlinedButton.icon(onPressed:locked?null:yesterday,icon:const Icon(Icons.content_copy),label:const Text('استدعاء موظفين أمس')),FilledButton.icon(onPressed:locked||saving?null:saveAttendance,icon:const Icon(Icons.save),label:const Text('حفظ اليوم'))]),if(locked)notice('مسير الرواتب مقفل؛ الشهر للقراءة فقط.',Colors.red),SizedBox(height:86,child:ListView(scrollDirection:Axis.horizontal,children:List.generate(days,(i){final d=DateTime(day.year,day.month,i+1),selected=d.day==day.day;return Padding(padding:const EdgeInsetsDirectional.only(end:5),child:OutlinedButton(style:OutlinedButton.styleFrom(backgroundColor:selected?purple:null,foregroundColor:selected?Colors.white:null),onPressed:()=>setState((){day=d;rebuild();}),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Text('${d.day}',style:const TextStyle(fontWeight:FontWeight.w900)),Text(weekday(d),style:const TextStyle(fontSize:10))])));}))),Row(children:[Expanded(child:Text('كشف اليوم • ${daily.length} موظف',style:const TextStyle(fontWeight:FontWeight.w900))),TextButton.icon(onPressed:locked?null:()async{final e=await search(false);if(e!=null)setState(()=>addEmployee(e));},icon:const Icon(Icons.person_search),label:const Text('اختيار موظف')),TextButton.icon(onPressed:locked?null:()async{final j=await search(true);if(j==null)return;final e=await search(false);if(e!=null)setState(()=>addEmployee(e,jobId:s(j['id'])));},icon:const Icon(Icons.work_outline),label:const Text('وظيفة + موظف'))]),if(daily.isEmpty)const Padding(padding:EdgeInsets.all(12),child:Text('اختر يومًا ثم أضف الموظفين أو استدعِ كشف أمس.')),...daily.values.map(attendanceRow)]);}
+  Future<void> processFingerprint()async{if(locked){setState(()=>error='الشهر مقفل؛ لن تعدّل المعالجة السجلات.');return;}setState(()=>saving=true);try{final buckets=<String,List<Map<String,dynamic>>>{};for(final e in events.where((x)=>s(x['processing_status'])!='processed'&&s(x['employee_id']).isNotEmpty)){final at=DateTime.tryParse(s(e['event_at']));if(at==null)continue;(buckets['${s(e['employee_id'])}|${date(at)}']??=<Map<String,dynamic>>[]).add(e);}var count=0;for(final entry in buckets.entries){final parts=entry.key.split('|'),person=emp(parts.first);if(person==null)continue;final list=entry.value..sort((a,b)=>s(a['event_at']).compareTo(s(b['event_at'])));await _db.from('erp_attendance_records').upsert({'company_id':_company.text.trim(),'employee_id':person['id'],'work_date':parts.last,'check_in':list.first['event_at'],'check_out':list.length>1?list.last['event_at']:null,'attendance_status':'present','attendance_fraction':1,'absence_type':null,'absence_penalty_days':0,'attendance_source':'fingerprint','notes':'معالجة من جهاز البصمة'},onConflict:'employee_id,work_date');for(final e in list){await _db.from('erp_hr_attendance_events').update({'processing_status':'processed','processing_note':'مطابقة ${s(person['employee_code'])}'}).eq('id',s(e['id']));}count++;}if(mounted)setState(()=>message='تمت معالجة $count مجموعة حضور من البصمة.');await load();}catch(e){if(mounted)setState(()=>error='تعذرت معالجة البصمات: $e');}finally{if(mounted)setState(()=>saving=false);}}
+  Future<void> matchEvent(Map<String,dynamic> event)async{final e=await search(false);if(e==null)return;try{await _db.from('erp_hr_attendance_events').update({'employee_id':e['id'],'processing_note':'مطابقة يدوية'}).eq('id',s(event['id']));await load();}catch(err){if(mounted)setState(()=>error='تعذرت المطابقة: $err');}}
+  Widget fingerprint(){final pending=events.where((e)=>s(e['processing_status'])!='processed'||s(e['employee_id']).isEmpty).length;return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Expanded(child:Text('حضور جهاز البصمة • ${devices.length} جهاز • ${events.length} حركة',style:const TextStyle(fontWeight:FontWeight.w900))),FilledButton.icon(onPressed:loading?null:load,icon:const Icon(Icons.sync),label:const Text('تحديث')),FilledButton.icon(onPressed:saving||locked?null:processFingerprint,icon:const Icon(Icons.fact_check_outlined),label:const Text('معالجة البصمات'))]),if(locked)notice('الشهر مقفل بالرواتب.',Colors.red),Wrap(spacing:8,children:[Chip(label:Text('الأجهزة: ${devices.length}')),Chip(label:Text('حركات غير معالجة: $pending')),Chip(label:Text('الموظفون: ${employees.length}'))]),const Text('أجهزة البصمة المسجلة',style:TextStyle(fontWeight:FontWeight.w900)),if(devices.isEmpty)const Text('لا توجد أجهزة مسجلة. أضفها من شاشة أجهزة البصمة وربط الحضور.'),...devices.map((d)=>Card(child:ListTile(leading:const Icon(Icons.fingerprint,color:purple),title:Text(s(d['device_name'])),subtitle:Text('${s(d['manufacturer'])} ${s(d['model'])} • ${s(d['ip_address'])}:${s(d['port'])}\nآخر مزامنة: ${s(d['last_sync_at'])}'),trailing:Chip(label:Text(s(d['status']).isEmpty?'غير معروف':s(d['status'])))))),const SizedBox(height:8),const Text('الحركات الخام — الأحدث أولًا',style:TextStyle(fontWeight:FontWeight.w900)),if(events.isEmpty)const Text('لا توجد حركات بصمة مستوردة للفترة المحددة.'),...events.take(250).map((e)=>Card(child:ListTile(dense:true,leading:Icon(s(e['processing_status'])=='processed'?Icons.check_circle:Icons.schedule,color:s(e['processing_status'])=='processed'?Colors.green:orange),title:Text(emp(s(e['employee_id']))==null?'كود البصمة: ${s(e['employee_code'])}':empName(e['employee_id'])),subtitle:Text('${s(e['event_at'])} • ${s(e['event_type'])} • ${s(e['processing_status'])}'),trailing:emp(s(e['employee_id']))==null?TextButton(onPressed:()=>matchEvent(e),child:const Text('مطابقة')):null)))]);}
+  Future<void> preview()async{final rows=_tabs.index==0?jobs:_tabs.index==1?attendance.where((r)=>s(r['work_date'])==date(day)).toList():events;await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('معاينة'),content:SizedBox(width:650,child:rows.isEmpty?const Text('لا توجد بيانات.'):SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:rows.take(100).map((r)=>ListTile(dense:true,title:Text(s(r['name_ar']).isNotEmpty?s(r['name_ar']):s(r['full_name']).isNotEmpty?s(r['full_name']):s(r['employee_code'])),subtitle:Text('${s(r['job_code'])} ${s(r['work_date'])} ${s(r['event_at'])}'))).toList()))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]));}
+  @override Widget build(BuildContext context){final tab=_tabs.index;return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Card(color:purple,child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[const Text('الحضور والانصراف',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),const Text('قوة العمل • الحضور اليدوي • حضور جهاز البصمة',style:TextStyle(color:Colors.white70)),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[task('تحديث',Icons.refresh,Colors.blue,loading?null:load),task('إضافة',Icons.add_circle_outline,const Color(0xFF168447),saving?null:()=>masterDialog(tab==0?'location':'job')),task('حفظ',Icons.save_outlined,const Color(0xFF168447),tab==1&&!saving&&!locked?saveAttendance:null),task('تعديل',Icons.edit_outlined,orange,tab==0&&jobs.isNotEmpty?()=>masterDialog('job',row:jobs.first):null),task('حذف',Icons.delete_outline,Colors.red,tab==0&&jobs.isNotEmpty?()=>deleteRow('job',jobs.first):null),task('معاينة',Icons.visibility_outlined,const Color(0xFF6841A5),preview),task('طباعة',Icons.print_outlined,const Color(0xFF536DFE),()=>setState(()=>message='افتح المعاينة ثم استخدم طباعة المتصفح.')),task('Excel',Icons.table_view_outlined,const Color(0xFF168447),()=>setState(()=>message='تصدير Excel غير مربوط حتى الآن.')),task('PDF',Icons.picture_as_pdf_outlined,Colors.red,()=>setState(()=>message='تصدير PDF غير مربوط حتى الآن.'))]))])),TextField(controller:_company,decoration:const InputDecoration(labelText:'معرّف الشركة (UUID)',border:OutlineInputBorder(),prefixIcon:Icon(Icons.business))),if(error!=null)notice(error!,Colors.red),if(message!=null)notice(message!,Colors.green),if(loading||saving)const LinearProgressIndicator(),TabBar(controller:_tabs,isScrollable:true,labelColor:purple,indicatorColor:orange,tabs:const [Tab(icon:Icon(Icons.account_tree_outlined),text:'قوة العمل'),Tab(icon:Icon(Icons.calendar_month_outlined),text:'الحضور اليدوي'),Tab(icon:Icon(Icons.fingerprint),text:'حضور جهاز البصمة')]),Expanded(child:TabBarView(controller:_tabs,children:[SingleChildScrollView(child:workforce()),SingleChildScrollView(child:manual()),SingleChildScrollView(child:fingerprint())]))]));}
 }
