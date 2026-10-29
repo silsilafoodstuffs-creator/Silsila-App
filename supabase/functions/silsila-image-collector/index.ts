@@ -408,20 +408,29 @@ Deno.serve(async (req: Request) => {
       };
       const fetchLinks = async (url: string): Promise<{ url: string; links: string[]; pagination: string[] } | null> => {
         try {
-          const target = safeUrl(url);
-          const res = await fetch(target, {
-            redirect: "follow",
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-              "Accept-Language": "ar-EG,ar;q=0.9,en;q=0.8",
-            },
-            signal: AbortSignal.timeout(9000),
-          });
-          if (!res.ok || !/(?:text\/html|application\/xhtml)/i.test(res.headers.get("content-type") ?? "")) return null;
-          const html = new TextDecoder().decode(await readLimited(res, 1_000_000));
+          let target = safeUrl(url);
+          let response: Response | null = null;
+          for (let hop = 0; hop <= 5; hop++) {
+            response = await fetch(target, {
+              redirect: "manual",
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "ar-EG,ar;q=0.9,en;q=0.8",
+              },
+              signal: AbortSignal.timeout(7000),
+            });
+            if (response.status < 300 || response.status >= 400) break;
+            const location = response.headers.get("location");
+            if (!location || hop === 5) return null;
+            const nextTarget = safeUrl(new URL(location, target).href);
+            if (nextTarget.origin !== origin) return null;
+            target = nextTarget;
+          }
+          if (!response || !response.ok || !/(?:text\\/html|application\\/xhtml)/i.test(response.headers.get("content-type") ?? "")) return null;
+          const html = new TextDecoder().decode(await readLimited(response, 1_000_000));
           const links = internalLinks(html, target).map((x) => canonical(x, target)).filter((x): x is string => Boolean(x));
-          const pagination = links.filter((link) => /(?:[?&](?:page|paged|pageno|page_no|pg)=\d+|\/page\/\d+\/?$|[?&]p=\d+)/i.test(link));
+          const pagination = links.filter((link) => /(?:[?&](?:page|paged|pageno|page_no|pg)=\\d+|\\/page\\/\\d+\\/?$|[?&]p=\\d+)/i.test(link));
           return { url: target.href, links, pagination };
         } catch { return null; }
       };
