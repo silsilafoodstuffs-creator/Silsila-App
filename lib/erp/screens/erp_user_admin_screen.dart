@@ -14,8 +14,8 @@ import 'erp_user_classifications_screen.dart';
 
 const _userAdminPurple = Color(0xFF3E007D);
 const _userAdminCanvas = Color(0xFFF7F5FA);
-const _userAdminActions = <String>['تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','استيراد Excel','طباعة PDF','الوصول السريع'];
-const _userAdminActionFields = <String,String>{'تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','استيراد Excel':'can_import_excel','طباعة PDF':'can_print_pdf','الوصول السريع':'show_in_quick_tasks'};
+const _userAdminActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','استيراد Excel','طباعة PDF','الوصول السريع'];
+const _userAdminActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','استيراد Excel':'can_import_excel','طباعة PDF':'can_print_pdf','الوصول السريع':'show_in_quick_tasks'};
 const _permissionActions = <String>['مسموح','تحديث','إضافة','حفظ','تعديل','حذف','معاينة','طباعة','Excel','PDF'];
 const _permissionActionFields = <String,String>{'مسموح':'can_access','تحديث':'can_refresh','إضافة':'can_add','حفظ':'can_save','تعديل':'can_edit','حذف':'can_delete','معاينة':'can_preview','طباعة':'can_print','Excel':'can_import_excel','PDF':'can_print_pdf'};
 const _userAdminTree = <String,Map<String,List<String>>>{
@@ -262,6 +262,13 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
           try {
             final classifications = await _db!.from('erp_user_classifications').select('id,company_id,user_type_id,classification_code,name_ar,name_en,is_active').eq('company_id', _company).order('classification_code');
             _classifications = (classifications as List).map((x) => Map<String, dynamic>.from(x)).toList();
+            // Inactive/mismatched classifications must not remain selectable on existing rows.
+            for (final user in userList) {
+              final classificationId = _s(user['classification_id']);
+              if (classificationId.isNotEmpty && !_classifications.any((x) => _s(x['id']) == classificationId && _s(x['user_type_id']) == _s(user['user_type_id']) && x['is_active'] == true)) {
+                user['classification_id'] = null;
+              }
+            }
           } catch (_) { _classifications = []; }
           try {
             final e = await _db!.from('erp_employees').select('id,employee_code,full_name,full_name_en,is_active').eq('company_id', _company).eq('is_active', true).order('employee_code');
