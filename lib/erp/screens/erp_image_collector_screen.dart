@@ -498,19 +498,24 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       await _loadCategoryOptions();
       final scope = _sourceScope(parsed.toString());
       if (_importedScope != scope) await _loadImportedForScope(scope);
+      List<String> sitePages = <String>[];
+      try {
+        if (mounted) setState(() => _status = 'جارٍ استكشاف بنية الموقع بسرعة وتجهيز قائمة الصفحات قبل تنزيل الصور...');
+        final discovery = await _invoke({'action': 'discover', 'url': parsed.toString(), 'maxPages': 40});
+        sitePages = (discovery['pages'] as List? ?? const []).map((x) => x.toString()).where((x) => x.isNotEmpty).toSet().toList();
+        if (mounted) setState(() => _status = 'انتهى الاستكشاف الأولي: تم العثور على ${sitePages.length + 1} صفحة مرشحة. جارٍ تجهيز أول دفعة صور...');
+      } catch (_) {
+        if (mounted) setState(() => _status = 'تعذر استكشاف الموقع بالكامل؛ سيتم فحص الصفحة الأساسية أولًا ثم استخدام روابط الترقيم المتاحة.');
+      }
       final result = await _invoke({'action': 'scan', 'url': parsed.toString()});
       final discovered = (result['pagination'] as List? ?? const [])
           .map((x) => x is Map ? (x['url'] ?? x['href'] ?? '').toString() : x.toString())
-          .where((x) => x.isNotEmpty)
-          .map((x) => Uri.tryParse(x))
-          .whereType<Uri>()
-          .map((x) => x.hasScheme ? x : parsed.resolveUri(x))
-          .map((x) => x.replace(fragment: '').toString())
-          .where((x) => Uri.tryParse(x)?.host == parsed.host && x != parsed.replace(fragment: '').toString())
-          .toSet().toList();
+          .where((x) => x.isNotEmpty).map((x) => Uri.tryParse(x)).whereType<Uri>()
+          .map((x) => x.hasScheme ? x : parsed.resolveUri(x)).map((x) => x.replace(fragment: '').toString())
+          .where((x) => Uri.tryParse(x)?.host == parsed.host && x != parsed.replace(fragment: '').toString()).toSet();
       _scannedCrawlPages.add(parsed.replace(fragment: '').toString());
-      for (final page in discovered) {
-        if (_queuedCrawlPages.add(page)) _crawlPages.add(page);
+      for (final page in <String>{...sitePages, ...discovered}) {
+        if (page != parsed.replace(fragment: '').toString() && _queuedCrawlPages.add(page)) _crawlPages.add(page);
       }
       final rawImages = (result['images'] as List? ?? const []);
       final candidates = rawImages.whereType<Map>().map((x) => Map<String, dynamic>.from(x)).toList();
@@ -605,6 +610,22 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     } catch (e) {
       if (mounted) setState(() { _crawlPageFailures++; _error = 'تعذر فحص الصفحة: ' + e.toString().replaceFirst('Exception: ', ''); });
     } finally { if (mounted) setState(() => _loading = false); }
+  }
+
+  Future<void> _scanNextBatch(int batchIndex) async {
+    if (_loading) return;
+    final pending = _crawlPages.where((p) => !_scannedCrawlPages.contains(p)).take(5).toList();
+    if (pending.isEmpty) return;
+    if (mounted) setState(() { _error = null; _status = 'بدء الدفعة ${batchIndex + 1}: سيتم فحص ${pending.length} صفحات بالتتابع مع الاحتفاظ بكل الصور التي جُمعت.'; });
+    for (var i = 0; i < pending.length; i++) {
+      if (!mounted) return;
+      await _scanCrawlPage(pending[i]);
+      if (_error != null) {
+        // Continue the remaining pages in this batch; a single failed URL must not stop the collection.
+        if (mounted) setState(() => _error = null);
+      }
+    }
+    if (mounted) setState(() => _status = 'انتهت الدفعة ${batchIndex + 1}. تم فحص ${_scannedCrawlPages.length} صفحة وجمع ${_images.length} صورة. يمكنك تحميل الدفعة التالية أو حفظ ZIP.');
   }
 
   void _toggle(String url, bool? value) {
@@ -1351,27 +1372,28 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 if (_pageUrl != null) ...[
                   const SizedBox(height: 10),
                 ],
-                if (_pageUrl != null && _crawlPages.isNotEmpty) ...[
+                if (_pageUrl != null) ...[
                   const SizedBox(height: 10),
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: _purple.withValues(alpha: .05), borderRadius: BorderRadius.circular(12), border: Border.all(color: _purple.withValues(alpha: .18))),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('دفعات صفحات الموقع', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                      const Text('استكشاف الموقع والتحميل على دفعات', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                       const SizedBox(height: 5),
-                      Text('تم فحص ${_scannedCrawlPages.length} صفحة • متبقي ${_crawlPages.where((p) => !_scannedCrawlPages.contains(p)).length} صفحة • ${_images.length} صورة مجمعة • فشل ${_crawlPageFailures}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                      Text('صفحات مكتشفة: ${_crawlPages.length + 1} • تم فحصها: ${_scannedCrawlPages.length} • متبقي: ${_crawlPages.where((p) => !_scannedCrawlPages.contains(p)).length} • صور مجمعة: ${_images.length} • صفحات فشل فحصها: $_crawlPageFailures', style: const TextStyle(fontSize: 12, color: Colors.black54)),
                       const SizedBox(height: 8),
-                      Wrap(spacing: 6, runSpacing: 6, children: [
-                        for (var i = 0; i < _crawlPages.length && i < 24; i++)
+                      Wrap(spacing: 8, runSpacing: 6, children: [
+                        for (var i = 0; i < ((_crawlPages.where((p) => !_scannedCrawlPages.contains(p)).length + 4) ~/ 5) && i < 12; i++)
                           OutlinedButton(
-                            onPressed: _loading || _scannedCrawlPages.contains(_crawlPages[i]) ? null : () => _scanCrawlPage(_crawlPages[i]),
-                            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7), visualDensity: VisualDensity.compact),
-                            child: Text(_scannedCrawlPages.contains(_crawlPages[i]) ? '✓ ${i + 2}' : 'تحميل ${i + 2}'),
+                            onPressed: _loading ? null : () => _scanNextBatch(i),
+                            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), visualDensity: VisualDensity.compact),
+                            child: Text('تحميل الدفعة ${i + 1} (${((_crawlPages.where((p) => !_scannedCrawlPages.contains(p)).length - i * 5).clamp(0, 5))} صفحات)'),
                           ),
                       ]),
-                      if (_crawlPages.length > 24) const Text('تُعرض أول 24 صفحة مكتشفة فقط لتجنب ازدحام الشاشة.', style: TextStyle(fontSize: 11, color: Colors.black54)),
-                      if (_crawlPages.every((p) => _scannedCrawlPages.contains(p))) const Padding(padding: EdgeInsets.only(top: 6), child: Text('اكتمل فحص كل صفحات الترقيم التي اكتشفها الموقع. قد توجد صفحات أخرى غير مرتبطة بروابط ترقيم واضحة.', style: TextStyle(fontSize: 11, color: Colors.green))),
+                      if (_crawlPages.where((p) => !_scannedCrawlPages.contains(p)).length > 60) const Text('تُعرض أول 12 دفعة؛ أكملها لتظهر الدفعات التالية.', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                      if (_crawlPages.isEmpty) const Text('لم تُكتشف صفحات إضافية تلقائيًا؛ قد يستخدم الموقع ترقيمًا غير ظاهر أو تحميل JavaScript.', style: TextStyle(fontSize: 11, color: Colors.black54)),
+                      if (_crawlPages.isNotEmpty && _crawlPages.every((p) => _scannedCrawlPages.contains(p))) const Padding(padding: EdgeInsets.only(top: 6), child: Text('اكتمل فحص الصفحات المكتشفة. قد توجد صفحات لا يكشفها الموقع عبر روابط HTML.', style: TextStyle(fontSize: 11, color: Colors.green))),
                     ]),
                   ),
                 ],
