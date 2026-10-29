@@ -360,7 +360,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       final cashboxes = (await db.from('erp_cashboxes').select('id,cashbox_code').eq('company_id', _cid)).map((r) => Map<String,dynamic>.from(r)).toList();
       final data = <Map<String,dynamic>>[
         {'name':'علياء مجدي','en':'Alia Magdy','job':'مسئول مشتريات','dep':'مشتريات شركات','dc':'PUR-SEC-05','jc':'JOB-041','loc':'LOC-001','area':'أطلس 4','central':true},
-        {'name':'أمنية جمال','en':'Omnia Gamal','job':'مسئول مشتريات','dep':'مشتريات تجار','dc':'PUR-SEC-06','jc':'JOB-042','loc':'LOC-001','area':'جمال عبد الناصر','central':true},
+        {'name':'أمنية جمال','en':'Omnia Gamal','job':'مسئول مشتريات','dep':'مشتريات تجار','dc':'PUR-SEC-06','jc':'JOB-041','loc':'LOC-001','area':'جمال عبد الناصر','central':true},
         {'name':'زهراء عبد العاطي','en':'Zahraa Abdelatty','job':'مندوب مبيعات Indoor','dep':'مبيعات داخلية','dc':'SAL-SEC-06','jc':'JOB-043','loc':'LOC-001','area':'اسبيكو','central':true},
         {'name':'علي الجمل','en':'Ali El Gamal','job':'مندوب مبيعات Outdoor','dep':'مبيعات خارجية','dc':'SAL-SEC-07','jc':'JOB-044','loc':'LOC-001','area':'النهضة','central':true},
         {'name':'هدي محمد','en':'Hoda Mohamed','job':'مندوب مبيعات Joker','dep':'مبيعات جوكر','dc':'SAL-SEC-08','jc':'JOB-045','loc':'LOC-001','area':'الحرفيين','central':true},
@@ -418,7 +418,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         idsByName[_s(item['name'])]=_s(inserted['id']);
         createdEmployees++;
       }
-      final users = (await db.from('erp_users').select('user_code,employee_id').eq('company_id',_cid)).map((r)=>Map<String,dynamic>.from(r)).toList();
+      final users = (await db.from('erp_users').select('id,user_code,employee_id,cashbox_id').eq('company_id',_cid)).map((r)=>Map<String,dynamic>.from(r)).toList();
       var maxUser = 0;
       for (final row in users) {
         final digits = _s(row['user_code']).replaceAll(RegExp('[^0-9]'), '');
@@ -429,15 +429,26 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       var permissionWarnings = 0;
       for (final item in data.where((r)=>r['central']==true || r['cashbox']!=null)) {
         final employeeId = idsByName[_s(item['name'])];
-        if (employeeId == null || users.any((u)=>_s(u['employee_id'])==employeeId)) continue;
-        maxUser++;
+        if (employeeId == null) continue;
+        final existingUserRows = users.where((u)=>_s(u['employee_id'])==employeeId).toList();
         final cb = cashboxes.where((r)=>_s(r['cashbox_code'])==_s(item['cashbox'])).toList();
-        final user = await db.from('erp_users').insert({
-          'company_id':_cid,'user_code':'USR' + maxUser.toString().padLeft(4,'0'),
-          'name_ar':item['name'],'name_en':item['en'],'user_type_id':employeeType['id'],
-          'employee_id':employeeId,'is_active':true,'has_sub_warehouse':false,
-          'cashbox_id':cb.isEmpty ? null : cb.first['id'],
-        }).select('id').single();
+        late Map<String,dynamic> user;
+        if (existingUserRows.isEmpty) {
+          maxUser++;
+          user = Map<String,dynamic>.from(await db.from('erp_users').insert({
+            'company_id':_cid,'user_code':'USR' + maxUser.toString().padLeft(4,'0'),
+            'name_ar':item['name'],'name_en':item['en'],'user_type_id':employeeType['id'],
+            'employee_id':employeeId,'is_active':true,'has_sub_warehouse':false,
+            'cashbox_id':cb.isEmpty ? null : cb.first['id'],
+          }).select('id,user_code,employee_id,cashbox_id').single());
+          users.add(user);
+          createdUsers++;
+        } else {
+          user = existingUserRows.first;
+          if (item['cashbox'] != null && cb.isNotEmpty && _s(user['cashbox_id']) != _s(cb.first['id'])) {
+            await db.from('erp_users').update({'cashbox_id':cb.first['id']}).eq('id',user['id']).eq('company_id',_cid);
+          }
+        }
         final title = _s(item['job']);
         final menuKey = title.contains('مشتريات') ? 'مشتريات' : (title.contains('مندوب') ? 'مبيعات' : (title.contains('محاسب') || title.contains('مراجع') || title.contains('خزينة') ? 'حسابات مالية' : 'مخازن'));
         try {
@@ -450,7 +461,6 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
             'show_in_quick_tasks':false,
           },onConflict:'user_id,menu_name,submenu_name,page_name');
         } catch (_) { permissionWarnings++; }
-        createdUsers++;
       }
       if (!mounted) return;
       setState(() {
