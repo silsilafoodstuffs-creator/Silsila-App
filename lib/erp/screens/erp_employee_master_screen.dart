@@ -369,7 +369,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         width: 265,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           OutlinedButton.icon(
-            onPressed: _selectedEmployeeId == null || _saving || _readOnly
+            onPressed: _selectedEmployeeId == null || _saving
                 ? null : () => _pickEmployeeDocument(item.$1, item.$2),
             icon: const Icon(Icons.upload_file),
             label: Text(item.$2, overflow: TextOverflow.ellipsis),
@@ -382,7 +382,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
               subtitle: Text('${((int.tryParse(_s(doc['size_bytes'])) ?? 0) / 1024).toStringAsFixed(0)} ك.ب'),
               trailing: Wrap(mainAxisSize: MainAxisSize.min, children: [
                 IconButton(tooltip: 'فتح المرفق', onPressed: () => _openEmployeeDocument(doc), icon: const Icon(Icons.open_in_new)),
-                IconButton(tooltip: 'حذف المرفق', onPressed: _readOnly || _saving ? null : () => _deleteEmployeeDocument(doc), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+                IconButton(tooltip: 'حذف المرفق', onPressed: _saving ? null : () => _deleteEmployeeDocument(doc), icon: const Icon(Icons.delete_outline, color: Colors.red)),
               ]),
             ),
         ]),
