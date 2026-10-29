@@ -44,6 +44,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
+  final Map<String, Future<Uint8List?>> _itemImageFutures = <String, Future<Uint8List?>>{};
   List<Map<String, dynamic>> _branches = [];
   List<Map<String, dynamic>> _geoRows = [];
   String? _branchId;
@@ -132,7 +133,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _geoRows = geoRows;
+        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
@@ -150,7 +151,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     try {
       final rows = await _repo.fetchItems(_company.text.trim(), pageSize: 500, search: _itemSearch.text);
       if (!mounted) return;
-      setState(() { _items = rows; _itemsOffset = rows.length; _itemsHasMore = rows.length == 500; _loading = false; });
+      setState(() { _items = rows; _itemImageFutures.clear(); _itemsOffset = rows.length; _itemsHasMore = rows.length == 500; _loading = false; });
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر البحث في الأصناف: $e'; });
@@ -601,13 +602,28 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         TextField(controller: _itemSearch, textInputAction: TextInputAction.search, onSubmitted: (_) => _searchItems(), decoration: InputDecoration(labelText: 'بحث باسم الصنف أو الكود أو الباركود', prefixIcon: const Icon(Icons.search), suffixIcon: IconButton(onPressed: _searchItems, icon: const Icon(Icons.search)), border: const OutlineInputBorder())),
         const SizedBox(height: 8),
         Text('الأصناف المحمّلة • ' + _items.length.toString() + (_itemsHasMore ? ' • توجد نتائج إضافية' : ''), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-        ..._items.map((i) => Card(child: ListTile(
-          leading: const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
-          title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
-          subtitle: Text(_categoryLabel(_s(i['category_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
-          isThreeLine: true,
-          trailing: IconButton(onPressed: _saving ? null : () => _toggle(i, true), icon: Icon(i['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
-        ))),
+        SizedBox(height: 600, child: ListView.builder(
+          itemCount: _items.length,
+          itemBuilder: (context, index) {
+            final i = _items[index];
+            final id = _s(i['id']);
+            final imageFuture = _itemImageFutures.putIfAbsent(id, () => _repo.fetchItemImage(_company.text.trim(), id));
+            return Card(child: ListTile(
+              leading: FutureBuilder<Uint8List?>(
+                future: imageFuture,
+                builder: (context, snapshot) {
+                  final bytes = snapshot.data;
+                  if (bytes == null || bytes.isEmpty) return const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D));
+                  return ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(bytes, width: 48, height: 48, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D))));
+                },
+              ),
+              title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
+              subtitle: Text(_categoryLabel(_s(i['category_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
+              isThreeLine: true,
+              trailing: IconButton(onPressed: _saving ? null : () => _toggle(i, true), icon: Icon(i['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
+            ));
+          },
+        )),
         if (_itemsHasMore || _itemsLoadingMore) Center(child: Padding(padding: const EdgeInsets.all(12), child: OutlinedButton.icon(onPressed: _itemsLoadingMore ? null : _loadMoreItems, icon: _itemsLoadingMore ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more), label: Text(_itemsLoadingMore ? 'جارٍ تحميل المزيد...' : 'تحميل 500 صنف إضافي')))),
       ],
     ],
