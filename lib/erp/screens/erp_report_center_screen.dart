@@ -21,6 +21,10 @@ class ErpReportCenterScreen extends StatefulWidget {
 
 class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
   bool _loading = false;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  int _nextOffset = 0;
+  static const int _pageSize = 500;
   String? _error;
   String? _sourceTable;
   List<Map<String, dynamic>> _rows = <Map<String, dynamic>>[];
@@ -117,6 +121,8 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
         _loading = false;
         _error = 'لا توجد شركة محددة. افتح بيانات الشركة وسجّل الدخول بحساب لديه عضوية نشطة ثم أعد المحاولة.';
         _rows = <Map<String, dynamic>>[];
+        _nextOffset = 0;
+        _hasMore = false;
         _sourceTable = null;
       });
       return;
@@ -124,6 +130,9 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _rows = <Map<String, dynamic>>[];
+      _nextOffset = 0;
+      _hasMore = false;
       _sourceTable = null;
     });
     final candidates = _sources[widget.reportName] ?? <String>[];
@@ -141,13 +150,15 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
             .from(table)
             .select('*')
             .eq('company_id', company)
-            .limit(500);
+            .range(0, _pageSize - 1);
         if (!mounted) return;
         setState(() {
           _rows = (raw as List)
               .whereType<Map<String, dynamic>>()
               .map((row) => Map<String, dynamic>.from(row))
               .toList();
+          _nextOffset = _rows.length;
+          _hasMore = _rows.length == _pageSize;
           _sourceTable = table;
           _loading = false;
           _error = null;
@@ -163,6 +174,37 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
       _rows = <Map<String, dynamic>>[];
       _error = 'تعذر قراءة مصدر التقرير. المصادر التي جرى فحصها: ${candidates.join('، ')}. التفاصيل: $lastError';
     });
+  }
+
+  Future<void> _loadMore() async {
+    final company = (widget.companyId ?? '').trim();
+    final table = _sourceTable;
+    if (company.isEmpty || table == null || _loadingMore || !_hasMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final raw = await Supabase.instance.client
+          .from(table)
+          .select('*')
+          .eq('company_id', company)
+          .range(_nextOffset, _nextOffset + _pageSize - 1);
+      if (!mounted) return;
+      final batch = (raw as List)
+          .whereType<Map<String, dynamic>>()
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList();
+      setState(() {
+        _rows = <Map<String, dynamic>>[..._rows, ...batch];
+        _nextOffset += batch.length;
+        _hasMore = batch.length == _pageSize;
+        _loadingMore = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _loadingMore = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذر تحميل الدفعة التالية: $error')),
+      );
+    }
   }
 
   List<Map<String, dynamic>> get _visibleRows {
@@ -224,7 +266,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
                   IconButton(tooltip: 'نسخ CSV إلى Excel', onPressed: rows.isEmpty ? null : _copyCsv, icon: const Icon(Icons.file_download_outlined)),
                 ]),
                 const SizedBox(height: 6),
-                Text(_sourceTable == null ? 'تقرير مرتبط ببيانات قاعدة البيانات' : 'مصدر البيانات: $_sourceTable • السجلات: ${_rows.length}',
+                Text(_sourceTable == null ? 'تقرير مرتبط ببيانات قاعدة البيانات' : 'مصدر البيانات: $_sourceTable • المحمّل: ${_rows.length}${_hasMore ? ' • توجد دفعات أخرى' : ''}',
                     style: const TextStyle(color: Colors.black54, fontSize: 12)),
                 const SizedBox(height: 8),
                 const Text('ملاحظة: هذه شاشة قراءة للبيانات المصدرية. لا تعرض نتائج محاسبية محسوبة أو أرصدة معتمدة ما لم تكن تلك الحسابات مفعّلة في مصدرها المتخصص.',
@@ -246,7 +288,8 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
             const Expanded(child: Center(child: Text('لا توجد سجلات في مصدر التقرير المحدد.'))),
           if (!_loading && _error == null && rows.isNotEmpty)
             Expanded(
-              child: SingleChildScrollView(
+              child: Column(children: [
+                Expanded(child: SingleChildScrollView(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
@@ -262,7 +305,16 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
                     )).toList(),
                   ),
                 ),
-              ),
+                ),
+                if (_hasMore || _loadingMore) Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: OutlinedButton.icon(
+                    onPressed: _loadingMore ? null : _loadMore,
+                    icon: _loadingMore ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more),
+                    label: Text(_loadingMore ? 'جارٍ تحميل المزيد...' : 'تحميل 500 سجل إضافي'),
+                  ),
+                ),
+              ]),
             ),
         ],
       ),
