@@ -122,6 +122,20 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
     }
   }
 
+  Future<void> _setBranch(Map<String, dynamic> row, String? branchId) async {
+    if (_saving) return;
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      await _repo.setBranch(_s(row['id']), branchId);
+      if (!mounted) return;
+      setState(() { _saving = false; _message = 'تم تحديث الإدارة / الفرع للخزينة.'; });
+      await _load(clearMessage: false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _saving = false; _error = 'تعذر تحديث الإدارة / الفرع: $e'; });
+    }
+  }
+
   Future<void> _toggle(Map<String, dynamic> row) async {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
@@ -241,7 +255,21 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
                   DataCell(Text(_s(r['cashbox_code']))),
                   DataCell(Text(_s(r['cashbox_name']))),
                   DataCell(Text(_s(r['cashbox_name_en']))),
-                  DataCell(Text(_branchLabel(_s(r['branch_id'])))),
+                  DataCell(SizedBox(
+                    width: 210,
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _s(r['branch_id']).isEmpty ? '' : _s(r['branch_id']),
+                      items: [
+                        const DropdownMenuItem<String>(value: '', child: Text('الإدارة المركزية', overflow: TextOverflow.ellipsis)),
+                        ..._branches.map((b) => DropdownMenuItem<String>(
+                          value: _s(b['id']),
+                          child: Text(_branchLabel(_s(b['id'])), overflow: TextOverflow.ellipsis),
+                        )),
+                      ],
+                      onChanged: _saving ? null : (value) => _setBranch(r, (value ?? '').isEmpty ? null : value),
+                    ),
+                  )),
                   DataCell(Checkbox(
                     value: r['is_active'] == true,
                     onChanged: _saving ? null : (_) => _toggle(r),
