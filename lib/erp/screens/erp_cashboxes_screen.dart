@@ -195,7 +195,8 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
           children: [
             const Text('إضافة خزينة / بنك', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
             TextField(controller: _code, focusNode: _codeFocus, decoration: const InputDecoration(labelText: 'الكود *')),
-            TextField(controller: _name, decoration: const InputDecoration(labelText: 'الاسم بالعربية *')),\n            TextField(controller: _nameEn, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية *')),
+            TextField(controller: _name, decoration: const InputDecoration(labelText: 'الاسم بالعربية *')),
+            TextField(controller: _nameEn, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية *')),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _accountId, isExpanded: true,
