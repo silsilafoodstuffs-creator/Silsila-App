@@ -282,6 +282,11 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
         _types=typeList; _users=userList; _templates=templateList;
         _rows=_isType?typeList:_isHierarchy?typeList:_isTemplate?templateList:userList;
         if (_selectedId != null && (_isHierarchy ? !typeList.any((r)=>_s(r['id'])==_selectedId) && !userList.any((r)=>_s(r['id'])==_selectedId) : !_rows.any((r)=>_s(r['id'])==_selectedId))) _selectedId=null;
+        // Selecting the templates tab must always select its first saved template;
+        // otherwise the detail grid can render only its headers.
+        if (_isTemplate && _selectedId == null && templateList.isNotEmpty) {
+          _selectedId = _s(templateList.first['id']);
+        }
         if (_selectedUserId != null && !userList.any((r)=>_s(r['id'])==_selectedUserId)) _selectedUserId=null;
         if (_selectedUserId==null && userList.isNotEmpty) _selectedUserId=_s(userList.first['id']);
         if (_selectedTemplateId != null && !templateList.any((r)=>_s(r['id'])==_selectedTemplateId)) _selectedTemplateId=null;
@@ -308,8 +313,38 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
 
   Future<void> _loadRules() async {
     if(_selectedId==null)return;
-    try { final result=await _db!.from('erp_permission_template_rules').select().eq('company_id',_company).eq('template_id',_selectedId!).order('menu_name').order('submenu_name').order('page_name');
-      if(mounted)setState(()=>_rules=(result as List).map((x)=>Map<String,dynamic>.from(x)).toList());
+    try {
+      final result=await _db!.from('erp_permission_template_rules').select()
+          .eq('company_id',_company).eq('template_id',_selectedId!)
+          .order('menu_name').order('submenu_name').order('page_name');
+      final loaded=(result as List).map((x)=>Map<String,dynamic>.from(x)).toList();
+      if(loaded.isEmpty) {
+        // A new/legacy template may not have rule rows yet. Build an editable
+        // in-memory matrix for every menu, submenu and page so the grid is never
+        // reduced to a header-only table. These rows are persisted by Save.
+        for(final menu in _userAdminTree.entries) {
+          loaded.add({
+            'company_id':_company,'template_id':_selectedId,
+            'menu_name':menu.key,'submenu_name':'*','page_name':'*',
+            for(final field in _userAdminActionFields.values) field:false,
+          });
+          for(final sub in menu.value.entries) {
+            loaded.add({
+              'company_id':_company,'template_id':_selectedId,
+              'menu_name':menu.key,'submenu_name':sub.key,'page_name':'*',
+              for(final field in _userAdminActionFields.values) field:false,
+            });
+            for(final page in sub.value) {
+              loaded.add({
+                'company_id':_company,'template_id':_selectedId,
+                'menu_name':menu.key,'submenu_name':sub.key,'page_name':page,
+                for(final field in _userAdminActionFields.values) field:false,
+              });
+            }
+          }
+        }
+      }
+      if(mounted)setState((){_rules=loaded;_error=null;if(loaded.isNotEmpty && (result as List).isEmpty)_message='القالب المحدد لا يحتوي على تفاصيل محفوظة بعد؛ تم إظهار جميع القوائم والشاشات كمسودة. عدّل الصلاحيات ثم اضغط حفظ.';});
     } catch(e){if(mounted)setState(()=>_error='تعذر تحميل تفاصيل القالب: $e');}
   }
   Future<void> _loadUserRules() async {
@@ -1350,7 +1385,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
       Padding(padding:const EdgeInsets.symmetric(vertical:8),child:Text('المستخدمون المستهدفون: ${targets.length} • إلغاء «مسموح» من القائمة الرئيسية يلغي صلاحيات الشاشات التابعة.',style:TextStyle(color:Colors.grey.shade700,fontSize:12))),
       Container(color:const Color(0xFFEDE4F8),padding:const EdgeInsetsDirectional.only(start:8,end:4,top:6,bottom:6),child:Row(children:[
         const Expanded(flex:3,child:Text('القائمة / الشاشة',style:TextStyle(fontWeight:FontWeight.w900,color:_userAdminPurple))),
-        Expanded(flex:7,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[for(final action in _permissionActions)SizedBox(width:72,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900)))]))),
+        Expanded(flex:7,child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[for(final action in _permissionActions)SizedBox(width:48,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900)))]))),
       ])),
       Expanded(child:ListView(children:[
         for(final menu in _userAdminTree.entries)ExpansionTile(key:PageStorageKey<String>('perm-menu-${menu.key}'),tilePadding:const EdgeInsets.symmetric(horizontal:4),title:_permissionTreeRow(menu.key,menu.key,'*','*',strong:true),children:[
