@@ -118,19 +118,25 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
     );
   }
 
+  String visibleDepartmentForEmployee(Map<String,dynamic> e) {
+    var current=departments.where((d)=>s(d['id'])==s(e['department_id']));
+    final seen=<String>{};
+    while(current.isNotEmpty) {
+      final node=current.first;
+      final id=s(node['id']);
+      if(!seen.add(id)) break;
+      if(s(node['department_level'])!='section') return id;
+      current=departments.where((d)=>s(d['id'])==s(node['parent_id']));
+    }
+    return s(e['administration_id']);
+  }
+
   Widget centralDepartmentNode(Map<String,dynamic> d,{bool manualMode=false,bool editable=false}) {
     final id=s(d['id']);
     final children=departments.where((x)=>s(x['parent_id'])==id&&s(x['department_level'])!='section').toList();
     final sectionIds=departments.where((x)=>s(x['department_level'])=='section'&&s(x['parent_id'])==id).map((x)=>s(x['id'])).toSet();
     final ownJobs=jobs.where((j)=>s(j['department_id'])==id||sectionIds.contains(s(j['department_id']))).toList();
-    final people=employees.where((e){
-      if(s(e['department_id'])==id)return true;
-      if(s(e['administration_id'])==id){
-        final dep=departments.where((x)=>s(x['id'])==s(e['department_id']));
-        return dep.isEmpty||s(dep.first['department_level'])=='section';
-      }
-      return false;
-    }).toList();
+    final people=employees.where((e)=>visibleDepartmentForEmployee(e)==id).toList();
     return Padding(
       padding:const EdgeInsetsDirectional.only(start:10),
       child:ExpansionTile(
