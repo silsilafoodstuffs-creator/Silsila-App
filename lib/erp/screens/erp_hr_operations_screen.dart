@@ -3,7 +3,6 @@ import 'package:excel/excel.dart' hide Border;
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -162,7 +161,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       }
     }
     final titles = ['قوة العمل', 'الحضور اليدوي', 'حضور جهاز البصمة'];
-    return {'title': 'الحضور والانصراف — \${titles[_tabs.index]}', 'sheet': titles[_tabs.index], 'headers': headers, 'rows': rows};
+    return {'title': 'الحضور والانصراف — ${titles[_tabs.index]}', 'sheet': titles[_tabs.index], 'headers': headers, 'rows': rows};
   }
 
   Future<Uint8List> _attendancePdfBytes() async {
@@ -177,9 +176,9 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
         pw.Directionality(textDirection: pw.TextDirection.rtl, child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-          pw.Text('سلسلة — \${data['title']}', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+          pw.Text('سلسلة — ${data['title']}', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 5),
-          pw.Text('الشركة: \${_company.text.trim()}    •    تاريخ التقرير: \${date(day)}    •    عدد السجلات: \${rows.length}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
+          pw.Text('الشركة: ${_company.text.trim()}    •    تاريخ التقرير: ${date(day)}    •    عدد السجلات: ${rows.length}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
           pw.SizedBox(height: 12),
           if (rows.isEmpty) pw.Text('لا توجد بيانات للتصدير.', textAlign: pw.TextAlign.right)
           else pw.TableHelper.fromTextArray(
@@ -211,12 +210,12 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       final encoded = workbook.encode();
       if (encoded == null || encoded.isEmpty) throw StateError('تعذر إنشاء ملف Excel.');
       await FileSaver.instance.saveFile(
-        name: 'silsila_attendance_\${DateTime.now().millisecondsSinceEpoch}',
+        name: 'silsila_attendance_${DateTime.now().millisecondsSinceEpoch}',
         bytes: Uint8List.fromList(encoded),
         fileExtension: 'xlsx',
         mimeType: MimeType.microsoftExcel,
       );
-      if (mounted) setState(() => message = 'تم تصدير \${rows.length} سجلًا إلى Excel.');
+      if (mounted) setState(() => message = 'تم تصدير ${rows.length} سجلًا إلى Excel.');
     } catch (e) {
       if (mounted) setState(() => error = 'تعذر تصدير Excel: $e');
     } finally {
@@ -232,7 +231,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
     try {
       final bytes = await _attendancePdfBytes();
       await FileSaver.instance.saveFile(
-        name: 'silsila_attendance_\${DateTime.now().millisecondsSinceEpoch}',
+        name: 'silsila_attendance_${DateTime.now().millisecondsSinceEpoch}',
         bytes: bytes,
         fileExtension: 'pdf',
         mimeType: MimeType.pdf,
