@@ -1785,7 +1785,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
 
   Widget _invoiceMetric(String label, String value, {bool strong = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      constraints: const BoxConstraints(minHeight: 30),
       decoration: BoxDecoration(
         color: strong ? const Color(0xFFF5EFFB) : const Color(0xFFFAF8FC),
         borderRadius: BorderRadius.circular(10),
@@ -1793,10 +1794,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF8B7D99), fontWeight: FontWeight.w700)),
-        const SizedBox(height: 3),
+          style: const TextStyle(fontSize: 10, height: 1.0, color: Color(0xFF8B7D99), fontWeight: FontWeight.w700)),
+        const SizedBox(height: 1),
         Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: strong ? const Color(0xFF3E007D) : const Color(0xFF241735), fontWeight: FontWeight.w900, fontSize: strong ? 14 : 12)),
+          style: TextStyle(color: strong ? const Color(0xFF3E007D) : const Color(0xFF241735), fontWeight: FontWeight.w900, fontSize: strong ? 12 : 11, height: 1.0)),
       ]),
     );
   }
@@ -1980,7 +1981,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     children: [
                       Align(alignment: Alignment.centerRight, child: FractionallySizedBox(widthFactor: 2 / 3, child: fiscalField)),
                       const SizedBox(height: 6),
-                      serialField,
+                      Align(alignment: Alignment.centerRight, child: FractionallySizedBox(widthFactor: 1 / 2, child: serialField)),
                     ],
                   );
                   if (compactHeader) {
@@ -2064,7 +2065,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   itemCount: metrics.length,
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: summaryColumns,
-                    mainAxisExtent: summaryWidth < 420 ? 58 : 54,
+                    mainAxisExtent: summaryWidth < 420 ? 36 : 34,
                     mainAxisSpacing: 6,
                     crossAxisSpacing: 8,
                   ),
