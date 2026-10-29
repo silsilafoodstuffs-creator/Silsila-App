@@ -37,6 +37,10 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   final _salePrice = TextEditingController(text: '0');
   final _taxRate = TextEditingController(text: '0');
   final _reorder = TextEditingController(text: '0');
+  final _itemSearch = TextEditingController();
+  int _itemsOffset = 0;
+  bool _itemsHasMore = false;
+  bool _itemsLoadingMore = false;
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
@@ -65,7 +69,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   @override
   void dispose() {
     _company.dispose(); _warehouseCode.dispose(); _warehouseName.dispose(); _warehouseNameEn.dispose(); _warehouseLocation.dispose(); _warehousePhone.dispose(); _warehouseLandline.dispose(); _address.dispose();
-    _itemCode.dispose(); _itemName.dispose(); _barcode.dispose(); _unit.dispose();
+    _itemCode.dispose(); _itemName.dispose(); _barcode.dispose(); _unit.dispose(); _itemSearch.dispose();
     _purchasePrice.dispose(); _salePrice.dispose(); _taxRate.dispose(); _reorder.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
@@ -121,7 +125,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       }
       final values = await Future.wait<List<Map<String, dynamic>>>([
         loadPart('المخازن', () => _repo.fetchWarehouses(companyId)),
-        loadPart('الأصناف', () => _repo.fetchItems(companyId)),
+        loadPart('الأصناف', () => _repo.fetchItems(companyId, pageSize: 500, search: _itemSearch.text)),
         loadPart('الفروع', () => _repo.fetchBranches(companyId)),
         loadPart('فئات الأصناف', () => _repo.fetchCategories(companyId)),
       ]);
@@ -136,7 +140,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _branches = values[2]; _categories = values[3]; _geoRows = geoRows;
+        _warehouses = values[0]; _items = values[1]; _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
@@ -145,6 +149,32 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر تحميل بيانات المخازن والأصناف: $e'; });
+    }
+  }
+
+  Future<void> _searchItems() async {
+    if (_view != 'items') return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final rows = await _repo.fetchItems(_company.text.trim(), pageSize: 500, search: _itemSearch.text);
+      if (!mounted) return;
+      setState(() { _items = rows; _itemsOffset = rows.length; _itemsHasMore = rows.length == 500; _loading = false; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _loading = false; _error = 'تعذر البحث في الأصناف: $e'; });
+    }
+  }
+
+  Future<void> _loadMoreItems() async {
+    if (_itemsLoadingMore || !_itemsHasMore) return;
+    setState(() => _itemsLoadingMore = true);
+    try {
+      final rows = await _repo.fetchItems(_company.text.trim(), offset: _itemsOffset, pageSize: 500, search: _itemSearch.text);
+      if (!mounted) return;
+      setState(() { _items.addAll(rows); _itemsOffset += rows.length; _itemsHasMore = rows.length == 500; _itemsLoadingMore = false; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _itemsLoadingMore = false; _error = 'تعذر تحميل صفحة الأصناف التالية: $e'; });
     }
   }
 
@@ -563,16 +593,17 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             FilledButton.icon(onPressed: _saving ? null : _createItem, icon: const Icon(Icons.add), label: const Text('حفظ الصنف')),
           ],
         ))),
-        Text('الأصناف المسجلة • ' + _items.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+        TextField(controller: _itemSearch, textInputAction: TextInputAction.search, onSubmitted: (_) => _searchItems(), decoration: InputDecoration(labelText: 'بحث باسم الصنف أو الكود أو الباركود', prefixIcon: const Icon(Icons.search), suffixIcon: IconButton(onPressed: _searchItems, icon: const Icon(Icons.search)), border: const OutlineInputBorder())),
+        const SizedBox(height: 8),
+        Text('الأصناف المحمّلة • ' + _items.length.toString() + (_itemsHasMore ? ' • توجد نتائج إضافية' : ''), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
         ..._items.map((i) => Card(child: ListTile(
-          leading: _decodeBytea(i['image_data']) != null
-              ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.memory(_decodeBytea(i['image_data'])!, width: 48, height: 48, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D))))
-              : const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
+          leading: const Icon(Icons.inventory_2_outlined, color: Color(0xFF3E007D)),
           title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
           subtitle: Text(_categoryLabel(_s(i['category_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
           isThreeLine: true,
           trailing: IconButton(onPressed: _saving ? null : () => _toggle(i, true), icon: Icon(i['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
         ))),
+        if (_itemsHasMore || _itemsLoadingMore) Center(child: Padding(padding: const EdgeInsets.all(12), child: OutlinedButton.icon(onPressed: _itemsLoadingMore ? null : _loadMoreItems, icon: _itemsLoadingMore ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more), label: Text(_itemsLoadingMore ? 'جارٍ تحميل المزيد...' : 'تحميل 500 صنف إضافي')))),
       ],
     ],
   )));
