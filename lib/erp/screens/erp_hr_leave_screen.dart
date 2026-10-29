@@ -18,7 +18,7 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
   String s(dynamic v)=>(v??'').toString();
   String date(DateTime d)=>'${d.year.toString().padLeft(4,'0')}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
   String name(dynamic id){final list=employees.where((e)=>s(e['id'])==s(id));return list.isEmpty?s(id):'${s(list.first['employee_code'])} — ${s(list.first['full_name'])}';}
-  Future<void> load()async{if(_company.text.trim().isEmpty){setState(()=>error='أدخل معرّف الشركة أولًا.');return;}setState(()=>{loading=true,error=null,message=null});try{final v=await Future.wait([_repo.fetchEmployees(_company.text.trim()),_repo.fetchLeaveRequests(_company.text.trim())]);if(!mounted)return;setState((){employees=v[0];requests=v[1];loading=false;});}catch(e){if(mounted)setState(()=>{loading=false,error='تعذر تحميل الإجازات: $e'});}}
+  Future<void> load()async{if(_company.text.trim().isEmpty){setState(()=>error='أدخل معرّف الشركة أولًا.');return;}setState((){loading=true;error=null;message=null;});try{final v=await Future.wait([_repo.fetchEmployees(_company.text.trim()),_repo.fetchLeaveRequests(_company.text.trim())]);if(!mounted)return;setState((){employees=v[0];requests=v[1];loading=false;});}catch(e){if(mounted)setState((){loading=false;error='تعذر تحميل الإجازات: $e';});}}
   Widget task(String l,IconData i,Color c,VoidCallback? f)=>ErpQuickTaskButton(label:l,icon:i,onPressed:f,fallbackColor:c);
   Widget notice(String t,Color c)=>Container(margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(9),decoration:BoxDecoration(color:c.withValues(alpha:.09),borderRadius:BorderRadius.circular(9)),child:Text(t,style:TextStyle(color:c)));
   Future<void> createLeave()async{
