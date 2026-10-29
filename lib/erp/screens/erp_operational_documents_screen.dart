@@ -1828,7 +1828,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF3E007D), size: 24)),
                 const SizedBox(width: 12),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(_salesDocumentTitle(_documentType), style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 22)),
+                  Text(_salesDocumentTitle(_documentType), key: const ValueKey('operational-document-title'), style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 22)),
                   const SizedBox(height: 3),
                   const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFF7B6A8E), fontSize: 12)),
                 ]),
@@ -1992,7 +1992,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               const SizedBox(height: 12),
               GridView.count(
                 crossAxisCount: wide ? 5 : 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: wide ? 2.5 : 2.8,
+                mainAxisSpacing: 8, crossAxisSpacing: 8, mainAxisExtent: 64, childAspectRatio: wide ? 2.5 : 2.8,
                 children: [
                   metric('قيمة الأصناف', '${_money(gross)} ج.م'),
                   metric('خصم الفاتورة %', '${_money((gross - lineDiscounts) <= 0 ? 0 : invoiceDiscount * 100 / (gross - lineDiscounts))}%'),
@@ -2195,7 +2195,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(_title, style: const TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
+        Text(_title, key: const ValueKey('operational-document-title'), style: const TextStyle(color: Color(0xFF3E007D), fontSize: 22, fontWeight: FontWeight.w900)),
         const SizedBox(height: 6),
         const Text('عرض المستندات المسجلة وترحيل المستندات المؤهلة إلى دفتر المخزون من خلال معاملة خادمية واحدة.',
           style: TextStyle(color: Colors.black54, height: 1.5)),
