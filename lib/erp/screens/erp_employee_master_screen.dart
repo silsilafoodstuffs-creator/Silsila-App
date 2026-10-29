@@ -371,7 +371,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
           OutlinedButton.icon(
             onPressed: _selectedEmployeeId == null || _saving || _readOnly
                 ? null : () => _pickEmployeeDocument(item.$1, item.$2),
-            icon: const Icon(Icons.upload_file_outlined),
+            icon: const Icon(Icons.upload_file),
             label: Text(item.$2, overflow: TextOverflow.ellipsis),
           ),
           for (final doc in (_docsByType[item.$1] ?? const <Map<String, dynamic>>[]))
@@ -741,7 +741,8 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
       if (_message != null) Text(_message!, style: const TextStyle(color: Colors.green)),
       if (_readOnly) const Text('تم تحميل الموظف المحدد؛ اضغط تعديل قبل تغيير بياناته.', style: TextStyle(color: _purple,fontWeight:FontWeight.w700)),
-      Expanded(child: SingleChildScrollView(child: IgnorePointer(ignoring: _readOnly, child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Expanded(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      IgnorePointer(ignoring: _readOnly, child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _section('بيانات أولية', Icons.badge_outlined, [
           _field(_code, 'كود الموظف التلقائي *', required: true, width: 185),
           _field(_ar, 'اسم الموظف عربي *', required: true, width: 220), _field(_en, 'اسم الموظف إنجليزي', width: 220),
