@@ -167,8 +167,8 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
 
   Future<Uint8List> _attendancePdfBytes() async {
     final data = _exportData();
-    final headers = List<String>.from(data['headers'] as List);
-    final rows = (data['rows'] as List).map((r) => List<String>.from(r as List)).toList();
+    final headers = List<String>.from(data['headers'] as List).reversed.toList();
+    final rows = (data['rows'] as List).map((r) => List<String>.from(r as List).reversed.toList()).toList();
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
     final pdf = pw.Document();
     pdf.addPage(pw.MultiPage(
@@ -176,21 +176,19 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       margin: const pw.EdgeInsets.all(20),
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
-        pw.Directionality(textDirection: pw.TextDirection.rtl, child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-          pw.Text('سلسلة — ${data['title']}', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-          pw.SizedBox(height: 5),
-          pw.Text('الشركة: ${_company.text.trim()}    •    تاريخ التقرير: ${date(day)}    •    عدد السجلات: ${rows.length}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
-          pw.SizedBox(height: 12),
-          if (rows.isEmpty) pw.Text('لا توجد بيانات للتصدير.', textAlign: pw.TextAlign.right)
-          else pw.TableHelper.fromTextArray(
-            headers: headers,
-            data: rows,
-            headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
-            cellStyle: const pw.TextStyle(fontSize: 7),
-            cellAlignment: pw.Alignment.centerRight,
-            headerAlignment: pw.Alignment.centerRight,
-          ),
-        ])),
+        pw.Text('سلسلة — ${data['title']}', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 5),
+        pw.Text('الشركة: ${_company.text.trim()}    •    تاريخ التقرير: ${date(day)}    •    عدد السجلات: ${rows.length}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
+        pw.SizedBox(height: 12),
+        if (rows.isEmpty) pw.Text('لا توجد بيانات للتصدير.', textAlign: pw.TextAlign.right)
+        else pw.TableHelper.fromTextArray(
+          headers: headers,
+          data: rows,
+          headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+          cellStyle: const pw.TextStyle(fontSize: 7),
+          cellAlignment: pw.Alignment.centerRight,
+          headerAlignment: pw.Alignment.centerRight,
+        ),
       ],
     ));
     return Uint8List.fromList(await pdf.save());
