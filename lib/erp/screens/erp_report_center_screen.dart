@@ -290,7 +290,6 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
             Expanded(
               child: Column(children: [
                 Expanded(child: SingleChildScrollView(
-                child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
