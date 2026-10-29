@@ -313,7 +313,6 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       a('Excel',Icons.file_download_outlined,const Color(0xFF16834A),_loading?null:_exportEmployeesExcel),
       a('PDF',Icons.picture_as_pdf_outlined,const Color(0xFFD32F2F),_previewEmployee),
       a('تهيئة 23 موظفًا',Icons.group_add_outlined,const Color(0xFF0F766E),_saving?null:_seedRequestedStaff),
-      a('تهيئة 23 موظفًا',Icons.group_add_outlined,const Color(0xFF0F766E),_saving?null:_seedRequestedStaff),
     ]));
   }
 
@@ -442,11 +441,14 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         final title = _s(item['job']);
         final menuKey = title.contains('مشتريات') ? 'مشتريات' : (title.contains('مندوب') ? 'مبيعات' : (title.contains('محاسب') || title.contains('مراجع') || title.contains('خزينة') ? 'حسابات مالية' : 'مخازن'));
         try {
-          await db.from('erp_user_permissions').upsert({
-            'company_id':_cid,'user_id':user['id'],'menu_key':menuKey,
-            'allow_access':true,'can_add':true,'can_edit':true,'can_delete':false,
-            'can_save':true,'can_print':true,'can_export_excel':true,'can_export_pdf':true,
-          },onConflict:'company_id,user_id,menu_key');
+          await db.from('erp_user_permission_matrix').upsert({
+            'company_id':_cid,'user_id':user['id'],'menu_name':menuKey,
+            'submenu_name':'الكل','page_name':'الكل',
+            'can_refresh':true,'can_add':true,'can_save':true,'can_edit':true,
+            'can_delete':false,'can_preview':true,'can_print':true,
+            'can_import_excel':true,'can_print_pdf':true,'can_access':true,
+            'show_in_quick_tasks':false,
+          },onConflict:'user_id,menu_name,submenu_name,page_name');
         } catch (_) { permissionWarnings++; }
         createdUsers++;
       }
