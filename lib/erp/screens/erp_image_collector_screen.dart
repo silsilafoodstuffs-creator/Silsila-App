@@ -356,6 +356,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       _images = [];
       _imagesPage = 0;
       _selected.clear();
+      _crawlPages.clear();
+      _queuedCrawlPages.clear();
+      _scannedCrawlPages.clear();
+      _crawlPageFailures = 0;
       _pageUrl = null;
       _error = null;
       _status = 'تم مسح سجل السحب السابق. أدخل رابط الصفحة الصحيحة وابدأ السحب من جديد.';
@@ -608,7 +612,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         _status = 'تم فحص الصفحة وإضافة ${added.length} صورة جديدة؛ إجمالي الصور ${_images.length}. يمكنك متابعة أي صفحة مرقمة أخرى.';
       });
     } catch (e) {
-      if (mounted) setState(() { _crawlPageFailures++; _error = 'تعذر فحص الصفحة: ' + e.toString().replaceFirst('Exception: ', ''); });
+      if (mounted) setState(() {
+        _crawlPageFailures++;
+        _scannedCrawlPages.add(pageUrl); // count the attempt as finished; keep the failure visible in the counter
+        _error = 'تعذر فحص الصفحة: ' + e.toString().replaceFirst('Exception: ', '');
+      });
     } finally { if (mounted) setState(() => _loading = false); }
   }
 
