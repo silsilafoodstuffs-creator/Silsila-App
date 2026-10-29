@@ -671,6 +671,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         if(n>maxUser)maxUser=n;
       }
       var createdUsers=0;
+      var permissionWarnings=0;
       for(final item in data.where((r)=>r['centralUser']==true || r['cashbox']!=null)) {
         final employeeId=employeeIdsByName[_s(item['name'])];
         if(employeeId==null || currentUsers.any((u)=>_s(u['employee_id'])==employeeId)) continue;
@@ -684,17 +685,21 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         }).select('id').single();
         final title=_s(item['job']);
         final menuKey=title.contains('مشتريات')?'مشتريات':(title.contains('مندوب')?'مبيعات':(title.contains('محاسب')||title.contains('مراجع')||title.contains('خزينة')?'حسابات مالية':'مخازن'));
-        await db.from('erp_user_permissions').upsert({
-          'company_id':_cid,'user_id':user['id'],'menu_key':menuKey,
-          'allow_access':true,'can_add':true,'can_edit':true,'can_delete':false,
-          'can_save':true,'can_print':true,'can_export_excel':true,'can_export_pdf':true,
-        },onConflict:'company_id,user_id,menu_key');
+        try {
+          await db.from('erp_user_permissions').upsert({
+            'company_id':_cid,'user_id':user['id'],'menu_key':menuKey,
+            'allow_access':true,'can_add':true,'can_edit':true,'can_delete':false,
+            'can_save':true,'can_print':true,'can_export_excel':true,'can_export_pdf':true,
+          },onConflict:'company_id,user_id,menu_key');
+        } catch (_) {
+          permissionWarnings++;
+        }
         createdUsers++;
       }
       if (!mounted) return;
       setState(() {
         _saving=false;
-        _message='تمت التهيئة: أضيف ' + createdEmployees.toString() + ' موظفًا جديدًا و' + createdUsers.toString() + ' مستخدم ERP بصلاحيات مؤقتة. أكواد الموظفين والمستخدمين أُنشئت تلقائيًا.';
+        _message='تمت التهيئة: أضيف ' + createdEmployees.toString() + ' موظفًا جديدًا و' + createdUsers.toString() + ' مستخدم ERP.' + (permissionWarnings > 0 ? ' تعذر حفظ صلاحيات ' + permissionWarnings.toString() + ' مستخدم؛ راجع صلاحيات قاعدة البيانات.' : ' تم حفظ الصلاحيات المؤقتة.') + ' أكواد الموظفين والمستخدمين أُنشئت تلقائيًا.';
       });
       await _load();
     } catch (e) {
