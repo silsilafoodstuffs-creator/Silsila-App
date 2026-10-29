@@ -43,7 +43,7 @@ class ErpInventoryMasterRepository {
   Future<List<Map<String, dynamic>>> fetchItems(String companyId, {int offset = 0, int pageSize = 500, String search = ''}) async {
     if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الأصناف غير صالح.');
     var query = _db.from('erp_items')
-      .select('id, item_code, barcode, item_name, category_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_mime_type')
+      .select('id, item_code, barcode, item_name, item_name_en, category_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_mime_type')
       .eq('company_id', companyId.trim());
     final term = search.trim();
     if (term.isNotEmpty) query = query.or('item_name.ilike.%$term%,item_code.ilike.%$term%,barcode.ilike.%$term%');
