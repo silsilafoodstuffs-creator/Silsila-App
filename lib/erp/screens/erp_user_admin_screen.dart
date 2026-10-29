@@ -1362,7 +1362,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         var rule=_permissionRule(uid,key[0],key[1],key[2]);
         if(rule==null){rule=<String,dynamic>{'company_id':_company,'user_id':uid,'menu_name':key[0],'submenu_name':key[1],'page_name':key[2],for(final f in _permissionActionFields.values)f:false};_rules.add(rule);}
         rule[field]=value;
-        if(field=='can_access'&&!value){for(final f in _permissionActionFields.values.where((f)=>f!='can_access'))rule[f]=false;}
+        if(field=='can_access'&&!value){for(final f in _permissionActionFields.values.where((f)=>f!='can_access'))rule[f]=false;rule['show_in_quick_tasks']=false;}
         else if(value){
           rule['can_access']=true;
           // Any enabled child permission must also enable its parent screen groups.
@@ -1462,7 +1462,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
         columns:[const DataColumn(label:Text('القائمة الرئيسية / الفرعية / الشاشة')),for(final action in _userAdminActions)DataColumn(label:SizedBox(width:48,child:Text(action,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800))))],
         rows:_rules.map((rule)=>DataRow(cells:[
           DataCell(SizedBox(width:250,child:Text('${rule['menu_name']} › ${rule['submenu_name']} › ${rule['page_name']}',maxLines:2,overflow:TextOverflow.ellipsis))),
-          for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:_editMode?(v)=>setState(()=>rule[field]=v==true):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
+          for(final field in _userAdminActionFields.values)DataCell(Center(child:Checkbox(value:rule[field]==true,onChanged:_editMode?(v)=>setState((){final enabled=v==true;rule[field]=enabled;if(field=='can_access'&&!enabled){for(final f in _userAdminActionFields.values.where((f)=>f!='can_access'))rule[f]=false;}else if(enabled){rule['can_access']=true;}}):null,visualDensity:VisualDensity.compact,activeColor:_userAdminPurple))),
         ])).toList(),
       )),
     ]);
@@ -1540,7 +1540,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
           final anyAction=_userAdminActionFields.values.where((field)=>field!='show_in_quick_tasks').any((field)=>item[field]==true);
           _rules.add(<String,dynamic>{
             'company_id':_company,'user_id':uid,'menu_name':item['menu_name'],'submenu_name':item['submenu_name']??'','page_name':item['page_name'],
-            'can_access':item['can_access']==true||anyAction,
+            'can_access':item['can_access']==true||anyAction||item['show_in_quick_tasks']==true,
             for(final field in _permissionActionFields.values.where((f)=>f!='can_access'))field:item[field]==true,
             'show_in_quick_tasks':item['show_in_quick_tasks']==true,
           });
