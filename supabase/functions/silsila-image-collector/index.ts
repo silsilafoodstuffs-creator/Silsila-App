@@ -427,10 +427,10 @@ Deno.serve(async (req: Request) => {
             if (nextTarget.origin !== origin) return null;
             target = nextTarget;
           }
-          if (!response || !response.ok || !/(?:text\\/html|application\\/xhtml)/i.test(response.headers.get("content-type") ?? "")) return null;
+          if (!response || !response.ok || !/(?:text\/html|application\/xhtml)/i.test(response.headers.get("content-type") ?? "")) return null;
           const html = new TextDecoder().decode(await readLimited(response, 1_000_000));
           const links = internalLinks(html, target).map((x) => canonical(x, target)).filter((x): x is string => Boolean(x));
-          const pagination = links.filter((link) => /(?:[?&](?:page|paged|pageno|page_no|pg)=\\d+|\\/page\\/\\d+\\/?$|[?&]p=\\d+)/i.test(link));
+          const pagination = links.filter((link) => /(?:[?&](?:page|paged|pageno|page_no|pg)=\d+|\/page\/\d+\/?$|[?&]p=\d+)/i.test(link));
           return { url: target.href, links, pagination };
         } catch { return null; }
       };
