@@ -1,0 +1,37 @@
+-- High-volume FK lookup indexes identified by Supabase's performance advisor.
+-- Additive only: no data changes. Use IF NOT EXISTS to avoid duplicate indexes.
+create index if not exists idx_scale_erp_branches_area_id on public.erp_branches(area_id);
+create index if not exists idx_scale_erp_branches_district_id on public.erp_branches(district_id);
+create index if not exists idx_scale_erp_branches_governorate_id on public.erp_branches(governorate_id);
+create index if not exists idx_scale_erp_cash_vouchers_branch_id on public.erp_cash_vouchers(branch_id);
+create index if not exists idx_scale_erp_cash_vouchers_counter_account_id on public.erp_cash_vouchers(counter_account_id);
+create index if not exists idx_scale_erp_cash_vouchers_created_by on public.erp_cash_vouchers(created_by);
+create index if not exists idx_scale_erp_cash_vouchers_destination_cashbox_id on public.erp_cash_vouchers(destination_cashbox_id);
+create index if not exists idx_scale_erp_cash_vouchers_party_id on public.erp_cash_vouchers(party_id);
+create index if not exists idx_scale_erp_cash_vouchers_posted_by on public.erp_cash_vouchers(posted_by);
+create index if not exists idx_scale_erp_data_backups_created_by on public.erp_data_backups(created_by);
+create index if not exists idx_scale_erp_employee_monthly_targets_employee_id on public.erp_employee_monthly_targets(employee_id);
+create index if not exists idx_scale_erp_employees_administration_id on public.erp_employees(administration_id);
+create index if not exists idx_scale_erp_employees_department_id on public.erp_employees(department_id);
+create index if not exists idx_scale_erp_employees_job_id on public.erp_employees(job_id);
+create index if not exists idx_scale_erp_employees_work_location_id on public.erp_employees(work_location_id);
+create index if not exists idx_scale_erp_geographic_data_parent_id on public.erp_geographic_data(parent_id);
+create index if not exists idx_scale_erp_hr_departments_parent_id on public.erp_hr_departments(parent_id);
+create index if not exists idx_scale_erp_hr_jobs_department_id on public.erp_hr_jobs(department_id);
+create index if not exists idx_scale_erp_hr_jobs_grade_id on public.erp_hr_jobs(grade_id);
+create index if not exists idx_scale_erp_hr_shifts_created_by on public.erp_hr_shifts(created_by);
+create index if not exists idx_scale_erp_parties_sales_rep_employee_id on public.erp_parties(sales_rep_employee_id);
+create index if not exists idx_scale_erp_program_settings_updated_by on public.erp_program_settings(updated_by);
+create index if not exists idx_scale_erp_public_lead_staging_company_id on public.erp_public_lead_staging(company_id);
+create index if not exists idx_scale_erp_public_lead_staging_imported_party_id on public.erp_public_lead_staging(imported_party_id);
+create index if not exists idx_scale_erp_sales_documents_fiscal_period_id on public.erp_sales_documents(fiscal_period_id);
+create index if not exists idx_scale_erp_sales_invoice_audit_log_document_id on public.erp_sales_invoice_audit_log(document_id);
+create index if not exists idx_scale_erp_supplier_deferred_commissions_created_by on public.erp_supplier_deferred_commissions(created_by);
+create index if not exists idx_scale_erp_supplier_deferred_commissions_supplier_id on public.erp_supplier_deferred_commissions(supplier_id);
+create index if not exists idx_scale_erp_users_classification_id on public.erp_users(classification_id);
+create index if not exists idx_scale_erp_users_employee_id on public.erp_users(employee_id);
+create index if not exists idx_scale_erp_users_parent_user_id on public.erp_users(parent_user_id);
+create index if not exists idx_scale_erp_warehouses_area_id on public.erp_warehouses(area_id);
+create index if not exists idx_scale_erp_warehouses_district_id on public.erp_warehouses(district_id);
+create index if not exists idx_scale_erp_warehouses_governorate_id on public.erp_warehouses(governorate_id);
+create index if not exists idx_scale_erp_warehouses_parent_warehouse_id on public.erp_warehouses(parent_warehouse_id);
