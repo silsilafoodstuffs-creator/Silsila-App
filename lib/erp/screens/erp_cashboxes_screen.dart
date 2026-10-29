@@ -62,6 +62,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
       });
+      await _generateNextCode();
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر تحميل الخزائن والحسابات البنكية: $e'; });
