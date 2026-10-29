@@ -381,7 +381,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         {'name':'يحي محمد','en':'Yehia Mohamed','job':'مشرف حركة مخازن','dep':'حركة مخازن','dc':'MOV-SEC-04','jc':'JOB-056','loc':'001','branch':'001','area':'مساكن الحرفيين'},
         {'name':'محمد فوزي','en':'Mohamed Fawzy','job':'مشرف حركة مخازن','dep':'حركة مخازن','dc':'MOV-SEC-04','jc':'JOB-056','loc':'002','branch':'002','area':'مساكن اسبيكو'},
         {'name':'محمد يوسف','en':'Mohamed Youssef','job':'أمين خزينة','dep':'الخزينة والبنوك','dc':'FIN-SEC-02','jc':'JOB-004','loc':'001','branch':'001','area':'مساكن السلام','cashbox':'CSH-0002'},
-        {'name':'محمد بكر','en':'Mohamed Bakr','job':'أمين خزينة','dep':'الخزينة والبنوك','dc':'FIN-SEC-02','jc':'JOB-004','loc':'002','branch':'002','area':'النهضة','cashbox':'CSH-0005'},
+        {'name':'محمد بكر','en':'Mohamed Bakr','job':'أمين خزينة','dep':'الخزينة والبنوك','dc':'FIN-SEC-02','jc':'JOB-004','loc':'002','branch':'002','area':'منطقة النهضة الشرقية','cashbox':'CSH-0005'},
       ];
       final existing = (await db.from('erp_employees').select('id,employee_code,full_name').eq('company_id', _cid)).map((r) => Map<String,dynamic>.from(r)).toList();
       var maxEmployee = 0;
