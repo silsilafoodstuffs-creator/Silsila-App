@@ -23,6 +23,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
   String? error,message;
   DateTime day=DateTime(DateTime.now().year,DateTime.now().month,DateTime.now().day);
   static const purple=Color(0xFF3E007D),orange=Color(0xFFFFA015);
+  static const workUnits=['مكتب إداري','مخازن','سيارات'];
   static const fractions=<String,double>{'يوم كامل':1,'3/4 يوم':.75,'1/2 يوم':.5,'1/4 يوم':.25};
   static const absenceTypes=['عطلة أسبوعية','إجازة رسمية','إجازة مرضية','إجازة إصابة عمل','إجازة سنوية','غياب بإذن','غياب بدون إذن'];
   static const penalties=<String,double>{'بدون جزاء':0,'0.25 يوم':.25,'0.5 يوم':.5,'0.75 يوم':.75,'1 يوم':1,'1.25 يوم':1.25,'1.5 يوم':1.5,'1.75 يوم':1.75,'2 يوم':2,'2.25 يوم':2.25,'2.5 يوم':2.5,'2.75 يوم':2.75,'3 يوم':3,'3.25 يوم':3.25,'3.5 يوم':3.5,'3.75 يوم':3.75,'4 يوم':4,'4.25 يوم':4.25,'4.5 يوم':4.5,'4.75 يوم':4.75,'5 يوم':5};
@@ -39,7 +40,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
     try{
       final c=_company.text.trim(),start=date(DateTime(day.year,day.month,1)),end=date(DateTime(day.year,day.month+1,0));
       final v=await Future.wait([
-        _db.from('erp_employees').select('id,employee_code,full_name,full_name_en,job_title,department_name,department_id,job_id,work_location_id,administration_id,branch_id,employment_status,is_active,governorate,district,locality').eq('company_id',c).order('employee_code'),
+        _db.from('erp_employees').select('id,employee_code,full_name,full_name_en,job_title,department_name,department_id,job_id,work_location_id,work_unit,administration_id,branch_id,employment_status,is_active,governorate,district,locality').eq('company_id',c).order('employee_code'),
         _db.from('erp_hr_work_locations').select().eq('company_id',c).order('location_code'),
         _db.from('erp_hr_departments').select().eq('company_id',c).order('department_code'),
         _db.from('erp_hr_jobs').select().eq('company_id',c).order('job_code'),
@@ -64,14 +65,14 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
   Future<void> masterDialog(String kind,{Map<String,dynamic>? row,String? parentId})async{
     final isJob=kind=='job',isLoc=kind=='location';
     final code=TextEditingController(text:s(row?[isJob?'job_code':isLoc?'location_code':'department_code'])),ar=TextEditingController(text:s(row?['name_ar'])),en=TextEditingController(text:s(row?['name_en']));
-    var level=s(row?['department_level']).isEmpty?'directorate':s(row?['department_level']);var locType=s(row?['location_type']).isEmpty?'branch':s(row?['location_type']);String? parent=s(row?['parent_id']).isNotEmpty?s(row?['parent_id']):parentId;String? dep=s(row?['department_id']).isNotEmpty?s(row?['department_id']):parentId;String? workLocation=s(row?['work_location_id']).isNotEmpty?s(row?['work_location_id']):null;final parentRows=departments.where((d)=>s(d['id'])==(parent??'')).toList();if(workLocation==null&&!isJob&&!isLoc&&parentRows.isNotEmpty)workLocation=s(parentRows.first['work_location_id']);final centralLocations=locations.where((l)=>s(l['location_type'])=='central').toList();if(workLocation==null&&centralLocations.isNotEmpty)workLocation=s(centralLocations.first['id']);String? err;
+    var level=s(row?['department_level']).isEmpty?(parentId==null?'directorate':'department'):s(row?['department_level']);var locType=s(row?['location_type']).isEmpty?'branch':s(row?['location_type']);String? parent=s(row?['parent_id']).isNotEmpty?s(row?['parent_id']):parentId;String? dep=s(row?['department_id']).isNotEmpty?s(row?['department_id']):parentId;String? workLocation=s(row?['work_location_id']).isNotEmpty?s(row?['work_location_id']):null;final parentRows=departments.where((d)=>s(d['id'])==(parent??'')).toList();if(workLocation==null&&!isJob&&!isLoc&&parentRows.isNotEmpty)workLocation=s(parentRows.first['work_location_id']);final centralLocations=locations.where((l)=>s(l['location_type'])=='central').toList();if(workLocation==null&&centralLocations.isNotEmpty)workLocation=s(centralLocations.first['id']);String? err;
     await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(title:Text('${row==null?'إضافة':'تعديل'} ${isJob?'وظيفة':isLoc?'موقع عمل':'إدارة / قسم'}'),content:SizedBox(width:500,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
       TextField(controller:code,decoration:const InputDecoration(labelText:'الكود *')),TextField(controller:ar,decoration:const InputDecoration(labelText:'الاسم بالعربية *')),if(!isLoc)TextField(controller:en,decoration:const InputDecoration(labelText:'الاسم بالإنجليزية')),
       if(isLoc)DropdownButtonFormField<String>(value:locType,decoration:const InputDecoration(labelText:'نوع الموقع'),items:const [DropdownMenuItem(value:'central',child:Text('إدارة مركزية')),DropdownMenuItem(value:'branch',child:Text('فرع'))],onChanged:(v)=>refresh(()=>locType=v??locType)),
-      if(!isLoc&&!isJob)DropdownButtonFormField<String>(value:level,decoration:const InputDecoration(labelText:'المستوى'),items:const [DropdownMenuItem(value:'directorate',child:Text('إدارة رئيسية')),DropdownMenuItem(value:'department',child:Text('إدارة فرعية')),DropdownMenuItem(value:'section',child:Text('قسم'))],onChanged:(v)=>refresh(()=>level=v??level)),
+      if(!isLoc&&!isJob)DropdownButtonFormField<String>(value:level,decoration:const InputDecoration(labelText:'المستوى'),items:const [DropdownMenuItem(value:'directorate',child:Text('إدارة رئيسية')),DropdownMenuItem(value:'department',child:Text('إدارة'))],onChanged:(v)=>refresh(()=>level=v??level)),
       if(!isLoc&&!isJob)DropdownButtonFormField<String>(value:locations.any((l)=>s(l['id'])==workLocation)?workLocation:null,decoration:const InputDecoration(labelText:'موقع العمل *'),items:locations.where((l)=>l['is_active']!=false).map((l)=>DropdownMenuItem<String>(value:s(l['id']),child:Text('${s(l['location_code'])} • ${s(l['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>workLocation=v)),
       if(!isLoc&&!isJob&&level!='directorate')DropdownButtonFormField<String>(value:departments.any((d)=>s(d['id'])==parent)?parent:null,decoration:const InputDecoration(labelText:'يتبع الإدارة'),items:departments.where((d)=>s(d['id'])!=s(row?['id'])&&s(d['department_level'])!='section'&&d['is_active']!=false).map((d)=>DropdownMenuItem<String>(value:s(d['id']),child:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>parent=v)),
-      if(isJob)DropdownButtonFormField<String>(value:departments.any((d)=>s(d['id'])==dep)?dep:null,decoration:const InputDecoration(labelText:'القسم *'),items:departments.where((d)=>d['is_active']!=false).map((d)=>DropdownMenuItem<String>(value:s(d['id']),child:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>dep=v)),
+      if(isJob)DropdownButtonFormField<String>(value:departments.any((d)=>s(d['id'])==dep)?dep:null,decoration:const InputDecoration(labelText:'الإدارة *'),items:departments.where((d)=>d['is_active']!=false&&(s(d['department_level'])!='section'||s(d['id'])==dep)).map((d)=>DropdownMenuItem<String>(value:s(d['id']),child:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>dep=v)),
       if(err!=null)notice(err!,Colors.red),
     ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()async{
       if(code.text.trim().isEmpty||ar.text.trim().isEmpty||(isJob&&dep==null)||(!isJob&&!isLoc&&workLocation==null)||(!isJob&&!isLoc&&level!='directorate'&&parent==null)){refresh(()=>err='أكمل الكود والاسم والارتباط التنظيمي.');return;}
@@ -84,8 +85,124 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
     code.dispose();ar.dispose();en.dispose();
   }
   Future<void> deleteRow(String kind,Map<String,dynamic> row)async{final ok=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(title:const Text('تأكيد الحذف'),content:const Text('هل تريد الحذف؟ قد تمنع العلاقات المرتبطة الحذف حفاظًا على البيانات.'),actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('نعم'))]));if(ok!=true)return;try{await _db.from(kind=='job'?'erp_hr_jobs':kind=='location'?'erp_hr_work_locations':'erp_hr_departments').delete().eq('id',s(row['id'])).eq('company_id',_company.text.trim());await load();}catch(e){if(mounted)setState(()=>error='تعذر الحذف: $e');}}
-  Widget deptNode(Map<String,dynamic> d){final children=departments.where((x)=>s(x['parent_id'])==s(d['id'])).toList(),js=jobs.where((x)=>s(x['department_id'])==s(d['id'])).toList();return Padding(padding:const EdgeInsetsDirectional.only(start:12),child:ExpansionTile(leading:const Icon(Icons.account_tree_outlined,color:orange),title:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'),trailing:Row(mainAxisSize:MainAxisSize.min,children:[IconButton(onPressed:()=>masterDialog('department',parentId:s(d['id'])),icon:const Icon(Icons.add)),IconButton(onPressed:()=>masterDialog('department',row:d),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>deleteRow('department',d),icon:const Icon(Icons.delete_outline,color:Colors.red))]),children:[...children.map(deptNode),...js.map((j)=>ListTile(dense:true,title:Text('${s(j['job_code'])} • ${s(j['name_ar'])}'),subtitle:Text(s(j['name_en'])),trailing:Row(mainAxisSize:MainAxisSize.min,children:[IconButton(onPressed:()=>masterDialog('job',row:j),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>deleteRow('job',j),icon:const Icon(Icons.delete_outline,color:Colors.red))]))),Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(onPressed:()=>masterDialog('job',parentId:s(d['id'])),icon:const Icon(Icons.add),label:const Text('إضافة وظيفة')))]));}
-  Widget workforce(){return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Expanded(child:Text('قوة العمل • ${locations.length} موقع • ${jobs.length} وظيفة',style:const TextStyle(fontWeight:FontWeight.w900))),FilledButton.icon(onPressed:()=>masterDialog('location'),icon:const Icon(Icons.add),label:const Text('موقع')),FilledButton.icon(onPressed:()=>masterDialog('department'),icon:const Icon(Icons.add),label:const Text('إدارة'))]),...locations.map((l)=>Card(child:ExpansionTile(leading:const Icon(Icons.location_city,color:purple),title:Text('${s(l['location_code'])} • ${s(l['name_ar'])}'),subtitle:Text(s(l['location_type'])=='central'?'إدارة مركزية':'فرع'),trailing:Row(mainAxisSize:MainAxisSize.min,children:[IconButton(onPressed:()=>masterDialog('location',row:l),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>deleteRow('location',l),icon:const Icon(Icons.delete_outline,color:Colors.red))]),children:departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['work_location_id'])==s(l['id'])).map(deptNode).toList()))),const SizedBox(height:8),const Text('دليل الوظائف',style:TextStyle(fontWeight:FontWeight.w900)),SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(columns:const [DataColumn(label:Text('كود الوظيفة')),DataColumn(label:Text('عربي')),DataColumn(label:Text('English')),DataColumn(label:Text('إجراءات'))],rows:jobs.map((j)=>DataRow(cells:[DataCell(Text(s(j['job_code']))),DataCell(Text(s(j['name_ar']))),DataCell(Text(s(j['name_en']))),DataCell(Row(children:[IconButton(onPressed:()=>masterDialog('job',row:j),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>deleteRow('job',j),icon:const Icon(Icons.delete_outline,color:Colors.red))]))])).toList()))]);}
+  List<Map<String,dynamic>> employeesForUnit(Map<String,dynamic> location,String unit) =>
+      employees.where((e)=>s(e['work_location_id'])==s(location['id'])&&(s(e['work_unit']).isEmpty?'مكتب إداري':s(e['work_unit']))==unit).toList();
+
+  Widget employeeTreeTile(Map<String,dynamic> e,{bool manualMode=false}) {
+    final already=daily.containsKey(s(e['id']));
+    return ListTile(
+      dense:true,
+      leading:const Icon(Icons.person_outline,color:purple),
+      title:Text('${s(e['employee_code'])} • ${s(e['full_name'])}',style:const TextStyle(fontWeight:FontWeight.w800)),
+      subtitle:Text('${s(e['job_title'])} • ${s(e['department_name'])}'),
+      trailing:manualMode?TextButton.icon(
+        onPressed:locked||already?null:()=>setState(()=>addEmployee(e)),
+        icon:Icon(already?Icons.check_circle_outline:Icons.person_add_alt_1),
+        label:Text(already?'مضاف':'إضافة للحضور'),
+      ):null,
+    );
+  }
+
+  Widget workUnitNode(Map<String,dynamic> location,String unit,{bool manualMode=false}) {
+    final people=employeesForUnit(location,unit);
+    return Padding(
+      padding:const EdgeInsetsDirectional.only(start:8),
+      child:ExpansionTile(
+        leading:Icon(unit=='مكتب إداري'?Icons.business_outlined:unit=='مخازن'?Icons.inventory_2_outlined:Icons.local_shipping_outlined,color:orange),
+        title:Text(unit,style:const TextStyle(fontWeight:FontWeight.w800)),
+        subtitle:Text('${people.length} موظف'),
+        children:people.isEmpty
+          ? [const ListTile(dense:true,title:Text('لا يوجد موظفون مسجلون في هذه الوحدة.'))]
+          : people.map((e)=>employeeTreeTile(e,manualMode:manualMode)).toList(),
+      ),
+    );
+  }
+
+  String visibleDepartmentForEmployee(Map<String,dynamic> e) {
+    var current=departments.where((d)=>s(d['id'])==s(e['department_id']));
+    final seen=<String>{};
+    while(current.isNotEmpty) {
+      final node=current.first;
+      final id=s(node['id']);
+      if(!seen.add(id)) break;
+      if(s(node['department_level'])!='section') return id;
+      current=departments.where((d)=>s(d['id'])==s(node['parent_id']));
+    }
+    return s(e['administration_id']);
+  }
+
+  Widget centralDepartmentNode(Map<String,dynamic> d,{bool manualMode=false,bool editable=false}) {
+    final id=s(d['id']);
+    final children=departments.where((x)=>s(x['parent_id'])==id&&s(x['department_level'])!='section').toList();
+    final sectionIds=departments.where((x)=>s(x['department_level'])=='section'&&s(x['parent_id'])==id).map((x)=>s(x['id'])).toSet();
+    final ownJobs=jobs.where((j)=>s(j['department_id'])==id||sectionIds.contains(s(j['department_id']))).toList();
+    final people=employees.where((e)=>visibleDepartmentForEmployee(e)==id).toList();
+    return Padding(
+      padding:const EdgeInsetsDirectional.only(start:10),
+      child:ExpansionTile(
+        leading:const Icon(Icons.account_tree_outlined,color:orange),
+        title:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'),
+        trailing:editable?Row(mainAxisSize:MainAxisSize.min,children:[
+          IconButton(tooltip:'إضافة إدارة تابعة',onPressed:()=>masterDialog('department',parentId:id),icon:const Icon(Icons.add)),
+          IconButton(tooltip:'تعديل الإدارة',onPressed:()=>masterDialog('department',row:d),icon:const Icon(Icons.edit_outlined)),
+          IconButton(tooltip:'حذف الإدارة',onPressed:()=>deleteRow('department',d),icon:const Icon(Icons.delete_outline,color:Colors.red)),
+        ]):null,
+        children:[
+          ...children.map((child)=>centralDepartmentNode(child,manualMode:manualMode,editable:editable)),
+          ...ownJobs.map((j)=>ListTile(
+            dense:true,
+            leading:const Icon(Icons.work_outline,color:purple),
+            title:Text('${s(j['job_code'])} • ${s(j['name_ar'])}'),
+            subtitle:Text(s(j['name_en'])),
+            trailing:manualMode?TextButton.icon(
+              onPressed:locked?null:()async{final e=await search(false);if(e!=null)setState(()=>addEmployee(e,jobId:s(j['id'])));},
+              icon:const Icon(Icons.person_add_alt_1),label:const Text('اختيار موظف'),
+            ):null,
+          )),
+          ...people.map((e)=>employeeTreeTile(e,manualMode:manualMode)),
+        ],
+      ),
+    );
+  }
+
+  Widget workLocationCard(Map<String,dynamic> location,{bool manualMode=false,bool editable=false}) {
+    final central=s(location['location_type'])=='central';
+    final children=central
+      ? departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['work_location_id'])==s(location['id'])&&s(d['department_level'])!='section').map((d)=>centralDepartmentNode(d,manualMode:manualMode,editable:editable)).toList()
+      : workUnits.map((unit)=>workUnitNode(location,unit,manualMode:manualMode)).toList();
+    return Card(child:ExpansionTile(
+      leading:Icon(central?Icons.account_balance_outlined:Icons.inventory_2_outlined,color:purple),
+      title:Text('${s(location['location_code'])} • ${s(location['name_ar'])}'),
+      subtitle:Text(central?'الإدارة المركزية • إدارات فقط':'وحدات العمل • مكتب إداري / مخازن / سيارات'),
+      trailing:editable?Row(mainAxisSize:MainAxisSize.min,children:[
+        IconButton(onPressed:()=>masterDialog('location',row:location),icon:const Icon(Icons.edit_outlined)),
+        IconButton(onPressed:()=>deleteRow('location',location),icon:const Icon(Icons.delete_outline,color:Colors.red)),
+      ]):null,
+      children:children,
+    ));
+  }
+
+  Widget workforce() => Column(
+    crossAxisAlignment:CrossAxisAlignment.stretch,
+    children:[
+      Row(children:[
+        Expanded(child:Text('قوة العمل • ${locations.length} موقع • ${jobs.length} وظيفة',style:const TextStyle(fontWeight:FontWeight.w900))),
+        FilledButton.icon(onPressed:()=>masterDialog('location'),icon:const Icon(Icons.add),label:const Text('موقع')),
+        FilledButton.icon(onPressed:()=>masterDialog('department'),icon:const Icon(Icons.add),label:const Text('إدارة')),
+      ]),
+      ...locations.map((l)=>workLocationCard(l,editable:true)),
+      const SizedBox(height:8),
+      const Text('دليل الوظائف',style:TextStyle(fontWeight:FontWeight.w900)),
+      SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
+        columns:const [DataColumn(label:Text('كود الوظيفة')),DataColumn(label:Text('عربي')),DataColumn(label:Text('English')),DataColumn(label:Text('إجراءات'))],
+        rows:jobs.map((j)=>DataRow(cells:[
+          DataCell(Text(s(j['job_code']))),DataCell(Text(s(j['name_ar']))),DataCell(Text(s(j['name_en']))),
+          DataCell(Row(children:[IconButton(onPressed:()=>masterDialog('job',row:j),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>deleteRow('job',j),icon:const Icon(Icons.delete_outline,color:Colors.red))]))
+        ])).toList(),
+      )),
+    ],
+  );
+
   Future<Map<String,dynamic>?> search(bool job)async{final q=TextEditingController();Map<String,dynamic>? chosen;final source=job?jobs:employees;await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh){final term=q.text.toLowerCase().trim();final rows=source.where((x){final fields=job?[x['job_code'],x['name_ar'],x['name_en']]:[x['employee_code'],x['full_name'],x['full_name_en'],x['job_title'],x['department_name'],x['governorate'],x['district'],x['locality'],branches.where((b)=>s(b['id'])==s(x['branch_id'])).map((b)=>s(b['branch_name'])).join()];return term.isEmpty||fields.any((v)=>s(v).toLowerCase().contains(term));}).toList();return AlertDialog(title:Text(job?'بحث الوظائف':'بحث الموظفين'),content:SizedBox(width:650,height:430,child:Column(children:[TextField(controller:q,autofocus:true,decoration:InputDecoration(labelText:job?'ابحث بالكود أو الاسم عربي/إنجليزي':'كود أو اسم أو فرع أو إدارة أو قسم أو موقع',prefixIcon:const Icon(Icons.search)),onChanged:(_)=>refresh((){})),Expanded(child:ListView(children:rows.map((x)=>ListTile(title:Text(job?'${s(x['job_code'])} • ${s(x['name_ar'])}':'${s(x['employee_code'])} • ${s(x['full_name'])}'),subtitle:Text(job?s(x['name_en']):'${s(x['department_name'])} • ${s(x['district'])}'),onTap:(){chosen=x;Navigator.pop(ctx);})).toList()))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]);}));q.dispose();return chosen;}
   void addEmployee(Map<String,dynamic> e,{String? jobId}){final id=s(e['id']);if(!daily.containsKey(id))daily[id]={'employeeId':id,'jobId':jobId??s(e['job_id']),'present':false,'absent':false,'fraction':'يوم كامل','absenceType':'غياب بدون إذن','penalty':'بدون جزاء'};}
   Future<void> yesterday()async{if(locked)return;try{final rows=await _db.from('erp_attendance_records').select().eq('company_id',_company.text.trim()).eq('work_date',date(day.subtract(const Duration(days:1))));setState((){daily.clear();for(final raw in rows){final r=Map<String,dynamic>.from(raw);daily[s(r['employee_id'])]={'employeeId':s(r['employee_id']),'jobId':s(r['job_id']),'present':s(r['attendance_status'])!='absent','absent':s(r['attendance_status'])=='absent','fraction':fractions.entries.firstWhere((x)=>x.value==((r['attendance_fraction'] as num?)?.toDouble()??1),orElse:()=>fractions.entries.first).key,'absenceType':s(r['absence_type']).isEmpty?'غياب بدون إذن':s(r['absence_type']),'penalty':penalties.entries.firstWhere((x)=>x.value==((r['absence_penalty_days'] as num?)?.toDouble()??0),orElse:()=>penalties.entries.first).key};}message='تم استدعاء كشف أمس؛ راجعه ثم احفظ.';});}catch(e){if(mounted)setState(()=>error='تعذر استدعاء أمس: $e');}}
@@ -93,29 +210,10 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
   Future<void> direct(Map<String,dynamic> e)async{if(locked)return;try{await _db.from('erp_attendance_records').upsert({'company_id':_company.text.trim(),'employee_id':e['id'],'work_date':date(day),'check_in':DateTime.now().toIso8601String(),'attendance_status':'present','attendance_fraction':1,'absence_type':null,'absence_penalty_days':0,'attendance_source':'direct','notes':'تسجيل حضور مباشر فقط'},onConflict:'employee_id,work_date');if(mounted)setState(()=>message='تم تسجيل حضور مباشر فقط للموظف ${s(e['full_name'])}.');await load();}catch(e){if(mounted)setState(()=>error='تعذر تسجيل الحضور: $e');}}
   Future<void> changeEmployee(Map<String,dynamic> row,String jobId) async { final picked=await search(false); if(picked==null)return; setState((){daily.remove(s(row['employeeId']));addEmployee(picked,jobId:jobId);}); }
   Widget attendanceRow(Map<String,dynamic> x){final e=emp(s(x['employeeId']));if(e==null)return const SizedBox.shrink();final jid=s(x['jobId']).isEmpty?s(e['job_id']):s(x['jobId']);final found=jobs.where((j)=>s(j['id'])==jid);final j=found.isEmpty?null:found.first;final abs=x['absent']==true;return Card(child:Padding(padding:const EdgeInsets.all(8),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[SizedBox(width:95,child:Text(s(j?['job_code']),style:const TextStyle(fontWeight:FontWeight.w900))),Expanded(child:Text(s(j?['name_ar']).isEmpty?s(e['job_title']):s(j?['name_ar']),style:const TextStyle(fontWeight:FontWeight.w800))),IconButton(onPressed:locked?null:()=>setState(()=>daily.remove(s(e['id']))),icon:const Icon(Icons.remove_circle_outline,color:Colors.red))]),Row(children:[SizedBox(width:115,child:GestureDetector(onDoubleTap:locked?null:()=>changeEmployee(x,jid),child:Text(s(e['employee_code']),style:const TextStyle(color:purple,fontWeight:FontWeight.w900)))),Expanded(child:Text(s(e['full_name']))),Checkbox(value:x['present']==true&&!abs,onChanged:locked?null:(v)=>setState((){x['present']=v==true;x['absent']=false;})),const Text('حضور')]),Wrap(spacing:7,runSpacing:5,children:[const Text('نوع الحضور'),SizedBox(width:120,child:DropdownButtonFormField<String>(value:fractions.containsKey(s(x['fraction']))?s(x['fraction']):'يوم كامل',isExpanded:true,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder()),items:fractions.keys.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:locked||abs?null:(v)=>setState(()=>x['fraction']=v??'يوم كامل'))),Checkbox(value:abs,onChanged:locked?null:(v)=>setState((){x['absent']=v==true;x['present']=false;if(v!=true)x['penalty']='بدون جزاء';})),const Text('غياب'),SizedBox(width:170,child:DropdownButtonFormField<String>(value:absenceTypes.contains(s(x['absenceType']))?s(x['absenceType']):'غياب بدون إذن',isExpanded:true,decoration:const InputDecoration(labelText:'حالة الغياب',isDense:true,border:OutlineInputBorder()),items:absenceTypes.map((v)=>DropdownMenuItem(value:v,child:Text(v,overflow:TextOverflow.ellipsis))).toList(),onChanged:locked||!abs?null:(v)=>setState((){x['absenceType']=v??'غياب بدون إذن';if(v!='غياب بدون إذن')x['penalty']='بدون جزاء';}))),SizedBox(width:140,child:DropdownButtonFormField<String>(value:penalties.containsKey(s(x['penalty']))?s(x['penalty']):'بدون جزاء',isExpanded:true,decoration:const InputDecoration(labelText:'جزاء الغياب',isDense:true,border:OutlineInputBorder()),items:penalties.keys.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:locked||!abs||s(x['absenceType'])!='غياب بدون إذن'?null:(v)=>setState(()=>x['penalty']=v??'بدون جزاء'))),FilledButton.tonal(onPressed:locked?null:()=>direct(e),child:const Text('تسجيل حضور مباشر'))])])));}
-  Widget manualDeptNode(Map<String,dynamic> d){
-    final children=departments.where((x)=>s(x['parent_id'])==s(d['id'])).toList();
-    final ownJobs=jobs.where((x)=>s(x['department_id'])==s(d['id'])).toList();
-    return Padding(padding:const EdgeInsetsDirectional.only(start:10),child:ExpansionTile(
-      leading:const Icon(Icons.account_tree_outlined,color:orange),
-      title:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'),
-      children:[
-        ...children.map(manualDeptNode),
-        ...ownJobs.map((j)=>ListTile(
-          dense:true,
-          title:Text('${s(j['job_code'])} • ${s(j['name_ar'])}'),
-          subtitle:Text(s(j['name_en'])),
-          trailing:TextButton.icon(
-            onPressed:locked?null:()async{final e=await search(false);if(e!=null)setState(()=>addEmployee(e,jobId:s(j['id'])));},
-            icon:const Icon(Icons.person_add_alt_1),label:const Text('اختيار موظف')),
-        )),
-      ],
-    ));
-  }
-  Widget manual(){final days=DateTime(day.year,day.month+1,0).day;return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Expanded(child:Text('الحضور اليدوي • ${date(day)} • ${locked?'مقفل':'مفتوح'}',style:const TextStyle(fontWeight:FontWeight.w900))),OutlinedButton.icon(onPressed:locked?null:yesterday,icon:const Icon(Icons.content_copy),label:const Text('استدعاء موظفين أمس')),FilledButton.icon(onPressed:locked||saving?null:saveAttendance,icon:const Icon(Icons.save),label:const Text('حفظ اليوم'))]),if(locked)notice('مسير الرواتب مقفل؛ الشهر للقراءة فقط.',Colors.red),SizedBox(height:86,child:ListView(scrollDirection:Axis.horizontal,children:List.generate(days,(i){final d=DateTime(day.year,day.month,i+1),selected=d.day==day.day;return Padding(padding:const EdgeInsetsDirectional.only(end:5),child:OutlinedButton(style:OutlinedButton.styleFrom(backgroundColor:selected?purple:null,foregroundColor:selected?Colors.white:null),onPressed:()=>setState((){day=d;rebuild();}),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Text('${d.day}',style:const TextStyle(fontWeight:FontWeight.w900)),Text(weekday(d),style:const TextStyle(fontSize:10))])));}))),const Text('شجرة قوة العمل — اختر الموظف أمام الوظيفة',style:TextStyle(fontWeight:FontWeight.w900)),...locations.map((l)=>Card(child:ExpansionTile(leading:const Icon(Icons.location_city,color:purple),title:Text('${s(l['location_code'])} • ${s(l['name_ar'])}'),children:departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['department_level'])=='directorate'&&s(d['work_location_id'])==s(l['id'])).map(manualDeptNode).toList()))),Row(children:[Expanded(child:Text('كشف اليوم • ${daily.length} موظف',style:const TextStyle(fontWeight:FontWeight.w900))),TextButton.icon(onPressed:locked?null:()async{final e=await search(false);if(e!=null)setState(()=>addEmployee(e));},icon:const Icon(Icons.person_search),label:const Text('اختيار موظف')),TextButton.icon(onPressed:locked?null:()async{final j=await search(true);if(j==null)return;final e=await search(false);if(e!=null)setState(()=>addEmployee(e,jobId:s(j['id'])));},icon:const Icon(Icons.work_outline),label:const Text('وظيفة + موظف'))]),if(daily.isEmpty)const Padding(padding:EdgeInsets.all(12),child:Text('اختر يومًا ثم أضف الموظفين أو استدعِ كشف أمس.')),...daily.values.map(attendanceRow)]);}
+  Widget manual(){final days=DateTime(day.year,day.month+1,0).day;return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Expanded(child:Text('الحضور اليدوي • ${date(day)} • ${locked?'مقفل':'مفتوح'}',style:const TextStyle(fontWeight:FontWeight.w900))),OutlinedButton.icon(onPressed:locked?null:yesterday,icon:const Icon(Icons.content_copy),label:const Text('استدعاء موظفين أمس')),FilledButton.icon(onPressed:locked||saving?null:saveAttendance,icon:const Icon(Icons.save),label:const Text('حفظ اليوم'))]),if(locked)notice('مسير الرواتب مقفل؛ الشهر للقراءة فقط.',Colors.red),SizedBox(height:86,child:ListView(scrollDirection:Axis.horizontal,children:List.generate(days,(i){final d=DateTime(day.year,day.month,i+1),selected=d.day==day.day;return Padding(padding:const EdgeInsetsDirectional.only(end:5),child:OutlinedButton(style:OutlinedButton.styleFrom(backgroundColor:selected?purple:null,foregroundColor:selected?Colors.white:null),onPressed:()=>setState((){day=d;rebuild();}),child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[Text('${d.day}',style:const TextStyle(fontWeight:FontWeight.w900)),Text(weekday(d),style:const TextStyle(fontSize:10))])));}))),const Text('شجرة قوة العمل — اختر الموظف أمام الوظيفة',style:TextStyle(fontWeight:FontWeight.w900)),...locations.map((l)=>workLocationCard(l,manualMode:true)),Row(children:[Expanded(child:Text('كشف اليوم • ${daily.length} موظف',style:const TextStyle(fontWeight:FontWeight.w900))),TextButton.icon(onPressed:locked?null:()async{final e=await search(false);if(e!=null)setState(()=>addEmployee(e));},icon:const Icon(Icons.person_search),label:const Text('اختيار موظف')),TextButton.icon(onPressed:locked?null:()async{final j=await search(true);if(j==null)return;final e=await search(false);if(e!=null)setState(()=>addEmployee(e,jobId:s(j['id'])));},icon:const Icon(Icons.work_outline),label:const Text('وظيفة + موظف'))]),if(daily.isEmpty)const Padding(padding:EdgeInsets.all(12),child:Text('اختر يومًا ثم أضف الموظفين أو استدعِ كشف أمس.')),...daily.values.map(attendanceRow)]);}
   Future<void> processFingerprint()async{if(locked){setState(()=>error='الشهر مقفل؛ لن تعدّل المعالجة السجلات.');return;}setState(()=>saving=true);try{final buckets=<String,List<Map<String,dynamic>>>{};for(final e in events.where((x)=>s(x['processing_status'])!='processed'&&s(x['employee_id']).isNotEmpty)){final at=DateTime.tryParse(s(e['event_at']));if(at==null)continue;(buckets['${s(e['employee_id'])}|${date(at)}']??=<Map<String,dynamic>>[]).add(e);}var count=0;for(final entry in buckets.entries){final parts=entry.key.split('|');final person=emp(parts.first);if(person==null)continue;final list=entry.value..sort((a,b)=>s(a['event_at']).compareTo(s(b['event_at'])));await _db.from('erp_attendance_records').upsert({'company_id':_company.text.trim(),'employee_id':person['id'],'work_date':parts.last,'check_in':list.first['event_at'],'check_out':list.length>1?list.last['event_at']:null,'attendance_status':'present','attendance_fraction':1,'absence_type':null,'absence_penalty_days':0,'attendance_source':'fingerprint','notes':'معالجة من جهاز البصمة'},onConflict:'employee_id,work_date');for(final e in list){await _db.from('erp_hr_attendance_events').update({'processing_status':'processed','processing_note':'مطابقة ${s(person['employee_code'])}'}).eq('id',s(e['id']));}count++;}if(mounted)setState(()=>message='تمت معالجة $count مجموعة حضور من البصمة.');await load();}catch(e){if(mounted)setState(()=>error='تعذرت معالجة البصمات: $e');}finally{if(mounted)setState(()=>saving=false);}}
   Future<void> matchEvent(Map<String,dynamic> event)async{final e=await search(false);if(e==null)return;try{await _db.from('erp_hr_attendance_events').update({'employee_id':e['id'],'processing_note':'مطابقة يدوية'}).eq('id',s(event['id']));await load();}catch(err){if(mounted)setState(()=>error='تعذرت المطابقة: $err');}}
-  Widget fingerprint(){final pending=events.where((e)=>s(e['processing_status'])!='processed'||s(e['employee_id']).isEmpty).length;return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Expanded(child:Text('حضور جهاز البصمة • ${devices.length} جهاز • ${events.length} حركة',style:const TextStyle(fontWeight:FontWeight.w900))),FilledButton.icon(onPressed:loading?null:load,icon:const Icon(Icons.sync),label:const Text('تحديث')),FilledButton.icon(onPressed:saving||locked?null:processFingerprint,icon:const Icon(Icons.fact_check_outlined),label:const Text('معالجة البصمات'))]),if(locked)notice('الشهر مقفل بالرواتب.',Colors.red),Wrap(spacing:8,children:[Chip(label:Text('الأجهزة: ${devices.length}')),Chip(label:Text('حركات غير معالجة: $pending')),Chip(label:Text('الموظفون: ${employees.length}'))]),const Text('شجرة قوة العمل',style:TextStyle(fontWeight:FontWeight.w900)),...locations.map((l)=>Card(child:ExpansionTile(leading:const Icon(Icons.location_city,color:purple),title:Text('${s(l['location_code'])} • ${s(l['name_ar'])}'),children:departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['work_location_id'])==s(l['id'])).map(deptNode).toList()))),const SizedBox(height:8),const Text('أجهزة البصمة المسجلة',style:TextStyle(fontWeight:FontWeight.w900)),if(devices.isEmpty)const Text('لا توجد أجهزة مسجلة. أضفها من شاشة أجهزة البصمة وربط الحضور.'),...devices.map((d)=>Card(child:ListTile(leading:const Icon(Icons.fingerprint,color:purple),title:Text(s(d['device_name'])),subtitle:Text('${s(d['manufacturer'])} ${s(d['model'])} • ${s(d['ip_address'])}:${s(d['port'])}\nآخر مزامنة: ${s(d['last_sync_at'])}'),trailing:Chip(label:Text(s(d['status']).isEmpty?'غير معروف':s(d['status'])))))),const SizedBox(height:8),const Text('الحركات الخام — الأحدث أولًا',style:TextStyle(fontWeight:FontWeight.w900)),if(events.isEmpty)const Text('لا توجد حركات بصمة مستوردة للفترة المحددة.'),...events.take(250).map((e)=>Card(child:ListTile(dense:true,leading:Icon(s(e['processing_status'])=='processed'?Icons.check_circle:Icons.schedule,color:s(e['processing_status'])=='processed'?Colors.green:orange),title:Text(emp(s(e['employee_id']))==null?'كود البصمة: ${s(e['employee_code'])}':empName(e['employee_id'])),subtitle:Text('${s(e['event_at'])} • ${s(e['event_type'])} • ${s(e['processing_status'])}'),trailing:emp(s(e['employee_id']))==null?TextButton(onPressed:()=>matchEvent(e),child:const Text('مطابقة')):null)))]);}
+  Widget fingerprint(){final pending=events.where((e)=>s(e['processing_status'])!='processed'||s(e['employee_id']).isEmpty).length;return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Expanded(child:Text('حضور جهاز البصمة • ${devices.length} جهاز • ${events.length} حركة',style:const TextStyle(fontWeight:FontWeight.w900))),FilledButton.icon(onPressed:loading?null:load,icon:const Icon(Icons.sync),label:const Text('تحديث')),FilledButton.icon(onPressed:saving||locked?null:processFingerprint,icon:const Icon(Icons.fact_check_outlined),label:const Text('معالجة البصمات'))]),if(locked)notice('الشهر مقفل بالرواتب.',Colors.red),Wrap(spacing:8,children:[Chip(label:Text('الأجهزة: ${devices.length}')),Chip(label:Text('حركات غير معالجة: $pending')),Chip(label:Text('الموظفون: ${employees.length}'))]),const Text('شجرة قوة العمل',style:TextStyle(fontWeight:FontWeight.w900)),...locations.map((l)=>workLocationCard(l)),const SizedBox(height:8),const Text('أجهزة البصمة المسجلة',style:TextStyle(fontWeight:FontWeight.w900)),if(devices.isEmpty)const Text('لا توجد أجهزة مسجلة. أضفها من شاشة أجهزة البصمة وربط الحضور.'),...devices.map((d)=>Card(child:ListTile(leading:const Icon(Icons.fingerprint,color:purple),title:Text(s(d['device_name'])),subtitle:Text('${s(d['manufacturer'])} ${s(d['model'])} • ${s(d['ip_address'])}:${s(d['port'])}\nآخر مزامنة: ${s(d['last_sync_at'])}'),trailing:Chip(label:Text(s(d['status']).isEmpty?'غير معروف':s(d['status'])))))),const SizedBox(height:8),const Text('الحركات الخام — الأحدث أولًا',style:TextStyle(fontWeight:FontWeight.w900)),if(events.isEmpty)const Text('لا توجد حركات بصمة مستوردة للفترة المحددة.'),...events.take(250).map((e)=>Card(child:ListTile(dense:true,leading:Icon(s(e['processing_status'])=='processed'?Icons.check_circle:Icons.schedule,color:s(e['processing_status'])=='processed'?Colors.green:orange),title:Text(emp(s(e['employee_id']))==null?'كود البصمة: ${s(e['employee_code'])}':empName(e['employee_id'])),subtitle:Text('${s(e['event_at'])} • ${s(e['event_type'])} • ${s(e['processing_status'])}'),trailing:emp(s(e['employee_id']))==null?TextButton(onPressed:()=>matchEvent(e),child:const Text('مطابقة')):null)))]);}
   Map<String, dynamic> _exportData() {
     final headers = <String>[];
     final rows = <List<String>>[];

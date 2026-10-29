@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
@@ -34,6 +35,17 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   final _relativeMobile = TextEditingController(text: '01127283261');
   final _relativeRelation = TextEditingController(text: 'أخ');
   String _contractType = 'بعقد';
+  String _workUnit = 'مكتب إداري';
+  List<Map<String, dynamic>> _employeeDocs = [];
+  static const _workUnits = ['مكتب إداري', 'مخازن', 'سيارات'];
+  static const _supportingDocs = <(String, String)>[
+    ('personal_id', 'صورة شخصية / بطاقة'), ('birth_certificate', 'شهادة الميلاد'),
+    ('qualification', 'المؤهل الدراسي'), ('labor_card', 'كعب العمل'),
+    ('insurance_print', 'برنت التأمينات'), ('military_status', 'شهادة / موقف التجنيد'),
+    ('criminal_record', 'الفيش'), ('trust_receipt', 'إيصال أمانة'),
+    ('health_certificate', 'الشهادة الصحية'), ('driving_license', 'رخصة القيادة'),
+    ('bank_account', 'بيانات الحساب البنكي'),
+  ];
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _deps = [];
   List<Map<String, dynamic>> _jobs = [];
@@ -83,7 +95,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final x = await Future.wait([
-        _db!.from('erp_employees').select('id,employee_code,full_name,full_name_en,department_name,job_title,mobile_1,phone,is_active').eq('company_id', _cid).order('employee_code'),
+        _db!.from('erp_employees').select('id,employee_code,full_name,full_name_en,department_name,job_title,mobile_1,phone,is_active,work_unit').eq('company_id', _cid).order('employee_code'),
         _db!.from('erp_hr_departments').select('id,department_code,name_ar,department_level,parent_id').eq('company_id', _cid).eq('is_active', true).order('department_code'),
         _db!.from('erp_hr_jobs').select('id,job_code,name_ar,department_id').eq('company_id', _cid).eq('is_active', true).order('job_code'),
         _db!.from('erp_hr_work_locations').select('id,location_code,name_ar').eq('company_id', _cid).eq('is_active', true).order('location_code'),
@@ -227,6 +239,156 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     }
   }
 
+  Map<String, List<Map<String, dynamic>>> get _docsByType {
+    final result = <String, List<Map<String, dynamic>>>{};
+    for (final doc in _employeeDocs) {
+      (result[_s(doc['doc_type'])] ??= <Map<String, dynamic>>[]).add(doc);
+    }
+    return result;
+  }
+
+  Future<void> _loadEmployeeDocs(String employeeId) async {
+    if (_db == null || _cid.isEmpty) return;
+    try {
+      final rows = await _db!.from('erp_employee_documents')
+          .select('id,employee_id,doc_type,file_name,storage_path,mime_type,size_bytes,created_at')
+          .eq('company_id', _cid).eq('employee_id', employeeId)
+          .order('created_at', ascending: false);
+      if (mounted && _selectedEmployeeId == employeeId) setState(() => _employeeDocs = List<Map<String, dynamic>>.from(rows));
+    } catch (e) {
+      if (mounted) setState(() => _message = 'تعذر تحميل مرفقات الموظف: $e');
+    }
+  }
+
+  String _documentMime(String extension) => switch (extension.toLowerCase()) {
+    'pdf' => 'application/pdf',
+    'jpg' || 'jpeg' => 'image/jpeg',
+    'png' => 'image/png',
+    'doc' => 'application/msword',
+    'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    _ => 'application/octet-stream',
+  };
+
+  Future<void> _pickEmployeeDocument(String type, String label) async {
+    final employeeId = _selectedEmployeeId;
+    if (_db == null || _cid.isEmpty || employeeId == null) {
+      setState(() => _error = 'احفظ الموظف أولًا ثم اختره من الجدول لإضافة المسوغات.');
+      return;
+    }
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'],
+        withData: true,
+      );
+      if (picked == null || picked.files.isEmpty) return;
+      final file = picked.files.single;
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        setState(() => _error = 'تعذر قراءة الملف من الجهاز؛ جرّب اختيار الملف مرة أخرى.');
+        return;
+      }
+      if (bytes.length > 8 * 1024 * 1024) {
+        setState(() => _error = 'الحد الأقصى لحجم المرفق 8 ميجابايت.');
+        return;
+      }
+      setState(() { _saving = true; _error = null; _message = null; });
+      final extension = (file.extension ?? file.name.split('.').last).toLowerCase();
+      final mime = _documentMime(extension);
+      final storagePath = '${_cid}/${employeeId}/employee_documents/${type}_${DateTime.now().microsecondsSinceEpoch}.${extension}';
+      await _db!.storage.from('erp-company-assets').uploadBinary(
+        storagePath, bytes,
+        fileOptions: FileOptions(contentType: mime, upsert: false),
+      );
+      try {
+        await _db!.from('erp_employee_documents').insert({
+          'company_id': _cid, 'employee_id': employeeId, 'doc_type': type,
+          'file_name': file.name, 'storage_path': storagePath,
+          'mime_type': mime, 'size_bytes': bytes.length,
+        });
+      } catch (_) {
+        await _db!.storage.from('erp-company-assets').remove([storagePath]);
+        rethrow;
+      }
+      await _loadEmployeeDocs(employeeId);
+      if (mounted) setState(() => _message = 'تم إرفاق "${label}" بنجاح.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر إرفاق "${label}": $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _openEmployeeDocument(Map<String, dynamic> doc) async {
+    try {
+      final url = await _db!.storage.from('erp-company-assets')
+          .createSignedUrl(_s(doc['storage_path']), 300);
+      if (!await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication)) {
+        throw StateError('تعذر فتح الملف في تطبيق خارجي.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر فتح المرفق: $e');
+    }
+  }
+
+  Future<void> _deleteEmployeeDocument(Map<String, dynamic> doc) async {
+    final id = _s(doc['id']);
+    final path = _s(doc['storage_path']);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('حذف المرفق'),
+        content: Text('هل تريد حذف "${_s(doc['file_name'])}" نهائيًا؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حذف')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await _db!.from('erp_employee_documents').delete().eq('id', id).eq('company_id', _cid);
+      await _db!.storage.from('erp-company-assets').remove([path]);
+      if (mounted) setState(() {
+        _employeeDocs.removeWhere((x) => _s(x['id']) == id);
+        _message = 'تم حذف المرفق.';
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر حذف المرفق: $e');
+    }
+  }
+
+  Widget _employeeDocumentsSection() => _section('المسوغات والمرفقات من الجهاز', Icons.attach_file_outlined, [
+    if (_selectedEmployeeId == null)
+      const Padding(
+        padding: EdgeInsets.only(bottom: 8),
+        child: Text('احفظ الموظف أولًا ثم اختره من الجدول لإضافة المرفقات.'),
+      ),
+    for (final item in _supportingDocs)
+      SizedBox(
+        width: 265,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          OutlinedButton.icon(
+            onPressed: _selectedEmployeeId == null || _saving
+                ? null : () => _pickEmployeeDocument(item.$1, item.$2),
+            icon: const Icon(Icons.upload_file),
+            label: Text(item.$2, overflow: TextOverflow.ellipsis),
+          ),
+          for (final doc in (_docsByType[item.$1] ?? const <Map<String, dynamic>>[]))
+            ListTile(
+              dense: true, contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.description_outlined, color: _purple),
+              title: Text(_s(doc['file_name']), maxLines: 2, overflow: TextOverflow.ellipsis),
+              subtitle: Text('${((int.tryParse(_s(doc['size_bytes'])) ?? 0) / 1024).toStringAsFixed(0)} ك.ب'),
+              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                IconButton(tooltip: 'فتح المرفق', onPressed: () => _openEmployeeDocument(doc), icon: const Icon(Icons.open_in_new)),
+                IconButton(tooltip: 'حذف المرفق', onPressed: _saving ? null : () => _deleteEmployeeDocument(doc), icon: const Icon(Icons.delete_outline, color: Colors.red)),
+              ]),
+            ),
+        ]),
+      ),
+  ]);
+
   Future<void> _save() async {
     if (!_form.currentState!.validate()) return;
     if (_cid.isEmpty || _db == null) { setState(() { _error = 'لا توجد شركة نشطة أو اتصال بقاعدة البيانات.'; }); return; }
@@ -240,7 +402,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       'mobile_1': _m1.text.trim(), 'mobile_2': _m2.text.trim(),
       'work_mobile_1': _w1.text.trim(), 'work_mobile_2': _w2.text.trim(),
       'phone': _m1.text.trim(), 'administration_id': _admin, 'department_id': _dep ?? _admin, 'job_id': _job,
-      'work_location_id': _loc, 'department_name': depName, 'job_title': jobName,
+      'work_location_id': _loc, 'work_unit': _workUnit, 'department_name': depName, 'job_title': jobName,
       'employment_status': _status, 'is_active': _status == 'active',
       'hire_date': _isoDate(_hireDate.text).isEmpty ? null : _isoDate(_hireDate.text),
       'contract_type': _contractType,
@@ -266,11 +428,12 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     _selectedEmployeeId = null;
     _editing = false;
     for (final c in [_code,_ar,_en,_nationalId,_address,_map,_m1,_m2,_w1,_w2,_relativeMobile,_relativeRelation]) { c.clear(); }
+    _employeeDocs = [];
     _ar.text = 'إدارة عليا'; _address.text = 'أطلس 4 بجوار الملعب عملية 1248 بلوك 7 مدخل 1 شقة 11';
     _m1.text = '01121237271'; _w1.text = '01044480160'; _relativeMobile.text = '01127283261'; _relativeRelation.text = 'أخ';
     setState(() {
       _gov = 'القاهرة'; _district = 'السلام'; _locality = 'أطلس 4'; _govGeoId = null; _districtGeoId = null; _admin = null; _dep = null;
-      _job = null; _loc = null; _status = 'active'; _contractType = 'بعقد';
+      _job = null; _loc = null; _status = 'active'; _contractType = 'بعقد'; _workUnit = 'مكتب إداري';
       _hireDate.text = '01-01-2027'; _contractFrom.text = '01-01-2027'; _contractTo.text = '31-12-2029';
     });
     if (generateCode) _generateNextCode();
@@ -296,7 +459,8 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         _job=_jobs.any((j)=>_s(j['id'])==v('job_id'))?v('job_id'):null;
         _loc=_locs.any((l)=>_s(l['id'])==v('work_location_id'))?v('work_location_id'):null;
         _status=v('employment_status').isEmpty?(r['is_active']==true?'active':'inactive'):v('employment_status');
-        _contractType=_contractTypes.contains(v('contract_type'))?v('contract_type'):'بدون عقد';_loading=false;});
+        _contractType=_contractTypes.contains(v('contract_type'))?v('contract_type'):'بدون عقد';_workUnit=_workUnits.contains(v('work_unit'))?v('work_unit'):'مكتب إداري';_loading=false;});
+      await _loadEmployeeDocs(id);
     }catch(e){if(mounted)setState(()=>_error='تعذر فتح بيانات الموظف: '+e.toString());}
   }
 
@@ -577,7 +741,8 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
       if (_message != null) Text(_message!, style: const TextStyle(color: Colors.green)),
       if (_readOnly) const Text('تم تحميل الموظف المحدد؛ اضغط تعديل قبل تغيير بياناته.', style: TextStyle(color: _purple,fontWeight:FontWeight.w700)),
-      Expanded(child: SingleChildScrollView(child: IgnorePointer(ignoring: _readOnly, child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Expanded(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      IgnorePointer(ignoring: _readOnly, child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _section('بيانات أولية', Icons.badge_outlined, [
           _field(_code, 'كود الموظف التلقائي *', required: true, width: 185),
           _field(_ar, 'اسم الموظف عربي *', required: true, width: 220), _field(_en, 'اسم الموظف إنجليزي', width: 220),
@@ -611,6 +776,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
           _drop('الإدارة', _admin, _deps.where((d) => d['department_level'] != 'section').map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _admin = v; _dep = null; _job = null; }), width: 175),
           _drop('القسم', _dep, _deps.where((d) => (d['department_level'] == 'section' || d['department_level'] == 'department') && (_admin == null || d['parent_id'] == _admin)).map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _dep = v; _job = null; }), width: 175),
           _drop('موقع العمل', _loc, _locs.map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar']) + ' • ' + _s(d['location_code'])))).toList(), (v) => setState(() { _loc = v; }), width: 175),
+          _drop('وحدة العمل', _workUnit, _workUnits.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))).toList(), (v) => setState(() => _workUnit = v ?? 'مكتب إداري'), width: 155),
           _drop('الوظيفة', _job, _availableJobs.map((j) => DropdownMenuItem(value: _s(j['id']), child: Text(_s(j['name_ar']) + ' • ' + _s(j['job_code'])))).toList(), (v) => setState(() { _job = v; }), width: 175),
           _dateField(_hireDate, 'تاريخ التعيين', width: 150),
           SizedBox(width: 400, child: Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
@@ -635,7 +801,9 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
           _field(_w1, 'موبايل عمل 1', type: TextInputType.phone, width: 155), _field(_w2, 'موبايل عمل 2', type: TextInputType.phone, width: 155),
           _field(_relativeMobile, 'موبايل أحد الأقارب', type: TextInputType.phone, width: 180), _field(_relativeRelation, 'صلة القرابة', width: 130),
         ]),
-      ]))))),
+      ]))),
+      _employeeDocumentsSection(),
+      ]))),
       _employeeGrid(),
     ])),
   );
