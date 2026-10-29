@@ -72,7 +72,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       if(!isLoc&&!isJob)DropdownButtonFormField<String>(value:level,decoration:const InputDecoration(labelText:'المستوى'),items:const [DropdownMenuItem(value:'directorate',child:Text('إدارة رئيسية')),DropdownMenuItem(value:'department',child:Text('إدارة'))],onChanged:(v)=>refresh(()=>level=v??level)),
       if(!isLoc&&!isJob)DropdownButtonFormField<String>(value:locations.any((l)=>s(l['id'])==workLocation)?workLocation:null,decoration:const InputDecoration(labelText:'موقع العمل *'),items:locations.where((l)=>l['is_active']!=false).map((l)=>DropdownMenuItem<String>(value:s(l['id']),child:Text('${s(l['location_code'])} • ${s(l['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>workLocation=v)),
       if(!isLoc&&!isJob&&level!='directorate')DropdownButtonFormField<String>(value:departments.any((d)=>s(d['id'])==parent)?parent:null,decoration:const InputDecoration(labelText:'يتبع الإدارة'),items:departments.where((d)=>s(d['id'])!=s(row?['id'])&&s(d['department_level'])!='section'&&d['is_active']!=false).map((d)=>DropdownMenuItem<String>(value:s(d['id']),child:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>parent=v)),
-      if(isJob)DropdownButtonFormField<String>(value:departments.any((d)=>s(d['id'])==dep)?dep:null,decoration:const InputDecoration(labelText:'القسم *'),items:departments.where((d)=>d['is_active']!=false&&s(d['department_level'])!='section').map((d)=>DropdownMenuItem<String>(value:s(d['id']),child:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>dep=v)),
+      if(isJob)DropdownButtonFormField<String>(value:departments.any((d)=>s(d['id'])==dep)?dep:null,decoration:const InputDecoration(labelText:'الإدارة *'),items:departments.where((d)=>d['is_active']!=false&&(s(d['department_level'])!='section'||s(d['id'])==dep)).map((d)=>DropdownMenuItem<String>(value:s(d['id']),child:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'))).toList(),onChanged:(v)=>refresh(()=>dep=v)),
       if(err!=null)notice(err!,Colors.red),
     ]))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()async{
       if(code.text.trim().isEmpty||ar.text.trim().isEmpty||(isJob&&dep==null)||(!isJob&&!isLoc&&workLocation==null)||(!isJob&&!isLoc&&level!='directorate'&&parent==null)){refresh(()=>err='أكمل الكود والاسم والارتباط التنظيمي.');return;}
@@ -154,7 +154,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
     );
   }
 
-  Widget workLocationCard(Map<String,dynamic> location,{bool manualMode=false}) {
+  Widget workLocationCard(Map<String,dynamic> location,{bool manualMode=false,bool editable=false}) {
     final central=s(location['location_type'])=='central';
     final children=central
       ? departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['work_location_id'])==s(location['id'])&&s(d['department_level'])!='section').map((d)=>centralDepartmentNode(d,manualMode:manualMode)).toList()
@@ -163,10 +163,10 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       leading:Icon(central?Icons.account_balance_outlined:Icons.warehouse_outlined,color:purple),
       title:Text('${s(location['location_code'])} • ${s(location['name_ar'])}'),
       subtitle:Text(central?'الإدارة المركزية • إدارات فقط':'وحدات العمل • مكتب إداري / مخازن / سيارات'),
-      trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+      trailing:editable?Row(mainAxisSize:MainAxisSize.min,children:[
         IconButton(onPressed:()=>masterDialog('location',row:location),icon:const Icon(Icons.edit_outlined)),
         IconButton(onPressed:()=>deleteRow('location',location),icon:const Icon(Icons.delete_outline,color:Colors.red)),
-      ]),
+      ]):null,
       children:children,
     ));
   }
@@ -179,7 +179,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
         FilledButton.icon(onPressed:()=>masterDialog('location'),icon:const Icon(Icons.add),label:const Text('موقع')),
         FilledButton.icon(onPressed:()=>masterDialog('department'),icon:const Icon(Icons.add),label:const Text('إدارة')),
       ]),
-      ...locations.map((l)=>workLocationCard(l)),
+      ...locations.map((l)=>workLocationCard(l,editable:true)),
       const SizedBox(height:8),
       const Text('دليل الوظائف',style:TextStyle(fontWeight:FontWeight.w900)),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
