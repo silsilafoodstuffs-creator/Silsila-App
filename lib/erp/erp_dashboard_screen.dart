@@ -674,6 +674,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final Map<String, List<Map<String, String>>> _saved = {};
   final Set<String> _cloudLoadedWorkspacePages = <String>{};
   final Set<String> _workspacePageLoadsInProgress = <String>{};
+  final Map<String, int> _workspaceOffsets = <String, int>{};
+  final Map<String, bool> _workspaceHasMore = <String, bool>{};
 
   List<Map<String, String>> get _rows {
     final rows = _saved[_page] ?? <Map<String, String>>[];
@@ -2661,20 +2663,27 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     _loadWorkspacePage(page);
   }
 
-  Future<void> _loadWorkspacePage(String page) async {
+  Future<void> _loadWorkspacePage(String page, {bool loadMore = false}) async {
     final companyId = _appManagementCompanyId;
     if (companyId == null || companyId.trim().isEmpty ||
-        _cloudLoadedWorkspacePages.contains(page) ||
+        (!loadMore && _cloudLoadedWorkspacePages.contains(page)) ||
+        (loadMore && _workspaceHasMore[page] != true) ||
         !_workspacePageLoadsInProgress.add(page)) return;
+    final offset = loadMore ? (_workspaceOffsets[page] ?? 0) : 0;
     try {
-      final records = await _workspaceRecordsService.listPage(companyId: companyId, pageKey: page);
+      final records = await _workspaceRecordsService.listPage(
+        companyId: companyId, pageKey: page, offset: offset, pageSize: 500,
+      );
       if (!mounted || companyId != _appManagementCompanyId) return;
       setState(() {
-        _saved[page] = records;
+        final existing = _saved[page] ?? <Map<String, String>>[];
+        _saved[page] = loadMore ? <Map<String, String>>[...existing, ...records] : records;
+        _workspaceOffsets[page] = offset + records.length;
+        _workspaceHasMore[page] = records.length == 500;
         _cloudLoadedWorkspacePages.add(page);
       });
     } catch (error) {
-      if (mounted) _showActionMessage('تعذر تحميل بيانات "$page" من قاعدة البيانات. تأكد من تطبيق supabase/erp_workspace_records.sql وصلاحيات العضوية. $error');
+      if (mounted) _showActionMessage('تعذر تحميل بيانات "$page" من قاعدة البيانات. تأكد من صلاحيات عضوية الشركة. $error');
     } finally {
       _workspacePageLoadsInProgress.remove(page);
     }
@@ -2731,7 +2740,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (_rows.isEmpty && _page != 'الهيكل الوظيفي') Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد نتائج مطابقة.'), textAlign: TextAlign.center))
        else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _gridKeys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _gridKeys.map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
       const SizedBox(height: 12),
-      Text('عدد السجلات المعروضة: ${_rows.length} • تحقق من حالة الحفظ بجوار كل عملية', style: const TextStyle(color: Colors.black45, fontSize: 11)),
+      Text('عدد السجلات المعروضة: ${_rows.length} • إجمالي السجلات المحمّلة: ${(_saved[_page] ?? <Map<String, String>>[]).length}', style: const TextStyle(color: Colors.black45, fontSize: 11)),
+      if (_workspaceHasMore[_page] == true || _workspacePageLoadsInProgress.contains(_page))
+        Align(alignment: Alignment.center, child: Padding(padding: const EdgeInsets.only(top: 10), child: OutlinedButton.icon(
+          onPressed: _workspacePageLoadsInProgress.contains(_page) ? null : () => _loadWorkspacePage(_page, loadMore: true),
+          icon: _workspacePageLoadsInProgress.contains(_page) ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.expand_more),
+          label: Text(_workspacePageLoadsInProgress.contains(_page) ? 'جارٍ تحميل السجلات...' : 'تحميل 500 سجل إضافي'),
+        ))),
     ])),
   ]);
 
