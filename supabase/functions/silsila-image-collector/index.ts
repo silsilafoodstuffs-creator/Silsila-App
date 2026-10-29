@@ -388,6 +388,68 @@ Deno.serve(async (req: Request) => {
   try {
     const body = await req.json();
     const action = String(body.action ?? "scan");
+    if (action === "discover") {
+      const start = safeUrl(String(body.url ?? ""));
+      const origin = start.origin;
+      const maxPages = Math.min(80, Math.max(20, Number(body.maxPages ?? 60) || 60));
+      const visited = new Set<string>();
+      const discovered = new Set<string>([start.href]);
+      let frontier: string[] = [start.href];
+      const canonical = (raw: string, base: URL): string | null => {
+        try {
+          const u = safeUrl(new URL(raw, base).href);
+          if (u.origin !== origin) return null;
+          u.hash = "";
+          for (const key of [...u.searchParams.keys()]) {
+            if (/^(?:utm_|fbclid|gclid|yclid|session|sid|add-to-cart|remove_item|orderby|filter|rating_filter)/i.test(key)) u.searchParams.delete(key);
+          }
+          if (u.href.length > 1800) return null;
+          return u.href;
+        } catch { return null; }
+      };
+      const fetchLinks = async (url: string): Promise<{ url: string; links: string[]; pagination: string[] } | null> => {
+        try {
+          const target = safeUrl(url);
+          const res = await fetch(target, {
+            redirect: "follow",
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "Accept-Language": "ar-EG,ar;q=0.9,en;q=0.8",
+            },
+            signal: AbortSignal.timeout(9000),
+          });
+          if (!res.ok || !/(?:text\/html|application\/xhtml)/i.test(res.headers.get("content-type") ?? "")) return null;
+          const html = new TextDecoder().decode(await readLimited(res, 1_000_000));
+          const links = internalLinks(html, target).map((x) => canonical(x, target)).filter((x): x is string => Boolean(x));
+          const pagination = links.filter((link) => /(?:[?&](?:page|paged|pageno|page_no|pg)=\d+|\/page\/\d+\/?$|[?&]p=\d+)/i.test(link));
+          return { url: target.href, links, pagination };
+        } catch { return null; }
+      };
+      let scanned = 0;
+      let failed = 0;
+      while (frontier.length && discovered.size < maxPages && scanned < maxPages) {
+        const wave = frontier.splice(0, Math.min(8, maxPages - scanned));
+        const results = await Promise.all(wave.map(fetchLinks));
+        scanned += wave.length;
+        const candidates: string[] = [];
+        for (const result of results) {
+          if (!result) { failed++; continue; }
+          // Prioritize explicit pagination before other same-site links.
+          candidates.push(...result.pagination, ...result.links);
+        }
+        const next: string[] = [];
+        for (const link of candidates) {
+          if (discovered.has(link)) continue;
+          discovered.add(link);
+          next.push(link);
+          if (discovered.size >= maxPages) break;
+        }
+        frontier = next;
+      }
+      const pages = [...discovered].filter((url) => url !== start.href);
+      return json({ start: start.href, pages, discoveredCount: discovered.size, scannedCount: scanned, failedCount: failed, limit: maxPages, truncated: frontier.length > 0 || discovered.size >= maxPages });
+    }
     if (action === "scan") {
       const page = safeUrl(String(body.url ?? ""));
       let target = page;
