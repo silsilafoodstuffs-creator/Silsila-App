@@ -29,19 +29,37 @@ class ErpInventoryMasterRepository {
       return rows.map((r) => Map<String, dynamic>.from(r)).toList();
     }
   }
-  Future<List<Map<String, dynamic>>> fetchCategories(String companyId) async {
-    final rows = await _db.from('erp_item_categories')
+  Future<List<Map<String, dynamic>>> fetchCategories(String companyId, {int offset = 0, int pageSize = 1000, String search = ''}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 2000) throw ArgumentError('نطاق صفحة فئات الأصناف غير صالح.');
+    var query = _db.from('erp_item_categories')
       .select('id, category_code, category_name, parent_id, is_active')
-      .eq('company_id', companyId.trim()).order('category_code').limit(2000);
+      .eq('company_id', companyId.trim());
+    final term = search.trim();
+    if (term.isNotEmpty) query = query.or('category_code.ilike.%$term%,category_name.ilike.%$term%');
+    final rows = await query.order('category_code').range(offset, offset + pageSize - 1);
     return rows.map((r) { final item = Map<String, dynamic>.from(r); item['category_code'] = item['category_code']; item['category_name'] = item['category_name']; return item; }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchItems(String companyId) async {
-    final rows = await _db.from('erp_items')
-      .select('id, item_code, barcode, item_name, category_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_data, image_mime_type')
-      .eq('company_id', companyId.trim()).order('item_code').limit(2000);
+  Future<List<Map<String, dynamic>>> fetchItems(String companyId, {int offset = 0, int pageSize = 500, String search = ''}) async {
+    if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الأصناف غير صالح.');
+    var query = _db.from('erp_items')
+      .select('id, item_code, barcode, item_name, category_id, base_unit, purchase_price, sale_price, tax_rate, reorder_level, expiry_tracking, is_active, image_url, image_mime_type')
+      .eq('company_id', companyId.trim());
+    final term = search.trim();
+    if (term.isNotEmpty) query = query.or('item_name.ilike.%$term%,item_code.ilike.%$term%,barcode.ilike.%$term%');
+    final rows = await query.order('item_code').range(offset, offset + pageSize - 1);
     return rows.map((r) { final item = Map<String, dynamic>.from(r); item['category_id'] = item['category_id']; return item; }).toList();
   }
+  Future<Uint8List?> fetchItemImage(String companyId, String itemId) async {
+    final row = await _db.from('erp_items').select('image_data').eq('company_id', companyId.trim()).eq('id', itemId).maybeSingle();
+    final value = row?['image_data'];
+    if (value == null) return null;
+    final raw = value.toString();
+    final prefix = raw.startsWith(r'\\x') ? 3 : raw.startsWith(r'\x') ? 2 : 0;
+    if (prefix == 0 || raw.length <= prefix || (raw.length - prefix).isOdd) return null;
+    try { return Uint8List.fromList(List<int>.generate((raw.length - prefix) ~/ 2, (i) => int.parse(raw.substring(prefix + i * 2, prefix + i * 2 + 2), radix: 16))); } catch (_) { return null; }
+  }
+
   Future<List<Map<String, dynamic>>> fetchBranches(String companyId) async {
     final rows = await _db.from('erp_branches')
       .select('id, branch_code, branch_name, is_active')
