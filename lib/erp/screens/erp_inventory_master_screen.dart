@@ -328,7 +328,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
 
   Future<void> _exportMasterExcel() async {
     final isWarehouses = _view == 'warehouses';
-    final rows = isWarehouses ? _warehouses : _items;
+    List<Map<String, dynamic>> rows = isWarehouses ? _warehouses : <Map<String, dynamic>>[];
     final label = isWarehouses ? 'المخازن' : 'الأصناف';
     if (rows.isEmpty) {
       setState(() => _message = 'لا توجد بيانات $label مطابقة للتصدير.');
@@ -336,6 +336,17 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     }
     setState(() { _loading = true; _error = null; _message = null; });
     try {
+      if (!isWarehouses) {
+        var offset = 0;
+        while (true) {
+          final batch = await _repo.fetchItems(_company.text.trim(), offset: offset, pageSize: 500, search: _itemSearch.text);
+          rows.addAll(batch);
+          offset += batch.length;
+          if (batch.length < 500) break;
+          if (rows.length >= 50000) throw StateError('تجاوز التصدير 50,000 صنف. استخدم تصديرًا مجزأً لتجنب استهلاك الذاكرة.');
+        }
+      }
+      if (rows.isEmpty) throw StateError('لا توجد سجلات مطابقة للتصدير.');
       final workbook = Excel.createExcel();
       final sheet = workbook[isWarehouses ? 'المخازن' : 'الأصناف'];
       final keys = isWarehouses
@@ -350,7 +361,9 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           for (final key in keys)
             TextCellValue(key == 'is_active'
               ? (row[key] == true ? 'نشط' : 'موقوف')
-              : _s(row[key])),
+              : key == 'category_name'
+                  ? _categoryLabel(_s(row['category_id']))
+                  : _s(row[key])),
         ]);
       }
       final bytes = workbook.encode();
