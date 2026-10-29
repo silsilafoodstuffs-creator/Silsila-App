@@ -1792,9 +1792,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         border: Border.all(color: const Color(0xFFE8E1F0)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF8B7D99), fontWeight: FontWeight.w700)),
-        const SizedBox(height: 4),
-        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: strong ? const Color(0xFF3E007D) : const Color(0xFF241735), fontWeight: FontWeight.w900, fontSize: strong ? 15 : 13)),
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF8B7D99), fontWeight: FontWeight.w700)),
+        const SizedBox(height: 3),
+        Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: strong ? const Color(0xFF3E007D) : const Color(0xFF241735), fontWeight: FontWeight.w900, fontSize: strong ? 14 : 12)),
       ]),
     );
   }
@@ -2042,10 +2044,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                 )),
               ],
               const SizedBox(height: 12),
-              GridView.count(
-                crossAxisCount: wide ? 5 : 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 6, crossAxisSpacing: 8, childAspectRatio: wide ? 2.9 : 2.9,
-                children: [
+              Builder(builder: (context) {
+                final summaryWidth = constraints.maxWidth;
+                final summaryColumns = summaryWidth >= 1050 ? 5 : summaryWidth >= 700 ? 3 : 2;
+                final metrics = <Widget>[
                   metric('قيمة الأصناف', '${_money(gross)} ج.م'),
                   metric('خصم الفاتورة %', '${_money((gross - lineDiscounts) <= 0 ? 0 : invoiceDiscount * 100 / (gross - lineDiscounts))}%'),
                   metric('خصم الفاتورة قيمة', '${_money(invoiceDiscount)} ج.م'),
@@ -2055,8 +2057,20 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   metric('قيمة الفاتورة', '${_money(net)} ج.م'),
                   metric('المستند المصدر', _sourceDocumentIds.isEmpty ? (_documentType == 'invoice' ? 'أمر بيع' : _documentType == 'order' ? 'عرض سعر' : 'لا يوجد مستند سابق') : '${_sourceDocumentIds.length} مستند مرتبط'),
                   metric('حالة المستند', status),
-                ],
-              ),
+                ];
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: metrics.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: summaryColumns,
+                    mainAxisExtent: summaryWidth < 420 ? 58 : 54,
+                    mainAxisSpacing: 6,
+                    crossAxisSpacing: 8,
+                  ),
+                  itemBuilder: (context, index) => metrics[index],
+                );
+              }),
               if (widget.kind == ErpOperationalKind.sales && _documentType == 'invoice') ...[
                 const SizedBox(height: 8),
                 CheckboxListTile(
