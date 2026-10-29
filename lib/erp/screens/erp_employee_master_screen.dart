@@ -254,7 +254,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
           .select('id,employee_id,doc_type,file_name,storage_path,mime_type,size_bytes,created_at')
           .eq('company_id', _cid).eq('employee_id', employeeId)
           .order('created_at', ascending: false);
-      if (mounted) setState(() => _employeeDocs = List<Map<String, dynamic>>.from(rows));
+      if (mounted && _selectedEmployeeId == employeeId) setState(() => _employeeDocs = List<Map<String, dynamic>>.from(rows));
     } catch (e) {
       if (mounted) setState(() => _message = 'تعذر تحميل مرفقات الموظف: $e');
     }
@@ -448,7 +448,6 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       if(rows.isEmpty)throw StateError('لم يتم العثور على الموظف');
       final r=Map<String,dynamic>.from(rows.first); String v(String k)=>_s(r[k]);
       _code.text=v('employee_code'); _ar.text=v('full_name'); _en.text=v('full_name_en'); _nationalId.text=v('national_id');
-      await _loadEmployeeDocs(id);
       _address.text=v('address'); _map.text=v('map_url'); _m1.text=v('mobile_1').isEmpty?v('phone'):v('mobile_1'); _m2.text=v('mobile_2');
       _w1.text=v('work_mobile_1'); _w2.text=v('work_mobile_2'); _relativeMobile.text=v('relative_mobile'); _relativeRelation.text=v('relative_relation');
       String dt(String s){final d=DateTime.tryParse(s);return d==null?s:d.day.toString().padLeft(2,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.year.toString();}
@@ -461,6 +460,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
         _loc=_locs.any((l)=>_s(l['id'])==v('work_location_id'))?v('work_location_id'):null;
         _status=v('employment_status').isEmpty?(r['is_active']==true?'active':'inactive'):v('employment_status');
         _contractType=_contractTypes.contains(v('contract_type'))?v('contract_type'):'بدون عقد';_workUnit=_workUnits.contains(v('work_unit'))?v('work_unit'):'مكتب إداري';_loading=false;});
+      await _loadEmployeeDocs(id);
     }catch(e){if(mounted)setState(()=>_error='تعذر فتح بيانات الموظف: '+e.toString());}
   }
 
