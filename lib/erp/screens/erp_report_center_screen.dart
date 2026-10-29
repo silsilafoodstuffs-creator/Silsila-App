@@ -75,6 +75,8 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'العملاء المتوقفون': <String>['erp_parties'],
     'تحصيلات يومية': <String>['erp_cash_vouchers'],
     'تصفية المندوبين': <String>['erp_cash_vouchers', 'erp_sales_documents'],
+    'تحقيق أهداف العملاء': <String>['erp_sales_targets', 'erp_customer_targets', 'erp_sales_documents'],
+    'تقرير العمولات المستحقة': <String>['erp_commission_runs', 'erp_commission_plans', 'erp_sales_documents'],
     'تكلفة خطوط السير': <String>['erp_delivery_routes', 'erp_sales_routes'],
     'كشف العاملين': <String>['erp_employees'],
     'الحضور والغياب': <String>['erp_attendance_records', 'erp_attendance'],
