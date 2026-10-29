@@ -1060,10 +1060,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   ]),
                 ),
                 const SizedBox(height: 4),
-                Expanded(child: SingleChildScrollView(
-                  child: Column(children: visibleItems.asMap().entries.map((entry) {
-                    final itemIndex = entry.key;
-                    final item = entry.value;
+                Expanded(child: ListView.builder(
+                  itemCount: visibleItems.length,
+                  itemBuilder: (context, itemIndex) {
+                    final item = visibleItems[itemIndex];
                     final id = _s(item['id']);
                     final options = optionsFor(item);
                     final selectedUnitId = selectedUnits[id] ?? '';
@@ -1171,7 +1171,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                         SizedBox(width: 95, child: Text('× ${_money(factor)}', style: const TextStyle(color: Colors.black54, fontSize: 11))),
                       ]),
                     );
-                  }).toList()),
+                  },
                 )),
                 const SizedBox(height: 8),
                 const Text('معاينة البنود المحددة', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
