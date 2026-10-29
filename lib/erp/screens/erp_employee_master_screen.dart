@@ -312,6 +312,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       a('طباعة',Icons.print_outlined,const Color(0xFFDB2777),_previewEmployee),
       a('Excel',Icons.file_download_outlined,const Color(0xFF16834A),_loading?null:_exportEmployeesExcel),
       a('PDF',Icons.picture_as_pdf_outlined,const Color(0xFFD32F2F),_previewEmployee),
+      a('تهيئة 23 موظفًا',Icons.group_add_outlined,const Color(0xFF0F766E),_saving?null:_seedRequestedStaff),
     ]));
   }
 
@@ -329,6 +330,376 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
           DataCell(Text(_s(e['employee_code']))),DataCell(Text(_s(e['full_name']))),DataCell(Text(_s(e['department_name']))),DataCell(Text(_s(e['job_title']))),DataCell(Text(_s(_s(e['mobile_1']).isEmpty?e['phone']:e['mobile_1']))),DataCell(Text(e['is_active']==true?'نشط':'غير نشط'))
         ])).toList()))))
     ]));
+  }
+
+  Future<void> _seedRequestedStaff() async {
+    if (_db == null || _cid.isEmpty || _saving || _loading) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تهيئة بيانات الموظفين'),
+        content: const Text('سيتم إنشاء الموظفين الـ23 المطلوبين وربط مستخدمي الإدارة المركزية وأمناء الخزائن. الموبايلات والأرقام القومية بيانات وهمية مؤقتة. لن تتكرر السجلات الموجودة.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('إنشاء البيانات')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final db = _db!;
+      final departments = _deps.map((r) => Map<String,dynamic>.from(r)).toList();
+      final jobs = _jobs.map((r) => Map<String,dynamic>.from(r)).toList();
+      final locations = _locs.map((r) => Map<String,dynamic>.from(r)).toList();
+      final branches = (await db.from('erp_branches').select('id,branch_code').eq('company_id', _cid).eq('is_active', true)).map((r) => Map<String,dynamic>.from(r)).toList();
+      final userTypes = (await db.from('erp_user_types').select('id,name_ar').eq('company_id', _cid)).map((r) => Map<String,dynamic>.from(r)).toList();
+      final employeeTypeRows = userTypes.where((r) => _s(r['name_ar']) == 'موظف').toList();
+      if (employeeTypeRows.isEmpty) throw StateError('نوع المستخدم الداخلي موظف غير موجود؛ حدّث أنواع المستخدمين أولًا.');
+      final employeeType = employeeTypeRows.first;
+      final cashboxes = (await db.from('erp_cashboxes').select('id,cashbox_code').eq('company_id', _cid)).map((r) => Map<String,dynamic>.from(r)).toList();
+      final data = <Map<String,dynamic>>[
+        {'name':'علياء مجدي','en':'Alia Magdy','job':'مسئول مشتريات','dep':'مشتريات شركات','depCode':'PUR-SEC-05','jobCode':'JOB-041','loc':'LOC-001','area':'أطلس 4','centralUser':true},
+        {'name':'أمنية جمال','en':'Omnia Gamal','job':'مسئول مشتريات','dep':'مشتريات تجار','depCode':'PUR-SEC-06','jobCode':'JOB-042','loc':'LOC-001','area':'جمال عبد الناصر','centralUser':true},
+        {'name':'زهراء عبد العاطي','en':'Zahraa Abdelatty','job':'مندوب مبيعات Indoor','dep':'مبيعات داخلية','depCode':'SAL-SEC-06','jobCode':'JOB-043','loc':'LOC-001','area':'اسبيكو','centralUser':true},
+        {'name':'علي الجمل','en':'Ali El Gamal','job':'مندوب مبيعات Outdoor','dep':'مبيعات خارجية','depCode':'SAL-SEC-07','jobCode':'JOB-044','loc':'LOC-001','area':'النهضة','centralUser':true},
+        {'name':'هدي محمد','en':'Hoda Mohamed','job':'مندوب مبيعات Joker','dep':'مبيعات جوكر','depCode':'SAL-SEC-08','jobCode':'JOB-045','loc':'LOC-001','area':'الحرفيين','centralUser':true},
+        {'name':'عبير عبد العاطي','en':'Abeer Abdelatty','job':'مندوب مبيعات Call Center','dep':'مبيعات كول سنتر','depCode':'SAL-SEC-11','jobCode':'JOB-046','loc':'LOC-001','area':'مساكن المحمودية','centralUser':true},
+        {'name':'دنيا علي','en':'Donia Ali','job':'مندوب مبيعات Indoor','dep':'مبيعات داخلية','depCode':'SAL-SEC-06','jobCode':'JOB-043','loc':'LOC-001','area':'مدينة السلام 1','centralUser':true},
+        {'name':'محمد عياد','en':'Mohamed Ayad','job':'مشرف حركة سيارات','dep':'حركة سيارات','depCode':'MOV-SEC-03','jobCode':'JOB-049','loc':'001','branch':'001','area':'مدينة السلام 2'},
+        {'name':'محمود ابراهيم','en':'Mahmoud Ibrahim','job':'مشرف حركة سيارات','dep':'حركة سيارات','depCode':'MOV-SEC-03','jobCode':'JOB-049','loc':'002','branch':'002','area':'مساكن الدلتا'},
+        {'name':'اسراء علي','en':'Esraa Ali','job':'مندوب تطبيقات','dep':'تطبيقات','depCode':'SAL-SEC-09','jobCode':'JOB-047','loc':'LOC-001','area':'أبو رجيلة','centralUser':true},
+        {'name':'أحمد عطية','en':'Ahmed Attia','job':'مندوب متابعة عملاء','dep':'متابعة العملاء','depCode':'SAL-SEC-10','jobCode':'JOB-048','loc':'LOC-001','area':'بركة النصر','centralUser':true},
+        {'name':'نادر ابراهيم','en':'Nader Ibrahim','job':'محاسب مراقبة مخزون','dep':'مراقبة المخزون','depCode':'FIN-SEC-07','jobCode':'JOB-050','loc':'001','branch':'001','area':'الشواك'},
+        {'name':'شعبان عيسي','en':'Shaaban Eissa','job':'محاسب مراقبة مخزون','dep':'مراقبة المخزون','depCode':'FIN-SEC-07','jobCode':'JOB-050','loc':'002','branch':'002','area':'منشية السادات'},
+        {'name':'محمود سمير','en':'Mahmoud Samir','job':'محاسب عملاء','dep':'حسابات العملاء','depCode':'FIN-SEC-05','jobCode':'JOB-051','loc':'LOC-001','area':'السلام أول','centralUser':true},
+        {'name':'خالد السيد','en':'Khaled El Sayed','job':'مراجع بنوك','dep':'الخزينة والبنوك','depCode':'FIN-SEC-02','jobCode':'JOB-052','loc':'LOC-001','area':'السلام ثان','centralUser':true},
+        {'name':'شمس نافع','en':'Shams Nafea','job':'مراجع خزائن','dep':'الخزينة والبنوك','depCode':'FIN-SEC-02','jobCode':'JOB-053','loc':'LOC-001','area':'مساكن أطلس','centralUser':true},
+        {'name':'محمود فهمي','en':'Mahmoud Fahmy','job':'محاسب حوافز موردين','dep':'حسابات الموردين','depCode':'FIN-SEC-06','jobCode':'JOB-054','loc':'LOC-001','area':'مساكن النهضة','centralUser':true},
+        {'name':'محمد حمدي','en':'Mohamed Hamdy','job':'محاسب مصروفات','dep':'حسابات منتظمة','depCode':'FIN-SEC-08','jobCode':'JOB-055','loc':'LOC-001','area':'عرب الطويل','centralUser':true},
+        {'name':'احمد شحتة','en':'Ahmed Shehta','job':'أمين خزينة','dep':'الخزينة والبنوك','depCode':'FIN-SEC-02','jobCode':'JOB-004','loc':'LOC-001','area':'النهضة الجديدة','centralUser':true,'cashbox':'CSH-0001'},
+        {'name':'يحي محمد','en':'Yehia Mohamed','job':'مشرف حركة مخازن','dep':'حركة مخازن','depCode':'MOV-SEC-04','jobCode':'JOB-056','loc':'001','branch':'001','area':'مساكن الحرفيين'},
+        {'name':'محمد فوزي','en':'Mohamed Fawzy','job':'مشرف حركة مخازن','dep':'حركة مخازن','depCode':'MOV-SEC-04','jobCode':'JOB-056','loc':'002','branch':'002','area':'مساكن اسبيكو'},
+        {'name':'محمد يوسف','en':'Mohamed Youssef','job':'أمين خزينة','dep':'الخزينة والبنوك','depCode':'FIN-SEC-02','jobCode':'JOB-004','loc':'001','branch':'001','area':'مساكن السلام','cashbox':'CSH-0002'},
+        {'name':'محمد بكر','en':'Mohamed Bakr','job':'أمين خزينة','dep':'الخزينة والبنوك','depCode':'FIN-SEC-02','jobCode':'JOB-004','loc':'002','branch':'002','area':'النهضة','cashbox':'CSH-0005'},
+      ];
+      final existing = (await db.from('erp_employees').select('id,employee_code,full_name').eq('company_id', _cid)).map((r) => Map<String,dynamic>.from(r)).toList();
+      var maxEmployee = 0;
+      for (final row in existing) {
+        final m = RegExp(r'EMP-?(\d+)
+    final id=_selectedEmployeeId;if(id==null||_db==null)return;
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد حذف الموظف'),content:Text('هل تريد حذف '+_ar.text+'؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حذف'))]));
+    if(yes!=true)return;
+    try{await _db!.from('erp_employees').delete().eq('id',id).eq('company_id',_cid);_clear();await _load();if(mounted)setState(()=>_message='تم حذف الموظف.');}catch(e){if(mounted)setState(()=>_error='تعذر حذف الموظف: '+e.toString());}
+  }
+
+  Future<void> _previewEmployee() async {
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('معاينة بيانات الموظف'),content:Text('الكود: '+_code.text+'\nالاسم: '+_ar.text+'\nالإدارة: '+(_dep??_admin??'—')+'\nالوظيفة: '+(_job??'—')+'\nالموبايل: '+_m1.text),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]));
+  }
+
+  Widget _field(TextEditingController c, String label, {bool required = false, TextInputType? type, double width = 245}) {
+    return SizedBox(width: width, child: TextFormField(
+      controller: c, keyboardType: type,
+      readOnly: c == _code,
+      enableInteractiveSelection: c != _code,
+      decoration: InputDecoration(labelText: label, prefixIcon: c == _code ? const Icon(Icons.lock_outline, size: 18) : null, filled: c == _code, fillColor: c == _code ? const Color(0xFFF1EEF4) : null, helperText: c == _code ? 'يُنشأ تلقائيًا ولا يمكن تعديله' : null, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true),
+      validator: (v) {
+        final value = (v ?? '').trim();
+        if (required && value.isEmpty) return 'حقل مطلوب';
+        if (c == _code && value.isNotEmpty && !RegExp(r'^[A-Za-z]+-?[0-9]+$').hasMatch(value)) return 'استخدم حروفًا إنجليزية ثم أرقامًا مثل EMP-0001';
+        if (c == _nationalId && value.isNotEmpty && !RegExp(r'^\d{14}$').hasMatch(value)) return 'الرقم القومي يجب أن يتكون من 14 رقمًا';
+        return null;
+      },
+    ));
+  }
+
+  Widget _drop(String label, String? value, List<DropdownMenuItem<String>> items, ValueChanged<String?> change, {double width = 245}) {
+    return SizedBox(width: width, child: DropdownButtonFormField<String>(
+      value: value, items: items, isExpanded: true, onChanged: change,
+      decoration: InputDecoration(labelText: label, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true),
+    ));
+  }
+
+  Widget _section(String title, IconData icon, List<Widget> children) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14), padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFFE9E1F1))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [Icon(icon, color: _orange), const SizedBox(width: 8), Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple))]),
+        const SizedBox(height: 12), Wrap(spacing: 10, runSpacing: 12, children: children),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.rtl,
+    child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Text('بيانات الموظفين', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _purple)),
+      const SizedBox(height: 8),
+      _employeeToolbar(),
+      if (_cid.isEmpty) Padding(padding: const EdgeInsets.only(bottom: 8), child: TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة UUID', border: OutlineInputBorder()), onSubmitted: (_) => _load())),
+      if (_loading) const LinearProgressIndicator(),
+      if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+      if (_message != null) Text(_message!, style: const TextStyle(color: Colors.green)),
+      if (_readOnly) const Text('تم تحميل الموظف المحدد؛ اضغط تعديل قبل تغيير بياناته.', style: TextStyle(color: _purple,fontWeight:FontWeight.w700)),
+      Expanded(child: SingleChildScrollView(child: IgnorePointer(ignoring: _readOnly, child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _section('بيانات أولية', Icons.badge_outlined, [
+          _field(_code, 'كود الموظف التلقائي *', required: true, width: 185),
+          _field(_ar, 'اسم الموظف عربي *', required: true, width: 220), _field(_en, 'اسم الموظف إنجليزي', width: 220),
+          _drop('الدولة', _country, ['مصر','السعودية','الإمارات','أخرى'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _country = v ?? 'مصر'; }), width: 125),
+          _drop('المحافظة', _geoRows.isEmpty ? (_gov.isEmpty ? null : _gov) : _govGeoId,
+            (_geoRows.isEmpty ? _govs.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
+            (v) => setState(() {
+              _govGeoId = _geoRows.isEmpty ? null : v;
+              _gov = _geoRows.isEmpty ? (v ?? '') : (_first(_geoRows.where((g) => _s(g['id']) == v).map((g) => _s(g['name_ar']))) ?? '');
+              _district = ''; _locality = ''; _districtGeoId = null;
+            }), width: 145),
+          _drop('مركز / حي', _geoRows.isEmpty ? (_district.isEmpty ? null : _district) : _districtGeoId,
+            (_geoRows.isEmpty ? (_districts[_gov] ?? ['المركز الرئيسي','وسط المدينة','حي أول','حي ثان']).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (_govGeoId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
+            (v) => setState(() {
+              _districtGeoId = _geoRows.isEmpty ? null : v;
+              _district = _geoRows.isEmpty ? (v ?? '') : (_first(_geoRows.where((g) => _s(g['id']) == v).map((g) => _s(g['name_ar']))) ?? '');
+              _locality = '';
+            }), width: 150),
+          _drop('منطقة / قرية', _locality.isEmpty ? null : _locality,
+            (_geoRows.isEmpty ? <String>{_locality, 'المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'}.where((v) => v.isNotEmpty).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : ([..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtGeoId ?? '') && _s(g['name_ar']) != _locality).map((g) => DropdownMenuItem<String>(value: _s(g['name_ar']), child: Text(_s(g['name_ar'])))), if (_locality.isNotEmpty) DropdownMenuItem<String>(value: _locality, child: Text(_locality))])).toList(),
+            (v) => setState(() { _locality = v ?? ''; }), width: 155),
+          _field(_address, 'العنوان التفصيلي', width: 285), _field(_map, 'رابط موقع Google Maps', width: 285),
+          OutlinedButton.icon(onPressed: () async {
+            final query = Uri.encodeComponent([_address.text, _district, _gov, _country].where((v) => v.trim().isNotEmpty).join(' '));
+            final uri = Uri.tryParse(_map.text.trim().isEmpty ? 'https://www.google.com/maps/search/?api=1&query=' + query : _map.text.trim());
+            if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }, icon: const Icon(Icons.map_outlined), label: const Text('فتح الموقع على الخرائط')),
+          _field(_nationalId, 'الرقم القومي (14 رقمًا) *', required: true, type: TextInputType.number, width: 190),
+        ]),
+        _section('بيانات العمل والتنظيم', Icons.account_tree_outlined, [
+          _drop('الإدارة', _admin, _deps.where((d) => d['department_level'] != 'section').map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _admin = v; _dep = null; _job = null; }), width: 175),
+          _drop('القسم', _dep, _deps.where((d) => (d['department_level'] == 'section' || d['department_level'] == 'department') && (_admin == null || d['parent_id'] == _admin)).map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _dep = v; _job = null; }), width: 175),
+          _drop('موقع العمل', _loc, _locs.map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar']) + ' • ' + _s(d['location_code'])))).toList(), (v) => setState(() { _loc = v; }), width: 175),
+          _drop('الوظيفة', _job, _availableJobs.map((j) => DropdownMenuItem(value: _s(j['id']), child: Text(_s(j['name_ar']) + ' • ' + _s(j['job_code'])))).toList(), (v) => setState(() { _job = v; }), width: 175),
+          _dateField(_hireDate, 'تاريخ التعيين', width: 150),
+          SizedBox(width: 400, child: Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            for (final item in const [('active', 'نشط'), ('inactive', 'غير نشط'), ('suspended', 'موقوف مؤقتًا'), ('terminated', 'منتهي الخدمة')])
+              InkWell(
+                onTap: () => setState(() => _status = item.$1),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Checkbox(value: _status == item.$1, onChanged: (checked) { if (checked == true) setState(() => _status = item.$1); }, visualDensity: VisualDensity.compact, activeColor: _purple),
+                  Text(item.$2, style: const TextStyle(fontSize: 13)),
+                ]),
+              ),
+          ])),
+          _drop('نوع العقد', _contractType, _contractTypes.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() => _contractType = v ?? 'بدون عقد'), width: 145),
+          if (_contractType == 'بعقد') ...[
+            _dateField(_contractFrom, 'تاريخ العقد من', width: 145), _dateField(_contractTo, 'تاريخ العقد إلى', width: 145),
+            SizedBox(width: 115, child: Padding(padding: const EdgeInsets.only(top: 14), child: Text('المدة: $_contractDuration', style: const TextStyle(fontWeight: FontWeight.w800, color: _purple)))),
+            SizedBox(width: 120, child: Padding(padding: const EdgeInsets.only(top: 14), child: Text(_contractStatus.label, style: TextStyle(color: _contractStatus.color, fontWeight: FontWeight.w900)))),
+          ],
+        ]),
+        _section('بيانات الاتصال', Icons.phone_in_talk_outlined, [
+          _field(_m1, 'موبايل 1', type: TextInputType.phone, width: 155), _field(_m2, 'موبايل 2', type: TextInputType.phone, width: 155),
+          _field(_w1, 'موبايل عمل 1', type: TextInputType.phone, width: 155), _field(_w2, 'موبايل عمل 2', type: TextInputType.phone, width: 155),
+          _field(_relativeMobile, 'موبايل أحد الأقارب', type: TextInputType.phone, width: 180), _field(_relativeRelation, 'صلة القرابة', width: 130),
+        ]),
+      ]))))),
+      _employeeGrid(),
+    ])),
+  );
+}
+).firstMatch(_s(row['employee_code']));
+        final n = int.tryParse(m?.group(1) ?? '') ?? 0;
+        if (n > maxEmployee) maxEmployee = n;
+      }
+      var createdEmployees = 0;
+      final employeeIdsByName = <String,String>{for (final row in existing) _s(row['full_name']):_s(row['id'])};
+      for (final item in data) {
+        if (employeeIdsByName.containsKey(_s(item['name']))) continue;
+        final depRows = departments.where((r) => _s(r['department_code']) == _s(item['depCode'])).toList();
+        final jobRows = jobs.where((r) => _s(r['job_code']) == _s(item['jobCode'])).toList();
+        final locRows = locations.where((r) => _s(r['location_code']) == _s(item['loc'])).toList();
+        final branchRows = branches.where((r) => _s(r['branch_code']) == _s(item['branch'])).toList();
+        if (depRows.isEmpty || jobRows.isEmpty || locRows.isEmpty) {
+          throw StateError('تعذر تحديد الإدارة أو القسم أو الوظيفة أو الموقع للموظف ' + _s(item['name']) + '. حدّث بيانات الموارد البشرية.');
+        }
+        final dep = depRows.first;
+        final job = jobRows.first;
+        final loc = locRows.first;
+        maxEmployee++;
+        final n = maxEmployee;
+        final nationalId = '000000000000' + n.toString().padLeft(2,'0');
+        final inserted = await db.from('erp_employees').insert({
+          'company_id':_cid,'branch_id':branchRows.isEmpty ? null : branchRows.first['id'],
+          'employee_code':'EMP-' + n.toString().padLeft(4,'0'),
+          'full_name':item['name'],'full_name_en':item['en'],'national_id':nationalId,'national_id_last4':nationalId.substring(10),
+          'phone':'010000000' + n.toString().padLeft(2,'0'),'mobile_1':'010000000' + n.toString().padLeft(2,'0'),
+          'work_mobile_1':'011000000' + n.toString().padLeft(2,'0'),'job_title':item['job'],'department_name':item['dep'],
+          'administration_id':dep['parent_id'],'department_id':dep['id'],'job_id':job['id'],'work_location_id':loc['id'],
+          'employment_status':'active','is_active':true,'country':'مصر','governorate':'القاهرة','district':'السلام',
+          'locality':item['area'],'address':'أطلس 4 بجوار الملعب عملية 1248 بلوك 7 مدخل 1 شقة 11',
+          'hire_date':'2027-01-01','contract_type':'بعقد','contract_start_date':'2027-01-01','contract_end_date':'2029-12-31',
+          'relative_mobile':'011100000' + n.toString().padLeft(2,'0'),'relative_relation':'أخ',
+          'notes':'بيانات أولية مؤقتة؛ رقم قومي وموبايل وهميان للتعديل لاحقًا',
+        }).select('id').single();
+        employeeIdsByName[_s(item['name'])]=_s(inserted['id']);
+        createdEmployees++;
+      }
+      final currentUsers = (await db.from('erp_users').select('user_code,employee_id').eq('company_id',_cid)).map((r)=>Map<String,dynamic>.from(r)).toList();
+      var maxUser = 0;
+      for (final row in currentUsers) {
+        final m=RegExp(r'(\d+)
+    final id=_selectedEmployeeId;if(id==null||_db==null)return;
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد حذف الموظف'),content:Text('هل تريد حذف '+_ar.text+'؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حذف'))]));
+    if(yes!=true)return;
+    try{await _db!.from('erp_employees').delete().eq('id',id).eq('company_id',_cid);_clear();await _load();if(mounted)setState(()=>_message='تم حذف الموظف.');}catch(e){if(mounted)setState(()=>_error='تعذر حذف الموظف: '+e.toString());}
+  }
+
+  Future<void> _previewEmployee() async {
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('معاينة بيانات الموظف'),content:Text('الكود: '+_code.text+'\nالاسم: '+_ar.text+'\nالإدارة: '+(_dep??_admin??'—')+'\nالوظيفة: '+(_job??'—')+'\nالموبايل: '+_m1.text),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]));
+  }
+
+  Widget _field(TextEditingController c, String label, {bool required = false, TextInputType? type, double width = 245}) {
+    return SizedBox(width: width, child: TextFormField(
+      controller: c, keyboardType: type,
+      readOnly: c == _code,
+      enableInteractiveSelection: c != _code,
+      decoration: InputDecoration(labelText: label, prefixIcon: c == _code ? const Icon(Icons.lock_outline, size: 18) : null, filled: c == _code, fillColor: c == _code ? const Color(0xFFF1EEF4) : null, helperText: c == _code ? 'يُنشأ تلقائيًا ولا يمكن تعديله' : null, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true),
+      validator: (v) {
+        final value = (v ?? '').trim();
+        if (required && value.isEmpty) return 'حقل مطلوب';
+        if (c == _code && value.isNotEmpty && !RegExp(r'^[A-Za-z]+-?[0-9]+$').hasMatch(value)) return 'استخدم حروفًا إنجليزية ثم أرقامًا مثل EMP-0001';
+        if (c == _nationalId && value.isNotEmpty && !RegExp(r'^\d{14}$').hasMatch(value)) return 'الرقم القومي يجب أن يتكون من 14 رقمًا';
+        return null;
+      },
+    ));
+  }
+
+  Widget _drop(String label, String? value, List<DropdownMenuItem<String>> items, ValueChanged<String?> change, {double width = 245}) {
+    return SizedBox(width: width, child: DropdownButtonFormField<String>(
+      value: value, items: items, isExpanded: true, onChanged: change,
+      decoration: InputDecoration(labelText: label, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true),
+    ));
+  }
+
+  Widget _section(String title, IconData icon, List<Widget> children) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14), padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: const Color(0xFFE9E1F1))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [Icon(icon, color: _orange), const SizedBox(width: 8), Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _purple))]),
+        const SizedBox(height: 12), Wrap(spacing: 10, runSpacing: 12, children: children),
+      ]),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.rtl,
+    child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Text('بيانات الموظفين', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _purple)),
+      const SizedBox(height: 8),
+      _employeeToolbar(),
+      if (_cid.isEmpty) Padding(padding: const EdgeInsets.only(bottom: 8), child: TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة UUID', border: OutlineInputBorder()), onSubmitted: (_) => _load())),
+      if (_loading) const LinearProgressIndicator(),
+      if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+      if (_message != null) Text(_message!, style: const TextStyle(color: Colors.green)),
+      if (_readOnly) const Text('تم تحميل الموظف المحدد؛ اضغط تعديل قبل تغيير بياناته.', style: TextStyle(color: _purple,fontWeight:FontWeight.w700)),
+      Expanded(child: SingleChildScrollView(child: IgnorePointer(ignoring: _readOnly, child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        _section('بيانات أولية', Icons.badge_outlined, [
+          _field(_code, 'كود الموظف التلقائي *', required: true, width: 185),
+          _field(_ar, 'اسم الموظف عربي *', required: true, width: 220), _field(_en, 'اسم الموظف إنجليزي', width: 220),
+          _drop('الدولة', _country, ['مصر','السعودية','الإمارات','أخرى'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _country = v ?? 'مصر'; }), width: 125),
+          _drop('المحافظة', _geoRows.isEmpty ? (_gov.isEmpty ? null : _gov) : _govGeoId,
+            (_geoRows.isEmpty ? _govs.map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
+            (v) => setState(() {
+              _govGeoId = _geoRows.isEmpty ? null : v;
+              _gov = _geoRows.isEmpty ? (v ?? '') : (_first(_geoRows.where((g) => _s(g['id']) == v).map((g) => _s(g['name_ar']))) ?? '');
+              _district = ''; _locality = ''; _districtGeoId = null;
+            }), width: 145),
+          _drop('مركز / حي', _geoRows.isEmpty ? (_district.isEmpty ? null : _district) : _districtGeoId,
+            (_geoRows.isEmpty ? (_districts[_gov] ?? ['المركز الرئيسي','وسط المدينة','حي أول','حي ثان']).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : _geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (_govGeoId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))).toList(),
+            (v) => setState(() {
+              _districtGeoId = _geoRows.isEmpty ? null : v;
+              _district = _geoRows.isEmpty ? (v ?? '') : (_first(_geoRows.where((g) => _s(g['id']) == v).map((g) => _s(g['name_ar']))) ?? '');
+              _locality = '';
+            }), width: 150),
+          _drop('منطقة / قرية', _locality.isEmpty ? null : _locality,
+            (_geoRows.isEmpty ? <String>{_locality, 'المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'}.where((v) => v.isNotEmpty).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : ([..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtGeoId ?? '') && _s(g['name_ar']) != _locality).map((g) => DropdownMenuItem<String>(value: _s(g['name_ar']), child: Text(_s(g['name_ar'])))), if (_locality.isNotEmpty) DropdownMenuItem<String>(value: _locality, child: Text(_locality))])).toList(),
+            (v) => setState(() { _locality = v ?? ''; }), width: 155),
+          _field(_address, 'العنوان التفصيلي', width: 285), _field(_map, 'رابط موقع Google Maps', width: 285),
+          OutlinedButton.icon(onPressed: () async {
+            final query = Uri.encodeComponent([_address.text, _district, _gov, _country].where((v) => v.trim().isNotEmpty).join(' '));
+            final uri = Uri.tryParse(_map.text.trim().isEmpty ? 'https://www.google.com/maps/search/?api=1&query=' + query : _map.text.trim());
+            if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }, icon: const Icon(Icons.map_outlined), label: const Text('فتح الموقع على الخرائط')),
+          _field(_nationalId, 'الرقم القومي (14 رقمًا) *', required: true, type: TextInputType.number, width: 190),
+        ]),
+        _section('بيانات العمل والتنظيم', Icons.account_tree_outlined, [
+          _drop('الإدارة', _admin, _deps.where((d) => d['department_level'] != 'section').map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _admin = v; _dep = null; _job = null; }), width: 175),
+          _drop('القسم', _dep, _deps.where((d) => (d['department_level'] == 'section' || d['department_level'] == 'department') && (_admin == null || d['parent_id'] == _admin)).map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar'])))).toList(), (v) => setState(() { _dep = v; _job = null; }), width: 175),
+          _drop('موقع العمل', _loc, _locs.map((d) => DropdownMenuItem(value: _s(d['id']), child: Text(_s(d['name_ar']) + ' • ' + _s(d['location_code'])))).toList(), (v) => setState(() { _loc = v; }), width: 175),
+          _drop('الوظيفة', _job, _availableJobs.map((j) => DropdownMenuItem(value: _s(j['id']), child: Text(_s(j['name_ar']) + ' • ' + _s(j['job_code'])))).toList(), (v) => setState(() { _job = v; }), width: 175),
+          _dateField(_hireDate, 'تاريخ التعيين', width: 150),
+          SizedBox(width: 400, child: Wrap(spacing: 12, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            for (final item in const [('active', 'نشط'), ('inactive', 'غير نشط'), ('suspended', 'موقوف مؤقتًا'), ('terminated', 'منتهي الخدمة')])
+              InkWell(
+                onTap: () => setState(() => _status = item.$1),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Checkbox(value: _status == item.$1, onChanged: (checked) { if (checked == true) setState(() => _status = item.$1); }, visualDensity: VisualDensity.compact, activeColor: _purple),
+                  Text(item.$2, style: const TextStyle(fontSize: 13)),
+                ]),
+              ),
+          ])),
+          _drop('نوع العقد', _contractType, _contractTypes.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() => _contractType = v ?? 'بدون عقد'), width: 145),
+          if (_contractType == 'بعقد') ...[
+            _dateField(_contractFrom, 'تاريخ العقد من', width: 145), _dateField(_contractTo, 'تاريخ العقد إلى', width: 145),
+            SizedBox(width: 115, child: Padding(padding: const EdgeInsets.only(top: 14), child: Text('المدة: $_contractDuration', style: const TextStyle(fontWeight: FontWeight.w800, color: _purple)))),
+            SizedBox(width: 120, child: Padding(padding: const EdgeInsets.only(top: 14), child: Text(_contractStatus.label, style: TextStyle(color: _contractStatus.color, fontWeight: FontWeight.w900)))),
+          ],
+        ]),
+        _section('بيانات الاتصال', Icons.phone_in_talk_outlined, [
+          _field(_m1, 'موبايل 1', type: TextInputType.phone, width: 155), _field(_m2, 'موبايل 2', type: TextInputType.phone, width: 155),
+          _field(_w1, 'موبايل عمل 1', type: TextInputType.phone, width: 155), _field(_w2, 'موبايل عمل 2', type: TextInputType.phone, width: 155),
+          _field(_relativeMobile, 'موبايل أحد الأقارب', type: TextInputType.phone, width: 180), _field(_relativeRelation, 'صلة القرابة', width: 130),
+        ]),
+      ]))))),
+      _employeeGrid(),
+    ])),
+  );
+}
+).firstMatch(_s(row['user_code']));
+        final n=int.tryParse(m?.group(1)??'')??0;
+        if(n>maxUser)maxUser=n;
+      }
+      var createdUsers=0;
+      for(final item in data.where((r)=>r['centralUser']==true || r['cashbox']!=null)) {
+        final employeeId=employeeIdsByName[_s(item['name'])];
+        if(employeeId==null || currentUsers.any((u)=>_s(u['employee_id'])==employeeId)) continue;
+        maxUser++;
+        final cashboxRows=cashboxes.where((r)=>_s(r['cashbox_code'])==_s(item['cashbox'])).toList();
+        final user=await db.from('erp_users').insert({
+          'company_id':_cid,'user_code':'USR' + maxUser.toString().padLeft(4,'0'),
+          'name_ar':item['name'],'name_en':item['en'],'user_type_id':employeeType['id'],
+          'employee_id':employeeId,'is_active':true,'has_sub_warehouse':false,
+          'cashbox_id':cashboxRows.isEmpty ? null : cashboxRows.first['id'],
+        }).select('id').single();
+        final title=_s(item['job']);
+        final menuKey=title.contains('مشتريات')?'مشتريات':(title.contains('مندوب')?'مبيعات':(title.contains('محاسب')||title.contains('مراجع')||title.contains('خزينة')?'حسابات مالية':'مخازن'));
+        await db.from('erp_user_permissions').upsert({
+          'company_id':_cid,'user_id':user['id'],'menu_key':menuKey,
+          'allow_access':true,'can_add':true,'can_edit':true,'can_delete':false,
+          'can_save':true,'can_print':true,'can_export_excel':true,'can_export_pdf':true,
+        },onConflict:'company_id,user_id,menu_key');
+        createdUsers++;
+      }
+      if (!mounted) return;
+      setState(() {
+        _saving=false;
+        _message='تمت التهيئة: أضيف ' + createdEmployees.toString() + ' موظفًا جديدًا و' + createdUsers.toString() + ' مستخدم ERP بصلاحيات مؤقتة. أكواد الموظفين والمستخدمين أُنشئت تلقائيًا.';
+      });
+      await _load();
+    } catch (e) {
+      if (mounted) setState(() { _saving=false; _error='تعذرت تهيئة الموظفين والمستخدمين: ' + e.toString(); });
+    }
   }
 
   Future<void> _deleteEmployee() async {
