@@ -513,6 +513,20 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     ));
   }
 
+  List<DropdownMenuItem<String>> _areaItems() {
+    if (_geoRows.isEmpty) {
+      final options = <String>{_locality, 'المنطقة الرئيسية', 'المنطقة الصناعية', 'وسط البلد', 'منطقة سكنية', 'القرية الرئيسية'}
+          .where((value) => value.isNotEmpty);
+      return options.map((value) => DropdownMenuItem<String>(value: value, child: Text(value))).toList();
+    }
+    final items = _geoRows
+        .where((row) => row['level'] == 'area' && _s(row['parent_id']) == (_districtGeoId ?? '') && _s(row['name_ar']) != _locality)
+        .map((row) => DropdownMenuItem<String>(value: _s(row['name_ar']), child: Text(_s(row['name_ar']))))
+        .toList();
+    if (_locality.isNotEmpty) items.add(DropdownMenuItem<String>(value: _locality, child: Text(_locality)));
+    return items;
+  }
+
   Widget _section(String title, IconData icon, List<Widget> children) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14), padding: const EdgeInsets.all(14),
@@ -556,7 +570,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
               _locality = '';
             }), width: 150),
           _drop('منطقة / قرية', _locality.isEmpty ? null : _locality,
-            (_geoRows.isEmpty ? <String>{_locality, 'المنطقة الرئيسية','المنطقة الصناعية','وسط البلد','منطقة سكنية','القرية الرئيسية'}.where((v) => v.isNotEmpty).map((v) => DropdownMenuItem<String>(value: v, child: Text(v))) : ([..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtGeoId ?? '') && _s(g['name_ar']) != _locality).map((g) => DropdownMenuItem<String>(value: _s(g['name_ar']), child: Text(_s(g['name_ar'])))), if (_locality.isNotEmpty) DropdownMenuItem<String>(value: _locality, child: Text(_locality))])).toList(),
+            _areaItems(),
             (v) => setState(() { _locality = v ?? ''; }), width: 155),
           _field(_address, 'العنوان التفصيلي', width: 285), _field(_map, 'رابط موقع Google Maps', width: 285),
           OutlinedButton.icon(onPressed: () async {
