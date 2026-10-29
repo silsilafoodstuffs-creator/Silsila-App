@@ -1992,7 +1992,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               const SizedBox(height: 12),
               GridView.count(
                 crossAxisCount: wide ? 5 : 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8, crossAxisSpacing: 8, mainAxisExtent: 64, childAspectRatio: wide ? 2.5 : 2.8,
+                mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: wide ? 1.7 : 1.7,
                 children: [
                   metric('قيمة الأصناف', '${_money(gross)} ج.م'),
                   metric('خصم الفاتورة %', '${_money((gross - lineDiscounts) <= 0 ? 0 : invoiceDiscount * 100 / (gross - lineDiscounts))}%'),
