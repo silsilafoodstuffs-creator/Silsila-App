@@ -98,6 +98,18 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'تقارير الفاتورة الإلكترونية': <String>['erp_einvoice_documents', 'erp_einvoice_submissions'],
   };
 
+  static const Map<String, String> _searchColumns = <String, String>{
+    'erp_items': 'item_name',
+    'erp_parties': 'party_name',
+    'erp_sales_documents': 'document_number',
+    'erp_purchase_documents': 'document_number',
+    'erp_inventory_movements': 'notes',
+    'erp_branches': 'branch_name',
+    'erp_workspace_records': 'record_key',
+    'erp_sales_representatives': 'rep_name',
+    'erp_cash_vouchers': 'voucher_number',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -146,11 +158,16 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     Object? lastError;
     for (final table in candidates) {
       try {
-        final raw = await Supabase.instance.client
+        var query = Supabase.instance.client
             .from(table)
             .select('*')
-            .eq('company_id', company)
-            .range(0, _pageSize - 1);
+            .eq('company_id', company);
+        final searchColumn = _searchColumns[table];
+        final searchTerm = _search.trim();
+        if (searchTerm.isNotEmpty && searchColumn != null) {
+          query = query.ilike(searchColumn, '%$searchTerm%');
+        }
+        final raw = await query.range(0, _pageSize - 1);
         if (!mounted) return;
         setState(() {
           _rows = (raw as List)
@@ -182,11 +199,16 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     if (company.isEmpty || table == null || _loadingMore || !_hasMore) return;
     setState(() => _loadingMore = true);
     try {
-      final raw = await Supabase.instance.client
+      var query = Supabase.instance.client
           .from(table)
           .select('*')
-          .eq('company_id', company)
-          .range(_nextOffset, _nextOffset + _pageSize - 1);
+          .eq('company_id', company);
+      final searchColumn = _searchColumns[table];
+      final searchTerm = _search.trim();
+      if (searchTerm.isNotEmpty && searchColumn != null) {
+        query = query.ilike(searchColumn, '%$searchTerm%');
+      }
+      final raw = await query.range(_nextOffset, _nextOffset + _pageSize - 1);
       if (!mounted) return;
       final batch = (raw as List)
           .whereType<Map<String, dynamic>>()
@@ -273,8 +295,9 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
                     style: TextStyle(color: Color(0xFF7A4A00), fontSize: 12, height: 1.4)),
                 const SizedBox(height: 10),
                 TextField(
-                  decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'بحث داخل التقرير', border: OutlineInputBorder(), isDense: true),
+                  decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'بحث في البيانات (اضغط Enter للبحث على الخادم)', border: OutlineInputBorder(), isDense: true),
                   onChanged: (value) => setState(() => _search = value),
+                  onSubmitted: (_) => _load(),
                 ),
               ]),
             ),
