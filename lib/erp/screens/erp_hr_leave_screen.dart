@@ -1,4 +1,10 @@
+import 'package:excel/excel.dart' hide Border;
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../services/erp_hr_repository.dart';
 
@@ -34,6 +40,85 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
     reason.dispose();
   }
   Future<void> decide(Map<String,dynamic> r,String action)async{setState(()=>saving=true);try{await _repo.decideLeave(s(r['id']),action);if(mounted)setState(()=>message=action=='approved'?'تم اعتماد طلب الإجازة.':'تم رفض طلب الإجازة.');await load();}catch(e){if(mounted)setState(()=>error='تعذر تحديث الطلب: $e');}finally{if(mounted)setState(()=>saving=false);}}
+  List<String> _leaveHeaders() => const ['كود الموظف', 'اسم الموظف', 'نوع الإجازة', 'من تاريخ', 'إلى تاريخ', 'عدد الأيام', 'الحالة', 'السبب / الملاحظات'];
+  List<List<String>> _leaveRows() => requests.map((r) {
+    final rawStatus = s(r['status']).toLowerCase();
+    final status = rawStatus == 'approved' ? 'معتمد' : rawStatus == 'rejected' ? 'مرفوض' : rawStatus == 'pending' ? 'في انتظار الاعتماد' : s(r['status']);
+    final employee = employees.where((e) => s(e['id']) == s(r['employee_id']));
+    final person = employee.isEmpty ? <String, dynamic>{} : employee.first;
+    return [s(person['employee_code']), s(person['full_name']).isEmpty ? name(r['employee_id']) : s(person['full_name']), s(r['leave_type']), s(r['starts_on']), s(r['ends_on']), s(r['requested_days']), status, s(r['reason'])];
+  }).toList();
+
+  Future<Uint8List> _leavePdfBytes() async {
+    final headers = _leaveHeaders().reversed.toList();
+    final rows = _leaveRows().map((row) => row.reversed.toList()).toList();
+    final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+    final pdf = pw.Document();
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4.landscape,
+      margin: const pw.EdgeInsets.all(20),
+      theme: pw.ThemeData.withFont(base: font, bold: font),
+      build: (_) => [
+        pw.Text('سلسلة — الإجازات والأذونات', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 5),
+        pw.Text('الشركة: ${_company.text.trim()}    •    تاريخ التقرير: ${date(DateTime.now())}    •    عدد الطلبات: ${rows.length}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
+        pw.SizedBox(height: 12),
+        if (rows.isEmpty) pw.Text('لا توجد طلبات إجازة.', textAlign: pw.TextAlign.right)
+        else pw.TableHelper.fromTextArray(headers: headers, data: rows, headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold), cellStyle: const pw.TextStyle(fontSize: 8), cellAlignment: pw.Alignment.centerRight, headerAlignment: pw.Alignment.centerRight),
+      ],
+    ));
+    return Uint8List.fromList(await pdf.save());
+  }
+
+  Future<void> exportExcel() async {
+    final rows = _leaveRows();
+    if (rows.isEmpty) { setState(() => message = 'لا توجد طلبات إجازة لتصديرها.'); return; }
+    setState(() { loading = true; error = null; message = null; });
+    try {
+      final workbook = Excel.createExcel();
+      final sheet = workbook['الإجازات'];
+      sheet.appendRow(_leaveHeaders().map((x) => TextCellValue(x)).toList());
+      for (final row in rows) {
+        sheet.appendRow(row.map((x) => TextCellValue(x)).toList());
+      }
+      final encoded = workbook.encode();
+      if (encoded == null || encoded.isEmpty) throw StateError('تعذر إنشاء ملف Excel.');
+      await FileSaver.instance.saveFile(name: 'silsila_leaves_${DateTime.now().millisecondsSinceEpoch}', bytes: Uint8List.fromList(encoded), fileExtension: 'xlsx', mimeType: MimeType.microsoftExcel);
+      if (mounted) setState(() => message = 'تم تصدير ${rows.length} طلب إجازة إلى Excel.');
+    } catch (e) {
+      if (mounted) setState(() => error = 'تعذر تصدير Excel: $e');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> exportPdf() async {
+    if (requests.isEmpty) { setState(() => message = 'لا توجد طلبات إجازة لتصديرها.'); return; }
+    setState(() { loading = true; error = null; message = null; });
+    try {
+      final bytes = await _leavePdfBytes();
+      await FileSaver.instance.saveFile(name: 'silsila_leaves_${DateTime.now().millisecondsSinceEpoch}', bytes: bytes, fileExtension: 'pdf', mimeType: MimeType.pdf);
+      if (mounted) setState(() => message = 'تم إنشاء ملف PDF وتنزيله.');
+    } catch (e) {
+      if (mounted) setState(() => error = 'تعذر إنشاء PDF: $e');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> printLeaves() async {
+    if (requests.isEmpty) { setState(() => message = 'لا توجد طلبات إجازة للطباعة.'); return; }
+    setState(() { loading = true; error = null; message = null; });
+    try {
+      final bytes = await _leavePdfBytes();
+      await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'silsila_leaves.pdf');
+    } catch (e) {
+      if (mounted) setState(() => error = 'تعذرت طباعة الإجازات: $e');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
   Future<void> preview()async{await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:const Text('معاينة الإجازات'),content:SizedBox(width:650,child:requests.isEmpty?const Text('لا توجد طلبات إجازة.'):SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:requests.take(100).map((r)=>ListTile(title:Text(name(r['employee_id'])),subtitle:Text('${s(r['leave_type'])} • ${s(r['starts_on'])} إلى ${s(r['ends_on'])} • ${s(r['status'])}'))).toList()))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]));}
   @override
   Widget build(BuildContext context) {
@@ -44,9 +129,9 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
       task('تعديل', Icons.edit_outlined, orange, null),
       task('حذف', Icons.delete_outline, Colors.red, null),
       task('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), preview),
-      task('طباعة', Icons.print_outlined, const Color(0xFF536DFE), () => setState(() => message = 'استخدم طباعة المتصفح بعد فتح المعاينة.')),
-      task('Excel', Icons.table_view_outlined, const Color(0xFF168447), () => setState(() => message = 'تصدير Excel غير مربوط حتى الآن.')),
-      task('PDF', Icons.picture_as_pdf_outlined, Colors.red, () => setState(() => message = 'تصدير PDF غير مربوط حتى الآن.')),
+      task('طباعة', Icons.print_outlined, const Color(0xFF536DFE), loading ? null : printLeaves),
+      task('Excel', Icons.table_view_outlined, const Color(0xFF168447), loading ? null : exportExcel),
+      task('PDF', Icons.picture_as_pdf_outlined, Colors.red, loading ? null : exportPdf),
     ]);
     return Directionality(
       textDirection: TextDirection.rtl,

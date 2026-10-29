@@ -1,4 +1,10 @@
+import 'package:excel/excel.dart' hide Border;
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 
@@ -110,6 +116,146 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
   Future<void> processFingerprint()async{if(locked){setState(()=>error='الشهر مقفل؛ لن تعدّل المعالجة السجلات.');return;}setState(()=>saving=true);try{final buckets=<String,List<Map<String,dynamic>>>{};for(final e in events.where((x)=>s(x['processing_status'])!='processed'&&s(x['employee_id']).isNotEmpty)){final at=DateTime.tryParse(s(e['event_at']));if(at==null)continue;(buckets['${s(e['employee_id'])}|${date(at)}']??=<Map<String,dynamic>>[]).add(e);}var count=0;for(final entry in buckets.entries){final parts=entry.key.split('|');final person=emp(parts.first);if(person==null)continue;final list=entry.value..sort((a,b)=>s(a['event_at']).compareTo(s(b['event_at'])));await _db.from('erp_attendance_records').upsert({'company_id':_company.text.trim(),'employee_id':person['id'],'work_date':parts.last,'check_in':list.first['event_at'],'check_out':list.length>1?list.last['event_at']:null,'attendance_status':'present','attendance_fraction':1,'absence_type':null,'absence_penalty_days':0,'attendance_source':'fingerprint','notes':'معالجة من جهاز البصمة'},onConflict:'employee_id,work_date');for(final e in list){await _db.from('erp_hr_attendance_events').update({'processing_status':'processed','processing_note':'مطابقة ${s(person['employee_code'])}'}).eq('id',s(e['id']));}count++;}if(mounted)setState(()=>message='تمت معالجة $count مجموعة حضور من البصمة.');await load();}catch(e){if(mounted)setState(()=>error='تعذرت معالجة البصمات: $e');}finally{if(mounted)setState(()=>saving=false);}}
   Future<void> matchEvent(Map<String,dynamic> event)async{final e=await search(false);if(e==null)return;try{await _db.from('erp_hr_attendance_events').update({'employee_id':e['id'],'processing_note':'مطابقة يدوية'}).eq('id',s(event['id']));await load();}catch(err){if(mounted)setState(()=>error='تعذرت المطابقة: $err');}}
   Widget fingerprint(){final pending=events.where((e)=>s(e['processing_status'])!='processed'||s(e['employee_id']).isEmpty).length;return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(children:[Expanded(child:Text('حضور جهاز البصمة • ${devices.length} جهاز • ${events.length} حركة',style:const TextStyle(fontWeight:FontWeight.w900))),FilledButton.icon(onPressed:loading?null:load,icon:const Icon(Icons.sync),label:const Text('تحديث')),FilledButton.icon(onPressed:saving||locked?null:processFingerprint,icon:const Icon(Icons.fact_check_outlined),label:const Text('معالجة البصمات'))]),if(locked)notice('الشهر مقفل بالرواتب.',Colors.red),Wrap(spacing:8,children:[Chip(label:Text('الأجهزة: ${devices.length}')),Chip(label:Text('حركات غير معالجة: $pending')),Chip(label:Text('الموظفون: ${employees.length}'))]),const Text('شجرة قوة العمل',style:TextStyle(fontWeight:FontWeight.w900)),...locations.map((l)=>Card(child:ExpansionTile(leading:const Icon(Icons.location_city,color:purple),title:Text('${s(l['location_code'])} • ${s(l['name_ar'])}'),children:departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['work_location_id'])==s(l['id'])).map(deptNode).toList()))),const SizedBox(height:8),const Text('أجهزة البصمة المسجلة',style:TextStyle(fontWeight:FontWeight.w900)),if(devices.isEmpty)const Text('لا توجد أجهزة مسجلة. أضفها من شاشة أجهزة البصمة وربط الحضور.'),...devices.map((d)=>Card(child:ListTile(leading:const Icon(Icons.fingerprint,color:purple),title:Text(s(d['device_name'])),subtitle:Text('${s(d['manufacturer'])} ${s(d['model'])} • ${s(d['ip_address'])}:${s(d['port'])}\nآخر مزامنة: ${s(d['last_sync_at'])}'),trailing:Chip(label:Text(s(d['status']).isEmpty?'غير معروف':s(d['status'])))))),const SizedBox(height:8),const Text('الحركات الخام — الأحدث أولًا',style:TextStyle(fontWeight:FontWeight.w900)),if(events.isEmpty)const Text('لا توجد حركات بصمة مستوردة للفترة المحددة.'),...events.take(250).map((e)=>Card(child:ListTile(dense:true,leading:Icon(s(e['processing_status'])=='processed'?Icons.check_circle:Icons.schedule,color:s(e['processing_status'])=='processed'?Colors.green:orange),title:Text(emp(s(e['employee_id']))==null?'كود البصمة: ${s(e['employee_code'])}':empName(e['employee_id'])),subtitle:Text('${s(e['event_at'])} • ${s(e['event_type'])} • ${s(e['processing_status'])}'),trailing:emp(s(e['employee_id']))==null?TextButton(onPressed:()=>matchEvent(e),child:const Text('مطابقة')):null)))]);}
+  Map<String, dynamic> _exportData() {
+    final headers = <String>[];
+    final rows = <List<String>>[];
+    String status(bool present, bool absent) => absent ? 'غياب' : present ? 'حضور' : 'لم يحدد';
+    if (_tabs.index == 0) {
+      headers.addAll(['نوع السجل', 'الكود', 'الاسم بالعربية', 'الاسم بالإنجليزية', 'موقع العمل', 'يتبع', 'الحالة']);
+      for (final l in locations) {
+        rows.add(['موقع عمل', s(l['location_code']), s(l['name_ar']), s(l['name_en']), s(l['name_ar']), '—', l['is_active'] == false ? 'غير نشط' : 'نشط']);
+      }
+      for (final d in departments) {
+        final location = locations.where((x) => s(x['id']) == s(d['work_location_id']));
+        final parent = departments.where((x) => s(x['id']) == s(d['parent_id']));
+        rows.add(['إدارة / قسم', s(d['department_code']), s(d['name_ar']), s(d['name_en']), location.isEmpty ? '—' : s(location.first['name_ar']), parent.isEmpty ? '—' : s(parent.first['name_ar']), d['is_active'] == false ? 'غير نشط' : 'نشط']);
+      }
+      for (final j in jobs) {
+        final department = departments.where((x) => s(x['id']) == s(j['department_id']));
+        rows.add(['وظيفة', s(j['job_code']), s(j['name_ar']), s(j['name_en']), '—', department.isEmpty ? '—' : s(department.first['name_ar']), j['is_active'] == false ? 'غير نشط' : 'نشط']);
+      }
+    } else if (_tabs.index == 1) {
+      headers.addAll(['التاريخ', 'كود الموظف', 'اسم الموظف', 'كود الوظيفة', 'اسم الوظيفة', 'موقع العمل', 'الإدارة / القسم', 'الحالة', 'نوع الحضور', 'حالة الغياب', 'جزاء الغياب']);
+      for (final x in daily.values) {
+        final e = emp(s(x['employeeId']));
+        if (e == null) continue;
+        final jobId = s(x['jobId']).isEmpty ? s(e['job_id']) : s(x['jobId']);
+        final jobRows = jobs.where((j) => s(j['id']) == jobId);
+        final job = jobRows.isEmpty ? <String, dynamic>{} : jobRows.first;
+        final locRows = locations.where((l) => s(l['id']) == s(e['work_location_id']));
+        rows.add([
+          date(day), s(e['employee_code']), s(e['full_name']), s(job['job_code']), s(job['name_ar']).isEmpty ? s(e['job_title']) : s(job['name_ar']),
+          locRows.isEmpty ? '—' : s(locRows.first['name_ar']), s(e['department_name']), status(x['present'] == true, x['absent'] == true),
+          x['present'] == true ? s(x['fraction']) : '—', x['absent'] == true ? s(x['absenceType']) : '—',
+          x['absent'] == true && s(x['absenceType']) == 'غياب بدون إذن' ? s(x['penalty']) : 'بدون جزاء',
+        ]);
+      }
+    } else {
+      headers.addAll(['نوع السجل', 'الجهاز / الكود', 'اسم الجهاز / الموظف', 'كود الموظف', 'اسم الموظف', 'التاريخ والوقت', 'نوع الحركة', 'حالة المعالجة', 'ملاحظات']);
+      for (final d in devices) {
+        rows.add(['جهاز', s(d['device_code']).isEmpty ? s(d['id']) : s(d['device_code']), s(d['device_name']), '', '', s(d['last_sync_at']), s(d['manufacturer']) + ' ' + s(d['model']), s(d['status']), s(d['ip_address']) + ':' + s(d['port'])]);
+      }
+      for (final e in events) {
+        final person = emp(s(e['employee_id']));
+        rows.add(['حركة بصمة', s(e['device_id']), person == null ? s(e['employee_code']) : s(person['full_name']), person == null ? s(e['employee_code']) : s(person['employee_code']), person == null ? 'غير مطابق' : s(person['full_name']), s(e['event_at']), s(e['event_type']), s(e['processing_status']), s(e['processing_note'])]);
+      }
+    }
+    final titles = ['قوة العمل', 'الحضور اليدوي', 'حضور جهاز البصمة'];
+    return {'title': 'الحضور والانصراف — ${titles[_tabs.index]}', 'sheet': titles[_tabs.index], 'headers': headers, 'rows': rows};
+  }
+
+  Future<Uint8List> _attendancePdfBytes() async {
+    final data = _exportData();
+    final headers = List<String>.from(data['headers'] as List).reversed.toList();
+    final rows = (data['rows'] as List).map((r) => List<String>.from(r as List).reversed.toList()).toList();
+    final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+    final pdf = pw.Document();
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4.landscape,
+      margin: const pw.EdgeInsets.all(20),
+      theme: pw.ThemeData.withFont(base: font, bold: font),
+      build: (_) => [
+        pw.Text('سلسلة — ${data['title']}', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 5),
+        pw.Text('الشركة: ${_company.text.trim()}    •    تاريخ التقرير: ${date(day)}    •    عدد السجلات: ${rows.length}', textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
+        pw.SizedBox(height: 12),
+        if (rows.isEmpty) pw.Text('لا توجد بيانات للتصدير.', textAlign: pw.TextAlign.right)
+        else pw.TableHelper.fromTextArray(
+          headers: headers,
+          data: rows,
+          headerStyle: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+          cellStyle: const pw.TextStyle(fontSize: 7),
+          cellAlignment: pw.Alignment.centerRight,
+          headerAlignment: pw.Alignment.centerRight,
+        ),
+      ],
+    ));
+    return Uint8List.fromList(await pdf.save());
+  }
+
+  Future<void> exportExcel() async {
+    final data = _exportData();
+    final rows = (data['rows'] as List).map((r) => List<String>.from(r as List)).toList();
+    if (rows.isEmpty) { setState(() => message = 'لا توجد بيانات في التابة الحالية لتصديرها.'); return; }
+    setState(() { loading = true; error = null; message = null; });
+    try {
+      final workbook = Excel.createExcel();
+      final sheet = workbook[data['sheet'] as String];
+      sheet.appendRow((data['headers'] as List<String>).map((x) => TextCellValue(x)).toList());
+      for (final row in rows) {
+        sheet.appendRow(row.map((x) => TextCellValue(x)).toList());
+      }
+      final encoded = workbook.encode();
+      if (encoded == null || encoded.isEmpty) throw StateError('تعذر إنشاء ملف Excel.');
+      await FileSaver.instance.saveFile(
+        name: 'silsila_attendance_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: Uint8List.fromList(encoded),
+        fileExtension: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      if (mounted) setState(() => message = 'تم تصدير ${rows.length} سجلًا إلى Excel.');
+    } catch (e) {
+      if (mounted) setState(() => error = 'تعذر تصدير Excel: $e');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> exportPdf() async {
+    final data = _exportData();
+    final rows = data['rows'] as List;
+    if (rows.isEmpty) { setState(() => message = 'لا توجد بيانات في التابة الحالية لتصديرها.'); return; }
+    setState(() { loading = true; error = null; message = null; });
+    try {
+      final bytes = await _attendancePdfBytes();
+      await FileSaver.instance.saveFile(
+        name: 'silsila_attendance_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: bytes,
+        fileExtension: 'pdf',
+        mimeType: MimeType.pdf,
+      );
+      if (mounted) setState(() => message = 'تم إنشاء ملف PDF وتنزيله.');
+    } catch (e) {
+      if (mounted) setState(() => error = 'تعذر إنشاء PDF: $e');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> printReport() async {
+    final data = _exportData();
+    if ((data['rows'] as List).isEmpty) { setState(() => message = 'لا توجد بيانات للطباعة.'); return; }
+    setState(() { loading = true; error = null; message = null; });
+    try {
+      final bytes = await _attendancePdfBytes();
+      await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'silsila_attendance.pdf');
+    } catch (e) {
+      if (mounted) setState(() => error = 'تعذرت الطباعة: $e');
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
   Future<void> addForTab() async {
     if(_tabs.index==0){await masterDialog('location');return;}
     if(_tabs.index==1){final e=await search(false);if(e!=null)setState(()=>addEmployee(e));return;}
@@ -128,9 +274,9 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       task('تعديل', Icons.edit_outlined, orange, tab == 0 && jobs.isNotEmpty ? () => masterDialog('job', row: jobs.first) : null),
       task('حذف', Icons.delete_outline, Colors.red, tab == 0 && jobs.isNotEmpty ? () => deleteRow('job', jobs.first) : null),
       task('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), preview),
-      task('طباعة', Icons.print_outlined, const Color(0xFF536DFE), () => setState(() => message = 'افتح المعاينة ثم استخدم طباعة المتصفح.')),
-      task('Excel', Icons.table_view_outlined, const Color(0xFF168447), () => setState(() => message = 'تصدير Excel غير مربوط حتى الآن.')),
-      task('PDF', Icons.picture_as_pdf_outlined, Colors.red, () => setState(() => message = 'تصدير PDF غير مربوط حتى الآن.')),
+      task('طباعة', Icons.print_outlined, const Color(0xFF536DFE), loading ? null : printReport),
+      task('Excel', Icons.table_view_outlined, const Color(0xFF168447), loading ? null : exportExcel),
+      task('PDF', Icons.picture_as_pdf_outlined, Colors.red, loading ? null : exportPdf),
     ]);
     return Directionality(
       textDirection: TextDirection.rtl,
