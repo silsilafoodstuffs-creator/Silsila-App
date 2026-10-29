@@ -1055,9 +1055,28 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       final excelBytes = _buildProductDataExcel(selectedImages);
       exportStage = 'إضافة ملف Excel إلى ZIP';
       archive.addFile(ArchiveFile('بيانات_الأصناف.xlsx', excelBytes.length, Uint8List.fromList(excelBytes)));
+      exportStage = 'تجهيز نسخة قابلة للتعديل للضغط';
+      // Copy the archive and every payload before encoding. The encoder may
+      // normalize entries by removing items, so it must not receive any
+      // list-backed data that could be unmodifiable.
+      final mutableArchive = Archive();
+      for (final sourceFile in archive.files.toList(growable: true)) {
+        final rawContent = sourceFile.content;
+        if (rawContent is! List<int>) {
+          throw Exception('محتوى الملف ' + sourceFile.name + ' ليس قائمة بايتات قابلة للنسخ.');
+        }
+        final payload = Uint8List.fromList(List<int>.from(rawContent, growable: true));
+        mutableArchive.addFile(ArchiveFile(sourceFile.name, payload.length, payload));
+      }
       exportStage = 'ضغط ملفات ZIP';
-      final zipped = ZipEncoder().encode(archive);
+      final zipped = ZipEncoder().encode(mutableArchive);
       if (zipped == null || zipped.isEmpty) throw Exception('تعذر إنشاء ملف ZIP.');
+      exportStage = 'التحقق من سلامة ملف ZIP';
+      final verifiedArchive = ZipDecoder().decodeBytes(Uint8List.fromList(zipped));
+      if (verifiedArchive.files.length != mutableArchive.files.length ||
+          mutableArchive.files.any((file) => !verifiedArchive.files.any((saved) => saved.name == file.name))) {
+        throw Exception('فشل التحقق من محتويات ZIP بعد الضغط؛ لم يتم حفظ ملف غير مكتمل.');
+      }
       exportStage = 'حفظ ملف ZIP على الجهاز';
       await FileSaver.instance.saveFile(
         name: 'silsila_images_${DateTime.now().millisecondsSinceEpoch}',
