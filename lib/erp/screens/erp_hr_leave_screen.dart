@@ -3,6 +3,7 @@ import 'package:excel/excel.dart' hide Border;
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -55,7 +56,7 @@ class _ErpHrLeaveScreenState extends State<ErpHrLeaveScreen>{
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
     final pdf = pw.Document();
     pdf.addPage(pw.MultiPage(
-      pageFormat: pw.PdfPageFormat.a4.landscape,
+      pageFormat: PdfPageFormat.a4.landscape,
       margin: const pw.EdgeInsets.all(20),
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
