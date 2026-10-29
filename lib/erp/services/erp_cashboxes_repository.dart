@@ -14,7 +14,7 @@ class ErpCashboxesRepository {
 
   Future<List<Map<String, dynamic>>> fetchCashboxes(String companyId) async {
     final rows = await _db.from('erp_cashboxes')
-      .select('id, cashbox_code, cashbox_name, branch_id, account_id, is_bank_account, bank_name, account_number_masked, is_active')
+      .select('id, cashbox_code, cashbox_name, cashbox_name_en, branch_id, account_id, is_bank_account, bank_name, account_number_masked, is_active')
       .eq('company_id', companyId.trim()).order('cashbox_code');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
@@ -33,19 +33,19 @@ class ErpCashboxesRepository {
   }
 
   Future<void> createCashbox({
-    required String companyId, required String code, required String name,
+    required String companyId, required String code, required String name, required String nameEn,
     required String accountId, String? branchId, required bool isBank,
     String? bankName, String? accountNumberMasked,
   }) async {
-    if (code.trim().isEmpty || name.trim().isEmpty || accountId.isEmpty) {
-      throw ArgumentError('كود الخزينة واسمها وحساب الأستاذ حقول مطلوبة.');
+    if (code.trim().isEmpty || name.trim().isEmpty || nameEn.trim().isEmpty || accountId.isEmpty) {
+      throw ArgumentError('كود الخزينة والاسمان العربي والإنجليزي وحساب الأستاذ حقول مطلوبة.');
     }
     final masked = _blank(accountNumberMasked);
     if (masked != null && !RegExp(r'^\d{4}$').hasMatch(masked)) {
       throw ArgumentError('أدخل آخر أربعة أرقام فقط من الحساب البنكي.');
     }
     await _db.from('erp_cashboxes').insert({
-      'company_id': companyId.trim(), 'cashbox_code': code.trim(), 'cashbox_name': name.trim(),
+      'company_id': companyId.trim(), 'cashbox_code': code.trim().toUpperCase(), 'cashbox_name': name.trim(), 'cashbox_name_en': nameEn.trim(),
       'account_id': accountId, 'branch_id': branchId, 'is_bank_account': isBank,
       'bank_name': _blank(bankName), 'account_number_masked': masked,
       'is_active': true,
