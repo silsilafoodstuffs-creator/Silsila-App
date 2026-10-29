@@ -147,17 +147,23 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
       }
       final targets = <Map<String, dynamic>>[
         {'branchId': null, 'ar': 'الخزينة الرئيسية - الإدارة المركزية', 'en': 'Central Administration Main Treasury'},
-        ...branches.take(3).map((b) => {
-          'branchId': _s(b['id']),
-          'ar': 'خزينة فرع ${_s(b['branch_name'])}',
-          'en': '${_s(b['branch_name'])} Branch Treasury',
-        }),
       ];
+      for (final branch in branches) {
+        final branchId = _s(branch['id']);
+        final branchName = _s(branch['branch_name']);
+        targets.addAll([
+          {'branchId': branchId, 'ar': 'الخزينة الرئيسية - ${branchName}', 'en': '${branchName} Main Treasury'},
+          {'branchId': branchId, 'ar': 'عهدة مصروفات - ${branchName}', 'en': '${branchName} Expense Custody'},
+          {'branchId': branchId, 'ar': 'تحصيلات - ${branchName}', 'en': '${branchName} Collections Treasury'},
+        ]);
+      }
       var created = 0;
       for (final target in targets) {
         final branchId = target['branchId'] as String?;
         final exists = rows.any((row) =>
-            row['is_bank_account'] != true && row['is_active'] == true &&
+            row['is_bank_account'] != true &&
+            row['is_active'] == true &&
+            _s(row['cashbox_name']) == _s(target['ar']) &&
             (branchId == null
                 ? _s(row['branch_id']).isEmpty
                 : _s(row['branch_id']) == branchId));
