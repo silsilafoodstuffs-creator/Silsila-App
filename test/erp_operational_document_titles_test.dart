@@ -32,31 +32,37 @@ void main() {
       kind: ErpOperationalKind.sales,
       documentType: 'quotation',
     );
-    expect(find.text('عرض سعر'), findsWidgets);
-    expect(find.text('أمر بيع'), findsNothing);
-    expect(find.text('فاتورة بيع'), findsNothing);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('operational-document-title'))).data,
+      'عرض سعر',
+    );
 
     await pumpDocument(
       tester,
       kind: ErpOperationalKind.sales,
       documentType: 'order',
     );
-    expect(find.text('أمر بيع'), findsWidgets);
-    expect(find.text('عرض سعر'), findsNothing);
-    expect(find.text('فاتورة بيع'), findsNothing);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('operational-document-title'))).data,
+      'أمر بيع',
+    );
 
     await pumpDocument(
       tester,
       kind: ErpOperationalKind.sales,
       documentType: 'invoice',
     );
-    expect(find.text('فاتورة بيع'), findsWidgets);
-    expect(find.text('عرض سعر'), findsNothing);
-    expect(find.text('أمر بيع'), findsNothing);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('operational-document-title'))).data,
+      'فاتورة بيع',
+    );
   });
 
   testWidgets('purchase documents retain the purchase title', (tester) async {
     await pumpDocument(tester, kind: ErpOperationalKind.purchase);
-    expect(find.text('مستندات المشتريات'), findsWidgets);
+    expect(
+      tester.widget<Text>(find.byKey(const ValueKey('operational-document-title'))).data,
+      'مستندات المشتريات',
+    );
   });
 }
