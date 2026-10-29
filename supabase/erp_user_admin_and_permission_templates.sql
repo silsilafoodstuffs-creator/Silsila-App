@@ -105,6 +105,7 @@ create table if not exists public.erp_user_permission_matrix (
  menu_name text not null,
  submenu_name text not null default '',
  page_name text not null,
+ can_access boolean not null default false,
  can_refresh boolean not null default false,
  can_add boolean not null default false,
  can_save boolean not null default false,
