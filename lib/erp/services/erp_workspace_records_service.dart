@@ -21,13 +21,19 @@ class ErpWorkspaceRecordsService {
   Future<List<Map<String, String>>> listPage({
     required String companyId,
     required String pageKey,
+    int offset = 0,
+    int pageSize = 500,
+    String search = '',
   }) async {
     _validate(companyId, pageKey);
-    final rows = await _db.from('erp_workspace_records')
+    if (offset < 0 || pageSize < 1 || pageSize > 2000) throw ArgumentError('نطاق صفحة السجلات غير صالح.');
+    var query = _db.from('erp_workspace_records')
         .select('record_key, record_data')
         .eq('company_id', companyId)
-        .eq('page_key', pageKey)
-        .order('created_at');
+        .eq('page_key', pageKey);
+    final term = search.trim();
+    if (term.isNotEmpty) query = query.ilike('record_key', '%$term%');
+    final rows = await query.order('created_at').order('id').range(offset, offset + pageSize - 1);
     return (rows as List).whereType<Map<String, dynamic>>().map((row) {
       final payload = row['record_data'];
       final result = <String, String>{};
