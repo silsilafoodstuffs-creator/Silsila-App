@@ -1911,7 +1911,6 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           if (_error != null) _notice(_error!, Colors.red),
           if (_message != null) _notice(_message!, Colors.green),
           _invoiceCard('بيانات المستند والعميل', Icons.description_outlined, LayoutBuilder(builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 700;
             final fieldWidth = constraints.maxWidth >= 850 ? 165.0 : constraints.maxWidth >= 700 ? 145.0 : constraints.maxWidth;
             final warehouseFieldWidth = constraints.maxWidth >= 850 ? 260.0 : constraints.maxWidth >= 700 ? 220.0 : constraints.maxWidth;
             final customerFieldWidth = constraints.maxWidth >= 850 ? 210.0 : constraints.maxWidth >= 700 ? 190.0 : constraints.maxWidth;
