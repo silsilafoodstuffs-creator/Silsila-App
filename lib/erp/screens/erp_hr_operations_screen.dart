@@ -108,7 +108,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
     return Padding(
       padding:const EdgeInsetsDirectional.only(start:8),
       child:ExpansionTile(
-        leading:Icon(unit=='مكتب إداري'?Icons.business_outlined:unit=='مخازن'?Icons.warehouse_outlined:Icons.local_shipping_outlined,color:orange),
+        leading:Icon(unit=='مكتب إداري'?Icons.business_outlined:unit=='مخازن'?Icons.inventory_2_outlined:Icons.local_shipping_outlined,color:orange),
         title:Text(unit,style:const TextStyle(fontWeight:FontWeight.w800)),
         subtitle:Text('${people.length} موظف'),
         children:people.isEmpty
@@ -171,7 +171,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       ? departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['work_location_id'])==s(location['id'])&&s(d['department_level'])!='section').map((d)=>centralDepartmentNode(d,manualMode:manualMode,editable:editable)).toList()
       : workUnits.map((unit)=>workUnitNode(location,unit,manualMode:manualMode)).toList();
     return Card(child:ExpansionTile(
-      leading:Icon(central?Icons.account_balance_outlined:Icons.warehouse_outlined,color:purple),
+      leading:Icon(central?Icons.account_balance_outlined:Icons.inventory_2_outlined,color:purple),
       title:Text('${s(location['location_code'])} • ${s(location['name_ar'])}'),
       subtitle:Text(central?'الإدارة المركزية • إدارات فقط':'وحدات العمل • مكتب إداري / مخازن / سيارات'),
       trailing:editable?Row(mainAxisSize:MainAxisSize.min,children:[
