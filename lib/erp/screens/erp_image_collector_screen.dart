@@ -622,7 +622,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
 
   Future<void> _scanNextBatch(int batchIndex) async {
     if (_loading) return;
-    final pending = _crawlPages.where((p) => !_scannedCrawlPages.contains(p)).take(5).toList();
+    final pending = _crawlPages.where((p) => !_scannedCrawlPages.contains(p)).skip(batchIndex * 5).take(5).toList();
     if (pending.isEmpty) return;
     if (mounted) setState(() { _error = null; _status = 'بدء الدفعة ${batchIndex + 1}: سيتم فحص ${pending.length} صفحات بالتتابع مع الاحتفاظ بكل الصور التي جُمعت.'; });
     for (var i = 0; i < pending.length; i++) {
