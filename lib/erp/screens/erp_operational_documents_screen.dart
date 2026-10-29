@@ -1954,13 +1954,40 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     decoration: field('المسلسل اليدوي (غير مكرر) *', suffix: const Icon(Icons.tag)),
                     enabled: !hasDraft,
                   );
+                  final fiscalField = DropdownButtonFormField<String>(
+                    value: fiscalOptions.any((p) => _s(p['id']) == _fiscalPeriodId) ? _fiscalPeriodId : null,
+                    isExpanded: true,
+                    decoration: field('السنة المالية'),
+                    items: fiscalOptions.map((p) => DropdownMenuItem<String>(
+                      value: _s(p['id']),
+                      child: Text(_s(p['period_name']), overflow: TextOverflow.ellipsis),
+                    )).toList(),
+                    onChanged: hasDraft ? null : (value) {
+                      final matches = fiscalOptions.where((p) => _s(p['id']) == value);
+                      if (matches.isEmpty) return;
+                      setState(() {
+                        _fiscalPeriodId = value;
+                        _fiscalYear.text = _s(matches.first['period_name']);
+                      });
+                    },
+                    hint: Text(_fiscalYear.text),
+                  );
+                  final serialAndFiscal = Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Align(alignment: Alignment.centerRight, child: FractionallySizedBox(widthFactor: 2 / 3, child: fiscalField)),
+                      const SizedBox(height: 6),
+                      serialField,
+                    ],
+                  );
                   if (compactHeader) {
                     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       titleBlock,
                       const SizedBox(height: 10),
                       dateField,
                       const SizedBox(height: 8),
-                      serialField,
+                      serialAndFiscal,
                     ]);
                   }
                   return Row(children: [
@@ -1968,24 +1995,15 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                     const SizedBox(width: 12),
                     Expanded(flex: 3, child: titleBlock),
                     const SizedBox(width: 12),
-                    Expanded(flex: 2, child: serialField),
+                    // Fiscal period sits above the manual serial. The fiscal selector
+                    // is one-third narrower, while the serial column uses half its
+                    // former flex weight on desktop.
+                    Expanded(flex: 1, child: serialAndFiscal),
                   ]);
                 }),
               ),
               const SizedBox(height: 12),
               Wrap(spacing: 8, runSpacing: 8, children: [
-                // Keep the four core controls together on the first desktop row.
-                box(DropdownButtonFormField<String>(
-                  value: fiscalOptions.any((p) => _s(p['id']) == _fiscalPeriodId) ? _fiscalPeriodId : null,
-                  isExpanded: true, decoration: field('السنة المالية'),
-                  items: fiscalOptions.map((p) => DropdownMenuItem<String>(value: _s(p['id']), child: Text(_s(p['period_name']), overflow: TextOverflow.ellipsis))).toList(),
-                  onChanged: hasDraft ? null : (value) {
-                    final matches = fiscalOptions.where((p) => _s(p['id']) == value);
-                    if (matches.isEmpty) return;
-                    setState(() { _fiscalPeriodId = value; _fiscalYear.text = _s(matches.first['period_name']); });
-                  },
-                  hint: Text(_fiscalYear.text),
-                )),
                 box(DropdownButtonFormField<String>(
                   value: _sourceChannel,
                   isExpanded: true, decoration: field('مصدر المستند'),
@@ -2026,7 +2044,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               const SizedBox(height: 12),
               GridView.count(
                 crossAxisCount: wide ? 5 : 2, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: wide ? 1.45 : 1.45,
+                mainAxisSpacing: 6, crossAxisSpacing: 8, childAspectRatio: wide ? 2.9 : 2.9,
                 children: [
                   metric('قيمة الأصناف', '${_money(gross)} ج.م'),
                   metric('خصم الفاتورة %', '${_money((gross - lineDiscounts) <= 0 ? 0 : invoiceDiscount * 100 / (gross - lineDiscounts))}%'),
