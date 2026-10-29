@@ -65,7 +65,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
   Future<void> masterDialog(String kind,{Map<String,dynamic>? row,String? parentId})async{
     final isJob=kind=='job',isLoc=kind=='location';
     final code=TextEditingController(text:s(row?[isJob?'job_code':isLoc?'location_code':'department_code'])),ar=TextEditingController(text:s(row?['name_ar'])),en=TextEditingController(text:s(row?['name_en']));
-    var level=s(row?['department_level']).isEmpty?'directorate':s(row?['department_level']);var locType=s(row?['location_type']).isEmpty?'branch':s(row?['location_type']);String? parent=s(row?['parent_id']).isNotEmpty?s(row?['parent_id']):parentId;String? dep=s(row?['department_id']).isNotEmpty?s(row?['department_id']):parentId;String? workLocation=s(row?['work_location_id']).isNotEmpty?s(row?['work_location_id']):null;final parentRows=departments.where((d)=>s(d['id'])==(parent??'')).toList();if(workLocation==null&&!isJob&&!isLoc&&parentRows.isNotEmpty)workLocation=s(parentRows.first['work_location_id']);final centralLocations=locations.where((l)=>s(l['location_type'])=='central').toList();if(workLocation==null&&centralLocations.isNotEmpty)workLocation=s(centralLocations.first['id']);String? err;
+    var level=s(row?['department_level']).isEmpty?(parentId==null?'directorate':'department'):s(row?['department_level']);var locType=s(row?['location_type']).isEmpty?'branch':s(row?['location_type']);String? parent=s(row?['parent_id']).isNotEmpty?s(row?['parent_id']):parentId;String? dep=s(row?['department_id']).isNotEmpty?s(row?['department_id']):parentId;String? workLocation=s(row?['work_location_id']).isNotEmpty?s(row?['work_location_id']):null;final parentRows=departments.where((d)=>s(d['id'])==(parent??'')).toList();if(workLocation==null&&!isJob&&!isLoc&&parentRows.isNotEmpty)workLocation=s(parentRows.first['work_location_id']);final centralLocations=locations.where((l)=>s(l['location_type'])=='central').toList();if(workLocation==null&&centralLocations.isNotEmpty)workLocation=s(centralLocations.first['id']);String? err;
     await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(title:Text('${row==null?'إضافة':'تعديل'} ${isJob?'وظيفة':isLoc?'موقع عمل':'إدارة / قسم'}'),content:SizedBox(width:500,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
       TextField(controller:code,decoration:const InputDecoration(labelText:'الكود *')),TextField(controller:ar,decoration:const InputDecoration(labelText:'الاسم بالعربية *')),if(!isLoc)TextField(controller:en,decoration:const InputDecoration(labelText:'الاسم بالإنجليزية')),
       if(isLoc)DropdownButtonFormField<String>(value:locType,decoration:const InputDecoration(labelText:'نوع الموقع'),items:const [DropdownMenuItem(value:'central',child:Text('إدارة مركزية')),DropdownMenuItem(value:'branch',child:Text('فرع'))],onChanged:(v)=>refresh(()=>locType=v??locType)),
@@ -118,7 +118,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
     );
   }
 
-  Widget centralDepartmentNode(Map<String,dynamic> d,{bool manualMode=false}) {
+  Widget centralDepartmentNode(Map<String,dynamic> d,{bool manualMode=false,bool editable=false}) {
     final id=s(d['id']);
     final children=departments.where((x)=>s(x['parent_id'])==id&&s(x['department_level'])!='section').toList();
     final sectionIds=departments.where((x)=>s(x['department_level'])=='section'&&s(x['parent_id'])==id).map((x)=>s(x['id'])).toSet();
@@ -136,8 +136,13 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
       child:ExpansionTile(
         leading:const Icon(Icons.account_tree_outlined,color:orange),
         title:Text('${s(d['department_code'])} • ${s(d['name_ar'])}'),
+        trailing:editable?Row(mainAxisSize:MainAxisSize.min,children:[
+          IconButton(tooltip:'إضافة إدارة تابعة',onPressed:()=>masterDialog('department',parentId:id),icon:const Icon(Icons.add)),
+          IconButton(tooltip:'تعديل الإدارة',onPressed:()=>masterDialog('department',row:d),icon:const Icon(Icons.edit_outlined)),
+          IconButton(tooltip:'حذف الإدارة',onPressed:()=>deleteRow('department',d),icon:const Icon(Icons.delete_outline,color:Colors.red)),
+        ]):null,
         children:[
-          ...children.map((child)=>centralDepartmentNode(child,manualMode:manualMode)),
+          ...children.map((child)=>centralDepartmentNode(child,manualMode:manualMode,editable:editable)),
           ...ownJobs.map((j)=>ListTile(
             dense:true,
             leading:const Icon(Icons.work_outline,color:purple),
@@ -157,7 +162,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
   Widget workLocationCard(Map<String,dynamic> location,{bool manualMode=false,bool editable=false}) {
     final central=s(location['location_type'])=='central';
     final children=central
-      ? departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['work_location_id'])==s(location['id'])&&s(d['department_level'])!='section').map((d)=>centralDepartmentNode(d,manualMode:manualMode)).toList()
+      ? departments.where((d)=>s(d['parent_id']).isEmpty&&s(d['work_location_id'])==s(location['id'])&&s(d['department_level'])!='section').map((d)=>centralDepartmentNode(d,manualMode:manualMode,editable:editable)).toList()
       : workUnits.map((unit)=>workUnitNode(location,unit,manualMode:manualMode)).toList();
     return Card(child:ExpansionTile(
       leading:Icon(central?Icons.account_balance_outlined:Icons.warehouse_outlined,color:purple),
