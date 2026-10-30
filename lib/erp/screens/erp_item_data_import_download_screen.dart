@@ -410,7 +410,20 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   }
 
   Uint8List _embedImagesInWorkbook(Uint8List workbookBytes, List<_ImportRow> selected, Map<_ImportRow, String> imagePaths) {
-    final archive = ZipDecoder().decodeBytes(workbookBytes);
+    final decodedArchive = ZipDecoder().decodeBytes(workbookBytes);
+    // ZipDecoder may expose an unmodifiable file collection. Clone every
+    // entry and payload into a fresh Archive before replacing XML parts or
+    // adding embedded media; this avoids Unsupported operation: removeWhere.
+    final archive = Archive();
+    for (final sourceFile in decodedArchive.files.toList(growable: true)) {
+      if (!sourceFile.isFile) continue;
+      final rawContent = sourceFile.content;
+      if (rawContent is! List<int>) {
+        throw Exception('محتوى ملف Excel الداخلي غير قابل للنسخ: ${sourceFile.name}');
+      }
+      final payload = Uint8List.fromList(List<int>.from(rawContent, growable: true));
+      archive.addFile(ArchiveFile(sourceFile.name, payload.length, payload));
+    }
     ArchiveFile? findFile(String name) {
       for (final file in archive.files) {
         if (file.isFile && file.name == name) return file;
