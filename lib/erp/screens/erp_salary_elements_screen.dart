@@ -256,12 +256,6 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   ]));
 
 
-  pw.Widget _pdfCell(String value, {bool bold = false}) => pw.Padding(
-    padding: const pw.EdgeInsets.all(4),
-    child: pw.Text(value, textAlign: pw.TextAlign.center,
-      style: pw.TextStyle(fontSize: 8, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
-  );
-
   Future<void> _printIndividual() async {
     if (_employeeId == null || _lineFor(_employeeId!) == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر موظفًا له شريط قبض في المسير المحدد.')));
