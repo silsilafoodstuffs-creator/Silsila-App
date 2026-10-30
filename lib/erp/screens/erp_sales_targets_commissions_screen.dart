@@ -581,7 +581,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
     List<String> unique(String key) => available.map((c)=>(c[key]??'').toString())
       .where((v)=>v.trim().isNotEmpty).toSet().toList()..sort();
     final governors=unique('governorate');
-    final districts=unique('district')..addAll(unique('center'));
+    final districts=(<String>{...unique('district'),...unique('center')}.toList()..sort());
     final areas=unique('area');
     await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>Directionality(
       textDirection:TextDirection.rtl,
