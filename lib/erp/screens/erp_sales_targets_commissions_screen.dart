@@ -628,7 +628,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
             }).map((c) {
               final id=c['id'].toString(), goal=_goalFor(id);
               return DataRow(cells:[
-                DataCell(Checkbox(value:selected.contains(id),onChanged:(v)=>refresh(()=>v==true?selected.add(id):selected.remove(id)))),
+                DataCell(Checkbox(shape:const CircleBorder(),value:selected.contains(id),onChanged:(v)=>refresh(()=>v==true?selected.add(id):selected.remove(id)))),
                 DataCell(Text((c['party_code']??'').toString())),
                 DataCell(Text((c['party_name']??'').toString())),
                 DataCell(Text((c['governorate']??'—').toString())),
@@ -705,9 +705,9 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
                 DataCell(Text((e['employee_code']??'').toString())),
                 DataCell(Text((e['full_name']??'').toString())),
                 DataCell(Text((e['full_name_en']??'—').toString())),
-                DataCell(Checkbox(value:r?['has_target']==true,onChanged:r==null?null:(v)=>_saveRep(e,{'has_target':v==true}))),
+                DataCell(Checkbox(shape:const CircleBorder(),value:r?['has_target']==true,onChanged:r==null?null:(v)=>_saveRep(e,{'has_target':v==true}))),
                 DataCell(OutlinedButton.icon(onPressed:r==null?null:()=>_linkCustomers(e),icon:const Icon(Icons.group_add_outlined,size:18),label:Text('العملاء (${_customers.where((c)=>c['sales_rep_id']?.toString()==r['id'].toString()).length})'))),
-                DataCell(Checkbox(value:hasCommission,onChanged:r==null?null:(v)=>_saveRep(e,{'has_commission':v==true}))),
+                DataCell(Checkbox(shape:const CircleBorder(),value:hasCommission,onChanged:r==null?null:(v)=>_saveRep(e,{'has_commission':v==true}))),
                 DataCell(hasCommission?SizedBox(width:190,child:DropdownButton<String>(
                   isExpanded:true,value:const ['tiered','percentage','points_per_unit'].contains(type)?type:'percentage',
                   items:const [
@@ -717,7 +717,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
                   ],
                   onChanged:r==null?null:(v)=>v==null?null:_saveRep(e,{'commission_type':v}),
                 )):const Text('—')),
-                DataCell(Checkbox(value:r?['is_active']==true,onChanged:r==null?null:(v)=>_saveRep(e,{'is_active':v==true}))),
+                DataCell(Checkbox(shape:const CircleBorder(),value:r?['is_active']==true,onChanged:r==null?null:(v)=>_saveRep(e,{'is_active':v==true}))),
               ]);
             }),
           ),
