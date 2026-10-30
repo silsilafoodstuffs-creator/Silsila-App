@@ -206,8 +206,13 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
       _toast('لا توجد فواتير مبيعات مرحلة وغير تجريبية لهذا المندوب خلال الشهر الحالي.');
       return;
     }
-    final method=rep['commission_plan']?.toString() ?? 'percentage';
-    final basis=method=='fixed_per_invoice'?'invoice_count':'sales_value';
+    final commissionType=rep['commission_type']?.toString() ?? 'percentage';
+    if(commissionType=='points_per_unit') {
+      _toast('نوع العمولة «نقاط لكل وحدة» محفوظ، لكن لا يمكن إصدار مسودة مالية قبل تحديد قيمة النقطة والوحدات المؤهلة في إعدادات خطة العمولة.');
+      return;
+    }
+    final method=commissionType=='tiered' ? 'tiered' : 'percentage';
+    final basis='sales_value';
     Map<String,dynamic>? plan;
     for(final candidate in _plans) {
       if(candidate['commission_method']==method && candidate['calculation_basis']==basis) {
@@ -579,12 +584,20 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
   Future<void> _saveRep(Map<String,dynamic> employee, Map<String,dynamic> values) async {
     final rep=_repFor(employee);
     if(rep==null) { _toast('تعذر إنشاء سجل المندوب. حدّث الشاشة وحاول مرة أخرى.'); return; }
+    final persistedValues=<String,dynamic>{...values};
+    // Keep the existing commission engine in sync for the two supported
+    // monetary methods. Points-per-unit is stored separately until its
+    // point valuation and eligible unit rules are configured.
+    final selectedType=persistedValues['commission_type']?.toString();
+    if(selectedType=='tiered' || selectedType=='percentage') {
+      persistedValues['commission_plan']=selectedType;
+    }
     try {
-      final saved=await _db.from('erp_sales_representatives').update(values)
+      final saved=await _db.from('erp_sales_representatives').update(persistedValues)
         .eq('id',rep['id']).eq('company_id',widget.companyId!).select('id').maybeSingle();
       if(saved==null) throw StateError('لم يتم تحديث سجل المندوب؛ راجع صلاحيات الشركة.');
       final index=_reps.indexWhere((r)=>r['id']==rep['id']);
-      if(index>=0) _reps[index]={..._reps[index],...values};
+      if(index>=0) _reps[index]={..._reps[index],...persistedValues};
       if(mounted)setState((){});
     } catch(e) { _toast('تعذر حفظ الإعداد: $e'); }
   }
