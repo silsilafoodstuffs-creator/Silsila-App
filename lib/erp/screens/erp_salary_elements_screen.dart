@@ -213,7 +213,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
 
   Future<void> _loadLines()async{
     if(_runId==null){if(mounted)setState(()=>_lines=[]);return;}
-    try{final rows=await _db.from('erp_payroll_lines').select('*').eq('payroll_run_id',_runId!).eq('company_id',widget.companyId!.trim());if(mounted)setState(()=>_lines=rows.map((x)=>Map<String,dynamic>.from(x)).toList());}
+    try{final rows=await _db.from('erp_payroll_lines').select('*').eq('payroll_run_id',_runId!).eq('company_id',widget.companyId!.trim());if(mounted)setState((){_lines=rows.map((x)=>Map<String,dynamic>.from(x)).toList();if(!_lines.any((line)=>_s(line['employee_id'])==_employeeId)){final eligible=_employees.where((e)=>_lines.any((line)=>_s(line['employee_id'])==_s(e['id']))).toList();_employeeId=eligible.isEmpty?null:_s(eligible.first['id']);}});}
     catch(e){if(mounted)setState(()=>_error='تعذر تحميل تفاصيل مسير القبض: $e');}
   }
 
@@ -379,7 +379,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   Widget _runDropdown()=>DropdownButtonFormField<String>(value:_runId,isExpanded:true,decoration:const InputDecoration(labelText:'مسير الرواتب المعتمد',border:OutlineInputBorder()),items:_runs.map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text('${_s(r['run_code'])} • ${_s(r['period_start'])} إلى ${_s(r['period_end'])}'))).toList(),onChanged:(v)async{setState(()=>_runId=v);await _loadLines();});
   Widget _individual()=>ListView(padding:const EdgeInsets.all(10),children:[
     _runDropdown(),const SizedBox(height:8),
-    DropdownButtonFormField<String>(value:_employeeId,isExpanded:true,decoration:const InputDecoration(labelText:'الموظف',border:OutlineInputBorder()),items:_employees.map((e)=>DropdownMenuItem(value:_s(e['id']),child:Text('${_s(e['employee_code'])} • ${_s(e['full_name'])}'))).toList(),onChanged:(v)=>setState(()=>_employeeId=v)),
+    DropdownButtonFormField<String>(value:_employeeId,isExpanded:true,decoration:const InputDecoration(labelText:'الموظف',border:OutlineInputBorder()),items:_employees.where((e)=>_lineFor(_s(e['id']))!=null).map((e)=>DropdownMenuItem<String>(value:_s(e['id']),child:Text('${_s(e['employee_code'])} • ${_s(e['full_name'])}'))).toList(),onChanged:(v)=>setState(()=>_employeeId=v)),
     const SizedBox(height:10),
     if(_employeeId!=null&&_lineFor(_employeeId!)!=null)Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_printIndividual,icon:const Icon(Icons.print),label:const Text('طباعة شريط الموظف'))),
     if(_employeeId!=null&&_lineFor(_employeeId!)!=null)_payslip(_employee(_employeeId!)!,_lineFor(_employeeId!)!)
