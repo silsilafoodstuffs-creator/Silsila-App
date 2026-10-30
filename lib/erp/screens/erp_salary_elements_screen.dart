@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 const _salaryPurple = Color(0xFF3E007D);
 const _salaryOrange = Color(0xFFFFA015);
@@ -252,11 +255,139 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
     Expanded(child:TabBarView(controller:_tabs,children:[_individual(),_aggregate()])),
   ]));
 
+
+  pw.Widget _pdfCell(String value, {bool bold = false}) => pw.Padding(
+    padding: const pw.EdgeInsets.all(4),
+    child: pw.Text(value, textAlign: pw.TextAlign.center,
+      style: pw.TextStyle(fontSize: 8, fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal)),
+  );
+
+  Future<void> _printIndividual() async {
+    if (_employeeId == null || _lineFor(_employeeId!) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر موظفًا له شريط قبض في المسير المحدد.')));
+      return;
+    }
+    final employee = _employee(_employeeId!)!;
+    final line = _lineFor(_employeeId!)!;
+    final values = line['element_values'] is Map ? Map<String,dynamic>.from(line['element_values'] as Map) : <String,dynamic>{};
+    final earning = _elements.where((x)=>_s(x['element_type'])=='earning'&&_n(values[_s(x['id'])])!=0).toList();
+    final deductions = _elements.where((x)=>_s(x['element_type'])=='deduction'&&_n(values[_s(x['id'])])!=0).toList();
+    final customDed = deductions.where((x)=>_s(x['nature'])=='value').fold<double>(0,(sum,x)=>sum+_n(values[_s(x['id'])]));
+    final legacyDed = (_n(line['deductions'])-customDed).clamp(0,double.infinity).toDouble();
+    final earningRows = <List<String>>[
+      ['الاستحقاق','القيمة'],
+      ['الراتب الأساسي',_fmt(line['basic_amount'])],
+      ['بدلات',_fmt(line['allowances'])],
+      ['عمولات',_fmt(line['commissions'])],
+      ['إضافي',_fmt(line['overtime_amount'])],
+      ...earning.map((x)=>[_s(x['name_ar']),_elementValue(x,values[_s(x['id'])])]),
+    ];
+    final deductionRows = <List<String>>[
+      ['الاستقطاع','القيمة'],
+      ['استقطاعات أساسية',_fmt(legacyDed)],
+      ...deductions.map((x)=>[_s(x['name_ar']),_elementValue(x,values[_s(x['id'])])]),
+    ];
+    try {
+      final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final doc = pw.Document(theme:pw.ThemeData.withFont(base:font,bold:font));
+      doc.addPage(pw.Page(pageFormat:PdfPageFormat.a4,build:(ctx)=>pw.Directionality(
+        textDirection:pw.TextDirection.rtl,
+        child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
+          pw.Center(child:pw.Text('سلسلة • شريط قبض موظف',style:pw.TextStyle(fontSize:19,fontWeight:pw.FontWeight.bold))),
+          pw.SizedBox(height:12),
+          pw.Text('الموظف: ${_s(employee['full_name'])}     الكود: ${_s(employee['employee_code'])}'),
+          pw.Text('القسم: ${_label(_departments,_s(employee['department_id']),'department_code','name_ar')}'),
+          pw.Text('الوظيفة: ${_label(_jobs,_s(employee['job_id']),'job_code','name_ar')}'),
+          pw.Text('الفرع: ${_label(_branches,_s(employee['branch_id']),'branch_code','branch_name')}'),
+          pw.Text('الموقع: ${_label(_locations,_s(employee['work_location_id']),'location_code','name_ar')}'),
+          pw.Text('فترة المسير: ${_selectedRunPeriod()}'),
+          pw.SizedBox(height:16),
+          pw.Row(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
+            pw.Expanded(child:pw.Column(children:[
+              pw.Text('الاستحقاقات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,fontSize:13)),
+              pw.TableHelper.fromTextArray(headers:earningRows.first, data:earningRows.skip(1).toList()),
+            ])),
+            pw.SizedBox(width:12),
+            pw.Expanded(child:pw.Column(children:[
+              pw.Text('الاستقطاعات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,fontSize:13)),
+              pw.TableHelper.fromTextArray(headers:deductionRows.first, data:deductionRows.skip(1).toList()),
+            ])),
+          ]),
+          pw.SizedBox(height:18),
+          pw.Container(padding:const pw.EdgeInsets.all(10),decoration:pw.BoxDecoration(border:pw.Border.all(color:PdfColors.deepPurple),color:PdfColors.grey100),child:pw.Column(children:[
+            pw.Text('صافي المستحق: ${_fmt(line['net_amount'])} ${_currencySymbol()}',style:pw.TextStyle(fontSize:16,fontWeight:pw.FontWeight.bold)),
+            pw.SizedBox(height:5),
+            pw.Text('فقط ${_spell(_n(line['net_amount']))} لا غير'),
+          ])),
+          pw.Spacer(),
+          pw.Row(mainAxisAlignment:pw.MainAxisAlignment.spaceBetween,children:[
+            pw.Text('توقيع الموظف: ........................'),
+            pw.Text('اعتماد الحسابات: ........................'),
+          ]),
+        ]),
+      )));
+      await Printing.layoutPdf(onLayout:(_) async=>doc.save());
+    } catch(e) {
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذرت طباعة شريط القبض: $e')));
+    }
+  }
+
+  Future<void> _printAggregate() async {
+    final employees=_filteredEmployees;
+    if(employees.isEmpty){
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('لا توجد بيانات مطابقة للفلاتر للطباعة.')));
+      return;
+    }
+    bool used(Map<String,dynamic> element)=>_lines.any((line){final values=line['element_values'];return values is Map&&_n(values[_s(element['id'])])!=0;});
+    final earning=_elements.where((x)=>_s(x['element_type'])=='earning'&&used(x)).toList();
+    final deduction=_elements.where((x)=>_s(x['element_type'])=='deduction'&&used(x)).toList();
+    final headers=<String>['م','كود الموظف','اسم الموظف','الراتب الأساسي','بدلات','عمولات','إضافي',
+      ...earning.map((x)=>'${_s(x['name_ar'])} (${_unit(_s(x['nature']))})'),
+      'استقطاعات أساسية',...deduction.map((x)=>'${_s(x['name_ar'])} (${_unit(_s(x['nature']))})'),'الصافي','التوقيع'];
+    final data=<List<String>>[];
+    for(var i=0;i<employees.length;i++){
+      final employee=employees[i],line=_lineFor(_s(employee['id']))!;
+      final values=line['element_values'] is Map?Map<String,dynamic>.from(line['element_values'] as Map):<String,dynamic>{};
+      final earningValues=earning.map((x)=>_n(values[_s(x['id'])])).toList();
+      final deductionValues=deduction.map((x)=>_n(values[_s(x['id'])])).toList();
+      final monetaryDed=deduction.asMap().entries.where((x)=>_s(x.value['nature'])=='value').fold<double>(0,(sum,x)=>sum+deductionValues[x.key]);
+      final row=<String>['${i+1}',_s(employee['employee_code']),_s(employee['full_name']),
+        _fmt(line['basic_amount']),_fmt(line['allowances']),_fmt(line['commissions']),_fmt(line['overtime_amount']),
+        ...earning.asMap().entries.map((x)=>_elementValue(x.value,earningValues[x.key])),
+        _fmt((_n(line['deductions'])-monetaryDed).clamp(0,double.infinity)),
+        ...deduction.asMap().entries.map((x)=>_elementValue(x.value,deductionValues[x.key])),
+        _fmt(line['net_amount']),'........................'];
+      data.add(row);
+    }
+    try{
+      final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final doc=pw.Document(theme:pw.ThemeData.withFont(base:font,bold:font));
+      doc.addPage(pw.MultiPage(pageFormat:PdfPageFormat.a3.landscape,build:(ctx)=>[
+        pw.Directionality(textDirection:pw.TextDirection.rtl,child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
+          pw.Center(child:pw.Text('سلسلة • شريط قبض مجمع',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold))),
+          pw.SizedBox(height:5),
+          pw.Text('الفترة: ${_selectedRunPeriod()}    عدد الموظفين: ${employees.length}'),
+          pw.Text('الفلاتر: الفرع ${_branchId==null?'الكل':_label(_branches,_branchId!,'branch_code','branch_name')} • الإدارة/القسم ${_departmentId==null?'الكل':_label(_departments,_departmentId!,'department_code','name_ar')} • الموقع ${_locationId==null?'الكل':_label(_locations,_locationId!,'location_code','name_ar')}'),
+          pw.SizedBox(height:8),
+          pw.Text('الاستحقاقات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,color:PdfColors.green800)),
+          pw.Text('الاستقطاعات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,color:PdfColors.red800)),
+          pw.TableHelper.fromTextArray(headers:headers,data:data,headerStyle:pw.TextStyle(fontSize:6,fontWeight:pw.FontWeight.bold),cellStyle:const pw.TextStyle(fontSize:6)),
+          pw.SizedBox(height:12),
+          pw.Text('إجمالي الموظفين: ${employees.length}    توقيع المسؤول: ................................................'),
+        ])),
+      ]));
+      await Printing.layoutPdf(onLayout:(_) async=>doc.save());
+    }catch(e){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذرت طباعة الشريط المجمع: $e')));
+    }
+  }
+
   Widget _runDropdown()=>DropdownButtonFormField<String>(value:_runId,isExpanded:true,decoration:const InputDecoration(labelText:'مسير الرواتب المعتمد',border:OutlineInputBorder()),items:_runs.map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text('${_s(r['run_code'])} • ${_s(r['period_start'])} إلى ${_s(r['period_end'])}'))).toList(),onChanged:(v)async{setState(()=>_runId=v);await _loadLines();});
   Widget _individual()=>ListView(padding:const EdgeInsets.all(10),children:[
     _runDropdown(),const SizedBox(height:8),
     DropdownButtonFormField<String>(value:_employeeId,isExpanded:true,decoration:const InputDecoration(labelText:'الموظف',border:OutlineInputBorder()),items:_employees.map((e)=>DropdownMenuItem(value:_s(e['id']),child:Text('${_s(e['employee_code'])} • ${_s(e['full_name'])}'))).toList(),onChanged:(v)=>setState(()=>_employeeId=v)),
     const SizedBox(height:10),
+    if(_employeeId!=null&&_lineFor(_employeeId!)!=null)Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_printIndividual,icon:const Icon(Icons.print),label:const Text('طباعة شريط الموظف'))),
     if(_employeeId!=null&&_lineFor(_employeeId!)!=null)_payslip(_employee(_employeeId!)!,_lineFor(_employeeId!)!)
     else const Card(child:Padding(padding:EdgeInsets.all(18),child:Text('لا يوجد للموظف شريط قبض في المسير المحدد.'))),
   ]);
@@ -359,7 +490,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
         DropdownButton<String>(value:_activeFilter,items:const [DropdownMenuItem(value:'الكل',child:Text('الكل')),DropdownMenuItem(value:'نشط',child:Text('نشط')),DropdownMenuItem(value:'غير نشط',child:Text('غير نشط'))],onChanged:(v)=>setState(()=>_activeFilter=v??'الكل')),
         OutlinedButton.icon(onPressed:()=>setState((){_branchId=null;_departmentId=null;_locationId=null;_jobId=null;_activeFilter='الكل';}),icon:const Icon(Icons.filter_alt_off),label:const Text('مسح الفلاتر')),
       ])),
-      Padding(padding:const EdgeInsets.symmetric(horizontal:10),child:Align(alignment:Alignment.centerRight,child:Text('عدد الموظفين: ${employees.length} • ${_selectedRunPeriod()}',style:const TextStyle(fontWeight:FontWeight.w800)))),
+      Padding(padding:const EdgeInsets.symmetric(horizontal:10),child:Row(children:[Expanded(child:Text('عدد الموظفين: ${employees.length} • ${_selectedRunPeriod()}',style:const TextStyle(fontWeight:FontWeight.w800))),FilledButton.icon(onPressed:_loading?null:_printAggregate,icon:const Icon(Icons.print),label:const Text('طباعة التقرير'))])),
       Expanded(child:employees.isEmpty?const Center(child:Text('لا توجد بيانات رواتب تطابق محددات التقرير.')):SingleChildScrollView(scrollDirection:Axis.horizontal,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),child:Row(children:[
           const Text('بيانات الموظف',style:TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple)),
