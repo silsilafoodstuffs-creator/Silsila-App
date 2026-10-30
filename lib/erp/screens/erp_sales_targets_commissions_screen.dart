@@ -651,14 +651,15 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
           TextButton(onPressed:()=>refresh(()=>selected.addAll(available.map((c)=>c['id'].toString()))),child:const Text('تحديد الكل')),
           FilledButton.icon(onPressed:()async{
             try {
-              final currently=available.where((c)=>c['sales_rep_id']?.toString()==repId);
-              for(final c in currently) {
-                if(!selected.contains(c['id'].toString())) {
-                  await _db.from('erp_parties').update({'sales_rep_id':null}).eq('id',c['id']).eq('company_id',widget.companyId!);
-                }
+              final unselectedIds=available.where((c)=>c['sales_rep_id']?.toString()==repId&&!selected.contains(c['id'].toString()))
+                .map((c)=>c['id'].toString()).toList();
+              if(unselectedIds.isNotEmpty) {
+                await _db.from('erp_parties').update({'sales_rep_id':null})
+                  .eq('company_id',widget.companyId!).inFilter('id',unselectedIds);
               }
-              for(final id in selected) {
-                await _db.from('erp_parties').update({'sales_rep_id':repId}).eq('id',id).eq('company_id',widget.companyId!);
+              if(selected.isNotEmpty) {
+                await _db.from('erp_parties').update({'sales_rep_id':repId})
+                  .eq('company_id',widget.companyId!).inFilter('id',selected.toList());
               }
               final areaIds=available.where((c)=>selected.contains(c['id'].toString()))
                 .map((c)=>c['geo_area_id']?.toString()).whereType<String>()
