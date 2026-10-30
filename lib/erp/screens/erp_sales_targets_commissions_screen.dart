@@ -682,9 +682,9 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
         ])),
       const SizedBox(height:12),
       if(_error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
-      if(_loading)const Expanded(child:Center(child:CircularProgressIndicator()))
-      else if(_employees.isEmpty)const Expanded(child:Center(child:Text('لا يوجد موظفون مسجلون في إدارة المبيعات.')))
-      else Expanded(child:Container(decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFE9E2F0))),
+      if(_loading)const SizedBox(height:590,child:Center(child:CircularProgressIndicator()))
+      else if(_employees.isEmpty)const SizedBox(height:590,child:Center(child:Text('لا يوجد موظفون مسجلون في إدارة المبيعات.')))
+      else SizedBox(height:620,child:Container(decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFE9E2F0))),
         child:LayoutBuilder(builder:(ctx,box)=>SingleChildScrollView(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:ConstrainedBox(
           constraints:BoxConstraints(minWidth:box.maxWidth),
           child:DataTable(
