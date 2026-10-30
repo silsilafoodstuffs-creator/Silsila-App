@@ -520,12 +520,20 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
         final numericSuffix = RegExp(r'([0-9]+)$').firstMatch(employeeCode)?.group(1);
         final cleanedCode = employeeCode.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
         final fallbackId = employeeId.replaceAll(RegExp(r'[^A-Fa-f0-9]'), '').toUpperCase();
-        final representativeCode = numericSuffix ??
+        var representativeCode = numericSuffix ??
             (cleanedCode.isNotEmpty
                 ? cleanedCode
                 : (fallbackId.length > 8 ? fallbackId.substring(0, 8) : fallbackId));
         if (representativeCode.isEmpty) {
           throw StateError('لا يمكن إنشاء كود مندوب لهذا الموظف دون كود موظف صالح.');
+        }
+        // Avoid collisions with legacy manually-created representative codes.
+        if (_reps.any((rep) => rep['rep_code']?.toString() == 'REP-$representativeCode')) {
+          representativeCode = cleanedCode.isNotEmpty ? cleanedCode : representativeCode;
+          if (_reps.any((rep) => rep['rep_code']?.toString() == 'REP-$representativeCode')) {
+            final uniqueTail = fallbackId.length > 6 ? fallbackId.substring(fallbackId.length - 6) : fallbackId;
+            representativeCode = '$representativeCode$uniqueTail';
+          }
         }
 
         final employeeName = (employee['full_name'] ?? '').toString().trim();
