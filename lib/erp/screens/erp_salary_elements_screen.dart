@@ -99,9 +99,9 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   }
 
   Future<void> _delete(Map<String,dynamic> row) async {
-    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد حذف عنصر المرتب'),content:Text('هل تريد حذف «${_s(row['name_ar'])}»؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('نعم'))]));
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد تعطيل عنصر المرتب'),content:Text('هل تريد تعطيل «${_s(row['name_ar'])}»؟ سيظل محفوظًا في أشرطة القبض السابقة.'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('نعم'))]));
     if(yes!=true)return;
-    try{await _db.from('erp_hr_salary_elements').delete().eq('id',_s(row['id'])).eq('company_id',widget.companyId!.trim());await _load();}
+    try{await _db.from('erp_hr_salary_elements').update({'is_active':false,'updated_at':DateTime.now().toUtc().toIso8601String()}).eq('id',_s(row['id'])).eq('company_id',widget.companyId!.trim());await _load();if(mounted)setState(()=>_message='تم تعطيل العنصر مع الاحتفاظ به في السجلات السابقة.');}
     catch(e){if(mounted)setState(()=>_error='تعذر الحذف: $e');}
   }
 
@@ -129,7 +129,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
         DataCell(Text(nature=='value'?'قيمة':nature=='days'?'أيام':'وقت')),DataCell(Text('${_s(r['default_value'])} $unit')),
         DataCell(Icon(r['show_on_payslip']==true?Icons.check_circle:Icons.cancel,color:r['show_on_payslip']==true?Colors.green:Colors.grey)),
         DataCell(Icon(r['is_active']==true?Icons.check_circle:Icons.cancel,color:r['is_active']==true?Colors.green:Colors.grey)),
-        DataCell(Row(children:[IconButton(tooltip:'تعديل',onPressed:()=>_edit(row:r),icon:const Icon(Icons.edit_outlined)),IconButton(tooltip:'حذف',onPressed:()=>_delete(r),icon:const Icon(Icons.delete_outline,color:Colors.red))])),
+        DataCell(Row(children:[IconButton(tooltip:'تعديل',onPressed:()=>_edit(row:r),icon:const Icon(Icons.edit_outlined)),IconButton(tooltip:'تعطيل',onPressed:()=>_delete(r),icon:const Icon(Icons.block,color:Colors.red))])),
       ]);}),
     )))),
   ]));
