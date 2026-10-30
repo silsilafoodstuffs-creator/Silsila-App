@@ -167,7 +167,9 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
       final amount = double.tryParse(_elementValueControllers[id]?.text.trim() ?? '0');
       if (amount == null || amount < 0 || amount > 999.999) { setState(() => _error = 'قيمة عنصر ${_s(element['name_ar'])} يجب أن تكون من 0 إلى 999.999.'); return; }
       elementValues[id] = amount;
-      if (_s(element['element_type']) == 'earning') elementEarnings += amount; else elementDeductions += amount;
+      if (_s(element['nature']) == 'value') {
+        if (_s(element['element_type']) == 'earning') elementEarnings += amount; else elementDeductions += amount;
+      }
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
