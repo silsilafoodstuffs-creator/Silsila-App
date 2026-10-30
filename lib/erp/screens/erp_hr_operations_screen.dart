@@ -237,7 +237,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
                     alignment:Alignment.center,
                     decoration:BoxDecoration(
                       color:selected?purple:Colors.transparent,
-                      border:selected?Border.all(color:orange,width:1.5):Border.all(color:purple.withOpacity(.16)),
+                      border:selected?Border.all(color:orange,width:1.5):Border.all(color:purple.withValues(alpha:.16)),
                       borderRadius:BorderRadius.circular(7),
                     ),
                     child:Text('\${d.day}',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:selected?Colors.white:null)),
@@ -252,7 +252,7 @@ class _ErpHrOperationsScreenState extends State<ErpHrOperationsScreen> with Sing
           padding:const EdgeInsets.only(top:4),
           child:Container(
             padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),
-            decoration:BoxDecoration(color:orange.withOpacity(.13),borderRadius:BorderRadius.circular(7),border:Border.all(color:orange.withOpacity(.6))),
+            decoration:BoxDecoration(color:orange.withValues(alpha:.13),borderRadius:BorderRadius.circular(7),border:Border.all(color:orange.withValues(alpha:.6))),
             child:Text('اليوم المحدد: $selectedWeekday • \${day.day}/\${day.month}/\${day.year}',
               style:const TextStyle(color:purple,fontSize:11,fontWeight:FontWeight.w900)),
           ),
