@@ -71,8 +71,8 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
         ]),
         const SizedBox(height: 10),
         SizedBox(width: 240, child: TextField(controller:value, keyboardType:const TextInputType.numberWithOptions(decimal:true), inputFormatters:[FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}(\.\d{0,3})?$'))], decoration:InputDecoration(labelText:'القيمة (3 أرقام + 3 كسور)', suffixText:nature=='value'?_currencyLabel(_currency):nature=='days'?'يوم':'دقيقة'), onChanged:(v){final parsed=double.tryParse(v);if(parsed!=null&&parsed>999.999)refresh(()=>error='الحد الأقصى للقيمة 999.999');else if(error!=null)refresh(()=>error=null);})),
-        CheckboxListTile(contentPadding:EdgeInsets.zero,value:show,onChanged:(v)=>refresh(()=>show=v??false),title:const Text('يظهر في شريط القبض'),controlAffinity:ListTileControlAffinity.leading),
-        CheckboxListTile(contentPadding:EdgeInsets.zero,value:active,onChanged:(v)=>refresh(()=>active=v??false),title:const Text('نشط'),controlAffinity:ListTileControlAffinity.leading),
+        Row(children:[Checkbox(value:show,shape:const CircleBorder(),onChanged:(v)=>refresh(()=>show=v??false)),const Expanded(child:Text('يظهر في شريط القبض'))]),
+        Row(children:[Checkbox(value:active,shape:const CircleBorder(),onChanged:(v)=>refresh(()=>active=v??false)),const Expanded(child:Text('نشط'))]),
         if(error!=null) Align(alignment:Alignment.centerRight,child:Text(error!,style:const TextStyle(color:Colors.red))),
       ]))),
       actions: [
