@@ -11,3 +11,7 @@ create index if not exists erp_sales_representatives_employee_id_fk_idx
 
 create index if not exists erp_users_cashbox_id_fk_idx
   on public.erp_users (cashbox_id);
+
+-- The employee/company composite foreign key uses this exact leading-column order.
+create index if not exists erp_employee_documents_employee_company_fk_idx
+  on public.erp_employee_documents (employee_id, company_id);
