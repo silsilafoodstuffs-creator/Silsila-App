@@ -602,16 +602,20 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
     final repId=rep['id'].toString();
     final assignedElsewhere=_reps.where((r)=>r['id']?.toString()!=repId)
       .expand((r)=>(r['assigned_area_ids'] as List? ?? const []).map((id)=>id.toString())).toSet();
-    String areaKey(Map<String,dynamic> customer) => [
-      customer['governorate'],
-      customer['district']??customer['center'],
-      customer['area'],
-    ].map((value)=>(value??'').toString().trim().toLowerCase()).join('|');
+    String areaKey(Map<String,dynamic> customer) {
+      final governorate=(customer['governorate']??'').toString().trim().toLowerCase();
+      final districtValue=(customer['district']??'').toString().trim();
+      final centerValue=(customer['center']??'').toString().trim();
+      final district=(districtValue.isNotEmpty?districtValue:centerValue).toLowerCase();
+      final area=(customer['area']??'').toString().trim().toLowerCase();
+      if(area.isEmpty) return '';
+      return '$governorate|$district|$area';
+    }
     // Also derive occupied areas from customer links, including legacy customers
     // whose geo_area_id has not yet been populated but whose locality text exists.
     final occupiedAreaKeys=_customers.where((customer) {
       final owner=customer['sales_rep_id']?.toString();
-      return owner!=null && owner.isNotEmpty && owner!=repId && areaKey(customer).replaceAll('|','').isNotEmpty;
+      return owner!=null && owner.isNotEmpty && owner!=repId && areaKey(customer).isNotEmpty;
     }).map(areaKey).toSet();
     assignedElsewhere.addAll(_customers.where((customer) {
       final owner=customer['sales_rep_id']?.toString();
@@ -641,7 +645,8 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
       final qCode=code.text.trim().toLowerCase(), qName=name.text.trim().toLowerCase();
       final cCode=(customer['party_code']??'').toString().toLowerCase();
       final cName=(customer['party_name']??'').toString().toLowerCase();
-      final d=(customer['district']??customer['center']??'').toString();
+      final districtValue=(customer['district']??'').toString();
+      final d=(districtValue.isNotEmpty?districtValue:(customer['center']??'')).toString();
       return (qCode.isEmpty||cCode.contains(qCode))&&(qName.isEmpty||cName.contains(qName))&&
         (governorate==null||customer['governorate']==governorate)&&
         (district==null||d==district)&&(locality==null||customer['area']==locality);
