@@ -499,7 +499,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
       final results=await Future.wait([
         _db.from('erp_employees').select('id,employee_code,full_name,full_name_en,department_name,is_active,employment_status').eq('company_id',c).ilike('department_name','%مبيعات%').order('employee_code'),
         _db.from('erp_sales_representatives').select().eq('company_id',c).order('rep_code'),
-        _db.from('erp_parties').select('id,party_code,party_name,party_name_en,governorate,district,center,area,geo_area_id,sales_rep_id,is_active').eq('company_id',c).eq('party_kind','customer').order('party_name'),
+        _db.from('erp_parties').select('id,party_code,party_name,party_name_en,governorate,district,center,area,geo_area_id,sales_rep_id,sales_rep_employee_id,is_active').eq('company_id',c).eq('party_kind','customer').order('party_name'),
         _db.from('erp_customer_monthly_goals').select('id,customer_id,goal_month,sales_target').eq('company_id',c).order('goal_month',ascending:false),
       ]);
       if(!mounted)return;
@@ -646,6 +646,17 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
     final rep=_repFor(employee);
     if(rep==null)return;
     final repId=rep['id'].toString();
+    final employeeId=employee['id'].toString();
+    String? assignedRepId(Map<String,dynamic> customer) {
+      final linkedRep=customer['sales_rep_id']?.toString();
+      if(linkedRep!=null && linkedRep.isNotEmpty) return linkedRep;
+      final linkedEmployee=customer['sales_rep_employee_id']?.toString();
+      if(linkedEmployee==null || linkedEmployee.isEmpty) return null;
+      for(final candidate in _reps) {
+        if(candidate['employee_id']?.toString()==linkedEmployee) return candidate['id']?.toString();
+      }
+      return null;
+    }
     final assignedElsewhere=_reps.where((r)=>r['id']?.toString()!=repId)
       .expand((r)=>(r['assigned_area_ids'] as List? ?? const []).map((id)=>id.toString())).toSet();
     String areaKey(Map<String,dynamic> customer) {
@@ -660,16 +671,16 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
     // Also derive occupied areas from customer links, including legacy customers
     // whose geo_area_id has not yet been populated but whose locality text exists.
     final occupiedAreaKeys=_customers.where((customer) {
-      final owner=customer['sales_rep_id']?.toString();
+      final owner=assignedRepId(customer);
       return owner!=null && owner.isNotEmpty && owner!=repId && areaKey(customer).isNotEmpty;
     }).map(areaKey).toSet();
     assignedElsewhere.addAll(_customers.where((customer) {
-      final owner=customer['sales_rep_id']?.toString();
+      final owner=assignedRepId(customer);
       final area=customer['geo_area_id']?.toString();
       return owner!=null && owner.isNotEmpty && owner!=repId && area!=null && area.isNotEmpty;
     }).map((customer)=>customer['geo_area_id'].toString()));
     final available=_customers.where((customer) {
-      final owner=customer['sales_rep_id']?.toString();
+      final owner=assignedRepId(customer);
       final areaId=customer['geo_area_id']?.toString();
       final areaTaken=(areaId!=null && areaId.isNotEmpty && assignedElsewhere.contains(areaId)) ||
         occupiedAreaKeys.contains(areaKey(customer));
@@ -677,7 +688,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
       // assignment can be corrected; hide every unassigned customer in occupied areas.
       return owner==repId || (!areaTaken && (owner==null || owner.isEmpty));
     }).toList();
-    final selected=available.where((c)=>c['sales_rep_id']?.toString()==repId)
+    final selected=available.where((c)=>assignedRepId(c)==repId)
       .map((c)=>c['id'].toString()).toSet();
     final code=TextEditingController();
     final name=TextEditingController();
@@ -736,17 +747,17 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
           TextButton(onPressed:()=>refresh(()=>selected.addAll(filteredCustomers().map((c)=>c['id'].toString()))),child:const Text('تحديد نتائج البحث')),
           FilledButton.icon(onPressed:()async{
             try {
-              final unselectedIds=available.where((c)=>c['sales_rep_id']?.toString()==repId&&!selected.contains(c['id'].toString()))
+              final unselectedIds=available.where((c)=>assignedRepId(c)==repId&&!selected.contains(c['id'].toString()))
                 .map((c)=>c['id'].toString()).toList();
               if(unselectedIds.isNotEmpty) {
-                final cleared=await _db.from('erp_parties').update({'sales_rep_id':null})
+                final cleared=await _db.from('erp_parties').update({'sales_rep_id':null,'sales_rep_employee_id':null})
                   .eq('company_id',widget.companyId!).inFilter('id',unselectedIds).select('id');
                 if((cleared as List).length!=unselectedIds.length) {
                   throw StateError('لم يتم فك ربط كل العملاء المحددين؛ راجع الصلاحيات.');
                 }
               }
               if(selected.isNotEmpty) {
-                final assigned=await _db.from('erp_parties').update({'sales_rep_id':repId})
+                final assigned=await _db.from('erp_parties').update({'sales_rep_id':repId,'sales_rep_employee_id':employeeId})
                   .eq('company_id',widget.companyId!).inFilter('id',selected.toList()).select('id');
                 if((assigned as List).length!=selected.length) {
                   throw StateError('لم يتم ربط كل العملاء المحددين؛ راجع الصلاحيات أو حدّث نتائج البحث.');
@@ -804,8 +815,9 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
               final repId = r?['id']?.toString();
               final hasCommission = r?['has_commission'] == true;
               final type = (r?['commission_type'] ?? 'percentage').toString();
-              final assignedCount = _customers.where(
-                (customer) => customer['sales_rep_id']?.toString() == repId,
+              final assignedCount = _customers.where((customer) =>
+                customer['sales_rep_id']?.toString() == repId ||
+                customer['sales_rep_employee_id']?.toString() == e['id']?.toString(),
               ).length;
               return DataRow(cells: [
                 DataCell(Text('${i + 1}')),
