@@ -690,7 +690,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
     List<Map<String,dynamic>> filteredCustomers() => available.where((customer) {
       final qCode=code.text.trim().toLowerCase(), qName=name.text.trim().toLowerCase();
       final cCode=(customer['party_code']??'').toString().toLowerCase();
-      final cName=(customer['party_name']??'').toString().toLowerCase();
+      final cName='${customer['party_name']??''} ${customer['party_name_en']??''}'.toLowerCase();
       final districtValue=(customer['district']??'').toString();
       final d=(districtValue.isNotEmpty?districtValue:(customer['center']??'')).toString();
       return (qCode.isEmpty||cCode.contains(qCode))&&(qName.isEmpty||cName.contains(qName))&&
