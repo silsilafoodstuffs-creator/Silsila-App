@@ -21,7 +21,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   String? _message;
 
   String _s(dynamic value) => (value ?? '').toString();
-  String _currencyLabel(String code) => const {'EGP':'ج.م','USD':r','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[code] ?? code;
+  String _currencyLabel(String code) { if (code == 'USD') return String.fromCharCode(36); return const {'EGP':'ج.م','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[code] ?? code; }
 
   @override
   void initState() { super.initState(); _load(); }
@@ -167,7 +167,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   String _fmt(dynamic v)=>_n(v).toStringAsFixed(3);
   String _unit(String nature)=>nature=='days'?' يوم':nature=='time'?' دقيقة':' ${_currencySymbol()}';
   String _elementValue(Map<String,dynamic> element,dynamic value)=>'${_fmt(value)}${_unit(_s(element['nature']))}';
-  String _currencySymbol()=>const {'EGP':'ج.م','USD':r','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[_currency]??_currency;,'SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[_currency]??_currency;
+  String _currencySymbol() { if (_currency == 'USD') return String.fromCharCode(36); return const {'EGP':'ج.م','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[_currency] ?? _currency; }
 
   @override
   void initState(){super.initState();_tabs=TabController(length:2,vsync:this,initialIndex:widget.initialTab.clamp(0,1).toInt());_load();}
