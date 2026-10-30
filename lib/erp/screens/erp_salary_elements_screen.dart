@@ -22,7 +22,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
 
   String _s(dynamic value) => (value ?? '').toString();
   String _currencyLabel(String code) { if (code == 'USD') return String.fromCharCode(36); return const {'EGP':'ج.م','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[code] ?? code; }
-  String _nextCode() { var max = 0; for (final row in _rows) { final match = RegExp(r'^SAL(\\d+)
+  String _nextCode() { var max = 0; for (final row in _rows) { final code = _s(row['element_code']); if (code.startsWith('SAL') && code.length > 3) { final number = int.tryParse(code.substring(3)); if (number != null && number > max) max = number; } } return 'SAL' + (max + 1).toString().padLeft(3, '0'); }
 
   @override
   void initState() { super.initState(); _load(); }
