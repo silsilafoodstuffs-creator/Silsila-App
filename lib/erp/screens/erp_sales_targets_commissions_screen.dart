@@ -587,9 +587,13 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
     final rep=_repFor(employee);
     if(rep==null)return;
     final repId=rep['id'].toString();
+    final assignedElsewhere=_reps.where((r)=>r['id']?.toString()!=repId)
+      .expand((r)=>(r['assigned_area_ids'] as List? ?? const []).map((id)=>id.toString())).toSet();
     final available=_customers.where((c) {
       final owner=c['sales_rep_id']?.toString();
-      return owner==null || owner.isEmpty || owner==repId;
+      final areaId=c['geo_area_id']?.toString();
+      final areaTaken=areaId!=null && areaId.isNotEmpty && assignedElsewhere.contains(areaId);
+      return !areaTaken && (owner==null || owner.isEmpty || owner==repId);
     }).toList();
     final selected=available.where((c)=>c['sales_rep_id']?.toString()==repId)
       .map((c)=>c['id'].toString()).toSet();
@@ -656,6 +660,11 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
               for(final id in selected) {
                 await _db.from('erp_parties').update({'sales_rep_id':repId}).eq('id',id).eq('company_id',widget.companyId!);
               }
+              final areaIds=available.where((c)=>selected.contains(c['id'].toString()))
+                .map((c)=>c['geo_area_id']?.toString()).whereType<String>()
+                .where((id)=>id.isNotEmpty).toSet().toList();
+              await _db.from('erp_sales_representatives').update({'assigned_area_ids':areaIds})
+                .eq('id',repId).eq('company_id',widget.companyId!);
               if(ctx.mounted)Navigator.pop(ctx);
               await _load();
               _toast('تم حفظ ربط ${selected.length} عميل بالمندوب.');
