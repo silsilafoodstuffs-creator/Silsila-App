@@ -28,7 +28,7 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
     'بيانات العملاء', 'قوائم أسعار البيع', 'قوائم أسعار الموردين', 'عروض الأصناف', 'مجلات عروض العملاء', 'عروض الترويج', 'عروض الرواكد', 'نواقص العملاء',
     'قاعدة العملاء المحتملين', 'الهيكل الوظيفي', 'الإدارات والأقسام', 'الوظائف والدرجات',
     'ملف الموظف', 'الإجازات والأذونات', 'مسير الرواتب', 'صرف الرواتب',
-    'أهداف العملاء الشهرية', 'خطط العمولة',
+    'أهداف المبيعات', 'خطط العمولة',
     'مسودات العمولات',
     'عرض سعر', 'أمر بيع', 'فاتورة بيع', 'مرتجع مبيعات', 'إذن تجهيز',
     'إذن تسليم', 'إذن إضافة', 'إذن صرف',
@@ -69,7 +69,7 @@ class _ErpClearDataScreenState extends State<ErpClearDataScreen> {
     if (confirmed != true || !mounted) return;
     setState(() { _busy = true; _status = 'جاري تجهيز النسخة الاحتياطية من السيرفر...'; });
     try {
-      final pages = _selected.toList()..sort();
+      final pages = _selected.map((page) => page == 'أهداف المبيعات' ? 'أهداف العملاء الشهرية' : page).toList()..sort();
       final prepared = await db.rpc('erp_prepare_selective_data_clear', params: {
         'p_company_id': companyId,
         'p_selected_pages': pages,
