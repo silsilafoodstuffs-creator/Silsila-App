@@ -311,8 +311,9 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
 
   Widget _aggregate(){
     final employees=_filteredEmployees;
-    final earning=_elements.where((x)=>_s(x['element_type'])=='earning').toList();
-    final deduction=_elements.where((x)=>_s(x['element_type'])=='deduction').toList();
+    bool used(Map<String,dynamic> element)=>_lines.any((line){final values=line['element_values'];return values is Map&&_n(values[_s(element['id'])])!=0;});
+    final earning=_elements.where((x)=>_s(x['element_type'])=='earning'&&used(x)).toList();
+    final deduction=_elements.where((x)=>_s(x['element_type'])=='deduction'&&used(x)).toList();
     return Column(children:[
       _runDropdown(),
       Padding(padding:const EdgeInsets.all(8),child:Wrap(spacing:8,runSpacing:8,children:[
