@@ -443,3 +443,268 @@ Future<void> _previewSalesTargets() async {
     });
   }
 }
+
+
+/// HR-backed sales representative directory. Employee identity is always read-only;
+/// only sales assignment and representative settings are edited here.
+class ErpSalesRepresentativesScreen extends StatefulWidget {
+  const ErpSalesRepresentativesScreen({super.key, required this.companyId});
+  final String? companyId;
+  @override
+  State<ErpSalesRepresentativesScreen> createState() => _ErpSalesRepresentativesScreenState();
+}
+
+class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesScreen> {
+  final _db = Supabase.instance.client;
+  bool _loading = true;
+  String? _error;
+  final List<Map<String,dynamic>> _employees = [];
+  final List<Map<String,dynamic>> _reps = [];
+  final List<Map<String,dynamic>> _customers = [];
+  final List<Map<String,dynamic>> _goals = [];
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  Future<void> _load() async {
+    if ((widget.companyId ?? '').isEmpty) {
+      if (mounted) setState(() { _loading=false; _error='اختر الشركة أولاً لعرض بيانات مندوبي المبيعات.'; });
+      return;
+    }
+    setState(() { _loading=true; _error=null; });
+    try {
+      final c=widget.companyId!;
+      final results=await Future.wait([
+        _db.from('erp_employees').select('id,employee_code,full_name,full_name_en,department_name,is_active,employment_status').eq('company_id',c).ilike('department_name','%مبيعات%').order('employee_code'),
+        _db.from('erp_sales_representatives').select().eq('company_id',c).order('rep_code'),
+        _db.from('erp_parties').select('id,party_code,party_name,party_name_en,governorate,district,center,area,geo_area_id,sales_rep_id,is_active').eq('company_id',c).eq('party_kind','customer').order('party_name'),
+        _db.from('erp_customer_monthly_goals').select('id,customer_id,goal_month,sales_target').eq('company_id',c).order('goal_month',ascending:false),
+      ]);
+      if(!mounted)return;
+      _employees..clear()..addAll((results[0] as List).cast<Map<String,dynamic>>());
+      _reps..clear()..addAll((results[1] as List).cast<Map<String,dynamic>>());
+      _customers..clear()..addAll((results[2] as List).cast<Map<String,dynamic>>());
+      _goals..clear()..addAll((results[3] as List).cast<Map<String,dynamic>>());
+      // Keep the directory complete if an employee was added after the migration.
+      for(final e in _employees) {
+        final exists=_reps.any((r)=>r['employee_id']?.toString()==e['id']?.toString());
+        if(!exists) {
+          final code=(e['employee_code']??'').toString().replaceAll(RegExp(r'[^A-Za-z0-9]'),'');
+          try {
+            final created=await _db.from('erp_sales_representatives').insert({
+              'company_id':c,'employee_id':e['id'],'rep_code':'REP-$code',
+              'rep_name':e['full_name'],'is_active':e['is_active']??true,
+              'has_target':false,'has_commission':false,'commission_type':'percentage',
+              'commission_plan':'percentage','is_demo_data':false,
+            }).select().single();
+            _reps.add(Map<String,dynamic>.from(created));
+          } catch (_) { /* A concurrent screen load may have created this row. */ }
+        }
+      }
+      if(mounted)setState(()=>_loading=false);
+    } catch(e) {
+      if(mounted)setState(() { _loading=false; _error='تعذر تحميل بيانات المندوبين: $e'; });
+    }
+  }
+
+  Map<String,dynamic>? _repFor(Map<String,dynamic> employee) {
+    for(final r in _reps) {
+      if(r['employee_id']?.toString()==employee['id']?.toString()) return r;
+    }
+    return null;
+  }
+
+  Future<void> _saveRep(Map<String,dynamic> employee, Map<String,dynamic> values) async {
+    final rep=_repFor(employee);
+    if(rep==null) { _toast('تعذر إنشاء سجل المندوب. حدّث الشاشة وحاول مرة أخرى.'); return; }
+    try {
+      await _db.from('erp_sales_representatives').update(values)
+        .eq('id',rep['id']).eq('company_id',widget.companyId!);
+      final index=_reps.indexWhere((r)=>r['id']==rep['id']);
+      if(index>=0) _reps[index]={..._reps[index],...values};
+      if(mounted)setState((){});
+    } catch(e) { _toast('تعذر حفظ الإعداد: $e'); }
+  }
+
+  void _toast(String value) {
+    if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(value)));
+  }
+
+  Map<String,dynamic>? _goalFor(String customerId) {
+    final month=DateTime.now().toIso8601String().substring(0,7);
+    for(final g in _goals) {
+      if(g['customer_id']?.toString()==customerId && g['goal_month']?.toString().startsWith(month)==true) return g;
+    }
+    return null;
+  }
+
+  Future<void> _editCustomerGoal(Map<String,dynamic> customer, StateSetter refresh) async {
+    final old=_goalFor(customer['id'].toString());
+    final controller=TextEditingController(text:old?['sales_target']?.toString()??'0');
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>Directionality(
+      textDirection:TextDirection.rtl,
+      child:AlertDialog(title:Text('هدف العميل: ${customer['party_name']}'),
+        content:SizedBox(width:340,child:TextField(controller:controller,
+          keyboardType:const TextInputType.numberWithOptions(decimal:true),
+          decoration:const InputDecoration(labelText:'هدف المبيعات الشهري (ج.م)',border:OutlineInputBorder()))),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ الهدف'))])));
+    if(ok!=true)return;
+    try {
+      final month=DateTime(DateTime.now().year,DateTime.now().month).toIso8601String().substring(0,10);
+      await _db.from('erp_customer_monthly_goals').upsert({
+        'company_id':widget.companyId,'customer_id':customer['id'],'goal_month':month,
+        'sales_target':double.parse(controller.text),'is_demo_data':false,
+      },onConflict:'company_id,customer_id,goal_month');
+      final rows=await _db.from('erp_customer_monthly_goals').select('id,customer_id,goal_month,sales_target')
+        .eq('company_id',widget.companyId!).eq('customer_id',customer['id']).order('goal_month',ascending:false);
+      _goals.removeWhere((g)=>g['customer_id']?.toString()==customer['id'].toString());
+      _goals.addAll((rows as List).cast<Map<String,dynamic>>());
+      refresh((){});
+    } catch(e) { _toast('تعذر حفظ هدف العميل: $e'); }
+    controller.dispose();
+  }
+
+  Future<void> _linkCustomers(Map<String,dynamic> employee) async {
+    final rep=_repFor(employee);
+    if(rep==null)return;
+    final repId=rep['id'].toString();
+    final available=_customers.where((c) {
+      final owner=c['sales_rep_id']?.toString();
+      return owner==null || owner.isEmpty || owner==repId;
+    }).toList();
+    final selected=available.where((c)=>c['sales_rep_id']?.toString()==repId)
+      .map((c)=>c['id'].toString()).toSet();
+    final code=TextEditingController();
+    final name=TextEditingController();
+    String? governorate, district, locality;
+    List<String> unique(String key) => available.map((c)=>(c[key]??'').toString())
+      .where((v)=>v.trim().isNotEmpty).toSet().toList()..sort();
+    final governors=unique('governorate');
+    final districts=unique('district')..addAll(unique('center'));
+    final areas=unique('area');
+    await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>Directionality(
+      textDirection:TextDirection.rtl,
+      child:AlertDialog(
+        title:Text('ربط العملاء بالمندوب: ${employee['full_name']}'),
+        content:SizedBox(width:1000,height:620,child:Column(children:[
+          Wrap(spacing:8,runSpacing:8,children:[
+            SizedBox(width:180,child:TextField(controller:code,decoration:const InputDecoration(labelText:'كود العميل',prefixIcon:Icon(Icons.tag)),onChanged:(_)=>refresh((){}))),
+            SizedBox(width:220,child:TextField(controller:name,decoration:const InputDecoration(labelText:'اسم العميل',prefixIcon:Icon(Icons.search)),onChanged:(_)=>refresh((){}))),
+            SizedBox(width:170,child:DropdownButtonFormField<String>(value:governorate,decoration:const InputDecoration(labelText:'المحافظة'),items:[const DropdownMenuItem(value:null,child:Text('كل المحافظات')),...governors.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>refresh(()=>governorate=v))),
+            SizedBox(width:170,child:DropdownButtonFormField<String>(value:district,decoration:const InputDecoration(labelText:'حي / مركز'),items:[const DropdownMenuItem(value:null,child:Text('كل الأحياء والمراكز')),...districts.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>refresh(()=>district=v))),
+            SizedBox(width:170,child:DropdownButtonFormField<String>(value:locality,decoration:const InputDecoration(labelText:'منطقة / قرية'),items:[const DropdownMenuItem(value:null,child:Text('كل المناطق والقرى')),...areas.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>refresh(()=>locality=v))),
+          ]),
+          const SizedBox(height:10),
+          Row(children:[Text('المتاح للربط: ${available.length} عميل',style:const TextStyle(fontWeight:FontWeight.w800,color:_p)),const Spacer(),Text('المحدد: ${selected.length}')]),
+          const Divider(),
+          Expanded(child:SingleChildScrollView(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
+            columns:const [DataColumn(label:Text('اختيار')),DataColumn(label:Text('كود العميل')),DataColumn(label:Text('اسم العميل')),DataColumn(label:Text('المحافظة')),DataColumn(label:Text('حي / مركز')),DataColumn(label:Text('منطقة / قرية')),DataColumn(label:Text('هدف العميل'))],
+            rows:available.where((c) {
+              final qCode=code.text.trim().toLowerCase(), qName=name.text.trim().toLowerCase();
+              final cCode=(c['party_code']??'').toString().toLowerCase(), cName=(c['party_name']??'').toString().toLowerCase();
+              final d=(c['district']??c['center']??'').toString();
+              return (qCode.isEmpty||cCode.contains(qCode))&&(qName.isEmpty||cName.contains(qName))&&
+                (governorate==null||c['governorate']==governorate)&&(district==null||d==district)&&
+                (locality==null||c['area']==locality);
+            }).map((c) {
+              final id=c['id'].toString(), goal=_goalFor(id);
+              return DataRow(cells:[
+                DataCell(Checkbox(value:selected.contains(id),onChanged:(v)=>refresh(()=>v==true?selected.add(id):selected.remove(id)))),
+                DataCell(Text((c['party_code']??'').toString())),
+                DataCell(Text((c['party_name']??'').toString())),
+                DataCell(Text((c['governorate']??'—').toString())),
+                DataCell(Text((c['district']??c['center']??'—').toString())),
+                DataCell(Text((c['area']??'—').toString())),
+                DataCell(Row(mainAxisSize:MainAxisSize.min,children:[
+                  Text(goal==null?'—':'${goal['sales_target']} ج.م'),
+                  IconButton(tooltip:'تحديد هدف العميل',icon:const Icon(Icons.flag_outlined,color:_o),onPressed:()=>_editCustomerGoal(c,refresh)),
+                ])),
+              ]);
+            }).toList(),
+          )))),
+        ])),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),
+          TextButton(onPressed:()=>refresh(()=>selected.addAll(available.map((c)=>c['id'].toString()))),child:const Text('تحديد الكل')),
+          FilledButton.icon(onPressed:()async{
+            try {
+              final currently=available.where((c)=>c['sales_rep_id']?.toString()==repId);
+              for(final c in currently) {
+                if(!selected.contains(c['id'].toString())) {
+                  await _db.from('erp_parties').update({'sales_rep_id':null}).eq('id',c['id']).eq('company_id',widget.companyId!);
+                }
+              }
+              for(final id in selected) {
+                await _db.from('erp_parties').update({'sales_rep_id':repId}).eq('id',id).eq('company_id',widget.companyId!);
+              }
+              if(ctx.mounted)Navigator.pop(ctx);
+              await _load();
+              _toast('تم حفظ ربط ${selected.length} عميل بالمندوب.');
+            } catch(e) { _toast('تعذر حفظ ربط العملاء: $e'); }
+          },icon:const Icon(Icons.link),label:const Text('حفظ الربط')),
+        ],
+      ),
+    )));
+    code.dispose(); name.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(
+        gradient:const LinearGradient(colors:[_p,Color(0xFF7443A6)]),borderRadius:BorderRadius.circular(18)),
+        child:Row(children:[
+          const Icon(Icons.badge_outlined,color:_o,size:30),const SizedBox(width:12),
+          const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text('بيانات مندوبين المبيعات',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
+            Text('بيانات الموظفين من إدارة المبيعات — إعدادات الربط والأهداف والعمولات',style:TextStyle(color:Color(0xFFEFE5F8),fontSize:12)),
+          ])),
+          IconButton(onPressed:_loading?null:_load,tooltip:'تحديث',icon:const Icon(Icons.refresh,color:Colors.white)),
+        ])),
+      const SizedBox(height:12),
+      if(_error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
+      if(_loading)const Expanded(child:Center(child:CircularProgressIndicator()))
+      else if(_employees.isEmpty)const Expanded(child:Center(child:Text('لا يوجد موظفون مسجلون في إدارة المبيعات.')))
+      else Expanded(child:Container(decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFE9E2F0))),
+        child:LayoutBuilder(builder:(ctx,box)=>SingleChildScrollView(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:ConstrainedBox(
+          constraints:BoxConstraints(minWidth:box.maxWidth),
+          child:DataTable(
+            headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+            columns:const [
+              DataColumn(label:Text('م')),DataColumn(label:Text('كود الموظف')),
+              DataColumn(label:Text('اسم الموظف عربي')),DataColumn(label:Text('اسم الموظف إنجليزي')),
+              DataColumn(label:Text('له هدف')),DataColumn(label:Text('ربط العملاء')),
+              DataColumn(label:Text('له عمولة')),DataColumn(label:Text('نوع العمولة')),
+              DataColumn(label:Text('نشط')),
+            ],
+            rows:List.generate(_employees.length,(i) {
+              final e=_employees[i], r=_repFor(_employees[i]);
+              final hasCommission=r?['has_commission']==true;
+              final type=(r?['commission_type']??'percentage').toString();
+              return DataRow(cells:[
+                DataCell(Text('${i+1}')),
+                DataCell(Text((e['employee_code']??'').toString())),
+                DataCell(Text((e['full_name']??'').toString())),
+                DataCell(Text((e['full_name_en']??'—').toString())),
+                DataCell(Checkbox(value:r?['has_target']==true,onChanged:r==null?null:(v)=>_saveRep(e,{'has_target':v==true}))),
+                DataCell(OutlinedButton.icon(onPressed:r==null?null:()=>_linkCustomers(e),icon:const Icon(Icons.group_add_outlined,size:18),label:Text('العملاء (${_customers.where((c)=>c['sales_rep_id']?.toString()==r['id'].toString()).length})'))),
+                DataCell(Checkbox(value:hasCommission,onChanged:r==null?null:(v)=>_saveRep(e,{'has_commission':v==true}))),
+                DataCell(SizedBox(width:190,child:DropdownButton<String>(
+                  isExpanded:true,value:const ['tiered','percentage','points_per_unit'].contains(type)?type:'percentage',
+                  items:const [
+                    DropdownMenuItem(value:'tiered',child:Text('شريحة')),
+                    DropdownMenuItem(value:'percentage',child:Text('نسبة من المحقق')),
+                    DropdownMenuItem(value:'points_per_unit',child:Text('نقاط لكل وحدة')),
+                  ],
+                  onChanged:r==null||!hasCommission?null:(v)=>v==null?null:_saveRep(e,{'commission_type':v}),
+                ))),
+                DataCell(Checkbox(value:r?['is_active']==true,onChanged:r==null?null:(v)=>_saveRep(e,{'is_active':v==true}))),
+              ]);
+            }),
+          ),
+        ))))),
+      )),
+    ]));
+  }
+}
