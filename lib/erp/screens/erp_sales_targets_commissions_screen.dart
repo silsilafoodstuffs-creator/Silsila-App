@@ -328,12 +328,13 @@ Future<void> _previewSalesTargets() async {
       const SizedBox(height:12),
       if(widget.initialTabIndex==0) Padding(padding:const EdgeInsets.only(bottom:10),child:Wrap(spacing:8,runSpacing:8,children:[
         ChoiceChip(label:const Text('أهداف العملاء بالمحافظة والحي والمنطقة'),selected:_goalsTab==0,onSelected:(_)=>setState(()=>_goalsTab=0)),
-        ChoiceChip(label:const Text('أهداف المندوبين'),selected:_goalsTab==1,onSelected:(_)=>setState(()=>_goalsTab=1)),
-        ChoiceChip(label:const Text('متابعة تحقيق الأهداف'),selected:_goalsTab==2,onSelected:(_)=>setState(()=>_goalsTab=2)),
+        ChoiceChip(label:const Text('أهداف العملاء الفردية'),selected:_goalsTab==1,onSelected:(_)=>setState(()=>_goalsTab=1)),
+        ChoiceChip(label:const Text('أهداف المندوبين'),selected:_goalsTab==2,onSelected:(_)=>setState(()=>_goalsTab=2)),
+        ChoiceChip(label:const Text('متابعة تحقيق الأهداف'),selected:_goalsTab==3,onSelected:(_)=>setState(()=>_goalsTab=3)),
       ])),
       const SizedBox(height:10),
       if(_loading)const Padding(padding:EdgeInsets.all(28),child:Center(child:CircularProgressIndicator()))
-      else SizedBox(height:590,child:switch(widget.initialTabIndex.clamp(0, 3).toInt()) { 1 => _repsView(demo), 2 => _plansView(demo), 3 => _runsView(demo), _ => _goalsTab==0 ? _customersView(demo) : _goalsPlaceholder(_goalsTab) }),
+      else SizedBox(height:590,child:switch(widget.initialTabIndex.clamp(0, 3).toInt()) { 1 => _repsView(demo), 2 => _plansView(demo), 3 => _runsView(demo), _ => switch(_goalsTab) { 0 => _goalsPlaceholder(0), 1 => _customersView(demo), 2 => _goalsPlaceholder(2), _ => _goalsPlaceholder(3) } }),
     ]));
   }
 
@@ -343,9 +344,12 @@ Future<void> _previewSalesTargets() async {
     child:Column(mainAxisSize:MainAxisSize.min,children:[
       const Icon(Icons.flag_circle_outlined,color:_p,size:42),
       const SizedBox(height:12),
-      Text(tab==1?'أهداف المندوبين':'متابعة تحقيق الأهداف',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:_p)),
+      Text(tab==0?'أهداف العملاء بالمحافظة والحي والمنطقة':tab==2?'أهداف المندوبين':'متابعة تحقيق الأهداف',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:_p)),
       const SizedBox(height:8),
-      const Text('تم إنشاء التبويب وتجهيزه ضمن شاشة أهداف المبيعات. سيتم تحديد قواعد التشغيل والتفاصيل عند استكمال مواصفات الأهداف.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+      Text(tab==0
+        ? 'تم تجهيز التبويب الأساسي لأهداف العملاء حسب المحافظة والحي والمنطقة. تركنا طريقة التشغيل والتوزيع دون افتراضات لحين استلام تعليماتك.'
+        : 'تم إنشاء التبويب وتجهيزه ضمن شاشة أهداف المبيعات. سيتم تحديد قواعد التشغيل والتفاصيل عند استكمال مواصفات الأهداف.',
+        textAlign:TextAlign.center,style:const TextStyle(color:Colors.black54)),
     ]),
   ));
 
