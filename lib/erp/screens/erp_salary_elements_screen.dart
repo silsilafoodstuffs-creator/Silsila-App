@@ -306,8 +306,42 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   ]));
 
   String _selectedRunPeriod(){final r=_runs.where((x)=>_s(x['id'])==_runId);return r.isEmpty?'—':'${_s(r.first['period_start'])} إلى ${_s(r.first['period_end'])}';}
-  String _spell(double value){final whole=value.floor();final frac=((value-whole)*100).round();final currency=_currency=='USD'?'دولار':_currency=='SAR'?'ريال سعودي':_currency=='AED'?'درهم إماراتي':_currency=='KWD'?'دينار كويتي':_currency=='EUR'?'يورو':_currency=='GBP'?'جنيه إسترليني':'جنيه';final sub=_currency=='USD'?'سنت':_currency=='SAR'?'هللة':_currency=='AED'?'فلس':_currency=='KWD'?'فلس':_currency=='EUR'?'سنت':_currency=='GBP'?'بنس':'قرش';if(whole==0&&frac==0)return 'صفر';return '${_arabicInteger(whole)} $currency${frac>0?' و${_arabicInteger(frac)} $sub':''}';}
-  String _arabicInteger(int n){if(n==0)return 'صفر';const ones=['','واحد','اثنان','ثلاثة','أربعة','خمسة','ستة','سبعة','ثمانية','تسعة'];if(n<10)return ones[n];if(n<20)return n==10?'عشرة':'${ones[n-10]} عشر';if(n<100)return '${ones[n%10]} و${['','عشرة','عشرون','ثلاثون','أربعون','خمسون','ستون','سبعون','ثمانون','تسعون'][n~/10]}';if(n<1000)return '${ones[n~/100]} مائة و${_arabicInteger(n%100)}';return n.toString();}
+  String _spell(double value) {
+    final totalMinor = (value * 100).round();
+    final whole = totalMinor ~/ 100;
+    final frac = totalMinor % 100;
+    final currency = _currency == 'USD' ? 'دولار' : _currency == 'SAR' ? 'ريال سعودي' : _currency == 'AED' ? 'درهم إماراتي' : _currency == 'KWD' ? 'دينار كويتي' : _currency == 'EUR' ? 'يورو' : _currency == 'GBP' ? 'جنيه إسترليني' : 'جنيه';
+    final sub = _currency == 'USD' ? 'سنت' : _currency == 'SAR' ? 'هللة' : _currency == 'AED' || _currency == 'KWD' ? 'فلس' : _currency == 'EUR' ? 'سنت' : _currency == 'GBP' ? 'بنس' : 'قرش';
+    if (totalMinor == 0) return 'صفر';
+    return '${_arabicInteger(whole)} $currency${frac > 0 ? ' و${_arabicInteger(frac)} $sub' : ''}';
+  }
+
+  String _arabicInteger(int n) {
+    const ones = ['', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة'];
+    const tens = ['', 'عشرة', 'عشرون', 'ثلاثون', 'أربعون', 'خمسون', 'ستون', 'سبعون', 'ثمانون', 'تسعون'];
+    if (n == 0) return 'صفر';
+    if (n < 10) return ones[n];
+    if (n < 20) return n == 10 ? 'عشرة' : '${ones[n - 10]} عشر';
+    if (n < 100) return n % 10 == 0 ? tens[n ~/ 10] : '${ones[n % 10]} و${tens[n ~/ 10]}';
+    if (n < 1000) {
+      final h = n ~/ 100;
+      final hundreds = ['', 'مائة', 'مائتان', 'ثلاثمائة', 'أربعمائة', 'خمسمائة', 'ستمائة', 'سبعمائة', 'ثمانمائة', 'تسعمائة'][h];
+      return n % 100 == 0 ? hundreds : '$hundreds و${_arabicInteger(n % 100)}';
+    }
+    if (n < 1000000) {
+      final thousands = n ~/ 1000;
+      final rest = n % 1000;
+      final label = thousands == 1 ? 'ألف' : thousands == 2 ? 'ألفان' : thousands <= 10 ? '${_arabicInteger(thousands)} آلاف' : '${_arabicInteger(thousands)} ألف';
+      return rest == 0 ? label : '$label و${_arabicInteger(rest)}';
+    }
+    if (n < 1000000000) {
+      final millions = n ~/ 1000000;
+      final rest = n % 1000000;
+      final label = millions == 1 ? 'مليون' : millions == 2 ? 'مليونان' : millions <= 10 ? '${_arabicInteger(millions)} ملايين' : '${_arabicInteger(millions)} مليون';
+      return rest == 0 ? label : '$label و${_arabicInteger(rest)}';
+    }
+    return n.toString();
+  }
 
   Widget _aggregate(){
     final employees=_filteredEmployees;
