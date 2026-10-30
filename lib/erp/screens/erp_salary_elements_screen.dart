@@ -262,7 +262,9 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
     final values=(line['element_values'] is Map)?Map<String,dynamic>.from(line['element_values'] as Map):<String,dynamic>{};
     final earning=_elements.where((x)=>_s(x['element_type'])=='earning'&&_n(values[_s(x['id'])])!=0).toList();
     final deductions=_elements.where((x)=>_s(x['element_type'])=='deduction'&&_n(values[_s(x['id'])])!=0).toList();
-    final base=_n(line['basic_amount']),allow=_n(line['allowances']),comm=_n(line['commissions']),ot=_n(line['overtime_amount']),ded=_n(line['deductions']);
+    final base=_n(line['basic_amount']),allow=_n(line['allowances']),comm=_n(line['commissions']),ot=_n(line['overtime_amount']);
+    final customDedTotal=deductions.fold<double>(0,(sum,x)=>sum+_n(values[_s(x['id'])]));
+    final ded=(_n(line['deductions'])-customDedTotal).clamp(0,double.infinity).toDouble();
     return Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       const Center(child:Text('سلسلة • شريط قبض موظف',style:TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:_salaryPurple))),
       const Divider(),
@@ -339,9 +341,10 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
         ],
         rows:List.generate(employees.length,(i){
           final e=employees[i],line=_lineFor(_s(e['id']))!,values=(line['element_values'] is Map)?Map<String,dynamic>.from(line['element_values'] as Map):<String,dynamic>{};
-          final base=_n(line['basic_amount']),allow=_n(line['allowances']),comm=_n(line['commissions']),ot=_n(line['overtime_amount']),ded=_n(line['deductions']);
+          final base=_n(line['basic_amount']),allow=_n(line['allowances']),comm=_n(line['commissions']),ot=_n(line['overtime_amount']);
           final earnings=earning.map((x)=>_n(values[_s(x['id'])])).toList();
           final deductions=deduction.map((x)=>_n(values[_s(x['id'])])).toList();
+          final ded=(_n(line['deductions'])-deductions.fold<double>(0,(sum,x)=>sum+x)).clamp(0,double.infinity).toDouble();
           final cells=<DataCell>[DataCell(Text('${i+1}')),DataCell(Text(_s(e['employee_code']))),DataCell(Text(_s(e['full_name']))),DataCell(Text(_fmt(base))),DataCell(Text(_fmt(allow))),DataCell(Text(_fmt(comm))),DataCell(Text(_fmt(ot)))];
           cells.addAll(earnings.map((v)=>DataCell(Text(_fmt(v)))));
           cells.add(DataCell(Text(_fmt(ded))));
