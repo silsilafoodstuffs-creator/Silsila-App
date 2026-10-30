@@ -383,7 +383,7 @@ Future<void> _previewSalesTargets() async {
       {'id':'r2','rep_name':'محمود عادل - مندوب تجريبي','rep_code':'DEMO-REP-02','monthly_sales_target':275000,'monthly_collection_target':220000,'commission_plan':'percentage','default_commission_rate':1.25},
       {'id':'r3','rep_name':'كريم أشرف - مندوب تجريبي','rep_code':'DEMO-REP-03','monthly_sales_target':220000,'monthly_collection_target':180000,'commission_plan':'fixed_per_invoice','default_commission_rate':35},
     ]:_reps;
-    if(rows.isEmpty)return const Center(child:Text('لا يوجد مندوبون في دليل المندوبين.'));
+    if(rows.isEmpty)return const Center(child:Text('لا يوجد مندوبون في شاشة بيانات مندوبين المبيعات.'));
     return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(ctx,i){
       final r=rows[i];final m=r['commission_plan']?.toString()??'percentage';final rate=double.tryParse(r['default_commission_rate']?.toString()??'')??0;
       return Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
