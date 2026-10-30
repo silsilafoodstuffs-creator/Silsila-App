@@ -102,7 +102,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد تعطيل عنصر المرتب'),content:Text('هل تريد تعطيل «${_s(row['name_ar'])}»؟ سيظل محفوظًا في أشرطة القبض السابقة.'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('نعم'))]));
     if(yes!=true)return;
     try{await _db.from('erp_hr_salary_elements').update({'is_active':false,'updated_at':DateTime.now().toUtc().toIso8601String()}).eq('id',_s(row['id'])).eq('company_id',widget.companyId!.trim());await _load();if(mounted)setState(()=>_message='تم تعطيل العنصر مع الاحتفاظ به في السجلات السابقة.');}
-    catch(e){if(mounted)setState(()=>_error='تعذر الحذف: $e');}
+    catch(e){if(mounted)setState(()=>_error='تعذر تعطيل العنصر: $e');}
   }
 
   @override
@@ -212,7 +212,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   }
 
   Future<void> _loadLines()async{
-    if(_runId==null){if(mounted)setState(()=>_lines=[]);return;}
+    if(_runId==null){if(mounted)setState(()=>{_lines=[];_employeeId=null;});return;}
     try{final rows=await _db.from('erp_payroll_lines').select('*').eq('payroll_run_id',_runId!).eq('company_id',widget.companyId!.trim());if(mounted)setState((){_lines=rows.map((x)=>Map<String,dynamic>.from(x)).toList();if(!_lines.any((line)=>_s(line['employee_id'])==_employeeId)){final eligible=_employees.where((e)=>_lines.any((line)=>_s(line['employee_id'])==_s(e['id']))).toList();_employeeId=eligible.isEmpty?null:_s(eligible.first['id']);}});}
     catch(e){if(mounted)setState(()=>_error='تعذر تحميل تفاصيل مسير القبض: $e');}
   }
