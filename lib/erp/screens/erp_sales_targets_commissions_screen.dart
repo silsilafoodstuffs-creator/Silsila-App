@@ -536,8 +536,9 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
     final rep=_repFor(employee);
     if(rep==null) { _toast('تعذر إنشاء سجل المندوب. حدّث الشاشة وحاول مرة أخرى.'); return; }
     try {
-      await _db.from('erp_sales_representatives').update(values)
-        .eq('id',rep['id']).eq('company_id',widget.companyId!);
+      final saved=await _db.from('erp_sales_representatives').update(values)
+        .eq('id',rep['id']).eq('company_id',widget.companyId!).select('id').maybeSingle();
+      if(saved==null) throw StateError('لم يتم تحديث سجل المندوب؛ راجع صلاحيات الشركة.');
       final index=_reps.indexWhere((r)=>r['id']==rep['id']);
       if(index>=0) _reps[index]={..._reps[index],...values};
       if(mounted)setState((){});
@@ -567,20 +568,34 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
           decoration:const InputDecoration(labelText:'هدف المبيعات الشهري (ج.م)',border:OutlineInputBorder()))),
         actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),
           FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ الهدف'))])));
-    if(ok!=true)return;
+    if(ok!=true) { controller.dispose(); return; }
+    final target=double.tryParse(controller.text.trim());
+    if(target==null || target<0) {
+      controller.dispose();
+      _toast('أدخل هدفًا رقميًا صحيحًا لا يقل عن صفر.');
+      return;
+    }
     try {
       final month=DateTime(DateTime.now().year,DateTime.now().month).toIso8601String().substring(0,10);
-      await _db.from('erp_customer_monthly_goals').upsert({
-        'company_id':widget.companyId,'customer_id':customer['id'],'goal_month':month,
-        'sales_target':double.parse(controller.text),'is_demo_data':false,
-      },onConflict:'company_id,customer_id,goal_month');
+      if(old!=null) {
+        final updated=await _db.from('erp_customer_monthly_goals')
+          .update({'sales_target':target,'is_demo_data':false})
+          .eq('id',old['id']).eq('company_id',widget.companyId!).select('id').maybeSingle();
+        if(updated==null) throw StateError('لم يتم تحديث هدف العميل؛ راجع الصلاحيات.');
+      } else {
+        await _db.from('erp_customer_monthly_goals').insert({
+          'company_id':widget.companyId,'customer_id':customer['id'],'goal_month':month,
+          'sales_target':target,'collection_target':0,'target_orders':0,'bonus_rate':0,
+          'is_demo_data':false,
+        });
+      }
       final rows=await _db.from('erp_customer_monthly_goals').select('id,customer_id,goal_month,sales_target')
         .eq('company_id',widget.companyId!).eq('customer_id',customer['id']).order('goal_month',ascending:false);
       _goals.removeWhere((g)=>g['customer_id']?.toString()==customer['id'].toString());
       _goals.addAll((rows as List).cast<Map<String,dynamic>>());
       refresh((){});
     } catch(e) { _toast('تعذر حفظ هدف العميل: $e'); }
-    controller.dispose();
+    finally { controller.dispose(); }
   }
 
   Future<void> _linkCustomers(Map<String,dynamic> employee) async {
@@ -589,9 +604,16 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
     final repId=rep['id'].toString();
     final assignedElsewhere=_reps.where((r)=>r['id']?.toString()!=repId)
       .expand((r)=>(r['assigned_area_ids'] as List? ?? const []).map((id)=>id.toString())).toSet();
-    final available=_customers.where((c) {
-      final owner=c['sales_rep_id']?.toString();
-      final areaId=c['geo_area_id']?.toString();
+    // Derive occupied areas from customer assignments too, so legacy rows cannot
+    // leave an area accidentally available just because its cached area list is empty.
+    assignedElsewhere.addAll(_customers.where((customer) {
+      final owner=customer['sales_rep_id']?.toString();
+      final area=customer['geo_area_id']?.toString();
+      return owner!=null && owner.isNotEmpty && owner!=repId && area!=null && area.isNotEmpty;
+    }).map((customer)=>customer['geo_area_id'].toString()));
+    final available=_customers.where((customer) {
+      final owner=customer['sales_rep_id']?.toString();
+      final areaId=customer['geo_area_id']?.toString();
       final areaTaken=areaId!=null && areaId.isNotEmpty && assignedElsewhere.contains(areaId);
       return !areaTaken && (owner==null || owner.isEmpty || owner==repId);
     }).toList();
@@ -605,6 +627,15 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
     final governors=unique('governorate');
     final districts=(<String>{...unique('district'),...unique('center')}.toList()..sort());
     final areas=unique('area');
+    List<Map<String,dynamic>> filteredCustomers() => available.where((customer) {
+      final qCode=code.text.trim().toLowerCase(), qName=name.text.trim().toLowerCase();
+      final cCode=(customer['party_code']??'').toString().toLowerCase();
+      final cName=(customer['party_name']??'').toString().toLowerCase();
+      final d=(customer['district']??customer['center']??'').toString();
+      return (qCode.isEmpty||cCode.contains(qCode))&&(qName.isEmpty||cName.contains(qName))&&
+        (governorate==null||customer['governorate']==governorate)&&
+        (district==null||d==district)&&(locality==null||customer['area']==locality);
+    }).toList();
     await showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>Directionality(
       textDirection:TextDirection.rtl,
       child:AlertDialog(
@@ -622,14 +653,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
           const Divider(),
           Expanded(child:SingleChildScrollView(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
             columns:const [DataColumn(label:Text('اختيار')),DataColumn(label:Text('كود العميل')),DataColumn(label:Text('اسم العميل')),DataColumn(label:Text('المحافظة')),DataColumn(label:Text('حي / مركز')),DataColumn(label:Text('منطقة / قرية')),DataColumn(label:Text('هدف العميل'))],
-            rows:available.where((c) {
-              final qCode=code.text.trim().toLowerCase(), qName=name.text.trim().toLowerCase();
-              final cCode=(c['party_code']??'').toString().toLowerCase(), cName=(c['party_name']??'').toString().toLowerCase();
-              final d=(c['district']??c['center']??'').toString();
-              return (qCode.isEmpty||cCode.contains(qCode))&&(qName.isEmpty||cName.contains(qName))&&
-                (governorate==null||c['governorate']==governorate)&&(district==null||d==district)&&
-                (locality==null||c['area']==locality);
-            }).map((c) {
+            rows:filteredCustomers().map((c) {
               final id=c['id'].toString(), goal=_goalFor(id);
               return DataRow(cells:[
                 DataCell(Checkbox(shape:const CircleBorder(),value:selected.contains(id),onChanged:(v)=>refresh(()=>v==true?selected.add(id):selected.remove(id)))),
@@ -648,24 +672,31 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
         ])),
         actions:[
           TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),
-          TextButton(onPressed:()=>refresh(()=>selected.addAll(available.map((c)=>c['id'].toString()))),child:const Text('تحديد الكل')),
+          TextButton(onPressed:()=>refresh(()=>selected.addAll(filteredCustomers().map((c)=>c['id'].toString()))),child:const Text('تحديد نتائج البحث')),
           FilledButton.icon(onPressed:()async{
             try {
               final unselectedIds=available.where((c)=>c['sales_rep_id']?.toString()==repId&&!selected.contains(c['id'].toString()))
                 .map((c)=>c['id'].toString()).toList();
               if(unselectedIds.isNotEmpty) {
-                await _db.from('erp_parties').update({'sales_rep_id':null})
-                  .eq('company_id',widget.companyId!).inFilter('id',unselectedIds);
+                final cleared=await _db.from('erp_parties').update({'sales_rep_id':null})
+                  .eq('company_id',widget.companyId!).inFilter('id',unselectedIds).select('id');
+                if((cleared as List).length!=unselectedIds.length) {
+                  throw StateError('لم يتم فك ربط كل العملاء المحددين؛ راجع الصلاحيات.');
+                }
               }
               if(selected.isNotEmpty) {
-                await _db.from('erp_parties').update({'sales_rep_id':repId})
-                  .eq('company_id',widget.companyId!).inFilter('id',selected.toList());
+                final assigned=await _db.from('erp_parties').update({'sales_rep_id':repId})
+                  .eq('company_id',widget.companyId!).inFilter('id',selected.toList()).select('id');
+                if((assigned as List).length!=selected.length) {
+                  throw StateError('لم يتم ربط كل العملاء المحددين؛ راجع الصلاحيات أو حدّث نتائج البحث.');
+                }
               }
               final areaIds=available.where((c)=>selected.contains(c['id'].toString()))
                 .map((c)=>c['geo_area_id']?.toString()).whereType<String>()
                 .where((id)=>id.isNotEmpty).toSet().toList();
-              await _db.from('erp_sales_representatives').update({'assigned_area_ids':areaIds})
-                .eq('id',repId).eq('company_id',widget.companyId!);
+              final repSaved=await _db.from('erp_sales_representatives').update({'assigned_area_ids':areaIds})
+                .eq('id',repId).eq('company_id',widget.companyId!).select('id').maybeSingle();
+              if(repSaved==null) throw StateError('تعذر حفظ نطاق المندوب؛ راجع صلاحيات الشركة.');
               if(ctx.mounted)Navigator.pop(ctx);
               await _load();
               _toast('تم حفظ ربط ${selected.length} عميل بالمندوب.');
