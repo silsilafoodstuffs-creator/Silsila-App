@@ -165,6 +165,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   double _n(dynamic v)=>v is num?v.toDouble():double.tryParse(_s(v))??0;
   String _fmt(dynamic v)=>_n(v).toStringAsFixed(3);
   String _unit(String nature)=>nature=='days'?' يوم':nature=='time'?' دقيقة':' ${_currencySymbol()}';
+  String _elementValue(Map<String,dynamic> element,dynamic value)=>'${_fmt(value)}${_unit(_s(element['nature']))}';
   String _currencySymbol()=>const {'EGP':'ج.م','USD':'$','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[_currency]??_currency;
 
   @override
@@ -279,13 +280,13 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
       const SizedBox(height:12),
       Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
         Expanded(child:_slipSide('الاستحقاقات',Colors.green,[
-          ('الراتب الأساسي',base),('بدلات',allow),('عمولات',comm),('إضافي',ot),
-          ...earning.map((x)=>(_s(x['name_ar']),_n(values[_s(x['id'])]))),
+          ('الراتب الأساسي',_fmt(base)),('بدلات',_fmt(allow)),('عمولات',_fmt(comm)),('إضافي',_fmt(ot)),
+          ...earning.map((x)=>(_s(x['name_ar']),_elementValue(x,values[_s(x['id'])]))),
         ])),
         const SizedBox(width:10),
         Expanded(child:_slipSide('الاستقطاعات',Colors.red,[
-          ('استقطاعات أخرى',ded),
-          ...deductions.map((x)=>(_s(x['name_ar']),_n(values[_s(x['id'])]))),
+          ('استقطاعات أساسية',_fmt(ded)),
+          ...deductions.map((x)=>(_s(x['name_ar']),_elementValue(x,values[_s(x['id'])]))),
         ])),
       ]),
       const SizedBox(height:12),
@@ -297,9 +298,9 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
     ])));
   }
 
-  Widget _slipSide(String title,Color color,List<(String,double)> items)=>Container(decoration:BoxDecoration(border:Border.all(color:color.withValues(alpha:.35)),borderRadius:BorderRadius.circular(8)),child:Column(children:[
+  Widget _slipSide(String title,Color color,List<(String,String)> items)=>Container(decoration:BoxDecoration(border:Border.all(color:color.withValues(alpha:.35)),borderRadius:BorderRadius.circular(8)),child:Column(children:[
     Container(width:double.infinity,padding:const EdgeInsets.all(8),color:color.withValues(alpha:.10),child:Text(title,textAlign:TextAlign.center,style:TextStyle(color:color,fontWeight:FontWeight.w900))),
-    ...items.map((x)=>Padding(padding:const EdgeInsets.symmetric(horizontal:8,vertical:7),child:Row(children:[Expanded(child:Text(x.$1)),Text(_fmt(x.$2),style:const TextStyle(fontWeight:FontWeight.w800))]))),
+    ...items.map((x)=>Padding(padding:const EdgeInsets.symmetric(horizontal:8,vertical:7),child:Row(children:[Expanded(child:Text(x.$1)),Text(x.$2,style:const TextStyle(fontWeight:FontWeight.w800))]))),
   ]));
 
   String _selectedRunPeriod(){final r=_runs.where((x)=>_s(x['id'])==_runId);return r.isEmpty?'—':'${_s(r.first['period_start'])} إلى ${_s(r.first['period_end'])}';}
@@ -335,8 +336,8 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
         columns:[
           const DataColumn(label:Text('م')),const DataColumn(label:Text('كود الموظف')),const DataColumn(label:Text('اسم الموظف')),
           const DataColumn(label:Text('الراتب الأساسي')),const DataColumn(label:Text('بدلات')),const DataColumn(label:Text('عمولات')),const DataColumn(label:Text('إضافي')),
-          ...earning.map((x)=>DataColumn(label:Text(_s(x['name_ar'])))),
-          const DataColumn(label:Text('استقطاعات أساسية')),...deduction.map((x)=>DataColumn(label:Text(_s(x['name_ar'])))),
+          ...earning.map((x)=>DataColumn(label:Text('${_s(x['name_ar'])} (${_unit(_s(x['nature']))})'))),
+          const DataColumn(label:Text('استقطاعات أساسية')),...deduction.map((x)=>DataColumn(label:Text('${_s(x['name_ar'])} (${_unit(_s(x['nature']))})'))),
           const DataColumn(label:Text('الصافي')),const DataColumn(label:Text('التوقيع')),
         ],
         rows:List.generate(employees.length,(i){
@@ -346,9 +347,9 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
           final deductions=deduction.map((x)=>_n(values[_s(x['id'])])).toList();
           final ded=(_n(line['deductions'])-deductions.fold<double>(0,(sum,x)=>sum+x)).clamp(0,double.infinity).toDouble();
           final cells=<DataCell>[DataCell(Text('${i+1}')),DataCell(Text(_s(e['employee_code']))),DataCell(Text(_s(e['full_name']))),DataCell(Text(_fmt(base))),DataCell(Text(_fmt(allow))),DataCell(Text(_fmt(comm))),DataCell(Text(_fmt(ot)))];
-          cells.addAll(earnings.map((v)=>DataCell(Text(_fmt(v)))));
+          cells.addAll(earning.asMap().entries.map((x)=>DataCell(Text(_elementValue(x.value,earnings[x.key])))));
           cells.add(DataCell(Text(_fmt(ded))));
-          cells.addAll(deductions.map((v)=>DataCell(Text(_fmt(v)))));
+          cells.addAll(deduction.asMap().entries.map((x)=>DataCell(Text(_elementValue(x.value,deductions[x.key])))));
           cells.add(DataCell(Text(_fmt(line['net_amount']),style:const TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple))));
           cells.add(const DataCell(Text('................')));
           return DataRow(cells:cells);
