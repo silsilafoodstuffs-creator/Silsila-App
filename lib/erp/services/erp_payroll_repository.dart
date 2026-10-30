@@ -99,7 +99,7 @@ class ErpPayrollRepository {
     final net = gross - totalDeductions;
     if (basic < 0 || allowances < 0 || commissions < 0 || overtime < 0 ||
         deductions < 0 || elementEarnings < 0 || elementDeductions < 0 || totalDeductions > gross || elementValues.values.any((v) => v < 0 || v > 999.999)) {
-      throw ArgumentError('راجع مكونات الراتب والاستقطاعات.');
+      throw ArgumentError('راجع عناصر المرتبات والاستقطاعات.');
     }
     await _db.from('erp_payroll_lines').insert({
       'company_id': companyId.trim(),
