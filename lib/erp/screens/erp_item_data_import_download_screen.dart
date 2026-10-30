@@ -208,10 +208,23 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     var foundProducts = 0, foundCategories = 0, foundImages = 0, pageErrors = 0;
     final siteHosts = <String>{uri.host.toLowerCase()};
     try {
+      const pageBatchSize = 5;
       while (queue.isNotEmpty && visited.length < 4000 && !_cancelCrawl) {
-        final next = queue.removeAt(0);
-        if (!visited.add(next)) continue;
-        try {
+        // Process a bounded batch of pages before advancing to newly discovered links.
+        // Requests remain sequential inside the batch to avoid overwhelming the source site.
+        final batch = <String>[];
+        while (queue.isNotEmpty && batch.length < pageBatchSize && visited.length + batch.length < 4000) {
+          final candidate = queue.removeAt(0);
+          if (visited.add(candidate)) batch.add(candidate);
+        }
+        if (batch.isEmpty) continue;
+        if (mounted) setState(() {
+          _status = 'بدء دفعة جديدة: ${batch.length} صفحات. إجمالي الصفحات المفحوصة ${visited.length - batch.length}، السجلات ${_rows.length}.';
+        });
+        for (var batchOffset = 0; batchOffset < batch.length; batchOffset++) {
+          if (_cancelCrawl || !mounted) break;
+          final next = batch[batchOffset];
+          try {
           final response = await Supabase.instance.client.functions.invoke(
             'silsila-image-collector',
             body: {'action': 'scan', 'url': next},
@@ -337,6 +350,10 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
           _status = 'فرز شامل جارٍ: صفحات مفحوصة ${visited.length} / 4000، أصناف مرشحة $foundProducts، إجمالي السجلات ${_rows.length}، فئات $foundCategories، صور مرشحة $foundImages، أخطاء $pageErrors، متبقي ${queue.length}.';
         });
         await Future<void>.delayed(const Duration(milliseconds: 1));
+        if (mounted) setState(() {
+          _status = 'دفعة ${((visited.length - 1) ~/ pageBatchSize) + 1}: صفحات مفحوصة ${visited.length} / 4000، سجلات ${_rows.length}، متبقي ${queue.length}.';
+        });
+        }
       }
       if (mounted) setState(() {
         _selectAll = true;
