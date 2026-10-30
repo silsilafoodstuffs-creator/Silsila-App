@@ -708,15 +708,15 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
                 DataCell(Checkbox(value:r?['has_target']==true,onChanged:r==null?null:(v)=>_saveRep(e,{'has_target':v==true}))),
                 DataCell(OutlinedButton.icon(onPressed:r==null?null:()=>_linkCustomers(e),icon:const Icon(Icons.group_add_outlined,size:18),label:Text('العملاء (${_customers.where((c)=>c['sales_rep_id']?.toString()==r['id'].toString()).length})'))),
                 DataCell(Checkbox(value:hasCommission,onChanged:r==null?null:(v)=>_saveRep(e,{'has_commission':v==true}))),
-                DataCell(SizedBox(width:190,child:DropdownButton<String>(
+                DataCell(hasCommission?SizedBox(width:190,child:DropdownButton<String>(
                   isExpanded:true,value:const ['tiered','percentage','points_per_unit'].contains(type)?type:'percentage',
                   items:const [
                     DropdownMenuItem(value:'tiered',child:Text('شريحة')),
                     DropdownMenuItem(value:'percentage',child:Text('نسبة من المحقق')),
                     DropdownMenuItem(value:'points_per_unit',child:Text('نقاط لكل وحدة')),
                   ],
-                  onChanged:r==null||!hasCommission?null:(v)=>v==null?null:_saveRep(e,{'commission_type':v}),
-                ))),
+                  onChanged:r==null?null:(v)=>v==null?null:_saveRep(e,{'commission_type':v}),
+                )):const Text('—')),
                 DataCell(Checkbox(value:r?['is_active']==true,onChanged:r==null?null:(v)=>_saveRep(e,{'is_active':v==true}))),
               ]);
             }),
