@@ -35,6 +35,14 @@ class ErpPayrollRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
+  Future<List<Map<String, dynamic>>> fetchSalaryElements(String companyId) async {
+    final rows = await _db.from('erp_hr_salary_elements')
+      .select('id, element_code, name_ar, element_type, nature, default_value, is_active')
+      .eq('company_id', companyId.trim()).eq('is_active', true)
+      .order('element_code');
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
   Future<List<Map<String, dynamic>>> fetchAccounts(String companyId) async {
     final rows = await _db.from('erp_accounts')
       .select('id, account_code, account_name')
@@ -45,7 +53,7 @@ class ErpPayrollRepository {
 
   Future<List<Map<String, dynamic>>> fetchLines(String runId) async {
     final rows = await _db.from('erp_payroll_lines')
-      .select('id, employee_id, basic_amount, allowances, commissions, overtime_amount, deductions, gross_amount, net_amount')
+      .select('id, employee_id, basic_amount, allowances, commissions, overtime_amount, deductions, gross_amount, net_amount, element_values')
       .eq('payroll_run_id', runId).order('created_at');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
@@ -82,12 +90,16 @@ class ErpPayrollRepository {
     required double commissions,
     required double overtime,
     required double deductions,
+    Map<String, double> elementValues = const <String, double>{},
+    double elementEarnings = 0,
+    double elementDeductions = 0,
   }) async {
-    final gross = basic + allowances + commissions + overtime;
-    final net = gross - deductions;
+    final gross = basic + allowances + commissions + overtime + elementEarnings;
+    final totalDeductions = deductions + elementDeductions;
+    final net = gross - totalDeductions;
     if (basic < 0 || allowances < 0 || commissions < 0 || overtime < 0 ||
-        deductions < 0 || deductions > gross) {
-      throw ArgumentError('راجع مكونات الراتب والاستقطاعات.');
+        deductions < 0 || elementEarnings < 0 || elementDeductions < 0 || totalDeductions > gross || elementValues.values.any((v) => v < 0 || v > 999.999)) {
+      throw ArgumentError('راجع عناصر المرتبات والاستقطاعات.');
     }
     await _db.from('erp_payroll_lines').insert({
       'company_id': companyId.trim(),
@@ -97,7 +109,8 @@ class ErpPayrollRepository {
       'allowances': allowances,
       'commissions': commissions,
       'overtime_amount': overtime,
-      'deductions': deductions,
+      'deductions': totalDeductions,
+      'element_values': elementValues,
       'gross_amount': gross,
       'net_amount': net,
     });

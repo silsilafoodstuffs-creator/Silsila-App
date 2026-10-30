@@ -23,6 +23,8 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _accounts = [];
   List<Map<String, dynamic>> _lines = [];
+  List<Map<String, dynamic>> _salaryElements = [];
+  final Map<String, TextEditingController> _elementValueControllers = <String, TextEditingController>{};
   String? _selectedRunId;
   String? _employeeId;
   String? _expenseAccountId;
@@ -46,7 +48,9 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
   @override
   void dispose() {
     _company.dispose(); _runCode.dispose(); _basic.dispose(); _allowances.dispose();
-    _commission.dispose(); _overtime.dispose(); _deductions.dispose(); super.dispose();
+    _commission.dispose(); _overtime.dispose(); _deductions.dispose();
+    for (final controller in _elementValueControllers.values) { controller.dispose(); }
+    super.dispose();
   }
 
   String _s(dynamic v) => (v ?? '').toString();
@@ -62,10 +66,15 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
         _repo.fetchRuns(_company.text),
         _repo.fetchEmployeeSalaries(_company.text),
         _repo.fetchAccounts(_company.text),
+        _repo.fetchSalaryElements(_company.text),
       ]);
       if (!mounted) return;
       setState(() {
         _runs = results[0]; _employees = results[1]; _accounts = results[2];
+        _salaryElements = results[3];
+        final activeIds = _salaryElements.map((e) => _s(e['id'])).toSet();
+        for (final id in _elementValueControllers.keys.toList()) { if (!activeIds.contains(id)) { _elementValueControllers.remove(id)?.dispose(); } }
+        for (final element in _salaryElements) { final id = _s(element['id']); _elementValueControllers.putIfAbsent(id, () => TextEditingController(text: _money(element['default_value']))); }
         if (!_employees.any((r) => _s(r['id']) == _employeeId)) _employeeId = _employees.isEmpty ? null : _s(_employees.first['id']);
         if (!_accounts.any((r) => _s(r['id']) == _expenseAccountId)) _expenseAccountId = _accounts.isEmpty ? null : _s(_accounts.first['id']);
         if (!_accounts.any((r) => _s(r['id']) == _payableAccountId)) _payableAccountId = _accounts.length > 1 ? _s(_accounts[1]['id']) : null;
@@ -151,13 +160,26 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
     final commission = double.tryParse(_commission.text) ?? -1;
     final overtime = double.tryParse(_overtime.text) ?? -1;
     final deductions = double.tryParse(_deductions.text) ?? -1;
+    final elementValues = <String, double>{};
+    double elementEarnings = 0, elementDeductions = 0;
+    for (final element in _salaryElements) {
+      final id = _s(element['id']);
+      final amount = double.tryParse(_elementValueControllers[id]?.text.trim() ?? '0');
+      if (amount == null || amount < 0 || amount > 999.999) { setState(() => _error = 'قيمة عنصر ${_s(element['name_ar'])} يجب أن تكون من 0 إلى 999.999.'); return; }
+      elementValues[id] = amount;
+      if (_s(element['nature']) == 'value') {
+        if (_s(element['element_type']) == 'earning') elementEarnings += amount; else elementDeductions += amount;
+      }
+    }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       await _repo.addLine(companyId: _company.text, runId: _selectedRunId!, employeeId: _employeeId!,
-        basic: basic, allowances: allowances, commissions: commission, overtime: overtime, deductions: deductions);
+        basic: basic, allowances: allowances, commissions: commission, overtime: overtime, deductions: deductions,
+        elementValues: elementValues, elementEarnings: elementEarnings, elementDeductions: elementDeductions);
       await _repo.recalculate(_selectedRunId!);
       if (!mounted) return;
       _basic.text = '0'; _allowances.text = '0'; _commission.text = '0'; _overtime.text = '0'; _deductions.text = '0';
+      for (final element in _salaryElements) { _elementValueControllers[_s(element['id'])]?.text = '0.000'; }
       setState(() { _saving = false; _message = 'تمت إضافة الموظف إلى المسير وإعادة حساب الإجماليات.'; });
       await _load();
     } catch (e) {
@@ -308,7 +330,13 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
                 const SizedBox(width: 6), Expanded(child: _amountField('إضافي', _overtime)),
               ]),
               const SizedBox(height: 8),
-              _amountField('استقطاعات', _deductions),
+              _amountField('استقطاعات أساسية', _deductions),
+              if (_salaryElements.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const Text('عناصر المرتبات المعرفة', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
+                const SizedBox(height: 6),
+                Wrap(spacing: 8, runSpacing: 8, children: _salaryElements.map((element) => SizedBox(width: 210, child: _amountField('${_s(element['name_ar'])} • ${_s(element['element_type']) == 'earning' ? 'استحقاق' : 'استقطاع'} • ${_s(element['nature']) == 'days' ? 'يوم' : _s(element['nature']) == 'time' ? 'دقيقة' : 'قيمة'}', _elementValueControllers[_s(element['id'])]!))).toList()),
+              ],
               const SizedBox(height: 8),
               FilledButton.icon(onPressed: _saving ? null : _addLine, icon: const Icon(Icons.person_add_alt_1), label: const Text('إضافة إلى المسير')),
             ],
