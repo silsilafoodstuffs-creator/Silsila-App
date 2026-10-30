@@ -784,7 +784,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
           child:DataTable(
             headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
             columns:const [
-              DataColumn(label:Text('م')),DataColumn(label:Text('كود الموظف')),
+              DataColumn(label:Text('م')),DataColumn(label:Text('كود المندوب')),
               DataColumn(label:Text('اسم الموظف عربي')),DataColumn(label:Text('اسم الموظف إنجليزي')),
               DataColumn(label:Text('له هدف')),DataColumn(label:Text('ربط العملاء')),
               DataColumn(label:Text('له عمولة')),DataColumn(label:Text('نوع العمولة')),
@@ -801,7 +801,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
               ).length;
               return DataRow(cells: [
                 DataCell(Text('${i + 1}')),
-                DataCell(Text((e['employee_code'] ?? '').toString())),
+                DataCell(Text((r?['rep_code'] ?? '—').toString())),
                 DataCell(Text((e['full_name'] ?? '').toString())),
                 DataCell(Text((e['full_name_en'] ?? '—').toString())),
                 DataCell(Checkbox(
