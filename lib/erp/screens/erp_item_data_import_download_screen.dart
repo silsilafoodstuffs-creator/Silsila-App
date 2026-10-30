@@ -167,6 +167,13 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
   final _url = TextEditingController();
   final List<_ImportRow> _rows = [];
   bool _busy = false, _selectAll = true, _crawling = false, _cancelCrawl = false;
+  // Render a bounded slice of the full crawl result to keep the browser responsive.
+  static const int _tablePageSize = 100;
+  int _tablePage = 0;
+  List<_ImportRow> get _visibleRows => _rows
+      .skip(_tablePage * _tablePageSize)
+      .take(_tablePageSize)
+      .toList(growable: false);
   String _status = 'أدخل رابط الموقع لفرز جميع الصفحات والمنتجات والفئات.';
   static const _headers = ['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','third_category','brand','barcode','sale_price','major_unit','inner_count','minor_unit','other_units','weight','length','width','height','description','source_page'];
   static const _headerLabels = ['المعرف','الصورة','رابط الصورة','اسم الصنف / الفئة','نوع السجل','نوع الكود','كود الصنف / الفئة','الفئة الرئيسية','الفئة الفرعية','الفئة الثانوية','البراند / الماركة','الباركود','السعر','الوحدة الكبرى','العدد الداخلي','الوحدة الصغرى','وحدات أخرى','الوزن','الطول','العرض','الارتفاع','الوصف','صفحة المصدر'];
@@ -179,7 +186,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
     }
   }
   void _resetExploration() {
-    setState(() { _rows.clear(); _selectAll = true; _status = 'تمت إعادة ضبط الاستكشاف. أدخل رابطًا ثم ابدأ الفحص.'; });
+    setState(() { _rows.clear(); _tablePage = 0; _selectAll = true; _status = 'تمت إعادة ضبط الاستكشاف. أدخل رابطًا ثم ابدأ الفحص.'; });
   }
   Future<void> _crawl() async {
     final raw = _url.text.trim();
@@ -192,6 +199,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       _busy = true; _crawling = true; _cancelCrawl = false; _selectAll = true;
       _status = 'بدأ فرز الموقع بالكامل؛ سيتم تتبع صفحات الفئات والمنتجات وروابط المزيد والترقيم.';
       _rows.clear();
+      _tablePage = 0;
     });
     final queue = <String>[uri.toString()];
     final queued = <String>{uri.toString()};
@@ -650,6 +658,19 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                   FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.black), onPressed: _busy || _rows.isEmpty ? null : _downloadExcel, icon: const Icon(Icons.file_download_outlined, size: 18), label: const Text('حفظ اكسيل')),
                   OutlinedButton.icon(onPressed: _busy || _rows.isEmpty ? null : _downloadImagesZip, icon: const Icon(Icons.folder_zip, size: 18), label: const Text('حفظ Excel + صور ZIP')),
                   if (_crawling) OutlinedButton.icon(onPressed: () => setState(() => _cancelCrawl = true), icon: const Icon(Icons.stop_circle_outlined, size: 18), label: const Text('إيقاف الفحص')),
+                  if (_rows.isNotEmpty) ...[
+                    Text('عرض ${_tablePage * _tablePageSize + 1}–${((_tablePage + 1) * _tablePageSize).clamp(0, _rows.length)} من ${_rows.length}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                    OutlinedButton.icon(
+                      onPressed: _busy || _tablePage == 0 ? null : () => setState(() => _tablePage--),
+                      icon: const Icon(Icons.chevron_right, size: 18),
+                      label: const Text('السجلات السابقة'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _busy || (_tablePage + 1) * _tablePageSize >= _rows.length ? null : () => setState(() => _tablePage++),
+                      icon: const Icon(Icons.chevron_left, size: 18),
+                      label: const Text('السجلات التالية'),
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 6),
@@ -719,7 +740,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                       const DataColumn(label: Text('العرض')),
                       const DataColumn(label: Text('الارتفاع')),
                     ],
-                    rows: _rows.map((r) => DataRow(cells: [
+                    rows: _visibleRows.map((r) => DataRow(cells: [
                       DataCell(Checkbox(shape: const CircleBorder(), value: r.selected, onChanged: (v) => setState(() => r.selected = v ?? false))),
                       DataCell(Text('${_rows.indexOf(r) + 1}')),
                       DataCell(GestureDetector(onTap: () => _preview(r), child: SizedBox(width: 52, height: 48, child: r.imageUrl.isEmpty ? const Icon(Icons.category_outlined) : Image.network(r.imageUrl, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image))))),
