@@ -168,7 +168,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   String _currencySymbol()=>const {'EGP':'ج.م','USD':'$','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[_currency]??_currency;
 
   @override
-  void initState(){super.initState();_tabs=TabController(length:2,vsync:this,initialIndex:widget.initialTab.clamp(0,1));_load();}
+  void initState(){super.initState();_tabs=TabController(length:2,vsync:this,initialIndex:widget.initialTab.clamp(0,1).toInt());_load();}
   @override
   void dispose(){_tabs.dispose();super.dispose();}
 
@@ -214,11 +214,23 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   Map<String,dynamic>? _employee(String id){final a=_employees.where((e)=>_s(e['id'])==id);return a.isEmpty?null:a.first;}
   Map<String,dynamic>? _lineFor(String id){final a=_lines.where((e)=>_s(e['employee_id'])==id);return a.isEmpty?null:a.first;}
   String _label(List<Map<String,dynamic>> rows,String id,String code,String name){final a=rows.where((x)=>_s(x['id'])==id);return a.isEmpty?'—':'${_s(a.first[code])} • ${_s(a.first[name])}';}
+  bool _departmentMatches(Map<String,dynamic> employee) {
+    if (_departmentId == null) return true;
+    var current = _s(employee['department_id']);
+    final seen = <String>{};
+    while (current.isNotEmpty && seen.add(current)) {
+      if (current == _departmentId) return true;
+      final node = _departments.where((d) => _s(d['id']) == current);
+      current = node.isEmpty ? '' : _s(node.first['parent_id']);
+    }
+    return _s(employee['administration_id']) == _departmentId;
+  }
+
   List<Map<String,dynamic>> get _filteredEmployees=>_employees.where((e){
     if(_activeFilter=='نشط'&&e['is_active']!=true)return false;
     if(_activeFilter=='غير نشط'&&e['is_active']==true)return false;
     if(_branchId!=null&&_s(e['branch_id'])!=_branchId)return false;
-    if(_departmentId!=null&&_s(e['department_id'])!=_departmentId&&_s(e['administration_id'])!=_departmentId)return false;
+    if(!_departmentMatches(e))return false;
     if(_locationId!=null&&_s(e['work_location_id'])!=_locationId)return false;
     if(_jobId!=null&&_s(e['job_id'])!=_jobId)return false;
     return _lineFor(_s(e['id']))!=null;
@@ -307,12 +319,22 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
         OutlinedButton.icon(onPressed:()=>setState((){_branchId=null;_departmentId=null;_locationId=null;_jobId=null;_activeFilter='الكل';}),icon:const Icon(Icons.filter_alt_off),label:const Text('مسح الفلاتر')),
       ])),
       Padding(padding:const EdgeInsets.symmetric(horizontal:10),child:Align(alignment:Alignment.centerRight,child:Text('عدد الموظفين: ${employees.length} • ${_selectedRunPeriod()}',style:const TextStyle(fontWeight:FontWeight.w800)))),
-      Expanded(child:employees.isEmpty?const Center(child:Text('لا توجد بيانات رواتب تطابق محددات التقرير.')):SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(
+      Expanded(child:employees.isEmpty?const Center(child:Text('لا توجد بيانات رواتب تطابق محددات التقرير.')):SingleChildScrollView(scrollDirection:Axis.horizontal,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),child:Row(children:[
+          const Text('بيانات الموظف',style:TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple)),
+          const SizedBox(width:22),
+          Text('الاستحقاقات • ${4+earning.length} عمود',style:const TextStyle(fontWeight:FontWeight.w900,color:Colors.green)),
+          const SizedBox(width:22),
+          Text('الاستقطاعات • ${1+deduction.length} عمود',style:const TextStyle(fontWeight:FontWeight.w900,color:Colors.red)),
+          const SizedBox(width:22),const Text('الصافي والتوقيع',style:TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple)),
+        ])),
+        SingleChildScrollView(child:DataTable(
         headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
         columns:[
           const DataColumn(label:Text('م')),const DataColumn(label:Text('كود الموظف')),const DataColumn(label:Text('اسم الموظف')),
+          const DataColumn(label:Text('الراتب الأساسي')),const DataColumn(label:Text('بدلات')),const DataColumn(label:Text('عمولات')),const DataColumn(label:Text('إضافي')),
           ...earning.map((x)=>DataColumn(label:Text(_s(x['name_ar'])))),
-          ...deduction.map((x)=>DataColumn(label:Text(_s(x['name_ar'])))),
+          const DataColumn(label:Text('استقطاعات أساسية')),...deduction.map((x)=>DataColumn(label:Text(_s(x['name_ar'])))),
           const DataColumn(label:Text('الصافي')),const DataColumn(label:Text('التوقيع')),
         ],
         rows:List.generate(employees.length,(i){
@@ -320,14 +342,16 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
           final base=_n(line['basic_amount']),allow=_n(line['allowances']),comm=_n(line['commissions']),ot=_n(line['overtime_amount']),ded=_n(line['deductions']);
           final earnings=earning.map((x)=>_n(values[_s(x['id'])])).toList();
           final deductions=deduction.map((x)=>_n(values[_s(x['id'])])).toList();
-          final cells=<DataCell>[DataCell(Text('${i+1}')),DataCell(Text(_s(e['employee_code']))),DataCell(Text(_s(e['full_name'])))];
-          cells.addAll(earnings.asMap().entries.map((x)=>DataCell(Text(_fmt(x.value+(x.key==0?base+allow+comm+ot:0))))));
-          cells.addAll(deductions.asMap().entries.map((x)=>DataCell(Text(_fmt(x.value+(x.key==0?ded:0))))));
+          final cells=<DataCell>[DataCell(Text('${i+1}')),DataCell(Text(_s(e['employee_code']))),DataCell(Text(_s(e['full_name']))),DataCell(Text(_fmt(base))),DataCell(Text(_fmt(allow))),DataCell(Text(_fmt(comm))),DataCell(Text(_fmt(ot)))];
+          cells.addAll(earnings.map((v)=>DataCell(Text(_fmt(v)))));
+          cells.add(DataCell(Text(_fmt(ded))));
+          cells.addAll(deductions.map((v)=>DataCell(Text(_fmt(v)))));
           cells.add(DataCell(Text(_fmt(line['net_amount']),style:const TextStyle(fontWeight:FontWeight.w900,color:_salaryPurple))));
           cells.add(const DataCell(Text('................')));
           return DataRow(cells:cells);
         }),
-      )))),
+      ))),
+      ]))),
     ]);
   }
 
