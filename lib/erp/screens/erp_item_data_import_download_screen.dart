@@ -164,7 +164,7 @@ class ErpItemDataImportScreen extends StatefulWidget {
   @override State<ErpItemDataImportScreen> createState() => _ErpItemDataImportScreenState();
 }
 class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
-  final _url = TextEditingController();
+  final _url = TextEditingController(text: 'https://www.amazon.eg/');
   final List<_ImportRow> _rows = [];
   bool _busy = false, _selectAll = true, _crawling = false, _cancelCrawl = false;
   // Render a bounded slice of the full crawl result to keep the browser responsive.
@@ -174,7 +174,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
       .skip(_tablePage * _tablePageSize)
       .take(_tablePageSize)
       .toList(growable: false);
-  String _status = 'أدخل رابط الموقع لفرز جميع الصفحات والمنتجات والفئات.';
+  String _status = 'المصدر الافتراضي: Amazon مصر. يمكنك تغيير الرابط قبل بدء الفحص.';
   static const _headers = ['id','image_file','image_url','name_ar','record_type','code_mode','item_code','category','subcategory','third_category','brand','barcode','sale_price','major_unit','inner_count','minor_unit','other_units','weight','length','width','height','description','source_page'];
   static const _headerLabels = ['المعرف','الصورة','رابط الصورة','اسم الصنف / الفئة','نوع السجل','نوع الكود','كود الصنف / الفئة','الفئة الرئيسية','الفئة الفرعية','الفئة الثانوية','البراند / الماركة','الباركود','السعر','الوحدة الكبرى','العدد الداخلي','الوحدة الصغرى','وحدات أخرى','الوزن','الطول','العرض','الارتفاع','الوصف','صفحة المصدر'];
   @override void dispose(){_url.dispose();super.dispose();}
@@ -667,7 +667,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                 children: [
                   SizedBox(width: 250, child: TextField(
                     controller: _url,
-                    decoration: const InputDecoration(labelText: 'رابط الموقع', hintText: 'https://example.com', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 10)),
+                    decoration: const InputDecoration(labelText: 'رابط الموقع (Amazon مصر افتراضيًا)', hintText: 'https://www.amazon.eg/', border: OutlineInputBorder(), isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 10)),
                   )),
                   FilledButton.icon(onPressed: _busy ? null : _crawl, icon: const Icon(Icons.travel_explore, size: 18), label: const Text('فرز الموقع بالكامل')),
                   OutlinedButton.icon(onPressed: _busy ? null : _pasteUrl, icon: const Icon(Icons.content_paste, size: 18), label: const Text('لصق الرابط')),
