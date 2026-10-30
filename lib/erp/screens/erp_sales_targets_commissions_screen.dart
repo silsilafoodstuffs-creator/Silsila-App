@@ -508,17 +508,51 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
       _customers..clear()..addAll((results[2] as List).cast<Map<String,dynamic>>());
       _goals..clear()..addAll((results[3] as List).cast<Map<String,dynamic>>());
       // Keep the directory complete if an employee was added after the migration.
-      for(final e in _employees) {
-        final exists=_reps.any((r)=>r['employee_id']?.toString()==e['id']?.toString());
-        if(!exists) {
-          final employeeCode=(e['employee_code']??'').toString().trim();
-          final numericSuffix=RegExp(r'([0-9]+)
-              'rep_name':e['full_name'],'is_active':e['is_active']??true,
-              'has_target':false,'has_commission':false,'commission_type':'percentage',
-              'commission_plan':'percentage','is_demo_data':false,
-            }).select().single();
-            _reps.add(Map<String,dynamic>.from(created));
-          } catch (_) { /* A concurrent screen load may have created this row. */ }
+      for (final employee in _employees) {
+        final employeeId = employee['id']?.toString();
+        if (employeeId == null || employeeId.isEmpty) continue;
+        final exists = _reps.any(
+          (rep) => rep['employee_id']?.toString() == employeeId,
+        );
+        if (exists) continue;
+
+        final employeeCode = (employee['employee_code'] ?? '').toString().trim();
+        final numericSuffix = RegExp(r'([0-9]+)$').firstMatch(employeeCode)?.group(1);
+        final cleanedCode = employeeCode.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
+        final fallbackId = employeeId.replaceAll(RegExp(r'[^A-Fa-f0-9]'), '').toUpperCase();
+        final representativeCode = numericSuffix ??
+            (cleanedCode.isNotEmpty
+                ? cleanedCode
+                : (fallbackId.length > 8 ? fallbackId.substring(0, 8) : fallbackId));
+        if (representativeCode.isEmpty) {
+          throw StateError('لا يمكن إنشاء كود مندوب لهذا الموظف دون كود موظف صالح.');
+        }
+
+        final employeeName = (employee['full_name'] ?? '').toString().trim();
+        final duplicateName = _reps.any((rep) => rep['rep_name']?.toString() == employeeName);
+        final representativeName = duplicateName
+            ? '$employeeName (${employeeCode.isEmpty ? representativeCode : employeeCode})'
+            : employeeName;
+        try {
+          final created = await _db.from('erp_sales_representatives').insert({
+            'company_id': c,
+            'employee_id': employeeId,
+            'rep_code': 'REP-$representativeCode',
+            'rep_name': representativeName,
+            'is_active': employee['is_active'] ?? true,
+            'has_target': false,
+            'has_commission': false,
+            'commission_type': 'percentage',
+            'commission_plan': 'percentage',
+            'is_demo_data': false,
+          }).select().single();
+          _reps.add(Map<String, dynamic>.from(created));
+        } catch (_) {
+          // A parallel screen load may have inserted this employee first.
+          final existing = await _db.from('erp_sales_representatives')
+              .select().eq('company_id', c).eq('employee_id', employeeId).maybeSingle();
+          if (existing == null) rethrow;
+          _reps.add(Map<String, dynamic>.from(existing));
         }
       }
       if(mounted)setState(()=>_loading=false);
