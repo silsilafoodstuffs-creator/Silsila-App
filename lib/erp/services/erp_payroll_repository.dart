@@ -35,6 +35,14 @@ class ErpPayrollRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
+  Future<List<Map<String, dynamic>>> fetchSalaryElements(String companyId) async {
+    final rows = await _db.from('erp_hr_salary_elements')
+      .select('id, element_code, name_ar, element_type, nature, default_value, is_active')
+      .eq('company_id', companyId.trim()).eq('is_active', true)
+      .order('element_code');
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
   Future<List<Map<String, dynamic>>> fetchAccounts(String companyId) async {
     final rows = await _db.from('erp_accounts')
       .select('id, account_code, account_name')
