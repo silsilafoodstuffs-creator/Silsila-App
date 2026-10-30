@@ -215,15 +215,16 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
         final batch = <String>[];
         while (queue.isNotEmpty && batch.length < pageBatchSize && visited.length + batch.length < 4000) {
           final candidate = queue.removeAt(0);
-          if (visited.add(candidate)) batch.add(candidate);
+          if (!visited.contains(candidate)) batch.add(candidate);
         }
         if (batch.isEmpty) continue;
         if (mounted) setState(() {
-          _status = 'بدء دفعة جديدة: ${batch.length} صفحات. إجمالي الصفحات المفحوصة ${visited.length - batch.length}، السجلات ${_rows.length}.';
+          _status = 'بدء دفعة جديدة: ${batch.length} صفحات. إجمالي الصفحات المكتملة ${visited.length}، السجلات ${_rows.length}.';
         });
         for (var batchOffset = 0; batchOffset < batch.length; batchOffset++) {
           if (_cancelCrawl || !mounted) break;
           final next = batch[batchOffset];
+          if (!visited.add(next)) continue;
           try {
           final response = await Supabase.instance.client.functions.invoke(
             'silsila-image-collector',
