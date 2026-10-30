@@ -337,7 +337,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
                 const SizedBox(height: 12),
                 const Text('عناصر المرتبات المعرفة', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
                 const SizedBox(height: 6),
-                Wrap(spacing: 8, runSpacing: 8, children: _salaryElements.map((element) => SizedBox(width: 210, child: _amountField('${_s(element['name_ar'])} • ${_s(element['element_type']) == 'earning' ? 'استحقاق' : 'استقطاع'}', _elementValueControllers[_s(element['id'])]!))).toList()),
+                Wrap(spacing: 8, runSpacing: 8, children: _salaryElements.map((element) => SizedBox(width: 210, child: _amountField('${_s(element['name_ar'])} • ${_s(element['element_type']) == 'earning' ? 'استحقاق' : 'استقطاع'} • ${_s(element['nature']) == 'days' ? 'يوم' : _s(element['nature']) == 'time' ? 'دقيقة' : 'قيمة'}', _elementValueControllers[_s(element['id'])]!))).toList()),
               ],
               const SizedBox(height: 8),
               FilledButton.icon(onPressed: _saving ? null : _addLine, icon: const Icon(Icons.person_add_alt_1), label: const Text('إضافة إلى المسير')),
