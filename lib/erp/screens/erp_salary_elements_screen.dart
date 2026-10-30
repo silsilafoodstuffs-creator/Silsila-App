@@ -212,7 +212,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
   }
 
   Future<void> _loadLines()async{
-    if(_runId==null){if(mounted)setState(()=>{_lines=[];_employeeId=null;});return;}
+    if(_runId==null){if(mounted)setState((){_lines=[];_employeeId=null;});return;}
     try{final rows=await _db.from('erp_payroll_lines').select('*').eq('payroll_run_id',_runId!).eq('company_id',widget.companyId!.trim());if(mounted)setState((){_lines=rows.map((x)=>Map<String,dynamic>.from(x)).toList();if(!_lines.any((line)=>_s(line['employee_id'])==_employeeId)){final eligible=_employees.where((e)=>_lines.any((line)=>_s(line['employee_id'])==_s(e['id']))).toList();_employeeId=eligible.isEmpty?null:_s(eligible.first['id']);}});}
     catch(e){if(mounted)setState(()=>_error='تعذر تحميل تفاصيل مسير القبض: $e');}
   }
