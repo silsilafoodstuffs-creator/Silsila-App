@@ -20,7 +20,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
       case 1: return 'المندوبون وعمولات المبيعات';
       case 2: return 'خطط العمولة';
       case 3: return 'مسودات العمولات';
-      default: return 'أهداف العملاء الشهرية';
+      default: return 'أهداف المبيعات';
     }
   }
   String get _sectionSubtitle {
@@ -28,11 +28,12 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
       case 1: return 'بيانات المندوبين ونسب العمولات المستحقة';
       case 2: return 'تعريف خطط العمولة وشرائح الاستحقاق';
       case 3: return 'مراجعة مسودات العمولات قبل الاعتماد';
-      default: return 'تحديد أهداف شهرية للعملاء ومتابعة تحقيقها';
+      default: return 'إدارة أهداف العملاء حسب المحافظة والحي والمنطقة ومتابعة التحقيق';
     }
   }
   SupabaseClient? _db;
   bool _loading = true;
+  int _goalsTab = 0;
   String? _error;
   final List<Map<String,dynamic>> _customers = [], _reps = [], _goals = [], _plans = [], _tiers = [], _salesDocs = [], _runs = [];
 
@@ -325,11 +326,28 @@ Future<void> _previewSalesTargets() async {
         _stat('أهداف الشهر',demo?'4':_goals.where((g)=>g['goal_month']?.toString().startsWith(_monthKey)==true).length.toString(),Icons.flag,_pink),
       ]);}),
       const SizedBox(height:12),
+      if(widget.initialTabIndex==0) Padding(padding:const EdgeInsets.only(bottom:10),child:Wrap(spacing:8,runSpacing:8,children:[
+        ChoiceChip(label:const Text('أهداف العملاء بالمحافظة والحي والمنطقة'),selected:_goalsTab==0,onSelected:(_)=>setState(()=>_goalsTab=0)),
+        ChoiceChip(label:const Text('أهداف المندوبين'),selected:_goalsTab==1,onSelected:(_)=>setState(()=>_goalsTab=1)),
+        ChoiceChip(label:const Text('متابعة تحقيق الأهداف'),selected:_goalsTab==2,onSelected:(_)=>setState(()=>_goalsTab=2)),
+      ])),
       const SizedBox(height:10),
       if(_loading)const Padding(padding:EdgeInsets.all(28),child:Center(child:CircularProgressIndicator()))
-      else SizedBox(height:590,child:switch(widget.initialTabIndex.clamp(0, 3).toInt()) { 1 => _repsView(demo), 2 => _plansView(demo), 3 => _runsView(demo), _ => _customersView(demo) }),
+      else SizedBox(height:590,child:switch(widget.initialTabIndex.clamp(0, 3).toInt()) { 1 => _repsView(demo), 2 => _plansView(demo), 3 => _runsView(demo), _ => _goalsTab==0 ? _customersView(demo) : _goalsPlaceholder(_goalsTab) }),
     ]));
   }
+
+  Widget _goalsPlaceholder(int tab) => Center(child:Container(
+    constraints:const BoxConstraints(maxWidth:620),padding:const EdgeInsets.all(24),
+    decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(16),border:Border.all(color:const Color(0xFFE9E2F0))),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+      const Icon(Icons.flag_circle_outlined,color:_p,size:42),
+      const SizedBox(height:12),
+      Text(tab==1?'أهداف المندوبين':'متابعة تحقيق الأهداف',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:_p)),
+      const SizedBox(height:8),
+      const Text('تم إنشاء التبويب وتجهيزه ضمن شاشة أهداف المبيعات. سيتم تحديد قواعد التشغيل والتفاصيل عند استكمال مواصفات الأهداف.',textAlign:TextAlign.center,style:TextStyle(color:Colors.black54)),
+    ]),
+  ));
 
   Widget _customersView(bool demo){
     final rows=demo?<Map<String,dynamic>>[
@@ -345,7 +363,7 @@ Future<void> _previewSalesTargets() async {
         const Icon(Icons.storefront,color:_p,size:28),const SizedBox(width:10),
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           Text(c['party_name']?.toString()??'',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
-          Text((c['business_classification']?.toString()??'تصنيف غير محدد')+' • '+(c['district']?.toString()??'منطقة غير محددة'),style:const TextStyle(fontSize:12,color:Colors.black54)),
+          Text([c['governorate'],c['district']??c['center'],c['area']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' • ').isEmpty?'موقع غير محدد':[c['governorate'],c['district']??c['center'],c['area']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' • '),style:const TextStyle(fontSize:12,color:Colors.black54)),
           const SizedBox(height:5),Wrap(spacing:12,runSpacing:4,children:[
             Text('المستهدف: '+money(g['sales_target']),style:const TextStyle(color:_p,fontWeight:FontWeight.w700)),
             Text('المحقق: '+money(demo?0:_actualSalesForCustomer(c['id'].toString())),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w700)),
