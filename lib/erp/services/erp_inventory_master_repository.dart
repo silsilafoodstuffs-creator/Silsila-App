@@ -83,22 +83,72 @@ class ErpInventoryMasterRepository {
 
   Future<void> createItem({
     required String companyId, required String code, required String name,
-    String? barcode, String? categoryId, String unit = 'وحدة', double purchasePrice = 0,
-    double salePrice = 0, double taxRate = 0, double reorderLevel = 0, bool expiryTracking = false, String? imageUrl, Uint8List? imageBytes, String? imageMimeType,
+    String? barcode, String? categoryId, String unit = 'وحدة',
+    String? middleUnit, double? majorInnerQuantity,
+    double? middleInnerQuantity, String? minorUnit,
+    double purchasePrice = 0, double salePrice = 0, double taxRate = 0,
+    double reorderLevel = 0, bool expiryTracking = false, String? imageUrl,
+    Uint8List? imageBytes, String? imageMimeType,
   }) async {
-    if (code.trim().isEmpty || name.trim().isEmpty || unit.trim().isEmpty) {
-      throw ArgumentError('كود الصنف والاسم ووحدة القياس حقول مطلوبة.');
+    final majorName = unit.trim();
+    final middleName = middleUnit?.trim() ?? '';
+    final minorName = minorUnit?.trim() ?? '';
+    final hasMiddle = middleName.isNotEmpty;
+    final hasMinor = minorName.isNotEmpty;
+    final majorCount = majorInnerQuantity ?? 1;
+    final middleCount = middleInnerQuantity ?? 1;
+    if (code.trim().isEmpty || name.trim().isEmpty || majorName.isEmpty) {
+      throw ArgumentError('كود الصنف والاسم والوحدة الكبرى حقول مطلوبة.');
     }
-    if (purchasePrice < 0 || salePrice < 0 || reorderLevel < 0 || taxRate < 0 || taxRate > 100) throw ArgumentError('الأسعار وحد إعادة الطلب لا تقبل القيم السالبة، ونسبة الضريبة من 0 إلى 100.');
-    await _db.from('erp_items').insert({
+    if (hasMinor && !hasMiddle && majorCount <= 0) {
+      throw ArgumentError('عدد الوحدات الصغرى داخل الوحدة الكبرى يجب أن يكون أكبر من صفر.');
+    }
+    if ((hasMiddle || hasMinor) && majorCount <= 0) {
+      throw ArgumentError('العدد الداخلي للوحدة الكبرى يجب أن يكون أكبر من صفر.');
+    }
+    if (hasMiddle && middleCount <= 0) {
+      throw ArgumentError('العدد الداخلي للوحدة الوسطى يجب أن يكون أكبر من صفر.');
+    }
+    if (hasMinor && !hasMiddle && middleInnerQuantity != null) {
+      throw ArgumentError('لا يمكن إدخال عدد داخلي لوحدة وسطى غير معرفة.');
+    }
+    if (purchasePrice < 0 || salePrice < 0 || reorderLevel < 0 || taxRate < 0 || taxRate > 100) {
+      throw ArgumentError('الأسعار وحد إعادة الطلب لا تقبل القيم السالبة، ونسبة الضريبة من 0 إلى 100.');
+    }
+
+    final units = <Map<String, dynamic>>[];
+    if (hasMiddle && hasMinor) {
+      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount * middleCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount});
+      units.add({'unit_code':'LEVEL_2','unit_name':middleName,'conversion_factor':middleCount,'is_base_unit':false,'unit_level':2,'inner_quantity':middleCount});
+      units.add({'unit_code':'LEVEL_3','unit_name':minorName,'conversion_factor':1,'is_base_unit':true,'unit_level':3,'inner_quantity':null});
+    } else if (hasMiddle) {
+      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount});
+      units.add({'unit_code':'LEVEL_2','unit_name':middleName,'conversion_factor':1,'is_base_unit':true,'unit_level':2,'inner_quantity':null});
+    } else if (hasMinor) {
+      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount});
+      units.add({'unit_code':'LEVEL_3','unit_name':minorName,'conversion_factor':1,'is_base_unit':true,'unit_level':3,'inner_quantity':null});
+    } else {
+      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':1,'is_base_unit':true,'unit_level':1,'inner_quantity':null});
+    }
+
+    final inserted = await _db.from('erp_items').insert({
       'company_id': companyId.trim(), 'item_code': code.trim(), 'item_name': name.trim(), 'category_id': categoryId,
-      'barcode': _blank(barcode), 'base_unit': unit.trim(),
+      'barcode': _blank(barcode), 'base_unit': hasMinor ? minorName : hasMiddle ? middleName : majorName,
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking,
       'image_data': imageBytes == null || imageBytes.isEmpty ? null : _byteaHex(imageBytes),
       'image_mime_type': imageBytes == null || imageBytes.isEmpty ? null : _blank(imageMimeType),
       'image_url': null, 'is_active': true,
-    });
+    }).select('id').single();
+    final itemId = inserted['id'].toString();
+    try {
+      await _db.from('erp_item_units').insert(units.map((row) => <String, dynamic>{
+        ...row, 'company_id': companyId.trim(), 'item_id': itemId, 'is_active': true,
+      }).toList());
+    } catch (_) {
+      await _db.from('erp_items').delete().eq('id', itemId).eq('company_id', companyId.trim());
+      rethrow;
+    }
   }
 
 
