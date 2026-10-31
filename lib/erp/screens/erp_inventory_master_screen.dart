@@ -340,7 +340,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     final isWarehouses = _view == 'warehouses';
     List<Map<String, dynamic>> rows = isWarehouses ? _warehouses : <Map<String, dynamic>>[];
     final label = isWarehouses ? 'المخازن' : 'الأصناف';
-    if (rows.isEmpty) {
+    if (isWarehouses && rows.isEmpty) {
       setState(() => _message = 'لا توجد بيانات $label مطابقة للتصدير.');
       return;
     }
@@ -357,14 +357,36 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         }
       }
       if (rows.isEmpty) throw StateError('لا توجد سجلات مطابقة للتصدير.');
+      if (!isWarehouses) {
+        final units = await _repo.fetchItemUnits(
+          _company.text.trim(), rows.map((r) => _s(r['id'])).toList(),
+        );
+        final byItem = <String, Map<int, Map<String, dynamic>>>{};
+        for (final unit in units) {
+          final level = int.tryParse(_s(unit['unit_level']));
+          if (level == null) continue;
+          byItem.putIfAbsent(_s(unit['item_id']), () => {})[level] = unit;
+        }
+        for (final item in rows) {
+          final levels = byItem[_s(item['id'])] ?? {};
+          final major = levels[1];
+          final middle = levels[2];
+          final minor = levels[3];
+          item['major_unit'] = major?['unit_name'] ?? item['base_unit'];
+          item['major_inner_quantity'] = major?['inner_quantity'] ?? '';
+          item['middle_unit'] = middle?['is_implicit'] == true ? '' : (middle?['unit_name'] ?? '');
+          item['middle_inner_quantity'] = middle?['is_implicit'] == true ? '' : (middle?['inner_quantity'] ?? '');
+          item['minor_unit'] = minor?['unit_name'] ?? item['base_unit'];
+        }
+      }
       final workbook = Excel.createExcel();
       final sheet = workbook[isWarehouses ? 'المخازن' : 'الأصناف'];
       final keys = isWarehouses
         ? <String>['warehouse_code','warehouse_name','warehouse_name_en','branch_name','location','phone','address','is_active']
-        : <String>['item_code','item_name','item_name_en','barcode','base_unit','category_name','purchase_price','sale_price','tax_rate','reorder_level','is_active'];
+        : <String>['item_code','item_name','item_name_en','barcode','major_unit','major_inner_quantity','middle_unit','middle_inner_quantity','minor_unit','category_name','purchase_price','sale_price','tax_rate','reorder_level','is_active'];
       final headers = isWarehouses
         ? <String>['كود المخزن','اسم المخزن','الاسم الإنجليزي','الفرع','الموقع','الهاتف','العنوان','الحالة']
-        : <String>['كود الصنف','اسم الصنف','الاسم الإنجليزي','الباركود','الوحدة','فئة الصنف','سعر الشراء','سعر البيع','الضريبة %','حد إعادة الطلب','الحالة'];
+        : <String>['كود الصنف','اسم الصنف','الاسم الإنجليزي','الباركود','الوحدة الكبرى','عدد الوسطى داخل الكبرى','الوحدة الوسطى','عدد الصغرى داخل الوسطى','الوحدة الصغرى','فئة الصنف','سعر الشراء','سعر البيع','الضريبة %','حد إعادة الطلب','الحالة'];
       sheet.appendRow(headers.map((value) => TextCellValue(value)).toList());
       for (final row in rows) {
         sheet.appendRow([
