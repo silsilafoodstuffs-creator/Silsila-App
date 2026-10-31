@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'erp_item_unit_conversion.dart';
 
 class ErpInventoryMasterRepository {
   ErpInventoryMasterRepository({SupabaseClient? client}) : _client = client ?? _tryClient();
@@ -116,23 +117,13 @@ class ErpInventoryMasterRepository {
       throw ArgumentError('الأسعار وحد إعادة الطلب لا تقبل القيم السالبة، ونسبة الضريبة من 0 إلى 100.');
     }
 
-    final units = <Map<String, dynamic>>[];
-    if (hasMiddle && hasMinor) {
-      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount * middleCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount,'is_selectable':true});
-      units.add({'unit_code':'LEVEL_2','unit_name':middleName,'conversion_factor':middleCount,'is_base_unit':false,'unit_level':2,'inner_quantity':middleCount,'is_selectable':true});
-      units.add({'unit_code':'LEVEL_3','unit_name':minorName,'conversion_factor':1,'is_base_unit':true,'unit_level':3,'inner_quantity':null,'is_selectable':true});
-    } else if (hasMiddle) {
-      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount,'is_selectable':true});
-      units.add({'unit_code':'LEVEL_2','unit_name':middleName,'conversion_factor':1,'is_base_unit':true,'unit_level':2,'inner_quantity':null,'is_selectable':true});
-    } else if (hasMinor) {
-      // The skipped middle level is represented explicitly for future compatibility,
-      // but remains hidden and cannot be selected as a transaction unit.
-      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount,'is_selectable':true});
-      units.add({'unit_code':'LEVEL_2','unit_name':majorName,'conversion_factor':1,'is_base_unit':false,'unit_level':2,'inner_quantity':1,'is_implicit':true,'is_selectable':false});
-      units.add({'unit_code':'LEVEL_3','unit_name':minorName,'conversion_factor':1,'is_base_unit':true,'unit_level':3,'inner_quantity':null,'is_selectable':true});
-    } else {
-      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':1,'is_base_unit':true,'unit_level':1,'inner_quantity':null,'is_selectable':true});
-    }
+    final units = ErpItemUnitConversion.buildUnits(
+      majorName: majorName,
+      middleName: hasMiddle ? middleName : null,
+      minorName: hasMinor ? minorName : null,
+      majorInnerQuantity: majorCount,
+      middleInnerQuantity: middleCount,
+    );
 
     final inserted = await _db.from('erp_items').insert({
       'company_id': companyId.trim(), 'item_code': code.trim(), 'item_name': name.trim(), 'category_id': categoryId,
