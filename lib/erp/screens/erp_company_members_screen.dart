@@ -519,8 +519,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 headingRowColor: WidgetStateProperty.all(const Color(0xFFF1E8FB)),
-                columnSpacing: 20,
-                horizontalMargin: 14,
+                columnSpacing: 14,
+                horizontalMargin: 12,
                 columns: const [
                   DataColumn(label: Text('م')),
                   DataColumn(label: Text('اسم المستخدم / UUID')),
