@@ -1045,7 +1045,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         // Responsive breakpoints: keep navigation, workspace, and utility panels visible.
         final width = c.maxWidth;
         final compact = width < 980;
-        final mobile = width < 760;
+        final mobile = width < 980;
         // On phones, navigation panels become overlay drawers instead of squeezing
         // the workspace into a few dozen pixels (which breaks Arabic word shaping).
         final sidebarWidth = width < 1050 ? 178.0 : width < 1320 ? 205.0 : width < 1550 ? 228.0 : 248.0;
