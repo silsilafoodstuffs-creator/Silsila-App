@@ -414,17 +414,23 @@ class SilsilaApp extends StatelessWidget {
             borderSide: const BorderSide(color: Color(0xFFB3261E), width: 1.8),
           ),
         ),
+        // Approved global grid standard: compact but readable spacing on every ERP screen.
         dataTableTheme: const DataTableThemeData(
-          headingRowHeight: 57,
-          dataRowMinHeight: 57,
-          dataRowMaxHeight: 57,
+          headingRowHeight: 48,
+          dataRowMinHeight: 48,
+          dataRowMaxHeight: 64,
+          horizontalMargin: 12,
+          columnSpacing: 14,
+          dividerThickness: 0.7,
           headingTextStyle: TextStyle(
-            color: Color(0xFF241735),
+            color: Color(0xFF3E007D),
+            fontFamily: 'Tajawal',
             fontSize: 12,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
           ),
           dataTextStyle: TextStyle(
             color: Color(0xFF241735),
+            fontFamily: 'Tajawal',
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
