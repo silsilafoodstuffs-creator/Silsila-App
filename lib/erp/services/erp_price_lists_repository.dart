@@ -108,7 +108,7 @@ class ErpPriceListsRepository {
   }
   Future<Map<String, dynamic>?> resolvePrice({
     required String companyId, required String itemId, required String kind,
-    required double quantity, String? partyId, DateTime? priceDate,
+    required double quantity, String? partyId, DateTime? priceDate, String? unitId,
   }) async {
     final day = (priceDate ?? DateTime.now()).toIso8601String().substring(0, 10);
     final result = await _db.rpc('erp_resolve_item_price', params: {
@@ -118,6 +118,7 @@ class ErpPriceListsRepository {
       'p_quantity': quantity,
       'p_party_id': partyId,
       'p_price_date': day,
+      'p_item_unit_id': unitId,
     });
     if (result is List && result.isNotEmpty) return Map<String, dynamic>.from(result.first as Map);
     if (result is Map) return Map<String, dynamic>.from(result);
