@@ -183,3 +183,26 @@ for each row execute function public.erp_set_updated_at();
 --    in trusted server-side operations; ordinary foreign keys alone do not enforce that.
 -- 3) The base unit in erp_items remains authoritative until migration/backfill rules
 --    for erp_item_units are implemented.
+
+
+create or replace function public.erp_refresh_item_unit_selectability()
+returns trigger language plpgsql set search_path=public as $$
+begin
+  update public.erp_item_units u
+  set is_selectable = case
+    when u.is_implicit then false
+    when exists (
+      select 1 from public.erp_item_units other
+      where other.item_id=u.item_id and other.is_active and not other.is_implicit
+        and lower(trim(other.unit_name))=lower(trim(u.unit_name))
+        and other.id<>u.id
+    ) then false else true end
+  where u.item_id=new.item_id and u.is_active and u.unit_level is not null
+    and (lower(trim(u.unit_name))=lower(trim(new.unit_name))
+      or (tg_op='UPDATE' and lower(trim(u.unit_name))=lower(trim(old.unit_name))));
+  return new;
+end $$;
+drop trigger if exists erp_item_units_refresh_selectability on public.erp_item_units;
+create trigger erp_item_units_refresh_selectability
+after insert or update of item_id,unit_name,conversion_factor,unit_level,is_implicit,is_active
+on public.erp_item_units for each row execute function public.erp_refresh_item_unit_selectability();
