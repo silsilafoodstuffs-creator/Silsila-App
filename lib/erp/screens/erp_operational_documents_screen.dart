@@ -618,7 +618,15 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       setState(() => _error = 'اختر مستندًا وطرفًا وصنفًا، وأدخل كمية صحيحة قبل جلب السعر.');
       return;
     }
-    final baseUnitOptions = (_unitsByItem[_itemId!] ?? const <Map<String, dynamic>>[])
+    var itemUnits = _unitsByItem[_itemId!];
+    if (itemUnits == null) {
+      itemUnits = await _repo.fetchUnits(
+        companyId: _company.text.trim(),
+        itemIds: [_itemId!],
+      );
+      if (mounted) setState(() => _unitsByItem[_itemId!] = itemUnits!);
+    }
+    final baseUnitOptions = (itemUnits ?? const <Map<String, dynamic>>[])
         .where((unit) => unit['is_base_unit'] == true && unit['is_selectable'] == true)
         .toList();
     final baseUnitId = baseUnitOptions.isEmpty ? null : _s(baseUnitOptions.first['id']);
