@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_operational_documents_repository.dart';
+import '../services/erp_item_unit_conversion.dart';
 import '../services/erp_operational_accounting_repository.dart';
 import 'erp_operational_account_mappings_screen.dart';
 
@@ -1001,7 +1002,11 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   ? options.map((row) => _n(row['conversion_factor'])).fold<double>(1, (a, b) => a > b ? a : b)
                   : 1.0;
               final selectedUnitPrice = hasThreeLevels
-                  ? (largestFactor <= 0 ? offerPrice : offerPrice * factor / largestFactor)
+                  ? ErpItemUnitConversion.priceForUnit(
+                      majorUnitPrice: offerPrice,
+                      selectedConversionFactor: factor,
+                      largestConversionFactor: largestFactor,
+                    )
                   : (factor > 1 ? offerPrice / factor : offerPrice);
               result.add({
                 'item_id': id,
