@@ -194,7 +194,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
     return DataTable(
       headingRowColor: WidgetStateProperty.all(const Color(0xFFEDE4F8)),
       dataRowMinHeight: 57, dataRowMaxHeight: 57, headingRowHeight: 57,
-      columnSpacing: 14, horizontalMargin: 10,
+      columnSpacing: 14, horizontalMargin: 12,
       columns: const [
         DataColumn(label: Text('م')),
         DataColumn(label: Text('كود التصنيف')),
