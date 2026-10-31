@@ -40,6 +40,14 @@ class ErpPriceListsRepository {
     final rows = await query.order('item_code').range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
+  Future<List<Map<String, dynamic>>> fetchSelectableUnits(String companyId, List<String> itemIds) async {
+    if (itemIds.isEmpty) return [];
+    final rows = await _db.from('erp_item_units')
+      .select('id,item_id,unit_code,unit_name,conversion_factor,is_base_unit,is_selectable')
+      .eq('company_id', companyId.trim()).eq('is_active', true).eq('is_selectable', true)
+      .inFilter('item_id', itemIds).order('unit_name');
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
   Future<List<Map<String, dynamic>>> fetchParties(String companyId, String kind, {int offset = 0, int pageSize = 1000, String search = ''}) async {
     if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة الأطراف غير صالح.');
     var query = _db.from('erp_parties')
@@ -54,7 +62,7 @@ class ErpPriceListsRepository {
   Future<List<Map<String, dynamic>>> fetchLines(String companyId, String listId, {int offset = 0, int pageSize = 1000}) async {
     if (offset < 0 || pageSize < 1 || pageSize > 1000) throw ArgumentError('نطاق صفحة تفاصيل قائمة الأسعار غير صالح.');
     final rows = await _db.from('erp_price_list_lines')
-      .select('id, item_id, min_quantity, unit_price, discount_percent, starts_on, ends_on')
+      .select('id, item_id, item_unit_id, min_quantity, unit_price, discount_percent, starts_on, ends_on')
       .eq('company_id', companyId.trim()).eq('price_list_id', listId)
       .order('item_id').range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
@@ -80,6 +88,7 @@ class ErpPriceListsRepository {
   Future<void> addLine({
     required String companyId, required String listId, required String itemId,
     required double unitPrice, double minQuantity = 1, double discountPercent = 0,
+    String? unitId,
   }) async {
     if (unitPrice < 0 || minQuantity <= 0 || discountPercent < 0 || discountPercent > 100) {
       throw ArgumentError('راجع السعر والحد الأدنى ونسبة الخصم.');
@@ -87,6 +96,7 @@ class ErpPriceListsRepository {
     await _db.from('erp_price_list_lines').insert({
       'company_id': companyId.trim(), 'price_list_id': listId, 'item_id': itemId,
       'unit_price': unitPrice, 'min_quantity': minQuantity, 'discount_percent': discountPercent,
+      'item_unit_id': unitId,
     });
   }
   Future<void> assignParty({
