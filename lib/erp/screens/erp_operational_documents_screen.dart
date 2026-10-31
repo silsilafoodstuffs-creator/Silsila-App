@@ -2108,7 +2108,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             if (_pendingLines.isNotEmpty) SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
               headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
               headingTextStyle: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 12),
-              dataRowMinHeight: 48, dataRowMaxHeight: 52, columnSpacing: 12,
+              dataRowMinHeight: 48, dataRowMaxHeight: 56, horizontalMargin: 12, columnSpacing: 14,
               columns: const [DataColumn(label: Text('م.')), DataColumn(label: Text('الكود')), DataColumn(label: Text('الصنف')), DataColumn(label: Text('الوحدة')), DataColumn(label: Text('الكمية')), DataColumn(label: Text('سعر الوحدة')), DataColumn(label: Text('الخصم')), DataColumn(label: Text('خصم %')), DataColumn(label: Text('الضريبة')), DataColumn(label: Text('الإجمالي')), DataColumn(label: Text(''))],
               rows: List<DataRow>.generate(_pendingLines.length, (index) {
                 final line = _pendingLines[index];
