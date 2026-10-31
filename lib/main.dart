@@ -414,7 +414,7 @@ class SilsilaApp extends StatelessWidget {
             borderSide: const BorderSide(color: Color(0xFFB3261E), width: 1.8),
           ),
         ),
-        // Approved global grid standard: compact but readable spacing on every ERP screen.
+        // Approved global grid standard: compact but readable spacing across ERP tables; only documented dense grids override it.
         dataTableTheme: const DataTableThemeData(
           headingRowHeight: 48,
           dataRowMinHeight: 48,
