@@ -595,7 +595,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             const SizedBox(height: 6),
             TextField(controller: _majorInner, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'عدد الوحدات التالية داخل الوحدة الكبرى')),
             const SizedBox(height: 6),
-            TextField(controller: _middleUnit, decoration: const InputDecoration(labelText: 'الوحدة الوسطى (اتركها فارغة لتخطي المستوى)')),
+            TextField(controller: _middleUnit, decoration: const InputDecoration(labelText: 'الوحدة الوسطى (اختياري)')),
             const SizedBox(height: 6),
             TextField(controller: _middleInner, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'عدد الوحدات الصغرى داخل الوحدة الوسطى')),
             const SizedBox(height: 6),
