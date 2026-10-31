@@ -183,7 +183,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
     try {
       final result = await _repo.resolvePrice(
         companyId: _company.text, itemId: _selectedItemId!, kind: _kind,
-        quantity: qty, partyId: _selectedPartyId,
+        quantity: qty, partyId: _selectedPartyId, unitId: _selectedUnitId,
       );
       if (!mounted) return;
       setState(() { _previewing = false; _pricePreview = result; });
