@@ -232,7 +232,7 @@ begin
     select u.unit_code, u.conversion_factor into v_unit_code, v_factor
     from public.erp_item_units u
     where u.id = p_unit_id and u.item_id = p_item_id
-      and u.company_id = v_company and u.is_active;
+      and u.company_id = v_company and u.is_active and u.is_selectable;
     if not found then raise exception 'وحدة القياس غير نشطة أو لا تتبع الصنف.'; end if;
   else
     select i.base_unit into v_unit_code from public.erp_items i where i.id = p_item_id;
