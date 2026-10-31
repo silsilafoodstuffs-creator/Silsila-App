@@ -230,13 +230,26 @@ class ErpOperationalDocumentsRepository {
   }) async {
     if (itemIds.isEmpty) return [];
     final rows = await _db.from('erp_item_units')
-      .select('id, item_id, unit_code, unit_name, conversion_factor, is_base_unit')
+      .select('id, item_id, unit_code, unit_name, conversion_factor, is_base_unit, unit_level, inner_quantity, is_implicit, is_selectable')
       .eq('company_id', companyId.trim())
       .eq('is_active', true)
+      .eq('is_selectable', true)
       .inFilter('item_id', itemIds)
       .order('unit_name');
-    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    final units = rows.map((r) => Map<String, dynamic>.from(r)).toList();
+    // Never expose repeated labels as independent selectable units: factor-1
+    // duplicates cannot produce a meaningful price or quantity conversion.
+    final nameCounts = <String, int>{};
+    for (final unit in units) {
+      final key = _unitNameKey(unit['unit_name'] ?? unit['unit_code']);
+      nameCounts[key] = (nameCounts[key] ?? 0) + 1;
+    }
+    return units.where((unit) =>
+      nameCounts[_unitNameKey(unit['unit_name'] ?? unit['unit_code'])] == 1
+    ).toList();
   }
+
+  String _unitNameKey(dynamic value) => value.toString().trim().toLowerCase();
 
   Future<List<Map<String, dynamic>>> fetchWarehouseBalances({
     required String companyId,
