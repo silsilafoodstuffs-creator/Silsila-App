@@ -354,10 +354,12 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
       ..._lines.map((l) {
         final item = _items.where((x) => _s(x['id']) == _s(l['item_id']));
         final name = item.isEmpty ? _s(l['item_id']) : _s(item.first['item_name']);
+        final unitRows = _units.where((u) => _s(u['id']) == _s(l['item_unit_id']));
+        final unitName = unitRows.isEmpty ? 'وحدة أساسية' : _s(unitRows.first['unit_name']);
         return Card(child: ListTile(
           leading: const Icon(Icons.sell_outlined, color: Color(0xFF3E007D)),
-          title: Text(name + ' — ' + _money(l['unit_price']) + ' ج.م'),
-          subtitle: Text('أقل كمية: ' + _s(l['min_quantity']) + ' • الخصم: ' + _s(l['discount_percent']) + '%'),
+          title: Text(name + ' — ' + _money(l['unit_price']) + ' ج.م / ' + unitName),
+          subtitle: Text('أقل كمية: ' + _s(l['min_quantity']) + ' ' + unitName + ' • الخصم: ' + _s(l['discount_percent']) + '%'),
         ));
       }),
       const SizedBox(height: 10),
