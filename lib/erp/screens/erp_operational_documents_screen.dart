@@ -618,6 +618,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       setState(() => _error = 'اختر مستندًا وطرفًا وصنفًا، وأدخل كمية صحيحة قبل جلب السعر.');
       return;
     }
+    final baseUnitOptions = (_unitsByItem[_itemId!] ?? const <Map<String, dynamic>>[])
+        .where((unit) => unit['is_base_unit'] == true && unit['is_selectable'] == true)
+        .toList();
+    final baseUnitId = baseUnitOptions.isEmpty ? null : _s(baseUnitOptions.first['id']);
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       final price = await _repo.resolvePrice(
@@ -626,10 +630,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         kind: widget.kind == ErpOperationalKind.purchase ? 'purchase' : 'sale',
         quantity: quantity,
         partyId: partyId,
-        unitId: (_unitsByItem[_itemId!] ?? const <Map<String, dynamic>>[])
-            .where((unit) => unit['is_base_unit'] == true && unit['is_selectable'] == true)
-            .map((unit) => _s(unit['id']))
-            .firstWhere((id) => id.isNotEmpty, orElse: () => ''),
+        unitId: baseUnitId,
       );
       if (!mounted) return;
       if (price == null) {
