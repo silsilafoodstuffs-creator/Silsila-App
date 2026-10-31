@@ -239,8 +239,6 @@ class ErpOperationalDocumentsRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
-  String _unitNameKey(dynamic value) => value.toString().trim().toLowerCase();
-
   Future<List<Map<String, dynamic>>> fetchWarehouseBalances({
     required String companyId,
     required String warehouseId,
