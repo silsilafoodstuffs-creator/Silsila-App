@@ -236,17 +236,7 @@ class ErpOperationalDocumentsRepository {
       .eq('is_selectable', true)
       .inFilter('item_id', itemIds)
       .order('unit_name');
-    final units = rows.map((r) => Map<String, dynamic>.from(r)).toList();
-    // Never expose repeated labels as independent selectable units: factor-1
-    // duplicates cannot produce a meaningful price or quantity conversion.
-    final nameCounts = <String, int>{};
-    for (final unit in units) {
-      final key = _unitNameKey(unit['unit_name'] ?? unit['unit_code']);
-      nameCounts[key] = (nameCounts[key] ?? 0) + 1;
-    }
-    return units.where((unit) =>
-      nameCounts[_unitNameKey(unit['unit_name'] ?? unit['unit_code'])] == 1
-    ).toList();
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
   String _unitNameKey(dynamic value) => value.toString().trim().toLowerCase();
