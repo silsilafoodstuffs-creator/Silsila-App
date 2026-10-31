@@ -626,7 +626,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       );
       if (mounted) setState(() => _unitsByItem[_itemId!] = itemUnits!);
     }
-    final baseUnitOptions = (itemUnits ?? const <Map<String, dynamic>>[])
+    final baseUnitOptions = itemUnits
         .where((unit) => unit['is_base_unit'] == true && unit['is_selectable'] == true)
         .toList();
     final baseUnitId = baseUnitOptions.isEmpty ? null : _s(baseUnitOptions.first['id']);
