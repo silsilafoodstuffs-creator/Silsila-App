@@ -278,7 +278,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           final unit = options.firstWhere((row) => _s(row['id']) == unitId, orElse: () => options.first);
           final oldFactor = _n(line['conversion_factor']) <= 0 ? 1.0 : _n(line['conversion_factor']);
           final newFactor = _n(unit['conversion_factor']) <= 0 ? 1.0 : _n(unit['conversion_factor']);
-          final ratio = oldFactor / newFactor;
+          final usesThreeLevels = options.any((row) => row['unit_level'] != null);
+          final ratio = usesThreeLevels ? (newFactor / oldFactor) : (oldFactor / newFactor);
           line['base_price'] = _n(line['base_price']) * ratio;
           line['policy_price'] = _n(line['policy_price']) * ratio;
           line['adjusted_price'] = _n(line['adjusted_price']) * ratio;
@@ -995,7 +996,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
               final offerPrice = sourceItems == null ? basePrice : _n(item['offer_price']);
               final minQuantity = sourceItems == null ? null : item['min_quantity'];
               final maxQuantity = sourceItems == null ? null : item['max_quantity'];
-              final selectedUnitPrice = factor > 1 ? offerPrice / factor : offerPrice;
+              final hasThreeLevels = options.any((row) => row['unit_level'] != null);
+              final largestFactor = hasThreeLevels
+                  ? options.map((row) => _n(row['conversion_factor'])).fold<double>(1, (a, b) => a > b ? a : b)
+                  : 1.0;
+              final selectedUnitPrice = hasThreeLevels
+                  ? (largestFactor <= 0 ? offerPrice : offerPrice * factor / largestFactor)
+                  : (factor > 1 ? offerPrice / factor : offerPrice);
               result.add({
                 'item_id': id,
                 'quantity': qty,
