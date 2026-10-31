@@ -485,7 +485,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     final data=_filteredEmployees;
     return Container(height:230,margin:const EdgeInsets.only(top:8),padding:const EdgeInsets.all(8),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFE9E1F1)),borderRadius:BorderRadius.circular(12)),child:Column(children:[
       Row(children:[const Expanded(child:Text('دليل الموظفين المسجلين — اختر موظفًا لعرض بياناته بالأعلى',style:TextStyle(fontWeight:FontWeight.w900,color:_purple))),Text(data.length.toString()+' / '+_employees.length.toString())]),
-      Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(headingRowHeight:72,dataRowMinHeight:38,dataRowMaxHeight:44,
+      Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(headingRowHeight:72,dataRowMinHeight:48,dataRowMaxHeight:60,
         columns:cols.map((col)=>DataColumn(label:SizedBox(width:col.$1=='full_name'?175:145,child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
           Text(col.$2,style:const TextStyle(fontWeight:FontWeight.w900)),
           SizedBox(height:30,child:TextField(controller:_employeeFilters[col.$1],onChanged:(_)=>setState((){}),decoration:const InputDecoration(hintText:'بحث...',isDense:true,border:OutlineInputBorder(),prefixIcon:Icon(Icons.search,size:14),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:5))))
