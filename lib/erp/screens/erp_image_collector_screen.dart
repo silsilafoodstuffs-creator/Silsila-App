@@ -913,7 +913,21 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         final desc=(raw['package_description']??'').toString().split('=');
         if(desc.length>1){_rowController(item,'major_unit').text=desc.first.trim();final p=desc[1].trim().split(RegExp(r'\s+'));if(p.isNotEmpty)_rowController(item,'internal_count').text=p.first;}
         final units=await db.from('erp_item_units').select('unit_name,conversion_factor,is_base_unit,unit_level,inner_quantity').eq('company_id',company).eq('item_id',raw['id'].toString()).eq('is_active',true).order('conversion_factor',ascending:true);
-        for(final u in (units as List).map((e)=>Map<String,dynamic>.from(e))){if(u['is_base_unit']==true)_rowController(item,'minor_unit').text=(u['unit_name']??'قطعة').toString();else if((double.tryParse((u['conversion_factor']??1).toString())??1)>1){_rowController(item,'major_unit').text=(u['unit_name']??'').toString();_rowController(item,'internal_count').text=(u['conversion_factor']??1).toString();}}
+        for(final u in (units as List).map((e)=>Map<String,dynamic>.from(e))){
+          final level=int.tryParse((u['unit_level']??'').toString());
+          if(level==3||u['is_base_unit']==true){
+            _rowController(item,'minor_unit').text=(u['unit_name']??'قطعة').toString();
+          }else if(level==2&&u['is_implicit']!=true){
+            _rowController(item,'middle_unit').text=(u['unit_name']??'').toString();
+            _rowController(item,'middle_internal_count').text=(u['inner_quantity']??1).toString();
+          }else if(level==1){
+            _rowController(item,'major_unit').text=(u['unit_name']??'').toString();
+            _rowController(item,'internal_count').text=(u['inner_quantity']??u['conversion_factor']??1).toString();
+          }else if(level==null&&(double.tryParse((u['conversion_factor']??1).toString())??1)>1){
+            _rowController(item,'major_unit').text=(u['unit_name']??'').toString();
+            _rowController(item,'internal_count').text=(u['conversion_factor']??1).toString();
+          }
+        }
         item['entity_mode']='old';if(mounted)setState(()=>_status='تم تحميل الصنف القديم '+code+'؛ راجع البيانات ثم اضغط تحديث بيانات.');
       }
     }catch(e){if(mounted)setState(()=>_error=e.toString().replaceFirst('Exception: ',''));}
