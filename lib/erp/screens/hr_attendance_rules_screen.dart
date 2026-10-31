@@ -186,8 +186,8 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       _numberFields([_num(s.earlyIn,'الحضور المبكر: قيمة الدقيقة إضافي',readOnly:!canEdit),_num(s.earlyOut,'الانصراف المبكر: قيمة الدقيقة خصم',readOnly:!canEdit),_num(s.lateOut,'الانصراف المتأخر: قيمة الدقيقة إضافي',readOnly:!canEdit)]),
       _heading('قواعد الحضور المتأخر — شرائح متتابعة'),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-        horizontalMargin:4,
-        columnSpacing:5,
+        horizontalMargin:12,
+        columnSpacing:14,
         dataRowMinHeight:57,
         dataRowMaxHeight:57,
         headingRowHeight:57,
@@ -195,9 +195,9 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
         columns:const [DataColumn(label:Text('التأخير')),DataColumn(label:Text('من')),DataColumn(label:Text('إلى')),DataColumn(label:Text('جزاء/دقيقة')),DataColumn(label:Text('نوع')),DataColumn(label:Text('حذف'))],
         rows:List.generate(s.from.length,(n)=>DataRow(cells:[
           DataCell(Text('${n+1}',style:const TextStyle(fontSize:11))),
-          DataCell(SizedBox(width:42,child:TextField(controller:s.from[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:8)),style:const TextStyle(fontSize:11),onChanged:canEdit?(_)=>setState((){}):null))),
+          DataCell(SizedBox(width:56,child:TextField(controller:s.from[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:8)),style:const TextStyle(fontSize:11),onChanged:canEdit?(_)=>setState((){}):null))),
           DataCell(SizedBox(width:42,child:TextField(controller:s.to[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:8)),style:const TextStyle(fontSize:11),onChanged:canEdit?(_)=>setState((){}):null))),
-          DataCell(SizedBox(width:52,child:TextField(controller:s.value[n],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:8)),style:const TextStyle(fontSize:11)))),
+          DataCell(SizedBox(width:64,child:TextField(controller:s.value[n],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:8)),style:const TextStyle(fontSize:11)))),
           DataCell(DropdownButton<String>(isDense:true,style:const TextStyle(fontSize:11,color:_purple),value:s.action[n],items:const[DropdownMenuItem(value:'خصم',child:Text('خصم')),DropdownMenuItem(value:'إضافي',child:Text('إضافي'))],onChanged:canEdit?(v)=>setState(()=>s.action[n]=v??'خصم'):null)),
           DataCell(IconButton(visualDensity:VisualDensity.compact,constraints:const BoxConstraints(minWidth:28,minHeight:28),padding:EdgeInsets.zero,tooltip:'حذف قاعدة التأخير',onPressed:canEdit&&s.from.length>1?()=>_confirmDelete('قاعدة التأخير ${n+1}',()=>setState(()=>s.removeLateRule(n))):null,icon:const Icon(Icons.delete_outline,color:_red,size:18))),
         ])),
