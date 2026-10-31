@@ -33,6 +33,10 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   final _itemName = TextEditingController();
   final _barcode = TextEditingController();
   final _unit = TextEditingController(text: 'وحدة');
+  final _middleUnit = TextEditingController();
+  final _minorUnit = TextEditingController();
+  final _majorInner = TextEditingController(text: '1');
+  final _middleInner = TextEditingController(text: '1');
   final _purchasePrice = TextEditingController(text: '0');
   final _salePrice = TextEditingController(text: '0');
   final _taxRate = TextEditingController(text: '0');
@@ -70,7 +74,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   @override
   void dispose() {
     _company.dispose(); _warehouseCode.dispose(); _warehouseName.dispose(); _warehouseNameEn.dispose(); _warehouseLocation.dispose(); _warehousePhone.dispose(); _warehouseLandline.dispose(); _address.dispose();
-    _itemCode.dispose(); _itemName.dispose(); _barcode.dispose(); _unit.dispose(); _itemSearch.dispose();
+    _itemCode.dispose(); _itemName.dispose(); _barcode.dispose(); _unit.dispose(); _middleUnit.dispose(); _minorUnit.dispose(); _majorInner.dispose(); _middleInner.dispose(); _itemSearch.dispose();
     _purchasePrice.dispose(); _salePrice.dispose(); _taxRate.dispose(); _reorder.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
@@ -235,6 +239,8 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     final sale = double.tryParse(_salePrice.text.trim()) ?? -1;
     final reorder = double.tryParse(_reorder.text.trim()) ?? -1;
     final taxRate = double.tryParse(_taxRate.text.trim()) ?? -1;
+    final majorInner = double.tryParse(_majorInner.text.trim()) ?? -1;
+    final middleInner = double.tryParse(_middleInner.text.trim()) ?? -1;
     setState(() { _saving = true; _error = null; _message = null; });
     try {
 
@@ -251,11 +257,14 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
       }
       await _repo.createItem(companyId: _company.text, code: _itemCode.text, name: _itemName.text,
-        barcode: _barcode.text, categoryId: _itemCategoryId, unit: _unit.text, purchasePrice: purchase,
+        barcode: _barcode.text, categoryId: _itemCategoryId, unit: _unit.text,
+        middleUnit: _middleUnit.text, minorUnit: _minorUnit.text,
+        majorInnerQuantity: majorInner, middleInnerQuantity: _middleUnit.text.trim().isEmpty ? null : middleInner,
+        purchasePrice: purchase,
         salePrice: sale, taxRate: taxRate, reorderLevel: reorder, expiryTracking: _expiry,
         imageBytes: imageBytes, imageMimeType: imageBytes == null ? null : contentType);
       if (!mounted) return;
-      _itemCode.clear(); _itemName.clear(); _barcode.clear(); _pickedItemImage = null; _pickedItemImageBytes = null; _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
+      _itemCode.clear(); _itemName.clear(); _barcode.clear(); _middleUnit.clear(); _minorUnit.clear(); _majorInner.text = '1'; _middleInner.text = '1'; _pickedItemImage = null; _pickedItemImageBytes = null; _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
       setState(() { _saving = false; _message = 'تمت إضافة الصنف.'; });
       await _load(clearMessage: false);
     } catch (e) {
@@ -300,7 +309,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     final currentFields = _view == 'warehouses'
         ? [_warehouseCode.text, _warehouseName.text, _warehouseNameEn.text, _warehouseLocation.text, _warehousePhone.text, _warehouseLandline.text, _address.text]
         : [_itemCode.text, _itemName.text, _barcode.text,
-                _unit.text == 'وحدة' ? '' : _unit.text,
+                _unit.text == 'وحدة' ? '' : _unit.text, _middleUnit.text, _minorUnit.text, _majorInner.text, _middleInner.text,
                 _purchasePrice.text == '0' ? '' : _purchasePrice.text,
                 _salePrice.text == '0' ? '' : _salePrice.text,
                 _taxRate.text == '0' ? '' : _taxRate.text,
@@ -315,7 +324,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       _error = null; _message = 'نموذج إضافة جديد جاهز.';
       if (_view == 'warehouses') { _warehouseCode.clear(); _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseLocation.clear(); _warehousePhone.clear(); _warehouseLandline.clear(); _address.clear(); _branchId = null; _parentWarehouseId = null; _governorateId = null; _districtId = null; _areaId = null; }
       else {
-        _itemCode.clear(); _itemName.clear(); _barcode.clear(); _unit.text = 'وحدة';
+        _itemCode.clear(); _itemName.clear(); _barcode.clear(); _unit.text = 'وحدة'; _middleUnit.clear(); _minorUnit.clear(); _majorInner.text = '1'; _middleInner.text = '1';
         _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
         _itemCategoryId = null; _expiry = false; _pickedItemImage = null; _pickedItemImageBytes = null;
       }
@@ -582,7 +591,15 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
                 ],
               ),
             ),
-            TextField(controller: _unit, decoration: const InputDecoration(labelText: 'وحدة القياس')),
+            TextField(controller: _unit, decoration: const InputDecoration(labelText: 'الوحدة الكبرى')),
+            const SizedBox(height: 6),
+            TextField(controller: _majorInner, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'عدد الوحدات التالية داخل الوحدة الكبرى')),
+            const SizedBox(height: 6),
+            TextField(controller: _middleUnit, decoration: const InputDecoration(labelText: 'الوحدة الوسطى (اتركها فارغة لتخطي المستوى)')),
+            const SizedBox(height: 6),
+            TextField(controller: _middleInner, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'عدد الوحدات الصغرى داخل الوحدة الوسطى')),
+            const SizedBox(height: 6),
+            TextField(controller: _minorUnit, decoration: const InputDecoration(labelText: 'الوحدة الصغرى (اختياري)')),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(child: TextField(controller: _purchasePrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: [TextInputFormatter.withFunction((oldValue, newValue) => RegExp(r'^\d*\.?\d{0,3}$').hasMatch(newValue.text) ? newValue : oldValue)], decoration: const InputDecoration(labelText: 'سعر الشراء'))),
