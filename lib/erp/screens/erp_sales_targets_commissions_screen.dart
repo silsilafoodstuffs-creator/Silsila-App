@@ -815,6 +815,11 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
           constraints:BoxConstraints(minWidth:box.maxWidth),
           child:DataTable(
             headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+            headingRowHeight:46,
+            dataRowMinHeight:50,
+            dataRowMaxHeight:66,
+            horizontalMargin:12,
+            columnSpacing:14,
             columns:const [
               DataColumn(label:Text('م')),DataColumn(label:Text('كود المندوب')),
               DataColumn(label:Text('اسم الموظف عربي')),DataColumn(label:Text('اسم الموظف إنجليزي')),
@@ -835,8 +840,8 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
               return DataRow(cells: [
                 DataCell(Text('${i + 1}')),
                 DataCell(Text((r?['rep_code'] ?? '—').toString())),
-                DataCell(Text((e['full_name'] ?? '').toString())),
-                DataCell(Text((e['full_name_en'] ?? '—').toString())),
+                DataCell(SizedBox(width:155,child:Text((e['full_name'] ?? '').toString(),softWrap:true,maxLines:2,overflow:TextOverflow.visible))),
+                DataCell(SizedBox(width:145,child:Text((e['full_name_en'] ?? '—').toString(),softWrap:true,maxLines:2,overflow:TextOverflow.visible))),
                 DataCell(Checkbox(
                   shape: const CircleBorder(),
                   value: r?['has_target'] == true,
