@@ -31,12 +31,14 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
     {'currency_code':'GBP','currency_name_ar':'جنيه إسترليني','currency_symbol':'GBP'},
   ];
   List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _units = [];
   List<Map<String, dynamic>> _parties = [];
   List<Map<String, dynamic>> _lines = [];
   String _kind = 'sale';
   String _currencyCode = 'EGP';
   String? _selectedListId;
   String? _selectedItemId;
+  String? _selectedUnitId;
   String? _selectedPartyId;
   Map<String, dynamic>? _pricePreview;
   bool _previewing = false;
@@ -102,6 +104,14 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         if (!_parties.any((x) => _s(x['id']) == _selectedPartyId)) _selectedPartyId = _parties.isEmpty ? null : _s(_parties.first['id']);
         _loading = false;
       });
+      final unitRows = await _repo.fetchSelectableUnits(_company.text, _items.map((e) => _s(e['id'])).toList());
+      if (mounted) setState(() {
+        _units = unitRows;
+        final available = _units.where((u) => _s(u['item_id']) == _selectedItemId).toList();
+        if (!available.any((u) => _s(u['id']) == _selectedUnitId)) {
+          _selectedUnitId = available.isEmpty ? null : _s(available.first['id']);
+        }
+      });
       await _loadLines();
     } catch (e) {
       if (!mounted) return;
@@ -154,7 +164,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       await _repo.addLine(companyId: _company.text, listId: _selectedListId!, itemId: _selectedItemId!,
-        unitPrice: price, minQuantity: qty, discountPercent: discount);
+        unitPrice: price, minQuantity: qty, discountPercent: discount, unitId: _selectedUnitId);
       if (!mounted) return;
       setState(() { _saving = false; _message = 'تمت إضافة سعر الصنف.'; });
       await _loadLines();
@@ -283,6 +293,16 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
             items: _items.map((x) => DropdownMenuItem<String>(value: _s(x['id']), child: Text(_itemLabel(_s(x['id'])), overflow: TextOverflow.ellipsis))).toList(),
             onChanged: (v) => setState(() => _selectedItemId = v),
           ),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: DropdownButtonFormField<String>(
+              value: _selectedUnitId, isExpanded: true,
+              decoration: const InputDecoration(labelText: 'وحدة السعر'),
+              items: _units.where((u) => _s(u['item_id']) == _selectedItemId).map((u) =>
+                DropdownMenuItem<String>(value: _s(u['id']), child: Text(_s(u['unit_name'])))).toList(),
+              onChanged: (v) => setState(() => _selectedUnitId = v),
+            )),
+          ]),
           const SizedBox(height: 8),
           Row(children: [
             Expanded(child: TextField(controller: _itemPrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'سعر الوحدة'))),
