@@ -1647,7 +1647,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(_module, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: _purple, fontWeight: FontWeight.w900, fontSize: compact ? 15 : 18)),
       if (!compact) const SizedBox(height: 4),
-      Wrap(
+      if (!mobile) Wrap(
         spacing: 5,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
