@@ -982,11 +982,16 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     final db=Supabase.instance.client;final company=await _activeCompanyId();final mode=(item['entity_mode']??'new').toString();
     final ar=_rowController(item,'item_name_ar',initial:_suggestedImageName(item,_images.indexOf(item))).text.trim();
     final en=_rowController(item,'item_name_en',initial:_excelValue(item,['product_name_en','english_name','name_en'])).text.trim();
-    final major=_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text.trim(),minor=_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text.trim();
+    final major=_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text.trim();
+    final middle=_rowController(item,'middle_unit',initial:_excelValue(item,['middle_unit','inner_unit'])).text.trim();
+    final minor=_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text.trim();
     final count=double.tryParse(_rowController(item,'internal_count',initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit'])).text.trim());
+    final middleCount=double.tryParse(_rowController(item,'middle_internal_count',initial:_excelValue(item,['middle_internal_count','units_per_middle'])).text.trim());
     final price=double.tryParse(_rowController(item,'sale_price',initial:_excelValue(item,['sale_price','price','price_value'])).text.trim()),area=double.tryParse(_rowController(item,'pricing_area',initial:_excelValue(item,['pricing_area','price_area'])).text.trim()),tax=double.tryParse(_rowController(item,'tax_rate',initial:_excelValue(item,['tax_rate','tax_percent','vat'])).text.trim());
     if(ar.isEmpty){setState(()=>_error='اسم الصنف العربي مطلوب.');return;}if(major.isEmpty||minor.isEmpty){setState(()=>_error='اختر الوحدة الكبرى والصغرى.');return;}
-    if(count==null||count<=0){setState(()=>_error='العدد الداخلي يجب أن يكون أكبر من صفر.');return;}if(price==null||price<0){setState(()=>_error='سعر الصنف غير صحيح.');return;}
+    if(count==null||count<=0){setState(()=>_error='العدد الداخلي للوحدة الكبرى يجب أن يكون أكبر من صفر.');return;}
+    if(middle.isNotEmpty&&(middleCount==null||middleCount<=0)){setState(()=>_error='عدد الوحدات الصغرى داخل الوحدة الوسطى يجب أن يكون أكبر من صفر.');return;}
+    if(price==null||price<0){setState(()=>_error='سعر الصنف غير صحيح.');return;}
     if(area==null||area<0){setState(()=>_error='مساحة التسعير غير صحيحة.');return;}if(tax==null||tax<0||tax>100){setState(()=>_error='نسبة الضريبة يجب أن تكون بين 0 و100.');return;}
     final oldCode=_rowController(item,'legacy_code').text.trim();if(mode=='old'&&(item['database_item_id']==null||oldCode.isEmpty)){setState(()=>_error='ابحث عن كود الصنف القديم أولًا.');return;}
     setState(()=>_loading=true);
@@ -995,7 +1000,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       if(mode=='new'){final rows=await db.from('erp_items').select('item_code').eq('company_id',company).like('item_code','ITEM-%').limit(5000);var max=0;for(final r in (rows as List)){final m=RegExp(r'-(\d+)$').firstMatch((r['item_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}code='ITEM-'+(max+1).toString().padLeft(4,'0');}
       final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
       final sourceBytes=Uint8List.fromList(base64Decode(b64));final png=await compute(_processTransparentPngInBackground,{'bytes':sourceBytes,'minWidth':300,'minHeight':300});
-      final values=<String,dynamic>{'item_name':ar,'item_name_en':en,'base_unit':minor,'sale_price':price,'tax_rate':tax,'pricing_area':area,'package_description':major+' = '+count.toStringAsFixed(3)+' '+minor,'weight_kg':double.tryParse(_rowController(item,'weight_kg').text.trim()) ?? 0,'length_cm':double.tryParse(_rowController(item,'length_cm').text.trim()) ?? 0,'width_cm':double.tryParse(_rowController(item,'width_cm').text.trim()) ?? 0,'height_cm':double.tryParse(_rowController(item,'height_cm').text.trim()) ?? 0,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,'source_name':'جامع صور سلسلة','source_url':item['url'].toString(),'is_active':true};
+      final values=<String,dynamic>{'item_name':ar,'item_name_en':en,'base_unit':minor,'sale_price':price,'tax_rate':tax,'pricing_area':area,'package_description':middle.isNotEmpty
+        ? major+' = '+count.toStringAsFixed(3)+' '+middle+' = '+middleCount!.toStringAsFixed(3)+' '+minor
+        : major+' = '+count.toStringAsFixed(3)+' '+minor,'weight_kg':double.tryParse(_rowController(item,'weight_kg').text.trim()) ?? 0,'length_cm':double.tryParse(_rowController(item,'length_cm').text.trim()) ?? 0,'width_cm':double.tryParse(_rowController(item,'width_cm').text.trim()) ?? 0,'height_cm':double.tryParse(_rowController(item,'height_cm').text.trim()) ?? 0,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,'source_name':'جامع صور سلسلة','source_url':item['url'].toString(),'is_active':true};
       final selectedCategoryId = item['category_secondary_id']?.toString() ?? item['category_sub_id']?.toString() ?? item['category_root_id']?.toString();
       if (selectedCategoryId != null && selectedCategoryId.isNotEmpty) values['category_id'] = selectedCategoryId;
       String id;
@@ -1004,8 +1011,10 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       await db.from('erp_item_units').update({'is_active':false,'is_selectable':false,'is_base_unit':false}).eq('company_id',company).eq('item_id',id);
       final unitRows = ErpItemUnitConversion.buildUnits(
         majorName: major,
+        middleName: middle.isEmpty ? null : middle,
         minorName: minor,
         majorInnerQuantity: count,
+        middleInnerQuantity: middle.isEmpty ? 1 : middleCount!,
       );
       await db.from('erp_item_units').upsert(
         unitRows.map((row) => <String,dynamic>{
@@ -1620,7 +1629,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       const SizedBox(height:3),
                       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                         dropdown('major_unit','وحدة كبرى',_rowController(item,'major_unit',initial:_excelValue(item,['major_unit','main_unit','unit'])).text,const ['','كرتونة','شدة','باكو','علبة','زجاجة','كيس','كيلو','جرام','لتر','مللي','قطعة','عبوة'],width:108),const SizedBox(width:4),
-                        field('internal_count','عدد داخلي',width:100,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']).isEmpty?'1000.000':_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:4),
+                        field('internal_count','عدد الوسطى داخل الكبرى',width:112,initial:_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']).isEmpty?'1':_excelValue(item,['internal_count','units_per_pack','pack_size','quantity_per_unit']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:4),
+                        dropdown('middle_unit','وحدة وسطى',_rowController(item,'middle_unit',initial:_excelValue(item,['middle_unit','inner_unit'])).text,const ['','شدة','باكو','علبة','زجاجة','كيس','كيلو','عبوة'],width:108),const SizedBox(width:4),
+                        field('middle_internal_count','عدد الصغرى داخل الوسطى',width:112,initial:_excelValue(item,['middle_internal_count','units_per_middle']).isEmpty?'1':_excelValue(item,['middle_internal_count','units_per_middle']),type:const TextInputType.numberWithOptions(decimal:true)),const SizedBox(width:4),
                         dropdown('minor_unit','وحدة صغرى',_rowController(item,'minor_unit',initial:_excelValue(item,['minor_unit','sub_unit','small_unit'])).text,const ['','قطعة','عبوة','علبة','زجاجة','كيس','جرام','مللي','وحدة'],width:108),const SizedBox(width:6),
                       ])),
                       const SizedBox(height:3),
