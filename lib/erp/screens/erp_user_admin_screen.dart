@@ -1217,9 +1217,9 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
                 Expanded(child: SingleChildScrollView(child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    headingRowHeight: 42,
-                    dataRowMinHeight: 39,
-                    dataRowMaxHeight: 44,
+                    headingRowHeight: 48,
+                    dataRowMinHeight: 48,
+                    dataRowMaxHeight: 56,
                     horizontalMargin: 12,
                     columnSpacing: 14,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF0E8F8)),
