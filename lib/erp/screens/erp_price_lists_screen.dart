@@ -291,7 +291,11 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
           DropdownButtonFormField<String>(
             value: _selectedItemId, isExpanded: true, decoration: const InputDecoration(labelText: 'الصنف'),
             items: _items.map((x) => DropdownMenuItem<String>(value: _s(x['id']), child: Text(_itemLabel(_s(x['id'])), overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) => setState(() => _selectedItemId = v),
+            onChanged: (v) => setState(() {
+              _selectedItemId = v;
+              final options = _units.where((u) => _s(u['item_id']) == v).toList();
+              _selectedUnitId = options.isEmpty ? null : _s(options.first['id']);
+            }),
           ),
           const SizedBox(height: 8),
           Row(children: [
