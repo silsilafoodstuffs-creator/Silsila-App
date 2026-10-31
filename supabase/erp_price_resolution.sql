@@ -8,7 +8,8 @@ create or replace function public.erp_resolve_item_price(
   p_price_kind text,
   p_quantity numeric default 1,
   p_party_id uuid default null,
-  p_price_date date default current_date
+  p_price_date date default current_date,
+  p_item_unit_id uuid default null
 )
 returns table (
   item_id uuid,
@@ -36,6 +37,9 @@ declare
   v_list_name text;
   v_currency char(3) := 'EGP';
   v_source text := 'item_master';
+  v_unit_factor numeric(14,6) := 1;
+  v_largest_factor numeric(14,6) := 1;
+  v_has_three_levels boolean := false;
 begin
   if p_price_kind is null or p_price_kind not in ('sale','purchase') then
     raise exception 'نوع التسعير يجب أن يكون sale أو purchase';
@@ -64,12 +68,29 @@ begin
 
   v_base := case when p_price_kind = 'sale' then v_item.sale_price else v_item.purchase_price end;
 
+  if p_item_unit_id is not null then
+    select u.conversion_factor into v_unit_factor
+    from public.erp_item_units u
+    where u.id=p_item_unit_id and u.item_id=p_item_id and u.company_id=p_company_id
+      and u.is_active and u.is_selectable;
+    if not found then raise exception 'وحدة التسعير غير صالحة أو مخفية.'; end if;
+  end if;
+  select coalesce(bool_or(u.unit_level is not null),false),
+         coalesce(max(u.conversion_factor) filter(where u.unit_level is not null),1)
+    into v_has_three_levels,v_largest_factor
+  from public.erp_item_units u
+  where u.item_id=p_item_id and u.company_id=p_company_id and u.is_active;
+  if v_has_three_levels and v_largest_factor>0 then
+    v_base := v_base * v_unit_factor / v_largest_factor;
+  end if;
+
   select l.id as price_list_id, l.price_list_name, l.currency_code, ln.unit_price, ln.discount_percent,
          case when pp.party_id is not null then 'party_price_list' else 'default_price_list' end as resolved_source
     into v_line
   from public.erp_price_lists l
   join public.erp_price_list_lines ln on ln.price_list_id = l.id
     and ln.company_id = p_company_id and ln.item_id = p_item_id
+    and ln.item_unit_id is not distinct from p_item_unit_id
     and ln.min_quantity <= p_quantity
     and (ln.starts_on is null or ln.starts_on <= p_price_date)
     and (ln.ends_on is null or ln.ends_on >= p_price_date)
@@ -101,6 +122,8 @@ begin
 end;
 $$;
 
+revoke all on function public.erp_resolve_item_price(uuid, uuid, text, numeric, uuid, date, uuid) from public, anon;
+grant execute on function public.erp_resolve_item_price(uuid, uuid, text, numeric, uuid, date, uuid) to authenticated;
 revoke all on function public.erp_resolve_item_price(uuid, uuid, text, numeric, uuid, date) from public, anon;
 grant execute on function public.erp_resolve_item_price(uuid, uuid, text, numeric, uuid, date) to authenticated;
 
