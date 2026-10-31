@@ -118,17 +118,20 @@ class ErpInventoryMasterRepository {
 
     final units = <Map<String, dynamic>>[];
     if (hasMiddle && hasMinor) {
-      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount * middleCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount});
-      units.add({'unit_code':'LEVEL_2','unit_name':middleName,'conversion_factor':middleCount,'is_base_unit':false,'unit_level':2,'inner_quantity':middleCount});
-      units.add({'unit_code':'LEVEL_3','unit_name':minorName,'conversion_factor':1,'is_base_unit':true,'unit_level':3,'inner_quantity':null});
+      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount * middleCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount,'is_selectable':true});
+      units.add({'unit_code':'LEVEL_2','unit_name':middleName,'conversion_factor':middleCount,'is_base_unit':false,'unit_level':2,'inner_quantity':middleCount,'is_selectable':true});
+      units.add({'unit_code':'LEVEL_3','unit_name':minorName,'conversion_factor':1,'is_base_unit':true,'unit_level':3,'inner_quantity':null,'is_selectable':true});
     } else if (hasMiddle) {
-      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount});
-      units.add({'unit_code':'LEVEL_2','unit_name':middleName,'conversion_factor':1,'is_base_unit':true,'unit_level':2,'inner_quantity':null});
+      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount,'is_selectable':true});
+      units.add({'unit_code':'LEVEL_2','unit_name':middleName,'conversion_factor':1,'is_base_unit':true,'unit_level':2,'inner_quantity':null,'is_selectable':true});
     } else if (hasMinor) {
-      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount});
-      units.add({'unit_code':'LEVEL_3','unit_name':minorName,'conversion_factor':1,'is_base_unit':true,'unit_level':3,'inner_quantity':null});
+      // The skipped middle level is represented explicitly for future compatibility,
+      // but remains hidden and cannot be selected as a transaction unit.
+      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':majorCount,'is_base_unit':false,'unit_level':1,'inner_quantity':majorCount,'is_selectable':true});
+      units.add({'unit_code':'LEVEL_2','unit_name':majorName,'conversion_factor':1,'is_base_unit':false,'unit_level':2,'inner_quantity':1,'is_implicit':true,'is_selectable':false});
+      units.add({'unit_code':'LEVEL_3','unit_name':minorName,'conversion_factor':1,'is_base_unit':true,'unit_level':3,'inner_quantity':null,'is_selectable':true});
     } else {
-      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':1,'is_base_unit':true,'unit_level':1,'inner_quantity':null});
+      units.add({'unit_code':'LEVEL_1','unit_name':majorName,'conversion_factor':1,'is_base_unit':true,'unit_level':1,'inner_quantity':null,'is_selectable':true});
     }
 
     final inserted = await _db.from('erp_items').insert({
