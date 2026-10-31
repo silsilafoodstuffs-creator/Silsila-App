@@ -1554,8 +1554,8 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                   final choices=options.contains(value)?options:<String>[value,...options];
                   return SizedBox(width:width,child:DropdownButtonFormField<String>(value:choices.firstWhere((v)=>v==value,orElse:()=>choices.first),isExpanded:true,
                     decoration:InputDecoration(hintText:label,labelText:null,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:7,vertical:7)),
-                    items:choices.map((v)=>DropdownMenuItem(value:v,child:Text(key=='entity_mode'?(v=='new'?'كود جديد':'كود قديم'):key=='save_as'?(v=='category'?'فئة':'صنف'):key=='major_unit'&&v.isEmpty?'وحدة كبرى':key=='minor_unit'&&v.isEmpty?'وحدة صغرى':v,overflow:TextOverflow.ellipsis))).toList(),
-                    onChanged:_loading?null:(v){if(v==null)return;setState((){item[key]=v;if(key=='major_unit'||key=='minor_unit')_rowController(item,key).text=v;if(key=='save_as'){item.remove('entity_mode');item.remove('database_item_id');item.remove('category_target_id');}});}));
+                    items:choices.map((v)=>DropdownMenuItem(value:v,child:Text(key=='entity_mode'?(v=='new'?'كود جديد':'كود قديم'):key=='save_as'?(v=='category'?'فئة':'صنف'):key=='major_unit'&&v.isEmpty?'وحدة كبرى':key=='minor_unit'&&v.isEmpty?'وحدة صغرى':key=='middle_unit'&&v.isEmpty?'وحدة وسطى (اختياري)':v,overflow:TextOverflow.ellipsis))).toList(),
+                    onChanged:_loading?null:(v){if(v==null)return;setState((){item[key]=v;if(key=='major_unit'||key=='middle_unit'||key=='minor_unit')_rowController(item,key).text=v;if(key=='save_as'){item.remove('entity_mode');item.remove('database_item_id');item.remove('category_target_id');}});}));
                 }
                 final suggested=_suggestedImageName(item,index);
                 var productName='';
