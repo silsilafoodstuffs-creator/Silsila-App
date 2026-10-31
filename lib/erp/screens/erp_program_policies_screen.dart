@@ -523,6 +523,46 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
           SizedBox(width:230,child:Text('الحجم / اللون المختار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
         ])))),
         ...rows,
+        const SizedBox(height:10),
+        Card(
+          elevation:0,
+          color:const Color(0xFFF5EFFB),
+          shape:RoundedRectangleBorder(
+            side:const BorderSide(color:Color(0xFFE2D5F0)),
+            borderRadius:BorderRadius.circular(10),
+          ),
+          child:Padding(
+            padding:const EdgeInsets.all(12),
+            child:Column(
+              crossAxisAlignment:CrossAxisAlignment.start,
+              children:const [
+                Row(children:[
+                  Icon(Icons.rule_folder_outlined,color:Color(0xFF3E007D),size:20),
+                  SizedBox(width:7),
+                  Expanded(child:Text('معيار التخطيط والمسافات الموحد — معتمد لكل شاشات سلسلة',
+                    style:TextStyle(fontWeight:FontWeight.w900,fontSize:13,color:Color(0xFF3E007D)))),
+                ]),
+                SizedBox(height:8),
+                Text('1) بين الحقول والأعمدة المرتبطة: 12–16 بكسل، والقيمة الافتراضية 14 بكسل.',
+                  style:TextStyle(fontSize:11,height:1.5)),
+                Text('2) بين مجموعات البيانات المستقلة: 24–32 بكسل.',
+                  style:TextStyle(fontSize:11,height:1.5)),
+                Text('3) بين الأقسام الرئيسية: 32–40 بكسل.',
+                  style:TextStyle(fontSize:11,height:1.5)),
+                Text('4) لا تُستخدم مسافة 50 بكسل بين كل عمودين؛ تُقبل فقط كحد أعلى عند الحاجة للفصل البصري بين مجموعات مستقلة.',
+                  style:TextStyle(fontSize:11,height:1.5)),
+                Text('5) الجداول: تقارب مريح دون تزاحم، مع هوامش داخلية واضحة وارتفاع صفوف يسمح بقراءة البيانات.',
+                  style:TextStyle(fontSize:11,height:1.5)),
+                Text('6) العربية: ممنوع تقطيع الكلمة أو عرض الحروف رأسيًا؛ يسمح بالتفاف النص بين الكلمات، مع توسيع العمود أو التمرير الأفقي عند الحاجة.',
+                  style:TextStyle(fontSize:11,height:1.5)),
+                Text('7) الشاشات الصغيرة: إعادة توزيع العناصر أو استخدام قوائم/بطاقات وتمرير أفقي منظم، دون تصغير النص إلى درجة تضر القراءة.',
+                  style:TextStyle(fontSize:11,height:1.5)),
+                Text('8) الاتساق: تطبيق نفس القواعد على الشاشات الحالية والجديدة، مع استثناءات موثقة فقط عندما تفرض طبيعة البيانات ذلك.',
+                  style:TextStyle(fontSize:11,height:1.5)),
+              ],
+            ),
+          ),
+        ),
       ])),
     ]);
   }
