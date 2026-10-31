@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/erp_item_unit_conversion.dart';
 
 Uint8List _processTransparentPngInBackground(Object input) {
     final Uint8List source;
@@ -1000,8 +1001,18 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       String id;
       if(mode=='new'){final inserted=await db.from('erp_items').insert({...values,'company_id':company,'item_code':code,'purchase_price':0,'category_id':selectedCategoryId}).select('id').single();id=inserted['id'].toString();}
       else{id=item['database_item_id'].toString();await db.from('erp_items').update(values).eq('id',id).eq('company_id',company);}
-      await db.from('erp_item_units').update({'is_base_unit':false}).eq('company_id',company).eq('item_id',id);
-      await db.from('erp_item_units').upsert([{'company_id':company,'item_id':id,'unit_code':'MAJOR','unit_name':major,'conversion_factor':count,'is_base_unit':false,'is_active':true},{'company_id':company,'item_id':id,'unit_code':'MINOR','unit_name':minor,'conversion_factor':1,'is_base_unit':true,'is_active':true}],onConflict:'item_id,unit_code');
+      await db.from('erp_item_units').update({'is_active':false,'is_selectable':false,'is_base_unit':false}).eq('company_id',company).eq('item_id',id);
+      final unitRows = ErpItemUnitConversion.buildUnits(
+        majorName: major,
+        minorName: minor,
+        majorInnerQuantity: count,
+      );
+      await db.from('erp_item_units').upsert(
+        unitRows.map((row) => <String,dynamic>{
+          ...row, 'company_id':company, 'item_id':id, 'is_active':true,
+        }).toList(),
+        onConflict:'item_id,unit_code',
+      );
       await _finishSavedRow(item,(mode=='new'?'تم إنشاء الصنف ':'تم تحديث الصنف ')+code+' وحفظ الصورة والبيانات في قاعدة البيانات.');
     }catch(e){if(mounted)setState(()=>_error='تعذر حفظ الصنف: '+e.toString().replaceFirst('Exception: ',''));}
     finally{if(mounted)setState(()=>_loading=false);}
