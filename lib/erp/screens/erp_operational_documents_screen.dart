@@ -626,6 +626,10 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         kind: widget.kind == ErpOperationalKind.purchase ? 'purchase' : 'sale',
         quantity: quantity,
         partyId: partyId,
+        unitId: (_unitsByItem[_itemId!] ?? const <Map<String, dynamic>>[])
+            .where((unit) => unit['is_base_unit'] == true && unit['is_selectable'] == true)
+            .map((unit) => _s(unit['id']))
+            .firstWhere((id) => id.isNotEmpty, orElse: () => ''),
       );
       if (!mounted) return;
       if (price == null) {
