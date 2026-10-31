@@ -51,6 +51,16 @@ class ErpInventoryMasterRepository {
     final rows = await query.order('item_code').range(offset, offset + pageSize - 1);
     return rows.map((r) { final item = Map<String, dynamic>.from(r); item['category_id'] = item['category_id']; return item; }).toList();
   }
+  Future<List<Map<String, dynamic>>> fetchItemUnits(String companyId, List<String> itemIds) async {
+    if (itemIds.isEmpty) return [];
+    final rows = await _db.from('erp_item_units')
+      .select('id,item_id,unit_level,unit_name,inner_quantity,conversion_factor,is_implicit,is_selectable,is_active')
+      .eq('company_id', companyId.trim())
+      .eq('is_active', true)
+      .inFilter('item_id', itemIds);
+    return rows.map((r) => Map<String, dynamic>.from(r)).toList();
+  }
+
   Future<Uint8List?> fetchItemImage(String companyId, String itemId) async {
     final row = await _db.from('erp_items').select('image_data').eq('company_id', companyId.trim()).eq('id', itemId).maybeSingle();
     final value = row?['image_data'];
