@@ -27,3 +27,4 @@ for each row execute function public.erp_link_stocktake_settlement_salary_elemen
 
 create index if not exists erp_stocktake_settlements_salary_element_idx
 on public.erp_stocktake_settlements(salary_element_id);
+revoke all on function public.erp_link_stocktake_settlement_salary_element() from public,anon,authenticated;
