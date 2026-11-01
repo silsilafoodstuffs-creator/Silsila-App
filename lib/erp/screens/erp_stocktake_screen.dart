@@ -94,7 +94,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     setState(()=>saving=true);
     try{
       final result=await db.rpc('erp_post_physical_stocktake',params:{'p_stocktake_id':docId,'p_target_type':shortage>0?targetType:null,'p_target_id':shortage>0?targetId:null});
-      if(mounted)setState(()=>message='تم ترحيل الجرد وتسجيل حركات التسوية. '+result.toString());
+      if(mounted)setState(()=>message='تم ترحيل الجرد وتسجيل حركات التسوية. '+(shortage>0&&targetType=='employee'?' تم ربط العجز بعنصر المرتب النظامي «عجز جرد». ':' ')+result.toString());
       await load();await loadLines(docId!);
     }catch(e){if(mounted)setState(()=>error='تعذر ترحيل الجرد: '+e.toString());}
     finally{if(mounted)setState(()=>saving=false);}
