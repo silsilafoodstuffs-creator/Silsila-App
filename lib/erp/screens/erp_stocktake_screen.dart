@@ -22,7 +22,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   final counts=<String,TextEditingController>{};
   List<Map<String,dynamic>> branches=[],warehouses=[],docs=[],items=[],lines=[],employees=[],expenses=[],units=[];
   String? branchId,baseWarehouseId,warehouseId,docId,targetId;
-  String countMode='detailed',targetType='employee',sourceMode='manual';
+  String countMode='default',targetType='employee',sourceMode='manual';
   bool loading=false,saving=false,editing=false;
   String? error,message;
   bool get _manualSettlementScreen => widget.title.contains('التسوية');
@@ -256,7 +256,29 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
          DropdownButtonFormField<String>(value:baseWarehouseId,isExpanded:true,decoration:const InputDecoration(labelText:'المخزن الرئيسي'),items:warehouses.where((w)=>s(w['parent_warehouse_id']).isEmpty && (branchId==null || s(w['branch_id'])==branchId)).map((w)=>DropdownMenuItem(value:s(w['id']),child:Text(warehouseName(w['id'])))).toList(),onChanged:(v)=>setState(() { baseWarehouseId=v; warehouseId=v; })),
          DropdownButtonFormField<String>(value:warehouseId,isExpanded:true,decoration:const InputDecoration(labelText:'المخزن الفرعي / موقع التخزين'),items:[if(baseWarehouseId!=null)DropdownMenuItem(value:baseWarehouseId,child:Text('المخزن الرئيسي — '+warehouseName(baseWarehouseId))),...warehouses.where((w)=>s(w['parent_warehouse_id'])==s(baseWarehouseId)).map((w)=>DropdownMenuItem(value:s(w['id']),child:Text(warehouseName(w['id']))))],onChanged:(v)=>setState(()=>warehouseId=v)),
         if(_manualSettlementScreen)InputDecorator(decoration:const InputDecoration(labelText:'مصدر التسوية',border:OutlineInputBorder()),child:Text(current==null?'يدوي تلقائي عند إنشاء تسوية جديدة':s(current['source'])=='manual'?'يدوي':'من جرد المخزون')),
-        if(!_manualSettlementScreen)DropdownButtonFormField<String>(value:countMode,decoration:const InputDecoration(labelText:'وضع الجرد'),items:const [DropdownMenuItem(value:'default',child:Text('الوحدة الافتراضية للمخزن')),DropdownMenuItem(value:'detailed',child:Text('جرد تفصيلي'))],onChanged:(v)=>setState(()=>countMode=v??countMode)),
+        if(!_manualSettlementScreen)Wrap(
+          spacing:16,
+          runSpacing:6,
+          crossAxisAlignment:WrapCrossAlignment.center,
+          children:[
+            Row(mainAxisSize:MainAxisSize.min,children:[
+              Checkbox(
+                shape:const CircleBorder(),
+                value:countMode=='default',
+                onChanged:(v){if(v==true)setState(()=>countMode='default');},
+              ),
+              const Text('الوحدة الافتراضية للمخزن'),
+            ]),
+            Row(mainAxisSize:MainAxisSize.min,children:[
+              Checkbox(
+                shape:const CircleBorder(),
+                value:countMode=='detailed',
+                onChanged:(v){if(v==true)setState(()=>countMode='detailed');},
+              ),
+              const Text('الجرد التفصيلي'),
+            ]),
+          ],
+        ),
         TextField(controller:notes,decoration:InputDecoration(labelText:_manualSettlementScreen?'ملاحظات التسوية':'ملاحظات المحضر')),
         const SizedBox(height:8),const Text('المحاضر السابقة',style:TextStyle(fontWeight:FontWeight.w800)),
          DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.where((d)=>_manualSettlementScreen?['manual','stocktake'].contains(s(d['source'])):s(d['source'])=='stocktake').map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+(s(d['source'])=='manual'?'يدوي':'جرد فعلي')+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(() { docId=v; editing=false; final selected=docs.where((d)=>s(d['id'])==v);if(selected.isNotEmpty){countMode=s(selected.first['count_mode']).isEmpty?'detailed':s(selected.first['count_mode']);} });if(v!=null)await loadLines(v);}),
