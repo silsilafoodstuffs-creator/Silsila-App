@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as excel;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 
@@ -17,7 +23,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   List<Map<String,dynamic>> warehouses=[],docs=[],items=[],lines=[],employees=[],expenses=[],units=[];
   String? warehouseId,docId,targetId;
   String countMode='detailed',targetType='employee';
-  bool loading=false,saving=false;
+  bool loading=false,saving=false,editing=false;
   String? error,message;
   String s(dynamic v)=>(v??'').toString();
   double n(dynamic v)=>v is num?v.toDouble():double.tryParse(s(v))??0;
@@ -60,7 +66,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     setState(()=>saving=true);
     try{
       final id=await db.rpc('erp_create_physical_stocktake',params:{'p_company_id':widget.companyId,'p_warehouse_id':warehouseId,'p_count_mode':countMode,'p_valuation_basis':null,'p_notes':notes.text.trim().isEmpty?null:notes.text.trim()});
-      docId=id.toString();notes.clear();await load();await loadLines(docId!);
+      docId=id.toString();notes.clear();await load();await loadLines(docId!);if(mounted)setState(()=>editing=true);
       if(mounted)setState(() { saving=false; message='تم إنشاء محضر الجرد ولقطة الأرصدة.'; });
     }catch(e){if(mounted)setState(() { saving=false; error='تعذر إنشاء محضر الجرد: '+e.toString(); });}
   }
@@ -76,7 +82,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       final payload=lines.map((l)=>{'line_id':s(l['id']),'counted_quantity':countedBase(l)}).toList();
       if(payload.any((r)=>(r['counted_quantity'] as double)<0))throw ArgumentError('لا يمكن إدخال كمية سالبة.');
       await db.rpc('erp_save_physical_stocktake_counts',params:{'p_stocktake_id':docId,'p_counts':payload});
-      await loadLines(docId!);if(mounted)setState(()=>message='تم حفظ المسودة دون تغيير الأرصدة المخزنية.');
+      await loadLines(docId!);if(mounted)setState(() {editing=false;message='تم حفظ المسودة دون تغيير الأرصدة المخزنية.';});
     }catch(e){if(mounted)setState(()=>error='تعذر حفظ المسودة: '+e.toString());}
     finally{if(mounted)setState(()=>saving=false);}
   }
@@ -94,6 +100,45 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     finally{if(mounted)setState(()=>saving=false);}
   }
 
+
+  void editDraft(){if(!isDraft)return;setState(() {editing=true;message='تم تفعيل تعديل كميات الجرد. احفظ المسودة قبل الترحيل.';});}
+  void previewDraft(){
+    showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('معاينة محضر الجرد'),
+      content:SizedBox(width:560,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Text('عدد الأصناف: ${lines.length}'),
+        Text('قيمة العجز: ${shortage.toStringAsFixed(2)} ج.م'),
+        ...lines.take(80).map((l)=>ListTile(dense:true,title:Text(itemName(l['item_id'])),subtitle:Text('رصيد النظام: ${n(l['physical_snapshot']).toStringAsFixed(3)} • الجرد: ${countedBase(l).toStringAsFixed(3)}'))),
+      ]))),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))],
+    ));
+  }
+  Future<void> exportPdf({required bool share}) async {
+    if(lines.isEmpty){setState(()=>message='لا توجد بنود لتصديرها.');return;}
+    try{
+      final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final doc=pw.Document();
+      doc.addPage(pw.MultiPage(theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
+        pw.Text('Silsila • ${widget.title}',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
+        pw.SizedBox(height:8),
+        pw.TableHelper.fromTextArray(headers:const ['م','كود الصنف','الصنف','رصيد النظام','الجرد','الفرق','القيمة'],data:lines.asMap().entries.map((e){final l=e.value;final item=items.firstWhere((x)=>s(x['id'])==s(l['item_id']),orElse:()=>{});final d=countedBase(l)-n(l['physical_snapshot']);return [e.key+1,s(item['item_code']),s(item['item_name']),n(l['physical_snapshot']).toStringAsFixed(3),countedBase(l).toStringAsFixed(3),d.toStringAsFixed(3),(d.abs()*n(l['valuation_price'])).toStringAsFixed(2)];}).toList()),
+      ]));
+      final bytes=await doc.save();
+      if(share){await Printing.sharePdf(bytes:bytes,filename:'Silsila-Stocktake.pdf');}
+      else{await Printing.layoutPdf(onLayout:(_)=>Future.value(bytes));}
+    }catch(e){if(mounted)setState(()=>error='تعذر إنشاء PDF: $e');}
+  }
+  Future<void> exportExcel() async {
+    if(lines.isEmpty){setState(()=>message='لا توجد بنود لتصديرها.');return;}
+    try{
+      final book=excel.Excel.createExcel();final sheet=book['الجرد'];
+      sheet.appendRow([excel.TextCellValue('م'),excel.TextCellValue('كود الصنف'),excel.TextCellValue('اسم الصنف'),excel.TextCellValue('رصيد النظام'),excel.TextCellValue('كمية الجرد'),excel.TextCellValue('الفرق'),excel.TextCellValue('قيمة الفرق')]);
+      for(var i=0;i<lines.length;i++){final l=lines[i];final item=items.firstWhere((x)=>s(x['id'])==s(l['item_id']),orElse:()=>{});final d=countedBase(l)-n(l['physical_snapshot']);sheet.appendRow([excel.IntCellValue(i+1),excel.TextCellValue(s(item['item_code'])),excel.TextCellValue(s(item['item_name'])),excel.DoubleCellValue(n(l['physical_snapshot'])),excel.DoubleCellValue(countedBase(l)),excel.DoubleCellValue(d),excel.DoubleCellValue(d.abs()*n(l['valuation_price']))]);}
+      final bytes=book.encode();if(bytes==null)throw StateError('تعذر تجهيز ملف Excel.');
+      await FilePicker.platform.saveFile(dialogTitle:'تصدير محضر الجرد',fileName:'Silsila-Stocktake.xlsx',bytes:Uint8List.fromList(bytes));
+    }catch(e){if(mounted)setState(()=>error='تعذر تصدير Excel: $e');}
+  }
+
   @override Widget build(BuildContext context){
     final doc=docs.where((d)=>s(d['id'])==docId);final current=doc.isEmpty?null:doc.first;
     final targets=targetType=='employee'?employees:expenses;
@@ -105,6 +150,12 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
           ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:loading?null:load),
           ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:saving?null:createDoc),
           ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:saving||!isDraft?null:saveDraft),
+          ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:saving||!isDraft?null:editDraft),
+          ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:null),
+          ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:previewDraft),
+          ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>exportPdf(share:false)),
+          ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:exportExcel),
+          ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf,onPressed:()=>exportPdf(share:true)),
           ErpQuickTaskButton(label:'ترحيل',icon:Icons.verified_outlined,onPressed:saving||!isDraft?null:postDoc),
         ])),
       ]))),
@@ -137,7 +188,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
             DataCell(Text((n(l['available_snapshot'])/f).toStringAsFixed(3))),DataCell(Text((n(l['reserved_snapshot'])/f).toStringAsFixed(3))),
             DataCell(Text((n(l['physical_snapshot'])/f).toStringAsFixed(3))),
             DataCell(Text(unit.isEmpty?'—':s(unit.first['unit_name']))),
-            DataCell(SizedBox(width:100,child:TextField(controller:counts[s(l['id'])],enabled:isDraft,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState((){}),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
+            DataCell(SizedBox(width:100,child:TextField(controller:counts[s(l['id'])],enabled:isDraft&&editing,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState((){}),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
             DataCell(Text((diff/f).toStringAsFixed(3))),
             DataCell(Text(diff<0?'عجز':diff>0?'زيادة':'مطابق',style:TextStyle(fontWeight:FontWeight.w800,color:diff<0?Colors.red:diff>0?Colors.green:Colors.black54))),
             DataCell(Text((diff.abs()*n(l['valuation_price'])).toStringAsFixed(2))),
