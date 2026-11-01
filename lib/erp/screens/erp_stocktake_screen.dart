@@ -63,6 +63,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   }
 
   Future<void> createDoc() async {
+    if(_manualSettlementScreen && sourceMode!='manual'){setState(()=>message='مصدر «من جرد المخزون» للمعاينة فقط؛ اختر محضراً سابقاً من القائمة.');return;}
     if(warehouseId==null){setState(()=>error='اختر المخزن أولاً.');return;}
     setState(()=>saving=true);
     try{
@@ -76,7 +77,11 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
 
   double countedBase(Map<String,dynamic> l){final f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);return (n(counts[s(l['id'])]?.text)*f);}
   double get shortage=>lines.fold<double>(0,(sum,l){final d=countedBase(l)-n(l['physical_snapshot']);return sum+(d<0?d.abs()*n(l['valuation_price']):0);});
-  bool get isDraft=>docs.any((d)=>s(d['id'])==docId&&s(d['status'])=='draft');
+  bool get isDraft {
+    final matches=docs.where((d)=>s(d['id'])==docId);
+    if(matches.isEmpty||s(matches.first['status'])!='draft')return false;
+    return _manualSettlementScreen ? s(matches.first['source'])=='manual' : s(matches.first['source'])=='stocktake';
+  }
 
   Future<void> saveDraft() async {
     if(!isDraft){setState(()=>error='المحضر ليس مسودة قابلة للتعديل.');return;}
@@ -87,6 +92,25 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       await db.rpc('erp_save_physical_stocktake_counts',params:{'p_stocktake_id':docId,'p_counts':payload});
       await loadLines(docId!);if(mounted)setState(() {editing=false;message='تم حفظ المسودة دون تغيير الأرصدة المخزنية.';});
     }catch(e){if(mounted)setState(()=>error='تعذر حفظ المسودة: '+e.toString());}
+    finally{if(mounted)setState(()=>saving=false);}
+  }
+
+  Future<void> deleteManualDraft() async {
+    final selected=docs.where((d)=>s(d['id'])==docId);
+    if(!_manualSettlementScreen||selected.isEmpty||s(selected.first['source'])!='manual'||s(selected.first['status'])!='draft')return;
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('إلغاء التسوية اليدوية'),
+      content:const Text('هل تريد حذف مسودة التسوية اليدوية؟ لا يمكن حذف تسوية مصدرها جرد فعلي.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('نعم، احذف المسودة'))],
+    ));
+    if(yes!=true)return;
+    setState(()=>saving=true);
+    try{
+      await db.from('erp_stocktakes').delete().eq('id',docId!).eq('company_id',widget.companyId).eq('source','manual').eq('status','draft');
+      docId=null;lines=[];for(final c in counts.values){c.dispose();}counts.clear();
+      await load();
+      if(mounted)setState(()=>message='تم إلغاء مسودة التسوية اليدوية.');
+    }catch(e){if(mounted)setState(()=>error='تعذر إلغاء المسودة: '+e.toString());}
     finally{if(mounted)setState(()=>saving=false);}
   }
 
@@ -151,10 +175,10 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         const Text('لقطة أرصدة، إدخال الكميات الفعلية، مراجعة الفروقات ثم الترحيل.',style:TextStyle(color:Colors.white70)),
         const SizedBox(height:8),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
           ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:loading?null:load),
-          ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:saving?null:createDoc),
+          ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:saving||(_manualSettlementScreen&&sourceMode!='manual')?null:createDoc),
           ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:saving||!isDraft?null:saveDraft),
           ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:saving||!isDraft?null:editDraft),
-          ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:null),
+          ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:saving||!_manualSettlementScreen||!isDraft?null:deleteManualDraft),
           ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:previewDraft),
           ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>exportPdf(share:false)),
           ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:exportExcel),
@@ -167,13 +191,13 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         const Text('إنشاء محضر جرد جديد',style:TextStyle(fontWeight:FontWeight.w900,fontSize:17)),
         DropdownButtonFormField<String>(value:warehouseId,isExpanded:true,decoration:const InputDecoration(labelText:'المخزن'),items:warehouses.map((w)=>DropdownMenuItem(value:s(w['id']),child:Text(warehouseName(w['id'])))).toList(),onChanged:(v)=>setState(()=>warehouseId=v)),
         if(_manualSettlementScreen)DropdownButtonFormField<String>(value:sourceMode,decoration:const InputDecoration(labelText:'مصدر التسوية (للمعاينة والاختيار فقط)'),items:const [DropdownMenuItem(value:'manual',child:Text('يدوي')),DropdownMenuItem(value:'stocktake',child:Text('من جرد المخزون'))],onChanged:docId!=null?null:(v)=>setState(()=>sourceMode=v??'manual')),
-        if(!_manualSettlementScreen || sourceMode=='stocktake')DropdownButtonFormField<String>(value:countMode,decoration:const InputDecoration(labelText:'وضع الجرد'),items:const [DropdownMenuItem(value:'default',child:Text('الوحدة الافتراضية للمخزن')),DropdownMenuItem(value:'detailed',child:Text('جرد تفصيلي'))],onChanged:(v)=>setState(()=>countMode=v??countMode)),
+        if(!_manualSettlementScreen)DropdownButtonFormField<String>(value:countMode,decoration:const InputDecoration(labelText:'وضع الجرد'),items:const [DropdownMenuItem(value:'default',child:Text('الوحدة الافتراضية للمخزن')),DropdownMenuItem(value:'detailed',child:Text('جرد تفصيلي'))],onChanged:(v)=>setState(()=>countMode=v??countMode)),
         TextField(controller:notes,decoration:const InputDecoration(labelText:'ملاحظات المحضر')),
         const SizedBox(height:8),const Text('المحاضر السابقة',style:TextStyle(fontWeight:FontWeight.w800)),
-        DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(()=>{docId=v;final selected=docs.where((d)=>s(d['id'])==s(v));if(selected.isNotEmpty)sourceMode=s(selected.first['source']).isEmpty?'stocktake':s(selected.first['source']);});if(v!=null)await loadLines(v);}),
+        DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.where((d)=>!_manualSettlementScreen||s(d['source'])==sourceMode).map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(() { docId=v; editing=false; });if(v!=null)await loadLines(v);}),
       ]))),
       if(current!=null)...[
-        Padding(padding:const EdgeInsets.all(8),child:Text('تفاصيل المحضر • '+warehouseName(current['warehouse_id'])+' • '+s(current['status']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17))),
+        Padding(padding:const EdgeInsets.all(8),child:Text('تفاصيل المحضر • '+warehouseName(current['warehouse_id'])+' • المصدر: '+(s(current['source'])=='manual'?'يدوي':'من جرد المخزون')+' • '+s(current['status']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17))),
         if(isDraft && shortage>0)Wrap(spacing:8,runSpacing:6,children:[
           SegmentedButton<String>(segments:const [ButtonSegment(value:'employee',label:Text('موظف')),ButtonSegment(value:'expense',label:Text('بند صرف'))],selected:{targetType},onSelectionChanged:(v)=>setState(() { targetType=v.first; targetId=null; })),
           SizedBox(width:300,child:DropdownButtonFormField<String>(value:targetId,isExpanded:true,decoration:const InputDecoration(labelText:'توجيه قيمة العجز'),items:targets.map((r)=>DropdownMenuItem(value:s(r['id']),child:Text(targetName(r),overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setState(()=>targetId=v))),
@@ -183,7 +207,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columns:const [
           DataColumn(label:Text('م')),DataColumn(label:Text('كود الصنف')),DataColumn(label:Text('اسم الصنف')),
           DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),DataColumn(label:Text('وحدة الجرد')),
-          DataColumn(label:Text('كمية الجرد')),DataColumn(label:Text('الفرق')),DataColumn(label:Text('نوع الفرق')),DataColumn(label:Text('قيمة الفرق')),
+          DataColumn(label:Text('كمية الجرد')),DataColumn(label:Text('زيادة جرد')),DataColumn(label:Text('عجز جرد')),DataColumn(label:Text('الرصيد بعد التسوية')),DataColumn(label:Text('الفرق')),DataColumn(label:Text('نوع الفرق')),DataColumn(label:Text('قيمة الفرق')),
         ],rows:List.generate(lines.length,(i){
           final l=lines[i],f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']),diff=countedBase(l)-n(l['physical_snapshot']);
           final item=items.where((x)=>s(x['id'])==s(l['item_id']));final it=item.isEmpty?<String,dynamic>{}:item.first;final unit=units.where((x)=>s(x['id'])==s(l['unit_id']));
@@ -193,6 +217,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
             DataCell(Text((n(l['physical_snapshot'])/f).toStringAsFixed(3))),
             DataCell(Text(unit.isEmpty?'—':s(unit.first['unit_name']))),
             DataCell(SizedBox(width:100,child:TextField(controller:counts[s(l['id'])],enabled:isDraft&&editing,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState((){}),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
+            DataCell(Text((diff>0?diff/f:0).toStringAsFixed(3))),DataCell(Text((diff<0?-diff/f:0).toStringAsFixed(3))),DataCell(Text((countedBase(l)/f).toStringAsFixed(3))),
             DataCell(Text((diff/f).toStringAsFixed(3))),
             DataCell(Text(diff<0?'عجز':diff>0?'زيادة':'مطابق',style:TextStyle(fontWeight:FontWeight.w800,color:diff<0?Colors.red:diff>0?Colors.green:Colors.black54))),
             DataCell(Text((diff.abs()*n(l['valuation_price'])).toStringAsFixed(2))),
