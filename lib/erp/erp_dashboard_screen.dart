@@ -794,7 +794,22 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             } else {
               try {
                 await _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: newRecord);
-                _showActionMessage('تم حفظ السجل الجديد في قاعدة البيانات.');
+                try {
+                  await _appManagementService.requestActivityLog(
+                    companyId: companyId,
+                    action: 'create',
+                    entityType: 'workspace_record',
+                    entityId: generatedCode,
+                    details: <String, Object?>{
+                      'page': _page,
+                      'record_name': name.text.trim(),
+                    },
+                  );
+                } catch (logError) {
+                  _showActionMessage('تم حفظ السجل، لكن تعذر تسجيل حدث المراجعة: $logError');
+                  return;
+                }
+                _showActionMessage('تم حفظ السجل وتسجيل العملية في سجل المراجعة.');
               } catch (error) {
                 _showActionMessage('تعذر الحفظ الدائم: ' + error.toString());
               }
