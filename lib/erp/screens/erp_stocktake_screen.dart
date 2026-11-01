@@ -297,7 +297,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
           const DataColumn(label:Text('م')),const DataColumn(label:Text('كود الصنف')),const DataColumn(label:Text('اسم الصنف')),
           const DataColumn(label:Text('رصيد متاح')),const DataColumn(label:Text('رصيد حجز')),const DataColumn(label:Text('رصيد فعلي')),
           if(s(current['count_mode'])=='detailed')...const [DataColumn(label:Text('كمية كبرى')),DataColumn(label:Text('وحدة كبرى')),DataColumn(label:Text('كمية وسطى')),DataColumn(label:Text('وحدة وسطى')),DataColumn(label:Text('كمية صغرى')),DataColumn(label:Text('وحدة صغرى'))],
-          const DataColumn(label:Text('وحدة الجرد')),DataColumn(label:Text(_manualSettlementScreen&&s(current['source'])=='manual'?'فرق التسوية (+ زيادة / - عجز)':'كمية الجرد')),const DataColumn(label:Text('زيادة جرد')),const DataColumn(label:Text('عجز جرد')),const DataColumn(label:Text('الرصيد بعد التسوية')),const DataColumn(label:Text('الفرق')),const DataColumn(label:Text('نوع الفرق')),const DataColumn(label:Text('قيمة الفرق')),
+          const DataColumn(label:Text('وحدة الجرد')),DataColumn(label:Text(_manualSettlementScreen&&s(current['source'])=='manual'?'فرق التسوية (+ زيادة / - عجز)':'كمية الجرد')),const DataColumn(label:Text('زيادة جرد')),const DataColumn(label:Text('عجز جرد')),DataColumn(label:Text(_manualSettlementScreen?'الرصيد بعد التسوية':'رصيد الجرد')),const DataColumn(label:Text('الفرق')),const DataColumn(label:Text('نوع الفرق')),const DataColumn(label:Text('قيمة الفرق')),
 
         ],rows:List.generate(lines.length,(i){
           final l=lines[i],f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']),diff=countedBase(l)-n(l['physical_snapshot']);
