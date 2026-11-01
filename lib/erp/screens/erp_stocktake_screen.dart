@@ -198,6 +198,23 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     });
   }
 
+  Future<void> chooseSettlementTarget() async {
+    final options=targetType=='employee'?employees:expenses;
+    final search=TextEditingController();
+    var filtered=List<Map<String,dynamic>>.from(options);
+    final selected=await showDialog<String>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,refresh)=>AlertDialog(
+      title:Text(targetType=='employee'?'اختيار الموظف المسؤول عن العجز':'اختيار بند الصرف'),
+      content:SizedBox(width:620,height:460,child:Column(children:[
+        TextField(controller:search,autofocus:true,decoration:const InputDecoration(prefixIcon:Icon(Icons.search),labelText:'بحث بالكود أو الاسم',border:OutlineInputBorder()),onChanged:(v)=>refresh(()=>filtered=options.where((r)=>targetName(r).toLowerCase().contains(v.trim().toLowerCase())).toList())),
+        const SizedBox(height:10),
+        Expanded(child:filtered.isEmpty?const Center(child:Text('لا توجد نتائج مطابقة.')):ListView.separated(itemCount:filtered.length,separatorBuilder:(_,__)=>const Divider(height:1),itemBuilder:(ctx,i){final row=filtered[i];return ListTile(dense:true,leading:Icon(targetType=='employee'?Icons.badge_outlined:Icons.receipt_long_outlined),title:Text(targetName(row)),onTap:()=>Navigator.pop(dialogContext,s(row['id'])),);}))
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إلغاء'))],
+    )));
+    search.dispose();
+    if(selected!=null&&mounted)setState(()=>targetId=selected);
+  }
+
   @override Widget build(BuildContext context){
     final doc=docs.where((d)=>s(d['id'])==docId);final current=doc.isEmpty?null:doc.first;
     final targets=targetType=='employee'?employees:expenses;
@@ -235,7 +252,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         Padding(padding:const EdgeInsets.all(8),child:Text('تفاصيل المحضر • '+warehouseName(current['warehouse_id'])+' • المصدر: '+(s(current['source'])=='manual'?'يدوي':'من جرد المخزون')+' • '+s(current['status']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17))),
         if(isDraft && shortage>0)Wrap(spacing:8,runSpacing:6,children:[
           SegmentedButton<String>(segments:const [ButtonSegment(value:'employee',label:Text('موظف')),ButtonSegment(value:'expense',label:Text('بند صرف'))],selected:{targetType},onSelectionChanged:(v)=>setState(() { targetType=v.first; targetId=null; })),
-          SizedBox(width:300,child:DropdownButtonFormField<String>(value:targetId,isExpanded:true,decoration:const InputDecoration(labelText:'توجيه قيمة العجز'),items:targets.map((r)=>DropdownMenuItem(value:s(r['id']),child:Text(targetName(r),overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setState(()=>targetId=v))),
+          OutlinedButton.icon(onPressed:chooseSettlementTarget,icon:const Icon(Icons.search),label:Text(targetId==null?'اختيار بند/موظف':targetName(targets.firstWhere((r)=>s(r['id'])==targetId,orElse:()=>{'id':targetId,'employee_code':'','full_name':'','item_code':'','name_ar':'—'})))),
           Text('قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:const TextStyle(fontWeight:FontWeight.w800,color:Colors.red)),
         ]) else if(isDraft) Padding(padding:const EdgeInsets.only(bottom:8),child:Text('لا توجد قيمة عجز حالياً؛ توجيه العجز غير مطلوب. قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:const TextStyle(color:Colors.green,fontWeight:FontWeight.w700))),
         if(isDraft)Align(alignment:AlignmentDirectional.centerStart,child:FilledButton.icon(onPressed:saving?null:postDoc,icon:const Icon(Icons.verified_outlined),label:const Text('ترحيل الجرد وتحديث الأرصدة'))),
