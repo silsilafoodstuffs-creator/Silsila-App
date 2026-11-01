@@ -781,7 +781,17 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   )));
 
 
-  List<Map<String, dynamic>> _unitsForItem(String itemId) => _itemUnits.where((u) => _s(u['item_id']) == itemId && u['is_active'] == true && u['is_selectable'] == true).toList();
+  List<Map<String, dynamic>> _unitsForItem(String itemId) {
+    final candidates = _itemUnits.where((u) =>
+      _s(u['item_id']) == itemId && u['is_active'] == true && u['is_selectable'] == true
+    ).toList()
+      ..sort((a, b) => _n(b['conversion_factor']).compareTo(_n(a['conversion_factor'])));
+    final seenNames = <String>{};
+    return candidates.where((unit) {
+      final name = _s(unit['unit_name']).trim().replaceAll(RegExp(r'\\s+'), ' ').toLowerCase();
+      return name.isNotEmpty && seenNames.add(name);
+    }).toList();
+  }
   Map<String, dynamic>? _settingsFor(String itemId, String warehouseId) {
     for (final row in _warehouseItemSettings) {
       if (_s(row['item_id']) == itemId && _s(row['warehouse_id']) == warehouseId) return row;
