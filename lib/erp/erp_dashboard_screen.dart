@@ -1401,7 +1401,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             InkWell(
               onTap: () => _open('مخازن', 'حركات', 'تسوية جرد'),
               borderRadius: BorderRadius.circular(10),
-              child: _notice(Icons.inventory_2_outlined, 'تسويات جرد غير مرحلة', 'يوجد $_pendingStocktakeDrafts محضر جرد محفوظ كمسودة ولم يُرحّل بعد. اضغط لفتح شاشة التسوية.', _pendingStocktakeDrafts > 0 ? _orange : Colors.white),
+              child: _notice(Icons.inventory_2_outlined, 'تسويات جرد غير مرحلة', 'يوجد $_pendingStocktakeDrafts مستند جرد أو تسوية يدوية محفوظ كمسودة ولم يُرحّل بعد. اضغط لفتح شاشة التسوية.', _pendingStocktakeDrafts > 0 ? _orange : Colors.white),
             ),
           ]),
         ),
