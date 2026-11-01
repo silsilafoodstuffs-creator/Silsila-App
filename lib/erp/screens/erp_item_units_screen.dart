@@ -334,7 +334,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
                     onChanged: !_editMode ? null : (v) => setState(() => row['is_active'] = v ?? false),
                   )),
                   DataCell(IconButton(
-                    tooltip: 'حذف الوحدة المحددة', onPressed: () => setState(() => _selectedId = key).then((_) => _removeSelected()),
+                    tooltip: 'حذف الوحدة المحددة', onPressed: () { setState(() => _selectedId = key); _removeSelected(); },
                     icon: const Icon(Icons.delete_forever, color: Colors.red),
                   )),
                 ],
