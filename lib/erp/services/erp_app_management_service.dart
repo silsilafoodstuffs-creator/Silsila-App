@@ -329,14 +329,13 @@ class ErpAppManagementService {
         entityId.trim().isEmpty) {
       throw ArgumentError('بيانات سجل النشاط غير مكتملة.');
     }
-    await _db.from('erp_app_activity_log').insert({
-      'company_id': companyId,
-      'app_id': appId,
-      'actor_id': currentUserId,
-      'action': action.trim(),
-      'entity_type': entityType.trim(),
-      'entity_id': entityId.trim(),
-      'details': details,
+    await _db.rpc('erp_append_app_activity_log', params: {
+      'p_company_id': companyId,
+      'p_action': action.trim(),
+      'p_entity_type': entityType.trim(),
+      'p_entity_id': entityId.trim(),
+      'p_app_id': appId,
+      'p_details': details,
     });
   }
 
