@@ -205,7 +205,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     for(final controller in counts.values){controller.dispose();}
     counts.clear();
     setState(() {
-      docId=null; lines=[]; editing=false;
+      docId=null; lines=[]; editing=false; countMode='default';
       sourceMode=_manualSettlementScreen?'manual':'stocktake';
       message='اختر مصدر المستند والمخزن ثم اضغط إضافة.';
       error=null;
