@@ -698,21 +698,61 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return const [];
   }
 
+  String _workspaceCodePrefix() {
+    final page = _page;
+    if (page.contains('مورد') || page.contains('شراء')) return 'SUP';
+    if (page.contains('عميل') || page.contains('بيع')) return 'CUS';
+    if (page.contains('موظف') || page.contains('مرتبات') || page.contains('رواتب')) return 'EMP';
+    if (page.contains('وظائف')) return 'JOB';
+    if (page.contains('إدارات') || page.contains('أقسام')) return 'DEP';
+    if (page.contains('نشاط')) return 'ACT';
+    if (page.contains('فرع')) return 'BRN';
+    if (page.contains('مخزن')) return 'WH';
+    if (page.contains('صنف') || page.contains('باركود')) return 'ITM';
+    if (page.contains('وحدات')) return 'UNT';
+    if (page.contains('حساب')) return 'ACC';
+    if (page.contains('خزائن') || page.contains('خزينة')) return 'CSH';
+    if (page.contains('حملة') || page.contains('عرض')) return 'MKT';
+    if (page.contains('إجاز')) return 'LEV';
+    if (page.contains('سياس')) return 'POL';
+    return 'GEN';
+  }
+
+  String _nextWorkspaceCode() {
+    final prefix = _workspaceCodePrefix();
+    var maxNumber = 0;
+    final rows = _saved[_page] ?? const <Map<String, String>>[];
+    for (final row in rows) {
+      for (final key in const ['الكود', 'كود الهيكل', 'رقم المستند', 'الرقم']) {
+        final value = (row[key] ?? '').trim().toUpperCase();
+        final match = RegExp('^' + prefix + r'(\d+)$').firstMatch(value);
+        final number = int.tryParse(match?.group(1) ?? '');
+        if (number != null && number > maxNumber) maxNumber = number;
+      }
+    }
+    return prefix + (maxNumber + 1).toString().padLeft(4, '0');
+  }
+
   void _openAddDialog() {
     final isOrgChart = _page == 'الهيكل الوظيفي';
-    final code = TextEditingController();
+    final code = TextEditingController(text: _nextWorkspaceCode());
     final name = TextEditingController();
+    final nameEn = TextEditingController();
     final details = TextEditingController();
     final parent = TextEditingController();
     final level = TextEditingController();
+    var isActive = true;
+    var showInApp = true;
     showDialog<void>(
       context: context,
-      builder: (dctx) => AlertDialog(
-        title: Text('إضافة سجل — $_page'),
-        content: SizedBox(width: 430, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: code, decoration: InputDecoration(labelText: isOrgChart ? 'كود الهيكل' : 'الكود / الرقم المرجعي')),
+      builder: (dctx) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
+        title: Text('إضافة سجل — ' + _page),
+        content: SizedBox(width: 460, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: code, readOnly: true, decoration: InputDecoration(labelText: isOrgChart ? 'كود الهيكل' : 'الكود التلقائي', helperText: 'تكويد سلسلة القياسي • بادئة إنجليزية وأرقام')),
           const SizedBox(height: 12),
-          TextField(controller: name, decoration: InputDecoration(labelText: isOrgChart ? 'المسمى الوظيفي' : 'الاسم / البيان')),
+          TextField(controller: name, decoration: InputDecoration(labelText: isOrgChart ? 'المسمى الوظيفي بالعربية' : 'الاسم بالعربية')),
+          const SizedBox(height: 12),
+          TextField(controller: nameEn, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'Name in English')),
           const SizedBox(height: 12),
           TextField(controller: details, maxLines: isOrgChart ? 1 : 3, decoration: InputDecoration(labelText: isOrgChart ? 'الإدارة / القسم' : 'الوصف أو ملاحظات')),
           if (isOrgChart) ...[
@@ -721,16 +761,22 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             const SizedBox(height: 12),
             TextField(controller: level, decoration: const InputDecoration(labelText: 'المستوى الإداري')),
           ],
+          const Divider(height: 22),
+          CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, value: isActive, title: const Text('نشط'), onChanged: (value) => setDialogState(() => isActive = value ?? false)),
+          CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, value: showInApp, title: const Text('عرض في التطبيق'), subtitle: const Text('ألغِ الاختيار للسجلات الداخلية التي لا تظهر للعملاء أو الموردين'), onChanged: (value) => setDialogState(() => showInApp = value ?? false)),
         ]))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dctx), child: Text(silsilaText('No / لا'))),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(silsilaText('إلغاء'))),
           FilledButton(onPressed: () async {
-            if (name.text.trim().isEmpty) return;
+            if (name.text.trim().isEmpty) {
+              _showActionMessage('أدخل الاسم العربي قبل الحفظ.');
+              return;
+            }
             final rows = List<Map<String, String>>.from(_saved[_page] ?? <Map<String, String>>[]);
-            final generatedCode = code.text.trim().isEmpty ? 'NEW-${rows.length + 1}' : code.text.trim();
+            final generatedCode = code.text.trim();
             final Map<String, String> row = isOrgChart
-                ? {'م': '${rows.length + 1}', 'كود الهيكل': generatedCode, 'المسمى الوظيفي': name.text.trim(), 'الإدارة / القسم': details.text.trim(), 'يتبع إلى': parent.text.trim().isEmpty ? '—' : parent.text.trim(), 'المستوى الإداري': level.text.trim().isEmpty ? 'غير محدد' : level.text.trim(), 'الحالة': 'نشط'}
-                : {'الكود': generatedCode, 'الاسم': name.text.trim(), 'الوصف': details.text.trim(), 'الحالة': 'مسودة'};
+                ? {'م': (rows.length + 1).toString(), 'كود الهيكل': generatedCode, 'المسمى الوظيفي': name.text.trim(), 'اسم إنجليزي': nameEn.text.trim(), 'الإدارة / القسم': details.text.trim(), 'يتبع إلى': parent.text.trim().isEmpty ? '—' : parent.text.trim(), 'المستوى الإداري': level.text.trim().isEmpty ? 'غير محدد' : level.text.trim(), 'الحالة': isActive ? 'نشط' : 'غير نشط', 'عرض في التطبيق': showInApp ? 'نعم' : 'لا'}
+                : {'الكود': generatedCode, 'الاسم': name.text.trim(), 'اسم إنجليزي': nameEn.text.trim(), 'الوصف': details.text.trim(), 'الحالة': isActive ? 'نشط' : 'غير نشط', 'عرض في التطبيق': showInApp ? 'نعم' : 'لا'};
             rows.insert(0, row);
             final newRecord = Map<String, String>.from(rows.first);
             newRecord['_مرجع داخلي'] = isOrgChart ? (newRecord['كود الهيكل'] ?? generatedCode) : (newRecord['الكود'] ?? newRecord['الاسم'] ?? newRecord.values.first);
@@ -738,9 +784,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             setState(() {
               _saved[_page] = rows;
               _selectedRecord = newRecord;
-              _activityLog.insert(0, 'تمت إضافة سجل جديد في شاشة $_page');
+              _activityLog.insert(0, 'تمت إضافة سجل جديد في شاشة ' + _page);
             });
-            Navigator.pop(dctx);
+            Navigator.pop(dialogContext);
             final companyId = _appManagementCompanyId;
             if (companyId == null || companyId.trim().isEmpty) {
               _showActionMessage('تمت الإضافة محليًا فقط. سجّل الدخول واربط المستخدم بشركة نشطة لتفعيل الحفظ الدائم.');
@@ -749,13 +795,13 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 await _workspaceRecordsService.saveRecord(companyId: companyId, pageKey: _page, record: newRecord);
                 _showActionMessage('تم حفظ السجل الجديد في قاعدة البيانات.');
               } catch (error) {
-                _showActionMessage('تعذر الحفظ الدائم: $error');
+                _showActionMessage('تعذر الحفظ الدائم: ' + error.toString());
               }
             }
           }, child: Text(silsilaText('حفظ السجل'))),
         ],
-      ),
-    ).then((_) { code.dispose(); name.dispose(); details.dispose(); parent.dispose(); level.dispose(); });
+      )),
+    ).then((_) { code.dispose(); name.dispose(); nameEn.dispose(); details.dispose(); parent.dispose(); level.dispose(); });
   }
 
   void _showActionMessage(String message) {
