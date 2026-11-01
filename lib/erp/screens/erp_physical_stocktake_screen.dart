@@ -44,7 +44,7 @@ class _ErpPhysicalStocktakeScreenState extends State<ErpPhysicalStocktakeScreen>
         _loading=false;
       });
       if(_documentId!=null) await _loadLines(_documentId!);
-    } catch(e){if(mounted)setState(()=>{_loading=false,_error='تعذر تحميل الجرد: $e'});}
+    } catch(e){if(mounted)setState(() { _loading=false; _error='تعذر تحميل الجرد: $e'; });}
   }
   Future<void> _loadLines(String id) async {
     setState(()=>_loading=true);
@@ -57,12 +57,12 @@ class _ErpPhysicalStocktakeScreenState extends State<ErpPhysicalStocktakeScreen>
         final byId={for(final item in items) _s(item['id']):Map<String,dynamic>.from(item)};
         for(final line in lines){line['_item']=byId[_s(line['item_id'])]??{};}
       }
-      if(mounted)setState(()=>{_lines=lines,_documentId=id,_loading=false});
-    }catch(e){if(mounted)setState(()=>{_loading=false,_error='تعذر تحميل بنود الجرد: $e'});}
+      if(mounted)setState(() { _lines=lines; _documentId=id; _loading=false; });
+    }catch(e){if(mounted)setState(() { _loading=false; _error='تعذر تحميل بنود الجرد: $e'; });}
   }
   Future<void> _create() async {
     if(_warehouseId==null){setState(()=>_error='اختر المخزن أولاً.');return;}
-    setState(()=>{_saving=true,_error=null});
+    setState(() { _saving=true; _error=null; });
     try{
       final id=await _db.rpc('erp_create_physical_stocktake',params:{
         'p_company_id':widget.companyId,'p_warehouse_id':_warehouseId,
@@ -76,7 +76,7 @@ class _ErpPhysicalStocktakeScreenState extends State<ErpPhysicalStocktakeScreen>
   }
   Future<void> _saveDraft() async {
     if(_documentId==null||!_isDraft)return;
-    setState(()=>{_saving=true,_error=null});
+    setState(() { _saving=true; _error=null; });
     try{
       for(final line in _lines){
         final counted=_n(line['counted_quantity']);
@@ -132,7 +132,7 @@ class _ErpPhysicalStocktakeScreenState extends State<ErpPhysicalStocktakeScreen>
         Text('تفصيل الأرصدة • متاح: ${_lines.fold<double>(0,(s,l)=>s+_n(l['available_snapshot'])).toStringAsFixed(2)} • حجز: ${_lines.fold<double>(0,(s,l)=>s+_n(l['reserved_snapshot'])).toStringAsFixed(2)} • عجز بالقيمة: ${_shortageValue.toStringAsFixed(2)} ج.م',style:const TextStyle(fontWeight:FontWeight.w800)),
         Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(
           columns:const [DataColumn(label:Text('م')),DataColumn(label:Text('كود الصنف')),DataColumn(label:Text('اسم الصنف')),DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),DataColumn(label:Text('الجرد الفعلي')),DataColumn(label:Text('الفرق')),DataColumn(label:Text('نوع الفرق')),DataColumn(label:Text('القيمة'))],
-          rows:List.generate(_lines.length,(i){final l=_lines[i],item=l['_item'] as Map<String,dynamic>???{};final variance=_n(l['counted_quantity'])-_n(l['physical_snapshot']);final value=variance.abs()*_n(l['valuation_price']);return DataRow(cells:[
+          rows:List.generate(_lines.length,(i){final l=_lines[i]; final item=(l['_item'] as Map<String,dynamic>?) ?? <String,dynamic>{};final variance=_n(l['counted_quantity'])-_n(l['physical_snapshot']);final value=variance.abs()*_n(l['valuation_price']);return DataRow(cells:[
             DataCell(Text('${i+1}')),DataCell(Text(_s(item['item_code']))),DataCell(Text(_s(item['item_name']))),
             DataCell(Text(_n(l['available_snapshot']).toStringAsFixed(2))),DataCell(Text(_n(l['reserved_snapshot']).toStringAsFixed(2))),DataCell(Text(_n(l['physical_snapshot']).toStringAsFixed(2))),
             DataCell(SizedBox(width:105,child:TextFormField(initialValue:_n(l['counted_quantity']).toStringAsFixed(2),enabled:_isDraft,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(v)=>setState(()=>l['counted_quantity']=double.tryParse(v)??0),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
@@ -144,7 +144,7 @@ class _ErpPhysicalStocktakeScreenState extends State<ErpPhysicalStocktakeScreen>
         if(_shortageValue>0&&_isDraft)...[
           const SizedBox(height:8),
           Row(children:[
-            Expanded(child:DropdownButtonFormField<String>(value:_targetType,decoration:const InputDecoration(labelText:'توجيه العجز إلى',isDense:true),items:const [DropdownMenuItem(value:'employee',child:Text('موظف')),DropdownMenuItem(value:'expense',child:Text('بند صرف'))],onChanged:(v)=>setState(()=>{_targetType=v??'employee',_targetId=null}))),
+            Expanded(child:DropdownButtonFormField<String>(value:_targetType,decoration:const InputDecoration(labelText:'توجيه العجز إلى',isDense:true),items:const [DropdownMenuItem(value:'employee',child:Text('موظف')),DropdownMenuItem(value:'expense',child:Text('بند صرف'))],onChanged:(v)=>setState(() { _targetType=v??'employee'; _targetId=null; }))),
             const SizedBox(width:8),
             Expanded(child:DropdownButtonFormField<String>(value:_targetId,decoration:InputDecoration(labelText:_targetType=='employee'?'الموظف':'بند الصرف',isDense:true),items:(_targetType=='employee'?_employees:_expenses).map((x)=>DropdownMenuItem(value:_s(x['id']),child:Text(_targetType=='employee'?' ${_s(x['employee_code'])} — ${_s(x['full_name'])}':'${_s(x['item_code'])} — ${_s(x['name_ar'])}'))).toList(),onChanged:(v)=>setState(()=>_targetId=v))),
           ]),
