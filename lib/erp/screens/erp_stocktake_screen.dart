@@ -188,11 +188,11 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       if(loading||saving)const LinearProgressIndicator(),
       if(error!=null)notice(error!,Colors.red),if(message!=null)notice(message!,Colors.green),
       Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        const Text('إنشاء محضر جرد جديد',style:TextStyle(fontWeight:FontWeight.w900,fontSize:17)),
+        Text(_manualSettlementScreen?'إنشاء تسوية مخزنية يدوية':'إنشاء محضر جرد جديد',style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17)),
         DropdownButtonFormField<String>(value:warehouseId,isExpanded:true,decoration:const InputDecoration(labelText:'المخزن'),items:warehouses.map((w)=>DropdownMenuItem(value:s(w['id']),child:Text(warehouseName(w['id'])))).toList(),onChanged:(v)=>setState(()=>warehouseId=v)),
         if(_manualSettlementScreen)DropdownButtonFormField<String>(value:sourceMode,decoration:const InputDecoration(labelText:'مصدر التسوية (للمعاينة والاختيار فقط)'),items:const [DropdownMenuItem(value:'manual',child:Text('يدوي')),DropdownMenuItem(value:'stocktake',child:Text('من جرد المخزون'))],onChanged:docId!=null?null:(v)=>setState(()=>sourceMode=v??'manual')),
         if(!_manualSettlementScreen)DropdownButtonFormField<String>(value:countMode,decoration:const InputDecoration(labelText:'وضع الجرد'),items:const [DropdownMenuItem(value:'default',child:Text('الوحدة الافتراضية للمخزن')),DropdownMenuItem(value:'detailed',child:Text('جرد تفصيلي'))],onChanged:(v)=>setState(()=>countMode=v??countMode)),
-        TextField(controller:notes,decoration:const InputDecoration(labelText:'ملاحظات المحضر')),
+        TextField(controller:notes,decoration:InputDecoration(labelText:_manualSettlementScreen?'ملاحظات التسوية':'ملاحظات المحضر')),
         const SizedBox(height:8),const Text('المحاضر السابقة',style:TextStyle(fontWeight:FontWeight.w800)),
         DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.where((d)=>!_manualSettlementScreen||s(d['source'])==sourceMode).map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(() { docId=v; editing=false; });if(v!=null)await loadLines(v);}),
       ]))),
