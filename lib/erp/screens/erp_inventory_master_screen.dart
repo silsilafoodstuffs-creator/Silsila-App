@@ -48,6 +48,8 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _itemUnits = [];
+  List<Map<String, dynamic>> _warehouseItemSettings = [];
   final Map<String, Future<Uint8List?>> _itemImageFutures = <String, Future<Uint8List?>>{};
   List<Map<String, dynamic>> _branches = [];
   List<Map<String, dynamic>> _geoRows = [];
@@ -126,6 +128,11 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         loadPart('الفروع', () => _repo.fetchBranches(companyId)),
         loadPart('فئات الأصناف', () => _repo.fetchCategories(companyId)),
       ]);
+      final itemIds = values[1].map((r) => _s(r['id'])).toList();
+      final extra = await Future.wait([
+        _repo.fetchItemUnits(companyId, itemIds),
+        _repo.fetchItemWarehouseSettings(companyId, itemIds),
+      ]);
       List<Map<String, dynamic>> geoRows = [];
       try {
         final geoResult = await Supabase.instance.client.from('erp_geographic_data')
@@ -137,7 +144,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _geoRows = geoRows;
+        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _itemUnits = extra[0]; _warehouseItemSettings = extra[1]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
@@ -154,8 +161,13 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final rows = await _repo.fetchItems(_company.text.trim(), pageSize: 500, search: _itemSearch.text);
+      final ids = rows.map((r) => _s(r['id'])).toList();
+      final extra = await Future.wait([
+        _repo.fetchItemUnits(_company.text.trim(), ids),
+        _repo.fetchItemWarehouseSettings(_company.text.trim(), ids),
+      ]);
       if (!mounted) return;
-      setState(() { _items = rows; _itemImageFutures.clear(); _itemsOffset = rows.length; _itemsHasMore = rows.length == 500; _loading = false; });
+      setState(() { _itemUnits = extra[0]; _warehouseItemSettings = extra[1]; _items = rows; _itemImageFutures.clear(); _itemsOffset = rows.length; _itemsHasMore = rows.length == 500; _loading = false; });
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر البحث في الأصناف: $e'; });
@@ -660,7 +672,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             final i = _items[index];
             final id = _s(i['id']);
             final imageFuture = _itemImageFutures.putIfAbsent(id, () => _repo.fetchItemImage(_company.text.trim(), id));
-            return Card(child: ListTile(
+            return Card(child: ExpansionTile(
               leading: FutureBuilder<Uint8List?>(
                 future: imageFuture,
                 builder: (context, snapshot) {
@@ -671,8 +683,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               ),
               title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
               subtitle: Text(_categoryLabel(_s(i['category_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
-              isThreeLine: true,
               trailing: IconButton(onPressed: _saving ? null : () => _toggle(i, true), icon: Icon(i['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
+              children: [_warehouseSettingsPanel(i)],
             ));
           },
         )),
@@ -680,6 +692,70 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       ],
     ],
   )));
+
+
+  List<Map<String, dynamic>> _unitsForItem(String itemId) => _itemUnits.where((u) => _s(u['item_id']) == itemId && u['is_active'] == true && u['is_selectable'] == true).toList();
+  Map<String, dynamic>? _settingsFor(String itemId, String warehouseId) {
+    for (final row in _warehouseItemSettings) {
+      if (_s(row['item_id']) == itemId && _s(row['warehouse_id']) == warehouseId) return row;
+    }
+    return null;
+  }
+  Future<void> _saveWarehouseUnitSetting(String itemId, String warehouseId, Map<String, dynamic> values) async {
+    setState(() { _saving = true; _error = null; });
+    try {
+      await _repo.saveItemWarehouseSettings(
+        companyId: _company.text.trim(), itemId: itemId, warehouseId: warehouseId,
+        purchaseUnitId: values['purchase_unit_id'] as String?, saleUnitId: values['sale_unit_id'] as String?,
+        transferUnitId: values['transfer_unit_id'] as String?, stopPurchase: values['stop_purchase'] == true,
+        stopSale: values['stop_sale'] == true, stopTransfer: values['stop_transfer'] == true,
+      );
+      await _load(clearMessage: false);
+      if (mounted) setState(() { _saving = false; _message = 'تم حفظ وحدات الصنف وإيقافاته للمخزن المحدد.'; });
+    } catch (e) {
+      if (mounted) setState(() { _saving = false; _error = 'تعذر حفظ إعدادات وحدات المخزن: $e'; });
+    }
+  }
+  Widget _warehouseSettingsPanel(Map<String, dynamic> item) {
+    final itemId = _s(item['id']);
+    final units = _unitsForItem(itemId);
+    if (_warehouses.isEmpty) return const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد مخازن نشطة لتهيئة وحدات الصنف.'));
+    if (units.isEmpty) return const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد وحدات قياس نشطة وقابلة للاختيار لهذا الصنف.'));
+    final largest = units.reduce((a,b) => _n(a['conversion_factor']) >= _n(b['conversion_factor']) ? a : b);
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Padding(padding: EdgeInsets.fromLTRB(12, 12, 12, 4), child: Text('إعدادات وحدات الصنف حسب المخزن', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D)))),
+      ..._warehouses.map((warehouse) {
+        final warehouseId = _s(warehouse['id']);
+        final existing = _settingsFor(itemId, warehouseId) ?? <String, dynamic>{};
+        final values = <String, dynamic>{
+          'purchase_unit_id': _s(existing['purchase_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['purchase_unit_id']),
+          'sale_unit_id': _s(existing['sale_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['sale_unit_id']),
+          'transfer_unit_id': _s(existing['transfer_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['transfer_unit_id']),
+          'stop_purchase': existing['stop_purchase'] == true, 'stop_sale': existing['stop_sale'] == true, 'stop_transfer': existing['stop_transfer'] == true,
+        };
+        return StatefulBuilder(builder: (context, refresh) => Card(
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(_s(warehouse['warehouse_code']) + ' — ' + _s(warehouse['warehouse_name']), style: const TextStyle(fontWeight: FontWeight.w800)),
+            Wrap(spacing: 10, runSpacing: 8, children: [
+              for (final entry in [('purchase_unit_id','شراء'),('sale_unit_id','بيع'),('transfer_unit_id','تحويل مخزني')])
+                SizedBox(width: 190, child: DropdownButtonFormField<String>(
+                  value: units.any((u) => _s(u['id']) == values[entry.$1]) ? values[entry.$1] as String : _s(largest['id']),
+                  isExpanded: true, decoration: InputDecoration(labelText: 'وحدة ${entry.$2}', isDense: true),
+                  items: units.map((u) => DropdownMenuItem(value: _s(u['id']), child: Text(_s(u['unit_name']), overflow: TextOverflow.ellipsis))).toList(),
+                  onChanged: (v) => refresh(() => values[entry.$1] = v),
+                )),
+            ]),
+            Wrap(spacing: 12, children: [
+              for (final entry in [('stop_purchase','إيقاف شراء'),('stop_sale','إيقاف بيع'),('stop_transfer','إيقاف تحويلات')])
+                SizedBox(width: 145, child: CheckboxListTile(dense: true, contentPadding: EdgeInsets.zero, controlAffinity: ListTileControlAffinity.leading, value: values[entry.$1] == true, title: Text(entry.$2, style: const TextStyle(fontSize: 12)), onChanged: (v) => refresh(() => values[entry.$1] = v == true))),
+            ]),
+            Align(alignment: Alignment.centerLeft, child: FilledButton.icon(onPressed: _saving ? null : () => _saveWarehouseUnitSetting(itemId, warehouseId, values), icon: const Icon(Icons.save, size: 17), label: const Text('حفظ إعدادات المخزن'))),
+          ])),
+        ));
+      }),
+    ]);
+  }
 
   Widget _notice(String text, Color color) => Container(
     margin: const EdgeInsets.only(top: 8), padding: const EdgeInsets.all(10),
