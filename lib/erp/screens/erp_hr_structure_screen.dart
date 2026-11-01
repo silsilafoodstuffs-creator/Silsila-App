@@ -1,4 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as excel;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import '../widgets/erp_quick_task_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _hrStructurePurple = Color(0xFF3E007D);
@@ -498,11 +505,102 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     }
   }
 
+
+  bool get _departmentMode => widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام';
+  List<Map<String,dynamic>> get _quickRows {
+    if (_departmentMode) return _tabs.index==0 ? _departments : _locations;
+    return _tabs.index==2 ? _grades : _jobs;
+  }
+  String get _quickKind {
+    if (_departmentMode) return _tabs.index==0 ? 'department' : 'location';
+    return _tabs.index==2 ? 'grade' : 'job';
+  }
+  String _quickCode(Map<String,dynamic> row) => (row[_quickKind=='department'?'department_code':_quickKind=='location'?'location_code':_quickKind=='grade'?'grade_code':'job_code']??'').toString();
+  String _quickName(Map<String,dynamic> row) => (row['name_ar']??'').toString();
+  Future<void> _quickAdd() async {
+    switch(_quickKind){case 'department':await _add('department');break;case 'location':await _add('location');break;case 'grade':await _addGrade();break;default:await _add('job');}
+  }
+  Future<void> _quickEdit() async {
+    if(_quickRows.isEmpty)return;
+    final row=_quickRows.first;
+    if(_quickKind=='grade'){await _editGrade(row);}
+    else if(!_departmentMode && _tabs.index==1){await _editJobRequirements(row);}
+    else{await _edit(row,_quickKind);}
+  }
+  Future<void> _quickDelete() async {
+    if(_quickRows.isEmpty)return;
+    final row=_quickRows.first;
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('تأكيد إيقاف السجل'),
+      content:Text('هل تريد إيقاف «${_quickName(row)}»؟ لن يتم حذف السجل المرتبط ببيانات أخرى.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('نعم، إيقاف'))],
+    ));
+    if(yes!=true||_db==null)return;
+    try{
+      final table=_quickKind=='department'?'erp_hr_departments':_quickKind=='location'?'erp_hr_work_locations':_quickKind=='grade'?'erp_hr_job_grades':'erp_hr_jobs';
+      await _db!.from(table).update({'is_active':false}).eq('id',row['id']).eq('company_id',_companyId);
+      await _load();
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر إيقاف السجل: $e')));}
+  }
+  void _quickPreview() {
+    final rows=_quickRows;
+    showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('معاينة بيانات الشاشة'),
+      content:SizedBox(width:560,child:SingleChildScrollView(child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Text('عدد السجلات: ${rows.length}',style:const TextStyle(fontWeight:FontWeight.w800)),
+        ...rows.take(100).map((r)=>ListTile(dense:true,title:Text(_quickCode(r)+' — '+_quickName(r)),subtitle:Text(r['is_active']==true?'نشط':'موقوف'))),
+      ]))),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))],
+    ));
+  }
+  Future<void> _quickPdf({required bool share}) async {
+    final rows=_quickRows;
+    if(rows.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('لا توجد بيانات للتصدير.')));return;}
+    try{
+      final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final doc=pw.Document();
+      doc.addPage(pw.MultiPage(theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
+        pw.Text('Silsila • ${_quickKind=='department'?'بيانات الإدارات':_quickKind=='location'?'مواقع العمل':_quickKind=='grade'?'درجات الوظائف':'بيانات الوظائف'}',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
+        pw.SizedBox(height:10),
+        pw.TableHelper.fromTextArray(headers:const ['م','الكود','الاسم','الحالة'],data:rows.asMap().entries.map((e)=>[e.key+1,_quickCode(e.value),_quickName(e.value),e.value['is_active']==true?'نشط':'موقوف']).toList()),
+      ]));
+      final bytes=await doc.save();
+      if(share){await Printing.sharePdf(bytes:bytes,filename:'Silsila-HR-Structure.pdf');}
+      else{await Printing.layoutPdf(onLayout:(_)=>Future.value(bytes));}
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر إنشاء PDF: $e')));}
+  }
+  Future<void> _quickExcel() async {
+    final rows=_quickRows;
+    if(rows.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('لا توجد بيانات للتصدير.')));return;}
+    try{
+      final book=excel.Excel.createExcel();
+      final sheet=book['بيانات'];
+      sheet.appendRow([excel.TextCellValue('م'),excel.TextCellValue('الكود'),excel.TextCellValue('الاسم'),excel.TextCellValue('الحالة')]);
+      for(var i=0;i<rows.length;i++){final r=rows[i];sheet.appendRow([excel.IntCellValue(i+1),excel.TextCellValue(_quickCode(r)),excel.TextCellValue(_quickName(r)),excel.TextCellValue(r['is_active']==true?'نشط':'موقوف')]);}
+      final bytes=book.encode();
+      if(bytes==null)throw StateError('تعذر تجهيز ملف Excel.');
+      final saved=await FilePicker.platform.saveFile(dialogTitle:'حفظ بيانات الهيكل الوظيفي',fileName:'Silsila-HR-Structure.xlsx',bytes:Uint8List.fromList(bytes));
+      if(saved!=null&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم تجهيز ملف Excel.')));
+    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تصدير Excel: $e')));}
+  }
+  Widget _quickToolbar()=>SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+    ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:_loading?null:_load),
+    ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:_loading?null:_quickAdd),
+    ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('يتم حفظ البيانات مباشرة عند تأكيد نافذة الإضافة أو التعديل.')))),
+    ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:_quickRows.isEmpty?null:_quickEdit),
+    ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:_quickRows.isEmpty?null:_quickDelete),
+    ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:_quickPreview),
+    ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>_quickPdf(share:false)),
+    ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:_quickExcel),
+    ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf,onPressed:()=>_quickPdf(share:true)),
+  ]));
+
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
     child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
       const Align(alignment: Alignment.centerRight, child: Text('الهيكل التنظيمي والوظائف ومواقع العمل', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
+      _quickToolbar(),
       if (_error != null) Align(alignment: Alignment.centerRight, child: Text(_error!, style: const TextStyle(color: Colors.red))),
       TabBar(controller: _tabs, isScrollable: true, labelColor: _hrStructurePurple, indicatorColor: _hrStructureOrange, tabs: widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام' ? const [
         Tab(text: 'الإدارات والأقسام'), Tab(text: 'مواقع العمل'),
