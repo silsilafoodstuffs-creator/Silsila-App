@@ -256,6 +256,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
           Text('قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:const TextStyle(fontWeight:FontWeight.w800,color:Colors.red)),
         ]) else if(isDraft) Padding(padding:const EdgeInsets.only(bottom:8),child:Text('لا توجد قيمة عجز حالياً؛ توجيه العجز غير مطلوب. قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:const TextStyle(color:Colors.green,fontWeight:FontWeight.w700))),
         if(isDraft)Align(alignment:AlignmentDirectional.centerStart,child:FilledButton.icon(onPressed:saving?null:postDoc,icon:const Icon(Icons.verified_outlined),label:const Text('ترحيل الجرد وتحديث الأرصدة'))),
+        const Align(alignment:AlignmentDirectional.centerStart,child:Text('تفصيلي الرصيد — عرض الكميات بالوحدات الكبرى والوسطى والصغرى',style:TextStyle(fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
         Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columns:const [
           DataColumn(label:Text('م')),DataColumn(label:Text('كود الصنف')),DataColumn(label:Text('اسم الصنف')),
           DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),DataColumn(label:Text('كمية كبرى')),DataColumn(label:Text('وحدة كبرى')),DataColumn(label:Text('كمية وسطى')),DataColumn(label:Text('وحدة وسطى')),DataColumn(label:Text('كمية صغرى')),DataColumn(label:Text('وحدة صغرى')),DataColumn(label:Text('وحدة الجرد')),
