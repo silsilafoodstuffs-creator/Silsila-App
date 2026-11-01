@@ -287,9 +287,12 @@ with seed(category_code,item_code,item_name,base_unit,brand_name,package_descrip
 insert into public.erp_item_units(company_id,item_id,unit_code,unit_name,conversion_factor,is_base_unit,is_active)
 select '47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid, i.id, 'BASE', i.base_unit, 1, true, true
 from public.erp_items i
-where i.company_id='47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid and i.item_code in (select item_code from seed)
+where i.company_id='47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid
+  and i.item_code in (select item_code from seed)
+  and not exists (select 1 from public.erp_item_units u where u.item_id=i.id and u.unit_level is not null)
 on conflict (item_id,unit_code) do update set
- unit_name=excluded.unit_name, conversion_factor=1, is_base_unit=true, is_active=true;
+ unit_name=excluded.unit_name, conversion_factor=1, is_base_unit=true, is_active=true
+where public.erp_item_units.unit_level is null;
 
 with seed(category_code,item_code,pack_unit,pack_factor,carton_unit,carton_factor) as (
  values ('FOOD-RICE','RICE-001','كيس 1 كجم',1,'شيكارة 25 كجم',25),
@@ -475,8 +478,10 @@ insert into public.erp_item_units(company_id,item_id,unit_code,unit_name,convers
 select '47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid, i.id, 'PACK', s.pack_unit, s.pack_factor, false, true
 from seed s join public.erp_items i on i.company_id='47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid and i.item_code=s.item_code
 where s.pack_unit is not null and s.pack_unit <> ''
+  and not exists (select 1 from public.erp_item_units u where u.item_id=i.id and u.unit_level is not null)
 on conflict (item_id,unit_code) do update set
- unit_name=excluded.unit_name, conversion_factor=excluded.conversion_factor, is_base_unit=false, is_active=true;
+ unit_name=excluded.unit_name, conversion_factor=excluded.conversion_factor, is_base_unit=false, is_active=true
+where public.erp_item_units.unit_level is null;
 
 with seed(item_code,carton_unit,carton_factor) as (
  values ('RICE-001','شيكارة 25 كجم',25),
@@ -662,8 +667,10 @@ insert into public.erp_item_units(company_id,item_id,unit_code,unit_name,convers
 select '47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid, i.id, 'CARTON', s.carton_unit, s.carton_factor, false, true
 from seed s join public.erp_items i on i.company_id='47278c99-7743-4dd4-9ce6-d11f28e02504'::uuid and i.item_code=s.item_code
 where s.carton_unit is not null and s.carton_unit <> ''
+  and not exists (select 1 from public.erp_item_units u where u.item_id=i.id and u.unit_level is not null)
 on conflict (item_id,unit_code) do update set
- unit_name=excluded.unit_name, conversion_factor=excluded.conversion_factor, is_base_unit=false, is_active=true;
+ unit_name=excluded.unit_name, conversion_factor=excluded.conversion_factor, is_base_unit=false, is_active=true
+where public.erp_item_units.unit_level is null;
 
 -- Ensure older pre-existing ERP categorys also have PNG artwork.
 update public.erp_item_categories
