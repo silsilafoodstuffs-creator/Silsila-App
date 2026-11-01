@@ -93,6 +93,10 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
       if (!mounted) return;
       setState(() {
         _rows = (results[0] as List).map((e) => Map<String,dynamic>.from(e)).toList();
+        _rows.sort((a,b) {
+          final lockedOrder = (_locked(a) ? 0 : 1).compareTo(_locked(b) ? 0 : 1);
+          return lockedOrder != 0 ? lockedOrder : _s(a['element_code']).compareTo(_s(b['element_code']));
+        });
         _currency = _s((results[1] as Map?)?['base_currency']).isEmpty ? 'EGP' : _s((results[1] as Map)['base_currency']);
         _loading = false;
       });
