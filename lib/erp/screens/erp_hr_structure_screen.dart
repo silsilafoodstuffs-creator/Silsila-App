@@ -33,8 +33,10 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   @override
   void initState() {
     super.initState();
-    final index = widget.initialTab == 'مواقع العمل' || widget.initialTab == 'درجات الوظائف' ? 1 : 0;
-    _tabs = TabController(length: 2, vsync: this, initialIndex: index);
+    final departmentMode = widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام';
+    final index = departmentMode ? (widget.initialTab == 'مواقع العمل' ? 1 : 0)
+        : widget.initialTab == 'درجات الوظائف' ? 2 : widget.initialTab == 'متطلبات التعيين' ? 1 : 0;
+    _tabs = TabController(length: departmentMode ? 2 : 3, vsync: this, initialIndex: index);
     _load();
   }
   @override
@@ -338,7 +340,38 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     {'key':'requires_bank_account','label':'حساب بنكي'},
   ];
 
-  Widget _jobsView() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+  Widget _jobsCatalogView() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    Row(children: [
+      const Expanded(child: Text('دليل الوظائف', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
+      FilledButton.icon(onPressed: () => _add('job'), icon: const Icon(Icons.add), label: const Text('إضافة وظيفة')),
+      IconButton(tooltip: 'تحديث', onPressed: _load, icon: const Icon(Icons.refresh)),
+    ]),
+    const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Text('الوظائف المسجلة وربط كل وظيفة بالإدارة والدرجة الوظيفية.')),
+    Expanded(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
+      columns: const [
+        DataColumn(label: Text('م')), DataColumn(label: Text('كود الوظيفة')),
+        DataColumn(label: Text('اسم الوظيفة')), DataColumn(label: Text('الإدارة / القسم')),
+        DataColumn(label: Text('الدرجة')), DataColumn(label: Text('الحالة')),
+        DataColumn(label: Text('متطلبات التعيين')),
+      ],
+      rows: List.generate(_jobs.length, (index) {
+        final job = _jobs[index];
+        final department = _departments.where((d) => d['id']?.toString() == job['department_id']?.toString());
+        final grade = _grades.where((g) => g['id']?.toString() == job['grade_id']?.toString());
+        return DataRow(cells: [
+          DataCell(Text((index + 1).toString())),
+          DataCell(Text((job['job_code'] ?? '').toString())),
+          DataCell(Text((job['name_ar'] ?? '').toString())),
+          DataCell(Text(department.isEmpty ? '—' : (department.first['name_ar'] ?? '').toString())),
+          DataCell(Text(grade.isEmpty ? '—' : (grade.first['name_ar'] ?? '').toString())),
+          DataCell(Text(job['is_active'] == true ? 'نشط' : 'موقوف')),
+          DataCell(IconButton(tooltip: 'عرض وتعديل متطلبات التعيين', onPressed: () => _editJobRequirements(job), icon: const Icon(Icons.fact_check_outlined, color: _hrStructurePurple))),
+        ]);
+      }),
+    )))),
+  ]);
+
+  Widget _jobRequirementsView() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
     Row(children: [
       const Expanded(child: Text('دليل الوظائف ومتطلبات التعيين', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
       OutlinedButton.icon(onPressed: _addGrade, icon: const Icon(Icons.workspace_premium_outlined), label: const Text('إدارة الدرجات')),
@@ -474,12 +507,12 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       TabBar(controller: _tabs, isScrollable: true, labelColor: _hrStructurePurple, indicatorColor: _hrStructureOrange, tabs: widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام' ? const [
         Tab(text: 'الإدارات والأقسام'), Tab(text: 'مواقع العمل'),
       ] : const [
-        Tab(text: 'الوظائف ومتطلبات التعيين'), Tab(text: 'درجات الوظائف'),
+        Tab(text: 'الوظائف'), Tab(text: 'متطلبات التعيين'), Tab(text: 'درجات الوظائف'),
       ]),
       Expanded(child: TabBarView(controller: _tabs, children: widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام' ? [
         _departmentsView(), _list('مواقع العمل', _locations, 'location_code', 'name_ar', 'location'),
       ] : [
-        _jobsView(), _gradesView(),
+        _jobsCatalogView(), _jobRequirementsView(), _gradesView(),
       ])),
     ])),
   );
