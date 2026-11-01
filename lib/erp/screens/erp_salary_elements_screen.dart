@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../widgets/erp_quick_task_button.dart';
 
 const _salaryPurple = Color(0xFF3E007D);
 const _salaryOrange = Color(0xFFFFA015);
@@ -25,6 +26,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
 
   String _s(dynamic value) => (value ?? '').toString();
   String _currencyLabel(String code) { if (code == 'USD') return String.fromCharCode(36); return const {'EGP':'ج.م','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[code] ?? code; }
+  bool _locked(Map<String,dynamic> row) => row['is_system_locked'] == true || _s(row['element_code']) == 'SYSSTOCKSHORTAGE';
   String _nextCode() { var max = 0; for (final row in _rows) { final code = _s(row['element_code']); if (code.startsWith('SAL') && code.length > 3) { final number = int.tryParse(code.substring(3)); if (number != null && number > max) max = number; } } return 'SAL' + (max + 1).toString().padLeft(3, '0'); }
 
   @override
@@ -49,6 +51,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   }
 
   Future<void> _edit({Map<String,dynamic>? row}) async {
+    if (row != null && _locked(row)) { setState(() => _message = 'عنصر عجز جرد عنصر نظامي ثابت ولا يمكن تعديله.'); return; }
     final code = TextEditingController(text: _s(row?['element_code']).isEmpty ? _nextCode() : _s(row?['element_code']));
     final ar = TextEditingController(text: _s(row?['name_ar']));
     final en = TextEditingController(text: _s(row?['name_en']));
@@ -99,6 +102,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   }
 
   Future<void> _delete(Map<String,dynamic> row) async {
+    if (_locked(row)) { setState(() => _message = 'عنصر عجز جرد عنصر نظامي ثابت ولا يمكن تعطيله أو حذفه.'); return; }
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد تعطيل عنصر المرتب'),content:Text('هل تريد تعطيل «${_s(row['name_ar'])}»؟ سيظل محفوظًا في أشرطة القبض السابقة.'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('نعم'))]));
     if(yes!=true)return;
     try{await _db.from('erp_hr_salary_elements').update({'is_active':false,'updated_at':DateTime.now().toUtc().toIso8601String()}).eq('id',_s(row['id'])).eq('company_id',widget.companyId!.trim());await _load();if(mounted)setState(()=>_message='تم تعطيل العنصر مع الاحتفاظ به في السجلات السابقة.');}
@@ -110,10 +114,17 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
     Card(color:_salaryPurple,child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       const Text('عناصر المرتبات',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
       const Text('تعريف عناصر الاستحقاق والاستقطاع وقواعد ظهورها في شريط القبض.',style:TextStyle(color:Colors.white70)),
-      const SizedBox(height:8),Wrap(spacing:8,children:[
-        FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:Colors.white,foregroundColor:_salaryPurple),onPressed:_loading?null:_load,icon:const Icon(Icons.refresh),label:const Text('تحديث')),
-        FilledButton.icon(style:FilledButton.styleFrom(backgroundColor:_salaryOrange,foregroundColor:_salaryPurple),onPressed:widget.companyId==null?null:()=>_edit(),icon:const Icon(Icons.add),label:const Text('إضافة عنصر')),
-      ]),
+      const SizedBox(height:8),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+        ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:_loading?null:_load),
+        ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:widget.companyId==null?null:()=>_edit()),
+        ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:_loading?null:_load),
+        ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:_rows.isEmpty?null:()=>_edit(row:_rows.first)),
+        ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:_rows.isEmpty?null:()=>_delete(_rows.first)),
+        ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:_load),
+        ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:_load),
+        ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:_load),
+        ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf,onPressed:_load),
+      ])),
     ]))),
     if(_loading)const LinearProgressIndicator(),
     if(_error!=null) _notice(_error!,Colors.red),
@@ -129,7 +140,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
         DataCell(Text(nature=='value'?'قيمة':nature=='days'?'أيام':'وقت')),DataCell(Text('${_s(r['default_value'])} $unit')),
         DataCell(Icon(r['show_on_payslip']==true?Icons.check_circle:Icons.cancel,color:r['show_on_payslip']==true?Colors.green:Colors.grey)),
         DataCell(Icon(r['is_active']==true?Icons.check_circle:Icons.cancel,color:r['is_active']==true?Colors.green:Colors.grey)),
-        DataCell(Row(children:[IconButton(tooltip:'تعديل',onPressed:()=>_edit(row:r),icon:const Icon(Icons.edit_outlined)),IconButton(tooltip:'تعطيل',onPressed:()=>_delete(r),icon:const Icon(Icons.block,color:Colors.red))])),
+        DataCell(Row(children:[if(!_locked(r)) IconButton(tooltip:'تعديل',onPressed:()=>_edit(row:r),icon:const Icon(Icons.edit_outlined)) else const Tooltip(message:'عنصر نظامي ثابت',child:Icon(Icons.lock_outline,color:Colors.grey)),if(!_locked(r)) IconButton(tooltip:'تعطيل',onPressed:()=>_delete(r),icon:const Icon(Icons.block,color:Colors.red))])),
       ]);}),
     )))),
   ]));
