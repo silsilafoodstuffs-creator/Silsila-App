@@ -32,3 +32,5 @@ for each row execute function public.erp_release_stocktake_settlement_on_payroll
 
 revoke all on function public.erp_release_stocktake_settlement_on_payroll_line_delete() from public,anon,authenticated;
 revoke all on function public.erp_release_stocktake_settlement_on_payroll_cancel() from public,anon,authenticated;
+create index if not exists erp_stocktake_settlements_payroll_line_id_idx on public.erp_stocktake_settlements(payroll_line_id);
+create index if not exists erp_stocktake_settlements_payroll_run_id_idx on public.erp_stocktake_settlements(payroll_run_id);
