@@ -43,7 +43,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         db.from('erp_warehouses').select('id,warehouse_code,warehouse_name,is_active,branch_id,parent_warehouse_id').eq('company_id',widget.companyId).eq('is_active',true).order('warehouse_code'),
         db.from('erp_stocktakes').select('id,warehouse_id,status,count_mode,valuation_basis,source,created_at,notes').eq('company_id',widget.companyId).order('created_at',ascending:false).limit(100),
         db.from('erp_items').select('id,item_code,item_name').eq('company_id',widget.companyId),
-        db.from('erp_item_units').select('id,item_id,unit_name,unit_level,conversion_factor').eq('company_id',widget.companyId).eq('is_active',true),
+        db.from('erp_item_units').select('id,item_id,unit_name,unit_level,conversion_factor,is_selectable').eq('company_id',widget.companyId).eq('is_active',true),
         db.from('erp_employees').select('id,employee_code,full_name').eq('company_id',widget.companyId).eq('is_active',true).order('employee_code'),
         db.from('erp_stocktake_expense_items').select('id,item_code,name_ar').eq('company_id',widget.companyId).eq('is_active',true).order('item_code'),
       ]);
@@ -78,7 +78,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
 
 
   Map<String,dynamic> unitBreakdown(dynamic itemId,double baseQuantity){
-    final list=units.where((u)=>s(u['item_id'])==s(itemId)).toList()
+    final list=units.where((u)=>s(u['item_id'])==s(itemId)&&u['is_selectable']==true).toList()
       ..sort((a,b)=>n(b['conversion_factor']).compareTo(n(a['conversion_factor'])));
     final larger=list.where((u)=>n(u['conversion_factor'])>1).toList();
     final base=list.where((u)=>n(u['conversion_factor'])<=1).toList();
