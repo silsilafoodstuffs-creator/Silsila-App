@@ -166,6 +166,17 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     }catch(e){if(mounted)setState(()=>error='تعذر تصدير Excel: $e');}
   }
 
+  void startNewDocument(){
+    for(final controller in counts.values){controller.dispose();}
+    counts.clear();
+    setState(() {
+      docId=null; lines=[]; editing=false;
+      sourceMode=_manualSettlementScreen?'manual':'stocktake';
+      message='اختر مصدر المستند والمخزن ثم اضغط إضافة.';
+      error=null;
+    });
+  }
+
   @override Widget build(BuildContext context){
     final doc=docs.where((d)=>s(d['id'])==docId);final current=doc.isEmpty?null:doc.first;
     final targets=targetType=='employee'?employees:expenses;
@@ -195,6 +206,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         TextField(controller:notes,decoration:InputDecoration(labelText:_manualSettlementScreen?'ملاحظات التسوية':'ملاحظات المحضر')),
         const SizedBox(height:8),const Text('المحاضر السابقة',style:TextStyle(fontWeight:FontWeight.w800)),
         DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.where((d)=>!_manualSettlementScreen||s(d['source'])==sourceMode).map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(() { docId=v; editing=false; });if(v!=null)await loadLines(v);}),
+        Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(onPressed:startNewDocument,icon:const Icon(Icons.add_circle_outline),label:const Text('مستند جديد'))),
       ]))),
       if(current!=null)...[
         Padding(padding:const EdgeInsets.all(8),child:Text('تفاصيل المحضر • '+warehouseName(current['warehouse_id'])+' • المصدر: '+(s(current['source'])=='manual'?'يدوي':'من جرد المخزون')+' • '+s(current['status']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17))),
