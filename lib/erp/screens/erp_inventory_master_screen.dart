@@ -613,15 +613,28 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
                 ],
               ),
             ),
-            TextField(controller: _unit, decoration: const InputDecoration(labelText: 'الوحدة الكبرى')),
-            const SizedBox(height: 6),
-            TextField(controller: _majorInner, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'عدد الوحدات التالية داخل الوحدة الكبرى')),
-            const SizedBox(height: 6),
-            TextField(controller: _middleUnit, decoration: const InputDecoration(labelText: 'الوحدة الوسطى (اختياري)')),
-            const SizedBox(height: 6),
-            TextField(controller: _middleInner, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'عدد الوحدات الصغرى داخل الوحدة الوسطى')),
-            const SizedBox(height: 6),
-            TextField(controller: _minorUnit, decoration: const InputDecoration(labelText: 'الوحدة الصغرى (اختياري)')),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5EFFB),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x223E007D)),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const Text('وحدات قياس الصنف', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
+                const SizedBox(height: 8),
+                LayoutBuilder(builder: (context, constraints) {
+                  final width = (constraints.maxWidth - 32) / 5;
+                  return Wrap(spacing: 8, runSpacing: 8, children: [
+                    SizedBox(width: width, child: TextField(controller: _unit, decoration: const InputDecoration(labelText: 'الوحدة الكبرى', border: OutlineInputBorder(), isDense: true))),
+                    SizedBox(width: width, child: TextField(controller: _majorInner, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'عددها الداخلي', helperText: 'وحدة وسطى/صغرى', border: OutlineInputBorder(), isDense: true))),
+                    SizedBox(width: width, child: TextField(controller: _middleUnit, decoration: const InputDecoration(labelText: 'الوحدة الوسطى', border: OutlineInputBorder(), isDense: true))),
+                    SizedBox(width: width, child: TextField(controller: _middleInner, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'عددها الداخلي', helperText: 'وحدة صغرى', border: OutlineInputBorder(), isDense: true))),
+                    SizedBox(width: width, child: TextField(controller: _minorUnit, decoration: const InputDecoration(labelText: 'الوحدة الصغرى', border: OutlineInputBorder(), isDense: true))),
+                  ]);
+                }),
+              ]),
+            ),
             const SizedBox(height: 8),
             Row(children: [
               Expanded(child: TextField(controller: _purchasePrice, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: [TextInputFormatter.withFunction((oldValue, newValue) => RegExp(r'^\d*\.?\d{0,3}$').hasMatch(newValue.text) ? newValue : oldValue)], decoration: const InputDecoration(labelText: 'سعر الشراء'))),
