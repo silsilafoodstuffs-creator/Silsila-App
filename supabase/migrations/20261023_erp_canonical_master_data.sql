@@ -122,7 +122,7 @@ on public.erp_items for each row execute function public.erp_validate_item_categ
 with unit_names as (
  select distinct company_id,base_unit as unit_name_ar from public.erp_items where nullif(trim(base_unit),'') is not null
 ), numbered as (
- select company_id,unit_name_ar,'U'||lpad(row_number() over(partition by company_id order by unit_name_ar)::text,3,'0') as unit_code
+ select company_id,unit_name_ar,'UNT'||lpad(row_number() over(partition by company_id order by unit_name_ar)::text,4,'0') as unit_code
  from unit_names
 )
 insert into public.erp_item_unit_catalog(company_id,activity_code,unit_code,unit_name_ar,is_active)
