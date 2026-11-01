@@ -277,7 +277,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
             DataCell(Text(diff<0?'عجز':diff>0?'زيادة':'مطابق',style:TextStyle(fontWeight:FontWeight.w800,color:diff<0?Colors.red:diff>0?Colors.green:Colors.black54))),
             DataCell(Text((diff.abs()*n(l['valuation_price'])).toStringAsFixed(2))),
           ]);
-        })))),
+        })))),),
       ]else const Expanded(child:Center(child:Text('اختر محضراً أو أنشئ محضراً جديداً لعرض التفاصيل.'))),
     ]));
   }
