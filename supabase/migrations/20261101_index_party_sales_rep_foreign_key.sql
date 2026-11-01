@@ -1,0 +1,1 @@
+create index if not exists erp_parties_sales_rep_fk_idx on public.erp_parties(sales_rep_id);
