@@ -246,6 +246,107 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     }
   }
 
+
+  Future<void> _manageItemWarehouseUnits(Map<String, dynamic> item) async {
+    final client = Supabase.instance.client;
+    final companyId = _company.text.trim();
+    final itemId = _s(item['id']);
+    if (companyId.isEmpty || itemId.isEmpty) return;
+    try {
+      final unitsRaw = await client.from('erp_item_units').select('id,unit_code,unit_name,conversion_factor,is_active,is_selectable')
+          .eq('company_id', companyId).eq('item_id', itemId).eq('is_active', true).eq('is_selectable', true)
+          .order('conversion_factor', ascending: false);
+      final settingsRaw = await client.from('erp_item_warehouse_settings')
+          .select('id,warehouse_id,purchase_unit_id,sale_unit_id,transfer_unit_id,stop_purchase,stop_sale,stop_transfer')
+          .eq('company_id', companyId).eq('item_id', itemId);
+      final units = (unitsRaw as List).map((e) => Map<String,dynamic>.from(e)).toList();
+      final settings = (settingsRaw as List).map((e) => Map<String,dynamic>.from(e)).toList();
+      if (units.isEmpty) {
+        if (mounted) setState(() => _error = 'لا توجد وحدات نشطة قابلة للاختيار لهذا الصنف. راجع تعريف وحداته أولاً.');
+        return;
+      }
+      final largest = _s(units.first['id']);
+      final rows = _warehouses.where((w) => w['is_active'] == true).map((w) {
+        final found = settings.where((r) => _s(r['warehouse_id']) == _s(w['id']));
+        final row = found.isEmpty ? <String,dynamic>{} : Map<String,dynamic>.from(found.first);
+        row['warehouse_id'] = _s(w['id']);
+        row['purchase_unit_id'] = _s(row['purchase_unit_id']).isEmpty ? largest : _s(row['purchase_unit_id']);
+        row['sale_unit_id'] = _s(row['sale_unit_id']).isEmpty ? largest : _s(row['sale_unit_id']);
+        row['transfer_unit_id'] = _s(row['transfer_unit_id']).isEmpty ? largest : _s(row['transfer_unit_id']);
+        row['stop_purchase'] = row['stop_purchase'] == true;
+        row['stop_sale'] = row['stop_sale'] == true;
+        row['stop_transfer'] = row['stop_transfer'] == true;
+        row['_warehouse'] = w;
+        return row;
+      }).toList();
+      if (!mounted) return;
+      await showDialog<void>(context: context, builder: (dialogContext) {
+        var saving = false;
+        String? error;
+        return StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
+          title: Text('وحدات المخازن • ' + _s(item['item_name'])),
+          content: SizedBox(width: 1050, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const Text('الوحدة الكبرى محددة افتراضياً للشراء والبيع والتحويل، ويمكن تخصيص كل مخزن بصورة مستقلة.'),
+            const SizedBox(height: 8),
+            if (error != null) _notice(error!, Colors.red),
+            Flexible(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
+              columns: const [
+                DataColumn(label: Text('م')), DataColumn(label: Text('كود الفرع')), DataColumn(label: Text('اسم الفرع')),
+                DataColumn(label: Text('كود المخزن')), DataColumn(label: Text('اسم المخزن')),
+                DataColumn(label: Text('وحدة الشراء')), DataColumn(label: Text('وحدة البيع')), DataColumn(label: Text('وحدة التحويل')),
+                DataColumn(label: Text('إيقاف شراء')), DataColumn(label: Text('إيقاف بيع')), DataColumn(label: Text('إيقاف تحويل')),
+              ],
+              rows: List.generate(rows.length, (index) {
+                final row = rows[index];
+                final w = row['_warehouse'] as Map<String,dynamic>;
+                final branch = _branches.where((b) => _s(b['id']) == _s(w['branch_id']));
+                final branchRow = branch.isEmpty ? <String,dynamic>{} : branch.first;
+                Widget unitPicker(String key) => DropdownButton<String>(
+                  value: units.any((u) => _s(u['id']) == _s(row[key])) ? _s(row[key]) : largest,
+                  isExpanded: true,
+                  items: units.map((u) => DropdownMenuItem(value: _s(u['id']), child: Text(_s(u['unit_name']) + ' (' + _s(u['conversion_factor']) + ')'))).toList(),
+                  onChanged: (v) => setDialogState(() => row[key] = v ?? largest),
+                );
+                Widget stopPicker(String key) => Checkbox(value: row[key] == true, shape: const CircleBorder(),
+                  onChanged: (v) => setDialogState(() => row[key] = v ?? false));
+                return DataRow(cells: [
+                  DataCell(Text((index + 1).toString())), DataCell(Text(_s(branchRow['branch_code']))),
+                  DataCell(Text(_s(branchRow['branch_name']))), DataCell(Text(_s(w['warehouse_code']))),
+                  DataCell(Text(_s(w['warehouse_name']))), DataCell(SizedBox(width: 145, child: unitPicker('purchase_unit_id'))),
+                  DataCell(SizedBox(width: 145, child: unitPicker('sale_unit_id'))), DataCell(SizedBox(width: 145, child: unitPicker('transfer_unit_id'))),
+                  DataCell(stopPicker('stop_purchase')), DataCell(stopPicker('stop_sale')), DataCell(stopPicker('stop_transfer')),
+                ]);
+              }),
+            ))),
+          ])),
+          actions: [
+            TextButton(onPressed: saving ? null : () => Navigator.pop(dialogContext), child: const Text('إغلاق')),
+            FilledButton.icon(onPressed: saving ? null : () async {
+              setDialogState(() { saving = true; error = null; });
+              try {
+                for (final row in rows) {
+                  await client.from('erp_item_warehouse_settings').upsert({
+                    'company_id': companyId, 'item_id': itemId, 'warehouse_id': row['warehouse_id'],
+                    'purchase_unit_id': row['purchase_unit_id'], 'sale_unit_id': row['sale_unit_id'],
+                    'transfer_unit_id': row['transfer_unit_id'], 'stop_purchase': row['stop_purchase'],
+                    'stop_sale': row['stop_sale'], 'stop_transfer': row['stop_transfer'],
+                    'updated_at': DateTime.now().toUtc().toIso8601String(),
+                  }, onConflict: 'item_id,warehouse_id');
+                }
+                if (dialogContext.mounted) Navigator.pop(dialogContext);
+                if (mounted) setState(() => _message = 'تم حفظ وحدات الشراء والبيع والتحويل لكل مخزن.');
+              } catch (e) {
+                setDialogState(() { saving = false; error = 'تعذر حفظ إعدادات الوحدات: $e'; });
+              }
+            }, icon: saving ? const SizedBox(width: 16,height: 16,child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save), label: const Text('حفظ إعدادات المخازن')),
+          ],
+        ));
+      });
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تحميل إعدادات وحدات المخازن: $e');
+    }
+  }
+
   Future<void> _createItem() async {
     final purchase = double.tryParse(_purchasePrice.text.trim()) ?? -1;
     final sale = double.tryParse(_salePrice.text.trim()) ?? -1;
@@ -683,7 +784,10 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               ),
               title: Text(_s(i['item_code']) + ' — ' + _s(i['item_name'])),
               subtitle: Text(_categoryLabel(_s(i['category_id'])) + '\nالوحدة: ' + _s(i['base_unit']) + ' • شراء: ' + _money(i['purchase_price']) + ' • بيع: ' + _money(i['sale_price']) + ' • ضريبة: ' + _money(i['tax_rate']) + '%\nحد الطلب: ' + _s(i['reorder_level']) + (_s(i['barcode']).isEmpty ? '' : ' • باركود: ' + _s(i['barcode']))),
-              trailing: IconButton(onPressed: _saving ? null : () => _toggle(i, true), icon: Icon(i['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
+              trailing: Wrap(spacing: 0, children: [
+                IconButton(tooltip: 'وحدات الشراء والبيع والتحويل لكل مخزن', onPressed: _saving ? null : () => _manageItemWarehouseUnits(i), icon: const Icon(Icons.tune, color: Color(0xFF3E007D))),
+                IconButton(tooltip: i['is_active'] == true ? 'إيقاف الصنف' : 'تنشيط الصنف', onPressed: _saving ? null : () => _toggle(i, true), icon: Icon(i['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
+              ]),
               children: [_warehouseSettingsPanel(i)],
             ));
           },
