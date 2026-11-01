@@ -187,6 +187,14 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
     }
   }
 
+  Map<String, dynamic>? _rowById(String? id) {
+    if (id == null) return null;
+    for (final row in _rows) {
+      if (_s(row['id']) == id) return row;
+    }
+    return null;
+  }
+
   String _cashboxName(String? id) {
     if (id == null) return 'غير مرتبط';
     for (final row in _cashboxes) {
@@ -233,7 +241,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
               SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
                 _task('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
                 _task(_editing ? 'حفظ' : 'إضافة', _editing ? Icons.save : Icons.add, const Color(0xFF168447), _saving ? null : (_editing ? _save : _startNew)),
-                _task('تعديل', Icons.edit, const Color(0xFFEF9B13), _editing || _selectedId == null ? null : () { final row = _rows.where((r) => _s(r['id']) == _selectedId).firstOrNull; if (row != null) _edit(row); }),
+                _task('تعديل', Icons.edit, const Color(0xFFEF9B13), _editing || _selectedId == null ? null : () { final row = _rowById(_selectedId); if (row != null) _edit(row); }),
                 _task('إيقاف/تفعيل', Icons.toggle_on, const Color(0xFFEF9B13), _selectedId == null ? null : () { final row = _rows.where((r) => _s(r['id']) == _selectedId).firstOrNull; if (row != null) _toggle(row); }),
                 _task('معاينة', Icons.visibility, const Color(0xFF6841A5), () => setState(() {})),
               ])),
