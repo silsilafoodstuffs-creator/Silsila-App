@@ -802,7 +802,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                     entityId: generatedCode,
                     details: <String, Object?>{
                       'page': _page,
-                      'record_name': name.text.trim(),
+                      'record_name': newRecord['الاسم'] ?? '',
                     },
                   );
                 } catch (logError) {
