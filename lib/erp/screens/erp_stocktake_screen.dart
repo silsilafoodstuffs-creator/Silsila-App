@@ -20,8 +20,8 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   final db=Supabase.instance.client;
   final notes=TextEditingController();
   final counts=<String,TextEditingController>{};
-  List<Map<String,dynamic>> warehouses=[],docs=[],items=[],lines=[],employees=[],expenses=[],units=[];
-  String? warehouseId,docId,targetId;
+  List<Map<String,dynamic>> branches=[],warehouses=[],docs=[],items=[],lines=[],employees=[],expenses=[],units=[];
+  String? branchId,baseWarehouseId,warehouseId,docId,targetId;
   String countMode='detailed',targetType='employee',sourceMode='manual';
   bool loading=false,saving=false,editing=false;
   String? error,message;
@@ -39,7 +39,8 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     setState(()=>loading=true);
     try{
       final v=await Future.wait<dynamic>([
-        db.from('erp_warehouses').select('id,warehouse_code,warehouse_name,is_active').eq('company_id',widget.companyId).eq('is_active',true).order('warehouse_code'),
+        db.from('erp_branches').select('id,branch_code,branch_name,is_active').eq('company_id',widget.companyId).eq('is_active',true).order('branch_code'),
+        db.from('erp_warehouses').select('id,warehouse_code,warehouse_name,is_active,branch_id,parent_warehouse_id').eq('company_id',widget.companyId).eq('is_active',true).order('warehouse_code'),
         db.from('erp_stocktakes').select('id,warehouse_id,status,count_mode,valuation_basis,source,created_at,notes').eq('company_id',widget.companyId).order('created_at',ascending:false).limit(100),
         db.from('erp_items').select('id,item_code,item_name').eq('company_id',widget.companyId),
         db.from('erp_item_units').select('id,unit_name,conversion_factor').eq('company_id',widget.companyId).eq('is_active',true),
@@ -47,7 +48,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         db.from('erp_stocktake_expense_items').select('id,item_code,name_ar').eq('company_id',widget.companyId).eq('is_active',true).order('item_code'),
       ]);
       if(!mounted)return;
-      setState(() { warehouses=List<Map<String,dynamic>>.from(v[0]); docs=List<Map<String,dynamic>>.from(v[1]); items=List<Map<String,dynamic>>.from(v[2]); units=List<Map<String,dynamic>>.from(v[3]); employees=List<Map<String,dynamic>>.from(v[4]); expenses=List<Map<String,dynamic>>.from(v[5]); warehouseId ??= warehouses.isEmpty ? null : s(warehouses.first['id']); loading=false; error=null; });
+      setState(() { branches=List<Map<String,dynamic>>.from(v[0]); warehouses=List<Map<String,dynamic>>.from(v[1]); docs=List<Map<String,dynamic>>.from(v[2]); items=List<Map<String,dynamic>>.from(v[3]); units=List<Map<String,dynamic>>.from(v[4]); employees=List<Map<String,dynamic>>.from(v[5]); expenses=List<Map<String,dynamic>>.from(v[6]); branchId ??= branches.isEmpty ? null : s(branches.first['id']); final mains=warehouses.where((w)=>s(w['parent_warehouse_id']).isEmpty && (branchId==null || s(w['branch_id'])==branchId)).toList(); baseWarehouseId ??= mains.isEmpty ? null : s(mains.first['id']); warehouseId ??= baseWarehouseId ?? (warehouses.isEmpty ? null : s(warehouses.first['id'])); loading=false; error=null; });
       if(docId!=null)await loadLines(docId!);
     }catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل بيانات الجرد: '+e.toString(); });}
   }
@@ -200,7 +201,9 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       if(error!=null)notice(error!,Colors.red),if(message!=null)notice(message!,Colors.green),
       Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         Text(_manualSettlementScreen?'إنشاء تسوية مخزنية يدوية':'إنشاء محضر جرد جديد',style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17)),
-        DropdownButtonFormField<String>(value:warehouseId,isExpanded:true,decoration:const InputDecoration(labelText:'المخزن'),items:warehouses.map((w)=>DropdownMenuItem(value:s(w['id']),child:Text(warehouseName(w['id'])))).toList(),onChanged:(v)=>setState(()=>warehouseId=v)),
+        DropdownButtonFormField<String>(value:branchId,isExpanded:true,decoration:const InputDecoration(labelText:'الفرع'),items:branches.map((b)=>DropdownMenuItem(value:s(b['id']),child:Text(s(b['branch_code'])+' — '+s(b['branch_name'])))).toList(),onChanged:(v)=>setState((){branchId=v;final mains=warehouses.where((w)=>s(w['parent_warehouse_id']).isEmpty && (v==null || s(w['branch_id'])==v)).toList();baseWarehouseId=mains.isEmpty?null:s(mains.first['id']);warehouseId=baseWarehouseId;})),
+         DropdownButtonFormField<String>(value:baseWarehouseId,isExpanded:true,decoration:const InputDecoration(labelText:'المخزن الرئيسي'),items:warehouses.where((w)=>s(w['parent_warehouse_id']).isEmpty && (branchId==null || s(w['branch_id'])==branchId)).map((w)=>DropdownMenuItem(value:s(w['id']),child:Text(warehouseName(w['id'])))).toList(),onChanged:(v)=>setState(()=>{baseWarehouseId=v;warehouseId=v;})),
+         DropdownButtonFormField<String>(value:warehouseId,isExpanded:true,decoration:const InputDecoration(labelText:'المخزن الفرعي / موقع التخزين'),items:[if(baseWarehouseId!=null)DropdownMenuItem(value:baseWarehouseId,child:Text('المخزن الرئيسي — '+warehouseName(baseWarehouseId))),...warehouses.where((w)=>s(w['parent_warehouse_id'])==s(baseWarehouseId)).map((w)=>DropdownMenuItem(value:s(w['id']),child:Text(warehouseName(w['id']))))],onChanged:(v)=>setState(()=>warehouseId=v)),
         if(_manualSettlementScreen)DropdownButtonFormField<String>(value:sourceMode,decoration:const InputDecoration(labelText:'مصدر التسوية (للمعاينة والاختيار فقط)'),items:const [DropdownMenuItem(value:'manual',child:Text('يدوي')),DropdownMenuItem(value:'stocktake',child:Text('من جرد المخزون'))],onChanged:docId!=null?null:(v)=>setState(()=>sourceMode=v??'manual')),
         if(!_manualSettlementScreen)DropdownButtonFormField<String>(value:countMode,decoration:const InputDecoration(labelText:'وضع الجرد'),items:const [DropdownMenuItem(value:'default',child:Text('الوحدة الافتراضية للمخزن')),DropdownMenuItem(value:'detailed',child:Text('جرد تفصيلي'))],onChanged:(v)=>setState(()=>countMode=v??countMode)),
         TextField(controller:notes,decoration:InputDecoration(labelText:_manualSettlementScreen?'ملاحظات التسوية':'ملاحظات المحضر')),
