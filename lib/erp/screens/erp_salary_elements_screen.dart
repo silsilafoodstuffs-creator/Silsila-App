@@ -79,6 +79,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   String _s(dynamic value) => (value ?? '').toString();
   String _currencyLabel(String code) { if (code == 'USD') return String.fromCharCode(36); return const {'EGP':'ج.م','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[code] ?? code; }
   bool _locked(Map<String,dynamic> row) => row['is_system_locked'] == true || _s(row['element_code']) == 'SYSSTOCKSHORTAGE';
+  Map<String,dynamic>? get _firstEditable => _rows.cast<Map<String,dynamic>?>().firstWhere((r)=>r!=null&&!_locked(r),orElse:()=>null);
   String _nextCode() { var max = 0; for (final row in _rows) { final code = _s(row['element_code']); if (code.startsWith('SAL') && code.length > 3) { final number = int.tryParse(code.substring(3)); if (number != null && number > max) max = number; } } return 'SAL' + (max + 1).toString().padLeft(3, '0'); }
 
   @override
@@ -174,8 +175,8 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
         ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:_loading?null:_load),
         ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:widget.companyId==null||_showNewRow?null:_startNewRow),
         ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:_loading?null:_saveNewRow),
-        ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:_rows.isEmpty?null:()=>_edit(row:_rows.first)),
-        ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:_rows.isEmpty?null:()=>_delete(_rows.first)),
+        ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:_firstEditable==null?null:()=>_edit(row:_firstEditable!)),
+        ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:_firstEditable==null?null:()=>_delete(_firstEditable!)),
         ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:_load),
         ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>_printElements(share:false)),
         ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:_exportElementsExcel),
