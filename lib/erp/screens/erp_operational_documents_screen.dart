@@ -1352,6 +1352,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
             throw ArgumentError('كمية الصنف $itemId يجب أن تكون بين ${minQty.toStringAsFixed(2)} و ${maxQty.isInfinite ? 'غير محدد' : maxQty.toStringAsFixed(2)} حسب شروط العرض.');
           }
         }
+        final itemUnits = _unitsByItem[itemId] ?? <Map<String, dynamic>>[];
+        final hasThreeLevels = itemUnits.any((unit) => unit['unit_level'] != null);
+        final largestFactor = hasThreeLevels
+            ? itemUnits.map((unit) => _n(unit['conversion_factor']))
+                .fold<double>(1, (a, b) => a > b ? a : b)
+            : 1.0;
+        final selectedUnitId = _s(line['unit_id']);
         final resolved = fixedOfferPrice != null ? <String, dynamic>{
           'base_unit_price': fixedOfferPrice,
           'net_unit_price': fixedOfferPrice,
@@ -1360,18 +1367,30 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           companyId: _company.text.trim(),
           itemId: itemId,
           kind: widget.kind == ErpOperationalKind.purchase ? 'purchase' : 'sale',
-          quantity: quantity * factor,
+          quantity: hasThreeLevels ? quantity : quantity * factor,
           partyId: selectedPartyId,
+          unitId: selectedUnitId.isEmpty ? null : selectedUnitId,
         );
         if (resolved == null) {
           throw StateError('لم يتمكن النظام من تحديد سياسة التسعير للصنف $itemId.');
         }
-        final unitPrice = fixedOfferPrice != null ? _n(fixedOfferPrice) : _n(resolved['base_unit_price']) / factor;
+        final unitPrice = fixedOfferPrice != null
+            ? _n(fixedOfferPrice)
+            : _n(resolved['base_unit_price']) / (hasThreeLevels ? 1 : factor);
         final discountPercent = fixedOfferPrice != null ? 0.0 : _n(resolved['discount_percent']);
         final discount = quantity * unitPrice * discountPercent / 100;
         final item = _items.firstWhere((row) => _s(row['id']) == itemId, orElse: () => <String, dynamic>{});
-        final basePrice = (widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price'])) / factor;
-        final adjustedPrice = fixedOfferPrice != null ? _n(fixedOfferPrice) : _n(resolved['net_unit_price']) / factor;
+        final majorUnitPrice = widget.kind == ErpOperationalKind.purchase ? _n(item['purchase_price']) : _n(item['sale_price']);
+        final basePrice = hasThreeLevels
+            ? ErpItemUnitConversion.priceForUnit(
+                majorUnitPrice: majorUnitPrice,
+                selectedConversionFactor: 1,
+                largestConversionFactor: largestFactor,
+              )
+            : majorUnitPrice / factor;
+        final adjustedPrice = fixedOfferPrice != null
+            ? _n(fixedOfferPrice)
+            : _n(resolved['net_unit_price']) / (hasThreeLevels ? 1 : factor);
         final taxRate = widget.kind == ErpOperationalKind.sales ? _n(item['tax_rate']) : 0.0;
         final tax = ((quantity * unitPrice - discount).clamp(0, double.infinity)) * (_isTaxInvoice ? taxRate : 0.0) / 100;
         pricedLines.add({
