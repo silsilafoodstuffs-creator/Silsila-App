@@ -22,9 +22,10 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   final counts=<String,TextEditingController>{};
   List<Map<String,dynamic>> warehouses=[],docs=[],items=[],lines=[],employees=[],expenses=[],units=[];
   String? warehouseId,docId,targetId;
-  String countMode='detailed',targetType='employee';
+  String countMode='detailed',targetType='employee',sourceMode='manual';
   bool loading=false,saving=false,editing=false;
   String? error,message;
+  bool get _manualSettlementScreen => widget.title.contains('التسوية');
   String s(dynamic v)=>(v??'').toString();
   double n(dynamic v)=>v is num?v.toDouble():double.tryParse(s(v))??0;
   String warehouseName(dynamic id){final a=warehouses.where((w)=>s(w['id'])==s(id));return a.isEmpty?s(id):s(a.first['warehouse_code'])+' — '+s(a.first['warehouse_name']);}
@@ -39,7 +40,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     try{
       final v=await Future.wait<dynamic>([
         db.from('erp_warehouses').select('id,warehouse_code,warehouse_name,is_active').eq('company_id',widget.companyId).eq('is_active',true).order('warehouse_code'),
-        db.from('erp_stocktakes').select('id,warehouse_id,status,count_mode,valuation_basis,created_at,notes').eq('company_id',widget.companyId).order('created_at',ascending:false).limit(100),
+        db.from('erp_stocktakes').select('id,warehouse_id,status,count_mode,valuation_basis,source,created_at,notes').eq('company_id',widget.companyId).order('created_at',ascending:false).limit(100),
         db.from('erp_items').select('id,item_code,item_name').eq('company_id',widget.companyId),
         db.from('erp_item_units').select('id,unit_name,conversion_factor').eq('company_id',widget.companyId).eq('is_active',true),
         db.from('erp_employees').select('id,employee_code,full_name').eq('company_id',widget.companyId).eq('is_active',true).order('employee_code'),
@@ -65,9 +66,11 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     if(warehouseId==null){setState(()=>error='اختر المخزن أولاً.');return;}
     setState(()=>saving=true);
     try{
-      final id=await db.rpc('erp_create_physical_stocktake',params:{'p_company_id':widget.companyId,'p_warehouse_id':warehouseId,'p_count_mode':countMode,'p_valuation_basis':null,'p_notes':notes.text.trim().isEmpty?null:notes.text.trim()});
+      final id = _manualSettlementScreen && sourceMode=='manual'
+        ? await db.rpc('erp_create_manual_stock_adjustment',params:{'p_company_id':widget.companyId,'p_warehouse_id':warehouseId,'p_notes':notes.text.trim().isEmpty?null:notes.text.trim()})
+        : await db.rpc('erp_create_physical_stocktake',params:{'p_company_id':widget.companyId,'p_warehouse_id':warehouseId,'p_count_mode':countMode,'p_valuation_basis':null,'p_notes':notes.text.trim().isEmpty?null:notes.text.trim()});
       docId=id.toString();notes.clear();await load();await loadLines(docId!);if(mounted)setState(()=>editing=true);
-      if(mounted)setState(() { saving=false; message='تم إنشاء محضر الجرد ولقطة الأرصدة.'; });
+      if(mounted)setState(() { saving=false; message=sourceMode=='manual'&&_manualSettlementScreen?'تم إنشاء تسوية يدوية بلقطة رصيد مرجعية.':'تم إنشاء محضر الجرد ولقطة الأرصدة.'; });
     }catch(e){if(mounted)setState(() { saving=false; error='تعذر إنشاء محضر الجرد: '+e.toString(); });}
   }
 
@@ -163,10 +166,11 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         const Text('إنشاء محضر جرد جديد',style:TextStyle(fontWeight:FontWeight.w900,fontSize:17)),
         DropdownButtonFormField<String>(value:warehouseId,isExpanded:true,decoration:const InputDecoration(labelText:'المخزن'),items:warehouses.map((w)=>DropdownMenuItem(value:s(w['id']),child:Text(warehouseName(w['id'])))).toList(),onChanged:(v)=>setState(()=>warehouseId=v)),
-        DropdownButtonFormField<String>(value:countMode,decoration:const InputDecoration(labelText:'وضع الجرد'),items:const [DropdownMenuItem(value:'default',child:Text('الوحدة الافتراضية للمخزن')),DropdownMenuItem(value:'detailed',child:Text('جرد تفصيلي'))],onChanged:(v)=>setState(()=>countMode=v??countMode)),
+        if(_manualSettlementScreen)DropdownButtonFormField<String>(value:sourceMode,decoration:const InputDecoration(labelText:'مصدر التسوية (للمعاينة والاختيار فقط)'),items:const [DropdownMenuItem(value:'manual',child:Text('يدوي')),DropdownMenuItem(value:'stocktake',child:Text('من جرد المخزون'))],onChanged:(v)=>setState(()=>sourceMode=v??'manual')),
+        if(!_manualSettlementScreen || sourceMode=='stocktake')DropdownButtonFormField<String>(value:countMode,decoration:const InputDecoration(labelText:'وضع الجرد'),items:const [DropdownMenuItem(value:'default',child:Text('الوحدة الافتراضية للمخزن')),DropdownMenuItem(value:'detailed',child:Text('جرد تفصيلي'))],onChanged:(v)=>setState(()=>countMode=v??countMode)),
         TextField(controller:notes,decoration:const InputDecoration(labelText:'ملاحظات المحضر')),
         const SizedBox(height:8),const Text('المحاضر السابقة',style:TextStyle(fontWeight:FontWeight.w800)),
-        DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(()=>docId=v);if(v!=null)await loadLines(v);}),
+        DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(()=>{docId=v;final selected=docs.where((d)=>s(d['id'])==s(v));if(selected.isNotEmpty)sourceMode=s(selected.first['source']).isEmpty?'stocktake':s(selected.first['source']);});if(v!=null)await loadLines(v);}),
       ]))),
       if(current!=null)...[
         Padding(padding:const EdgeInsets.all(8),child:Text('تفاصيل المحضر • '+warehouseName(current['warehouse_id'])+' • '+s(current['status']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17))),
