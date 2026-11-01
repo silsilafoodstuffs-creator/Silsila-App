@@ -33,8 +33,8 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   @override
   void initState() {
     super.initState();
-    final index = widget.initialTab == 'مواقع العمل' ? 3 : widget.initialTab == 'درجات الوظائف' ? 2 : widget.initialTab == 'الوظائف والدرجات' ? 1 : 0;
-    _tabs = TabController(length: 4, vsync: this, initialIndex: index);
+    final index = widget.initialTab == 'مواقع العمل' || widget.initialTab == 'درجات الوظائف' ? 1 : 0;
+    _tabs = TabController(length: 2, vsync: this, initialIndex: index);
     _load();
   }
   @override
@@ -471,13 +471,15 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
       const Align(alignment: Alignment.centerRight, child: Text('الهيكل التنظيمي والوظائف ومواقع العمل', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
       if (_error != null) Align(alignment: Alignment.centerRight, child: Text(_error!, style: const TextStyle(color: Colors.red))),
-      TabBar(controller: _tabs, isScrollable: true, labelColor: _hrStructurePurple, indicatorColor: _hrStructureOrange, tabs: const [
-        Tab(text: 'الإدارات والأقسام'), Tab(text: 'الوظائف ومتطلبات التعيين'), Tab(text: 'درجات الوظائف'), Tab(text: 'مواقع العمل'),
+      TabBar(controller: _tabs, isScrollable: true, labelColor: _hrStructurePurple, indicatorColor: _hrStructureOrange, tabs: widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام' ? const [
+        Tab(text: 'الإدارات والأقسام'), Tab(text: 'مواقع العمل'),
+      ] : const [
+        Tab(text: 'الوظائف ومتطلبات التعيين'), Tab(text: 'درجات الوظائف'),
       ]),
-      Expanded(child: TabBarView(controller: _tabs, children: [
-        _departmentsView(),
+      Expanded(child: TabBarView(controller: _tabs, children: widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام' ? [
+        _departmentsView(), _list('مواقع العمل', _locations, 'location_code', 'name_ar', 'location'),
+      ] : [
         _jobsView(), _gradesView(),
-        _list('مواقع العمل', _locations, 'location_code', 'name_ar', 'location'),
       ])),
     ])),
   );
