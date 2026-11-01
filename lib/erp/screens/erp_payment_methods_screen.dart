@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
+import 'package:excel/excel.dart' as excel;
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../widgets/erp_quick_task_button.dart';
@@ -195,6 +201,76 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
     return null;
   }
 
+
+  List<List<String>> _exportRows() => _filtered.map((r) => [
+    _s(r['payment_method_code']),
+    _s(r['name_ar']),
+    _s(r['name_en']),
+    _types[_s(r['method_type'])] ?? _s(r['method_type']),
+    _cashboxName(_s(r['cashbox_id']).isEmpty ? null : _s(r['cashbox_id'])),
+    r['allow_receipts'] == true ? 'نعم' : 'لا',
+    r['allow_payments'] == true ? 'نعم' : 'لا',
+    r['requires_reference'] == true ? 'نعم' : 'لا',
+    r['is_active'] == true ? 'نشطة' : 'موقوفة',
+  ]).toList(growable: false);
+
+  Future<void> _exportExcel() async {
+    if (_filtered.isEmpty) { setState(() => _message = 'لا توجد بيانات لتصديرها.'); return; }
+    try {
+      final book = excel.Excel.createExcel();
+      final sheet = book['طرق الدفع'];
+      const headers = ['الكود','الاسم العربي','الاسم الإنجليزي','النوع','الخزينة المرتبطة','القبض','الصرف','مرجع','الحالة'];
+      sheet.appendRow(headers.map((v) => excel.TextCellValue(v)).toList());
+      for (final row in _exportRows()) {
+        sheet.appendRow(row.map((v) => excel.TextCellValue(v)).toList());
+      }
+      final bytes = book.encode();
+      if (bytes == null) throw StateError('تعذر تجهيز ملف Excel.');
+      await FilePicker.platform.saveFile(
+        dialogTitle: 'تصدير طرق الدفع',
+        fileName: 'Silsila-Payment-Methods.xlsx',
+        bytes: Uint8List.fromList(bytes),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تصدير Excel: $e');
+    }
+  }
+
+  Future<void> _exportPdf({required bool print}) async {
+    if (_filtered.isEmpty) { setState(() => _message = 'لا توجد بيانات للطباعة أو التصدير.'); return; }
+    try {
+      final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final doc = pw.Document();
+      doc.addPage(pw.MultiPage(
+        theme: pw.ThemeData.withFont(base: font, bold: font),
+        build: (_) => [
+          pw.Text('سلسلة • دليل طرق الدفع', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 10),
+          pw.TableHelper.fromTextArray(
+            headers: const ['الكود','الاسم','النوع','الخزينة','قبض','صرف','مرجع','الحالة'],
+            data: _filtered.map((r) => [
+              _s(r['payment_method_code']), _s(r['name_ar']),
+              _types[_s(r['method_type'])] ?? _s(r['method_type']),
+              _cashboxName(_s(r['cashbox_id']).isEmpty ? null : _s(r['cashbox_id'])),
+              r['allow_receipts'] == true ? 'نعم' : 'لا',
+              r['allow_payments'] == true ? 'نعم' : 'لا',
+              r['requires_reference'] == true ? 'نعم' : 'لا',
+              r['is_active'] == true ? 'نشطة' : 'موقوفة',
+            ]).toList(),
+          ),
+        ],
+      ));
+      final bytes = await doc.save();
+      if (print) {
+        await Printing.layoutPdf(onLayout: (_) => Future.value(bytes));
+      } else {
+        await Printing.sharePdf(bytes: bytes, filename: 'Silsila-Payment-Methods.pdf');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تجهيز PDF: $e');
+    }
+  }
+
   String _cashboxName(String? id) {
     if (id == null) return 'غير مرتبط';
     for (final row in _cashboxes) {
@@ -243,7 +319,10 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
                 _task(_editing ? 'حفظ' : 'إضافة', _editing ? Icons.save : Icons.add, const Color(0xFF168447), _saving ? null : (_editing ? _save : _startNew)),
                 _task('تعديل', Icons.edit, const Color(0xFFEF9B13), _editing || _selectedId == null ? null : () { final row = _rowById(_selectedId); if (row != null) _edit(row); }),
                 _task('إيقاف/تفعيل', Icons.toggle_on, const Color(0xFFEF9B13), _selectedId == null ? null : () { final row = _rows.where((r) => _s(r['id']) == _selectedId).firstOrNull; if (row != null) _toggle(row); }),
-                _task('معاينة', Icons.visibility, const Color(0xFF6841A5), () => setState(() {})),
+                _task('معاينة', Icons.visibility, const Color(0xFF6841A5), () => showDialog<void>(context: context, builder: (ctx) => AlertDialog(title: const Text('معاينة طرق الدفع'), content: Text('عدد طرق الدفع المعروضة: ${_filtered.length}'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))])),
+                _task('طباعة', Icons.print, const Color(0xFFFF27C3), _filtered.isEmpty ? null : () => _exportPdf(print: true)),
+                _task('Excel', Icons.file_download, const Color(0xFF16834A), _filtered.isEmpty ? null : _exportExcel),
+                _task('PDF', Icons.picture_as_pdf, const Color(0xFFD32F2F), _filtered.isEmpty ? null : () => _exportPdf(print: false)),
               ])),
             ]),
           )),
