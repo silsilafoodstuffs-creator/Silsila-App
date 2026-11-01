@@ -70,7 +70,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
 
   Future<void> saveDraft() async {
     if(!isDraft){setState(()=>error='المحضر ليس مسودة قابلة للتعديل.');return;}
-    setState(()=>saving=true);
+    setState(() { saving=true; error=null; message=null; });
     try{
       for(final l in lines){final q=countedBase(l);if(q<0)throw ArgumentError('لا يمكن إدخال كمية سالبة.');await db.from('erp_stocktake_lines').update({'counted_quantity':q}).eq('id',s(l['id'])).eq('stocktake_id',docId!);}
       await loadLines(docId!);if(mounted)setState(()=>message='تم حفظ المسودة دون تغيير الأرصدة المخزنية.');
