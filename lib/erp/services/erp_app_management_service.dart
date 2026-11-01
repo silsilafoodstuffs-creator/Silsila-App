@@ -313,8 +313,8 @@ class ErpAppManagementService {
         .toList(growable: false);
   }
 
-  /// Activity inserts should normally be performed by a trusted server function.
-  /// This client method succeeds only if a deliberate RLS policy permits it.
+  /// Appends an immutable company-scoped event through a SECURITY DEFINER RPC.
+  /// The database validates membership and stamps actor_id from auth.uid().
   Future<void> requestActivityLog({
     required String companyId,
     String? appId,
