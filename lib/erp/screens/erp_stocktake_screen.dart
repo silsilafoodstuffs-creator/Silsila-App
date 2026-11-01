@@ -233,7 +233,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         const Text('لقطة أرصدة، إدخال الكميات الفعلية، مراجعة الفروقات ثم الترحيل.',style:TextStyle(color:Colors.white70)),
         const SizedBox(height:8),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
           ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:loading?null:load),
-          ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:saving||(_manualSettlementScreen&&sourceMode!='manual')?null:createDoc),
+          ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:saving||(_manualSettlementScreen&&(sourceMode!='manual'||docId!=null))?null:createDoc),
           ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:saving||!isDraft?null:saveDraft),
           ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:saving||!isDraft?null:editDraft),
           ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:saving||!canDeleteManualDraft?null:deleteManualDraft),
