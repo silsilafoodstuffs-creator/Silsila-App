@@ -21,6 +21,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'group_duplicate_items','category':'مخزنية','ar':'تجميع الأصناف المتكررة في شاشات المخازن','en':'Group duplicate items in inventory screens'},
     {'key':'zero_adjustment_only','category':'مخزنية','ar':'اشتراط ترحيل التسوية المخزنية بصفر فقط','en':'Require inventory adjustments to post only at zero'},
     {'key':'adjustment_sale_price','category':'مخزنية','ar':'سعر الصنف في التسوية المخزنية هو سعر البيع بدلاً من سعر الشراء','en':'Use sale price in inventory adjustments'},
+    {'key':'inventory.stocktake.valuation_basis','category':'مخزنية','ar':'أساس تقييم فروق الجرد','en':'Stocktake variance valuation basis','mandatory':true,'value':'sale','options':['sale','purchase']},
     {'key':'balance_sale_price','category':'مخزنية','ar':'سعر الصنف في تقارير الأرصدة هو سعر البيع بدلاً من سعر الشراء','en':'Use sale price in balance reports'},
     {'key':'customer_default_rep','category':'بيعية','ar':'إمكانية تغيير المندوب الافتراضي للعميل','en':'Allow changing customer default sales representative'},
     {'key':'customer_default_price_policy','category':'بيعية','ar':'إمكانية تغيير سياسة الأسعار الافتراضية للعميل','en':'Allow changing customer default price policy'},
@@ -241,7 +242,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                             isExpanded: true, isDense: true,
                                             decoration: const InputDecoration(labelText: 'القيمة', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                             style: const TextStyle(fontSize: 10, color: Colors.black87),
-                                            items: options.map((v) => DropdownMenuItem(value: v, child: Text(v, maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
+                                            items: options.map((v) => DropdownMenuItem(value: v, child: Text(p['key']=='inventory.stocktake.valuation_basis' ? (v=='sale'?'سعر البيع':'سعر الشراء') : v, maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
                                             onChanged: (v) => setState(() => p['value'] = v),
                                           )
                                         : Text((p['value'] ?? '').toString().isEmpty ? '—' : (p['value'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10))),
