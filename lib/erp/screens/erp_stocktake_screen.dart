@@ -43,7 +43,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         db.from('erp_warehouses').select('id,warehouse_code,warehouse_name,is_active,branch_id,parent_warehouse_id').eq('company_id',widget.companyId).eq('is_active',true).order('warehouse_code'),
         db.from('erp_stocktakes').select('id,warehouse_id,status,count_mode,valuation_basis,source,created_at,notes').eq('company_id',widget.companyId).order('created_at',ascending:false).limit(100),
         db.from('erp_items').select('id,item_code,item_name').eq('company_id',widget.companyId),
-        db.from('erp_item_units').select('id,unit_name,conversion_factor').eq('company_id',widget.companyId).eq('is_active',true),
+        db.from('erp_item_units').select('id,item_id,unit_name,unit_level,conversion_factor').eq('company_id',widget.companyId).eq('is_active',true),
         db.from('erp_employees').select('id,employee_code,full_name').eq('company_id',widget.companyId).eq('is_active',true).order('employee_code'),
         db.from('erp_stocktake_expense_items').select('id,item_code,name_ar').eq('company_id',widget.companyId).eq('is_active',true).order('item_code'),
       ]);
@@ -74,6 +74,26 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       docId=id.toString();notes.clear();await load();await loadLines(docId!);if(mounted)setState(()=>editing=true);
       if(mounted)setState(() { saving=false; message=sourceMode=='manual'&&_manualSettlementScreen?'تم إنشاء تسوية يدوية بلقطة رصيد مرجعية.':'تم إنشاء محضر الجرد ولقطة الأرصدة.'; });
     }catch(e){if(mounted)setState(() { saving=false; error='تعذر إنشاء محضر الجرد: '+e.toString(); });}
+  }
+
+
+  Map<String,dynamic> unitBreakdown(dynamic itemId,double baseQuantity){
+    final list=units.where((u)=>s(u['item_id'])==s(itemId)).toList()
+      ..sort((a,b)=>n(b['conversion_factor']).compareTo(n(a['conversion_factor'])));
+    final larger=list.where((u)=>n(u['conversion_factor'])>1).toList();
+    final base=list.where((u)=>n(u['conversion_factor'])<=1).toList();
+    final major=larger.isNotEmpty?larger.first:null;
+    final middle=larger.length>1?larger[1]:null;
+    final baseUnit=base.isNotEmpty?base.last:(list.isNotEmpty?list.last:null);
+    final majorFactor=major==null?1:n(major['conversion_factor']);
+    final middleFactor=middle==null?1:n(middle['conversion_factor']);
+    final majorQty=major==null?0:(baseQuantity/majorFactor).floorToDouble();
+    final afterMajor=major==null?baseQuantity:baseQuantity-majorQty*majorFactor;
+    final middleQty=middle==null?0:(afterMajor/middleFactor).floorToDouble();
+    final minorQty=middle==null?afterMajor:afterMajor-middleQty*middleFactor;
+    return {'majorQty':majorQty,'majorUnit':major==null?'—':s(major['unit_name']),
+      'middleQty':middleQty,'middleUnit':middle==null?'—':s(middle['unit_name']),
+      'minorQty':minorQty,'minorUnit':baseUnit==null?'—':s(baseUnit['unit_name'])};
   }
 
   double countedBase(Map<String,dynamic> l){final f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);return (n(counts[s(l['id'])]?.text)*f);}
@@ -221,15 +241,17 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         if(isDraft)Align(alignment:AlignmentDirectional.centerStart,child:FilledButton.icon(onPressed:saving?null:postDoc,icon:const Icon(Icons.verified_outlined),label:const Text('ترحيل الجرد وتحديث الأرصدة'))),
         Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columns:const [
           DataColumn(label:Text('م')),DataColumn(label:Text('كود الصنف')),DataColumn(label:Text('اسم الصنف')),
-          DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),DataColumn(label:Text('وحدة الجرد')),
+          DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),DataColumn(label:Text('كمية كبرى')),DataColumn(label:Text('وحدة كبرى')),DataColumn(label:Text('كمية وسطى')),DataColumn(label:Text('وحدة وسطى')),DataColumn(label:Text('كمية صغرى')),DataColumn(label:Text('وحدة صغرى')),DataColumn(label:Text('وحدة الجرد')),
           DataColumn(label:Text('كمية الجرد')),DataColumn(label:Text('زيادة جرد')),DataColumn(label:Text('عجز جرد')),DataColumn(label:Text('الرصيد بعد التسوية')),DataColumn(label:Text('الفرق')),DataColumn(label:Text('نوع الفرق')),DataColumn(label:Text('قيمة الفرق')),
         ],rows:List.generate(lines.length,(i){
           final l=lines[i],f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']),diff=countedBase(l)-n(l['physical_snapshot']);
+          final breakdown=unitBreakdown(l['item_id'],n(l['physical_snapshot']));
           final item=items.where((x)=>s(x['id'])==s(l['item_id']));final it=item.isEmpty?<String,dynamic>{}:item.first;final unit=units.where((x)=>s(x['id'])==s(l['unit_id']));
           return DataRow(cells:[
             DataCell(Text((i+1).toString())),DataCell(Text(s(it['item_code']))),DataCell(Text(s(it['item_name']))),
             DataCell(Text((n(l['available_snapshot'])/f).toStringAsFixed(3))),DataCell(Text((n(l['reserved_snapshot'])/f).toStringAsFixed(3))),
             DataCell(Text((n(l['physical_snapshot'])/f).toStringAsFixed(3))),
+            DataCell(Text(n(breakdown['majorQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['majorUnit']))),DataCell(Text(n(breakdown['middleQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['middleUnit']))),DataCell(Text(n(breakdown['minorQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['minorUnit']))),
             DataCell(Text(unit.isEmpty?'—':s(unit.first['unit_name']))),
             DataCell(SizedBox(width:100,child:TextField(controller:counts[s(l['id'])],enabled:isDraft&&editing,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState((){}),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
             DataCell(Text((diff>0?diff/f:0).toStringAsFixed(3))),DataCell(Text((diff<0?-diff/f:0).toStringAsFixed(3))),DataCell(Text((countedBase(l)/f).toStringAsFixed(3))),
