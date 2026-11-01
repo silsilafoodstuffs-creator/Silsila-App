@@ -189,7 +189,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
     try {
       final book = excel.Excel.createExcel();
       final sheet = book['وحدات الأصناف'];
-      sheet.appendRow(['م', 'كود الوحدة', 'اسم الوحدة عربي', 'اسم الوحدة إنجليزي', 'الحالة']);
+      sheet.appendRow([excel.TextCellValue('م'), excel.TextCellValue('كود الوحدة'), excel.TextCellValue('اسم الوحدة عربي'), excel.TextCellValue('اسم الوحدة إنجليزي'), excel.TextCellValue('الحالة')]);
       final rows = _activityRows;
       for (var i = 0; i < rows.length; i++) {
         final r = rows[i];
