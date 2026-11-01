@@ -2,6 +2,8 @@ import 'package:excel/excel.dart' hide Border;
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:image_picker/image_picker.dart';
@@ -584,6 +586,31 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     if(yes==true)await _toggle(item,true);
   }
 
+
+  Future<void> _exportMasterPdf({required bool share}) async {
+    final isWarehouse=_view=='warehouses';
+    final rows=isWarehouse?_warehouses:_items;
+    if(rows.isEmpty){setState(()=>_message='لا توجد بيانات للتصدير.');return;}
+    try{
+      final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final doc=pw.Document();
+      final headers=isWarehouse?const ['م','كود المخزن','اسم المخزن','العنوان','الحالة']:const ['م','كود الصنف','اسم الصنف','الوحدة','سعر الشراء','سعر البيع','الضريبة'];
+      final data=rows.asMap().entries.map((e){
+        final r=e.value;
+        if(isWarehouse)return [e.key+1,_s(r['warehouse_code']),_s(r['warehouse_name']),_s(r['address']),r['is_active']==true?'نشط':'موقوف'];
+        return [e.key+1,_s(r['item_code']),_s(r['item_name']),_s(r['base_unit']),_money(r['purchase_price']),_money(r['sale_price']),_money(r['tax_rate'])+'%'];
+      }).toList();
+      doc.addPage(pw.MultiPage(theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
+        pw.Text(isWarehouse?'بيانات المخازن':'بيانات الأصناف',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
+        pw.SizedBox(height:10),
+        pw.TableHelper.fromTextArray(headers:headers,data:data),
+      ]));
+      final bytes=await doc.save();
+      if(share){await Printing.sharePdf(bytes:bytes,filename:isWarehouse?'Silsila-Warehouses.pdf':'Silsila-Items.pdf');}
+      else{await Printing.layoutPdf(onLayout:(_)=>Future.value(bytes));}
+    }catch(e){if(mounted)setState(()=>_error='تعذر إنشاء ملف PDF: $e');}
+  }
+
   Future<void> _previewMasterData() async {
     final rows = _view == 'warehouses' ? _warehouses : _items;
     final label = _view == 'warehouses' ? 'المخازن' : 'الأصناف';
@@ -616,9 +643,9 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFFFA015), _saving || _loading ? null : _editFirstRecord),
             _quickTask('حذف', Icons.delete_outline, const Color(0xFFB42318), _saving || _loading ? null : _deleteFirstRecord),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewMasterData),
-            _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewMasterData),
+            _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), () => _exportMasterPdf(share: false)),
             _quickTask('Excel', Icons.file_download_outlined, const Color(0xFF137C8B), _loading ? null : _exportMasterExcel),
-            _quickTask('طباعة PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), _previewMasterData),
+            _quickTask('PDF', Icons.picture_as_pdf_outlined, const Color(0xFFB3261E), () => _exportMasterPdf(share: true)),
           ])),
         ]),
       )),
