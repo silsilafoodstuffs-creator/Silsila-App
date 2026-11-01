@@ -812,13 +812,17 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     final rows = _warehouses.where((w) => w['is_active'] == true).map((warehouse) {
       final warehouseId = _s(warehouse['id']);
       final existing = _settingsFor(itemId, warehouseId) ?? <String,dynamic>{};
+      String unitValue(String key) {
+        final selected = _s(existing[key]);
+        return units.any((u) => _s(u['id']) == selected) ? selected : _s(largest['id']);
+      }
       return <String,dynamic>{
         'warehouse': warehouse,
         'warehouse_id': warehouseId,
-        'purchase_unit_id': _s(existing['purchase_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['purchase_unit_id']),
-        'sale_unit_id': _s(existing['sale_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['sale_unit_id']),
-        'transfer_unit_id': _s(existing['transfer_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['transfer_unit_id']),
-        'stocktake_unit_id': _s(existing['stocktake_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['stocktake_unit_id']),
+        'purchase_unit_id': unitValue('purchase_unit_id'),
+        'sale_unit_id': unitValue('sale_unit_id'),
+        'transfer_unit_id': unitValue('transfer_unit_id'),
+        'stocktake_unit_id': unitValue('stocktake_unit_id'),
         'stop_purchase': existing['stop_purchase'] == true,
         'stop_sale': existing['stop_sale'] == true,
         'stop_transfer': existing['stop_transfer'] == true,
