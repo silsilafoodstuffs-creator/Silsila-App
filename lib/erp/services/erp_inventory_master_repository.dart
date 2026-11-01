@@ -65,19 +65,19 @@ class ErpInventoryMasterRepository {
   Future<List<Map<String, dynamic>>> fetchItemWarehouseSettings(String companyId, List<String> itemIds) async {
     if (itemIds.isEmpty) return [];
     final rows = await _db.from('erp_item_warehouse_settings')
-      .select('id,item_id,warehouse_id,purchase_unit_id,sale_unit_id,transfer_unit_id,stop_purchase,stop_sale,stop_transfer')
+      .select('id,item_id,warehouse_id,purchase_unit_id,sale_unit_id,transfer_unit_id,stocktake_unit_id,stop_purchase,stop_sale,stop_transfer')
       .eq('company_id', companyId.trim()).inFilter('item_id', itemIds);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
   Future<void> saveItemWarehouseSettings({
     required String companyId, required String itemId, required String warehouseId,
-    String? purchaseUnitId, String? saleUnitId, String? transferUnitId,
+    String? purchaseUnitId, String? saleUnitId, String? transferUnitId, String? stocktakeUnitId,
     bool stopPurchase = false, bool stopSale = false, bool stopTransfer = false,
   }) async {
     await _db.from('erp_item_warehouse_settings').upsert({
       'company_id': companyId.trim(), 'item_id': itemId, 'warehouse_id': warehouseId,
-      'purchase_unit_id': purchaseUnitId, 'sale_unit_id': saleUnitId, 'transfer_unit_id': transferUnitId,
+      'purchase_unit_id': purchaseUnitId, 'sale_unit_id': saleUnitId, 'transfer_unit_id': transferUnitId, 'stocktake_unit_id': stocktakeUnitId,
       'stop_purchase': stopPurchase, 'stop_sale': stopSale, 'stop_transfer': stopTransfer,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }, onConflict: 'item_id,warehouse_id');
