@@ -537,6 +537,53 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     }
   }
 
+
+  Future<void> _editFirstRecord() async {
+    final isWarehouse=_view=='warehouses';
+    final rows=isWarehouse?_warehouses:_items;
+    if(rows.isEmpty){setState(()=>_message='لا توجد سجلات لتعديلها.');return;}
+    final row=rows.first;
+    final code=TextEditingController(text:_s(row[isWarehouse?'warehouse_code':'item_code']));
+    final name=TextEditingController(text:_s(row[isWarehouse?'warehouse_name':'item_name']));
+    final barcode=TextEditingController(text:_s(row['barcode']));
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:Text(isWarehouse?'تعديل بيانات المخزن':'تعديل بيانات الصنف'),
+      content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
+        TextField(controller:code,decoration:const InputDecoration(labelText:'الكود')),
+        TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم بالعربية')),
+        if(!isWarehouse)TextField(controller:barcode,decoration:const InputDecoration(labelText:'الباركود')),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ التعديل'))],
+    ));
+    try{
+      if(yes==true&&code.text.trim().isNotEmpty&&name.text.trim().isNotEmpty){
+        if(isWarehouse){
+          await Supabase.instance.client.from('erp_warehouses').update({'warehouse_code':code.text.trim().toUpperCase(),'warehouse_name':name.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
+        }else{
+          await Supabase.instance.client.from('erp_items').update({'item_code':code.text.trim().toUpperCase(),'item_name':name.text.trim(),'barcode':barcode.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
+        }
+        await _load(clearMessage:false);
+        if(mounted)setState(()=>_message='تم تعديل السجل الأول في القائمة.');
+      }
+    }catch(e){if(mounted)setState(()=>_error='تعذر تعديل السجل: $e');}
+    finally{code.dispose();name.dispose();barcode.dispose();}
+  }
+  Future<void> _deleteFirstRecord() async {
+    if(_view=='warehouses'){
+      if(_warehouses.isEmpty){setState(()=>_message='لا توجد مخازن لحذفها.');return;}
+      await _deleteWarehouse(_warehouses.first);
+      return;
+    }
+    if(_items.isEmpty){setState(()=>_message='لا توجد أصناف لإيقافها.');return;}
+    final item=_items.first;
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('تأكيد إيقاف الصنف'),
+      content:Text('إيقاف الصنف «${_s(item['item_name'])}»؟ سيظل محفوظاً إذا كان مرتبطاً بحركات أو مستندات.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('نعم، إيقاف'))],
+    ));
+    if(yes==true)await _toggle(item,true);
+  }
+
   Future<void> _previewMasterData() async {
     final rows = _view == 'warehouses' ? _warehouses : _items;
     final label = _view == 'warehouses' ? 'المخازن' : 'الأصناف';
@@ -566,6 +613,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             _quickTask('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
             _quickTask('إضافة', Icons.add_circle_outline, const Color(0xFF168447), _saving ? null : _newCurrentRecord),
             _quickTask('حفظ', Icons.save_outlined, const Color(0xFF168447), _saving || _loading ? null : _saveCurrentRecord),
+            _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFFFA015), _saving || _loading ? null : _editFirstRecord),
+            _quickTask('حذف', Icons.delete_outline, const Color(0xFFB42318), _saving || _loading ? null : _deleteFirstRecord),
             _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewMasterData),
             _quickTask('طباعة', Icons.print_outlined, const Color(0xFF4056A1), _previewMasterData),
             _quickTask('Excel', Icons.file_download_outlined, const Color(0xFF137C8B), _loading ? null : _exportMasterExcel),
