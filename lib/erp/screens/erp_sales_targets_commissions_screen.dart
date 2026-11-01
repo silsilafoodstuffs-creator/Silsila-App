@@ -795,95 +795,141 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-      Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(
-        gradient:const LinearGradient(colors:[_p,Color(0xFF7443A6)]),borderRadius:BorderRadius.circular(18)),
-        child:Row(children:[
-          const Icon(Icons.badge_outlined,color:_o,size:30),const SizedBox(width:12),
-          const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-            Text('بيانات مندوبين المبيعات',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
-            Text('بيانات الموظفين من إدارة المبيعات — إعدادات الربط والأهداف والعمولات',style:TextStyle(color:Color(0xFFEFE5F8),fontSize:12)),
-          ])),
-          IconButton(onPressed:_loading?null:_load,tooltip:'تحديث',icon:const Icon(Icons.refresh,color:Colors.white)),
-        ])),
-      const SizedBox(height:12),
-      if(_error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
-      if(_loading)const SizedBox(height:590,child:Center(child:CircularProgressIndicator()))
-      else if(_employees.isEmpty)const SizedBox(height:590,child:Center(child:Text('لا يوجد موظفون مسجلون في إدارة المبيعات.')))
-      else SizedBox(height:620,child:Container(decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFE9E2F0))),
-        child:LayoutBuilder(builder:(ctx,box)=>SingleChildScrollView(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:ConstrainedBox(
-          constraints:BoxConstraints(minWidth:box.maxWidth),
-          child:DataTable(
-            headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-            headingRowHeight:46,
-            dataRowMinHeight:50,
-            dataRowMaxHeight:66,
-            horizontalMargin:12,
-            columnSpacing:14,
-            columns:const [
-              DataColumn(label:Text('م')),DataColumn(label:Text('كود المندوب')),
-              DataColumn(label:Text('اسم الموظف عربي')),DataColumn(label:Text('اسم الموظف إنجليزي')),
-              DataColumn(label:Text('له هدف')),DataColumn(label:Text('ربط العملاء')),
-              DataColumn(label:Text('له عمولة')),DataColumn(label:Text('نوع العمولة')),
-              DataColumn(label:Text('نشط')),
-            ],
-            rows: List.generate(_employees.length, (i) {
-              final e = _employees[i];
-              final r = _repFor(e);
-              final repId = r?['id']?.toString();
-              final hasCommission = r?['has_commission'] == true;
-              final type = (r?['commission_type'] ?? 'percentage').toString();
-              final assignedCount = _customers.where((customer) =>
-                customer['sales_rep_id']?.toString() == repId ||
-                customer['sales_rep_employee_id']?.toString() == e['id']?.toString(),
-              ).length;
-              return DataRow(cells: [
-                DataCell(Text('${i + 1}')),
-                DataCell(Text((r?['rep_code'] ?? '—').toString())),
-                DataCell(SizedBox(width:155,child:Text((e['full_name'] ?? '').toString(),softWrap:true,maxLines:2,overflow:TextOverflow.visible))),
-                DataCell(SizedBox(width:145,child:Text((e['full_name_en'] ?? '—').toString(),softWrap:true,maxLines:2,overflow:TextOverflow.visible))),
-                DataCell(Checkbox(
-                  shape: const CircleBorder(),
-                  value: r?['has_target'] == true,
-                  onChanged: r == null ? null : (value) => _saveRep(e, {'has_target': value == true}),
-                )),
-                DataCell(OutlinedButton.icon(
-                  onPressed: r == null ? null : () => _linkCustomers(e),
-                  icon: const Icon(Icons.group_add_outlined, size: 18),
-                  label: Text('العملاء ($assignedCount)'),
-                )),
-                DataCell(Checkbox(
-                  shape: const CircleBorder(),
-                  value: hasCommission,
-                  onChanged: r == null ? null : (value) => _saveRep(e, {'has_commission': value == true}),
-                )),
-                DataCell(hasCommission
-                    ? SizedBox(
-                        width: 190,
-                        child: DropdownButton<String>(
-                          isExpanded: true,
-                          value: const ['tiered', 'percentage', 'points_per_unit'].contains(type) ? type : 'percentage',
-                          items: const [
-                            DropdownMenuItem(value: 'tiered', child: Text('شريحة')),
-                            DropdownMenuItem(value: 'percentage', child: Text('نسبة من المحقق')),
-                            DropdownMenuItem(value: 'points_per_unit', child: Text('نقاط لكل وحدة')),
-                          ],
-                          onChanged: r == null ? null : (value) {
-                            if (value != null) _saveRep(e, {'commission_type': value});
-                          },
-                        ),
-                      )
-                    : const Text('—')),
-                DataCell(Checkbox(
-                  shape: const CircleBorder(),
-                  value: r?['is_active'] == true,
-                  onChanged: r == null ? null : (value) => _saveRep(e, {'is_active': value == true}),
-                )),
-              ]);
-            }),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [_p, Color(0xFF7443A6)]),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(children: [
+              const Icon(Icons.badge_outlined, color: _o, size: 30),
+              const SizedBox(width: 12),
+              const Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('بيانات مندوبين المبيعات', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                  Text('دليل موظفي إدارة المبيعات — الهوية الوظيفية للعرض فقط وإعدادات المندوب للربط والأهداف والعمولات', style: TextStyle(color: Color(0xFFEFE5F8), fontSize: 12)),
+                ],
+              )),
+              IconButton(onPressed: _loading ? null : _load, tooltip: 'تحديث', icon: const Icon(Icons.refresh, color: Colors.white)),
+            ]),
           ),
-        )))),
-      )),
-    ]));
+          const SizedBox(height: 12),
+          if (_error != null)
+            Padding(padding: const EdgeInsets.all(8), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+          if (_loading)
+            const SizedBox(height: 590, child: Center(child: CircularProgressIndicator()))
+          else if (_employees.isEmpty)
+            const SizedBox(height: 590, child: Center(child: Text('لا يوجد موظفون مسجلون في إدارة المبيعات.')))
+          else
+            LayoutBuilder(builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final columns = width >= 1180 ? 3 : width >= 760 ? 2 : 1;
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _employees.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: columns,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  mainAxisExtent: 286,
+                ),
+                itemBuilder: (context, index) {
+                  final employee = _employees[index];
+                  final rep = _repFor(employee);
+                  final repId = rep?['id']?.toString();
+                  final hasCommission = rep?['has_commission'] == true;
+                  final rawType = (rep?['commission_type'] ?? 'percentage').toString();
+                  final type = const ['tiered', 'percentage', 'points_per_unit'].contains(rawType) ? rawType : 'percentage';
+                  final assignedCount = _customers.where((customer) =>
+                    customer['sales_rep_id']?.toString() == repId ||
+                    customer['sales_rep_employee_id']?.toString() == employee['id']?.toString(),
+                  ).length;
+                  return Container(
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: const Color(0xFFE9E2F0)),
+                      boxShadow: const [BoxShadow(color: Color(0x08000000), blurRadius: 7, offset: Offset(0, 2))],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(children: [
+                          CircleAvatar(backgroundColor: const Color(0xFFF5EFFB), child: Text('${index + 1}', style: const TextStyle(color: _p, fontWeight: FontWeight.w900))),
+                          const SizedBox(width: 9),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text((rep?['rep_code'] ?? '—').toString(), style: const TextStyle(color: _p, fontWeight: FontWeight.w900)),
+                            Text((employee['employee_code'] ?? '—').toString(), style: const TextStyle(color: Colors.black54, fontSize: 11)),
+                          ])),
+                          Icon(Icons.badge_outlined, color: Colors.deepPurple.shade300),
+                        ]),
+                        const Divider(height: 18),
+                        Text((employee['full_name'] ?? '').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                        const SizedBox(height: 3),
+                        Text((employee['full_name_en'] ?? '—').toString(), maxLines: 1, overflow: TextOverflow.ellipsis, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                        const SizedBox(height: 9),
+                        Row(children: [
+                          const Expanded(child: Text('له هدف', style: TextStyle(fontWeight: FontWeight.w700))),
+                          Checkbox(
+                            shape: const CircleBorder(),
+                            value: rep?['has_target'] == true,
+                            onChanged: rep == null ? null : (value) => _saveRep(employee, {'has_target': value == true}),
+                          ),
+                          const SizedBox(width: 6),
+                          const Expanded(child: Text('نشط', style: TextStyle(fontWeight: FontWeight.w700))),
+                          Checkbox(
+                            shape: const CircleBorder(),
+                            value: rep?['is_active'] == true,
+                            onChanged: rep == null ? null : (value) => _saveRep(employee, {'is_active': value == true}),
+                          ),
+                        ]),
+                        Row(children: [
+                          const Expanded(child: Text('له عمولة', style: TextStyle(fontWeight: FontWeight.w700))),
+                          Checkbox(
+                            shape: const CircleBorder(),
+                            value: hasCommission,
+                            onChanged: rep == null ? null : (value) => _saveRep(employee, {'has_commission': value == true}),
+                          ),
+                        ]),
+                        if (hasCommission)
+                          DropdownButtonFormField<String>(
+                            value: type,
+                            isDense: true,
+                            decoration: const InputDecoration(labelText: 'نوع العمولة', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 7)),
+                            items: const [
+                              DropdownMenuItem(value: 'tiered', child: Text('شريحة')),
+                              DropdownMenuItem(value: 'percentage', child: Text('نسبة من المحقق')),
+                              DropdownMenuItem(value: 'points_per_unit', child: Text('نقاط لكل وحدة')),
+                            ],
+                            onChanged: rep == null ? null : (value) {
+                              if (value != null) _saveRep(employee, {'commission_type': value});
+                            },
+                          ),
+                        const Spacer(),
+                        SizedBox(
+                          height: 38,
+                          child: OutlinedButton.icon(
+                            onPressed: rep == null ? null : () => _linkCustomers(employee),
+                            icon: const Icon(Icons.group_add_outlined, size: 17),
+                            label: Text('ربط العملاء ($assignedCount)'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }),
+        ],
+      ),
+    );
   }
 }
