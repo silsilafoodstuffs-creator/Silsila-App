@@ -204,6 +204,20 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
     }
   }
 
+  String _elementSummary(dynamic raw) {
+    if (raw is! Map) return '';
+    final values=Map<String,dynamic>.from(raw);
+    final parts=<String>[];
+    for(final entry in values.entries){
+      final amount=_n(entry.value);
+      if(amount<=0)continue;
+      final element=_salaryElements.where((e)=>_s(e['id'])==entry.key);
+      if(element.isEmpty)continue;
+      parts.add(_s(element.first['name_ar'])+' '+_money(amount));
+    }
+    return parts.join(' • ');
+  }
+
   String _employeeLabel(String id) {
     final rows = _employees.where((r) => _s(r['id']) == id);
     return rows.isEmpty ? id : '${_s(rows.first['employee_code'])} — ${_s(rows.first['full_name'])}';
@@ -335,7 +349,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
                 const SizedBox(height: 12),
                 const Text('عناصر المرتبات المعرفة', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF3E007D))),
                 const SizedBox(height: 6),
-                Wrap(spacing: 8, runSpacing: 8, children: _salaryElements.map((element) => SizedBox(width: 210, child: _amountField('${_s(element['name_ar'])} • ${_s(element['element_type']) == 'earning' ? 'استحقاق' : 'استقطاع'} • ${_s(element['nature']) == 'days' ? 'يوم' : _s(element['nature']) == 'time' ? 'دقيقة' : 'قيمة'}', _elementValueControllers[_s(element['id'])]!))).toList()),
+                Wrap(spacing: 8, runSpacing: 8, children: _salaryElements.map((element) => SizedBox(width: 210, child: _amountField('${_s(element['name_ar'])} • ${_s(element['element_type']) == 'earning' ? 'استحقاق' : 'استقطاع'} • ${_s(element['nature']) == 'days' ? 'يوم' : _s(element['nature']) == 'time' ? 'دقيقة' : 'قيمة'}', _elementValueControllers[_s(element['id'])]!, enabled: element['is_system_locked'] != true && _s(element['element_code']) != 'SYSSTOCKSHORTAGE'))).toList()),
               ],
               const SizedBox(height: 8),
               FilledButton.icon(onPressed: _saving ? null : _addLine, icon: const Icon(Icons.person_add_alt_1), label: const Text('إضافة إلى المسير')),
@@ -343,7 +357,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
           ))),
           ..._lines.map((line) => Card(child: ListTile(
             title: Text(_employeeLabel(_s(line['employee_id']))),
-            subtitle: Text('أساسي ${_money(line['basic_amount'])} • بدلات ${_money(line['allowances'])} • عمولات ${_money(line['commissions'])} • إضافي ${_money(line['overtime_amount'])}\nاستقطاعات ${_money(line['deductions'])}'),
+            subtitle: Text('أساسي ${_money(line['basic_amount'])} • بدلات ${_money(line['allowances'])} • عمولات ${_money(line['commissions'])} • إضافي ${_money(line['overtime_amount'])}\nاستقطاعات ${_money(line['deductions'])}'+(_elementSummary(line['element_values']).isEmpty?'':'\nعناصر المرتبات: '+_elementSummary(line['element_values']))),
             isThreeLine: true,
             trailing: Text('${_money(line['net_amount'])} ج.م', style: const TextStyle(fontWeight: FontWeight.w900)),
           ))),
@@ -359,8 +373,8 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
     onChanged: onChanged,
   );
 
-  Widget _amountField(String label, TextEditingController controller) => TextField(
-    controller: controller, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+  Widget _amountField(String label, TextEditingController controller, {bool enabled = true}) => TextField(
+    controller: controller, enabled: enabled, keyboardType: const TextInputType.numberWithOptions(decimal: true),
     decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
   );
 
