@@ -100,8 +100,13 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   double countedBase(Map<String,dynamic> l){final f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);final entered=n(counts[s(l['id'])]?.text)*f;final manual=docs.any((d)=>s(d['id'])==docId&&s(d['source'])=='manual');return manual?n(l['physical_snapshot'])+entered:entered;}
   double get shortage=>lines.fold<double>(0,(sum,l){final d=countedBase(l)-n(l['physical_snapshot']);return sum+(d<0?d.abs()*n(l['valuation_price']):0);});
   bool get canDeleteManualDraft=>_manualSettlementScreen&&isDraft&&docs.any((d)=>s(d['id'])==docId&&s(d['source'])=='manual');
+  bool get canEditDraft {
+    if(!isDraft)return false;
+    final current=docs.where((d)=>s(d['id'])==docId);
+    return !(_manualSettlementScreen&&current.isNotEmpty&&s(current.first['source'])=='stocktake');
+  }
   bool get canEditLines {
-    if(!isDraft||!editing)return false;
+    if(!canEditDraft||!editing)return false;
     final current=docs.where((d)=>s(d['id'])==docId);
     if(_manualSettlementScreen&&current.isNotEmpty&&s(current.first['source'])=='stocktake')return false;
     return true;
@@ -158,7 +163,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   }
 
 
-  void editDraft(){if(!isDraft)return;setState(() {editing=true;message='تم تفعيل تعديل كميات الجرد. احفظ المسودة قبل الترحيل.';});}
+  void editDraft(){if(!canEditDraft)return;setState(() {editing=true;message='تم تفعيل تعديل كميات الجرد. احفظ المسودة قبل الترحيل.';});}
   void previewDraft(){
     showDialog<void>(context:context,builder:(ctx)=>AlertDialog(
       title:const Text('معاينة محضر الجرد'),
@@ -235,7 +240,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
           ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:loading?null:load),
           ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:saving||(_manualSettlementScreen&&(sourceMode!='manual'||docId!=null))?null:createDoc),
           ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:saving||!isDraft?null:saveDraft),
-          ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:saving||!isDraft?null:editDraft),
+          ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:saving||!canEditDraft?null:editDraft),
           ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:saving||!canDeleteManualDraft?null:deleteManualDraft),
           ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:previewDraft),
           ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>exportPdf(share:false)),
