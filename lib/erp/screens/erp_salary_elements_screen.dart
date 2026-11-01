@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:typed_data';
+import 'package:excel/excel.dart' as excel;
+import 'package:file_saver/file_saver.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -174,9 +177,9 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
         ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:_rows.isEmpty?null:()=>_edit(row:_rows.first)),
         ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:_rows.isEmpty?null:()=>_delete(_rows.first)),
         ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:_load),
-        ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:_load),
-        ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:_load),
-        ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf,onPressed:_load),
+        ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>_printElements(share:false)),
+        ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:_exportElementsExcel),
+        ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf,onPressed:()=>_printElements(share:true)),
       ])),
     ]))),
     if(_loading)const LinearProgressIndicator(),
@@ -197,6 +200,37 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
       ]);}), if(_showNewRow) _newElementRow()],
     )))),
   ]));
+
+
+  Future<void> _printElements({required bool share}) async {
+    if(_rows.isEmpty){setState(()=>_message='لا توجد عناصر مرتبات لتصديرها.');return;}
+    try{
+      final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+      final doc=pw.Document();
+      doc.addPage(pw.MultiPage(theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
+        pw.Text('عناصر المرتبات',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
+        pw.SizedBox(height:8),
+        pw.TableHelper.fromTextArray(headers:const ['م','الكود','اسم العنصر','النوع','طريقة الحساب','الطبيعة','القيمة الافتراضية','الحالة'],data:_rows.asMap().entries.map((e){
+          final r=e.value;
+          return [e.key+1,_s(r['element_code']),_s(r['name_ar']),_s(r['element_type'])=='deduction'?'استقطاع':'استحقاق',_s(r['value_mode'])=='variable'?'متغير':'ثابت',_s(r['nature']),_s(r['default_value']),r['is_active']==true?'نشط':'موقوف'];
+        }).toList()),
+      ]));
+      final bytes=await doc.save();
+      if(share){await Printing.sharePdf(bytes:bytes,filename:'Silsila-Salary-Elements.pdf');}
+      else{await Printing.layoutPdf(onLayout:(_)=>Future.value(bytes));}
+    }catch(e){if(mounted)setState(()=>_error='تعذر إنشاء ملف PDF: $e');}
+  }
+  Future<void> _exportElementsExcel() async {
+    if(_rows.isEmpty){setState(()=>_message='لا توجد عناصر مرتبات لتصديرها.');return;}
+    try{
+      final book=excel.Excel.createExcel();final sheet=book['عناصر المرتبات'];
+      sheet.appendRow([excel.TextCellValue('م'),excel.TextCellValue('الكود'),excel.TextCellValue('اسم العنصر'),excel.TextCellValue('النوع'),excel.TextCellValue('طريقة الحساب'),excel.TextCellValue('الطبيعة'),excel.TextCellValue('القيمة الافتراضية'),excel.TextCellValue('ظاهر في شريط القبض'),excel.TextCellValue('الحالة'),excel.TextCellValue('عنصر نظامي')]);
+      for(var i=0;i<_rows.length;i++){final r=_rows[i];sheet.appendRow([excel.IntCellValue(i+1),excel.TextCellValue(_s(r['element_code'])),excel.TextCellValue(_s(r['name_ar'])),excel.TextCellValue(_s(r['element_type'])),excel.TextCellValue(_s(r['value_mode'])),excel.TextCellValue(_s(r['nature'])),excel.DoubleCellValue(_n(r['default_value'])),excel.TextCellValue(r['show_on_payslip']==true?'نعم':'لا'),excel.TextCellValue(r['is_active']==true?'نشط':'موقوف'),excel.TextCellValue(_locked(r)?'نعم':'لا')]);}
+      final bytes=book.encode();if(bytes==null||bytes.isEmpty)throw StateError('تعذر إنشاء ملف Excel.');
+      await FileSaver.instance.saveFile(name:'silsila_salary_elements_${DateTime.now().millisecondsSinceEpoch}',bytes:Uint8List.fromList(bytes),fileExtension:'xlsx',mimeType:MimeType.microsoftExcel);
+      if(mounted)setState(()=>_message='تم تصدير عناصر المرتبات إلى Excel.');
+    }catch(e){if(mounted)setState(()=>_error='تعذر تصدير Excel: $e');}
+  }
 
   Widget _notice(String text,Color color)=>Container(margin:const EdgeInsets.symmetric(vertical:6),padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:color.withValues(alpha:.08),borderRadius:BorderRadius.circular(8)),child:Text(text,style:TextStyle(color:color)));
 }
