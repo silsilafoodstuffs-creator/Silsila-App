@@ -179,8 +179,16 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     setState(() => _itemsLoadingMore = true);
     try {
       final rows = await _repo.fetchItems(_company.text.trim(), offset: _itemsOffset, pageSize: 500, search: _itemSearch.text);
+      final ids = rows.map((r) => _s(r['id'])).toList();
+      final extra = await Future.wait([
+        _repo.fetchItemUnits(_company.text.trim(), ids),
+        _repo.fetchItemWarehouseSettings(_company.text.trim(), ids),
+      ]);
       if (!mounted) return;
-      setState(() { _items.addAll(rows); _itemsOffset += rows.length; _itemsHasMore = rows.length == 500; _itemsLoadingMore = false; });
+      setState(() {
+        _items.addAll(rows); _itemUnits.addAll(extra[0]); _warehouseItemSettings.addAll(extra[1]);
+        _itemsOffset += rows.length; _itemsHasMore = rows.length == 500; _itemsLoadingMore = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() { _itemsLoadingMore = false; _error = 'تعذر تحميل صفحة الأصناف التالية: $e'; });
