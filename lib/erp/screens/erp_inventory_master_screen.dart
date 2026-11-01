@@ -788,7 +788,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       ..sort((a, b) => _n(b['conversion_factor']).compareTo(_n(a['conversion_factor'])));
     final seenNames = <String>{};
     return candidates.where((unit) {
-      final name = _s(unit['unit_name']).trim().replaceAll(RegExp(r'\\s+'), ' ').toLowerCase();
+      final name = _s(unit['unit_name']).trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
       return name.isNotEmpty && seenNames.add(name);
     }).toList();
   }
