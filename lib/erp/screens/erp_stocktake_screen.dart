@@ -72,7 +72,9 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     if(!isDraft){setState(()=>error='المحضر ليس مسودة قابلة للتعديل.');return;}
     setState(() { saving=true; error=null; message=null; });
     try{
-      for(final l in lines){final q=countedBase(l);if(q<0)throw ArgumentError('لا يمكن إدخال كمية سالبة.');await db.from('erp_stocktake_lines').update({'counted_quantity':q}).eq('id',s(l['id'])).eq('stocktake_id',docId!);}
+      final payload=lines.map((l)=>{'line_id':s(l['id']),'counted_quantity':countedBase(l)}).toList();
+      if(payload.any((r)=>(r['counted_quantity'] as double)<0))throw ArgumentError('لا يمكن إدخال كمية سالبة.');
+      await db.rpc('erp_save_physical_stocktake_counts',params:{'p_stocktake_id':docId,'p_counts':payload});
       await loadLines(docId!);if(mounted)setState(()=>message='تم حفظ المسودة دون تغيير الأرصدة المخزنية.');
     }catch(e){if(mounted)setState(()=>error='تعذر حفظ المسودة: '+e.toString());}
     finally{if(mounted)setState(()=>saving=false);}
@@ -117,11 +119,11 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       ]))),
       if(current!=null)...[
         Padding(padding:const EdgeInsets.all(8),child:Text('تفاصيل المحضر • '+warehouseName(current['warehouse_id'])+' • '+s(current['status']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17))),
-        if(isDraft)Wrap(spacing:8,runSpacing:6,children:[
+        if(isDraft && shortage>0)Wrap(spacing:8,runSpacing:6,children:[
           SegmentedButton<String>(segments:const [ButtonSegment(value:'employee',label:Text('موظف')),ButtonSegment(value:'expense',label:Text('بند صرف'))],selected:{targetType},onSelectionChanged:(v)=>setState(() { targetType=v.first; targetId=null; })),
           SizedBox(width:300,child:DropdownButtonFormField<String>(value:targetId,isExpanded:true,decoration:const InputDecoration(labelText:'توجيه قيمة العجز'),items:targets.map((r)=>DropdownMenuItem(value:s(r['id']),child:Text(targetName(r),overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setState(()=>targetId=v))),
-          Text('قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:TextStyle(fontWeight:FontWeight.w800,color:shortage>0?Colors.red:Colors.green)),
-        ]),
+          Text('قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:const TextStyle(fontWeight:FontWeight.w800,color:Colors.red)),
+        ]) else if(isDraft) Padding(padding:const EdgeInsets.only(bottom:8),child:Text('لا توجد قيمة عجز حالياً؛ توجيه العجز غير مطلوب. قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:const TextStyle(color:Colors.green,fontWeight:FontWeight.w700))),
         Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columns:const [
           DataColumn(label:Text('م')),DataColumn(label:Text('كود الصنف')),DataColumn(label:Text('اسم الصنف')),
           DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),
@@ -133,7 +135,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
             DataCell(Text((i+1).toString())),DataCell(Text(s(it['item_code']))),DataCell(Text(s(it['item_name']))),
             DataCell(Text((n(l['available_snapshot'])/f).toStringAsFixed(3))),DataCell(Text((n(l['reserved_snapshot'])/f).toStringAsFixed(3))),
             DataCell(Text((n(l['physical_snapshot'])/f).toStringAsFixed(3))),
-            DataCell(SizedBox(width:100,child:TextField(controller:counts[s(l['id'])],enabled:isDraft,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
+            DataCell(SizedBox(width:100,child:TextField(controller:counts[s(l['id'])],enabled:isDraft,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState((){}),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
             DataCell(Text((diff/f).toStringAsFixed(3))),
             DataCell(Text(diff<0?'عجز':diff>0?'زيادة':'مطابق',style:TextStyle(fontWeight:FontWeight.w800,color:diff<0?Colors.red:diff>0?Colors.green:Colors.black54))),
             DataCell(Text((diff.abs()*n(l['valuation_price'])).toStringAsFixed(2))),
