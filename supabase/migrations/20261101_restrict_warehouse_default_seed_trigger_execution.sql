@@ -1,0 +1,1 @@
+revoke all on function public.erp_seed_item_warehouse_defaults_after_warehouse() from public,anon,authenticated;
