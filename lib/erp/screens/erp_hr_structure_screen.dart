@@ -521,6 +521,17 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   String _quickCode(Map<String,dynamic> row) => (row[_quickKind=='department'?'department_code':_quickKind=='location'?'location_code':_quickKind=='grade'?'grade_code':'job_code']??'').toString();
   String _quickName(Map<String,dynamic> row) => (row['name_ar']??'').toString();
   Future<void> _quickAdd() async {
+    if(!_departmentMode && _tabs.index==1){
+      if(_jobs.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('أضف وظيفة أولاً قبل تعريف متطلبات التعيين.')));return;}
+      String? selectedId;
+      final chosen=await showDialog<String>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setDialogState)=>AlertDialog(
+        title:const Text('اختر الوظيفة لتعديل متطلبات التعيين'),
+        content:DropdownButtonFormField<String>(isExpanded:true,decoration:const InputDecoration(labelText:'الوظيفة'),items:_jobs.map((j)=>DropdownMenuItem(value:j['id'].toString(),child:Text(j['job_code'].toString()+' — '+j['name_ar'].toString(),overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setDialogState(()=>selectedId=v)),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>selectedId==null?null:Navigator.pop(ctx,selectedId),child:const Text('متابعة'))],
+      )));
+      if(chosen!=null){final job=_jobs.firstWhere((j)=>j['id'].toString()==chosen);await _editJobRequirements(job);}
+      return;
+    }
     switch(_quickKind){case 'department':await _add('department');break;case 'location':await _add('location');break;case 'grade':await _addGrade();break;default:await _add('job');}
   }
   Future<void> _quickEdit() async {
