@@ -471,6 +471,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       _quickTask('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _previewDirectory),
       _quickTask('Excel', Icons.file_download_outlined, const Color(0xFF16834A), _previewDirectory),
       _quickTask('PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _previewDirectory),
+      _quickTask('خرائط Google', Icons.map_outlined, const Color(0xFF2475B8), _singleSelectedBranch == null ? null : () => _openBranchInGoogleMaps(_singleSelectedBranch!)),
     ]),
   );
 
