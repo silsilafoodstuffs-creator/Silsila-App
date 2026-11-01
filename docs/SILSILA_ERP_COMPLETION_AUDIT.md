@@ -48,7 +48,7 @@
 | المخازن والأصناف | `erp_inventory_master_screen.dart`, `erp_inventory_screen.dart`, `erp_item_categories_screen.dart`, `erp_item_units_screen.dart`, `erp_item_offers_screen.dart`, `erp_item_data_import_download_screen.dart`, `erp_image_collector_screen.dart`, `erp_stocktake_screen.dart`, `erp_movement_audit_screen.dart` |
 | المبيعات والمشتريات | `erp_operational_documents_screen.dart`, `erp_sales_fulfillment_screen.dart`, `erp_sales_targets_commissions_screen.dart`, `erp_delegate_allocation_screen.dart`, `erp_customer_credit_screen.dart`, `erp_customer_shortages_screen.dart`, `erp_supplier_deferred_commissions_screen.dart`, `erp_public_leads_screen.dart`, `erp_price_lists_screen.dart` |
 | الموارد البشرية والرواتب | `erp_employee_master_screen.dart`, `erp_hr_structure_screen.dart`, `erp_hr_operations_screen.dart`, `erp_hr_leave_screen.dart`, `erp_salary_elements_screen.dart`, `erp_payroll_screen.dart`, `hr_attendance_rules_screen.dart` |
-| المستخدمون والصلاحيات | `erp_user_admin_screen.dart`, `erp_user_classifications_screen.dart`, `erp_permissions_screen.dart`, `erp_company_members_screen.dart`, `erp_login_gate.dart` |
+| المستخدمون والصلاحيات | `erp_user_admin_screen.dart`, `erp_user_admin_screen_backup.dart` (نسخة احتياطية وليست شاشة تشغيل مستقلة), `erp_user_classifications_screen.dart`, `erp_permissions_screen.dart`, `erp_company_members_screen.dart`, `erp_login_gate.dart` |
 | الفاتورة الإلكترونية والتقارير | `erp_einvoice_screen.dart`, `erp_report_center_screen.dart` |
 
 ## 5. فجوات مؤكدة تحتاج تنفيذًا متخصصًا أو اختبارًا مستقلًا
