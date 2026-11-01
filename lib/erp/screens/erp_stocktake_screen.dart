@@ -100,6 +100,12 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   double countedBase(Map<String,dynamic> l){final f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);final entered=n(counts[s(l['id'])]?.text)*f;final manual=docs.any((d)=>s(d['id'])==docId&&s(d['source'])=='manual');return manual?n(l['physical_snapshot'])+entered:entered;}
   double get shortage=>lines.fold<double>(0,(sum,l){final d=countedBase(l)-n(l['physical_snapshot']);return sum+(d<0?d.abs()*n(l['valuation_price']):0);});
   bool get canDeleteManualDraft=>_manualSettlementScreen&&isDraft&&docs.any((d)=>s(d['id'])==docId&&s(d['source'])=='manual');
+  bool get canEditLines {
+    if(!isDraft||!editing)return false;
+    final current=docs.where((d)=>s(d['id'])==docId);
+    if(_manualSettlementScreen&&current.isNotEmpty&&s(current.first['source'])=='stocktake')return false;
+    return true;
+  }
 
   bool get isDraft {
     final matches=docs.where((d)=>s(d['id'])==docId);
@@ -278,7 +284,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
               DataCell(Text(n(breakdown['majorQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['majorUnit']))),DataCell(Text(n(breakdown['middleQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['middleUnit']))),DataCell(Text(n(breakdown['minorQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['minorUnit']))),
             ],
             DataCell(Text(unit.isEmpty?'—':s(unit.first['unit_name']))),
-            DataCell(SizedBox(width:125,child:TextField(controller:counts[s(l['id'])],enabled:isDraft&&editing,keyboardType:const TextInputType.numberWithOptions(signed:true,decimal:true),onChanged:(_)=>setState(()=>error=null),decoration:InputDecoration(isDense:true,border:const OutlineInputBorder(),hintText:_manualSettlementScreen&&s(current['source'])=='manual'?'0 = دون فرق':'كمية فعلية')))),
+            DataCell(SizedBox(width:125,child:TextField(controller:counts[s(l['id'])],enabled:canEditLines,keyboardType:const TextInputType.numberWithOptions(signed:true,decimal:true),onChanged:(_)=>setState(()=>error=null),decoration:InputDecoration(isDense:true,border:const OutlineInputBorder(),hintText:_manualSettlementScreen&&s(current['source'])=='manual'?'0 = دون فرق':'كمية فعلية')))),
             DataCell(Text((diff>0?diff/f:0).toStringAsFixed(3))),DataCell(Text((diff<0?-diff/f:0).toStringAsFixed(3))),DataCell(Text((countedBase(l)/f).toStringAsFixed(3))),
             DataCell(Text((diff/f).toStringAsFixed(3))),
             DataCell(Text(diff<0?'عجز':diff>0?'زيادة':'مطابق',style:TextStyle(fontWeight:FontWeight.w800,color:diff<0?Colors.red:diff>0?Colors.green:Colors.black54))),
