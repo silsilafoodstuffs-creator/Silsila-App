@@ -106,7 +106,12 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       }
     }
     if (_company.text.trim().isEmpty) {
-      setState(() => _error = 'لم يتم العثور على شركة نشطة لحسابك. افتح بيانات الشركة أو تحقق من عضوية الشركة.');
+      setState(() {
+        _loading = false;
+        _warehouses = [];
+        _branches = [];
+        _error = 'لم يتم العثور على شركة نشطة لحسابك. افتح بيانات الشركة أو تحقق من عضوية الشركة.';
+      });
       return;
     }
     setState(() { _loading = true; _error = null; if (clearMessage) _message = null; });
@@ -130,10 +135,13 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         loadPart('الفروع', () => _repo.fetchBranches(companyId)),
         loadPart('فئات الأصناف', () => _repo.fetchCategories(companyId)),
       ]);
+      // Optional item-unit settings must never block the primary warehouse/branch
+      // directory. Load each auxiliary dataset independently and preserve the
+      // successfully fetched warehouse rows if one optional query is unavailable.
       final itemIds = values[1].map((r) => _s(r['id'])).toList();
-      final extra = await Future.wait([
-        _repo.fetchItemUnits(companyId, itemIds),
-        _repo.fetchItemWarehouseSettings(companyId, itemIds),
+      final extra = await Future.wait<List<Map<String, dynamic>>>([
+        loadPart('وحدات قياس الأصناف', () => _repo.fetchItemUnits(companyId, itemIds)),
+        loadPart('إعدادات الأصناف حسب المخزن', () => _repo.fetchItemWarehouseSettings(companyId, itemIds)),
       ]);
       List<Map<String, dynamic>> geoRows = [];
       try {
@@ -632,7 +640,13 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           )),
         const SizedBox(height: 12),
         Text('المخازن المسجلة • ' + _warehouses.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-        ..._warehouses.map((w) => Card(child: ListTile(
+        if (_warehouses.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text('لا توجد مخازن مسجلة لهذه الشركة حتى الآن. يمكنك إضافة مخزن من النموذج أعلاه، أو الضغط على «تحديث» لإعادة التحميل.'),
+          )
+        else
+          ..._warehouses.map((w) => Card(child: ListTile(
           leading: const Icon(Icons.warehouse_outlined, color: Color(0xFF3E007D)),
           title: Text((_s(w['parent_warehouse_id']).isEmpty ? '' : '↳ ') + _s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name'])),
           subtitle: Text(_branchName(_s(w['branch_id'])) + (_s(w['address']).isEmpty ? '' : '\n' + _s(w['address'])) + (_s(w['parent_warehouse_id']).isEmpty ? '' : '\nمخزن فرعي تابع لـ ' + _warehouseParentName(_s(w['parent_warehouse_id'])))),
