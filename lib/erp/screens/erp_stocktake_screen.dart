@@ -1,0 +1,146 @@
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../widgets/erp_quick_task_button.dart';
+
+class ErpStocktakeScreen extends StatefulWidget {
+  const ErpStocktakeScreen({super.key, required this.companyId});
+  final String companyId;
+  @override
+  State<ErpStocktakeScreen> createState() => _ErpStocktakeScreenState();
+}
+
+class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
+  final db=Supabase.instance.client;
+  final notes=TextEditingController();
+  final counts=<String,TextEditingController>{};
+  List<Map<String,dynamic>> warehouses=[],docs=[],items=[],lines=[],employees=[],expenses=[];
+  String? warehouseId,docId,targetId;
+  String countMode='detailed',targetType='employee';
+  bool loading=false,saving=false;
+  String? error,message;
+  String s(dynamic v)=>(v??'').toString();
+  double n(dynamic v)=>v is num?v.toDouble():double.tryParse(s(v))??0;
+  String warehouseName(dynamic id){final a=warehouses.where((w)=>s(w['id'])==s(id));return a.isEmpty?s(id):s(a.first['warehouse_code'])+' — '+s(a.first['warehouse_name']);}
+  String itemName(dynamic id){final a=items.where((w)=>s(w['id'])==s(id));return a.isEmpty?s(id):s(a.first['item_code'])+' — '+s(a.first['item_name']);}
+  String targetName(Map<String,dynamic> r)=>targetType=='employee'?s(r['employee_code'])+' — '+s(r['full_name']):s(r['item_code'])+' — '+s(r['name_ar']);
+  @override void initState(){super.initState();load();}
+  @override void dispose(){notes.dispose();for(final c in counts.values){c.dispose();}super.dispose();}
+
+  Future<void> load() async {
+    if(widget.companyId.isEmpty){setState(()=>error='لا توجد شركة محددة.');return;}
+    setState(()=>loading=true);
+    try{
+      final v=await Future.wait<dynamic>([
+        db.from('erp_warehouses').select('id,warehouse_code,warehouse_name,is_active').eq('company_id',widget.companyId).eq('is_active',true).order('warehouse_code'),
+        db.from('erp_stocktakes').select('id,warehouse_id,status,count_mode,valuation_basis,created_at,notes').eq('company_id',widget.companyId).order('created_at',ascending:false).limit(100),
+        db.from('erp_items').select('id,item_code,item_name').eq('company_id',widget.companyId),
+        db.from('erp_employees').select('id,employee_code,full_name').eq('company_id',widget.companyId).eq('is_active',true).order('employee_code'),
+        db.from('erp_stocktake_expense_items').select('id,item_code,name_ar').eq('company_id',widget.companyId).eq('is_active',true).order('item_code'),
+      ]);
+      if(!mounted)return;
+      setState(()=>{warehouses=List<Map<String,dynamic>>.from(v[0]),docs=List<Map<String,dynamic>>.from(v[1]),items=List<Map<String,dynamic>>.from(v[2]),employees=List<Map<String,dynamic>>.from(v[3]),expenses=List<Map<String,dynamic>>.from(v[4]),warehouseId??=(warehouses.isEmpty?null:s(warehouses.first['id'])),loading=false,error=null});
+      if(docId!=null)await loadLines(docId!);
+    }catch(e){if(mounted)setState(()=>{loading=false,error='تعذر تحميل بيانات الجرد: '+e.toString()});}
+  }
+
+  Future<void> loadLines(String id) async {
+    try{
+      final raw=await db.from('erp_stocktake_lines').select('id,item_id,warehouse_id,available_snapshot,reserved_snapshot,physical_snapshot,counted_quantity,variance_quantity,unit_id,conversion_factor,valuation_price,valuation_value').eq('stocktake_id',id).order('created_at');
+      for(final c in counts.values){c.dispose();} counts.clear();
+      final data=List<Map<String,dynamic>>.from(raw);
+      for(final l in data){final f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);counts[s(l['id'])]=TextEditingController(text:(n(l['counted_quantity'])/f).toStringAsFixed(3).replaceFirst(RegExp(r'\.000$'),''));}
+      if(mounted)setState(()=>lines=data);
+    }catch(e){if(mounted)setState(()=>error='تعذر تحميل تفاصيل الجرد: '+e.toString());}
+  }
+
+  Future<void> createDoc() async {
+    if(warehouseId==null){setState(()=>error='اختر المخزن أولاً.');return;}
+    setState(()=>saving=true);
+    try{
+      final id=await db.rpc('erp_create_physical_stocktake',params:{'p_company_id':widget.companyId,'p_warehouse_id':warehouseId,'p_count_mode':countMode,'p_valuation_basis':null,'p_notes':notes.text.trim().isEmpty?null:notes.text.trim()});
+      docId=id.toString();notes.clear();await load();await loadLines(docId!);
+      if(mounted)setState(()=>{saving=false,message='تم إنشاء محضر الجرد ولقطة الأرصدة.'});
+    }catch(e){if(mounted)setState(()=>{saving=false,error='تعذر إنشاء محضر الجرد: '+e.toString()});}
+  }
+
+  double countedBase(Map<String,dynamic> l){final f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);return (n(counts[s(l['id'])]?.text)*f);}
+  double get shortage=>lines.fold<double>(0,(sum,l){final d=countedBase(l)-n(l['physical_snapshot']);return sum+(d<0?d.abs()*n(l['valuation_price']):0);});
+  bool get isDraft=>docs.any((d)=>s(d['id'])==docId&&s(d['status'])=='draft');
+
+  Future<void> saveDraft() async {
+    if(!isDraft){setState(()=>error='المحضر ليس مسودة قابلة للتعديل.');return;}
+    setState(()=>saving=true);
+    try{
+      for(final l in lines){final q=countedBase(l);if(q<0)throw ArgumentError('لا يمكن إدخال كمية سالبة.');await db.from('erp_stocktake_lines').update({'counted_quantity':q}).eq('id',s(l['id'])).eq('stocktake_id',docId!);}
+      await loadLines(docId!);if(mounted)setState(()=>message='تم حفظ المسودة دون تغيير الأرصدة المخزنية.');
+    }catch(e){if(mounted)setState(()=>error='تعذر حفظ المسودة: '+e.toString());}
+    finally{if(mounted)setState(()=>saving=false);}
+  }
+
+  Future<void> postDoc() async {
+    if(!isDraft)return;
+    await saveDraft();if(!mounted||error!=null)return;
+    if(shortage>0&&targetId==null){setState(()=>error='توجد قيمة عجز؛ اختر الموظف أو بند الصرف أولاً.');return;}
+    setState(()=>saving=true);
+    try{
+      final result=await db.rpc('erp_post_physical_stocktake',params:{'p_stocktake_id':docId,'p_target_type':shortage>0?targetType:null,'p_target_id':shortage>0?targetId:null});
+      if(mounted)setState(()=>message='تم ترحيل الجرد وتسجيل حركات التسوية. '+result.toString());
+      await load();await loadLines(docId!);
+    }catch(e){if(mounted)setState(()=>error='تعذر ترحيل الجرد: '+e.toString());}
+    finally{if(mounted)setState(()=>saving=false);}
+  }
+
+  @override Widget build(BuildContext context){
+    final doc=docs.where((d)=>s(d['id'])==docId);final current=doc.isEmpty?null:doc.first;
+    final targets=targetType=='employee'?employees:expenses;
+    return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      Card(color:const Color(0xFF3E007D),child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        const Text('الجرد الفعلي للمخازن',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),
+        const Text('لقطة أرصدة، إدخال الكميات الفعلية، مراجعة الفروقات ثم الترحيل.',style:TextStyle(color:Colors.white70)),
+        const SizedBox(height:8),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+          ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:loading?null:load),
+          ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:saving?null:createDoc),
+          ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:saving||!isDraft?null:saveDraft),
+          ErpQuickTaskButton(label:'ترحيل',icon:Icons.verified_outlined,onPressed:saving||!isDraft?null:postDoc),
+        ])),
+      ]))),
+      if(loading||saving)const LinearProgressIndicator(),
+      if(error!=null)notice(error!,Colors.red),if(message!=null)notice(message!,Colors.green),
+      Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        const Text('إنشاء محضر جرد جديد',style:TextStyle(fontWeight:FontWeight.w900,fontSize:17)),
+        DropdownButtonFormField<String>(value:warehouseId,isExpanded:true,decoration:const InputDecoration(labelText:'المخزن'),items:warehouses.map((w)=>DropdownMenuItem(value:s(w['id']),child:Text(warehouseName(w['id'])))).toList(),onChanged:(v)=>setState(()=>warehouseId=v)),
+        DropdownButtonFormField<String>(value:countMode,decoration:const InputDecoration(labelText:'وضع الجرد'),items:const [DropdownMenuItem(value:'default',child:Text('الوحدة الافتراضية للمخزن')),DropdownMenuItem(value:'detailed',child:Text('جرد تفصيلي'))],onChanged:(v)=>setState(()=>countMode=v??countMode)),
+        TextField(controller:notes,decoration:const InputDecoration(labelText:'ملاحظات المحضر')),
+        const SizedBox(height:8),const Text('المحاضر السابقة',style:TextStyle(fontWeight:FontWeight.w800)),
+        DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(()=>docId=v);if(v!=null)await loadLines(v);}),
+      ]))),
+      if(current!=null)...[
+        Padding(padding:const EdgeInsets.all(8),child:Text('تفاصيل المحضر • '+warehouseName(current['warehouse_id'])+' • '+s(current['status']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17))),
+        if(isDraft)Wrap(spacing:8,runSpacing:6,children:[
+          SegmentedButton<String>(segments:const [ButtonSegment(value:'employee',label:Text('موظف')),ButtonSegment(value:'expense',label:Text('بند صرف'))],selected:{targetType},onSelectionChanged:(v)=>setState(()=>{targetType=v.first,targetId=null})),
+          SizedBox(width:300,child:DropdownButtonFormField<String>(value:targetId,isExpanded:true,decoration:const InputDecoration(labelText:'توجيه قيمة العجز'),items:targets.map((r)=>DropdownMenuItem(value:s(r['id']),child:Text(targetName(r),overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setState(()=>targetId=v))),
+          Text('قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:TextStyle(fontWeight:FontWeight.w800,color:shortage>0?Colors.red:Colors.green)),
+        ]),
+        Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columns:const [
+          DataColumn(label:Text('م')),DataColumn(label:Text('كود الصنف')),DataColumn(label:Text('اسم الصنف')),
+          DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),
+          DataColumn(label:Text('كمية الجرد')),DataColumn(label:Text('الفرق')),DataColumn(label:Text('نوع الفرق')),DataColumn(label:Text('قيمة الفرق')),
+        ],rows:List.generate(lines.length,(i){
+          final l=lines[i],f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']),diff=countedBase(l)-n(l['physical_snapshot']);
+          final item=items.where((x)=>s(x['id'])==s(l['item_id']));final it=item.isEmpty?<String,dynamic>{}:item.first;
+          return DataRow(cells:[
+            DataCell(Text((i+1).toString())),DataCell(Text(s(it['item_code']))),DataCell(Text(s(it['item_name']))),
+            DataCell(Text((n(l['available_snapshot'])/f).toStringAsFixed(3))),DataCell(Text((n(l['reserved_snapshot'])/f).toStringAsFixed(3))),
+            DataCell(Text((n(l['physical_snapshot'])/f).toStringAsFixed(3))),
+            DataCell(SizedBox(width:100,child:TextField(controller:counts[s(l['id'])],enabled:isDraft,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder())))),
+            DataCell(Text((diff/f).toStringAsFixed(3))),
+            DataCell(Text(diff<0?'عجز':diff>0?'زيادة':'مطابق',style:TextStyle(fontWeight:FontWeight.w800,color:diff<0?Colors.red:diff>0?Colors.green:Colors.black54))),
+            DataCell(Text((diff.abs()*n(l['valuation_price'])).toStringAsFixed(2))),
+          ]);
+        })))),
+      ]else const Expanded(child:Center(child:Text('اختر محضراً أو أنشئ محضراً جديداً لعرض التفاصيل.'))),
+    ]));
+  }
+
+  Widget notice(String t,Color c)=>Container(margin:const EdgeInsets.symmetric(vertical:5),padding:const EdgeInsets.all(9),decoration:BoxDecoration(color:c.withValues(alpha:.09),borderRadius:BorderRadius.circular(9)),child:Text(t,style:TextStyle(color:c)));
+}
