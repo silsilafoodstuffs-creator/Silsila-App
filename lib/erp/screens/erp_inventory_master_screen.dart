@@ -298,7 +298,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
             const Text('الوحدة الكبرى محددة افتراضياً للشراء والبيع والتحويل، ويمكن تخصيص كل مخزن بصورة مستقلة.'),
             const SizedBox(height: 8),
             if (error != null) _notice(error!, Colors.red),
-            Flexible(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
+            Flexible(child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: SingleChildScrollView(child: DataTable(
               columns: const [
                 DataColumn(label: Text('م')), DataColumn(label: Text('كود الفرع')), DataColumn(label: Text('اسم الفرع')),
                 DataColumn(label: Text('كود المخزن')), DataColumn(label: Text('اسم المخزن')),
@@ -327,7 +327,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
                   DataCell(stopPicker('stop_purchase')), DataCell(stopPicker('stop_sale')), DataCell(stopPicker('stop_transfer')),
                 ]);
               }),
-            ))),
+            )))),
           ])),
           actions: [
             TextButton(onPressed: saving ? null : () => Navigator.pop(dialogContext), child: const Text('إغلاق')),
