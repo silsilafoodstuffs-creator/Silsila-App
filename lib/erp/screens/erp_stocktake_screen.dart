@@ -261,11 +261,10 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         if(isDraft)Align(alignment:AlignmentDirectional.centerStart,child:FilledButton.icon(onPressed:saving?null:postDoc,icon:const Icon(Icons.verified_outlined),label:const Text('ترحيل الجرد وتحديث الأرصدة'))),
         Align(alignment:AlignmentDirectional.centerStart,child:Text(s(current['count_mode'])=='detailed'?'تفصيلي الرصيد — عرض الكميات بالوحدات الكبرى والوسطى والصغرى':'الجرد بالوحدة الافتراضية المحددة للمخزن',style:const TextStyle(fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
         Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columns:[
-          DataColumn(label:Text('م')),DataColumn(label:Text('كود الصنف')),DataColumn(label:Text('اسم الصنف')),
           const DataColumn(label:Text('م')),const DataColumn(label:Text('كود الصنف')),const DataColumn(label:Text('اسم الصنف')),
           const DataColumn(label:Text('رصيد متاح')),const DataColumn(label:Text('رصيد حجز')),const DataColumn(label:Text('رصيد فعلي')),
           if(s(current['count_mode'])=='detailed')...const [DataColumn(label:Text('كمية كبرى')),DataColumn(label:Text('وحدة كبرى')),DataColumn(label:Text('كمية وسطى')),DataColumn(label:Text('وحدة وسطى')),DataColumn(label:Text('كمية صغرى')),DataColumn(label:Text('وحدة صغرى'))],
-          const DataColumn(label:Text('وحدة الجرد')),DataColumn(label:Text(_manualSettlementScreen?'فرق التسوية (+ زيادة / - عجز)':'كمية الجرد')),const DataColumn(label:Text('زيادة جرد')),const DataColumn(label:Text('عجز جرد')),const DataColumn(label:Text('الرصيد بعد التسوية')),const DataColumn(label:Text('الفرق')),const DataColumn(label:Text('نوع الفرق')),const DataColumn(label:Text('قيمة الفرق')),
+          const DataColumn(label:Text('وحدة الجرد')),DataColumn(label:Text(_manualSettlementScreen&&s(current['source'])=='manual'?'فرق التسوية (+ زيادة / - عجز)':'كمية الجرد')),const DataColumn(label:Text('زيادة جرد')),const DataColumn(label:Text('عجز جرد')),const DataColumn(label:Text('الرصيد بعد التسوية')),const DataColumn(label:Text('الفرق')),const DataColumn(label:Text('نوع الفرق')),const DataColumn(label:Text('قيمة الفرق')),
 
         ],rows:List.generate(lines.length,(i){
           final l=lines[i],f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']),diff=countedBase(l)-n(l['physical_snapshot']);
@@ -279,7 +278,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
               DataCell(Text(n(breakdown['majorQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['majorUnit']))),DataCell(Text(n(breakdown['middleQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['middleUnit']))),DataCell(Text(n(breakdown['minorQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['minorUnit']))),
             ],
             DataCell(Text(unit.isEmpty?'—':s(unit.first['unit_name']))),
-            DataCell(SizedBox(width:125,child:TextField(controller:counts[s(l['id'])],enabled:isDraft&&editing,keyboardType:const TextInputType.numberWithOptions(signed:true,decimal:true),onChanged:(_)=>setState(()=>error=null),decoration:InputDecoration(isDense:true,border:const OutlineInputBorder(),hintText:_manualSettlementScreen?'0 = دون فرق':'كمية فعلية')))),
+            DataCell(SizedBox(width:125,child:TextField(controller:counts[s(l['id'])],enabled:isDraft&&editing,keyboardType:const TextInputType.numberWithOptions(signed:true,decimal:true),onChanged:(_)=>setState(()=>error=null),decoration:InputDecoration(isDense:true,border:const OutlineInputBorder(),hintText:_manualSettlementScreen&&s(current['source'])=='manual'?'0 = دون فرق':'كمية فعلية')))),
             DataCell(Text((diff>0?diff/f:0).toStringAsFixed(3))),DataCell(Text((diff<0?-diff/f:0).toStringAsFixed(3))),DataCell(Text((countedBase(l)/f).toStringAsFixed(3))),
             DataCell(Text((diff/f).toStringAsFixed(3))),
             DataCell(Text(diff<0?'عجز':diff>0?'زيادة':'مطابق',style:TextStyle(fontWeight:FontWeight.w800,color:diff<0?Colors.red:diff>0?Colors.green:Colors.black54))),
