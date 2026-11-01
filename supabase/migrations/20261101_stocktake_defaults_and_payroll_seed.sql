@@ -32,14 +32,14 @@ insert into public.erp_hr_salary_elements
 select c.id,v.code,v.ar,v.en,v.typ,v.mode,v.nature,0,true,true,false
 from public.erp_companies c
 cross join (values
- ('NIGHTSHIFT','بدل وردية ليلية','Night Shift Allowance','earning','fixed','value'),
- ('MEALOVERTIME','بدل وجبة إضافية','Overtime Meal Allowance','earning','variable','value'),
- ('TRAVEL','بدل مأمورية وانتقال','Business Travel Allowance','earning','variable','value'),
- ('PHONEDEDUCT','خصم اتصالات','Phone Deduction','deduction','variable','value'),
- ('LOAN','خصم قرض موظف','Employee Loan Deduction','deduction','variable','value'),
- ('UNIFORM','خصم عهدة أو زي','Uniform / Custody Deduction','deduction','variable','value'),
- ('HOLIDAY','أجر عمل أيام العطلات','Holiday Work Pay','earning','variable','days'),
- ('INSURANCEOTHER','استقطاعات تأمينية أخرى','Other Insurance Deductions','deduction','variable','value')
+ ('SAL0014',''بدل وردية ليلية','Night Shift Allowance','earning','fixed','value'),
+ ('SAL0013',''بدل وجبة إضافية','Overtime Meal Allowance','earning','variable','value'),
+ ('SAL0026',''بدل مأمورية وانتقال','Business Travel Allowance','earning','variable','value'),
+ ('SAL0019',''خصم اتصالات','Phone Deduction','deduction','variable','value'),
+ ('SAL0011',''خصم قرض موظف','Employee Loan Deduction','deduction','variable','value'),
+ ('SAL0027',''خصم عهدة أو زي','Uniform / Custody Deduction','deduction','variable','value'),
+ ('SAL0007',''أجر عمل أيام العطلات','Holiday Work Pay','earning','variable','days'),
+ ('SAL0009',''استقطاعات تأمينية أخرى','Other Insurance Deductions','deduction','variable','value')
 ) as v(code,ar,en,typ,mode,nature)
 where not exists (
  select 1 from public.erp_hr_salary_elements e
