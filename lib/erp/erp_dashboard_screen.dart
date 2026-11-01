@@ -1757,7 +1757,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           .from('erp_stocktakes')
           .select('id')
           .eq('company_id', companyId)
-          .eq('source', 'stocktake')
+          .inFilter('source', ['stocktake', 'manual'])
           .eq('status', 'draft');
       if (mounted) setState(() => _pendingStocktakeDrafts = (rows as List).length);
     } catch (_) {
