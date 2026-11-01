@@ -156,7 +156,6 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
           ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>exportPdf(share:false)),
           ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:exportExcel),
           ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf,onPressed:()=>exportPdf(share:true)),
-          ErpQuickTaskButton(label:'ترحيل',icon:Icons.verified_outlined,onPressed:saving||!isDraft?null:postDoc),
         ])),
       ]))),
       if(loading||saving)const LinearProgressIndicator(),
@@ -176,6 +175,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
           SizedBox(width:300,child:DropdownButtonFormField<String>(value:targetId,isExpanded:true,decoration:const InputDecoration(labelText:'توجيه قيمة العجز'),items:targets.map((r)=>DropdownMenuItem(value:s(r['id']),child:Text(targetName(r),overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)=>setState(()=>targetId=v))),
           Text('قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:const TextStyle(fontWeight:FontWeight.w800,color:Colors.red)),
         ]) else if(isDraft) Padding(padding:const EdgeInsets.only(bottom:8),child:Text('لا توجد قيمة عجز حالياً؛ توجيه العجز غير مطلوب. قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:const TextStyle(color:Colors.green,fontWeight:FontWeight.w700))),
+        if(isDraft)Align(alignment:AlignmentDirectional.centerStart,child:FilledButton.icon(onPressed:saving?null:postDoc,icon:const Icon(Icons.verified_outlined),label:const Text('ترحيل الجرد وتحديث الأرصدة'))),
         Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columns:const [
           DataColumn(label:Text('م')),DataColumn(label:Text('كود الصنف')),DataColumn(label:Text('اسم الصنف')),
           DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),DataColumn(label:Text('وحدة الجرد')),
