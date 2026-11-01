@@ -265,7 +265,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
           .eq('company_id', companyId).eq('item_id', itemId).eq('is_active', true).eq('is_selectable', true)
           .order('conversion_factor', ascending: false);
       final settingsRaw = await client.from('erp_item_warehouse_settings')
-          .select('id,warehouse_id,purchase_unit_id,sale_unit_id,transfer_unit_id,stop_purchase,stop_sale,stop_transfer')
+          .select('id,warehouse_id,purchase_unit_id,sale_unit_id,transfer_unit_id,stocktake_unit_id,stop_purchase,stop_sale,stop_transfer')
           .eq('company_id', companyId).eq('item_id', itemId);
       final units = (unitsRaw as List).map((e) => Map<String,dynamic>.from(e)).toList();
       final settings = (settingsRaw as List).map((e) => Map<String,dynamic>.from(e)).toList();
@@ -281,6 +281,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         row['purchase_unit_id'] = _s(row['purchase_unit_id']).isEmpty ? largest : _s(row['purchase_unit_id']);
         row['sale_unit_id'] = _s(row['sale_unit_id']).isEmpty ? largest : _s(row['sale_unit_id']);
         row['transfer_unit_id'] = _s(row['transfer_unit_id']).isEmpty ? largest : _s(row['transfer_unit_id']);
+        row['stocktake_unit_id'] = _s(row['stocktake_unit_id']).isEmpty ? largest : _s(row['stocktake_unit_id']);
         row['stop_purchase'] = row['stop_purchase'] == true;
         row['stop_sale'] = row['stop_sale'] == true;
         row['stop_transfer'] = row['stop_transfer'] == true;
@@ -301,7 +302,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
               columns: const [
                 DataColumn(label: Text('م')), DataColumn(label: Text('كود الفرع')), DataColumn(label: Text('اسم الفرع')),
                 DataColumn(label: Text('كود المخزن')), DataColumn(label: Text('اسم المخزن')),
-                DataColumn(label: Text('وحدة الشراء')), DataColumn(label: Text('وحدة البيع')), DataColumn(label: Text('وحدة التحويل')),
+                DataColumn(label: Text('وحدة الشراء')), DataColumn(label: Text('وحدة البيع')), DataColumn(label: Text('وحدة التحويل')), DataColumn(label: Text('وحدة الجرد')),
                 DataColumn(label: Text('إيقاف شراء')), DataColumn(label: Text('إيقاف بيع')), DataColumn(label: Text('إيقاف تحويل')),
               ],
               rows: List.generate(rows.length, (index) {
@@ -322,6 +323,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
                   DataCell(Text(_s(branchRow['branch_name']))), DataCell(Text(_s(w['warehouse_code']))),
                   DataCell(Text(_s(w['warehouse_name']))), DataCell(SizedBox(width: 145, child: unitPicker('purchase_unit_id'))),
                   DataCell(SizedBox(width: 145, child: unitPicker('sale_unit_id'))), DataCell(SizedBox(width: 145, child: unitPicker('transfer_unit_id'))),
+                  DataCell(SizedBox(width: 145, child: unitPicker('stocktake_unit_id'))),
                   DataCell(stopPicker('stop_purchase')), DataCell(stopPicker('stop_sale')), DataCell(stopPicker('stop_transfer')),
                 ]);
               }),
@@ -336,7 +338,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
                   await client.from('erp_item_warehouse_settings').upsert({
                     'company_id': companyId, 'item_id': itemId, 'warehouse_id': row['warehouse_id'],
                     'purchase_unit_id': row['purchase_unit_id'], 'sale_unit_id': row['sale_unit_id'],
-                    'transfer_unit_id': row['transfer_unit_id'], 'stop_purchase': row['stop_purchase'],
+                    'transfer_unit_id': row['transfer_unit_id'], 'stocktake_unit_id': row['stocktake_unit_id'], 'stop_purchase': row['stop_purchase'],
                     'stop_sale': row['stop_sale'], 'stop_transfer': row['stop_transfer'],
                     'updated_at': DateTime.now().toUtc().toIso8601String(),
                   }, onConflict: 'item_id,warehouse_id');
