@@ -192,6 +192,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   final Map<String, bool> _managedPermissions = <String, bool>{};
   bool _permissionsLoading = false;
   List<ErpAppActivityEntry> _savedAppActivity = <ErpAppActivityEntry>[];
+  int _pendingStocktakeDrafts = 0;
+  bool _stocktakeAlertsLoading = false;
   bool _notificationsPanelVisible = true;
   bool _activityPanelVisible = true;
   bool _quickAccessPanelVisible = true;
@@ -1393,12 +1395,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               const Icon(Icons.notifications_active_outlined, color: Colors.white),
               const SizedBox(width: 8),
               Expanded(child: Text(silsilaText('لوحة التنبيهات'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16))),
-              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: _orange, borderRadius: BorderRadius.circular(20)), child: Text(silsilaText('3'), style: TextStyle(color: _purple, fontWeight: FontWeight.w900))),
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), decoration: BoxDecoration(color: _orange, borderRadius: BorderRadius.circular(20)), child: Text(_stocktakeAlertsLoading ? '…' : _pendingStocktakeDrafts.toString(), style: TextStyle(color: _purple, fontWeight: FontWeight.w900))),
             ]),
             const SizedBox(height: 12),
-            _notice(Icons.inventory_2_outlined, 'مراجعة المخزون', 'راجع حدود إعادة الطلب والصلاحية', _orange),
-            _notice(Icons.security_outlined, 'صلاحيات المستخدمين', 'إعداد سياسات الوصول قبل التشغيل', _pink),
-            _notice(Icons.cloud_off_outlined, 'الربط بقاعدة البيانات', 'بعض الشاشات ما زالت تجريبية', Colors.white),
+            InkWell(
+              onTap: () => _open('مخازن', 'حركات', 'تسوية جرد'),
+              borderRadius: BorderRadius.circular(10),
+              child: _notice(Icons.inventory_2_outlined, 'تسويات جرد غير مرحلة', 'يوجد $_pendingStocktakeDrafts محضر جرد محفوظ كمسودة ولم يُرحّل بعد. اضغط لفتح شاشة التسوية.', _pendingStocktakeDrafts > 0 ? _orange : Colors.white),
+            ),
           ]),
         ),
         const SizedBox(height: 16),
@@ -1447,7 +1451,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (_notificationsPanelVisible || _activityPanelVisible)
         Padding(
           padding: EdgeInsets.only(top: 12),
-          child: Text(silsilaText('ملاحظة: التنبيهات وسجل النشاطات حاليًا أمثلة محلية، وليسا متصلين بعد بأحداث النظام الفعلية.'), style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
+          child: Text(silsilaText('ملاحظة: تنبيهات محاضر الجرد مرتبطة بقاعدة البيانات، بينما سجل النشاطات ما زال محليًا.'), style: TextStyle(color: Colors.black54, fontSize: 10, height: 1.6)),
         ),
       if (!_notificationsPanelVisible && !_activityPanelVisible && !_quickAccessPanelVisible)
         Padding(
@@ -1745,8 +1749,27 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     return ((current - previous) / previous.abs()) * 100;
   }
 
+  Future<void> _loadStocktakeAlerts(String companyId) async {
+    if (companyId.isEmpty) return;
+    if (mounted) setState(() => _stocktakeAlertsLoading = true);
+    try {
+      final rows = await Supabase.instance.client
+          .from('erp_stocktakes')
+          .select('id')
+          .eq('company_id', companyId)
+          .eq('source', 'stocktake')
+          .eq('status', 'draft');
+      if (mounted) setState(() => _pendingStocktakeDrafts = (rows as List).length);
+    } catch (_) {
+      // Preserve the last known count if the user has no permission to read stocktakes.
+    } finally {
+      if (mounted) setState(() => _stocktakeAlertsLoading = false);
+    }
+  }
+
   Future<void> _loadExecutiveMetrics(String companyId) async {
     if (!mounted || companyId.isEmpty) return;
+    _loadStocktakeAlerts(companyId);
     setState(() {
       _executiveMetricsLoading = true;
       _executiveMetricsError = null;
