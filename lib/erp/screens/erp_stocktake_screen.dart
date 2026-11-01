@@ -146,6 +146,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     if(!isDraft){setState(()=>error='المحضر ليس مسودة قابلة للتعديل.');return;}
     setState(() { saving=true; error=null; message=null; });
     try{
+      if(_manualCurrentDocument&&lines.any((l)=>n(increaseCounts[s(l['id'])]?.text)<0||n(shortageCounts[s(l['id'])]?.text)<0))throw ArgumentError('حقلا الزيادة والعجز لا يقبلان قيمة سالبة.');
       if(_manualCurrentDocument&&lines.any((l)=>n(increaseCounts[s(l['id'])]?.text)>0&&n(shortageCounts[s(l['id'])]?.text)>0))throw ArgumentError('اختر زيادة أو عجزًا للصنف الواحد؛ لا يمكن إدخالهما معًا.');
       final payload=lines.map((l)=>{'line_id':s(l['id']),'counted_quantity':countedBase(l)}).toList();
       if(payload.any((r)=>(r['counted_quantity'] as double)<0))throw ArgumentError('لا يمكن أن يتجاوز عجز التسوية رصيد الصنف الحالي.');
@@ -167,7 +168,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     setState(()=>saving=true);
     try{
       await db.from('erp_stocktakes').delete().eq('id',docId!).eq('company_id',widget.companyId).eq('source','manual').eq('status','draft');
-      docId=null;lines=[];for(final c in counts.values){c.dispose();}counts.clear();
+      docId=null;lines=[];for(final c in counts.values){c.dispose();}counts.clear();for(final c in increaseCounts.values){c.dispose();}increaseCounts.clear();for(final c in shortageCounts.values){c.dispose();}shortageCounts.clear();
       await load();
       if(mounted)setState(()=>message='تم إلغاء مسودة التسوية اليدوية.');
     }catch(e){if(mounted)setState(()=>error='تعذر إلغاء المسودة: '+e.toString());}
