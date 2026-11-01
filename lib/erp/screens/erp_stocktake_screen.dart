@@ -127,7 +127,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         ]) else if(isDraft) Padding(padding:const EdgeInsets.only(bottom:8),child:Text('لا توجد قيمة عجز حالياً؛ توجيه العجز غير مطلوب. قيمة العجز: '+shortage.toStringAsFixed(2)+' ج.م',style:const TextStyle(color:Colors.green,fontWeight:FontWeight.w700))),
         Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(columns:const [
           DataColumn(label:Text('م')),DataColumn(label:Text('كود الصنف')),DataColumn(label:Text('اسم الصنف')),
-          DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),
+          DataColumn(label:Text('رصيد متاح')),DataColumn(label:Text('رصيد حجز')),DataColumn(label:Text('رصيد فعلي')),DataColumn(label:Text('وحدة الجرد')),
           DataColumn(label:Text('كمية الجرد')),DataColumn(label:Text('الفرق')),DataColumn(label:Text('نوع الفرق')),DataColumn(label:Text('قيمة الفرق')),
         ],rows:List.generate(lines.length,(i){
           final l=lines[i],f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']),diff=countedBase(l)-n(l['physical_snapshot']);
