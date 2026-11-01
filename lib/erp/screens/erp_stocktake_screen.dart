@@ -67,7 +67,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     setState(()=>saving=true);
     try{
       final id = _manualSettlementScreen && sourceMode=='manual'
-        ? await db.rpc('erp_create_manual_stock_adjustment',params:{'p_company_id':widget.companyId,'p_warehouse_id':warehouseId,'p_notes':notes.text.trim().isEmpty?null:notes.text.trim()})
+        ? await db.rpc('erp_create_manual_stock_adjustment',params:{'p_company_id':widget.companyId,'p_warehouse_id':warehouseId,'p_count_mode':'default','p_valuation_basis':null,'p_notes':notes.text.trim().isEmpty?null:notes.text.trim()})
         : await db.rpc('erp_create_physical_stocktake',params:{'p_company_id':widget.companyId,'p_warehouse_id':warehouseId,'p_count_mode':countMode,'p_valuation_basis':null,'p_notes':notes.text.trim().isEmpty?null:notes.text.trim()});
       docId=id.toString();notes.clear();await load();await loadLines(docId!);if(mounted)setState(()=>editing=true);
       if(mounted)setState(() { saving=false; message=sourceMode=='manual'&&_manualSettlementScreen?'تم إنشاء تسوية يدوية بلقطة رصيد مرجعية.':'تم إنشاء محضر الجرد ولقطة الأرصدة.'; });
