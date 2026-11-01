@@ -821,7 +821,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       await _repo.saveItemWarehouseSettings(
         companyId: _company.text.trim(), itemId: itemId, warehouseId: warehouseId,
         purchaseUnitId: values['purchase_unit_id'] as String?, saleUnitId: values['sale_unit_id'] as String?,
-        transferUnitId: values['transfer_unit_id'] as String?, stopPurchase: values['stop_purchase'] == true,
+        transferUnitId: values['transfer_unit_id'] as String?, stocktakeUnitId: values['stocktake_unit_id'] as String?, stopPurchase: values['stop_purchase'] == true,
         stopSale: values['stop_sale'] == true, stopTransfer: values['stop_transfer'] == true,
       );
       await _load(clearMessage: false);
@@ -845,6 +845,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           'purchase_unit_id': _s(existing['purchase_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['purchase_unit_id']),
           'sale_unit_id': _s(existing['sale_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['sale_unit_id']),
           'transfer_unit_id': _s(existing['transfer_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['transfer_unit_id']),
+          'stocktake_unit_id': _s(existing['stocktake_unit_id']).isEmpty ? _s(largest['id']) : _s(existing['stocktake_unit_id']),
           'stop_purchase': existing['stop_purchase'] == true, 'stop_sale': existing['stop_sale'] == true, 'stop_transfer': existing['stop_transfer'] == true,
         };
         return StatefulBuilder(builder: (context, refresh) => Card(
@@ -852,7 +853,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           child: Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text(_s(warehouse['warehouse_code']) + ' — ' + _s(warehouse['warehouse_name']), style: const TextStyle(fontWeight: FontWeight.w800)),
             Wrap(spacing: 10, runSpacing: 8, children: [
-              for (final entry in [('purchase_unit_id','شراء'),('sale_unit_id','بيع'),('transfer_unit_id','تحويل مخزني')])
+              for (final entry in [('purchase_unit_id','شراء'),('sale_unit_id','بيع'),('transfer_unit_id','تحويل مخزني'),('stocktake_unit_id','جرد')])
                 SizedBox(width: 190, child: DropdownButtonFormField<String>(
                   value: units.any((u) => _s(u['id']) == values[entry.$1]) ? values[entry.$1] as String : _s(largest['id']),
                   isExpanded: true, decoration: InputDecoration(labelText: 'وحدة ${entry.$2}', isDense: true),
