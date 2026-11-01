@@ -20,19 +20,22 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   final db=Supabase.instance.client;
   final notes=TextEditingController();
   final counts=<String,TextEditingController>{};
+  final increaseCounts=<String,TextEditingController>{};
+  final shortageCounts=<String,TextEditingController>{};
   List<Map<String,dynamic>> branches=[],warehouses=[],docs=[],items=[],lines=[],employees=[],expenses=[],units=[];
   String? branchId,baseWarehouseId,warehouseId,docId,targetId;
   String countMode='default',targetType='employee',sourceMode='manual';
   bool loading=false,saving=false,editing=false;
   String? error,message;
   bool get _manualSettlementScreen => widget.title.contains('التسوية');
+  bool get _manualCurrentDocument => docs.any((d)=>s(d['id'])==docId&&s(d['source'])=='manual');
   String s(dynamic v)=>(v??'').toString();
   double n(dynamic v)=>v is num?v.toDouble():double.tryParse(s(v))??0;
   String warehouseName(dynamic id){final a=warehouses.where((w)=>s(w['id'])==s(id));return a.isEmpty?s(id):s(a.first['warehouse_code'])+' — '+s(a.first['warehouse_name']);}
   String itemName(dynamic id){final a=items.where((w)=>s(w['id'])==s(id));return a.isEmpty?s(id):s(a.first['item_code'])+' — '+s(a.first['item_name']);}
   String targetName(Map<String,dynamic> r)=>targetType=='employee'?s(r['employee_code'])+' — '+s(r['full_name']):s(r['item_code'])+' — '+s(r['name_ar']);
   @override void initState(){super.initState();load();}
-  @override void dispose(){notes.dispose();for(final c in counts.values){c.dispose();}super.dispose();}
+  @override void dispose(){notes.dispose();for(final c in counts.values){c.dispose();}for(final c in increaseCounts.values){c.dispose();}for(final c in shortageCounts.values){c.dispose();}super.dispose();}
 
   Future<void> load() async {
     if(widget.companyId.isEmpty){setState(()=>error='لا توجد شركة محددة.');return;}
@@ -57,9 +60,21 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     try{
       final raw=await db.from('erp_stocktake_lines').select('id,item_id,warehouse_id,available_snapshot,reserved_snapshot,physical_snapshot,counted_quantity,variance_quantity,unit_id,conversion_factor,valuation_price,valuation_value').eq('stocktake_id',id).order('created_at');
       for(final c in counts.values){c.dispose();} counts.clear();
+      for(final c in increaseCounts.values){c.dispose();} increaseCounts.clear();
+      for(final c in shortageCounts.values){c.dispose();} shortageCounts.clear();
       final data=List<Map<String,dynamic>>.from(raw);
       final isManualDoc=docs.any((d)=>s(d['id'])==id&&s(d['source'])=='manual');
-      for(final l in data){final f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);final entered=isManualDoc?n(l['counted_quantity'])-n(l['physical_snapshot']):n(l['counted_quantity']);counts[s(l['id'])]=TextEditingController(text:(entered/f).toStringAsFixed(3).replaceFirst(RegExp(r'\.000$'),''));}
+      for(final l in data){
+        final lineId=s(l['id']);
+        final factor=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);
+        final delta=n(l['counted_quantity'])-n(l['physical_snapshot']);
+        if(isManualDoc){
+          increaseCounts[lineId]=TextEditingController(text:(delta>0?delta/factor:0).toStringAsFixed(3));
+          shortageCounts[lineId]=TextEditingController(text:(delta<0?-delta/factor:0).toStringAsFixed(3));
+        }else{
+          counts[lineId]=TextEditingController(text:(n(l['counted_quantity'])/factor).toStringAsFixed(3));
+        }
+      }
       if(mounted)setState(()=>lines=data);
     }catch(e){if(mounted)setState(()=>error='تعذر تحميل تفاصيل الجرد: '+e.toString());}
   }
@@ -97,7 +112,16 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
       'minorQty':minorQty,'minorUnit':baseUnit==null?'—':s(baseUnit['unit_name'])};
   }
 
-  double countedBase(Map<String,dynamic> l){final f=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);final entered=n(counts[s(l['id'])]?.text)*f;final manual=docs.any((d)=>s(d['id'])==docId&&s(d['source'])=='manual');return manual?n(l['physical_snapshot'])+entered:entered;}
+  double countedBase(Map<String,dynamic> l){
+    final id=s(l['id']);
+    final factor=n(l['conversion_factor'])<=0?1:n(l['conversion_factor']);
+    if(_manualCurrentDocument){
+      final increase=n(increaseCounts[id]?.text);
+      final shortage=n(shortageCounts[id]?.text);
+      return n(l['physical_snapshot'])+(increase-shortage)*factor;
+    }
+    return n(counts[id]?.text)*factor;
+  }
   double get shortage=>lines.fold<double>(0,(sum,l){final d=countedBase(l)-n(l['physical_snapshot']);return sum+(d<0?d.abs()*n(l['valuation_price']):0);});
   bool get canDeleteManualDraft=>_manualSettlementScreen&&isDraft&&docs.any((d)=>s(d['id'])==docId&&s(d['source'])=='manual');
   bool get canEditDraft {
@@ -122,8 +146,9 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     if(!isDraft){setState(()=>error='المحضر ليس مسودة قابلة للتعديل.');return;}
     setState(() { saving=true; error=null; message=null; });
     try{
+      if(_manualCurrentDocument&&lines.any((l)=>n(increaseCounts[s(l['id'])]?.text)>0&&n(shortageCounts[s(l['id'])]?.text)>0))throw ArgumentError('اختر زيادة أو عجزًا للصنف الواحد؛ لا يمكن إدخالهما معًا.');
       final payload=lines.map((l)=>{'line_id':s(l['id']),'counted_quantity':countedBase(l)}).toList();
-      if(payload.any((r)=>(r['counted_quantity'] as double)<0))throw ArgumentError('لا يمكن إدخال كمية سالبة.');
+      if(payload.any((r)=>(r['counted_quantity'] as double)<0))throw ArgumentError('لا يمكن أن يتجاوز عجز التسوية رصيد الصنف الحالي.');
       await db.rpc('erp_save_physical_stocktake_counts',params:{'p_stocktake_id':docId,'p_counts':payload});
       await loadLines(docId!);if(mounted)setState(() {editing=false;message='تم حفظ المسودة دون تغيير الأرصدة المخزنية.';});
     }catch(e){if(mounted)setState(()=>error='تعذر حفظ المسودة: '+e.toString());}
@@ -204,6 +229,10 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
   void startNewDocument(){
     for(final controller in counts.values){controller.dispose();}
     counts.clear();
+    for(final controller in increaseCounts.values){controller.dispose();}
+    increaseCounts.clear();
+    for(final controller in shortageCounts.values){controller.dispose();}
+    shortageCounts.clear();
     setState(() {
       docId=null; lines=[]; editing=false; countMode='default';
       sourceMode=_manualSettlementScreen?'manual':'stocktake';
@@ -311,8 +340,10 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
               DataCell(Text(n(breakdown['majorQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['majorUnit']))),DataCell(Text(n(breakdown['middleQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['middleUnit']))),DataCell(Text(n(breakdown['minorQty']).toStringAsFixed(3))),DataCell(Text(s(breakdown['minorUnit']))),
             ],
             DataCell(Text(unit.isEmpty?'—':s(unit.first['unit_name']))),
-            DataCell(SizedBox(width:125,child:TextField(controller:counts[s(l['id'])],enabled:canEditLines,keyboardType:const TextInputType.numberWithOptions(signed:true,decimal:true),onChanged:(_)=>setState(()=>error=null),decoration:InputDecoration(isDense:true,border:const OutlineInputBorder(),hintText:_manualSettlementScreen&&s(current['source'])=='manual'?'0 = دون فرق':'كمية فعلية')))),
-            DataCell(Text((diff>0?diff/f:0).toStringAsFixed(3))),DataCell(Text((diff<0?-diff/f:0).toStringAsFixed(3))),DataCell(Text((countedBase(l)/f).toStringAsFixed(3))),
+            DataCell(SizedBox(width:125,child:_manualCurrentDocument?Text((diff/f).toStringAsFixed(3)):TextField(controller:counts[s(l['id'])],enabled:canEditLines,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState(()=>error=null),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),hintText:'كمية فعلية')))),
+            DataCell(_manualCurrentDocument?SizedBox(width:105,child:TextField(controller:increaseCounts[s(l['id'])],enabled:canEditLines,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState(()=>error=null),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),hintText:'زيادة'))):Text((diff>0?diff/f:0).toStringAsFixed(3))),
+            DataCell(_manualCurrentDocument?SizedBox(width:105,child:TextField(controller:shortageCounts[s(l['id'])],enabled:canEditLines,keyboardType:const TextInputType.numberWithOptions(decimal:true),onChanged:(_)=>setState(()=>error=null),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),hintText:'عجز'))):Text((diff<0?-diff/f:0).toStringAsFixed(3))),
+            DataCell(Text((countedBase(l)/f).toStringAsFixed(3))),
             DataCell(Text((diff/f).toStringAsFixed(3))),
             DataCell(Text(diff<0?'عجز':diff>0?'زيادة':'مطابق',style:TextStyle(fontWeight:FontWeight.w800,color:diff<0?Colors.red:diff>0?Colors.green:Colors.black54))),
             DataCell(Text((diff.abs()*n(l['valuation_price'])).toStringAsFixed(2))),
