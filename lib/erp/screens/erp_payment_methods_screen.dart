@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
 import 'package:pdf/widgets.dart' as pw;
@@ -318,8 +317,8 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
                 _task('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
                 _task(_editing ? 'حفظ' : 'إضافة', _editing ? Icons.save : Icons.add, const Color(0xFF168447), _saving ? null : (_editing ? _save : _startNew)),
                 _task('تعديل', Icons.edit, const Color(0xFFEF9B13), _editing || _selectedId == null ? null : () { final row = _rowById(_selectedId); if (row != null) _edit(row); }),
-                _task('إيقاف/تفعيل', Icons.toggle_on, const Color(0xFFEF9B13), _selectedId == null ? null : () { final row = _rows.where((r) => _s(r['id']) == _selectedId).firstOrNull; if (row != null) _toggle(row); }),
-                _task('معاينة', Icons.visibility, const Color(0xFF6841A5), () => showDialog<void>(context: context, builder: (ctx) => AlertDialog(title: const Text('معاينة طرق الدفع'), content: Text('عدد طرق الدفع المعروضة: ${_filtered.length}'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))])),
+                _task('إيقاف/تفعيل', Icons.toggle_on, const Color(0xFFEF9B13), _selectedId == null ? null : () { final row = _rowById(_selectedId); if (row != null) _toggle(row); }),
+                _task('معاينة', Icons.visibility, const Color(0xFF6841A5), () => showDialog<void>(context: context, builder: (ctx) => AlertDialog(title: const Text('معاينة طرق الدفع'), content: Text('عدد طرق الدفع المعروضة: ${_filtered.length}'), actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))]))),
                 _task('طباعة', Icons.print, const Color(0xFFFF27C3), _filtered.isEmpty ? null : () => _exportPdf(print: true)),
                 _task('Excel', Icons.file_download, const Color(0xFF16834A), _filtered.isEmpty ? null : _exportExcel),
                 _task('PDF', Icons.picture_as_pdf, const Color(0xFFD32F2F), _filtered.isEmpty ? null : () => _exportPdf(print: false)),
