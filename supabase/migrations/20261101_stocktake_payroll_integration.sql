@@ -23,11 +23,12 @@ begin
    from public.erp_payroll_lines where payroll_run_id=v_run.id and company_id=v_run.company_id
    order by created_at,id for update
  loop
-   select coalesce(sum(s.amount),0)::numeric(16,2),max(s.salary_element_id),array_agg(s.id)
+   select coalesce(sum(s.amount),0)::numeric(16,2),(array_agg(s.salary_element_id order by s.created_at))[1],array_agg(s.id)
    into v_amount,v_element_id,v_settlement_ids
    from public.erp_stocktake_settlements s
    where s.company_id=v_run.company_id and s.target_type='employee' and s.target_id=v_line.employee_id
-     and s.payroll_line_id is null and s.salary_element_id is not null;
+     and s.payroll_line_id is null and s.salary_element_id is not null
+      and s.created_at::date<=v_run.period_end;
    if v_amount>0 then
      if v_line.net_amount<v_amount then raise exception 'قيمة عجز الجرد للموظف تتجاوز صافي مستحقاته في هذا المسير'; end if;
      v_values:=coalesce(v_line.element_values,'{}'::jsonb);
