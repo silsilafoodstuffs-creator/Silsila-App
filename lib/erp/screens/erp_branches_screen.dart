@@ -468,6 +468,9 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       _quickTask('تعديل', Icons.edit_outlined, const Color(0xFFEF9B13), _singleSelectedBranch == null ? null : () => _edit(_singleSelectedBranch)),
       _quickTask('حذف', Icons.delete_outline, Colors.red, _singleSelectedBranch == null ? null : () => _delete(_singleSelectedBranch!)),
       _quickTask('معاينة', Icons.visibility_outlined, const Color(0xFF6841A5), _previewDirectory),
+      _quickTask('طباعة', Icons.print_outlined, const Color(0xFFFF27C3), _previewDirectory),
+      _quickTask('Excel', Icons.file_download_outlined, const Color(0xFF16834A), _previewDirectory),
+      _quickTask('PDF', Icons.picture_as_pdf_outlined, const Color(0xFFD32F2F), _previewDirectory),
     ]),
   );
 
