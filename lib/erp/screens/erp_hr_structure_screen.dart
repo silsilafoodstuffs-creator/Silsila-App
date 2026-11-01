@@ -44,8 +44,11 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final index = departmentMode ? (widget.initialTab == 'مواقع العمل' ? 1 : 0)
         : widget.initialTab == 'درجات الوظائف' ? 2 : widget.initialTab == 'متطلبات التعيين' ? 1 : 0;
     _tabs = TabController(length: departmentMode ? 2 : 3, vsync: this, initialIndex: index);
+    _tabs.addListener(_onTabChanged);
     _load();
   }
+  void _onTabChanged() { if (mounted && !_tabs.indexIsChanging) setState(() {}); }
+
   @override
   void didUpdateWidget(covariant ErpHrStructureScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -54,7 +57,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
 
   @override
   void dispose() {
-    _tabs.dispose(); _code.dispose(); _ar.dispose(); _en.dispose(); super.dispose();
+    _tabs.removeListener(_onTabChanged); _tabs.dispose(); _code.dispose(); _ar.dispose(); _en.dispose(); super.dispose();
   }
 
   Future<void> _load() async {
