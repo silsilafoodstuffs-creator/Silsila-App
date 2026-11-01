@@ -436,7 +436,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       Card(color: const Color(0xFF3E007D), child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          const Text('بيانات المخازن والأصناف', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+          const Text('بيانات الأصناف والمخازن', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
           const Text('تعريف المخازن والأصناف الأساسية قبل تسجيل الحركات.', style: TextStyle(color: Colors.white70, height: 1.5)),
           const SizedBox(height: 8),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
