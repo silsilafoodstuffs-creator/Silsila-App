@@ -25,6 +25,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
   String _type = 'cash';
   String? _cashboxId;
   String? _editingId;
+  String? _selectedId;
   bool _allowReceipts = true;
   bool _allowPayments = true;
   bool _requiresReference = false;
@@ -116,6 +117,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
   void _edit(Map<String, dynamic> row) {
     setState(() {
       _editing = true;
+      _selectedId = _s(row['id']);
       _editingId = _s(row['id']);
       _nameAr.text = _s(row['name_ar']);
       _nameEn.text = _s(row['name_en']);
@@ -166,7 +168,6 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
   }
 
   Future<void> _toggle(Map<String, dynamic> row) async {
-    if (!_editing) { setState(() => _error = 'اضغط تعديل أولًا لتغيير الحالة.'); return; }
     final next = row['is_active'] != true;
     final yes = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: Text(next ? 'تفعيل طريقة الدفع' : 'إيقاف طريقة الدفع'),
@@ -232,8 +233,8 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
               SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
                 _task('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
                 _task(_editing ? 'حفظ' : 'إضافة', _editing ? Icons.save : Icons.add, const Color(0xFF168447), _saving ? null : (_editing ? _save : _startNew)),
-                _task('تعديل', Icons.edit, const Color(0xFFEF9B13), _editing || _rows.isEmpty ? null : () => _edit(_rows.first)),
-                _task('إيقاف/تفعيل', Icons.toggle_on, const Color(0xFFEF9B13), _editing && _rows.isNotEmpty ? () => _toggle(_rows.first) : null),
+                _task('تعديل', Icons.edit, const Color(0xFFEF9B13), _editing || _selectedId == null ? null : () { final row = _rows.where((r) => _s(r['id']) == _selectedId).firstOrNull; if (row != null) _edit(row); }),
+                _task('إيقاف/تفعيل', Icons.toggle_on, const Color(0xFFEF9B13), _selectedId == null ? null : () { final row = _rows.where((r) => _s(r['id']) == _selectedId).firstOrNull; if (row != null) _toggle(row); }),
                 _task('معاينة', Icons.visibility, const Color(0xFF6841A5), () => setState(() {})),
               ])),
             ]),
@@ -311,7 +312,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
               ],
               rows: [
                 for (var i = 0; i < _filtered.length; i++)
-                  DataRow(cells: [
+                  DataRow(selected: _s(_filtered[i]['id']) == _selectedId, onSelectChanged: (selected) => setState(() { _selectedId = selected == true ? _s(_filtered[i]['id']) : null; }), cells: [
                     DataCell(Text('${i + 1}')),
                     DataCell(Text(_s(_filtered[i]['payment_method_code']))),
                     DataCell(Text(_s(_filtered[i]['name_ar']))),
@@ -323,7 +324,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
                     DataCell(Text(_filtered[i]['is_active'] == true ? 'نشطة' : 'موقوفة')),
                     DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                       IconButton(tooltip: 'تعديل', onPressed: () => _edit(_filtered[i]), icon: const Icon(Icons.edit_outlined, color: _paymentPurple)),
-                      IconButton(tooltip: 'تفعيل/إيقاف', onPressed: _editing ? () => _toggle(_filtered[i]) : null, icon: Icon(_filtered[i]['is_active'] == true ? Icons.toggle_on : Icons.toggle_off, color: _paymentOrange)),
+                      IconButton(tooltip: 'تفعيل/إيقاف', onPressed: () => _toggle(_filtered[i]), icon: Icon(_filtered[i]['is_active'] == true ? Icons.toggle_on : Icons.toggle_off, color: _paymentOrange)),
                     ])),
                   ]),
               ],
