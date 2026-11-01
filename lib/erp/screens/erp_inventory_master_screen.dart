@@ -548,8 +548,11 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         ]),
       )),
       const SizedBox(height: 10),
-      TextField(controller: _company, decoration: const InputDecoration(labelText: 'معرّف الشركة (UUID)', border: OutlineInputBorder())),
-      const SizedBox(height: 8),
+      if (_company.text.trim().isNotEmpty)
+        const Padding(
+          padding: EdgeInsetsDirectional.only(bottom: 8),
+          child: Text('يتم عرض بيانات الشركة النشطة المرتبطة بحسابك تلقائيًا.'),
+        ),
       if (_loading || _saving) const LinearProgressIndicator(),
       if (_error != null) _notice(_error!, Colors.red),
       if (_message != null) _notice(_message!, Colors.green),
