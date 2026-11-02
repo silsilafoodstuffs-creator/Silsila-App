@@ -72,6 +72,7 @@ SupabaseClient? get database {
 
 List<String> activityTypes = const <String>[];
 bool _startupIntroAdvertisementAttempted = false;
+bool _startupAdvertisementActive = false;
 
 const egyptGovernorates = [
   'القاهرة',
@@ -5747,17 +5748,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String governorate = 'القاهرة';
   bool sameWhatsApp = true;
   bool busy = false;
-  Map<String,dynamic> _publisherProfile = {};
-
-  Future<void> _loadPublisherProfile() async {
-    try {
-      final db = database; final id = db?.auth.currentUser?.id;
-      if (db == null || id == null) return;
-      final row = await db.from('profiles').select('full_name,phone,address,governorate,district,area').eq('id', id).maybeSingle();
-      if (mounted && row != null) setState(() => _publisherProfile = Map<String,dynamic>.from(row));
-    } catch (_) {}
-  }
-
   @override
   void dispose() {
     nameController.dispose();
@@ -6814,6 +6804,16 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   bool isNegotiable = false;
   late String type;
   bool busy = false;
+  Map<String,dynamic> _publisherProfile = {};
+
+  Future<void> _loadPublisherProfile() async {
+    try {
+      final db = database; final id = db?.auth.currentUser?.id;
+      if (db == null || id == null) return;
+      final row = await db.from('profiles').select('full_name,phone,address,governorate,district,area').eq('id', id).maybeSingle();
+      if (mounted && row != null) setState(() => _publisherProfile = Map<String,dynamic>.from(row));
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
