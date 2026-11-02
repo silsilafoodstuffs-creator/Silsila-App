@@ -337,6 +337,24 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       if(count<1){setState(()=>error='حدد عدد أوراق دفتر الشيكات في بيانات الحساب البنكي.');return;}
       valid.add({'bank_id':draft.bankId,'start':startNumber,'count':count});
     }
+    for(var i=0;i<valid.length;i++){
+      final current=valid[i];
+      final currentStart=current['start'] as int;
+      final currentEnd=currentStart+(current['count'] as int)-1;
+      final bankIdValue=current['bank_id'];
+      for(final existing in books.where((b)=>b['registered']==true&&s(b['bank_cashbox_id'])==s(bankIdValue))){
+        final existingStart=n(existing['first_check_number']).toInt();
+        final existingEnd=existingStart+n(existing['sheet_count']).toInt()-1;
+        if(currentStart<=existingEnd&&existingStart<=currentEnd){setState(()=>error='مدى أرقام الدفتر في السطر '+(i+1).toString()+' يتداخل مع دفتر مسجل بالفعل.');return;}
+      }
+      for(var j=0;j<i;j++){
+        final previous=valid[j];
+        if(s(previous['bank_id'])!=s(bankIdValue))continue;
+        final previousStart=previous['start'] as int;
+        final previousEnd=previousStart+(previous['count'] as int)-1;
+        if(currentStart<=previousEnd&&previousStart<=currentEnd){setState(()=>error='أرقام الدفاتر الجديدة متداخلة بين السطرين '+(j+1).toString()+' و'+(i+1).toString()+'.');return;}
+      }
+    }
     await run(()async{
       for(final draft in valid){
         final row=await db!.from('erp_checkbooks').insert({'company_id':company,'bank_cashbox_id':draft['bank_id'],'first_check_number':draft['start'],'sheet_count':draft['count'],'created_by':db!.auth.currentUser?.id}).select('id').single();
