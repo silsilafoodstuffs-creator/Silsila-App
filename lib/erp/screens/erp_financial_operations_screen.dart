@@ -21,6 +21,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   String partyType = 'supplier', chequeType = 'bank', chequeDirection = 'payment', trackingFilter = 'all';
   final amount = TextEditingController(), description = TextEditingController(), fromName = TextEditingController(), toName = TextEditingController();
   final partyName = TextEditingController(), firstCheck = TextEditingController(), issueDate = TextEditingController(text: _todayDisplay());
+  final movementDate = TextEditingController(text: _todayDisplay());
   final dueDate = TextEditingController(text: _todayDisplay()), chequeAmount = TextEditingController();
   List<Map<String,dynamic>> cashboxes=[], accounts=[], parties=[], users=[], sales=[], movements=[], orders=[], books=[], cheques=[];
   static String _today() { final d=DateTime.now(); return d.year.toString().padLeft(4,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.day.toString().padLeft(2,'0'); }
@@ -44,7 +45,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     if(company.isNotEmpty) WidgetsBinding.instance.addPostFrameCallback((_)=>load());
   }
   @override void dispose() {
-    tabs.dispose(); for(final c in [amount,description,fromName,toName,partyName,firstCheck,issueDate,dueDate,chequeAmount]) {c.dispose();} super.dispose();
+    tabs.dispose(); for(final c in [amount,description,fromName,toName,partyName,firstCheck,issueDate,dueDate,chequeAmount,movementDate]) {c.dispose();} super.dispose();
   }
 
   Future<void> load() async {
@@ -57,10 +58,10 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
         db!.from('erp_parties').select('id,party_code,party_name,party_kind').eq('company_id',company).eq('is_active',true).limit(2000),
         db!.from('erp_users').select('id,auth_user_id,user_code,name_ar').eq('company_id',company).eq('is_active',true).limit(1000),
         db!.from('erp_sales_documents').select('id,document_number,grand_total').eq('company_id',company).eq('document_type','order').limit(300),
-        db!.from('erp_cash_movements').select('*').eq('company_id',company).order('movement_date',ascending:false).limit(300),
-        db!.from('erp_cash_orders').select('*').eq('company_id',company).order('order_date',ascending:false).limit(300),
-        db!.from('erp_checkbooks').select('*').eq('company_id',company).order('created_at',ascending:false).limit(300),
-        db!.from('erp_cheques').select('*').eq('company_id',company).order('check_number').limit(3000),
+        db!.from('erp_cash_movements').select('*').eq('company_id',company).order('movement_no',ascending:false).limit(300),
+        db!.from('erp_cash_orders').select('*').eq('company_id',company).order('order_no',ascending:false).limit(300),
+        db!.from('erp_checkbooks').select('*').eq('company_id',company).order('book_no',ascending:false).limit(300),
+        db!.from('erp_cheques').select('*').eq('company_id',company).order('check_number',ascending:false).limit(3000),
         db!.from('erp_financial_policies').select().eq('company_id',company).maybeSingle(),
       ]);
       if(!mounted)return;
@@ -133,7 +134,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       IconButton.filledTonal(onPressed:()=>selectEndpoint(type,c,isFrom),icon:const Icon(Icons.search),tooltip:'بحث F1')
     ]),
   );
-  String currentSerial(){switch(tabs.index){case 0:return movements.isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(movements.first['movement_number']);case 1:return orders.where((o)=>s(o['instrument_type'])!='cheque').isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(orders.where((o)=>s(o['instrument_type'])!='cheque').first['order_number']);case 2:return orders.where((o)=>s(o['instrument_type'])=='cheque').isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(orders.where((o)=>s(o['instrument_type'])=='cheque').first['order_number']);case 3:return cheques.isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(cheques.last['check_number']);case 4:return books.isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(books.first['book_number']);default:return 'تلقائي وغير قابل للتكرار';}}
+  String currentSerial(){switch(tabs.index){case 0:return movements.isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(movements.first['movement_number']);case 1:return orders.where((o)=>s(o['instrument_type'])!='cheque').isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(orders.where((o)=>s(o['instrument_type'])!='cheque').first['order_number']);case 2:return orders.where((o)=>s(o['instrument_type'])=='cheque').isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(orders.where((o)=>s(o['instrument_type'])=='cheque').first['order_number']);case 3:return cheques.isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(cheques.first['check_number']);case 4:return books.isEmpty?'يُنشأ تلقائيًا عند الحفظ':s(books.first['book_number']);default:return 'تلقائي وغير قابل للتكرار';}}
   Widget quick() => Card(color:purple,child:Padding(padding:const EdgeInsets.all(9),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Text(tabNames[tabs.index],style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:19)),
     Text('مسلسل المستند: '+currentSerial(),style:const TextStyle(color:Colors.white70,fontSize:12,fontWeight:FontWeight.w600)),
@@ -154,6 +155,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
 
   Future<void> saveMovement() async {
     final v=double.tryParse(amount.text.trim());
+    if(parseDisplayDate(movementDate.text)==null){setState(()=>error='أدخل تاريخ الحركة بصيغة DD-MM-YYYY.');return;}
     if(v==null||v<=0||fromId==null||toId==null||fromName.text.isEmpty||toName.text.isEmpty){setState(()=>error='اختر جهتي الحركة وأدخل قيمة موجبة.');return;}
     if(movementType=='transfer'&&fromId==toId){setState(()=>error='جهة التحويل يجب أن تختلف عن المصدر.');return;}
     if(movementType=='receipt'&&toType!='cashbox'&&toType!='bank'){setState(()=>error='جهة التوريد يجب أن تكون خزينة أو بنك.');return;}
@@ -163,7 +165,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     await run(()async{await db!.rpc('erp_create_cash_movement',params:{
       'p_company_id':company,'p_movement_type':movementType,'p_from_type':fromType,'p_from_id':fromId,'p_from_name':fromName.text,
       'p_to_type':toType,'p_to_id':toId,'p_to_name':toName.text,'p_amount':v,'p_description':description.text,
-      'p_counter_account_id':counterAccountId,'p_movement_date':_today()
+      'p_counter_account_id':counterAccountId,'p_movement_date':isoDate(movementDate.text)
     });amount.clear();description.clear();},'تم حفظ الحركة وإنشاء سند خزينة مسودة مرتبط بها. يلزم ترحيل السند لتحديث الأرصدة والقيود.');
   }
   Future<void> postMovement(Map<String,dynamic> row) async {
@@ -271,7 +273,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       const SizedBox(height:8),Row(children:[Expanded(child:drop('جهة الصرف من',fromType,entityTypes,(v)=>setState(() {fromType=v??fromType;fromId=null;fromName.clear();}))),const SizedBox(width:8),Expanded(child:picker('اسم الجهة من',fromType,fromName,true))]),
       const SizedBox(height:8),Row(children:[Expanded(child:drop('وجهة الصرف إلى',toType,entityTypes,(v)=>setState(() {toType=v??toType;toId=null;toName.clear();}))),const SizedBox(width:8),Expanded(child:picker('اسم الجهة إلى',toType,toName,false))]),
       if(movementType!='transfer') ...[const SizedBox(height:8),drop('الحساب المقابل للقيد',counterAccountId,[const DropdownMenuItem<String>(value:null,child:Text('اختر حسابًا مقابلًا')),...accounts.map((a)=>DropdownMenuItem(value:s(a['id']),child:Text(s(a['account_code'])+' — '+s(a['account_name']))))],(v)=>setState(()=>counterAccountId=v))],
-      const SizedBox(height:8),field(description,'البيان'),Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:saveMovement,child:const Text('حفظ الحركة'))),
+      const SizedBox(height:8),field(movementDate,'تاريخ الحركة DD-MM-YYYY'),const SizedBox(height:8),field(description,'البيان'),Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:saveMovement,child:const Text('حفظ الحركة'))),
     ]))),
     section('حركة نقدية',movements.length),
     grid(['م','مسلسل الحركة','النوع','من','إلى','القيمة','التاريخ'],movements.map((r)=>[s(r['movement_no']),s(r['movement_number']),s(r['movement_type']),s(r['from_name']),s(r['to_name']),money(r['amount']),s(r['movement_date'])]).toList(),actions:movements.map((r)=>IconButton(tooltip:'ترحيل سند الخزينة',onPressed:saving?null:()=>postMovement(r),icon:const Icon(Icons.send_rounded,color:purple))).toList())
