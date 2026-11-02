@@ -27,9 +27,11 @@ class UserService {
       throw ArgumentError('معرّف المستخدم مطلوب.');
     }
 
+    // Cross-user lookups must use the public, approved profile directory.
+    // Private profile fields remain available only through getCurrentUserProfile().
     final result = await _client
-        .from('profiles')
-        .select()
+        .from('profile_public_directory')
+        .select('id, full_name, avatar_url, role, account_type')
         .eq('id', cleanUserId)
         .maybeSingle();
 
