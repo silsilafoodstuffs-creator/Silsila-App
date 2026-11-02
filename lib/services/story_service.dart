@@ -116,12 +116,12 @@ class StoryService {
   }) async {
     final id = int.tryParse(storyId);
     if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
-    if (duration != null && (duration <= Duration.zero || duration > const Duration(hours: 1))) {
-      throw ArgumentError('مدة القصة يجب أن تكون من دقيقة إلى 60 دقيقة.');
+    if (duration != null && (duration <= Duration.zero || duration > const Duration(hours: 24))) {
+      throw ArgumentError('مدة القصة يجب أن تكون من دقيقة إلى 24 ساعة.');
     }
     final data = <String,dynamic>{'caption': _clean(caption), 'updated_at': DateTime.now().toUtc().toIso8601String()};
     if (duration != null) {
-      data['duration_minutes'] = duration.inMinutes.clamp(1,60);
+      data['duration_minutes'] = duration.inMinutes.clamp(1,1440);
       data['expires_at'] = DateTime.now().toUtc().add(duration).toIso8601String();
       data['archived_at'] = null;
     }
@@ -132,7 +132,7 @@ class StoryService {
   }
 
   Future<Map<String, dynamic>> republishStory(String storyId, {int durationMinutes = 60}) async {
-    if (durationMinutes < 1 || durationMinutes > 60) throw ArgumentError('مدة القصة من دقيقة إلى 60 دقيقة.');
+    if (durationMinutes < 1 || durationMinutes > 1440) throw ArgumentError('مدة القصة من دقيقة إلى 24 ساعة.');
     final id = int.tryParse(storyId);
     if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
     final row = await _requireClient.from('stories').update({
@@ -182,12 +182,15 @@ class StoryService {
       final companyId = (member?['company_id'] ?? erpUser?['company_id'])?.toString();
       if (companyId != null && companyId.isNotEmpty) {
         final policy = await _requireClient.from('erp_program_policies').select('policy_value,is_enabled').eq('company_id', companyId).eq('policy_key', 'trader_market.story_duration').maybeSingle();
-        final maximumMinutes = int.tryParse((policy?['policy_value'] ?? '60').toString());
-        if (policy?['is_enabled'] == true && maximumMinutes != null && maximumMinutes > 0 && effectiveDuration.inMinutes > maximumMinutes) effectiveDuration = Duration(minutes: maximumMinutes.clamp(1,60));
+        final maximumValue = int.tryParse((policy?['policy_value'] ?? '60').toString());
+        final unitPolicy = await _requireClient.from('erp_program_policies').select('policy_value,is_enabled').eq('company_id', companyId).eq('policy_key', 'trader_market.story_duration_unit').maybeSingle();
+        final unit = (unitPolicy?['policy_value'] ?? 'دقيقة').toString();
+        final maximumMinutes = (maximumValue ?? 60) * (unit == 'ساعة' ? 60 : 1);
+        if (policy?['is_enabled'] == true && maximumMinutes > 0 && effectiveDuration.inMinutes > maximumMinutes) effectiveDuration = Duration(minutes: maximumMinutes.clamp(1,1440));
       }
     } catch (_) { /* Keep the 60-minute default if company policy is unavailable. */ }
     if (effectiveDuration <= Duration.zero ||
-        effectiveDuration > const Duration(hours: 1)) {
+        effectiveDuration > const Duration(hours: 24)) {
       throw ArgumentError(
         'مدة القصة يجب أن تكون أكبر من صفر '
         'ولا تتجاوز ساعة واحدة.',
@@ -203,7 +206,7 @@ class StoryService {
       'caption': cleanCaption,
       'created_at': now.toIso8601String(),
       'expires_at': now.add(effectiveDuration).toIso8601String(),
-      'duration_minutes': effectiveDuration.inMinutes.clamp(1,60),
+      'duration_minutes': effectiveDuration.inMinutes.clamp(1,1440),
     };
 
     if (cleanActivity != null) {
