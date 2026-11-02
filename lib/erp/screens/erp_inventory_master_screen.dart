@@ -400,15 +400,15 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         'p_company_id':_company.text.trim(),'p_item_id':itemId,
       });
       if(!mounted)return;
-      setState(()=>{
-        _sharedWorkspaceStock=List<Map<String,dynamic>>.from(rows as List),
-        _sharedStockLoaded=true,
-        _loading=false,
-        _error=null,
+      setState(() {
+        _sharedWorkspaceStock=List<Map<String,dynamic>>.from(rows as List);
+        _sharedStockLoaded=true;
+        _loading=false;
+        _error=null;
       });
     } catch(e) {
       if(!mounted)return;
-      setState(()=>{_loading=false,_error='تعذر تحميل الأرصدة المشتركة: $e'});
+      setState(() { _loading=false; _error='تعذر تحميل الأرصدة المشتركة: $e'; });
     }
   }
 
