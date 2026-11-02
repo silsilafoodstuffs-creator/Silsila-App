@@ -41,6 +41,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _documents = [];
   List<Map<String, dynamic>> _stockMovements = [];
+  List<Map<String, dynamic>> _memberLocations = [];
+  String? _selectedLocationMemberUserId;
   List<Map<String, dynamic>> _draftLines = [];
   String _documentType = 'purchase';
   String? _selectedDocBranchId;
@@ -163,6 +165,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _safeRows(() => _db.from('erp_business_workspace_employees').select('id,department_id,employee_code,full_name,job_title,monthly_salary,is_active').eq('workspace_id', id).order('full_name')),
         _safeRows(() => _db.from('erp_business_workspace_documents').select('id,document_no,document_type,document_date,counterparty_name,status,total,created_at').eq('workspace_id', id).order('created_at', ascending: false).limit(200)),
         _safeRows(() => _db.from('erp_business_workspace_stock_movements').select('id,warehouse_id,item_link_id,movement_type,quantity_in,quantity_out,unit_cost,movement_date').eq('workspace_id', id).order('movement_date', ascending: false).limit(1000)),
+        _safeRows(() => _db.from('erp_business_workspace_member_locations').select('id,user_id,access_scope,branch_id,warehouse_id,is_allowed').eq('workspace_id', id)),
       ]);
       if (!mounted) return;
       setState(() {
@@ -177,6 +180,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _employees = List<Map<String, dynamic>>.from(result[8]);
         _documents = List<Map<String, dynamic>>.from(result[9]);
         _stockMovements = List<Map<String, dynamic>>.from(result[10]);
+        _memberLocations = List<Map<String, dynamic>>.from(result[11]);
+        final selectableMembers = _members.where((m)=>m['member_role']!='owner').toList();
+        _selectedLocationMemberUserId = selectableMembers.any((m)=>m['user_id'].toString()==_selectedLocationMemberUserId) ? _selectedLocationMemberUserId : (selectableMembers.isNotEmpty ? selectableMembers.first['user_id'].toString() : null);
         _selectedDocBranchId = _branches.any((x) => x['id'].toString() == _selectedDocBranchId) ? _selectedDocBranchId : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
         _selectedDocWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedDocWarehouseId) ? _selectedDocWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
         _selectedDocItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedDocItemLinkId && x['is_enabled'] == true) ? _selectedDocItemLinkId : (_itemLinks.where((x) => x['is_enabled'] == true).isNotEmpty ? _itemLinks.firstWhere((x) => x['is_enabled'] == true)['id'].toString() : null);
@@ -499,6 +505,41 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         },child:const Text('حفظ الصلاحيات')),
       ],
     )));
+  }
+
+  bool _memberHasBranchAccess(String userId,String branchId) {
+    final rows=_memberLocations.where((l)=>l['user_id'].toString()==userId&&l['access_scope']=='branch'&&l['branch_id'].toString()==branchId);
+    if(rows.isNotEmpty) return rows.first['is_allowed']==true;
+    final warehouseAllowed=_memberLocations.any((l)=>l['user_id'].toString()==userId&&l['access_scope']=='warehouse'&&l['is_allowed']==true&&_warehouses.any((w)=>w['id'].toString()==l['warehouse_id'].toString()&&w['branch_id'].toString()==branchId));
+    if(warehouseAllowed) return true;
+    return !_memberLocations.any((l)=>l['user_id'].toString()==userId&&l['is_allowed']==true);
+  }
+
+  bool _memberHasWarehouseAccess(String userId,Map<String,dynamic> warehouse) {
+    final whId=warehouse['id'].toString();
+    final rows=_memberLocations.where((l)=>l['user_id'].toString()==userId&&l['access_scope']=='warehouse'&&l['warehouse_id'].toString()==whId);
+    if(rows.isNotEmpty) return rows.first['is_allowed']==true;
+    final branchRows=_memberLocations.where((l)=>l['user_id'].toString()==userId&&l['access_scope']=='branch'&&l['branch_id'].toString()==warehouse['branch_id'].toString());
+    if(branchRows.isNotEmpty && branchRows.first['is_allowed']==false) return false;
+    if(branchRows.isNotEmpty && branchRows.first['is_allowed']==true) return true;
+    return !_memberLocations.any((l)=>l['user_id'].toString()==userId&&l['is_allowed']==true);
+  }
+
+  Future<void> _setMemberLocationAccess(String userId,String scope,String branchId,String? warehouseId,bool allowed) async {
+    final workspaceId=_selected?['id']?.toString();
+    if(workspaceId==null) return;
+    try {
+      await _db.rpc('erp_set_business_workspace_location_access',params:{
+        'p_workspace_id':workspaceId,'p_user_id':userId,'p_access_scope':scope,
+        'p_branch_id':branchId,'p_warehouse_id':warehouseId,'p_is_allowed':allowed,
+      });
+      if(scope=='branch'&&allowed) {
+        final ids=_warehouses.where((w)=>w['branch_id'].toString()==branchId).map((w)=>w['id'].toString()).toList();
+        if(ids.isNotEmpty) await _db.from('erp_business_workspace_member_locations').delete().eq('workspace_id',workspaceId).eq('user_id',userId).eq('access_scope','warehouse').inFilter('warehouse_id',ids);
+      }
+      await _loadStructure();
+      _message('تم تحديث نطاق وصول المستخدم.');
+    } catch(e) { _message('تعذر تحديث نطاق الوصول: $e'); }
   }
 
   Future<void> _removeMember(String userId) async {
@@ -938,6 +979,20 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       dense: true, contentPadding: EdgeInsets.zero, title: Text(_permissionLabel(entry.key), style: const TextStyle(fontSize: 12)),
       value: entry.value, onChanged: (v) => setState(() => _memberPermissions[entry.key] = v),
     )),
+    const Divider(),
+    _sectionTitle('فروع ومخازن مستخدميني','حدد الفرع بالكامل أو امنح الوصول إلى مخازن معينة فقط'),
+    if(_members.where((m)=>m['member_role']!='owner').isNotEmpty) ...[
+      DropdownButtonFormField<String>(
+        value:_members.any((m)=>m['user_id'].toString()==_selectedLocationMemberUserId&&m['member_role']!='owner')?_selectedLocationMemberUserId:null,
+        decoration:const InputDecoration(labelText:'المستخدم الفرعي'),
+        items:_members.where((m)=>m['member_role']!='owner').map((m)=>DropdownMenuItem(value:m['user_id'].toString(),child:Text((m['member_display_name']??'مستخدم').toString()))).toList(),
+        onChanged:(v)=>setState(()=>_selectedLocationMemberUserId=v),
+      ),
+      if(_selectedLocationMemberUserId!=null) ..._branches.map((b)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('السماح بالفرع بالكامل: ${b['name_ar']}'),value:_memberHasBranchAccess(_selectedLocationMemberUserId!,b['id'].toString()),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'branch',b['id'].toString(),null,v)),
+        Padding(padding:const EdgeInsets.only(right:22),child:Column(children:_warehouses.where((w)=>w['branch_id'].toString()==b['id'].toString()).map((w)=>SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('مخزن: ${w['name_ar']}'),value:_memberHasWarehouseAccess(_selectedLocationMemberUserId!,w),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'warehouse',b['id'].toString(),w['id'].toString(),v))).toList())),
+      ])),
+    ] else const Text('أضف مستخدماً فرعياً أولاً لتحديد الفروع والمخازن المتاحة له.'),
     const Divider(),
     _sectionTitle('المستخدمون المرتبطون', 'إلغاء الوصول لا يحذف حساب المستخدم من سلسلة'),
     ..._members.map((m) => ListTile(
