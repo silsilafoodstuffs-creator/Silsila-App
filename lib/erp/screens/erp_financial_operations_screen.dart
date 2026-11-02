@@ -399,9 +399,9 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       title:Text('متابعة الشيك '+s(c['check_number'])),
       content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
         DropdownButtonFormField<String>(value:result,decoration:const InputDecoration(labelText:'الحالة'),items:const[
-          DropdownMenuItem(value:'paid',child:Text('تم السداد')),DropdownMenuItem(value:'returned',child:Text('ارتداد')),DropdownMenuItem(value:'cashed_from_cashbox',child:Text('صرف من الخزينة'))
+          DropdownMenuItem(value:'paid',child:Text(s(c['direction'])=='receipt'?'تم التحصيل':'تم السداد')),DropdownMenuItem(value:'returned',child:Text('ارتداد')),DropdownMenuItem(value:'cashed_from_cashbox',child:Text(s(c['direction'])=='receipt'?'تم التوريد للخزينة':'صرف من الخزينة'))
         ],onChanged:(v)=>local(()=>result=v??result)),
-        const SizedBox(height:8),field(date,'تاريخ السداد / الارتداد DD-MM-YYYY'),
+        const SizedBox(height:8),field(date,s(c['direction'])=='receipt'?'تاريخ التحصيل / التوريد / الارتداد DD-MM-YYYY':'تاريخ السداد / الصرف / الارتداد DD-MM-YYYY'),
         if(result!='returned') ...[const SizedBox(height:8),drop('الحساب المقابل للقيد',counterAccount,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب المقابل')),...accounts.map((a)=>DropdownMenuItem(value:s(a['id']),child:Text(s(a['account_code'])+' — '+s(a['account_name']))))],(v)=>local(()=>counterAccount=v))],
         if(result=='cashed_from_cashbox')drop('الخزينة',cashbox,[...cashboxes.where((x)=>x['is_bank_account']!=true).map((x)=>DropdownMenuItem(value:s(x['id']),child:Text(s(x['cashbox_name']))))],(v)=>local(()=>cashbox=v)),
       ])),
