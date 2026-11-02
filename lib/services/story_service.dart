@@ -114,8 +114,8 @@ class StoryService {
   Future<Map<String, dynamic>> updateStory({
     required String storyId, String? caption, Duration? duration,
   }) async {
-    final id = int.tryParse(storyId);
-    if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
+    final id = storyId.trim();
+    if (id.isEmpty) throw ArgumentError('معرّف القصة غير صالح.');
     if (duration != null && (duration <= Duration.zero || duration > const Duration(hours: 1))) {
       throw ArgumentError('مدة القصة يجب أن تكون من دقيقة إلى 60 دقيقة.');
     }
@@ -132,8 +132,8 @@ class StoryService {
   }
 
   Future<void> deleteStory(String storyId) async {
-    final id = int.tryParse(storyId);
-    if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
+    final id = storyId.trim();
+    if (id.isEmpty) throw ArgumentError('معرّف القصة غير صالح.');
     await _requireClient.from('stories').delete().eq('id', id).eq('user_id', _userId);
   }
 
