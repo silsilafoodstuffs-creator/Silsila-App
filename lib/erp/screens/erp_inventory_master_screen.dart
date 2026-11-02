@@ -446,11 +446,42 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   }
 
 
-  Future<void> _editFirstRecord() async {
+  Future<Map<String,dynamic>?> _chooseMasterRecord(String action) async {
     final isWarehouse=_view=='warehouses';
     final rows=isWarehouse?_warehouses:_items;
-    if(rows.isEmpty){setState(()=>_message='لا توجد سجلات لتعديلها.');return;}
-    final row=rows.first;
+    if(rows.isEmpty)return null;
+    return showDialog<Map<String,dynamic>>(
+      context:context,
+      builder:(ctx)=>AlertDialog(
+        title:Text(action=='edit'?'اختر السجل المراد تعديله':isWarehouse?'اختر المخزن المراد حذفه':'اختر الصنف المراد إيقافه'),
+        content:SizedBox(
+          width:620,
+          height:460,
+          child:ListView.separated(
+            itemCount:rows.length,
+            separatorBuilder:(_,__)=>const Divider(height:1),
+            itemBuilder:(ctx,index){
+              final row=rows[index];
+              return ListTile(
+                dense:true,
+                title:Text(isWarehouse
+                  ? _s(row['warehouse_code'])+' — '+_s(row['warehouse_name'])
+                  : _s(row['item_code'])+' — '+_s(row['item_name'])),
+                subtitle:Text(row['is_active']==true?'نشط':'موقوف'),
+                onTap:()=>Navigator.pop(ctx,Map<String,dynamic>.from(row)),
+              );
+            },
+          ),
+        ),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء'))],
+      ),
+    );
+  }
+
+  Future<void> _editFirstRecord() async {
+    final isWarehouse=_view=='warehouses';
+    final row=await _chooseMasterRecord('edit');
+    if(row==null)return;
     final code=TextEditingController(text:_s(row[isWarehouse?'warehouse_code':'item_code']));
     final name=TextEditingController(text:_s(row[isWarehouse?'warehouse_name':'item_name']));
     final barcode=TextEditingController(text:_s(row['barcode']));
@@ -471,19 +502,19 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           await Supabase.instance.client.from('erp_items').update({'item_code':code.text.trim().toUpperCase(),'item_name':name.text.trim(),'barcode':barcode.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
         }
         await _load(clearMessage:false);
-        if(mounted)setState(()=>_message='تم تعديل السجل الأول في القائمة.');
+        if(mounted)setState(()=>_message='تم تعديل السجل المحدد.');
       }
     }catch(e){if(mounted)setState(()=>_error='تعذر تعديل السجل: $e');}
     finally{code.dispose();name.dispose();barcode.dispose();}
   }
   Future<void> _deleteFirstRecord() async {
+    final selected=await _chooseMasterRecord('delete');
+    if(selected==null)return;
     if(_view=='warehouses'){
-      if(_warehouses.isEmpty){setState(()=>_message='لا توجد مخازن لحذفها.');return;}
-      await _deleteWarehouse(_warehouses.first);
+      await _deleteWarehouse(selected);
       return;
     }
-    if(_items.isEmpty){setState(()=>_message='لا توجد أصناف لإيقافها.');return;}
-    final item=_items.first;
+    final item=selected;
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
       title:const Text('تأكيد إيقاف الصنف'),
       content:Text('إيقاف الصنف «${_s(item['item_name'])}»؟ سيظل محفوظاً إذا كان مرتبطاً بحركات أو مستندات.'),
