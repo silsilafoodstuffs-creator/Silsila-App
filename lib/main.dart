@@ -6775,6 +6775,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final Map<String,String> _productUnits = {};
   final Map<String,String> _productQuality = {};
   final Map<String,bool> _productNegotiable = {};
+  final Map<String,DateTime> _productExpiryDates = {};
   DateTime? _transportAt;
   bool selectAllProducts = false;
 
@@ -6870,6 +6871,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             FilterChip(label:const Text('صلاحية قريبة'),selected:(_productQuality[name]??'good')=='near_expiry',onSelected:(v)=>setState(()=>_productQuality[name]=v?'near_expiry':'good')),
             FilterChip(label:const Text('قابل للتفاوض'),selected:_productNegotiable[name]==true,onSelected:(v)=>setState(()=>_productNegotiable[name]=v)),
           ])),
+          if(type=='sell'&&(_productQuality[name]??'good')=='near_expiry') ListTile(contentPadding:const EdgeInsetsDirectional.only(start:32),dense:true,title:const Text('تاريخ انتهاء الصلاحية'),subtitle:Text(_productExpiryDates[name]?.toIso8601String().split('T').first??'اختياري — حدد التاريخ'),trailing:IconButton(icon:const Icon(Icons.calendar_month),onPressed:()async{final now=DateTime.now();final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:_productExpiryDates[name]??now.add(const Duration(days:30)));if(d!=null)setState(()=>_productExpiryDates[name]=d);})),
         ]);
       }),
       if(expanded)...children.map((child)=>_marketCategoryNode(child,depth+1)),
@@ -6922,7 +6924,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       itemsData.add({
         'product_id':product?['id'],'product_name':name,'quantity':qty,
         'unit':_productUnits[name] ?? product?['unit'] ?? 'وحدة',
-        'price':price,'is_negotiable':_productNegotiable[name]??isNegotiable,'quality_preference':_productQuality[name]??'good',
+        'price':price,'is_negotiable':_productNegotiable[name]??isNegotiable,'quality_preference':_productQuality[name]??'good','expiry_condition_date':_productExpiryDates[name]?.toIso8601String().split('T').first,
       });
     }
     if (itemsData.isEmpty && selectedProducts.isEmpty) {
