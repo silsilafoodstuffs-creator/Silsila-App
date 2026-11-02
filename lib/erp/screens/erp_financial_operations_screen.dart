@@ -68,15 +68,15 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
         requireApproval=p?['require_cash_order_approval']!=false; allowCredit=p?['allow_credit_cheques']!=false;
         loading=false; error=null;
       });
-    } catch(e) { if(mounted)setState(()=>{loading=false;error='تعذر تحميل البيانات: '+e.toString();}); }
+    } catch(e) { if(mounted)setState(() {loading=false;error='تعذر تحميل البيانات: '+e.toString();}); }
   }
 
   Future<void> run(Future<void> Function() action,String ok) async {
-    if(saving)return; setState(()=>{saving=true;error=null;message=null;});
-    try { await action(); if(!mounted)return; setState(()=>{saving=false;message=ok;}); await load(); }
-    catch(e) { if(mounted)setState(()=>{saving=false;error='تعذر التنفيذ: '+e.toString();}); }
+    if(saving)return; setState(() {saving=true;error=null;message=null;});
+    try { await action(); if(!mounted)return; setState(() {saving=false;message=ok;}); await load(); }
+    catch(e) { if(mounted)setState(() {saving=false;error='تعذر التنفيذ: '+e.toString();}); }
   }
-  void resetForm() { amount.clear(); description.clear(); fromName.clear(); toName.clear(); partyName.clear(); chequeAmount.clear(); setState(()=>{error=null;message='نموذج جديد جاهز.';}); }
+  void resetForm() { amount.clear(); description.clear(); fromName.clear(); toName.clear(); partyName.clear(); chequeAmount.clear(); setState(() {error=null;message='نموذج جديد جاهز.';}); }
   String cashboxName(String id) { final a=cashboxes.where((x)=>s(x['id'])==id); return a.isEmpty?'غير محدد':s(a.first['cashbox_name']); }
   String entityName(Map<String,dynamic> r) => s(r['party_name']).isNotEmpty?s(r['party_name']):s(r['account_name']).isNotEmpty?s(r['account_name']):s(r['cashbox_name']);
   String entityCode(Map<String,dynamic> r) => s(r['party_code']).isNotEmpty?s(r['party_code']):s(r['account_code']).isNotEmpty?s(r['account_code']):s(r['cashbox_code']);
@@ -108,7 +108,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     DropdownButtonFormField<String>(value:value,isExpanded:true,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true),items:items,onChanged:onChanged);
   Widget picker(String label,String type,TextEditingController c,bool isFrom) => Row(children:[
     Expanded(child:field(c,label+' • F1',readOnly:true)),
-    IconButton.filledTonal(onPressed:()async{final r=await pick(type);if(r==null)return;setState(()=>{c.text=entityName(r);if(isFrom)fromId=s(r['id']);else toId=s(r['id']);});},icon:const Icon(Icons.search),tooltip:'بحث F1')
+    IconButton.filledTonal(onPressed:()async{final r=await pick(type);if(r==null)return;setState(() {c.text=entityName(r);if(isFrom)fromId=s(r['id']);else toId=s(r['id']);});},icon:const Icon(Icons.search),tooltip:'بحث F1')
   ]);
   Widget quick() => Card(color:purple,child:Padding(padding:const EdgeInsets.all(9),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Text(tabNames[tabs.index],style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:19)),
@@ -194,8 +194,8 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   Widget movementView()=>Column(children:[
     Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
       Row(children:[Expanded(child:drop('نوع الحركة',movementType,const[DropdownMenuItem(value:'receipt',child:Text('سند قبض')),DropdownMenuItem(value:'payment',child:Text('سند صرف')),DropdownMenuItem(value:'transfer',child:Text('سند تحويل خزائن'))],(v)=>setState(()=>movementType=v??movementType))),const SizedBox(width:8),Expanded(child:field(amount,'القيمة الموجبة',numeric:true))]),
-      const SizedBox(height:8),Row(children:[Expanded(child:drop('جهة الصرف من',fromType,entityTypes,(v)=>setState(()=>{fromType=v??fromType;fromId=null;fromName.clear();}))),const SizedBox(width:8),Expanded(child:picker('اسم الجهة من',fromType,fromName,true))]),
-      const SizedBox(height:8),Row(children:[Expanded(child:drop('وجهة الصرف إلى',toType,entityTypes,(v)=>setState(()=>{toType=v??toType;toId=null;toName.clear();}))),const SizedBox(width:8),Expanded(child:picker('اسم الجهة إلى',toType,toName,false))]),
+      const SizedBox(height:8),Row(children:[Expanded(child:drop('جهة الصرف من',fromType,entityTypes,(v)=>setState(() {fromType=v??fromType;fromId=null;fromName.clear();}))),const SizedBox(width:8),Expanded(child:picker('اسم الجهة من',fromType,fromName,true))]),
+      const SizedBox(height:8),Row(children:[Expanded(child:drop('وجهة الصرف إلى',toType,entityTypes,(v)=>setState(() {toType=v??toType;toId=null;toName.clear();}))),const SizedBox(width:8),Expanded(child:picker('اسم الجهة إلى',toType,toName,false))]),
       const SizedBox(height:8),field(description,'البيان'),Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:saveMovement,child:const Text('حفظ الحركة'))),
     ]))),
     section('حركة نقدية',movements.length),
@@ -214,10 +214,10 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   ]);
   Widget chequeView(bool isOrder)=>Column(children:[
     Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
-      Row(children:[Expanded(child:drop('نوع الشيك',chequeType,const[DropdownMenuItem(value:'bank',child:Text('شيك بنكي')),DropdownMenuItem(value:'credit',child:Text('شيك ائتمان'))],(v)=>setState(()=>{chequeType=v??chequeType;chequeId=null;}))),const SizedBox(width:8),Expanded(child:drop('نوع الحركة',chequeDirection,const[DropdownMenuItem(value:'payment',child:Text('صرف / دفع')),DropdownMenuItem(value:'receipt',child:Text('توريد / قبض'))],(v)=>setState(()=>chequeDirection=v??chequeDirection)))]),
+      Row(children:[Expanded(child:drop('نوع الشيك',chequeType,const[DropdownMenuItem(value:'bank',child:Text('شيك بنكي')),DropdownMenuItem(value:'credit',child:Text('شيك ائتمان'))],(v)=>setState(() {chequeType=v??chequeType;chequeId=null;}))),const SizedBox(width:8),Expanded(child:drop('نوع الحركة',chequeDirection,const[DropdownMenuItem(value:'payment',child:Text('صرف / دفع')),DropdownMenuItem(value:'receipt',child:Text('توريد / قبض'))],(v)=>setState(()=>chequeDirection=v??chequeDirection)))]),
       const SizedBox(height:8),
       if(chequeType=='bank')drop('الشيك المتاح غير المستخدم',chequeId,[const DropdownMenuItem<String>(value:null,child:Text('اختر الشيك')),...cheques.where((c)=>s(c['status'])=='available'&&s(c['cheque_type'])=='bank').map((c)=>DropdownMenuItem(value:s(c['id']),child:Text(s(c['check_number'])+' • '+cashboxName(s(c['bank_cashbox_id'])))))],(v)=>setState(()=>chequeId=v))
-      else drop('الحساب البنكي',bankId,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب البنكي')),...cashboxes.where((b)=>b['is_bank_account']==true).map((b)=>DropdownMenuItem(value:s(b['id']),child:Text(s(b['cashbox_name']))))],(v)=>setState(()=>{bankId=v;chequeId=null;})),
+      else Column(children:[drop('الحساب البنكي',bankId,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب البنكي')),...cashboxes.where((b)=>b['is_bank_account']==true).map((b)=>DropdownMenuItem(value:s(b['id']),child:Text(s(b['cashbox_name']))))],(v)=>setState(() {bankId=v;chequeId=null;})),const SizedBox(height:8),field(firstCheck,'رقم شيك الائتمان',numeric:true)]),
       const SizedBox(height:8),Row(children:[Expanded(child:field(issueDate,'تاريخ الإصدار')),const SizedBox(width:8),Expanded(child:field(dueDate,'تاريخ الاستحقاق'))]),
       const SizedBox(height:8),field(partyName,'اسم المستفيد'),const SizedBox(height:8),field(chequeAmount,'قيمة الشيك الموجبة',numeric:true),const SizedBox(height:8),field(description,'البيان'),
       Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:()=>issueCheque(isOrder),child:Text(isOrder?'حفظ أمر الشيك':'حفظ حركة الشيك'))),
