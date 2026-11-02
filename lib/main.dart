@@ -2674,19 +2674,21 @@ class _MainShellState extends State<MainShell> {
           const SizedBox(height: 14),
           Row(children: [
             Expanded(child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: Colors.green.shade700),
+              style: FilledButton.styleFrom(backgroundColor: purple),
               onPressed: () => openMarketPost('buy'),
               icon: const Icon(Icons.shopping_basket_outlined),
-              label: Text(silsilaText(silsilaText('إضافة طلب شراء'))),
+              label: const Text('عايز أشتري'),
             )),
             const SizedBox(width: 8),
             Expanded(child: FilledButton.icon(
               style: FilledButton.styleFrom(backgroundColor: orange),
               onPressed: () => openMarketPost('sell'),
               icon: const Icon(Icons.sell_outlined),
-              label: Text(silsilaText(silsilaText('طلب بيع'))),
+              label: const Text('عايز أبيع'),
             )),
           ]),
+          const SizedBox(height: 8),
+          SizedBox(width: double.infinity, child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3)), onPressed: () => openMarketPost('transfer'), icon: const Icon(Icons.local_shipping_outlined), label: const Text('عايز أنقل')),
           const SizedBox(height: 12),
           MarketPostsSection(key: marketPostsKey),
         ],
@@ -6676,7 +6678,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
           children: posts.map((post) {
             final type = (post['post_type'] ?? '').toString();
             final isBuy = type == 'buy' || type == 'request';
-            final color = isBuy ? Colors.green.shade700 : orange;
+            final color = type == 'transfer' ? const Color(0xFFFF27C3) : isBuy ? purple : orange;
             final title = (post['title'] ?? 'إعلان').toString();
             final details = (post['description'] ?? post['details'] ?? '').toString();
             final quantity = post['quantity'];
@@ -6685,7 +6687,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
             final governorate = (post['governorate'] ?? '').toString();
             final contactPhone = (post['contact_phone'] ?? '').toString();
             final subtitle = [
-              isBuy ? 'طلب شراء' : 'عرض بيع',
+              type == 'transfer' ? 'طلب نقل' : isBuy ? 'عايز أشتري' : 'عايز أبيع',
               if (category.isNotEmpty) 'القسم: $category',
               if (quantity != null) 'الكمية: $quantity ${post['unit'] ?? ''}',
               if (targetPrice != null) 'السعر: $targetPrice جنيه',
@@ -6699,7 +6701,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
               expiryDate: (post['expiry_date'] ?? '').toString(),
               isNegotiable: post['is_negotiable'] == true,
               title: title,
-              type: isBuy ? 'طلب شراء' : 'عرض بيع',
+              type: type == 'transfer' ? 'عايز أنقل' : isBuy ? 'عايز أشتري' : 'عايز أبيع',
               details: subtitle,
               color: color,
             );
@@ -6806,7 +6808,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         governorate: governorateController.text.trim().isEmpty ? null : governorateController.text.trim(),
         category: categoryController.text.trim().isEmpty ? null : categoryController.text.trim(),
         contactPhone: contactPhoneController.text.trim().isEmpty ? null : normalizePhoneForAuth(contactPhoneController.text),
-        expiryDate: expiryDate,
+        durationHours: 24,
         isNegotiable: isNegotiable,
       );
       if (mounted) {
@@ -6835,12 +6837,14 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 12),
-            decoration: BoxDecoration(color: type == 'buy' ? Colors.green.shade700 : purple, borderRadius: BorderRadius.circular(14)),
-            child: Text(type == 'buy' ? 'عايز أشتري' : 'عايز أبيع',
+            decoration: BoxDecoration(color: type == 'buy' ? purple : type == 'transfer' ? const Color(0xFFFF27C3) : orange, borderRadius: BorderRadius.circular(14)),
+            child: Text(type == 'buy' ? 'عايز أشتري' : type == 'transfer' ? 'عايز أنقل' : 'عايز أبيع',
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 19)),
           ),
           const SizedBox(height: 12),
+          TextField(controller: titleController, decoration: const InputDecoration(labelText: 'عنوان الطلب')),
+          const SizedBox(height: 10),
           TextField(
             controller: detailsController,
             maxLines: 4,
@@ -6878,10 +6882,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             )),
           ],
           const SizedBox(height: 12),
-          TextField(
-            controller: titleController,
-            decoration: const InputDecoration(labelText: 'عنوان العرض أو الطلب'),
-          ),
+
           const SizedBox(height: 12),
           TextField(
             controller: quantityController,
@@ -6917,7 +6918,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           ),
           const SizedBox(height: 8),
           SwitchListTile(contentPadding: EdgeInsets.zero, value: isNegotiable, onChanged: (value) => setState(() => isNegotiable = value), title: Text(silsilaText(silsilaText('السعر قابل للتفاوض البسيط'))), subtitle: Text(silsilaText(silsilaText('يمكن للطرف الآخر إرسال سعر مقترح للموافقة أو الرفض أو التعديل.')))),
-          ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.event_busy_outlined, color: purple), title: Text(silsilaText(silsilaText('تاريخ صلاحية الطلب'))), subtitle: Text(expiryDate == null ? 'غير محدد' : '${expiryDate!.year}/${expiryDate!.month.toString().padLeft(2, '0')}/${expiryDate!.day.toString().padLeft(2, '0')}'), trailing: IconButton(tooltip: 'اختيار التاريخ', icon: const Icon(Icons.calendar_month), onPressed: () async { final now = DateTime.now(); final value = await showDatePicker(context: context, initialDate: expiryDate ?? now.add(const Duration(days: 7)), firstDate: DateTime(now.year, now.month, now.day), lastDate: DateTime(2100)); if (value != null) setState(() => expiryDate = value); })),
+
           const SizedBox(height: 16),
           FilledButton(
             onPressed: busy ? null : savePost,
