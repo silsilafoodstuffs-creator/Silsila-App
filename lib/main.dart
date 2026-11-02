@@ -7108,7 +7108,7 @@ class _MyMarketPostsScreenState extends State<MyMarketPostsScreen> {
     if(ok!=true){title.dispose();details.dispose();return;}
     try {
       if(_admin) await _service.updatePostForModeration(postId:post['id'].toString(),title:title.text,description:details.text);
-      else await _service.updatePost(postId:post['id'].toString(),title:title.text,description:details.text);
+      else await _service.updatePostDetails(postId:post['id'].toString(),title:title.text,description:details.text);
       await _reload();
     } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تعديل الطلب: '+e.toString()))); }
     title.dispose();details.dispose();
