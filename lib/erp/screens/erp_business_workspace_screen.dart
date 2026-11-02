@@ -488,7 +488,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         FilledButton(onPressed:() async {
           try {
             await _db.from('erp_business_workspace_members').update({
-              'member_role':role,'permissions':permissions,'is_active':true,'can_open_workspace':permissions['workspace.enter']==true,
+              'member_role':role,'permissions':permissions,'is_active':true,'can_open_workspace':role=='admin'||permissions['workspace.enter']==true,
             }).eq('workspace_id',_selected!['id'].toString()).eq('user_id',member['user_id'].toString());
             if(dialogContext.mounted) Navigator.pop(dialogContext);
             await _loadStructure(); _message('تم تحديث صلاحيات المستخدم.');
