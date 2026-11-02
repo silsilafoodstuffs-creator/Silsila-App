@@ -163,7 +163,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     },order?'تم حفظ أمر الشيك.':'تم حفظ حركة الشيك.');
   }
   Future<void> settle(Map<String,dynamic> c) async {
-    final date=TextEditingController(text:_today());String result='paid';String? cashbox;
+    final date=TextEditingController(text:_today());String result='paid';String? cashbox;String? counterAccount;
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,local)=>AlertDialog(
       title:Text('متابعة الشيك '+s(c['check_number'])),
       content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -171,11 +171,12 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
           DropdownMenuItem(value:'paid',child:Text('تم السداد')),DropdownMenuItem(value:'returned',child:Text('ارتداد')),DropdownMenuItem(value:'cashed_from_cashbox',child:Text('صرف من الخزينة'))
         ],onChanged:(v)=>local(()=>result=v??result)),
         const SizedBox(height:8),field(date,'تاريخ السداد / الارتداد'),
+        if(result!='returned') ...[const SizedBox(height:8),drop('الحساب المقابل للقيد',counterAccount,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب المقابل')),...accounts.map((a)=>DropdownMenuItem(value:s(a['id']),child:Text(s(a['account_code'])+' — '+s(a['account_name']))))],(v)=>local(()=>counterAccount=v))],
         if(result=='cashed_from_cashbox')drop('الخزينة',cashbox,[...cashboxes.where((x)=>x['is_bank_account']!=true).map((x)=>DropdownMenuItem(value:s(x['id']),child:Text(s(x['cashbox_name']))))],(v)=>local(()=>cashbox=v)),
       ])),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد'))],
     )));
-    if(yes==true) await run(()async{await db!.rpc('erp_settle_cheque',params:{'p_cheque_id':c['id'],'p_result':result,'p_settlement_date':date.text,'p_method':result=='cashed_from_cashbox'?'cashbox':'bank','p_cashbox_id':cashbox,'p_reference':null});},'تم تحديث حالة الشيك وتاريخ التسوية.');
+    if(yes==true) await run(()async{await db!.rpc('erp_settle_cheque',params:{'p_cheque_id':c['id'],'p_result':result,'p_settlement_date':date.text,'p_method':result=='cashed_from_cashbox'?'cashbox':'bank','p_cashbox_id':cashbox,'p_reference':null,'p_counter_account_id':counterAccount});},'تم تحديث حالة الشيك وتاريخ التسوية.');
     date.dispose();
   }
   Future<void> savePolicy() async {await run(()async{await db!.from('erp_financial_policies').upsert({'company_id':company,'cash_issue_mode':directMode?'direct':'sales_order_only','require_cash_order_approval':requireApproval,'allow_credit_cheques':allowCredit,'updated_by':db!.auth.currentUser?.id},onConflict:'company_id');},'تم حفظ السياسات المحاسبية.');}
