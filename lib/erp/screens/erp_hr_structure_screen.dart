@@ -40,7 +40,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   @override
   void initState() {
     super.initState();
-    final departmentMode = widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام';
+    final departmentMode = widget.initialTab == 'بيانات الإدارات' || widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام';
     final index = departmentMode ? (widget.initialTab == 'مواقع العمل' ? 1 : 0)
         : widget.initialTab == 'درجات الوظائف' ? 2 : widget.initialTab == 'متطلبات التعيين' ? 1 : 0;
     _tabs = TabController(length: departmentMode ? 2 : 3, vsync: this, initialIndex: index);
@@ -509,7 +509,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   }
 
 
-  bool get _departmentMode => widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام';
+  bool get _departmentMode => widget.initialTab == 'بيانات الإدارات' || widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام';
   List<Map<String,dynamic>> get _quickRows {
     if (_departmentMode) return _tabs.index==0 ? _departments : _locations;
     return _tabs.index==2 ? _grades : _jobs;
@@ -642,15 +642,15 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
     child: Padding(padding: const EdgeInsets.all(16), child: Column(children: [
-      const Align(alignment: Alignment.centerRight, child: Text('الهيكل التنظيمي والوظائف ومواقع العمل', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
+      Align(alignment: Alignment.centerRight, child: Text(_departmentMode ? 'بيانات الإدارات' : 'بيانات الوظائف', style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _hrStructurePurple))),
       _quickToolbar(),
       if (_error != null) Align(alignment: Alignment.centerRight, child: Text(_error!, style: const TextStyle(color: Colors.red))),
-      TabBar(controller: _tabs, isScrollable: true, labelColor: _hrStructurePurple, indicatorColor: _hrStructureOrange, tabs: widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام' ? const [
+      TabBar(controller: _tabs, isScrollable: true, labelColor: _hrStructurePurple, indicatorColor: _hrStructureOrange, tabs: (widget.initialTab == 'بيانات الإدارات' || widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام') ? const [
         Tab(text: 'الإدارات والأقسام'), Tab(text: 'مواقع العمل'),
       ] : const [
         Tab(text: 'الوظائف'), Tab(text: 'متطلبات التعيين'), Tab(text: 'درجات الوظائف'),
       ]),
-      Expanded(child: TabBarView(controller: _tabs, children: widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام' ? [
+      Expanded(child: TabBarView(controller: _tabs, children: (widget.initialTab == 'بيانات الإدارات' || widget.initialTab == 'مواقع العمل' || widget.initialTab == 'الإدارات والأقسام') ? [
         _departmentsView(), _list('مواقع العمل', _locations, 'location_code', 'name_ar', 'location'),
       ] : [
         _jobsCatalogView(), _jobRequirementsView(), _gradesView(),
