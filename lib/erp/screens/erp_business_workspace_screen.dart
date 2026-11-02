@@ -69,6 +69,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _employeeName = TextEditingController();
   final _employeeJob = TextEditingController();
   final _employeeSalary = TextEditingController(text: '0');
+  final _employeeWorkHours = TextEditingController(text:'08:00 - 17:00');
+  final _employeeWeeklyOff = TextEditingController(text:'الجمعة');
+  final _employeeAnnualLeave = TextEditingController(text:'21');
   String? _selectedBranchForWarehouse;
   String _cashType = 'receipt';
   final _cashAmount = TextEditingController();
@@ -111,7 +114,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     _itemSearch.dispose(); _localItemCode.dispose(); _reorderLevel.dispose(); _openingQuantity.dispose(); _openingCost.dispose();
     _proposalName.dispose(); _proposalNameEn.dispose(); _proposalCategory.dispose(); _proposalUnit.dispose(); _proposalDescription.dispose();
     _cashAmount.dispose(); _cashDescription.dispose(); _cashCounterparty.dispose(); _cashReference.dispose();
-    _departmentCode.dispose(); _departmentName.dispose(); _employeeName.dispose(); _employeeJob.dispose(); _employeeSalary.dispose();
+    _departmentCode.dispose(); _departmentName.dispose(); _employeeName.dispose(); _employeeJob.dispose(); _employeeSalary.dispose(); _employeeWorkHours.dispose(); _employeeWeeklyOff.dispose(); _employeeAnnualLeave.dispose();
     _docCounterparty.dispose(); _docNotes.dispose(); _docQuantity.dispose(); _docUnitPrice.dispose(); _docDiscount.dispose(); _docTax.dispose();
     _inventoryQuantity.dispose(); _inventoryUnitCost.dispose(); _inventoryNotes.dispose();
     super.dispose();
@@ -337,8 +340,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         'employee_code':code,'full_name':name,
         'job_title':_employeeJob.text.trim().isEmpty?null:_employeeJob.text.trim(),
         'monthly_salary':salary,
-        'work_schedule':<String,dynamic>{'type':'standard'},
-        'leave_policy':<String,dynamic>{},
+        'work_schedule':<String,dynamic>{'type':'standard','hours':_employeeWorkHours.text.trim(),'weekly_off':_employeeWeeklyOff.text.trim()},
+        'leave_policy':<String,dynamic>{'annual_days':int.tryParse(_employeeAnnualLeave.text.trim())??21},
       });
       _employeeName.clear(); _employeeJob.clear(); _employeeSalary.text='0';
       await _loadStructure(); _message('تم تسجيل الموظف برقم $code.');
@@ -966,7 +969,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ]),
     TextField(controller:_warehouseNameEn,decoration:const InputDecoration(labelText:'اسم المخزن بالإنجليزية (اختياري)')),
     ..._warehouses.map((w) => ListTile(dense: true, leading: const Icon(Icons.warehouse, color: _workspaceOrange), title: Text(w['name_ar'].toString()), subtitle: Text('${w['warehouse_code']} • ${w['show_balance_in_silsila']==true?'الرصيد ظاهر في سلسلة':'الرصيد غير ظاهر في سلسلة'}'),
-      trailing:Switch(value:w['show_balance_in_silsila']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'show_balance_in_silsila':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث سياسة ظهور الرصيد: $e');}}))),
+      trailing:Column(mainAxisSize:MainAxisSize.min,children:[
+        Row(mainAxisSize:MainAxisSize.min,children:[const Text('نشط',style:TextStyle(fontSize:10)),Switch(value:w['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'is_active':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث حالة المخزن: $e');}})]),
+        Row(mainAxisSize:MainAxisSize.min,children:[const Text('إظهار الرصيد',style:TextStyle(fontSize:10)),Switch(value:w['show_balance_in_silsila']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'show_balance_in_silsila':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث سياسة ظهور الرصيد: $e');}})]),
+      ]))),
   ]);
 
   Widget _membersInfo() => Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -1176,6 +1182,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     TextField(controller:_employeeName,decoration:const InputDecoration(labelText:'اسم الموظف *')),
     TextField(controller:_employeeJob,decoration:const InputDecoration(labelText:'الوظيفة')),
     TextField(controller:_employeeSalary,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'المرتب الشهري')),
+    Row(children:[Expanded(child:TextField(controller:_employeeWorkHours,decoration:const InputDecoration(labelText:'مواعيد العمل'))),const SizedBox(width:8),Expanded(child:TextField(controller:_employeeWeeklyOff,decoration:const InputDecoration(labelText:'يوم الإجازة الأسبوعية')))]),
+    TextField(controller:_employeeAnnualLeave,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'أيام الإجازة السنوية')),
     const SizedBox(height:8),
     Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_addEmployee,icon:const Icon(Icons.person_add),label:const Text('إضافة موظف'))),
     const Divider(),
