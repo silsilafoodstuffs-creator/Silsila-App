@@ -5,7 +5,8 @@ const _workspacePurple = Color(0xFF3E007D);
 const _workspaceOrange = Color(0xFFFFA015);
 
 class ErpBusinessWorkspaceScreen extends StatefulWidget {
-  const ErpBusinessWorkspaceScreen({super.key});
+  final VoidCallback? onExit;
+  const ErpBusinessWorkspaceScreen({super.key, this.onExit});
   @override
   State<ErpBusinessWorkspaceScreen> createState() => _ErpBusinessWorkspaceScreenState();
 }
@@ -37,6 +38,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _departments = [];
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _documents = [];
+  List<Map<String, dynamic>> _stockMovements = [];
   List<Map<String, dynamic>> _draftLines = [];
   String _documentType = 'purchase';
   String? _selectedDocBranchId;
@@ -148,6 +150,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _safeRows(() => _db.from('erp_business_workspace_departments').select('id,parent_id,department_code,name_ar,is_active').eq('workspace_id', id).order('name_ar')),
         _safeRows(() => _db.from('erp_business_workspace_employees').select('id,department_id,employee_code,full_name,job_title,monthly_salary,is_active').eq('workspace_id', id).order('full_name')),
         _safeRows(() => _db.from('erp_business_workspace_documents').select('id,document_no,document_type,document_date,counterparty_name,status,total,created_at').eq('workspace_id', id).order('created_at', ascending: false).limit(200)),
+        _safeRows(() => _db.from('erp_business_workspace_stock_movements').select('id,warehouse_id,item_link_id,movement_type,quantity_in,quantity_out,unit_cost,movement_date').eq('workspace_id', id).order('movement_date', ascending: false).limit(1000)),
       ]);
       if (!mounted) return;
       setState(() {
@@ -161,6 +164,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _departments = List<Map<String, dynamic>>.from(result[7]);
         _employees = List<Map<String, dynamic>>.from(result[8]);
         _documents = List<Map<String, dynamic>>.from(result[9]);
+        _stockMovements = List<Map<String, dynamic>>.from(result[10]);
         _selectedDocBranchId = _branches.any((x) => x['id'].toString() == _selectedDocBranchId) ? _selectedDocBranchId : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
         _selectedDocWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedDocWarehouseId) ? _selectedDocWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
         _selectedDocItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedDocItemLinkId && x['is_enabled'] == true) ? _selectedDocItemLinkId : (_itemLinks.where((x) => x['is_enabled'] == true).isNotEmpty ? _itemLinks.firstWhere((x) => x['is_enabled'] == true)['id'].toString() : null);
@@ -526,6 +530,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _areaView() {
     if (_area == 'صرف وتوريد نقدية') return _cashMovementsView();
+    if (_area == 'خروج من إدارة نشاطي') return _exitWorkspaceView();
+    if (_area.startsWith('تقارير')) return _reportsView(_area);
     if (_area == 'فاتورة شراء / مرتجع شراء') return _documentsView(purchase:true);
     if (_area == 'فاتورة بيع / مرتجع بيع') return _documentsView(purchase:false);
     if (_area == 'بياناتي الأساسية') return _basicData();
@@ -556,7 +562,16 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _tileGrid([
           ('الفروع', Icons.account_tree_outlined, '${_branches.length} فرع'),
           ('المخازن', Icons.warehouse_outlined, '${_warehouses.length} مخزن'),
-          ('حالة الربط', Icons.link, 'ربط اختياري مع سلسلة'),
+          ('الأصناف', Icons.inventory_2_outlined, '${_itemLinks.where((x)=>x['is_enabled']==true).length} صنف مفعل'),
+          ('مستندات مرحلة', Icons.receipt_long, '${_documents.where((x)=>x['status']=='posted').length} مستند'),
+        ]),
+        const SizedBox(height:12),
+        _sectionTitle('مؤشرات النشاط','ملخص تشغيلي من البيانات المسجلة داخل هذه المساحة'),
+        _tileGrid([
+          ('إجمالي المبيعات', Icons.trending_up, '${_documentTotal('sale')} جنيه'),
+          ('إجمالي المشتريات', Icons.shopping_cart_outlined, '${_documentTotal('purchase')} جنيه'),
+          ('الوارد النقدي', Icons.south_west, '${_cashTotal(true)} جنيه'),
+          ('الصادر النقدي', Icons.north_east, '${_cashTotal(false)} جنيه'),
         ]),
       ]);
     }
@@ -927,6 +942,71 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       const Text('هذه الوحدة ضمن خطة التنفيذ، ولم يتم تفعيل عملياتها بعد.', style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w700)),
     ])),
   );
+
+  double _documentTotal(String type) => _documents.where((d)=>d['status']=='posted' && d['document_type']==type).fold<double>(0,(sum,d)=>sum+(double.tryParse(d['total'].toString())??0));
+
+  double _cashTotal(bool incoming) {
+    final incomingTypes = ['receipt','deposit','income','transfer_in'];
+    return _cashMovements.where((m)=>incomingTypes.contains(m['movement_type'])==incoming).fold<double>(0,(sum,m)=>sum+(double.tryParse(m['amount'].toString())??0));
+  }
+
+  Widget _reportsView(String kind) {
+    final basic = kind == 'تقارير البيانات الأساسية';
+    final finance = kind == 'تقارير مالية وتحليلات';
+    final posted = _documents.where((d)=>d['status']=='posted').toList();
+    final quantity = _stockMovements.fold<double>(0,(sum,m)=>sum+(double.tryParse(m['quantity_in'].toString())??0)-(double.tryParse(m['quantity_out'].toString())??0));
+    return ListView(children:[
+      _backHeader(kind),
+      if (basic) ...[
+        _sectionTitle('تقرير البيانات الأساسية','إحصاء السجلات المعرفة في النشاط'),
+        _tileGrid([
+          ('الفروع',Icons.account_tree,'${_branches.length}'),
+          ('المخازن',Icons.warehouse,'${_warehouses.length}'),
+          ('المستخدمون',Icons.people,'${_members.length}'),
+          ('الأصناف المفعلة',Icons.inventory,'${_itemLinks.where((x)=>x['is_enabled']==true).length}'),
+          ('الإدارات والأقسام',Icons.corporate_fare,'${_departments.length}'),
+          ('الموظفون',Icons.badge,'${_employees.length}'),
+        ]),
+      ] else if (finance) ...[
+        _sectionTitle('التحليل المالي التشغيلي','المبالغ المستخرجة من المستندات والحركات المسجلة، وليست بديلاً عن قائمة مالية معتمدة'),
+        _tileGrid([
+          ('مبيعات مرحلة',Icons.trending_up,'${_documentTotal('sale')} جنيه'),
+          ('مشتريات مرحلة',Icons.shopping_cart,'${_documentTotal('purchase')} جنيه'),
+          ('مرتجعات البيع',Icons.assignment_return,'${_documentTotal('sale_return')} جنيه'),
+          ('مرتجعات الشراء',Icons.keyboard_return,'${_documentTotal('purchase_return')} جنيه'),
+          ('مقبوضات',Icons.south_west,'${_cashTotal(true)} جنيه'),
+          ('مدفوعات',Icons.north_east,'${_cashTotal(false)} جنيه'),
+        ]),
+      ] else ...[
+        _sectionTitle('تقرير الحركات','حالة المستندات والحركات المخزنية والنقدية'),
+        _tileGrid([
+          ('كل المستندات',Icons.receipt_long,'${_documents.length}'),
+          ('مستندات مرحلة',Icons.verified,'${posted.length}'),
+          ('مسودات',Icons.edit_note,'${_documents.where((d)=>d['status']=='draft').length}'),
+          ('حركات نقدية',Icons.payments,'${_cashMovements.length}'),
+          ('حركات مخزنية',Icons.inventory_2,'${_stockMovements.length}'),
+          ('صافي كمية الحركة',Icons.scale,'${quantity.toStringAsFixed(2)}'),
+        ]),
+        const Divider(),
+        ...posted.take(20).map((d)=>ListTile(dense:true,title:Text(d['document_no'].toString()),subtitle:Text('${d['document_type']} • ${d['document_date']}'),trailing:Text('${d['total']}'))),
+      ],
+    ]);
+  }
+
+  Widget _exitWorkspaceView() => Center(child: ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth:420),
+    child: Card(elevation:0,child:Padding(padding:const EdgeInsets.all(24),child:Column(
+      mainAxisSize:MainAxisSize.min,children:[
+        const Icon(Icons.logout_rounded,size:48,color:_workspacePurple),
+        const SizedBox(height:12),
+        const Text('الخروج من إدارة نشاطي',style:TextStyle(fontWeight:FontWeight.w900,fontSize:18,color:_workspacePurple)),
+        const SizedBox(height:8),
+        const Text('سيتم الرجوع إلى قوائم سلسلة الرئيسية. بيانات النشاط محفوظة ولن يتم حذف أي سجل.',textAlign:TextAlign.center),
+        const SizedBox(height:16),
+        FilledButton.icon(onPressed:()=>widget.onExit?.call() ?? Navigator.of(context).maybePop(),icon:const Icon(Icons.arrow_forward),label:const Text('العودة إلى سلسلة')),
+      ],
+    ))),
+  ));
 
   Widget _backHeader(String title) => Row(children: [
     IconButton(onPressed: () => setState(() => _area = 'الرئيسية'), icon: const Icon(Icons.arrow_forward, color: _workspacePurple)),
