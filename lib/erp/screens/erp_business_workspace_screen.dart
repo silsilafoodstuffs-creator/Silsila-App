@@ -50,6 +50,14 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _docUnitPrice = TextEditingController(text:'0');
   final _docDiscount = TextEditingController(text:'0');
   final _docTax = TextEditingController(text:'0');
+  String _inventoryMode = 'transfer';
+  String _adjustDirection = 'increase';
+  String? _sourceWarehouseId;
+  String? _targetWarehouseId;
+  String? _inventoryItemLinkId;
+  final _inventoryQuantity = TextEditingController(text:'1');
+  final _inventoryUnitCost = TextEditingController(text:'0');
+  final _inventoryNotes = TextEditingController();
   String? _selectedDepartmentId;
   final _departmentCode = TextEditingController();
   final _departmentName = TextEditingController();
@@ -99,6 +107,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     _cashAmount.dispose(); _cashDescription.dispose(); _cashCounterparty.dispose(); _cashReference.dispose();
     _departmentCode.dispose(); _departmentName.dispose(); _employeeName.dispose(); _employeeJob.dispose(); _employeeSalary.dispose();
     _docCounterparty.dispose(); _docNotes.dispose(); _docQuantity.dispose(); _docUnitPrice.dispose(); _docDiscount.dispose(); _docTax.dispose();
+    _inventoryQuantity.dispose(); _inventoryUnitCost.dispose(); _inventoryNotes.dispose();
     super.dispose();
   }
 
@@ -168,6 +177,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _selectedDocBranchId = _branches.any((x) => x['id'].toString() == _selectedDocBranchId) ? _selectedDocBranchId : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
         _selectedDocWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedDocWarehouseId) ? _selectedDocWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
         _selectedDocItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedDocItemLinkId && x['is_enabled'] == true) ? _selectedDocItemLinkId : (_itemLinks.where((x) => x['is_enabled'] == true).isNotEmpty ? _itemLinks.firstWhere((x) => x['is_enabled'] == true)['id'].toString() : null);
+        _inventoryItemLinkId = _itemLinks.any((x) => x['id'].toString() == _inventoryItemLinkId && x['is_enabled'] == true) ? _inventoryItemLinkId : (_itemLinks.where((x) => x['is_enabled'] == true).isNotEmpty ? _itemLinks.firstWhere((x) => x['is_enabled'] == true)['id'].toString() : null);
+        _sourceWarehouseId = _warehouses.any((x) => x['id'].toString() == _sourceWarehouseId) ? _sourceWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
+        _targetWarehouseId = _warehouses.any((x) => x['id'].toString() == _targetWarehouseId) ? _targetWarehouseId : (_warehouses.length > 1 ? _warehouses[1]['id'].toString() : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null));
         _selectedDepartmentId = _departments.any((x) => x['id'].toString() == _selectedDepartmentId) ? _selectedDepartmentId : (_departments.isNotEmpty ? _departments.first['id'].toString() : null);
         _selectedBranchForWarehouse = _branches.any((x) => x['id'].toString() == _selectedBranchForWarehouse) ? _selectedBranchForWarehouse : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
         _selectedStockWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
@@ -253,6 +265,40 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       await _loadStructure();
       _message('تم اعتماد المستند وترحيل حركته إلى مخزون النشاط.');
     } catch(e) { _message('لم يتم ترحيل المستند: $e'); }
+  }
+
+  Future<void> _saveInventoryMovement() async {
+    final workspaceId = _selected?['id']?.toString();
+    final itemId = _inventoryItemLinkId;
+    final qty = double.tryParse(_inventoryQuantity.text.trim());
+    final cost = double.tryParse(_inventoryUnitCost.text.trim()) ?? 0;
+    if(workspaceId==null||itemId==null||qty==null||qty<=0||cost<0||_sourceWarehouseId==null){
+      _message('اختر الصنف والمخزن وأدخل كمية صحيحة.'); return;
+    }
+    final now=DateTime.now();
+    final docNo='ACT-STK-${now.microsecondsSinceEpoch}';
+    try{
+      if(_inventoryMode=='transfer'){
+        if(_targetWarehouseId==null||_targetWarehouseId==_sourceWarehouseId){_message('اختر مخزناً مستهدفاً مختلفاً.');return;}
+        await _db.rpc('erp_transfer_business_workspace_stock',params:{
+          'p_workspace_id':workspaceId,'p_source_warehouse_id':_sourceWarehouseId,
+          'p_target_warehouse_id':_targetWarehouseId,'p_item_link_id':itemId,
+          'p_quantity':qty,'p_document_no':docNo,
+          'p_movement_date':now.toIso8601String().substring(0,10),
+          'p_notes':_inventoryNotes.text.trim(),
+        });
+      }else{
+        await _db.rpc('erp_adjust_business_workspace_stock',params:{
+          'p_workspace_id':workspaceId,'p_warehouse_id':_sourceWarehouseId,
+          'p_item_link_id':itemId,'p_direction':_adjustDirection,
+          'p_quantity':qty,'p_unit_cost':cost,'p_document_no':docNo,
+          'p_movement_date':now.toIso8601String().substring(0,10),
+          'p_notes':_inventoryNotes.text.trim(),
+        });
+      }
+      _inventoryQuantity.text='1';_inventoryUnitCost.text='0';_inventoryNotes.clear();
+      await _loadStructure();_message('تم ترحيل الحركة المخزنية وتحديث رصيد المخازن.');
+    }catch(e){_message('تعذر ترحيل الحركة المخزنية: $e');}
   }
 
   Future<void> _addDepartment() async {
@@ -574,6 +620,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _areaView() {
     if (_area == 'صرف وتوريد نقدية') return _cashMovementsView();
+    if (_area == 'تحويلات وتسويات مخزنية') return _inventoryMovementsView();
     if (_area == 'خروج من إدارة نشاطي') return _exitWorkspaceView();
     if (_area.startsWith('تقارير')) return _reportsView(_area);
     if (_area == 'فاتورة شراء / مرتجع شراء') return _documentsView(purchase:true);
@@ -648,6 +695,70 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     selectedColor: const Color(0xFFF0E7FA),
     onSelected: (_) => setState(() => _basicTab = index),
   );
+
+  Widget _inventoryMovementsView() => ListView(children:[
+    _backHeader('تحويلات وتسويات مخزنية'),
+    _sectionTitle('حركات المخزون','التحويل والتسوية يُرحلان ذرياً إلى دفتر حركة المخزون'),
+    Wrap(spacing:6,children:[
+      ChoiceChip(label:const Text('تحويل بين مخازني'),selected:_inventoryMode=='transfer',onSelected:(_)=>setState(()=>_inventoryMode='transfer')),
+      ChoiceChip(label:const Text('تسوية مخزنية'),selected:_inventoryMode=='adjustment',onSelected:(_)=>setState(()=>_inventoryMode='adjustment')),
+    ]),
+    const SizedBox(height:8),
+    DropdownButtonFormField<String>(
+      value:_warehouses.any((w)=>w['id'].toString()==_sourceWarehouseId)?_sourceWarehouseId:null,
+      decoration:InputDecoration(labelText:_inventoryMode=='transfer'?'المخزن المصدر':'المخزن'),
+      items:_warehouses.map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
+      onChanged:(v)=>setState(()=>_sourceWarehouseId=v),
+    ),
+    if(_inventoryMode=='transfer') ...[
+      const SizedBox(height:8),
+      DropdownButtonFormField<String>(
+        value:_warehouses.any((w)=>w['id'].toString()==_targetWarehouseId)?_targetWarehouseId:null,
+        decoration:const InputDecoration(labelText:'المخزن المستهدف'),
+        items:_warehouses.where((w)=>w['id'].toString()!=_sourceWarehouseId).map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
+        onChanged:(v)=>setState(()=>_targetWarehouseId=v),
+      ),
+    ],
+    if(_inventoryMode=='adjustment') ...[
+      const SizedBox(height:8),
+      DropdownButtonFormField<String>(
+        value:_adjustDirection,
+        decoration:const InputDecoration(labelText:'اتجاه التسوية'),
+        items:const[DropdownMenuItem(value:'increase',child:Text('زيادة رصيد')),DropdownMenuItem(value:'decrease',child:Text('عجز / تخفيض رصيد'))],
+        onChanged:(v){if(v!=null)setState(()=>_adjustDirection=v);},
+      ),
+    ],
+    const SizedBox(height:8),
+    DropdownButtonFormField<String>(
+      value:_itemLinks.any((x)=>x['id'].toString()==_inventoryItemLinkId&&x['is_enabled']==true)?_inventoryItemLinkId:null,
+      decoration:const InputDecoration(labelText:'الصنف'),
+      items:_itemLinks.where((x)=>x['is_enabled']==true).map((x){final item=x['erp_items'] is Map?Map<String,dynamic>.from(x['erp_items']):<String,dynamic>{};return DropdownMenuItem(value:x['id'].toString(),child:Text((item['item_name']??'صنف').toString()));}).toList(),
+      onChanged:(v)=>setState(()=>_inventoryItemLinkId=v),
+    ),
+    Row(children:[
+      Expanded(child:TextField(controller:_inventoryQuantity,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية'))),
+      if(_inventoryMode=='adjustment'&&_adjustDirection=='increase') ...[
+        const SizedBox(width:8),
+        Expanded(child:TextField(controller:_inventoryUnitCost,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'تكلفة الوحدة'))),
+      ],
+    ]),
+    TextField(controller:_inventoryNotes,decoration:const InputDecoration(labelText:'ملاحظات')),
+    const SizedBox(height:8),
+    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_saveInventoryMovement,icon:const Icon(Icons.check_circle),label:const Text('ترحيل الحركة'))),
+    const Divider(),
+    _sectionTitle('آخر الحركات المخزنية','${_stockMovements.length} حركة في دفتر النشاط'),
+    ..._stockMovements.take(50).map((m){
+      final linkRows=_itemLinks.where((x)=>x['id'].toString()==m['item_link_id'].toString());
+      final link=linkRows.isEmpty?null:linkRows.first;
+      final item=link?['erp_items'] is Map?Map<String,dynamic>.from(link!['erp_items']):<String,dynamic>{};
+      final incoming=(double.tryParse(m['quantity_in'].toString())??0)>0;
+      return ListTile(dense:true,leading:Icon(incoming?Icons.south_west:Icons.north_east,color:incoming?Colors.green:Colors.deepOrange),
+        title:Text((item['item_name']??'صنف').toString()),
+        subtitle:Text('${m['movement_type']} • ${m['movement_date']}'),
+        trailing:Text(incoming?'+${m['quantity_in']}':'-${m['quantity_out']}'),
+      );
+    }),
+  ]);
 
   Widget _documentsView({required bool purchase}) => ListView(children: [
     _backHeader(purchase?'فاتورة شراء / مرتجع شراء':'فاتورة بيع / مرتجع بيع'),
