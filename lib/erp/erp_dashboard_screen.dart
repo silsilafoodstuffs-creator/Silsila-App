@@ -1166,7 +1166,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                       ? ErpProgramPoliciesScreen(
                                           companyId: _appManagementCompanyId,
                                         )
-                                      : ErpUserAdminScreen(
+                                      : (_page == 'بيانات المخازن' || _page == 'دليل المخازن والفروع' || _page == 'دليل المخازن')
+                                          ? ErpInventoryMasterScreen(key: ValueKey('$_page-$_appManagementCompanyId'), initialCompanyId: _appManagementCompanyId, initialView: 'warehouses')
+                                          : _page == 'دليل الأصناف'
+                                              ? ErpInventoryMasterScreen(key: ValueKey('$_page-$_appManagementCompanyId'), initialCompanyId: _appManagementCompanyId, initialView: 'items')
+                                              : ErpUserAdminScreen(
                                           companyId: _appManagementCompanyId,
                                           initialView: _page == 'قوالب صلاحيات المستخدمين'
                                               ? 'templates'
