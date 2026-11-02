@@ -102,6 +102,54 @@ class StoryService {
     return _mapRows(response);
   }
 
+
+  /// سجل جميع قصص المستخدم، بما فيها المنتهية والمؤرشفة.
+  Future<List<Map<String, dynamic>>> getMyStoryHistory({int limit = 200}) async {
+    _validateLimit(limit);
+    final rows = await _requireClient.from('stories').select()
+      .eq('user_id', _userId).order('created_at', ascending: false).limit(limit);
+    return _mapRows(rows);
+  }
+
+  Future<Map<String, dynamic>> updateStory({
+    required String storyId, String? caption, Duration? duration,
+  }) async {
+    final id = int.tryParse(storyId);
+    if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
+    if (duration != null && (duration <= Duration.zero || duration > const Duration(hours: 1))) {
+      throw ArgumentError('مدة القصة يجب أن تكون من دقيقة إلى 60 دقيقة.');
+    }
+    final data = <String,dynamic>{'caption': _clean(caption), 'updated_at': DateTime.now().toUtc().toIso8601String()};
+    if (duration != null) {
+      data['duration_minutes'] = duration.inMinutes.clamp(1,60);
+      data['expires_at'] = DateTime.now().toUtc().add(duration).toIso8601String();
+      data['archived_at'] = null;
+    }
+    final row = await _requireClient.from('stories').update(data)
+      .eq('id', id).eq('user_id', _userId).select().maybeSingle();
+    if (row == null) throw StateError('القصة غير موجودة أو لا تملك صلاحية تعديلها.');
+    return Map<String,dynamic>.from(row);
+  }
+
+  Future<void> deleteStory(String storyId) async {
+    final id = int.tryParse(storyId);
+    if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
+    await _requireClient.from('stories').delete().eq('id', id).eq('user_id', _userId);
+  }
+
+  Future<Map<String, dynamic>> republishStory(String storyId, {int durationMinutes = 60}) async {
+    if (durationMinutes < 1 || durationMinutes > 60) throw ArgumentError('مدة القصة من دقيقة إلى 60 دقيقة.');
+    final id = int.tryParse(storyId);
+    if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
+    final row = await _requireClient.from('stories').update({
+      'expires_at': DateTime.now().toUtc().add(Duration(minutes: durationMinutes)).toIso8601String(),
+      'duration_minutes': durationMinutes, 'archived_at': null,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', id).eq('user_id', _userId).select().maybeSingle();
+    if (row == null) throw StateError('القصة غير موجودة أو لا تملك صلاحية إعادة نشرها.');
+    return Map<String,dynamic>.from(row);
+  }
+
   /// إنشاء قصة جديدة تنتهي افتراضيًا بعد ساعة.
   Future<Map<String, dynamic>> createStory({
     required String mediaUrl,
