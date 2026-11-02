@@ -14,6 +14,7 @@ class ErpBusinessWorkspaceScreen extends StatefulWidget {
 class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen> {
   final _db = Supabase.instance.client;
   List<Map<String, dynamic>> _workspaces = [];
+  List<Map<String, dynamic>> _activityTypes = [];
   Map<String, dynamic>? _selected;
   bool _loading = true;
   bool _saving = false;
@@ -124,10 +125,12 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
+      final activityRows = await _safeRows(() => _db.from('activity_types').select('code,name,name_en').eq('is_active',true).order('name'));
       final rows = await _db.from('erp_business_workspaces').select()
           .eq('is_active', true).order('created_at');
       if (!mounted) return;
       setState(() {
+        _activityTypes = activityRows;
         _workspaces = List<Map<String, dynamic>>.from(rows);
         if (_selected != null) {
           final matches = _workspaces.where((w) => w['id'] == _selected!['id']);
@@ -615,7 +618,15 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم النشاط *')),
         const SizedBox(height: 10),
-        TextField(controller: _activity, decoration: const InputDecoration(labelText: 'نوع النشاط')),
+        if (_activityTypes.isNotEmpty)
+          DropdownButtonFormField<String>(
+            value:_activityTypes.any((a)=>a['code'].toString()==_activity.text)?_activity.text:null,
+            decoration:const InputDecoration(labelText:'نوع النشاط'),
+            items:_activityTypes.map((a)=>DropdownMenuItem(value:a['code'].toString(),child:Text((a['name']??a['name_en']??a['code']).toString()))).toList(),
+            onChanged:(v){if(v!=null)_activity.text=v;},
+          )
+        else
+          TextField(controller:_activity,decoration:const InputDecoration(labelText:'نوع النشاط')),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(value: _accountKind, decoration: const InputDecoration(labelText: 'نوع الحساب'), items: const [DropdownMenuItem(value: 'customer', child: Text('عميل')), DropdownMenuItem(value: 'supplier', child: Text('مورد')), DropdownMenuItem(value: 'other', child: Text('نوع آخر'))], onChanged: (v) { if (v != null) _accountKind = v; }),
       ])),
@@ -955,7 +966,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       const SizedBox(height:10),
       Text((_selected?['workspace_name']??'نشاطي').toString(),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:20,color:_workspacePurple)),
       const SizedBox(height:6),
-      Text('نوع النشاط: ${_selected?['activity_type']??'غير محدد'}'),
+      Text('نوع النشاط: ${_activityTypes.where((a)=>a['code'].toString()==_selected?['activity_type']?.toString()).map((a)=>(a['name']??a['name_en']??a['code']).toString()).firstOrNull ?? _selected?['activity_type']??'غير محدد'}'),
       Text('نوع الحساب: ${_selected?['account_kind']??'غير محدد'}'),
       Text('حالة النشاط: ${_selected?['is_active']==true?'نشط':'غير نشط'}'),
       const Divider(),
