@@ -183,6 +183,45 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
     catch(e){if(mounted)setState(()=>_error='تعذر تعطيل العنصر: $e');}
   }
 
+  Future<Map<String,dynamic>?> _chooseEditableElement(String action) async {
+    final candidates=_rows.where((row)=>!_locked(row)).toList();
+    if(candidates.isEmpty)return null;
+    return showDialog<Map<String,dynamic>>(
+      context:context,
+      builder:(ctx)=>AlertDialog(
+        title:Text(action=='edit'?'اختر عنصر المرتب للتعديل':'اختر عنصر المرتب للتعطيل'),
+        content:SizedBox(
+          width:560,
+          height:440,
+          child:ListView.separated(
+            itemCount:candidates.length,
+            separatorBuilder:(_,__)=>const Divider(height:1),
+            itemBuilder:(ctx,index){
+              final row=candidates[index];
+              return ListTile(
+                dense:true,
+                title:Text(_s(row['element_code'])+' — '+_s(row['name_ar'])),
+                subtitle:Text(_s(row['element_type'])=='earning'?'استحقاق':'استقطاع'),
+                onTap:()=>Navigator.pop(ctx,Map<String,dynamic>.from(row)),
+              );
+            },
+          ),
+        ),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء'))],
+      ),
+    );
+  }
+
+  Future<void> _quickEdit() async {
+    final row=await _chooseEditableElement('edit');
+    if(row!=null)await _edit(row:row);
+  }
+
+  Future<void> _quickDelete() async {
+    final row=await _chooseEditableElement('delete');
+    if(row!=null)await _delete(row);
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Card(color:_salaryPurple,child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -191,9 +230,9 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
       const SizedBox(height:8),SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
         ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:_loading?null:_load),
         ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:widget.companyId==null||_showNewRow?null:_startNewRow),
-        ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:_loading?null:_saveNewRow),
-        ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:_firstEditable==null?null:()=>_edit(row:_firstEditable!)),
-        ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:_firstEditable==null?null:()=>_delete(_firstEditable!)),
+        ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:_loading||!_showNewRow?null:_saveNewRow),
+        ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:_loading||_showNewRow||_rows.every(_locked)?null:_quickEdit),
+        ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:_loading||_showNewRow||_rows.every(_locked)?null:_quickDelete),
         ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:_load),
         ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>_printElements(share:false)),
         ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:_exportElementsExcel),
