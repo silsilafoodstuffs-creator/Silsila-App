@@ -560,7 +560,7 @@ class WelcomeScreen extends StatelessWidget {
                         builder: (_) => const LoginScreen(),
                       ),
                     ),
-                    child: Text(silsilaText('ابدأ الآن'),
+                    child: const Text('ابدأ',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
