@@ -10,10 +10,10 @@ void main() {
 
     expect(find.text('سلسلة Silsila'), findsOneWidget);
     expect(find.text('بنربط السوق ببعضه'), findsOneWidget);
-    expect(find.text('ابدأ الآن'), findsOneWidget);
+    expect(find.text('ابدأ'), findsOneWidget);
     final welcomeScaffold = tester.widget<Scaffold>(
       find.ancestor(
-        of: find.text('ابدأ الآن'),
+        of: find.text('ابدأ'),
         matching: find.byType(Scaffold),
       ).first,
     );
@@ -34,7 +34,7 @@ void main() {
     await tester.pumpWidget(const SilsilaApp());
     await tester.pump();
 
-    final context = tester.element(find.text('ابدأ الآن'));
+    final context = tester.element(find.text('ابدأ'));
     final theme = Theme.of(context);
 
     expect(theme.colorScheme.primary, const Color(0xFF3E007D));
@@ -50,7 +50,7 @@ void main() {
   testWidgets('login flow requests email and password, not phone OTP',
       (tester) async {
     await tester.pumpWidget(const SilsilaApp());
-    await tester.tap(find.text('ابدأ الآن'));
+    await tester.tap(find.text('ابدأ'));
     await tester.pumpAndSettle();
 
     expect(find.text('البريد الإلكتروني المسجل'), findsOneWidget);
