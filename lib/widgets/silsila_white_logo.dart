@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -22,20 +23,26 @@ class SilsilaWhiteLogo extends StatelessWidget {
   static Future<Uint8List?>? _whiteBytes;
 
   static Future<Uint8List?> _loadWhiteVariant() async {
+    ByteData? source;
     try {
-      final source = await rootBundle.load('assets/images/silsila_logo.png');
-      final codec = await ui.instantiateImageCodec(source.buffer.asUint8List());
+      source = await rootBundle.load('assets/images/silsila_logo.png');
+    } catch (_) {
+      return null;
+    }
+    final original = Uint8List.fromList(
+      source.buffer.asUint8List(source.offsetInBytes, source.lengthInBytes),
+    );
+    ui.Codec? codec;
+    ui.Image? image;
+    try {
+      codec = await ui.instantiateImageCodec(original);
       final frame = await codec.getNextFrame();
-      final image = frame.image;
+      image = frame.image;
       final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-      if (data == null) return null;
-
+      if (data == null) return original;
       final bytes = Uint8List.fromList(
         data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
       );
-      // Purple (#3E007D) and white (#FFFFFF) are the two endpoints.
-      // Complementing pixels along this axis exchanges those two colors and
-      // keeps blended edge pixels smooth without changing pink/orange pixels.
       const pr = 62.0, pg = 0.0, pb = 125.0;
       const dr = 193.0, dg = 255.0, db = 130.0;
       const lengthSquared = dr * dr + dg * dg + db * db;
@@ -49,17 +56,17 @@ class SilsilaWhiteLogo extends StatelessWidget {
         final cr = vr - t * dr;
         final cg = vg - t * dg;
         final cb = vb - t * db;
-        final distance = math.sqrt(cr * cr + cg * cg + cb * cb);
-        if (distance > 18) continue;
+        if (math.sqrt(cr * cr + cg * cg + cb * cb) > 18) continue;
         bytes[i] = (pr + 255 - r).round().clamp(0, 255).toInt();
         bytes[i + 1] = (255 - g).round().clamp(0, 255).toInt();
         bytes[i + 2] = (pb + 255 - b).round().clamp(0, 255).toInt();
       }
-      image.dispose();
-      codec.dispose();
       return bytes;
     } catch (_) {
-      return null;
+      return original;
+    } finally {
+      image?.dispose();
+      codec?.dispose();
     }
   }
 
