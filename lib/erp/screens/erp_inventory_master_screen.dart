@@ -422,7 +422,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           value:_items.any((item)=>_s(item['id'])==_selectedSharedItemId)?_selectedSharedItemId:null,
           isExpanded:true,decoration:const InputDecoration(labelText:'الصنف المركزي'),
           items:_items.map((item)=>DropdownMenuItem(value:_s(item['id']),child:Text('${_s(item['item_name'])} • ${_s(item['item_code'])}'))).toList(),
-          onChanged:(v)=>setState(()=>{_selectedSharedItemId=v;_sharedStockLoaded=false;_sharedWorkspaceStock=[];}),
+          onChanged:(v)=>setState(() {_selectedSharedItemId=v;_sharedStockLoaded=false;_sharedWorkspaceStock=[];}),
         )),
         const SizedBox(width:8),
         FilledButton.icon(onPressed:_loading?null:_loadSharedWorkspaceStock,icon:const Icon(Icons.refresh),label:const Text('عرض الأرصدة')),
