@@ -20,10 +20,14 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   String movementType = 'receipt', fromType = 'customer', toType = 'cashbox', orderType = 'payment';
   String partyType = 'supplier', chequeType = 'bank', chequeDirection = 'payment', trackingFilter = 'all';
   final amount = TextEditingController(), description = TextEditingController(), fromName = TextEditingController(), toName = TextEditingController();
-  final partyName = TextEditingController(), firstCheck = TextEditingController(), issueDate = TextEditingController(text: _today());
-  final dueDate = TextEditingController(text: _today()), chequeAmount = TextEditingController();
+  final partyName = TextEditingController(), firstCheck = TextEditingController(), issueDate = TextEditingController(text: _todayDisplay());
+  final dueDate = TextEditingController(text: _todayDisplay()), chequeAmount = TextEditingController();
   List<Map<String,dynamic>> cashboxes=[], accounts=[], parties=[], users=[], sales=[], movements=[], orders=[], books=[], cheques=[];
   static String _today() { final d=DateTime.now(); return d.year.toString().padLeft(4,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.day.toString().padLeft(2,'0'); }
+  static String _todayDisplay(){final d=DateTime.now();return d.day.toString().padLeft(2,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.year.toString().padLeft(4,'0');}
+  DateTime? parseDisplayDate(String value){final t=value.trim();final iso=DateTime.tryParse(t);if(iso!=null)return iso;final p=t.split('-');if(p.length!=3)return null;final d=int.tryParse(p[0]),m=int.tryParse(p[1]),y=int.tryParse(p[2]);if(d==null||m==null||y==null)return null;final v=DateTime(y,m,d);return v.year==y&&v.month==m&&v.day==d?v:null;}
+  String isoDate(String value)=>parseDisplayDate(value)?.toIso8601String().substring(0,10)??value;
+  String displayDate(dynamic value){final d=parseDisplayDate(s(value));return d==null?s(value):d.day.toString().padLeft(2,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.year.toString().padLeft(4,'0');}
   String get company => widget.companyId?.trim() ?? '';
   String s(dynamic v) => (v ?? '').toString();
   double n(dynamic v) => v is num ? v.toDouble() : double.tryParse(s(v)) ?? 0;
@@ -199,7 +203,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     await run(()async{final row=await db!.from('erp_checkbooks').insert({'company_id':company,'bank_cashbox_id':bankId,'first_check_number':start,'sheet_count':count,'created_by':db!.auth.currentUser?.id}).select('id').single();await db!.rpc('erp_register_checkbook',params:{'p_checkbook_id':row['id']});firstCheck.clear();},'تم تسجيل الدفتر وإنشاء أرقام الشيكات.');
   }
   Future<void> issueCheque(bool order) async {
-    final v=double.tryParse(chequeAmount.text.trim()), issue=DateTime.tryParse(issueDate.text), due=DateTime.tryParse(dueDate.text);
+    final v=double.tryParse(chequeAmount.text.trim()), issue=parseDisplayDate(issueDate.text), due=parseDisplayDate(dueDate.text);
     if(v==null||v<=0||partyName.text.trim().isEmpty){setState(()=>error='اختر شيكًا متاحًا أو أدخل رقم شيك ائتمان، مع المستفيد والقيمة الموجبة.');return;}
     if(chequeType=='bank'&&chequeId==null){setState(()=>error='لا يمكن اختيار إلا رقم شيك بنكي متاح غير مستخدم.');return;}
     if(chequeType=='credit'&&(bankId==null||int.tryParse(firstCheck.text.trim())==null)){setState(()=>error='حدد الحساب البنكي ورقم شيك الائتمان.');return;}
@@ -209,43 +213,43 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       String selectedId=chequeId??'';
       Map<String,dynamic> ch={};
       if(chequeType=='bank'){ch=cheques.firstWhere((x)=>s(x['id'])==selectedId);}
-      else {ch=await db!.from('erp_cheques').insert({'company_id':company,'bank_cashbox_id':bankId,'check_number':int.parse(firstCheck.text.trim()),'cheque_type':'credit','direction':chequeDirection,'issue_date':issueDate.text,'amount':v,'status':'available','created_by':db!.auth.currentUser?.id}).select().single();selectedId=s(ch['id']);}
-      await db!.rpc('erp_issue_cheque',params:{'p_cheque_id':selectedId,'p_cheque_type':chequeType,'p_direction':chequeDirection,'p_issue_date':issueDate.text,'p_due_date':dueDate.text,'p_amount':v,'p_payee_type':partyType,'p_payee_id':null,'p_payee_name':partyName.text.trim(),'p_notes':description.text});
+      else {ch=await db!.from('erp_cheques').insert({'company_id':company,'bank_cashbox_id':bankId,'check_number':int.parse(firstCheck.text.trim()),'cheque_type':'credit','direction':chequeDirection,'issue_date':isoDate(issueDate.text),'amount':v,'status':'available','created_by':db!.auth.currentUser?.id}).select().single();selectedId=s(ch['id']);}
+      await db!.rpc('erp_issue_cheque',params:{'p_cheque_id':selectedId,'p_cheque_type':chequeType,'p_direction':chequeDirection,'p_issue_date':isoDate(issueDate.text),'p_due_date':isoDate(dueDate.text),'p_amount':v,'p_payee_type':partyType,'p_payee_id':null,'p_payee_name':partyName.text.trim(),'p_notes':description.text});
       if(order) await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':chequeDirection,'instrument_type':'cheque','cheque_id':selectedId,'party_type':partyType,'party_name':partyName.text.trim(),'amount':v,'description':'شيك رقم '+s(ch['check_number']),'status':'converted','created_by':db!.auth.currentUser?.id});
       chequeAmount.clear();partyName.clear();description.clear();chequeId=null;if(chequeType=='credit')firstCheck.clear();
     },order?'تم حفظ أمر الشيك.':'تم حفظ حركة الشيك.');
   }
   Future<void> editCheque(Map<String,dynamic> c) async {
-    final issue=TextEditingController(text:s(c['issue_date']));final due=TextEditingController(text:s(c['due_date']));
+    final issue=TextEditingController(text:displayDate(c['issue_date']));final due=TextEditingController(text:displayDate(c['due_date']));
     final value=TextEditingController(text:money(c['amount']));final payee=TextEditingController(text:s(c['payee_name']));final notes=TextEditingController(text:s(c['notes']));
     final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
       title:Text('تعديل بيانات الشيك '+s(c['check_number'])),
       content:SizedBox(width:460,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        field(issue,'تاريخ الإصدار'),const SizedBox(height:8),field(due,'تاريخ الاستحقاق'),const SizedBox(height:8),field(value,'القيمة الموجبة',numeric:true),const SizedBox(height:8),field(payee,'اسم المستفيد'),const SizedBox(height:8),field(notes,'ملاحظات'),
+        field(issue,'تاريخ الإصدار DD-MM-YYYY'),const SizedBox(height:8),field(due,'تاريخ الاستحقاق DD-MM-YYYY'),const SizedBox(height:8),field(value,'القيمة الموجبة',numeric:true),const SizedBox(height:8),field(payee,'اسم المستفيد'),const SizedBox(height:8),field(notes,'ملاحظات'),
       ]))),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ التعديل'))],
     ));
-    if(ok==true){final a=double.tryParse(value.text);final d1=DateTime.tryParse(issue.text);final d2=DateTime.tryParse(due.text);
+    if(ok==true){final a=double.tryParse(value.text);final d1=parseDisplayDate(issue.text);final d2=parseDisplayDate(due.text);
       if(a==null||a<=0||d1==null||d2==null||d2.isBefore(d1)){notify('راجع قيمة الشيك وتواريخه.');}
-      else await run(()async{await db!.rpc('erp_update_cheque_details',params:{'p_cheque_id':c['id'],'p_issue_date':issue.text,'p_due_date':due.text,'p_amount':a,'p_payee_type':s(c['payee_type']).isEmpty?'supplier':s(c['payee_type']),'p_payee_name':payee.text,'p_notes':notes.text});},'تم تعديل الشيك وفق صلاحيات المستخدم.');
+      else await run(()async{await db!.rpc('erp_update_cheque_details',params:{'p_cheque_id':c['id'],'p_issue_date':isoDate(issue.text),'p_due_date':isoDate(due.text),'p_amount':a,'p_payee_type':s(c['payee_type']).isEmpty?'supplier':s(c['payee_type']),'p_payee_name':payee.text,'p_notes':notes.text});},'تم تعديل الشيك وفق صلاحيات المستخدم.');
     }
     issue.dispose();due.dispose();value.dispose();payee.dispose();notes.dispose();
   }
   Future<void> settle(Map<String,dynamic> c) async {
-    final date=TextEditingController(text:_today());String result='paid';String? cashbox;String? counterAccount;
+    final date=TextEditingController(text:_todayDisplay());String result='paid';String? cashbox;String? counterAccount;
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,local)=>AlertDialog(
       title:Text('متابعة الشيك '+s(c['check_number'])),
       content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
         DropdownButtonFormField<String>(value:result,decoration:const InputDecoration(labelText:'الحالة'),items:const[
           DropdownMenuItem(value:'paid',child:Text('تم السداد')),DropdownMenuItem(value:'returned',child:Text('ارتداد')),DropdownMenuItem(value:'cashed_from_cashbox',child:Text('صرف من الخزينة'))
         ],onChanged:(v)=>local(()=>result=v??result)),
-        const SizedBox(height:8),field(date,'تاريخ السداد / الارتداد'),
+        const SizedBox(height:8),field(date,'تاريخ السداد / الارتداد DD-MM-YYYY'),
         if(result!='returned') ...[const SizedBox(height:8),drop('الحساب المقابل للقيد',counterAccount,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب المقابل')),...accounts.map((a)=>DropdownMenuItem(value:s(a['id']),child:Text(s(a['account_code'])+' — '+s(a['account_name']))))],(v)=>local(()=>counterAccount=v))],
         if(result=='cashed_from_cashbox')drop('الخزينة',cashbox,[...cashboxes.where((x)=>x['is_bank_account']!=true).map((x)=>DropdownMenuItem(value:s(x['id']),child:Text(s(x['cashbox_name']))))],(v)=>local(()=>cashbox=v)),
       ])),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد'))],
     )));
-    if(yes==true) await run(()async{await db!.rpc('erp_settle_cheque',params:{'p_cheque_id':c['id'],'p_result':result,'p_settlement_date':date.text,'p_method':result=='cashed_from_cashbox'?'cashbox':'bank','p_cashbox_id':cashbox,'p_reference':null,'p_counter_account_id':counterAccount});},'تم تحديث حالة الشيك وتاريخ التسوية.');
+    if(yes==true) await run(()async{await db!.rpc('erp_settle_cheque',params:{'p_cheque_id':c['id'],'p_result':result,'p_settlement_date':isoDate(date.text),'p_method':result=='cashed_from_cashbox'?'cashbox':'bank','p_cashbox_id':cashbox,'p_reference':null,'p_counter_account_id':counterAccount});},'تم تحديث حالة الشيك وتاريخ التسوية.');
     date.dispose();
   }
   Future<void> savePolicy() async {await run(()async{await db!.from('erp_financial_policies').upsert({'company_id':company,'cash_issue_mode':directMode?'direct':'sales_order_only','require_cash_order_approval':requireApproval,'allow_credit_cheques':allowCredit,'updated_by':db!.auth.currentUser?.id},onConflict:'company_id');},'تم حفظ السياسات المحاسبية.');}
