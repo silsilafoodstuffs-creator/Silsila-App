@@ -97,6 +97,7 @@ class TraderMarketService {
     String? pickupLocation,
     String? deliveryLocation,
     int durationHours = 24,
+    DateTime? requestedAt,
   }) async {
     final cleanTitle = _requiredText(
       title,
@@ -163,6 +164,7 @@ class TraderMarketService {
       'items_data': itemsData,
       'quality_preference': qualityPreference,
       'moderation_status': 'published',
+      if (requestedAt != null) 'requested_at': requestedAt.toUtc().toIso8601String(),
     };
 
     _addIfNotEmpty(data, 'activity_type', activityType);
