@@ -408,6 +408,50 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     } catch (e) { _message('تعذر ربط المستخدم: $e'); }
   }
 
+  Future<void> _editMember(Map<String,dynamic> member) async {
+    final permissions = <String,bool>{};
+    final stored = member['permissions'] is Map ? Map<String,dynamic>.from(member['permissions']) : <String,dynamic>{};
+    for (final key in _memberPermissions.keys) {
+      permissions[key] = stored[key] == true;
+    }
+    var role = (member['member_role'] ?? 'staff').toString();
+    await showDialog<void>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,setDialogState)=>AlertDialog(
+      title:Text('صلاحيات ${member['member_display_name'] ?? 'المستخدم'}'),
+      content:SizedBox(width:440,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        DropdownButtonFormField<String>(
+          value:role=='owner'?'staff':role,
+          decoration:const InputDecoration(labelText:'الدور داخل النشاط'),
+          items:const [
+            DropdownMenuItem(value:'admin',child:Text('مدير')),
+            DropdownMenuItem(value:'manager',child:Text('مدير فرع')),
+            DropdownMenuItem(value:'accountant',child:Text('محاسب')),
+            DropdownMenuItem(value:'warehouse',child:Text('مسؤول مخزن')),
+            DropdownMenuItem(value:'sales',child:Text('مبيعات')),
+            DropdownMenuItem(value:'staff',child:Text('مستخدم')),
+            DropdownMenuItem(value:'viewer',child:Text('عرض فقط')),
+          ],
+          onChanged:(v){if(v!=null)setDialogState(()=>role=v);},
+        ),
+        ...permissions.entries.map((entry)=>SwitchListTile(
+          dense:true,contentPadding:EdgeInsets.zero,title:Text(_permissionLabel(entry.key),style:const TextStyle(fontSize:12)),
+          value:entry.value,onChanged:(v)=>setDialogState(()=>permissions[entry.key]=v),
+        )),
+      ]))),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إلغاء')),
+        FilledButton(onPressed:() async {
+          try {
+            await _db.from('erp_business_workspace_members').update({
+              'member_role':role,'permissions':permissions,'is_active':true,'can_open_workspace':permissions['workspace.enter']==true,
+            }).eq('workspace_id',_selected!['id'].toString()).eq('user_id',member['user_id'].toString());
+            if(dialogContext.mounted) Navigator.pop(dialogContext);
+            await _loadStructure(); _message('تم تحديث صلاحيات المستخدم.');
+          } catch(e) { _message('تعذر تحديث الصلاحيات: $e'); }
+        },child:const Text('حفظ الصلاحيات')),
+      ],
+    )));
+  }
+
   Future<void> _removeMember(String userId) async {
     final id = _selected?['id']?.toString();
     if (id == null) return;
@@ -732,7 +776,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       Expanded(child: TextField(controller: _branchName, decoration: const InputDecoration(labelText: 'اسم الفرع'))),
       IconButton(onPressed: _addBranch, icon: const Icon(Icons.add_circle, color: _workspacePurple)),
     ]),
-    ..._branches.map((b) => ListTile(dense: true, leading: const Icon(Icons.account_tree, color: _workspacePurple), title: Text(b['name_ar'].toString()), subtitle: Text(b['branch_code'].toString()))),
+    ..._branches.map((b) => ListTile(dense: true, leading: const Icon(Icons.account_tree, color: _workspacePurple), title: Text(b['name_ar'].toString()), subtitle: Text(b['branch_code'].toString()),
+      trailing:Switch(value:b['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_branches').update({'is_active':v}).eq('id',b['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث الفرع: $e');}}))),
     const Divider(),
     _sectionTitle('مخازن نشاطي', 'يرتبط كل مخزن بفرع داخل النشاط'),
     DropdownButtonFormField<String>(
@@ -747,7 +792,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       Expanded(child: TextField(controller: _warehouseName, decoration: const InputDecoration(labelText: 'اسم المخزن'))),
       IconButton(onPressed: _addWarehouse, icon: const Icon(Icons.add_circle, color: _workspacePurple)),
     ]),
-    ..._warehouses.map((w) => ListTile(dense: true, leading: const Icon(Icons.warehouse, color: _workspaceOrange), title: Text(w['name_ar'].toString()), subtitle: Text(w['warehouse_code'].toString()))),
+    ..._warehouses.map((w) => ListTile(dense: true, leading: const Icon(Icons.warehouse, color: _workspaceOrange), title: Text(w['name_ar'].toString()), subtitle: Text('${w['warehouse_code']} • ${w['show_balance_in_silsila']==true?'الرصيد ظاهر في سلسلة':'الرصيد غير ظاهر في سلسلة'}'),
+      trailing:Switch(value:w['show_balance_in_silsila']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'show_balance_in_silsila':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث سياسة ظهور الرصيد: $e');}}))),
   ]);
 
   Widget _membersInfo() => ListView(children: [
@@ -780,10 +826,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       dense: true, leading: const Icon(Icons.account_circle_outlined, color: _workspacePurple),
       title: Text((m['member_display_name'] ?? 'مستخدم سلسلة').toString()),
       subtitle: Text('${m['member_role']} • ${m['is_active'] == true ? 'نشط' : 'غير نشط'}'),
-      trailing: m['member_role'] == 'owner' ? const Text('المالك') : IconButton(
-        tooltip: 'إلغاء الوصول', icon: const Icon(Icons.person_remove_alt_1, color: Colors.redAccent),
-        onPressed: () => _removeMember(m['user_id'].toString()),
-      ),
+      trailing: m['member_role'] == 'owner' ? const Text('المالك') : Wrap(mainAxisSize:MainAxisSize.min,children:[
+        IconButton(tooltip:'تعديل الصلاحيات',icon:const Icon(Icons.tune,color:_workspacePurple),onPressed:()=>_editMember(m)),
+        IconButton(tooltip:'إلغاء الوصول',icon:const Icon(Icons.person_remove_alt_1,color:Colors.redAccent),onPressed:()=>_removeMember(m['user_id'].toString())),
+      ]),
     )),
   ]);
 
