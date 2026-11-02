@@ -960,13 +960,20 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ])),
   ]);
 
+  String _activityLabel(dynamic code) {
+    final matches=_activityTypes.where((a)=>a['code'].toString()==(code??'').toString());
+    if(matches.isEmpty) return (code??'غير محدد').toString();
+    final activity=matches.first;
+    return (activity['name']??activity['name_en']??activity['code']).toString();
+  }
+
   Widget _activityOverviewPanel() => ListView(children:[
     Card(elevation:0,child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
       const Icon(Icons.storefront_outlined,size:38,color:_workspacePurple),
       const SizedBox(height:10),
       Text((_selected?['workspace_name']??'نشاطي').toString(),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:20,color:_workspacePurple)),
       const SizedBox(height:6),
-      Text('نوع النشاط: ${_activityTypes.where((a)=>a['code'].toString()==_selected?['activity_type']?.toString()).map((a)=>(a['name']??a['name_en']??a['code']).toString()).firstOrNull ?? _selected?['activity_type']??'غير محدد'}'),
+      Text('نوع النشاط: ${_activityLabel(_selected?['activity_type'])}'),
       Text('نوع الحساب: ${_selected?['account_kind']??'غير محدد'}'),
       Text('حالة النشاط: ${_selected?['is_active']==true?'نشط':'غير نشط'}'),
       const Divider(),
