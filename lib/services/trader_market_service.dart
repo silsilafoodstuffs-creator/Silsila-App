@@ -82,11 +82,9 @@ class TraderMarketService {
       final member = await _requireClient.from('erp_company_members')
           .select('company_id').eq('user_id', ownerId).eq('is_active', true)
           .limit(1).maybeSingle();
-      final erpUser = member == null
-          ? await _requireClient.from('erp_users').select('company_id')
-              .eq('auth_user_id', ownerId).eq('is_active', true)
-              .limit(1).maybeSingle()
-          : null;
+      final erpUser = await _requireClient.from('erp_users')
+          .select('id,company_id').eq('auth_user_id', ownerId).eq('is_active', true)
+          .limit(1).maybeSingle();
       final companyId = (member?['company_id'] ?? erpUser?['company_id'])?.toString();
       if (companyId == null || companyId.isEmpty) return 24;
       final policyKey = postType == 'sell'
@@ -95,10 +93,16 @@ class TraderMarketService {
               ? 'trader_market.transfer_duration_hours'
               : 'trader_market.buy_duration_hours';
       final policy = await _requireClient.from('erp_program_policies')
-          .select('policy_value,is_enabled').eq('company_id', companyId)
-          .eq('policy_key', policyKey).maybeSingle();
+          .select('policy_value,is_enabled,apply_to_all,user_ids')
+          .eq('company_id', companyId).eq('policy_key', policyKey).maybeSingle();
+      final selectedUsers = (policy?['user_ids'] as List?)
+              ?.map((value) => value.toString()).toSet() ??
+          <String>{};
+      final appliesToUser = policy?['apply_to_all'] == true ||
+          selectedUsers.contains((erpUser?['id'] ?? '').toString());
       final configured = int.tryParse((policy?['policy_value'] ?? '24').toString());
-      if (policy?['is_enabled'] == true && configured != null && configured > 0) {
+      if (policy?['is_enabled'] == true && appliesToUser &&
+          configured != null && configured > 0) {
         return configured.clamp(1, 720).toInt();
       }
     } catch (_) {
