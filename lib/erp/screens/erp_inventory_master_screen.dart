@@ -422,12 +422,13 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       : ListView(children:_workspaceItemProposals.map((proposal){
         final id=_s(proposal['id']);
         final workspace=proposal['erp_business_workspaces'] is Map?Map<String,dynamic>.from(proposal['erp_business_workspaces']):<String,dynamic>{};
-        final categoryValue=_proposalCategorySelections.containsKey(id)?_proposalCategorySelections[id]:_categories.where((c)=>_s(c['category_name']).toLowerCase()==_s(proposal['proposed_category']).toLowerCase()).map((c)=>_s(c['id'])).firstOrNull;
+        final matchedCategories=_categories.where((c)=>_s(c['category_name']).toLowerCase()==_s(proposal['proposed_category']).toLowerCase()).toList();
+        final categoryValue=_proposalCategorySelections.containsKey(id)?_proposalCategorySelections[id]:(matchedCategories.isEmpty?null:_s(matchedCategories.first['id']));
         return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Text(_s(workspace['workspace_name']).isEmpty?'نشاط غير محدد':_s(workspace['workspace_name']),style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF3E007D))),
           Text('النشاط: ${_s(workspace['activity_type'])} • تاريخ الطلب: ${_s(proposal['created_at']).split('T').first}',style:const TextStyle(color:Colors.black54,fontSize:12)),
-          TextField(key:ValueKey('proposal-name-$id'),controller:TextEditingController(text:_proposalNameEdits[id]??_s(proposal['name_ar']))..selection=TextSelection.collapsed(offset:(_proposalNameEdits[id]??_s(proposal['name_ar'])).length),decoration:const InputDecoration(labelText:'اسم الصنف بعد المراجعة'),onChanged:(v)=>_proposalNameEdits[id]=v),
-          TextField(key:ValueKey('proposal-unit-$id'),controller:TextEditingController(text:_proposalUnitEdits[id]??_s(proposal['unit_name'])),decoration:const InputDecoration(labelText:'وحدة القياس'),onChanged:(v)=>_proposalUnitEdits[id]=v),
+          TextFormField(key:ValueKey('proposal-name-$id'),initialValue:_proposalNameEdits[id]??_s(proposal['name_ar']),decoration:const InputDecoration(labelText:'اسم الصنف بعد المراجعة'),onChanged:(v)=>_proposalNameEdits[id]=v),
+          TextFormField(key:ValueKey('proposal-unit-$id'),initialValue:_proposalUnitEdits[id]??_s(proposal['unit_name']),decoration:const InputDecoration(labelText:'وحدة القياس'),onChanged:(v)=>_proposalUnitEdits[id]=v),
           DropdownButtonFormField<String>(
             value:_categories.any((c)=>_s(c['id'])==categoryValue)?categoryValue:null,
             decoration:const InputDecoration(labelText:'الفئة المركزية'),
@@ -455,6 +456,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   }
 
   Future<void> _exportMasterExcel() async {
+    if (_view == 'proposals') { setState(() => _message = 'تتم مراجعة الطلبات من بطاقات الأصناف المقترحة.'); return; }
     final isWarehouses = _view == 'warehouses';
     List<Map<String, dynamic>> rows = isWarehouses ? _warehouses : <Map<String, dynamic>>[];
     final label = isWarehouses ? 'المخازن' : 'الأصناف';
@@ -657,7 +659,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       Card(color: const Color(0xFF3E007D), child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(_view == 'warehouses' ? 'بيانات المخازن' : 'بيانات الأصناف', style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+          Text(_view == 'warehouses' ? 'بيانات المخازن' : _view == 'proposals' ? 'مراجعة الأصناف المقترحة' : 'بيانات الأصناف', style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
           const Text('تعريف المخازن والأصناف الأساسية قبل تسجيل الحركات.', style: TextStyle(color: Colors.white70, height: 1.5)),
           const SizedBox(height: 8),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
