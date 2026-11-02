@@ -194,7 +194,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   }
   Future<void> exportExcel() async {
     final rows=exportRows();if(rows.isEmpty){notify('لا توجد سجلات لتصديرها.');return;}
-    setState(()=>{loading=true;error=null;message=null;});
+    setState(() {loading=true;error=null;message=null;});
     try{
       final book=Excel.createExcel();final sheet=book[tabNames[tabs.index]];
       sheet.appendRow(exportHeaders().map((x)=>TextCellValue(x)).toList());
@@ -207,14 +207,14 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   }
   Future<void> exportPdf() async {
     final rows=exportRows();if(rows.isEmpty){notify('لا توجد سجلات لتصديرها.');return;}
-    setState(()=>{loading=true;error=null;message=null;});
+    setState(() {loading=true;error=null;message=null;});
     try{final bytes=await exportPdfBytes();await FileSaver.instance.saveFile(name:'silsila_finance_'+DateTime.now().millisecondsSinceEpoch.toString(),bytes:bytes,fileExtension:'pdf',mimeType:MimeType.pdf);if(mounted)setState(()=>message='تم إنشاء ملف PDF.');}
     catch(e){if(mounted)setState(()=>error='تعذر إنشاء PDF: '+e.toString());}
     finally{if(mounted)setState(()=>loading=false);}
   }
   Future<void> printData() async {
     if(exportRows().isEmpty){notify('لا توجد سجلات للطباعة.');return;}
-    setState(()=>{loading=true;error=null;message=null;});
+    setState(() {loading=true;error=null;message=null;});
     try{final bytes=await exportPdfBytes();await Printing.layoutPdf(onLayout:(_)=>Future.value(bytes),name:'silsila_finance.pdf');}
     catch(e){if(mounted)setState(()=>error='تعذرت الطباعة: '+e.toString());}
     finally{if(mounted)setState(()=>loading=false);}
