@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:excel/excel.dart' hide Border;
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
@@ -32,7 +31,6 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   final movementDate = TextEditingController(text: _todayDisplay());
   final dueDate = TextEditingController(text: _todayDisplay()), chequeAmount = TextEditingController();
   List<Map<String,dynamic>> cashboxes=[], accounts=[], parties=[], users=[], sales=[], movements=[], orders=[], books=[], cheques=[];
-  static String _today() { final d=DateTime.now(); return d.year.toString().padLeft(4,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.day.toString().padLeft(2,'0'); }
   static String _todayDisplay(){final d=DateTime.now();return d.day.toString().padLeft(2,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.year.toString().padLeft(4,'0');}
   DateTime? parseDisplayDate(String value){final t=value.trim();final iso=DateTime.tryParse(t);if(iso!=null)return iso;final p=t.split('-');if(p.length!=3)return null;final d=int.tryParse(p[0]),m=int.tryParse(p[1]),y=int.tryParse(p[2]);if(d==null||m==null||y==null)return null;final v=DateTime(y,m,d);return v.year==y&&v.month==m&&v.day==d?v:null;}
   String isoDate(String value)=>parseDisplayDate(value)?.toIso8601String().substring(0,10)??value;
