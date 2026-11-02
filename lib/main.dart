@@ -7113,7 +7113,7 @@ class _MyMarketPostsScreenState extends State<MyMarketPostsScreen> {
     final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('زيادة مدة عرض الطلب'),content:TextField(controller:ctl,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'عدد الساعات الإضافية')),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد'))]));
     final hours=int.tryParse(ctl.text.trim())??0; ctl.dispose();
     if(ok!=true)return;
-    try { await _service.extendPost(post['id'].toString(),hours); await _reload(); } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تمديد الطلب: '+e.toString()))); }
+    try { if (_admin) { await _service.extendPostForModeration(post['id'].toString(),hours); } else { await _service.extendPost(post['id'].toString(),hours); } await _reload(); } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تمديد الطلب: '+e.toString()))); }
   }
   Future<void> _delete(Map<String,dynamic> post) async {
     final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('حذف الطلب'),content:const Text('سيتم حذف الطلب نهائيًا. هل تريد المتابعة؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حذف'))]));
@@ -7187,7 +7187,7 @@ class _MyMarketPostsScreenState extends State<MyMarketPostsScreen> {
         Text(expired?'انتهت مدة العرض':'الحالة: '+(p['status']??'نشط').toString()),
         Wrap(spacing:6,children:[
           OutlinedButton(onPressed:()=>_edit(p),child:const Text('تعديل')),
-          if(!_admin) OutlinedButton(onPressed:()=>_extend(p),child:const Text('زيادة المدة / إعادة النشر')),
+          OutlinedButton(onPressed:()=>_extend(p),child:const Text('زيادة المدة / إعادة النشر')),
           if(!_admin) OutlinedButton(onPressed:()=>_delete(p),child:const Text('حذف')),
           if(_admin) FilledButton(onPressed:()=>_moderate(p,true),child:const Text('إعادة النشر')),
           if(_admin) OutlinedButton(onPressed:()=>_moderate(p,false),child:const Text('إيقاف / أرشفة')),
