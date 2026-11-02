@@ -6770,6 +6770,9 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final Map<String,TextEditingController> _productQuantities = {};
   final Map<String,TextEditingController> _productPrices = {};
   final Map<String,String> _productUnits = {};
+  final Map<String,String> _productQuality = {};
+  final Map<String,bool> _productNegotiable = {};
+  DateTime? _transportAt;
   bool selectAllProducts = false;
 
   @override
@@ -6847,7 +6850,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         final name=(product['name']??'').toString();
         return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,value:selectedProducts.contains(name),title:Text(name),onChanged:(v)=>setState((){
-            if(v==true){selectedProducts.add(name);_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[name]=(product['unit']??'وحدة').toString();}
+            if(v==true){selectedProducts.add(name);_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[name]=(product['unit']??'وحدة').toString();_productQuality[name]='good';_productNegotiable[name]=false;}
             else selectedProducts.remove(name);
             selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
           })),
@@ -6857,6 +6860,11 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             Expanded(child:DropdownButtonFormField<String>(value:_productUnits[name],isExpanded:true,decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),items:{_productUnits[name]??'وحدة','كرتونة','علبة','عبوة','كيلو','جرام','طن','قطعة','لتر'}.map((u)=>DropdownMenuItem(value:u,child:Text(u,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_productUnits[name]=v);})),
             const SizedBox(width:6),
             Expanded(child:TextField(controller:_productPrices[name],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر',isDense:true,border:OutlineInputBorder()))),
+          ])),
+          if(selectedProducts.contains(name)) Padding(padding:const EdgeInsetsDirectional.only(start:32,bottom:6),child:Wrap(spacing:8,runSpacing:2,children:[
+            FilterChip(label:const Text('صلاحية جيدة'),selected:(_productQuality[name]??'good')=='good',onSelected:(v)=>setState(()=>_productQuality[name]=v?'good':'near_expiry')),
+            FilterChip(label:const Text('صلاحية قريبة'),selected:(_productQuality[name]??'good')=='near_expiry',onSelected:(v)=>setState(()=>_productQuality[name]=v?'near_expiry':'good')),
+            FilterChip(label:const Text('قابل للتفاوض'),selected:_productNegotiable[name]==true,onSelected:(v)=>setState(()=>_productNegotiable[name]=v)),
           ])),
         ]);
       }),
@@ -6910,7 +6918,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       itemsData.add({
         'product_id':product?['id'],'product_name':name,'quantity':qty,
         'unit':_productUnits[name] ?? product?['unit'] ?? 'وحدة',
-        'price':price,'is_negotiable':isNegotiable,
+        'price':price,'is_negotiable':_productNegotiable[name]??isNegotiable,'quality_preference':_productQuality[name]??'good',
       });
     }
     if (itemsData.isEmpty && selectedProducts.isEmpty) {
@@ -7055,6 +7063,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           if (type == 'transfer') ...[
             const SizedBox(height: 8),
             const Text('بيانات النقل', style: TextStyle(color: Color(0xFFFF27C3), fontWeight: FontWeight.bold)),
+            ListTile(contentPadding:EdgeInsets.zero,title:const Text('موعد النقل المطلوب'),subtitle:Text(_transportAt==null?'حدد تاريخ ووقت التحميل':_transportAt!.toLocal().toString()),trailing:IconButton(icon:const Icon(Icons.schedule),onPressed:()async{final d=await showDatePicker(context:context,firstDate:DateTime.now(),lastDate:DateTime(2100),initialDate:_transportAt??DateTime.now());if(d==null||!mounted)return;final t=await showTimePicker(context:context,initialTime:TimeOfDay.fromDateTime(_transportAt??DateTime.now()));if(t!=null)setState(()=>_transportAt=DateTime(d.year,d.month,d.day,t.hour,t.minute));})),
             DropdownButtonFormField<String>(value:transferActor,decoration:const InputDecoration(labelText:'مقدم الطلب بصفته'),items:const [DropdownMenuItem(value:'seller',child:Text('البائع')),DropdownMenuItem(value:'buyer',child:Text('المشتري'))],onChanged:(v)=>setState(()=>transferActor=v??'seller')),
             DropdownButtonFormField<String>(value:freightPayer,decoration:const InputDecoration(labelText:'النولون على'),items:const [DropdownMenuItem(value:'seller',child:Text('البائع')),DropdownMenuItem(value:'buyer',child:Text('المشتري'))],onChanged:(v)=>setState(()=>freightPayer=v??'seller')),
             DropdownButtonFormField<String>(value:freightPoint,decoration:const InputDecoration(labelText:'وقت حساب النولون'),items:const [DropdownMenuItem(value:'loading',child:Text('وقت التحميل')),DropdownMenuItem(value:'unloading',child:Text('وقت التنزيل'))],onChanged:(v)=>setState(()=>freightPoint=v??'loading')),
