@@ -100,6 +100,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     });
   }
 
+  Widget integerField(TextEditingController c,String label) => TextField(controller:c,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true));
   Widget field(TextEditingController c,String label,{bool numeric=false,bool readOnly=false}) => TextField(
     controller:c,readOnly:readOnly,keyboardType:numeric?const TextInputType.numberWithOptions(decimal:true):TextInputType.text,
     inputFormatters:numeric?[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))]:null,
@@ -277,7 +278,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       Row(children:[Expanded(child:drop('نوع الشيك',chequeType,const[DropdownMenuItem(value:'bank',child:Text('شيك بنكي')),DropdownMenuItem(value:'credit',child:Text('شيك ائتمان'))],(v)=>setState(() {chequeType=v??chequeType;chequeId=null;}))),const SizedBox(width:8),Expanded(child:drop('نوع الحركة',chequeDirection,const[DropdownMenuItem(value:'payment',child:Text('صرف / دفع')),DropdownMenuItem(value:'receipt',child:Text('توريد / قبض'))],(v)=>setState(()=>chequeDirection=v??chequeDirection)))]),
       const SizedBox(height:8),
       if(chequeType=='bank')drop('الشيك المتاح غير المستخدم',chequeId,[const DropdownMenuItem<String>(value:null,child:Text('اختر الشيك')),...cheques.where((c)=>s(c['status'])=='available'&&s(c['cheque_type'])=='bank').map((c)=>DropdownMenuItem(value:s(c['id']),child:Text(s(c['check_number'])+' • '+cashboxName(s(c['bank_cashbox_id'])))))],(v)=>setState(()=>chequeId=v))
-      else Column(children:[drop('الحساب البنكي',bankId,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب البنكي')),...cashboxes.where((b)=>b['is_bank_account']==true).map((b)=>DropdownMenuItem(value:s(b['id']),child:Text(s(b['cashbox_name']))))],(v)=>setState(() {bankId=v;chequeId=null;})),const SizedBox(height:8),field(firstCheck,'رقم شيك الائتمان',numeric:true)]),
+      else Column(children:[drop('الحساب البنكي',bankId,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب البنكي')),...cashboxes.where((b)=>b['is_bank_account']==true).map((b)=>DropdownMenuItem(value:s(b['id']),child:Text(s(b['cashbox_name']))))],(v)=>setState(() {bankId=v;chequeId=null;})),const SizedBox(height:8),integerField(firstCheck,'رقم شيك الائتمان')]),
       const SizedBox(height:8),Row(children:[Expanded(child:field(issueDate,'تاريخ الإصدار')),const SizedBox(width:8),Expanded(child:field(dueDate,'تاريخ الاستحقاق'))]),
       const SizedBox(height:8),field(partyName,'اسم المستفيد'),const SizedBox(height:8),field(chequeAmount,'قيمة الشيك الموجبة',numeric:true),const SizedBox(height:8),field(description,'البيان'),
       Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:()=>issueCheque(isOrder),child:Text(isOrder?'حفظ أمر الشيك':'حفظ حركة الشيك'))),
@@ -288,7 +289,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   Widget booksView()=>Column(children:[
     Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
       drop('الحساب البنكي',bankId,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب')),...cashboxes.where((b)=>b['is_bank_account']==true).map((b)=>DropdownMenuItem(value:s(b['id']),child:Text(s(b['cashbox_name'])+' • '+s(b['checkbook_sheet_count'])+' ورقة')))],(v)=>setState(()=>bankId=v)),
-      const SizedBox(height:8),field(firstCheck,'بداية الدفتر / أول رقم شيك',numeric:true),
+      const SizedBox(height:8),integerField(firstCheck,'بداية الدفتر / أول رقم شيك'),
       Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:registerBook,child:const Text('حفظ وتسجيل الدفتر'))),
     ]))),
     section('دفاتر الشيكات',books.length),
