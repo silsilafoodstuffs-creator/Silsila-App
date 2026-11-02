@@ -181,8 +181,19 @@ class StoryService {
       throw ArgumentError('نوع النشاط طويل أكثر من اللازم.');
     }
 
-    if (duration <= Duration.zero ||
-        duration > const Duration(hours: 1)) {
+    var effectiveDuration = duration;
+    try {
+      final member = await _requireClient.from('erp_company_members').select('company_id').eq('user_id', _userId).eq('is_active', true).limit(1).maybeSingle();
+      final erpUser = member == null ? await _requireClient.from('erp_users').select('company_id').eq('auth_user_id', _userId).eq('is_active', true).limit(1).maybeSingle() : null;
+      final companyId = (member?['company_id'] ?? erpUser?['company_id'])?.toString();
+      if (companyId != null && companyId.isNotEmpty) {
+        final policy = await _requireClient.from('erp_program_policies').select('policy_value,is_enabled').eq('company_id', companyId).eq('policy_key', 'trader_market.story_duration').maybeSingle();
+        final maximumMinutes = int.tryParse((policy?['policy_value'] ?? '60').toString());
+        if (policy?['is_enabled'] == true && maximumMinutes != null && maximumMinutes > 0 && effectiveDuration.inMinutes > maximumMinutes) effectiveDuration = Duration(minutes: maximumMinutes.clamp(1,60));
+      }
+    } catch (_) { /* Keep the 60-minute default if company policy is unavailable. */ }
+    if (effectiveDuration <= Duration.zero ||
+        effectiveDuration > const Duration(hours: 1)) {
       throw ArgumentError(
         'مدة القصة يجب أن تكون أكبر من صفر '
         'ولا تتجاوز ساعة واحدة.',
@@ -197,7 +208,8 @@ class StoryService {
       'media_type': cleanType,
       'caption': cleanCaption,
       'created_at': now.toIso8601String(),
-      'expires_at': now.add(duration).toIso8601String(),
+      'expires_at': now.add(effectiveDuration).toIso8601String(),
+      'duration_minutes': effectiveDuration.inMinutes.clamp(1,60),
     };
 
     if (cleanActivity != null) {
