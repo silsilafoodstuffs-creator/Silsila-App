@@ -211,6 +211,17 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
     }
   }
 
+  Future<void> _editSheetCount(Map<String,dynamic> row) async {
+    final controller=TextEditingController(text:_s(row['checkbook_sheet_count']).isEmpty?'50':_s(row['checkbook_sheet_count']));
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:Text('عدد أوراق دفتر الشيكات • '+_s(row['cashbox_name'])),
+      content:TextField(controller:controller,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],decoration:const InputDecoration(labelText:'عدد الأوراق',helperText:'من 1 إلى 1000')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ'))],
+    ));
+    if(ok==true){final count=int.tryParse(controller.text);if(count==null||count<1||count>1000){setState(()=>_error='عدد أوراق الدفتر يجب أن يكون من 1 إلى 1000.');}else{setState(()=>_saving=true);try{await _repo.updateCheckbookSheetCount(_s(row['id']),count);if(mounted)setState(()=>_message='تم تحديث عدد أوراق دفتر الشيكات.');await _load();}catch(e){if(mounted)setState(()=>_error='تعذر تحديث عدد الأوراق: '+e.toString());}finally{if(mounted)setState(()=>_saving=false);}}}
+    controller.dispose();
+  }
+
   Future<void> _toggle(Map<String, dynamic> row) async {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
@@ -323,6 +334,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
                 DataColumn(label: Text('الاسم العربي')),
                 DataColumn(label: Text('الاسم الإنجليزي')),
                 if (widget.initialBankOnly) DataColumn(label: Text('عدد أوراق دفتر الشيكات')),
+                if (widget.initialBankOnly) DataColumn(label: Text('تعديل عدد الأوراق')),
                 DataColumn(label: Text('الإدارة / الفرع')),
                 DataColumn(label: Text('نشط')),
               ],
@@ -334,6 +346,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
                   DataCell(Text(_s(r['cashbox_name']))),
                   DataCell(Text(_s(r['cashbox_name_en']))),
                   if (widget.initialBankOnly) DataCell(Text(_s(r['checkbook_sheet_count']))),
+                  if (widget.initialBankOnly) DataCell(IconButton(tooltip:'تعديل عدد الأوراق',onPressed:_saving?null:()=>_editSheetCount(r),icon:const Icon(Icons.edit,color:Color(0xFFFFA015)))),
                   DataCell(SizedBox(
                     width: 210,
                     child: DropdownButton<String>(
