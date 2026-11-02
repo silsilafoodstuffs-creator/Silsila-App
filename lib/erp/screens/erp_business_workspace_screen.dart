@@ -24,7 +24,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _name = TextEditingController();
   final _activity = TextEditingController();
   final _branchName = TextEditingController();
+  final _branchNameEn = TextEditingController();
   final _warehouseName = TextEditingController();
+  final _warehouseNameEn = TextEditingController();
   final _branchCode = TextEditingController();
   final _warehouseCode = TextEditingController();
   List<Map<String, dynamic>> _branches = [];
@@ -59,6 +61,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _inventoryUnitCost = TextEditingController(text:'0');
   final _inventoryNotes = TextEditingController();
   String? _selectedDepartmentId;
+  String? _selectedParentDepartmentId;
   final _departmentCode = TextEditingController();
   final _departmentName = TextEditingController();
   final _employeeName = TextEditingController();
@@ -100,7 +103,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   @override
   void dispose() {
-    _name.dispose(); _activity.dispose(); _branchName.dispose();
+    _name.dispose(); _activity.dispose(); _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     _warehouseName.dispose(); _branchCode.dispose(); _warehouseCode.dispose(); _memberPhone.dispose();
     _itemSearch.dispose(); _localItemCode.dispose(); _reorderLevel.dispose(); _openingQuantity.dispose(); _openingCost.dispose();
     _proposalName.dispose(); _proposalNameEn.dispose(); _proposalCategory.dispose(); _proposalUnit.dispose(); _proposalDescription.dispose();
@@ -308,7 +311,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     if (id == null || code.isEmpty || name.isEmpty) { _message('أدخل كود الإدارة واسمها.'); return; }
     try {
       await _db.from('erp_business_workspace_departments').insert({
-        'workspace_id':id,'department_code':code,'name_ar':name,
+        'workspace_id':id,'department_code':code,'name_ar':name,'parent_id':_selectedParentDepartmentId,
       });
       _departmentCode.clear(); _departmentName.clear();
       await _loadStructure(); _message('تم إضافة الإدارة / القسم.');
@@ -517,8 +520,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     try {
       await _db.from('erp_business_workspace_branches').insert({
         'workspace_id': id, 'branch_code': code, 'name_ar': name,
+        'name_en': _branchNameEn.text.trim().isEmpty ? null : _branchNameEn.text.trim(),
       });
-      _branchName.clear(); _branchCode.clear();
+      _branchName.clear(); _branchNameEn.clear(); _branchCode.clear();
       await _loadStructure(); _message('تم حفظ الفرع.');
     } catch (e) { _message('تعذر حفظ الفرع: $e'); }
   }
@@ -534,8 +538,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       await _db.from('erp_business_workspace_warehouses').insert({
         'workspace_id': id, 'branch_id': _selectedBranchForWarehouse ?? _branches.first['id'],
         'warehouse_code': code, 'name_ar': name,
+        'name_en': _warehouseNameEn.text.trim().isEmpty ? null : _warehouseNameEn.text.trim(),
       });
-      _warehouseName.clear(); _warehouseCode.clear();
+      _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseCode.clear();
       await _loadStructure(); _message('تم حفظ المخزن وربطه بالفرع الأول.');
     } catch (e) { _message('تعذر حفظ المخزن: $e'); }
   }
@@ -887,6 +892,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       Expanded(child: TextField(controller: _branchName, decoration: const InputDecoration(labelText: 'اسم الفرع'))),
       IconButton(onPressed: _addBranch, icon: const Icon(Icons.add_circle, color: _workspacePurple)),
     ]),
+    TextField(controller:_branchNameEn,decoration:const InputDecoration(labelText:'اسم الفرع بالإنجليزية (اختياري)')),
     ..._branches.map((b) => ListTile(dense: true, leading: const Icon(Icons.account_tree, color: _workspacePurple), title: Text(b['name_ar'].toString()), subtitle: Text(b['branch_code'].toString()),
       trailing:Switch(value:b['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_branches').update({'is_active':v}).eq('id',b['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث الفرع: $e');}}))),
     const Divider(),
@@ -903,6 +909,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       Expanded(child: TextField(controller: _warehouseName, decoration: const InputDecoration(labelText: 'اسم المخزن'))),
       IconButton(onPressed: _addWarehouse, icon: const Icon(Icons.add_circle, color: _workspacePurple)),
     ]),
+    TextField(controller:_warehouseNameEn,decoration:const InputDecoration(labelText:'اسم المخزن بالإنجليزية (اختياري)')),
     ..._warehouses.map((w) => ListTile(dense: true, leading: const Icon(Icons.warehouse, color: _workspaceOrange), title: Text(w['name_ar'].toString()), subtitle: Text('${w['warehouse_code']} • ${w['show_balance_in_silsila']==true?'الرصيد ظاهر في سلسلة':'الرصيد غير ظاهر في سلسلة'}'),
       trailing:Switch(value:w['show_balance_in_silsila']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'show_balance_in_silsila':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث سياسة ظهور الرصيد: $e');}}))),
   ]);
@@ -1060,6 +1067,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   ]);
   Widget _employeesInfo() => ListView(children: [
     _sectionTitle('إداراتي وأقسامي', 'هيكل إداري مستقل بنظام الشجرة'),
+    DropdownButtonFormField<String>(value:_departments.any((d)=>d['id'].toString()==_selectedParentDepartmentId)?_selectedParentDepartmentId:null,decoration:const InputDecoration(labelText:'يتبع الإدارة / القسم (اختياري)'),items:[const DropdownMenuItem<String>(value:null,child:Text('قسم رئيسي')),..._departments.map((d)=>DropdownMenuItem(value:d['id'].toString(),child:Text(d['name_ar'].toString())))],onChanged:(v)=>setState(()=>_selectedParentDepartmentId=v)),
     Row(children:[
       Expanded(child:TextField(controller:_departmentCode,decoration:const InputDecoration(labelText:'كود الإدارة / القسم'))),
       const SizedBox(width:8),
@@ -1086,7 +1094,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ..._employees.map((e)=>ListTile(dense:true,leading:const Icon(Icons.badge_outlined,color:_workspaceOrange),
       title:Text(e['full_name'].toString()),
       subtitle:Text('${e['employee_code']} • ${e['job_title'] ?? 'بدون وظيفة'}'),
-      trailing:Text('${e['monthly_salary']}',style:const TextStyle(color:_workspacePurple,fontWeight:FontWeight.w800)),
+      trailing:Wrap(mainAxisSize:MainAxisSize.min,children:[Text('${e['monthly_salary']}',style:const TextStyle(color:_workspacePurple,fontWeight:FontWeight.w800)),Switch(value:e['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_employees').update({'is_active':v}).eq('id',e['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(err){_message('تعذر تحديث حالة الموظف: $err');}})]),
     )),
   ]);
 
