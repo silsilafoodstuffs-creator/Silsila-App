@@ -35,6 +35,7 @@ import 'services/checkout_service.dart';
 import 'services/cart_service.dart';
 import 'services/activity_service.dart';
 import 'services/app_language.dart';
+import 'widgets/silsila_white_logo.dart';
 
 const purple = Color(0xFF3E007D);
 const orange = Color(0xFFFFA015);
@@ -509,7 +510,7 @@ class WelcomeScreen extends StatelessWidget {
         // Match the exact Silsila logo background purple; avoid a lighter
         // gradient that makes the welcome screen look visually patched.
         decoration: const BoxDecoration(
-          color: purple,
+          color: Color(0xFF3E007D),
         ),
         child: SafeArea(
           child: Padding(
@@ -6497,23 +6498,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: SizedBox(
                       height: 100,
                       width: 250,
-                      child: Image.asset(
-                        'assets/images/silsila_logo.png',
+                      child: const SilsilaWhiteLogo(
+                        width: 250,
+                        height: 100,
                         fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.hub_rounded, color: purple, size: 44),
-                            SizedBox(width: 10),
-                            Text(silsilaText('سلسلة Silsila'),
-                              style: TextStyle(
-                                color: purple,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 26,
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                     ),
                   ),
