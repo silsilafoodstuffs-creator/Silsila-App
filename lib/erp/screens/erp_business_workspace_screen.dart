@@ -369,7 +369,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ..._members.map((m) => ListTile(
       dense: true, leading: const Icon(Icons.account_circle_outlined, color: _workspacePurple),
       title: Text((m['member_display_name'] ?? 'مستخدم سلسلة').toString()),
-      subtitle: Text('\${m['member_role']} • \${m['is_active'] == true ? 'نشط' : 'غير نشط'}'),
+      subtitle: Text('${m['member_role']} • ${m['is_active'] == true ? 'نشط' : 'غير نشط'}'),
       trailing: m['member_role'] == 'owner' ? const Text('المالك') : IconButton(
         tooltip: 'إلغاء الوصول', icon: const Icon(Icons.person_remove_alt_1, color: Colors.redAccent),
         onPressed: () => _removeMember(m['user_id'].toString()),
