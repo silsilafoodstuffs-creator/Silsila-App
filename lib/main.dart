@@ -6783,7 +6783,14 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
   final governorateController = TextEditingController();
   final categoryController = TextEditingController();
   final contactPhoneController = TextEditingController();
+  final pickupLocationController = TextEditingController();
+  final deliveryLocationController = TextEditingController();
   DateTime? expiryDate;
+  bool preferGoodExpiry = true;
+  bool preferNearExpiry = false;
+  String transferActor = 'seller';
+  String freightPayer = 'seller';
+  String freightPoint = 'loading';
   bool isNegotiable = false;
   late String type;
   bool busy = false;
@@ -6798,6 +6805,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     governorateController.dispose();
     categoryController.dispose();
     contactPhoneController.dispose();
+    pickupLocationController.dispose();
+    deliveryLocationController.dispose();
     for (final controller in _productQuantities.values) { controller.dispose(); }
     for (final controller in _productPrices.values) { controller.dispose(); }
     super.dispose();
@@ -6893,7 +6902,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('راجع كمية وسعر كل صنف؛ الكمية حتى 4 أرقام و3 منازل عشرية.')));
         return;
       }
-      final product = _marketProducts.where((p)=>(p['name']??'').toString()==name).firstOrNull;
+      final matchingProducts = _marketProducts.where((p)=>(p['name']??'').toString()==name).toList();
+      final product = matchingProducts.isEmpty ? null : matchingProducts.first;
       itemsData.add({
         'product_id':product?['id'],'product_name':name,'quantity':qty,
         'unit':_productUnits[name] ?? product?['unit'] ?? 'وحدة',
@@ -6933,7 +6943,13 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         contactPhone: contactPhoneController.text.trim().isEmpty ? null : normalizePhoneForAuth(contactPhoneController.text),
         durationHours: 24,
         itemsData: itemsData,
-        qualityPreference: 'any',
+        qualityPreference: preferNearExpiry ? 'near_expiry' : preferGoodExpiry ? 'good' : 'any',
+        expiryConditionDate: type == 'sell' ? expiryDate : null,
+        sellerBuyerRole: type == 'transfer' ? transferActor : null,
+        freightPayer: type == 'transfer' ? freightPayer : null,
+        freightCollectionPoint: type == 'transfer' ? freightPoint : null,
+        pickupLocation: pickupLocationController.text.trim(),
+        deliveryLocation: deliveryLocationController.text.trim(),
         isNegotiable: isNegotiable,
       );
       if (mounted) {
@@ -7026,6 +7042,22 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           ),
           const SizedBox(height: 8),
           SwitchListTile(contentPadding: EdgeInsets.zero, value: isNegotiable, onChanged: (value) => setState(() => isNegotiable = value), title: Text(silsilaText(silsilaText('السعر قابل للتفاوض البسيط'))), subtitle: Text(silsilaText(silsilaText('يمكن للطرف الآخر إرسال سعر مقترح للموافقة أو الرفض أو التعديل.')))),
+          const SizedBox(height: 8),
+          Wrap(spacing: 10, children: [
+            FilterChip(label: const Text('صلاحية جيدة'), selected: preferGoodExpiry, onSelected: (v) => setState(() => preferGoodExpiry = v)),
+            FilterChip(label: const Text('صلاحية قريبة'), selected: preferNearExpiry, onSelected: (v) => setState(() => preferNearExpiry = v)),
+          ]),
+          if (type == 'sell' && preferNearExpiry)
+            ListTile(contentPadding: EdgeInsets.zero, title: const Text('تاريخ انتهاء الصلاحية'), subtitle: Text(expiryDate == null ? 'اختياري — حدد التاريخ' : expiryDate!.toIso8601String().split('T').first), trailing: IconButton(icon: const Icon(Icons.calendar_month), onPressed: () async { final now=DateTime.now(); final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:expiryDate??now.add(const Duration(days:30))); if(d!=null)setState(()=>expiryDate=d); })),
+          if (type == 'transfer') ...[
+            const SizedBox(height: 8),
+            const Text('بيانات النقل', style: TextStyle(color: Color(0xFFFF27C3), fontWeight: FontWeight.bold)),
+            DropdownButtonFormField<String>(value:transferActor,decoration:const InputDecoration(labelText:'مقدم الطلب بصفته'),items:const [DropdownMenuItem(value:'seller',child:Text('البائع')),DropdownMenuItem(value:'buyer',child:Text('المشتري'))],onChanged:(v)=>setState(()=>transferActor=v??'seller')),
+            DropdownButtonFormField<String>(value:freightPayer,decoration:const InputDecoration(labelText:'النولون على'),items:const [DropdownMenuItem(value:'seller',child:Text('البائع')),DropdownMenuItem(value:'buyer',child:Text('المشتري'))],onChanged:(v)=>setState(()=>freightPayer=v??'seller')),
+            DropdownButtonFormField<String>(value:freightPoint,decoration:const InputDecoration(labelText:'وقت حساب النولون'),items:const [DropdownMenuItem(value:'loading',child:Text('وقت التحميل')),DropdownMenuItem(value:'unloading',child:Text('وقت التنزيل'))],onChanged:(v)=>setState(()=>freightPoint=v??'loading')),
+            TextField(controller:pickupLocationController,decoration:const InputDecoration(labelText:'مكان التحميل')),
+            TextField(controller:deliveryLocationController,decoration:const InputDecoration(labelText:'مكان التنزيل')),
+          ],
 
           const SizedBox(height: 16),
           FilledButton(
