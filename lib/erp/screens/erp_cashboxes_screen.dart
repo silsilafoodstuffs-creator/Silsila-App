@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_cashboxes_repository.dart';
@@ -20,6 +21,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   final _nameEn = TextEditingController();
   final _bankName = TextEditingController();
   final _maskedNumber = TextEditingController();
+  final _checkbookSheetCount = TextEditingController(text: '50');
   List<Map<String, dynamic>> _rows = [];
   List<Map<String, dynamic>> _accounts = [];
   List<Map<String, dynamic>> _branches = [];
@@ -42,7 +44,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   }
   @override
   void dispose() {
-    _company.dispose(); _codeFocus.dispose(); _code.dispose(); _name.dispose(); _nameEn.dispose(); _bankName.dispose(); _maskedNumber.dispose(); super.dispose();
+    _company.dispose(); _codeFocus.dispose(); _code.dispose(); _name.dispose(); _nameEn.dispose(); _bankName.dispose(); _maskedNumber.dispose(); _checkbookSheetCount.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
 
@@ -111,9 +113,10 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
     try {
       await _repo.createCashbox(companyId: _company.text, code: _code.text, name: _name.text, nameEn: _nameEn.text,
         accountId: _accountId ?? '', branchId: _branchId, isBank: _isBank,
-        bankName: _bankName.text, accountNumberMasked: _maskedNumber.text);
+        bankName: _bankName.text, accountNumberMasked: _maskedNumber.text,
+        checkbookSheetCount: int.tryParse(_checkbookSheetCount.text.trim()) ?? 50);
       if (!mounted) return;
-      _code.clear(); _name.clear(); _nameEn.clear(); _bankName.clear(); _maskedNumber.clear();
+      _code.clear(); _name.clear(); _nameEn.clear(); _bankName.clear(); _maskedNumber.clear(); _checkbookSheetCount.text = '50';
       setState(() { _saving = false; _message = 'تمت إضافة ' + (_isBank ? 'الحساب البنكي.' : 'الخزينة.'); });
       await _load(clearMessage: false);
     } catch (e) {
@@ -302,6 +305,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
             if (_isBank) ...[
               TextField(controller: _bankName, decoration: const InputDecoration(labelText: 'اسم البنك')),
               TextField(controller: _maskedNumber, decoration: const InputDecoration(labelText: 'رقم الحساب بشكل مخفي')),
+              TextField(controller: _checkbookSheetCount, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], decoration: const InputDecoration(labelText: 'عدد أوراق دفتر الشيكات الافتراضي')),
             ],
             const SizedBox(height: 8),
             FilledButton.icon(onPressed: _saving ? null : _create, icon: const Icon(Icons.account_balance_wallet_outlined), label: const Text('حفظ')),
@@ -318,6 +322,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
                 DataColumn(label: Text('كود الخزينة')),
                 DataColumn(label: Text('الاسم العربي')),
                 DataColumn(label: Text('الاسم الإنجليزي')),
+                if (widget.initialBankOnly) DataColumn(label: Text('عدد أوراق دفتر الشيكات')),
                 DataColumn(label: Text('الإدارة / الفرع')),
                 DataColumn(label: Text('نشط')),
               ],
@@ -328,6 +333,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
                   DataCell(Text(_s(r['cashbox_code']))),
                   DataCell(Text(_s(r['cashbox_name']))),
                   DataCell(Text(_s(r['cashbox_name_en']))),
+                  if (widget.initialBankOnly) DataCell(Text(_s(r['checkbook_sheet_count']))),
                   DataCell(SizedBox(
                     width: 210,
                     child: DropdownButton<String>(
