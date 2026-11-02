@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silsila_app/main.dart';
-import 'package:silsila_app/erp/widgets/silsila_white_logo.dart';
+import 'package:silsila_app/widgets/silsila_white_logo.dart';
 
 void main() {
   testWidgets('welcome screen displays Silsila branding and primary action',
