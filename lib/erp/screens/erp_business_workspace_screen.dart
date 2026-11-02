@@ -85,6 +85,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   int _stockTab = 0;
   int _memberSubTab = 0;
   int _businessSubTab = 0;
+  int _employeeSubTab = 0;
   String? _selectedPlatformItemId;
   String? _selectedStockWarehouseId;
   String? _selectedStockItemLinkId;
@@ -1268,19 +1269,39 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       trailing:p['status']=='pending'?const Text('قيد المراجعة'):Text(p['status'].toString()),
     )),
   ]);
-  Widget _employeesInfo() => ListView(children: [
-    _sectionTitle('إداراتي وأقسامي', 'هيكل إداري مستقل بنظام الشجرة'),
-    DropdownButtonFormField<String>(value:_departments.any((d)=>d['id'].toString()==_selectedParentDepartmentId)?_selectedParentDepartmentId:null,decoration:const InputDecoration(labelText:'يتبع الإدارة / القسم (اختياري)'),items:[const DropdownMenuItem<String>(value:null,child:Text('قسم رئيسي')),..._departments.map((d)=>DropdownMenuItem(value:d['id'].toString(),child:Text(d['name_ar'].toString())))],onChanged:(v)=>setState(()=>_selectedParentDepartmentId=v)),
+  Widget _employeesInfo() => Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    _sectionTitle('موظفين نشاطي','إدارة الهيكل الإداري والموظفين في تبويبين مستقلين'),
+    Wrap(spacing:6,children:[
+      ChoiceChip(label:const Text('إداراتي وأقسامي'),selected:_employeeSubTab==0,onSelected:(_)=>setState(()=>_employeeSubTab=0)),
+      ChoiceChip(label:Text('موظفيني (${_employees.length})'),selected:_employeeSubTab==1,onSelected:(_)=>setState(()=>_employeeSubTab=1)),
+    ]),
+    const SizedBox(height:8),
+    Expanded(child:IndexedStack(index:_employeeSubTab,children:[
+      _departmentsPanel(),_employeeRecordsPanel(),
+    ])),
+  ]);
+
+  Widget _departmentsPanel() => ListView(children:[
+    _sectionTitle('إداراتي وأقسامي','هيكل إداري مستقل بنظام الشجرة'),
+    DropdownButtonFormField<String>(
+      value:_departments.any((d)=>d['id'].toString()==_selectedParentDepartmentId)?_selectedParentDepartmentId:null,
+      decoration:const InputDecoration(labelText:'يتبع الإدارة / القسم (اختياري)'),
+      items:[const DropdownMenuItem<String>(value:null,child:Text('قسم رئيسي')),..._departments.map((d)=>DropdownMenuItem(value:d['id'].toString(),child:Text(d['name_ar'].toString())))],
+      onChanged:(v)=>setState(()=>_selectedParentDepartmentId=v),
+    ),
     Row(children:[
       Expanded(child:TextField(controller:_departmentCode,decoration:const InputDecoration(labelText:'كود الإدارة / القسم'))),
       const SizedBox(width:8),
       Expanded(child:TextField(controller:_departmentName,decoration:const InputDecoration(labelText:'اسم الإدارة / القسم'))),
       IconButton(onPressed:_addDepartment,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
     ]),
+    const Divider(),
     ..._departments.map((d)=>ListTile(dense:true,leading:Icon(d['parent_id']==null?Icons.account_tree:Icons.subdirectory_arrow_left,color:_workspacePurple),
       title:Text(d['name_ar'].toString()),subtitle:Text(d['department_code'].toString()))),
-    const Divider(),
-    _sectionTitle('موظفين نشاطي','بيانات مبسطة مستقلة عن موظفي سلسلة'),
+  ]);
+
+  Widget _employeeRecordsPanel() => ListView(children:[
+    _sectionTitle('موظفيني','بيانات مبسطة مستقلة عن موظفي سلسلة'),
     DropdownButtonFormField<String>(
       value:_departments.any((d)=>d['id'].toString()==_selectedDepartmentId)?_selectedDepartmentId:null,
       decoration:const InputDecoration(labelText:'الإدارة / القسم'),
@@ -1290,7 +1311,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     TextField(controller:_employeeName,decoration:const InputDecoration(labelText:'اسم الموظف *')),
     TextField(controller:_employeeJob,decoration:const InputDecoration(labelText:'الوظيفة')),
     TextField(controller:_employeeSalary,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'المرتب الشهري')),
-    Row(children:[Expanded(child:TextField(controller:_employeeWorkHours,decoration:const InputDecoration(labelText:'مواعيد العمل'))),const SizedBox(width:8),Expanded(child:TextField(controller:_employeeWeeklyOff,decoration:const InputDecoration(labelText:'يوم الإجازة الأسبوعية')))]),
+    Row(children:[
+      Expanded(child:TextField(controller:_employeeWorkHours,decoration:const InputDecoration(labelText:'مواعيد العمل'))),
+      const SizedBox(width:8),
+      Expanded(child:TextField(controller:_employeeWeeklyOff,decoration:const InputDecoration(labelText:'يوم الإجازة الأسبوعية'))),
+    ]),
     TextField(controller:_employeeAnnualLeave,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'أيام الإجازة السنوية')),
     const SizedBox(height:8),
     Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_addEmployee,icon:const Icon(Icons.person_add),label:const Text('إضافة موظف'))),
@@ -1299,7 +1324,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ..._employees.map((e)=>ListTile(dense:true,leading:const Icon(Icons.badge_outlined,color:_workspaceOrange),
       title:Text(e['full_name'].toString()),
       subtitle:Text('${e['employee_code']} • ${e['job_title'] ?? 'بدون وظيفة'}'),
-      trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('${e['monthly_salary']}',style:const TextStyle(color:_workspacePurple,fontWeight:FontWeight.w800)),Switch(value:e['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_employees').update({'is_active':v}).eq('id',e['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(err){_message('تعذر تحديث حالة الموظف: $err');}})]),
+      trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+        Text('${e['monthly_salary']}',style:const TextStyle(color:_workspacePurple,fontWeight:FontWeight.w800)),
+        Switch(value:e['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_employees').update({'is_active':v}).eq('id',e['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(err){_message('تعذر تحديث حالة الموظف: $err');}}),
+      ]),
     )),
   ]);
 
