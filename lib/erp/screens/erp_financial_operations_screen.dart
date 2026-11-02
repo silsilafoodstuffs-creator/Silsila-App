@@ -194,6 +194,22 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       chequeAmount.clear();partyName.clear();description.clear();chequeId=null;if(chequeType=='credit')firstCheck.clear();
     },order?'تم حفظ أمر الشيك.':'تم حفظ حركة الشيك.');
   }
+  Future<void> editCheque(Map<String,dynamic> c) async {
+    final issue=TextEditingController(text:s(c['issue_date']));final due=TextEditingController(text:s(c['due_date']));
+    final value=TextEditingController(text:money(c['amount']));final payee=TextEditingController(text:s(c['payee_name']));final notes=TextEditingController(text:s(c['notes']));
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:Text('تعديل بيانات الشيك '+s(c['check_number'])),
+      content:SizedBox(width:460,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        field(issue,'تاريخ الإصدار'),const SizedBox(height:8),field(due,'تاريخ الاستحقاق'),const SizedBox(height:8),field(value,'القيمة الموجبة',numeric:true),const SizedBox(height:8),field(payee,'اسم المستفيد'),const SizedBox(height:8),field(notes,'ملاحظات'),
+      ]))),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ التعديل'))],
+    ));
+    if(ok==true){final a=double.tryParse(value.text);final d1=DateTime.tryParse(issue.text);final d2=DateTime.tryParse(due.text);
+      if(a==null||a<=0||d1==null||d2==null||d2.isBefore(d1)){notify('راجع قيمة الشيك وتواريخه.');}
+      else await run(()async{await db!.rpc('erp_update_cheque_details',params:{'p_cheque_id':c['id'],'p_issue_date':issue.text,'p_due_date':due.text,'p_amount':a,'p_payee_type':s(c['payee_type']).isEmpty?'supplier':s(c['payee_type']),'p_payee_name':payee.text,'p_notes':notes.text});},'تم تعديل الشيك وفق صلاحيات المستخدم.');
+    }
+    issue.dispose();due.dispose();value.dispose();payee.dispose();notes.dispose();
+  }
   Future<void> settle(Map<String,dynamic> c) async {
     final date=TextEditingController(text:_today());String result='paid';String? cashbox;String? counterAccount;
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,local)=>AlertDialog(
@@ -257,7 +273,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:()=>issueCheque(isOrder),child:Text(isOrder?'حفظ أمر الشيك':'حفظ حركة الشيك'))),
     ]))),
     section(isOrder?'أوامر الشيكات':'حركة الشيكات',cheques.length),
-    grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),s(c['issue_date']),s(c['due_date']),money(c['amount']),s(c['status'])]).toList())
+    grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),s(c['issue_date']),s(c['due_date']),money(c['amount']),s(c['status'])]).toList(),actions:cheques.map((c)=>s(c['status'])=='paid'||s(c['status'])=='returned'||s(c['status'])=='cashed_from_cashbox'||s(c['status'])=='cancelled'?const Icon(Icons.lock,color:Colors.grey):IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple))).toList())
   ]);
   Widget booksView()=>Column(children:[
     Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
