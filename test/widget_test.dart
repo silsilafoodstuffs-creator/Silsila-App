@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silsila_app/main.dart';
+import 'package:silsila_app/services/app_language.dart';
 import 'package:silsila_app/widgets/silsila_white_logo.dart';
 
 void main() {
@@ -28,6 +29,27 @@ void main() {
       (welcomeContainer.decoration! as BoxDecoration).color,
       const Color(0xFF3E007D),
     );
+  });
+
+  testWidgets('English selection translates app labels and switches layout direction',
+      (tester) async {
+    await SilsilaLanguage.setLanguage('en');
+    await tester.pumpWidget(const SilsilaApp());
+    await tester.pump();
+
+    expect(SilsilaLanguage.isEnglish, isTrue);
+    expect(silsilaText('نوع النشاط'), 'Business activity');
+    expect(find.text('ابدأ'), findsOneWidget);
+    final direction = tester.widget<Directionality>(
+      find.ancestor(
+        of: find.text('ابدأ'),
+        matching: find.byType(Directionality),
+      ).first,
+    );
+    expect(direction.textDirection, TextDirection.ltr);
+
+    await SilsilaLanguage.setLanguage('ar');
+    await tester.pump();
   });
 
   testWidgets('primary action uses the Silsila color identity',
