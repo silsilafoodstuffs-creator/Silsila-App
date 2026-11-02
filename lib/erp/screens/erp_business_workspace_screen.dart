@@ -993,6 +993,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ]);
   }
 
+  void _exitWorkspace() {
+    final callback = widget.onExit;
+    if (callback != null) { callback(); } else { Navigator.of(context).maybePop(); }
+  }
+
   Widget _exitWorkspaceView() => Center(child: ConstrainedBox(
     constraints: const BoxConstraints(maxWidth:420),
     child: Card(elevation:0,child:Padding(padding:const EdgeInsets.all(24),child:Column(
@@ -1003,7 +1008,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         const SizedBox(height:8),
         const Text('سيتم الرجوع إلى قوائم سلسلة الرئيسية. بيانات النشاط محفوظة ولن يتم حذف أي سجل.',textAlign:TextAlign.center),
         const SizedBox(height:16),
-        FilledButton.icon(onPressed:()=>widget.onExit?.call() ?? Navigator.of(context).maybePop(),icon:const Icon(Icons.arrow_forward),label:const Text('العودة إلى سلسلة')),
+        FilledButton.icon(onPressed:_exitWorkspace,icon:const Icon(Icons.arrow_forward),label:const Text('العودة إلى سلسلة')),
       ],
     ))),
   ));
