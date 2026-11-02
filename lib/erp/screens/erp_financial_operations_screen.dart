@@ -281,6 +281,8 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   Future<void> postMovement(Map<String,dynamic> row) async {
     final id=s(row['cash_voucher_id']);
     if(id.isEmpty){notify('لا يوجد سند خزينة مرتبط بهذه الحركة.');return;}
+    final voucher=await db!.from('erp_cash_vouchers').select('status').eq('id',id).maybeSingle();
+    if(voucher==null||s(voucher['status'])!='draft'){notify('سند الخزينة مرحّل بالفعل أو غير متاح للترحيل.');return;}
     await run(()async{await db!.rpc('erp_post_cash_voucher',params:{'p_voucher_id':id});},'تم ترحيل سند الحركة وتحديث القيد المحاسبي.');
   }
   Future<void> approveOrder(Map<String,dynamic> row) async {
