@@ -117,17 +117,21 @@ class StoryService {
       final member = await _requireClient.from('erp_company_members')
           .select('company_id').eq('user_id', _userId).eq('is_active', true)
           .limit(1).maybeSingle();
-      final erpUser = member == null
-          ? await _requireClient.from('erp_users').select('company_id')
-              .eq('auth_user_id', _userId).eq('is_active', true)
-              .limit(1).maybeSingle()
-          : null;
+      final erpUser = await _requireClient.from('erp_users')
+          .select('id,company_id').eq('auth_user_id', _userId).eq('is_active', true)
+          .limit(1).maybeSingle();
       final companyId = (member?['company_id'] ?? erpUser?['company_id'])?.toString();
       if (companyId == null || companyId.isEmpty) return 60;
       final policy = await _requireClient.from('erp_program_policies')
-          .select('policy_value,is_enabled').eq('company_id', companyId)
+          .select('policy_value,is_enabled,apply_to_all,user_ids')
+          .eq('company_id', companyId)
           .eq('policy_key', 'trader_market.story_duration').maybeSingle();
-      if (policy?['is_enabled'] != true) return 60;
+      final selectedUsers = (policy?['user_ids'] as List?)
+              ?.map((value) => value.toString()).toSet() ??
+          <String>{};
+      final appliesToUser = policy?['apply_to_all'] == true ||
+          selectedUsers.contains((erpUser?['id'] ?? '').toString());
+      if (policy?['is_enabled'] != true || !appliesToUser) return 60;
       final maximumValue = int.tryParse((policy?['policy_value'] ?? '60').toString()) ?? 60;
       final unitPolicy = await _requireClient.from('erp_program_policies')
           .select('policy_value').eq('company_id', companyId)
