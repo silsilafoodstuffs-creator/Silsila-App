@@ -1145,7 +1145,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _page == 'المستخدمين' ||
                       _page == 'قوالب صلاحيات المستخدمين' ||
                       _page == 'صلاحيات المستخدمين' ||
-                      _page == 'سياسات البرنامج'
+                      _page == 'سياسات البرنامج' ||
+                      _page == 'بيانات المخازن' ||
+                      _page == 'دليل المخازن والفروع' ||
+                      _page == 'دليل المخازن' ||
+                      _page == 'دليل الأصناف'
                     )
                         ? Padding(
                             padding: EdgeInsets.all(pagePadding),
