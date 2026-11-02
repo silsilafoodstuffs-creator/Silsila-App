@@ -158,7 +158,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _safeRows(() => _db.from('erp_business_workspace_branches').select().eq('workspace_id', id).order('name_ar')),
         _safeRows(() => _db.from('erp_business_workspace_warehouses').select().eq('workspace_id', id).order('name_ar')),
         _safeRows(() => _db.from('erp_business_workspace_members').select('id,user_id,member_role,is_active,can_open_workspace,member_display_name,permissions').eq('workspace_id', id).order('created_at')),
-        _safeRows(() => _db.from('erp_business_workspace_item_links').select('id,workspace_id,platform_item_id,is_enabled,local_code,reorder_level,erp_items(item_code,item_name,base_unit)').eq('workspace_id', id).order('created_at')),
+        _safeRows(() => _db.from('erp_business_workspace_item_links').select('id,workspace_id,platform_item_id,is_enabled,local_code,reorder_level,erp_items(item_code,item_name,base_unit,erp_item_categories(category_name,activity_code))').eq('workspace_id', id).order('created_at')),
         _safeRows(() => _db.from('erp_business_workspace_stock_openings').select('id,warehouse_id,item_link_id,quantity,unit_cost,opening_date').eq('workspace_id', id).order('created_at')),
         _safeRows(() => _db.from('erp_business_workspace_item_proposals').select('id,name_ar,name_en,proposed_category,unit_name,status,review_note,created_at').eq('workspace_id', id).order('created_at', ascending: false)),
         _safeRows(() => _db.from('erp_business_workspace_cash_movements').select('id,movement_no,movement_type,movement_date,amount,description,counterparty_name,payment_method,reference_no').eq('workspace_id', id).order('movement_date', ascending: false).limit(200)),
@@ -378,11 +378,24 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   Future<void> _loadPlatformItems() async {
     try {
       final rows = await _db.from('erp_items')
-          .select('id,item_code,item_name,item_name_en,base_unit,category_id')
-          .eq('is_active', true).order('item_name').limit(500);
+          .select('id,item_code,item_name,item_name_en,base_unit,category_id,erp_item_categories(category_name,activity_code)')
+          .eq('is_active', true).order('item_name').limit(1000);
+      final activity = (_selected?['activity_type'] ?? '').toString().trim();
+      var matchingCodes = <String>{};
+      if (activity.isNotEmpty) {
+        final activityRows = await _db.from('activity_types').select('code,name,name_en').eq('is_active', true);
+        matchingCodes = List<Map<String,dynamic>>.from(activityRows)
+          .where((a) => [a['code'],a['name'],a['name_en']].any((v)=>v!=null&&v.toString().trim().toLowerCase()==activity.toLowerCase()))
+          .map((a)=>(a['code']??'').toString()).where((c)=>c.isNotEmpty).toSet();
+      }
+      final catalog = List<Map<String,dynamic>>.from(rows);
+      final filtered = matchingCodes.isEmpty ? catalog : catalog.where((item) {
+        final category = item['erp_item_categories'] is Map ? Map<String,dynamic>.from(item['erp_item_categories']) : <String,dynamic>{};
+        return matchingCodes.contains((category['activity_code']??'').toString());
+      }).toList();
       if (!mounted) return;
       setState(() {
-        _platformItems = List<Map<String, dynamic>>.from(rows);
+        _platformItems = filtered;
         if (_selectedPlatformItemId == null && _platformItems.isNotEmpty) {
           _selectedPlatformItemId = _platformItems.first['id'].toString();
         }
@@ -1061,7 +1074,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       items: _platformItems.where((x) {
         final q = _itemSearch.text.trim().toLowerCase();
         return q.isEmpty || ('${x['item_name']} ${x['item_code']}'.toLowerCase().contains(q));
-      }).map((x) => DropdownMenuItem(value: x['id'].toString(), child: Text('${x['item_name']} • ${x['item_code'] ?? ''}'))).toList(),
+      }).map((x) => DropdownMenuItem(value: x['id'].toString(), child: Text('${x['item_name']} • ${x['item_code'] ?? ''} • ${(x['erp_item_categories'] is Map ? x['erp_item_categories']['category_name'] : '') ?? ''}'))).toList(),
       onChanged: (v) => setState(() => _selectedPlatformItemId = v),
     ),
     const SizedBox(height: 8),
