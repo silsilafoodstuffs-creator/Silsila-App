@@ -831,7 +831,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
 
   List<Map<String, dynamic>> _unitsForItem(String itemId) {
     final candidates = _itemUnits.where((u) =>
-      _s(u['item_id']) == itemId && u['is_active'] == true && u['is_selectable'] == true && (u['is_base_unit'] == true || _n(u['conversion_factor']) != 1)
+      _s(u['item_id']) == itemId && u['is_active'] == true && u['is_selectable'] == true && u['is_implicit'] != true
     ).toList()
       ..sort((a, b) => _n(b['conversion_factor']).compareTo(_n(a['conversion_factor'])));
     final seenNames = <String>{};
