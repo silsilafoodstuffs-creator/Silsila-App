@@ -74,6 +74,39 @@ class TraderMarketService {
     return _mapRows(response);
   }
 
+  Future<int> _maximumDurationHoursForUser({
+    required String ownerId,
+    required String postType,
+  }) async {
+    try {
+      final member = await _requireClient.from('erp_company_members')
+          .select('company_id').eq('user_id', ownerId).eq('is_active', true)
+          .limit(1).maybeSingle();
+      final erpUser = member == null
+          ? await _requireClient.from('erp_users').select('company_id')
+              .eq('auth_user_id', ownerId).eq('is_active', true)
+              .limit(1).maybeSingle()
+          : null;
+      final companyId = (member?['company_id'] ?? erpUser?['company_id'])?.toString();
+      if (companyId == null || companyId.isEmpty) return 24;
+      final policyKey = postType == 'sell'
+          ? 'trader_market.sell_duration_hours'
+          : postType == 'transfer'
+              ? 'trader_market.transfer_duration_hours'
+              : 'trader_market.buy_duration_hours';
+      final policy = await _requireClient.from('erp_program_policies')
+          .select('policy_value,is_enabled').eq('company_id', companyId)
+          .eq('policy_key', policyKey).maybeSingle();
+      final configured = int.tryParse((policy?['policy_value'] ?? '24').toString());
+      if (policy?['is_enabled'] == true && configured != null && configured > 0) {
+        return configured.clamp(1, 720).toInt();
+      }
+    } catch (_) {
+      // Keep the documented 24-hour default when company policy is unavailable.
+    }
+    return 24;
+  }
+
   /// نشر طلب شراء أو عرض بيع في سوق التجار.
   Future<Map<String, dynamic>> createPost({
     required String title,
@@ -133,18 +166,11 @@ class TraderMarketService {
 
     if (durationHours < 1 || durationHours > 720) throw ArgumentError('مدة الطلب يجب أن تكون بين ساعة و720 ساعة.');
     if (!const {'buy','sell','transfer'}.contains(cleanType)) throw ArgumentError('نوع الطلب غير صالح.');
-    var effectiveDurationHours = durationHours;
-    try {
-      final member = await _requireClient.from('erp_company_members').select('company_id').eq('user_id', _userId).eq('is_active', true).limit(1).maybeSingle();
-      final erpUser = member == null ? await _requireClient.from('erp_users').select('company_id').eq('auth_user_id', _userId).eq('is_active', true).limit(1).maybeSingle() : null;
-      final companyId = (member?['company_id'] ?? erpUser?['company_id'])?.toString();
-      if (companyId != null && companyId.isNotEmpty) {
-        final policyKey = cleanType == 'sell' ? 'trader_market.sell_duration_hours' : cleanType == 'transfer' ? 'trader_market.transfer_duration_hours' : 'trader_market.buy_duration_hours';
-        final policy = await _requireClient.from('erp_program_policies').select('policy_value,is_enabled').eq('company_id', companyId).eq('policy_key', policyKey).maybeSingle();
-        final maximum = int.tryParse((policy?['policy_value'] ?? '24').toString());
-        if (policy?['is_enabled'] == true && maximum != null && maximum > 0) effectiveDurationHours = effectiveDurationHours.clamp(1, maximum.clamp(1,720)).toInt();
-      }
-    } catch (_) { /* Keep the documented 24-hour default if company policy is unavailable. */ }
+    final maximumDurationHours = await _maximumDurationHoursForUser(
+      ownerId: _userId,
+      postType: cleanType,
+    );
+    final effectiveDurationHours = durationHours.clamp(1, maximumDurationHours).toInt();
     final now = DateTime.now().toUtc();
     final profile = await _requireClient.from('profiles').select('full_name,phone,address,governorate,district,area').eq('id', _userId).maybeSingle();
     final profileAddress = [profile?['governorate'], profile?['district'], profile?['area'], profile?['address']].where((v) => v != null && v.toString().trim().isNotEmpty).join(' - ');
@@ -454,9 +480,16 @@ class TraderMarketService {
     if (extraHours < 1 || extraHours > 720) throw ArgumentError('أدخل مدة إضافية من ساعة إلى 720 ساعة.');
     final id = int.tryParse(postId);
     if (id == null) throw ArgumentError('معرّف الطلب غير صالح.');
-    final current = await _requireClient.from('trader_market_posts').select('expires_at,extended_hours')
+    final current = await _requireClient.from('trader_market_posts').select('expires_at,extended_hours,post_type')
       .eq('id', id).eq('user_id', _userId).maybeSingle();
     if (current == null) throw StateError('الطلب غير موجود أو لا تملك صلاحية تمديده.');
+    final maximumHours = await _maximumDurationHoursForUser(
+      ownerId: _userId,
+      postType: (current['post_type'] ?? 'buy').toString(),
+    );
+    if (extraHours > maximumHours) {
+      throw ArgumentError('الحد الأقصى للتمديد وفق سياسة الشركة هو $maximumHours ساعة.');
+    }
     final oldExpiry = DateTime.tryParse((current['expires_at'] ?? '').toString())?.toUtc();
     final base = oldExpiry != null && oldExpiry.isAfter(DateTime.now().toUtc()) ? oldExpiry : DateTime.now().toUtc();
     final row = await _requireClient.from('trader_market_posts').update({
@@ -472,9 +505,16 @@ class TraderMarketService {
     if (extraHours < 1 || extraHours > 720) throw ArgumentError('أدخل مدة إضافية من ساعة إلى 720 ساعة.');
     final id = int.tryParse(postId);
     if (id == null) throw ArgumentError('معرّف الطلب غير صالح.');
-    final current = await _requireClient.from('trader_market_posts').select('expires_at,extended_hours')
+    final current = await _requireClient.from('trader_market_posts').select('expires_at,extended_hours,post_type,user_id')
       .eq('id', id).maybeSingle();
     if (current == null) throw StateError('الطلب غير موجود.');
+    final maximumHours = await _maximumDurationHoursForUser(
+      ownerId: (current['user_id'] ?? '').toString(),
+      postType: (current['post_type'] ?? 'buy').toString(),
+    );
+    if (extraHours > maximumHours) {
+      throw ArgumentError('الحد الأقصى للتمديد وفق سياسة الشركة هو $maximumHours ساعة.');
+    }
     final oldExpiry = DateTime.tryParse((current['expires_at'] ?? '').toString())?.toUtc();
     final base = oldExpiry != null && oldExpiry.isAfter(DateTime.now().toUtc()) ? oldExpiry : DateTime.now().toUtc();
     final row = await _requireClient.from('trader_market_posts').update({
@@ -515,14 +555,25 @@ class TraderMarketService {
   Future<void> moderatePost(String postId, {required bool publish}) async {
     final id = int.tryParse(postId);
     if (id == null) throw ArgumentError('معرّف الطلب غير صالح.');
-    final now=DateTime.now().toUtc();
-    await _requireClient.from('trader_market_posts').update({
-      'is_active': publish, 'status': publish ? 'active' : 'archived',
+    final current = await _requireClient.from('trader_market_posts')
+        .select('post_type,user_id').eq('id', id).maybeSingle();
+    if (current == null) throw StateError('الطلب غير موجود.');
+    final now = DateTime.now().toUtc();
+    final data = <String, dynamic>{
+      'is_active': publish,
+      'status': publish ? 'active' : 'archived',
       'moderation_status': publish ? 'published' : 'archived',
-      if(publish) 'published_at': now.toIso8601String(),
-      if(publish) 'expires_at': now.add(const Duration(hours:24)).toIso8601String(),
-      if(publish) 'duration_hours': 24,
-    }).eq('id', id);
+      if (publish) 'published_at': now.toIso8601String(),
+    };
+    if (publish) {
+      final maximumHours = await _maximumDurationHoursForUser(
+        ownerId: (current['user_id'] ?? '').toString(),
+        postType: (current['post_type'] ?? 'buy').toString(),
+      );
+      data['expires_at'] = now.add(Duration(hours: maximumHours)).toIso8601String();
+      data['duration_hours'] = maximumHours;
+    }
+    await _requireClient.from('trader_market_posts').update(data).eq('id', id);
   }
 
   void _validateContactPhone(String? value) {
