@@ -4492,7 +4492,17 @@ class _StoriesScreenState extends State<StoriesScreen> {
     captionController.clear();
     selectedMedia = null;
     newStoryMediaType = 'image';
-    durationMinutes = 60;
+    final maximumDurationMinutes = await storyService.getMaximumDurationMinutes();
+    final durationOptions = <int>[
+      5, 10, 15, 30, 45, 60, 90, 120, 180, 360, 720, 1440,
+    ].where((minutes) => minutes <= maximumDurationMinutes).toList();
+    if (durationOptions.isEmpty) durationOptions.add(maximumDurationMinutes);
+    final preferredDuration = maximumDurationMinutes >= 60 ? 60 : maximumDurationMinutes;
+    if (!durationOptions.contains(preferredDuration)) {
+      durationOptions.add(preferredDuration);
+      durationOptions.sort();
+    }
+    durationMinutes = preferredDuration;
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -4553,7 +4563,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
               DropdownButtonFormField<int>(
                 value: durationMinutes,
                 decoration: const InputDecoration(labelText: 'مدة ظهور القصة'),
-                items: [5, 10, 15, 30, 45, 60].map((m) => DropdownMenuItem(value: m, child: Text('$m دقيقة'))).toList(),
+                items: durationOptions.map((m) => DropdownMenuItem(value: m, child: Text('$m دقيقة'))).toList(),
                 onChanged: (value) => setDialogState(() => durationMinutes = value ?? 60),
               ),
             ]),
