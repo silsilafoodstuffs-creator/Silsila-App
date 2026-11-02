@@ -131,12 +131,6 @@ class StoryService {
     return Map<String,dynamic>.from(row);
   }
 
-  Future<void> deleteStory(String storyId) async {
-    final id = int.tryParse(storyId);
-    if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
-    await _requireClient.from('stories').delete().eq('id', id).eq('user_id', _userId);
-  }
-
   Future<Map<String, dynamic>> republishStory(String storyId, {int durationMinutes = 60}) async {
     if (durationMinutes < 1 || durationMinutes > 60) throw ArgumentError('مدة القصة من دقيقة إلى 60 دقيقة.');
     final id = int.tryParse(storyId);
