@@ -16,8 +16,8 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   SupabaseClient? db;
   late final TabController tabs;
   bool loading = false, saving = false, directMode = true, requireApproval = true, allowCredit = true;
-  String? error, message, fromId, toId, bankId, chequeId, assigneeId, salesId;
-  String movementType = 'receipt', fromType = 'cashbox', toType = 'customer', orderType = 'payment';
+  String? error, message, fromId, toId, bankId, chequeId, assigneeId, salesId, counterAccountId;
+  String movementType = 'receipt', fromType = 'customer', toType = 'cashbox', orderType = 'payment';
   String partyType = 'supplier', chequeType = 'bank', chequeDirection = 'payment', trackingFilter = 'all';
   final amount = TextEditingController(), description = TextEditingController(), fromName = TextEditingController(), toName = TextEditingController();
   final partyName = TextEditingController(), firstCheck = TextEditingController(), issueDate = TextEditingController(text: _today());
@@ -131,7 +131,20 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     final v=double.tryParse(amount.text.trim());
     if(v==null||v<=0||fromId==null||toId==null||fromName.text.isEmpty||toName.text.isEmpty){setState(()=>error='اختر جهتي الحركة وأدخل قيمة موجبة.');return;}
     if(movementType=='transfer'&&fromId==toId){setState(()=>error='جهة التحويل يجب أن تختلف عن المصدر.');return;}
-    await run(()async{await db!.from('erp_cash_movements').insert({'company_id':company,'movement_type':movementType,'from_type':fromType,'from_id':fromId,'from_name':fromName.text,'to_type':toType,'to_id':toId,'to_name':toName.text,'amount':v,'description':description.text,'created_by':db!.auth.currentUser?.id});amount.clear();description.clear();},'تم حفظ الحركة النقدية.');
+    if(movementType=='receipt'&&toType!='cashbox'&&toType!='bank'){setState(()=>error='جهة التوريد يجب أن تكون خزينة أو بنك.');return;}
+    if(movementType=='payment'&&fromType!='cashbox'&&fromType!='bank'){setState(()=>error='جهة الصرف يجب أن تكون خزينة أو بنك.');return;}
+    if(movementType=='transfer'&&((fromType!='cashbox'&&fromType!='bank')||(toType!='cashbox'&&toType!='bank'))){setState(()=>error='التحويل يتم بين الخزائن أو الحسابات البنكية فقط.');return;}
+    if(movementType!='transfer'&&counterAccountId==null){setState(()=>error='حدد الحساب المقابل للحركة حتى يتم إنشاء سند الخزينة.');return;}
+    await run(()async{await db!.rpc('erp_create_cash_movement',params:{
+      'p_company_id':company,'p_movement_type':movementType,'p_from_type':fromType,'p_from_id':fromId,'p_from_name':fromName.text,
+      'p_to_type':toType,'p_to_id':toId,'p_to_name':toName.text,'p_amount':v,'p_description':description.text,
+      'p_counter_account_id':counterAccountId,'p_movement_date':_today()
+    });amount.clear();description.clear();},'تم حفظ الحركة وإنشاء سند خزينة مسودة مرتبط بها. يلزم ترحيل السند لتحديث الأرصدة والقيود.');
+  }
+  Future<void> postMovement(Map<String,dynamic> row) async {
+    final id=s(row['cash_voucher_id']);
+    if(id.isEmpty){notify('لا يوجد سند خزينة مرتبط بهذه الحركة.');return;}
+    await run(()async{await db!.rpc('erp_post_cash_voucher',params:{'p_voucher_id':id});},'تم ترحيل سند الحركة وتحديث القيد المحاسبي.');
   }
   Future<void> saveOrder() async {
     final v=double.tryParse(amount.text.trim());
@@ -196,13 +209,14 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     DropdownMenuItem(value:'supplier',child:Text('مورد')),DropdownMenuItem(value:'customer',child:Text('عميل')),DropdownMenuItem(value:'expense',child:Text('بند صرف')),DropdownMenuItem(value:'bank',child:Text('بنك')),DropdownMenuItem(value:'cashbox',child:Text('خزينة'))];
   Widget movementView()=>Column(children:[
     Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
-      Row(children:[Expanded(child:drop('نوع الحركة',movementType,const[DropdownMenuItem(value:'receipt',child:Text('سند قبض')),DropdownMenuItem(value:'payment',child:Text('سند صرف')),DropdownMenuItem(value:'transfer',child:Text('سند تحويل خزائن'))],(v)=>setState(()=>movementType=v??movementType))),const SizedBox(width:8),Expanded(child:field(amount,'القيمة الموجبة',numeric:true))]),
+      Row(children:[Expanded(child:drop('نوع الحركة',movementType,const[DropdownMenuItem(value:'receipt',child:Text('سند قبض')),DropdownMenuItem(value:'payment',child:Text('سند صرف')),DropdownMenuItem(value:'transfer',child:Text('سند تحويل خزائن'))],(v)=>setState(() {movementType=v??movementType;if(movementType=='receipt'){fromType='customer';toType='cashbox';}else if(movementType=='payment'){fromType='cashbox';toType='supplier';}else{fromType='cashbox';toType='cashbox';}fromId=null;toId=null;fromName.clear();toName.clear();}))),const SizedBox(width:8),Expanded(child:field(amount,'القيمة الموجبة',numeric:true))]),
       const SizedBox(height:8),Row(children:[Expanded(child:drop('جهة الصرف من',fromType,entityTypes,(v)=>setState(() {fromType=v??fromType;fromId=null;fromName.clear();}))),const SizedBox(width:8),Expanded(child:picker('اسم الجهة من',fromType,fromName,true))]),
       const SizedBox(height:8),Row(children:[Expanded(child:drop('وجهة الصرف إلى',toType,entityTypes,(v)=>setState(() {toType=v??toType;toId=null;toName.clear();}))),const SizedBox(width:8),Expanded(child:picker('اسم الجهة إلى',toType,toName,false))]),
+      if(movementType!='transfer') ...[const SizedBox(height:8),drop('الحساب المقابل للقيد',counterAccountId,[const DropdownMenuItem<String>(value:null,child:Text('اختر حسابًا مقابلًا')),...accounts.map((a)=>DropdownMenuItem(value:s(a['id']),child:Text(s(a['account_code'])+' — '+s(a['account_name']))))],(v)=>setState(()=>counterAccountId=v))],
       const SizedBox(height:8),field(description,'البيان'),Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:saveMovement,child:const Text('حفظ الحركة'))),
     ]))),
     section('حركة نقدية',movements.length),
-    grid(['م','مسلسل الحركة','النوع','من','إلى','القيمة','التاريخ'],movements.map((r)=>[s(r['movement_no']),s(r['movement_number']),s(r['movement_type']),s(r['from_name']),s(r['to_name']),money(r['amount']),s(r['movement_date'])]).toList())
+    grid(['م','مسلسل الحركة','النوع','من','إلى','القيمة','التاريخ'],movements.map((r)=>[s(r['movement_no']),s(r['movement_number']),s(r['movement_type']),s(r['from_name']),s(r['to_name']),money(r['amount']),s(r['movement_date'])]).toList(),actions:movements.map((r)=>IconButton(tooltip:'ترحيل سند الخزينة',onPressed:saving?null:()=>postMovement(r),icon:const Icon(Icons.send_rounded,color:purple))).toList())
   ]);
   Widget orderView()=>Column(children:[
     Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
