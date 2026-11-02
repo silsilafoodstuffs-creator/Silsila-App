@@ -35,6 +35,14 @@ class ErpItemUnitConversion {
       rows.add(_row(1, major, 1, true, null));
     }
 
+    // Units whose factor is 1 but which are not the canonical base unit are aliases, not distinct stock units.
+    // Keep their records for history, but never expose them as selectable purchase/sale/transfer units.
+    for (final row in rows) {
+      if ((row['conversion_factor'] as num).toDouble() == 1 && row['is_base_unit'] != true) {
+        row['is_selectable'] = false;
+      }
+    }
+
     final manual = rows.where((r) => r['is_implicit'] != true).toList();
     final counts = <String, int>{};
     for (final row in manual) {
