@@ -1,9 +1,7 @@
 create index if not exists erp_biz_ws_audit_actor_idx on public.erp_business_workspace_audit_log(actor_user_id);
-create index if not exists erp_biz_ws_audit_recent_idx on public.erp_business_workspace_audit_log(workspace_id,created_at desc);
 create index if not exists erp_biz_ws_warehouse_branch_idx on public.erp_business_workspace_warehouses(branch_id,workspace_id);
 create index if not exists erp_biz_ws_cash_branch_idx on public.erp_business_workspace_cash_movements(branch_id,workspace_id);
 create index if not exists erp_biz_ws_cash_creator_idx on public.erp_business_workspace_cash_movements(created_by);
-create index if not exists erp_biz_ws_cash_recent_idx on public.erp_business_workspace_cash_movements(workspace_id,movement_date desc);
 create index if not exists erp_biz_ws_dept_parent_idx on public.erp_business_workspace_departments(parent_id,workspace_id);
 create index if not exists erp_biz_ws_doc_lines_doc_idx on public.erp_business_workspace_document_lines(document_id,workspace_id);
 create index if not exists erp_biz_ws_doc_lines_item_idx on public.erp_business_workspace_document_lines(item_link_id,workspace_id);
@@ -24,5 +22,6 @@ create index if not exists erp_biz_ws_moves_doc_idx on public.erp_business_works
 create index if not exists erp_biz_ws_moves_item_idx on public.erp_business_workspace_stock_movements(item_link_id,workspace_id);
 create index if not exists erp_biz_ws_moves_wh_idx on public.erp_business_workspace_stock_movements(warehouse_id,workspace_id);
 create index if not exists erp_biz_ws_moves_creator_idx on public.erp_business_workspace_stock_movements(created_by);
-create index if not exists erp_biz_ws_moves_balance_idx on public.erp_business_workspace_stock_movements(workspace_id,warehouse_id,item_link_id,movement_date);
 create index if not exists erp_biz_ws_opening_creator_idx on public.erp_business_workspace_stock_openings(created_by);
+create index if not exists erp_biz_ws_opening_item_idx on public.erp_business_workspace_stock_openings(item_link_id,workspace_id);
+create index if not exists erp_biz_ws_opening_wh_idx on public.erp_business_workspace_stock_openings(warehouse_id,workspace_id);
