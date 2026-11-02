@@ -4,7 +4,7 @@ language plpgsql stable security definer set search_path=pg_catalog,public,auth,
 as $$
 declare v_user uuid:=(select auth.uid()); v_company uuid;
 begin
- if v_user is null or not private.can_access_business_workspace(p_workspace_id,'inventory.read') then raise exception 'Insufficient permission to compare workspace stock with Silsila' using errcode='42501'; end if;
+ if v_user is null or not private.can_access_business_workspace(p_workspace_id,'inventory.read') or not private.can_access_business_workspace(p_workspace_id,'items.read') then raise exception 'Insufficient permission to compare workspace stock with Silsila' using errcode='42501'; end if;
  select platform_company_id into v_company from public.erp_business_workspaces where id=p_workspace_id and is_active;
  if v_company is null then raise exception 'The workspace is not linked to a Silsila company catalog' using errcode='22023'; end if;
  return query
