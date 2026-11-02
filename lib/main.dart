@@ -71,7 +71,6 @@ SupabaseClient? get database {
 }
 
 List<String> activityTypes = const <String>[];
-bool _startupAdvertisementActive = false;
 bool _startupIntroAdvertisementAttempted = false;
 
 const egyptGovernorates = [
@@ -562,7 +561,7 @@ class WelcomeScreen extends StatelessWidget {
                         builder: (_) => const LoginScreen(),
                       ),
                     ),
-                    child: const Text(silsilaText('ابدأ'),
+                    child: Text(silsilaText('ابدأ'),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -661,7 +660,7 @@ class EntryOptionsScreen extends StatelessWidget {
                   return const Padding(padding: EdgeInsets.all(10), child: Center(child: CircularProgressIndicator()));
                 }
                 if (types.isEmpty) {
-                  return const Padding(padding: EdgeInsets.all(12), child: Text(silsilaText('لا توجد أنواع مستخدمين مفعّلة للظهور في التطبيق. فعّل «يظهر في التطبيق» من شاشة أنواع المستخدمين.'), textAlign: TextAlign.center));
+                  return Padding(padding: const EdgeInsets.all(12), child: Text(silsilaText('لا توجد أنواع مستخدمين مفعّلة للظهور في التطبيق. فعّل «يظهر في التطبيق» من شاشة أنواع المستخدمين.'), textAlign: TextAlign.center));
                 }
                 return Wrap(alignment: WrapAlignment.center, spacing: 9, runSpacing: 9,
                   children: types.map((row) {
@@ -2229,7 +2228,7 @@ class _MainShellState extends State<MainShell> {
             ));
           }),
           if (!loadingLiveCustomers && liveCustomers.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Center(child: Text(silsilaText('لا توجد حسابات عملاء معتمدة منشورة حاليًا.')))),
+            Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(silsilaText('لا توجد حسابات عملاء معتمدة منشورة حاليًا.')))),
         ] else ...[
           _sectionTitle('شركات الشحن', liveShippingCompanies.where((company) {
             final name = (company['name'] ?? '').toString().toLowerCase();
@@ -2250,7 +2249,7 @@ class _MainShellState extends State<MainShell> {
             subtitle: Text((company['category'] ?? company['classification'] ?? 'شركة شحن معتمدة على سلسلة').toString()),
           ))),
           if (!loadingLiveShippingCompanies && liveShippingCompanies.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Center(child: Text(silsilaText('لا توجد شركات شحن نشطة مسجلة حاليًا.')))),
+            Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(silsilaText('لا توجد شركات شحن نشطة مسجلة حاليًا.')))),
         ],
       ],
     );
@@ -2688,7 +2687,7 @@ class _MainShellState extends State<MainShell> {
             )),
           ]),
           const SizedBox(height: 8),
-          SizedBox(width: double.infinity, child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3)), onPressed: () => openMarketPost('transfer'), icon: const Icon(Icons.local_shipping_outlined), label: const Text('عايز أنقل')),
+          SizedBox(width: double.infinity, child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3)), onPressed: () => openMarketPost('transfer'), icon: const Icon(Icons.local_shipping_outlined), label: const Text('عايز أنقل'))),
           const SizedBox(height: 12),
           OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyMarketPostsScreen())), icon: const Icon(Icons.manage_history), label: const Text('إدارة طلباتي وسجل السوق')),
           const SizedBox(height: 8),
@@ -4837,7 +4836,7 @@ class _MyStoryHistoryScreenState extends State<MyStoryHistoryScreen>{
     if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
     if(s.hasError)return Center(child:Text('تعذر تحميل سجل القصص: '+s.error.toString()));
     final rows=s.data??[];if(rows.isEmpty)return const Center(child:Text('لا توجد قصص محفوظة.'));
-    return ListView.builder(itemCount:rows.length,padding:const EdgeInsets.all(12),itemBuilder:(context,i){final story=rows[i];final expired=DateTime.tryParse((story['expires_at']??'').toString())?.isBefore(DateTime.now())??true;return Card(child:ListTile(title:Text((story['caption']??story['media_type']??'قصة').toString()),subtitle:Text(expired?'منتهية — محفوظة في السجل':'نشطة'),trailing:Wrap(mainAxisSize:MainAxisSize.min,children:[IconButton(onPressed:()=>_edit(story),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>_republish(story),icon:const Icon(Icons.replay,color:purple)),IconButton(onPressed:()=>_delete(story),icon:const Icon(Icons.delete_outline,color:Colors.red))])));});
+    return ListView.builder(itemCount:rows.length,padding:const EdgeInsets.all(12),itemBuilder:(context,i){final story=rows[i];final expired=DateTime.tryParse((story['expires_at']??'').toString())?.isBefore(DateTime.now())??true;return Card(child:ListTile(title:Text((story['caption']??story['media_type']??'قصة').toString()),subtitle:Text(expired?'منتهية — محفوظة في السجل':'نشطة'),trailing:Wrap(spacing:0,children:[IconButton(onPressed:()=>_edit(story),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>_republish(story),icon:const Icon(Icons.replay,color:purple)),IconButton(onPressed:()=>_delete(story),icon:const Icon(Icons.delete_outline,color:Colors.red))])));});
   }));
 }
 
@@ -5748,6 +5747,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String governorate = 'القاهرة';
   bool sameWhatsApp = true;
   bool busy = false;
+  Map<String,dynamic> _publisherProfile = {};
+
+  Future<void> _loadPublisherProfile() async {
+    try {
+      final db = database; final id = db?.auth.currentUser?.id;
+      if (db == null || id == null) return;
+      final row = await db.from('profiles').select('full_name,phone,address,governorate,district,area').eq('id', id).maybeSingle();
+      if (mounted && row != null) setState(() => _publisherProfile = Map<String,dynamic>.from(row));
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
