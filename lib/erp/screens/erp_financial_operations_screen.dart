@@ -31,7 +31,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   List<Map<String,dynamic>> maps(dynamic x) => (x as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
 
   int initial() {
-    const names=['حركة نقدية','أمر صرف / توريد نقدية','أمر صرف شيكات','حركة صرف / توريد شيكات','تسجيل دفاتر شيكات','متابعة الشيكات','شيكات الائتمان'];
+    const names=['حركة نقدية','أمر صرف / توريد نقدية','أمر صرف شيكات','حركة صرف / توريد شيكات','تسجيل دفاتر شيكات','متابعة الشيكات','شيكات الائتمان','السياسات المحاسبية'];
     final i=names.indexOf(widget.initialView); return i<0?0:i;
   }
   @override void initState() {
@@ -154,12 +154,14 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     if(chequeType=='credit'&&(bankId==null||int.tryParse(firstCheck.text.trim())==null)){setState(()=>error='حدد الحساب البنكي ورقم شيك الائتمان.');return;}
     if(issue==null||due==null||due.isBefore(issue)){setState(()=>error='تاريخ الاستحقاق لا يسبق تاريخ الإصدار.');return;}
     if(chequeType=='credit'&&!allowCredit){setState(()=>error='شيكات الائتمان غير مفعلة في السياسات.');return;}
-    Map<String,dynamic> ch={};
-    if(chequeType=='bank'){ch=cheques.firstWhere((x)=>s(x['id'])==chequeId);} else {ch=await db!.from('erp_cheques').insert({'company_id':company,'bank_cashbox_id':bankId,'check_number':int.parse(firstCheck.text.trim()),'cheque_type':'credit','direction':chequeDirection,'issue_date':issueDate.text,'amount':v,'status':'available','created_by':db!.auth.currentUser?.id}).select().single(); chequeId=s(ch['id']);}
     await run(()async{
-      await db!.rpc('erp_issue_cheque',params:{'p_cheque_id':chequeId,'p_cheque_type':chequeType,'p_direction':chequeDirection,'p_issue_date':issueDate.text,'p_due_date':dueDate.text,'p_amount':v,'p_payee_type':partyType,'p_payee_id':null,'p_payee_name':partyName.text.trim(),'p_notes':description.text});
-      if(order) await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':chequeDirection,'instrument_type':'cheque','cheque_id':chequeId,'party_type':partyType,'party_name':partyName.text.trim(),'amount':v,'description':'شيك رقم '+s(ch['check_number']),'created_by':db!.auth.currentUser?.id});
-      chequeAmount.clear();partyName.clear();description.clear();chequeId=null;
+      String selectedId=chequeId??'';
+      Map<String,dynamic> ch={};
+      if(chequeType=='bank'){ch=cheques.firstWhere((x)=>s(x['id'])==selectedId);}
+      else {ch=await db!.from('erp_cheques').insert({'company_id':company,'bank_cashbox_id':bankId,'check_number':int.parse(firstCheck.text.trim()),'cheque_type':'credit','direction':chequeDirection,'issue_date':issueDate.text,'amount':v,'status':'available','created_by':db!.auth.currentUser?.id}).select().single();selectedId=s(ch['id']);}
+      await db!.rpc('erp_issue_cheque',params:{'p_cheque_id':selectedId,'p_cheque_type':chequeType,'p_direction':chequeDirection,'p_issue_date':issueDate.text,'p_due_date':dueDate.text,'p_amount':v,'p_payee_type':partyType,'p_payee_id':null,'p_payee_name':partyName.text.trim(),'p_notes':description.text});
+      if(order) await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':chequeDirection,'instrument_type':'cheque','cheque_id':selectedId,'party_type':partyType,'party_name':partyName.text.trim(),'amount':v,'description':'شيك رقم '+s(ch['check_number']),'created_by':db!.auth.currentUser?.id});
+      chequeAmount.clear();partyName.clear();description.clear();chequeId=null;if(chequeType=='credit')firstCheck.clear();
     },order?'تم حفظ أمر الشيك.':'تم حفظ حركة الشيك.');
   }
   Future<void> settle(Map<String,dynamic> c) async {
