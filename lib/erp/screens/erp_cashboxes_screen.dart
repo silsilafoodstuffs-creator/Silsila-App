@@ -317,7 +317,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
-              columns: const [
+              columns: [
                 DataColumn(label: Text('م')),
                 DataColumn(label: Text('كود الخزينة')),
                 DataColumn(label: Text('الاسم العربي')),
