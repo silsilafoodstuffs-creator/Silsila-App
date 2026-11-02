@@ -2690,6 +2690,8 @@ class _MainShellState extends State<MainShell> {
           const SizedBox(height: 8),
           SizedBox(width: double.infinity, child: FilledButton.icon(style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF27C3)), onPressed: () => openMarketPost('transfer'), icon: const Icon(Icons.local_shipping_outlined), label: const Text('عايز أنقل')),
           const SizedBox(height: 12),
+          OutlinedButton.icon(onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyMarketPostsScreen())), icon: const Icon(Icons.manage_history), label: const Text('إدارة طلباتي وسجل السوق')),
+          const SizedBox(height: 8),
           MarketPostsSection(key: marketPostsKey),
         ],
       );
@@ -6927,6 +6929,64 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         ],
       );
 }
+
+
+class MyMarketPostsScreen extends StatefulWidget {
+  const MyMarketPostsScreen({super.key});
+  @override State<MyMarketPostsScreen> createState() => _MyMarketPostsScreenState();
+}
+class _MyMarketPostsScreenState extends State<MyMarketPostsScreen> {
+  final _service = TraderMarketService();
+  late Future<List<Map<String,dynamic>>> _future;
+  bool _admin = false;
+  @override void initState() { super.initState(); _future = _load(); }
+  Future<List<Map<String,dynamic>>> _load() async {
+    final db = database;
+    if (db == null) return [];
+    final profile = await db.from('profiles').select('role,account_type').eq('id',db.auth.currentUser!.id).maybeSingle();
+    _admin = profile?['role'] == 'admin' || profile?['role'] == 'super_admin' || profile?['account_type'] == 'إدارة نشاط';
+    return _admin ? _service.getAllPostsForModeration() : _service.getMyPostHistory();
+  }
+  Future<void> _reload() async { final f=_load(); setState(()=>_future=f); try { await f; } catch (_) {} }
+  Future<void> _extend(Map<String,dynamic> post) async {
+    final ctl=TextEditingController(text:'24');
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('زيادة مدة عرض الطلب'),content:TextField(controller:ctl,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'عدد الساعات الإضافية')),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد'))]));
+    final hours=int.tryParse(ctl.text.trim())??0; ctl.dispose();
+    if(ok!=true)return;
+    try { await _service.extendPost(post['id'].toString(),hours); await _reload(); } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تمديد الطلب: '+e.toString()))); }
+  }
+  Future<void> _delete(Map<String,dynamic> post) async {
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('حذف الطلب'),content:const Text('سيتم حذف الطلب نهائيًا. هل تريد المتابعة؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حذف'))]));
+    if(ok!=true)return;
+    try { await _service.deletePost(post['id'].toString()); await _reload(); } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحذف: '+e.toString()))); }
+  }
+  Future<void> _moderate(Map<String,dynamic> post,bool publish) async {
+    try { await _service.moderatePost(post['id'].toString(),publish:publish); await _reload(); } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تحديث حالة الطلب: '+e.toString()))); }
+  }
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(_admin?'مراقبة سوق التجار':'إدارة طلباتي'),backgroundColor:purple,foregroundColor:Colors.white,actions:[IconButton(onPressed:_reload,icon:const Icon(Icons.refresh))]),body:FutureBuilder<List<Map<String,dynamic>>>(future:_future,builder:(context,snapshot){
+    if(snapshot.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+    if(snapshot.hasError)return Center(child:Text('تعذر تحميل السجل: '+snapshot.error.toString()));
+    final rows=snapshot.data??[];
+    if(rows.isEmpty)return const Center(child:Text('لا توجد طلبات محفوظة في السجل.'));
+    return ListView.builder(padding:const EdgeInsets.all(12),itemCount:rows.length,itemBuilder:(context,i){
+      final p=rows[i], type=(p['post_type']??'').toString(), color=type=='sell'?orange:type=='transfer'?const Color(0xFFFF27C3):purple;
+      final expired=DateTime.tryParse((p['expires_at']??'').toString())?.isBefore(DateTime.now())??false;
+      return Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Text(type=='sell'?'عايز أبيع':type=='transfer'?'عايز أنقل':'عايز أشتري',style:TextStyle(color:color,fontWeight:FontWeight.bold)),
+        Text((p['title']??'').toString(),style:const TextStyle(fontWeight:FontWeight.bold)),
+        Text('تاريخ النشر: '+(p['published_at']??p['created_at']??'—').toString()),
+        Text(expired?'انتهت مدة العرض':'الحالة: '+(p['status']??'نشط').toString()),
+        Wrap(spacing:6,children:[
+          if(!_admin) OutlinedButton(onPressed:()=>_extend(p),child:const Text('زيادة المدة / إعادة النشر')),
+          if(!_admin) OutlinedButton(onPressed:()=>_delete(p),child:const Text('حذف')),
+          if(_admin) FilledButton(onPressed:()=>_moderate(p,true),child:const Text('إعادة النشر')),
+          if(_admin) OutlinedButton(onPressed:()=>_moderate(p,false),child:const Text('إيقاف / أرشفة')),
+        ]),
+      ])));
+    });
+  }));
+}
+
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
