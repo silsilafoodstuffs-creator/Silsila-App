@@ -40,6 +40,9 @@ class ErpCashboxesRepository {
     if (code.trim().isEmpty || name.trim().isEmpty || nameEn.trim().isEmpty || accountId.isEmpty) {
       throw ArgumentError('كود الخزينة والاسمان العربي والإنجليزي وحساب الأستاذ حقول مطلوبة.');
     }
+    if (isBank && (checkbookSheetCount < 1 || checkbookSheetCount > 1000)) {
+      throw ArgumentError('عدد أوراق دفتر الشيكات يجب أن يكون بين 1 و1000.');
+    }
     final masked = _blank(accountNumberMasked);
     if (masked != null && !RegExp(r'^\d{4}$').hasMatch(masked)) {
       throw ArgumentError('أدخل آخر أربعة أرقام فقط من الحساب البنكي.');
