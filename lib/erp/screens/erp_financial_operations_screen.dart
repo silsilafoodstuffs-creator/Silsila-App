@@ -109,7 +109,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
         title:Text('اختيار '+type+' • بحث F1'),
         content:SizedBox(width:560,height:420,child:Column(children:[
           TextField(autofocus:true,onChanged:(v)=>setLocal(()=>q=v),decoration:const InputDecoration(prefixIcon:Icon(Icons.search),hintText:'بحث بالاسم أو الكود')),
-          Expanded(child:ListView(children:list.where((r)=>(entityName(r)+' '+entityCode(r)).toLowerCase().contains(q.toLowerCase())).map((r)=>ListTile(title:Text(entityName(r)),subtitle:Text(entityCode(r)),onTap:()=>Navigator.pop(ctx,r)).toList())),
+          Expanded(child:ListView(children:list.where((r)=>(entityName(r)+' '+entityCode(r)).toLowerCase().contains(q.toLowerCase())).map((r)=>ListTile(title:Text(entityName(r)),subtitle:Text(entityCode(r)),onTap:()=>Navigator.pop(ctx,r))).toList())),
         ])),
         actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء'))],
       ));
