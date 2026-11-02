@@ -821,17 +821,12 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
   int _index = 0;
   List<_AdvertisementSlide> _ads = _fallbackAds;
   bool _loadingAds = false;
-  bool _popupAttempted = false;
-  OverlayEntry? _popupEntry;
-  Timer? _popupTimer;
 
   @override
   void didUpdateWidget(covariant _HomeAdvertisementsCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.activityCode != widget.activityCode) {
-      _closePopup();
       _loadingAds = false;
-      _popupAttempted = false;
       _loadManagedAdvertisements();
     }
   }
@@ -893,90 +888,9 @@ class _HomeAdvertisementsCarouselState extends State<_HomeAdvertisementsCarousel
     }
   }
 
-  Future<void> _loadPopupAdvertisement() async {
-    if (_popupAttempted) return;
-    _popupAttempted = true;
-    final client = database;
-    if (client == null) return;
-    final requestedActivityCode = widget.activityCode;
-    try {
-      final rows = await client.rpc('get_silsila_public_popup_ads', params: {'p_activity_code': requestedActivityCode});
-      final candidates = (rows as List).whereType<Map<String, dynamic>>();
-      if (candidates.isEmpty || !mounted) { _startupAdvertisementActive = false; return; }
-      final row = candidates.first;
-      final path = row['storage_path']?.toString() ?? '';
-      if (path.isEmpty) { _startupAdvertisementActive = false; return; }
-      final url = client.storage.from('silsila-public-ads').getPublicUrl(path);
-      final type = row['target_type']?.toString() ?? 'none';
-      final code = row['target_code']?.toString();
-      final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 5).clamp(1, 120).toInt();
-      while (_startupAdvertisementActive && mounted) {
-        await Future<void>.delayed(const Duration(milliseconds: 250));
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 700));
-      if (!mounted || requestedActivityCode != widget.activityCode) return;
-      _popupEntry = OverlayEntry(builder: (overlayContext) => Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560, maxHeight: 420),
-                child: SizedBox(
-                width: MediaQuery.of(context).size.width * .82,
-                height: MediaQuery.of(context).size.height * .46,
-                child: Material(
-                  color: Colors.white,
-                  elevation: 18,
-                  borderRadius: BorderRadius.circular(24),
-                  clipBehavior: Clip.antiAlias,
-                  child: Stack(children: [
-                    Positioned.fill(
-                      child: InkWell(
-                        onTap: () {
-                          _closePopup();
-                          widget.onDestinationTap(type, code);
-                        },
-                        child: Image.network(url, fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image_outlined, size: 56, color: purple))),
-                      ),
-                    ),
-                    Positioned(
-                      top: 7, left: 7,
-                      child: Material(
-                        color: Colors.white.withValues(alpha: .94),
-                        shape: const CircleBorder(),
-                        child: IconButton(
-                          tooltip: 'إغلاق الإعلان',
-                          onPressed: _closePopup,
-                          icon: const Icon(Icons.close_rounded, color: purple),
-                        ),
-                      ),
-                    ),
-                  ]),
-                ),
-              ),
-              ),
-            ),
-          ));
-      Overlay.of(context).insert(_popupEntry!);
-      _popupTimer?.cancel();
-      _popupTimer = Timer(Duration(seconds: duration), _closePopup);
-    } catch (_) {
-      // Popup ads are optional; the app remains usable if the feed is unavailable.
-    }
-  }
-
-  void _closePopup() {
-    _popupTimer?.cancel();
-    _popupTimer = null;
-    _popupEntry?.remove();
-    _popupEntry = null;
-  }
-
   @override
   void dispose() {
     _timer?.cancel();
-    _popupTimer?.cancel();
-    _popupEntry?.remove();
     _controller.dispose();
     super.dispose();
   }
