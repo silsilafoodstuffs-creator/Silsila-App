@@ -132,6 +132,18 @@ class TraderMarketService {
 
     if (durationHours < 1 || durationHours > 720) throw ArgumentError('مدة الطلب يجب أن تكون بين ساعة و720 ساعة.');
     if (!const {'buy','sell','transfer'}.contains(cleanType)) throw ArgumentError('نوع الطلب غير صالح.');
+    var effectiveDurationHours = durationHours;
+    try {
+      final member = await _requireClient.from('erp_company_members').select('company_id').eq('user_id', _userId).eq('is_active', true).limit(1).maybeSingle();
+      final erpUser = member == null ? await _requireClient.from('erp_users').select('company_id').eq('auth_user_id', _userId).eq('is_active', true).limit(1).maybeSingle() : null;
+      final companyId = (member?['company_id'] ?? erpUser?['company_id'])?.toString();
+      if (companyId != null && companyId.isNotEmpty) {
+        final policyKey = cleanType == 'sell' ? 'trader_market.sell_duration_hours' : cleanType == 'transfer' ? 'trader_market.transfer_duration_hours' : 'trader_market.buy_duration_hours';
+        final policy = await _requireClient.from('erp_program_policies').select('policy_value,is_enabled').eq('company_id', companyId).eq('policy_key', policyKey).maybeSingle();
+        final maximum = int.tryParse((policy?['policy_value'] ?? '24').toString());
+        if (policy?['is_enabled'] == true && maximum != null && maximum > 0) effectiveDurationHours = effectiveDurationHours.clamp(1, maximum.clamp(1,720));
+      }
+    } catch (_) { /* Keep the documented 24-hour default if company policy is unavailable. */ }
     final now = DateTime.now().toUtc();
     final profile = await _requireClient.from('profiles').select('full_name,phone,address,governorate,district,area').eq('id', _userId).maybeSingle();
     final profileAddress = [profile?['governorate'], profile?['district'], profile?['area'], profile?['address']].where((v) => v != null && v.toString().trim().isNotEmpty).join(' - ');
@@ -143,8 +155,8 @@ class TraderMarketService {
       'is_active': true,
       'status': 'active',
       'published_at': now.toIso8601String(),
-      'duration_hours': durationHours,
-      'expires_at': now.add(Duration(hours: durationHours)).toIso8601String(),
+      'duration_hours': effectiveDurationHours,
+      'expires_at': now.add(Duration(hours: effectiveDurationHours)).toIso8601String(),
       'owner_display_name': profile?['full_name']?.toString(),
       'owner_phone': (contactPhone ?? profile?['phone'])?.toString(),
       'owner_address': profileAddress,
