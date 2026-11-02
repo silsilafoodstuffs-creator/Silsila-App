@@ -534,22 +534,51 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     }
     switch(_quickKind){case 'department':await _add('department');break;case 'location':await _add('location');break;case 'grade':await _addGrade();break;default:await _add('job');}
   }
+  Future<Map<String,dynamic>?> _chooseQuickRow(String action) async {
+    final rows=_quickRows;
+    if(rows.isEmpty)return null;
+    return showDialog<Map<String,dynamic>>(
+      context:context,
+      builder:(ctx)=>AlertDialog(
+        title:Text(action=='edit'?'اختر السجل المراد تعديله':'اختر السجل المراد إيقافه'),
+        content:SizedBox(
+          width:620,
+          height:480,
+          child:ListView.separated(
+            itemCount:rows.length,
+            separatorBuilder:(_,__)=>const Divider(height:1),
+            itemBuilder:(ctx,index){
+              final row=rows[index];
+              return ListTile(
+                dense:true,
+                title:Text(_quickCode(row)+' — '+_quickName(row)),
+                subtitle:Text(row['is_active']==true?'نشط':'موقوف'),
+                onTap:()=>Navigator.pop(ctx,Map<String,dynamic>.from(row)),
+              );
+            },
+          ),
+        ),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء'))],
+      ),
+    );
+  }
+
   Future<void> _quickEdit() async {
-    if(_quickRows.isEmpty)return;
-    final row=_quickRows.first;
+    final row=await _chooseQuickRow('edit');
+    if(row==null)return;
     if(_quickKind=='grade'){await _editGrade(row);}
     else if(!_departmentMode && _tabs.index==1){await _editJobRequirements(row);}
     else{await _edit(row,_quickKind);}
   }
   Future<void> _quickDelete() async {
-    if(_quickRows.isEmpty)return;
-    final row=_quickRows.first;
+    final row=await _chooseQuickRow('delete');
+    if(row==null||_db==null)return;
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
       title:const Text('تأكيد إيقاف السجل'),
       content:Text('هل تريد إيقاف «${_quickName(row)}»؟ لن يتم حذف السجل المرتبط ببيانات أخرى.'),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('لا')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('نعم، إيقاف'))],
     ));
-    if(yes!=true||_db==null)return;
+    if(yes!=true)return;
     try{
       final table=_quickKind=='department'?'erp_hr_departments':_quickKind=='location'?'erp_hr_work_locations':_quickKind=='grade'?'erp_hr_job_grades':'erp_hr_jobs';
       await _db!.from(table).update({'is_active':false}).eq('id',row['id']).eq('company_id',_companyId);
