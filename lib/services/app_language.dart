@@ -43,7 +43,7 @@ String silsilaText(String value) {
   const words = <String, String>{
     'سلسلة Silsila': 'Silsila',
     'سلسلة': 'Silsila',
-    'ابدأ الآن': 'Get Started',
+    'ابدأ الآن': 'ابدأ',
     'ابدأ مع سلسلة': 'Get started with Silsila',
     'اختار طريقة دخولك': 'Choose how to sign in',
     'تسجيل الدخول': 'Sign in',
