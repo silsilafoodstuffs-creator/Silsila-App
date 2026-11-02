@@ -86,12 +86,13 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     try {
       final user = _db.auth.currentUser;
       if (user == null) throw StateError('يجب تسجيل الدخول أولاً.');
-      final row = await _db.from('erp_business_workspaces').insert({
-        'owner_user_id': user.id,
-        'workspace_name': name,
-        'activity_type': _activity.text.trim(),
-        'account_kind': _accountKind,
-      }).select().single();
+      final workspaceId = await _db.rpc('erp_create_business_workspace', params: {
+        'p_workspace_name': name,
+        'p_activity_type': _activity.text.trim(),
+        'p_account_kind': _accountKind,
+      });
+      final row = await _db.from('erp_business_workspaces').select()
+          .eq('id', workspaceId.toString()).single();
       if (!mounted) return;
       setState(() {
         _workspaces.add(Map<String, dynamic>.from(row));
