@@ -7123,14 +7123,46 @@ class _MyMarketPostsScreenState extends State<MyMarketPostsScreen> {
   Future<void> _edit(Map<String,dynamic> post) async {
     final title=TextEditingController(text:(post['title']??'').toString());
     final details=TextEditingController(text:(post['description']??'').toString());
-    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تعديل طلب سوق التجار'),content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:title,decoration:const InputDecoration(labelText:'عنوان الطلب')),TextField(controller:details,maxLines:4,decoration:const InputDecoration(labelText:'التفاصيل'))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ'))]));
-    if(ok!=true){title.dispose();details.dispose();return;}
+    final items=(post['items_data'] as List? ?? const []).whereType<Map>().map((e)=>Map<String,dynamic>.from(e)).toList();
+    final quantities=<TextEditingController>[];
+    final prices=<TextEditingController>[];
+    final units=<TextEditingController>[];
+    for(final item in items){
+      quantities.add(TextEditingController(text:(item['quantity']??'').toString()));
+      prices.add(TextEditingController(text:(item['price']??'').toString()));
+      units.add(TextEditingController(text:(item['unit']??'وحدة').toString()));
+    }
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('تعديل طلب سوق التجار'),
+      content:SizedBox(width:520,height:520,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        TextField(controller:title,decoration:const InputDecoration(labelText:'عنوان الطلب')),
+        TextField(controller:details,maxLines:3,decoration:const InputDecoration(labelText:'التفاصيل')),
+        if(items.isNotEmpty)const Divider(),
+        ...List.generate(items.length,(i)=>Padding(padding:const EdgeInsets.symmetric(vertical:6),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Text((items[i]['product_name']??'صنف').toString(),style:const TextStyle(fontWeight:FontWeight.bold)),
+          Row(children:[
+            Expanded(child:TextField(controller:quantities[i],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية'))),
+            const SizedBox(width:6),
+            Expanded(child:TextField(controller:units[i],decoration:const InputDecoration(labelText:'الوحدة'))),
+            const SizedBox(width:6),
+            Expanded(child:TextField(controller:prices[i],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر'))),
+          ]),
+        ]))),
+      ]))),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ التعديل'))],
+    ));
+    if(ok!=true){title.dispose();details.dispose();for(final x in [...quantities,...prices,...units]){x.dispose();}return;}
     try {
-      if(_admin) await _service.updatePostForModeration(postId:post['id'].toString(),title:title.text,description:details.text);
-      else await _service.updatePostDetails(postId:post['id'].toString(),title:title.text,description:details.text);
+      for(var i=0;i<items.length;i++){
+        final q=double.tryParse(quantities[i].text.trim()),p=double.tryParse(prices[i].text.trim());
+        if(q==null||!q.isFinite||q<=0||q>9999.999||((q*1000).roundToDouble()-q*1000).abs()>0.000001||p==null||!p.isFinite||p<0||units[i].text.trim().isEmpty)throw ArgumentError('راجع كمية ووحدة وسعر الصنف '+(items[i]['product_name']??'').toString());
+        items[i]['quantity']=q;items[i]['price']=p;items[i]['unit']=units[i].text.trim();
+      }
+      if(_admin) await _service.updatePostForModeration(postId:post['id'].toString(),title:title.text,description:details.text,itemsData:items);
+      else await _service.updatePostDetails(postId:post['id'].toString(),title:title.text,description:details.text,itemsData:items);
       await _reload();
     } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تعديل الطلب: '+e.toString()))); }
-    title.dispose();details.dispose();
+    title.dispose();details.dispose();for(final x in [...quantities,...prices,...units]){x.dispose();}
   }
   Future<void> _adminDelete(Map<String,dynamic> post) async {
     final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('حذف طلب من السوق'),content:const Text('تأكيد حذف الطلب من سوق التجار؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حذف'))]));
