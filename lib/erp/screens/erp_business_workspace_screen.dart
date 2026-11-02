@@ -36,6 +36,18 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _cashMovements = [];
   List<Map<String, dynamic>> _departments = [];
   List<Map<String, dynamic>> _employees = [];
+  List<Map<String, dynamic>> _documents = [];
+  List<Map<String, dynamic>> _draftLines = [];
+  String _documentType = 'purchase';
+  String? _selectedDocBranchId;
+  String? _selectedDocWarehouseId;
+  String? _selectedDocItemLinkId;
+  final _docCounterparty = TextEditingController();
+  final _docNotes = TextEditingController();
+  final _docQuantity = TextEditingController(text:'1');
+  final _docUnitPrice = TextEditingController(text:'0');
+  final _docDiscount = TextEditingController(text:'0');
+  final _docTax = TextEditingController(text:'0');
   String? _selectedDepartmentId;
   final _departmentCode = TextEditingController();
   final _departmentName = TextEditingController();
@@ -84,6 +96,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     _proposalName.dispose(); _proposalNameEn.dispose(); _proposalCategory.dispose(); _proposalUnit.dispose(); _proposalDescription.dispose();
     _cashAmount.dispose(); _cashDescription.dispose(); _cashCounterparty.dispose(); _cashReference.dispose();
     _departmentCode.dispose(); _departmentName.dispose(); _employeeName.dispose(); _employeeJob.dispose(); _employeeSalary.dispose();
+    _docCounterparty.dispose(); _docNotes.dispose(); _docQuantity.dispose(); _docUnitPrice.dispose(); _docDiscount.dispose(); _docTax.dispose();
     super.dispose();
   }
 
@@ -123,6 +136,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _db.from('erp_business_workspace_cash_movements').select('id,movement_no,movement_type,movement_date,amount,description,counterparty_name,payment_method,reference_no').eq('workspace_id', id).order('movement_date', ascending: false).limit(200),
         _db.from('erp_business_workspace_departments').select('id,parent_id,department_code,name_ar,is_active').eq('workspace_id', id).order('name_ar'),
         _db.from('erp_business_workspace_employees').select('id,department_id,employee_code,full_name,job_title,monthly_salary,is_active').eq('workspace_id', id).order('full_name'),
+        _db.from('erp_business_workspace_documents').select('id,document_no,document_type,document_date,counterparty_name,status,total,created_at').eq('workspace_id', id).order('created_at', ascending: false).limit(200),
       ]);
       if (!mounted) return;
       setState(() {
@@ -135,6 +149,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _cashMovements = List<Map<String, dynamic>>.from(result[6]);
         _departments = List<Map<String, dynamic>>.from(result[7]);
         _employees = List<Map<String, dynamic>>.from(result[8]);
+        _documents = List<Map<String, dynamic>>.from(result[9]);
+        _selectedDocBranchId = _branches.any((x) => x['id'].toString() == _selectedDocBranchId) ? _selectedDocBranchId : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
+        _selectedDocWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedDocWarehouseId) ? _selectedDocWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
+        _selectedDocItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedDocItemLinkId && x['is_enabled'] == true) ? _selectedDocItemLinkId : (_itemLinks.where((x) => x['is_enabled'] == true).isNotEmpty ? _itemLinks.firstWhere((x) => x['is_enabled'] == true)['id'].toString() : null);
         _selectedDepartmentId = _departments.any((x) => x['id'].toString() == _selectedDepartmentId) ? _selectedDepartmentId : (_departments.isNotEmpty ? _departments.first['id'].toString() : null);
         _selectedBranchForWarehouse = _branches.any((x) => x['id'].toString() == _selectedBranchForWarehouse) ? _selectedBranchForWarehouse : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
         _selectedStockWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
@@ -169,6 +187,57 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       _message('تم إنشاء مساحة النشاط المستقلة.');
     } catch (e) { _message('لم يتم إنشاء النشاط: $e'); }
     finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  void _addDocumentLine() {
+    final itemId = _selectedDocItemLinkId;
+    final qty = double.tryParse(_docQuantity.text.trim());
+    final price = double.tryParse(_docUnitPrice.text.trim());
+    final discount = double.tryParse(_docDiscount.text.trim()) ?? 0;
+    if (itemId == null || qty == null || qty <= 0 || price == null || price < 0 || discount < 0 || discount > qty*price) {
+      _message('اختر صنفاً وأدخل كمية وسعراً وخصماً صحيحين.'); return;
+    }
+    setState(() {
+      _draftLines.add({'item_link_id':itemId,'quantity':qty,'unit_price':price,'discount':discount});
+      _docQuantity.text='1'; _docUnitPrice.text='0'; _docDiscount.text='0';
+    });
+  }
+
+  Future<void> _createWorkspaceDocument() async {
+    final id = _selected?['id']?.toString();
+    final branchId = _selectedDocBranchId;
+    final warehouseId = _selectedDocWarehouseId;
+    if (id == null || branchId == null || warehouseId == null || _draftLines.isEmpty) {
+      _message('اختر الفرع والمخزن وأضف صنفاً واحداً على الأقل.'); return;
+    }
+    final tax = double.tryParse(_docTax.text.trim()) ?? 0;
+    if (tax < 0) { _message('قيمة الضريبة غير صحيحة.'); return; }
+    try {
+      final now = DateTime.now();
+      final prefix = _documentType.toUpperCase();
+      final docNo = 'ACT-$prefix-${now.microsecondsSinceEpoch}';
+      final docId = await _db.rpc('erp_create_business_workspace_document', params: {
+        'p_workspace_id':id,'p_branch_id':branchId,'p_warehouse_id':warehouseId,
+        'p_document_no':docNo,'p_document_type':_documentType,
+        'p_document_date':now.toIso8601String().substring(0,10),
+        'p_counterparty_name':_docCounterparty.text.trim(),
+        'p_notes':_docNotes.text.trim(),
+        'p_lines':_draftLines,
+        'p_tax':tax,
+      });
+      setState(() { _draftLines.clear(); });
+      _docCounterparty.clear(); _docNotes.clear(); _docTax.text='0';
+      await _loadStructure();
+      _message('تم إنشاء المستند كمسودة رقم $docNo. لم يتغير المخزون بعد.');
+    } catch(e) { _message('تعذر إنشاء المستند: $e'); }
+  }
+
+  Future<void> _postWorkspaceDocument(String documentId) async {
+    try {
+      await _db.rpc('erp_post_business_workspace_document',params:{'p_document_id':documentId});
+      await _loadStructure();
+      _message('تم اعتماد المستند وترحيل حركته إلى مخزون النشاط.');
+    } catch(e) { _message('لم يتم ترحيل المستند: $e'); }
   }
 
   Future<void> _addDepartment() async {
@@ -446,6 +515,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _areaView() {
     if (_area == 'صرف وتوريد نقدية') return _cashMovementsView();
+    if (_area == 'فاتورة شراء / مرتجع شراء') return _documentsView(purchase:true);
+    if (_area == 'فاتورة بيع / مرتجع بيع') return _documentsView(purchase:false);
     if (_area == 'بياناتي الأساسية') return _basicData();
     final sections = <String, List<(String, IconData, String)>>{
       'حركات نشاطي': [
@@ -507,6 +578,74 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     selectedColor: const Color(0xFFF0E7FA),
     onSelected: (_) => setState(() => _basicTab = index),
   );
+
+  Widget _documentsView({required bool purchase}) => ListView(children: [
+    _backHeader(purchase?'فاتورة شراء / مرتجع شراء':'فاتورة بيع / مرتجع بيع'),
+    _sectionTitle(purchase?'مشتريات النشاط':'مبيعات النشاط','مستندات مستقلة بمسودات واعتماد قبل ترحيل المخزون'),
+    Wrap(spacing:6,children:[
+      ChoiceChip(label:Text(purchase?'فاتورة شراء':'فاتورة بيع'),selected:_documentType==(purchase?'purchase':'sale'),onSelected:(_){setState(()=>_documentType=purchase?'purchase':'sale');}),
+      ChoiceChip(label:Text(purchase?'مرتجع شراء':'مرتجع بيع'),selected:_documentType==(purchase?'purchase_return':'sale_return'),onSelected:(_){setState(()=>_documentType=purchase?'purchase_return':'sale_return');}),
+    ]),
+    const SizedBox(height:8),
+    DropdownButtonFormField<String>(
+      value:_branches.any((x)=>x['id'].toString()==_selectedDocBranchId)?_selectedDocBranchId:null,
+      decoration:const InputDecoration(labelText:'الفرع'),
+      items:_branches.map((b)=>DropdownMenuItem(value:b['id'].toString(),child:Text(b['name_ar'].toString()))).toList(),
+      onChanged:(v)=>setState(()=>_selectedDocBranchId=v),
+    ),
+    const SizedBox(height:8),
+    DropdownButtonFormField<String>(
+      value:_warehouses.any((x)=>x['id'].toString()==_selectedDocWarehouseId)?_selectedDocWarehouseId:null,
+      decoration:const InputDecoration(labelText:'المخزن'),
+      items:_warehouses.map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
+      onChanged:(v)=>setState(()=>_selectedDocWarehouseId=v),
+    ),
+    TextField(controller:_docCounterparty,decoration:InputDecoration(labelText:purchase?'اسم المورد':'اسم العميل')),
+    const SizedBox(height:8),
+    _sectionTitle('بنود المستند','يمكن إضافة أكثر من صنف قبل إنشاء المسودة'),
+    DropdownButtonFormField<String>(
+      value:_itemLinks.any((x)=>x['id'].toString()==_selectedDocItemLinkId&&x['is_enabled']==true)?_selectedDocItemLinkId:null,
+      decoration:const InputDecoration(labelText:'الصنف'),
+      items:_itemLinks.where((x)=>x['is_enabled']==true).map((x){
+        final item=x['erp_items'] is Map?Map<String,dynamic>.from(x['erp_items']):<String,dynamic>{};
+        return DropdownMenuItem(value:x['id'].toString(),child:Text((item['item_name']??'صنف').toString()));
+      }).toList(),
+      onChanged:(v)=>setState(()=>_selectedDocItemLinkId=v),
+    ),
+    Row(children:[
+      Expanded(child:TextField(controller:_docQuantity,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية'))),
+      const SizedBox(width:6),
+      Expanded(child:TextField(controller:_docUnitPrice,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'سعر الوحدة'))),
+      const SizedBox(width:6),
+      Expanded(child:TextField(controller:_docDiscount,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الخصم'))),
+      IconButton(onPressed:_addDocumentLine,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
+    ]),
+    ..._draftLines.asMap().entries.map((entry){
+      final line=entry.value;
+      final linkRows=_itemLinks.where((x)=>x['id'].toString()==line['item_link_id']);
+      final link=linkRows.isEmpty?null:linkRows.first;
+      final item=link?['erp_items'] is Map?Map<String,dynamic>.from(link!['erp_items']):<String,dynamic>{};
+      return ListTile(dense:true,title:Text((item['item_name']??'صنف').toString()),
+        subtitle:Text('الكمية ${line['quantity']} × ${line['unit_price']} • خصم ${line['discount']}'),
+        trailing:IconButton(icon:const Icon(Icons.close,color:Colors.redAccent),onPressed:()=>setState(()=>_draftLines.removeAt(entry.key)));
+    }),
+    TextField(controller:_docTax,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'ضريبة المستند')),
+    TextField(controller:_docNotes,decoration:const InputDecoration(labelText:'ملاحظات')),
+    const SizedBox(height:8),
+    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_createWorkspaceDocument,icon:const Icon(Icons.save),label:const Text('حفظ كمسودة'))),
+    const Divider(),
+    _sectionTitle('مستندات النشاط','${_documents.where((d)=>purchase?['purchase','purchase_return'].contains(d['document_type']):['sale','sale_return'].contains(d['document_type'])).length} مستند'),
+    ..._documents.where((d)=>purchase?['purchase','purchase_return'].contains(d['document_type']):['sale','sale_return'].contains(d['document_type'])).map((d)=>Card(
+      elevation:0,child:ListTile(dense:true,
+        title:Text('${d['document_no']} • ${d['document_type']}'),
+        subtitle:Text('${d['document_date']} • ${d['counterparty_name']??'بدون طرف'} • ${d['status']}'),
+        trailing:Row(mainAxisSize:MainAxisSize.min,children:[
+          Text('${d['total']}',style:const TextStyle(fontWeight:FontWeight.w800,color:_workspacePurple)),
+          if(d['status']=='draft') IconButton(tooltip:'اعتماد وترحيل',icon:const Icon(Icons.check_circle,color:Colors.green),onPressed:()=>_postWorkspaceDocument(d['id'].toString())),
+        ]),
+      ),
+    )),
+  ]);
 
   Widget _cashMovementsView() => ListView(children: [
     _backHeader('صرف وتوريد نقدية'),
