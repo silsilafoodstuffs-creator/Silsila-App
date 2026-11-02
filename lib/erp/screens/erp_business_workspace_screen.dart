@@ -28,6 +28,17 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _warehouseCode = TextEditingController();
   List<Map<String, dynamic>> _branches = [];
   List<Map<String, dynamic>> _warehouses = [];
+  List<Map<String, dynamic>> _members = [];
+  final _memberPhone = TextEditingController();
+  String _memberRole = 'staff';
+  final Map<String, bool> _memberPermissions = {
+    'workspace.enter': true, 'members.read': false, 'members.manage': false,
+    'master.read': true, 'master.manage': false, 'items.read': true, 'items.propose': false,
+    'inventory.read': false, 'inventory.manage': false, 'purchases.read': false,
+    'purchases.manage': false, 'sales.read': false, 'sales.manage': false,
+    'cash.read': false, 'cash.manage': false, 'hr.read': false, 'hr.manage': false,
+    'reports.read': false, 'audit.read': false,
+  };
 
   @override
   void initState() { super.initState(); _load(); }
@@ -35,7 +46,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   @override
   void dispose() {
     _name.dispose(); _activity.dispose(); _branchName.dispose();
-    _warehouseName.dispose(); _branchCode.dispose(); _warehouseCode.dispose();
+    _warehouseName.dispose(); _branchCode.dispose(); _warehouseCode.dispose(); _memberPhone.dispose();
     super.dispose();
   }
 
@@ -68,11 +79,13 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       final result = await Future.wait([
         _db.from('erp_business_workspace_branches').select().eq('workspace_id', id).order('name_ar'),
         _db.from('erp_business_workspace_warehouses').select().eq('workspace_id', id).order('name_ar'),
+        _db.from('erp_business_workspace_members').select('id,user_id,member_role,is_active,can_open_workspace,member_display_name,permissions').eq('workspace_id', id).order('created_at'),
       ]);
       if (!mounted) return;
       setState(() {
         _branches = List<Map<String, dynamic>>.from(result[0]);
         _warehouses = List<Map<String, dynamic>>.from(result[1]);
+        _members = List<Map<String, dynamic>>.from(result[2]);
       });
     } catch (e) {
       if (mounted) setState(() => _error = 'تعذر تحميل الفروع والمخازن: $e');
@@ -103,6 +116,29 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       _message('تم إنشاء مساحة النشاط المستقلة.');
     } catch (e) { _message('لم يتم إنشاء النشاط: $e'); }
     finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  Future<void> _addMember() async {
+    final id = _selected?['id']?.toString();
+    if (id == null || _memberPhone.text.trim().isEmpty) { _message('أدخل رقم هاتف مستخدم مسجل ونشط في سلسلة.'); return; }
+    try {
+      await _db.rpc('erp_add_business_workspace_member', params: {
+        'p_workspace_id': id, 'p_phone': _memberPhone.text.trim(),
+        'p_role': _memberRole, 'p_permissions': _memberPermissions,
+      });
+      _memberPhone.clear(); await _loadStructure(); _message('تم ربط المستخدم بالنشاط وتطبيق صلاحياته.');
+    } catch (e) { _message('تعذر ربط المستخدم: $e'); }
+  }
+
+  Future<void> _removeMember(String userId) async {
+    final id = _selected?['id']?.toString();
+    if (id == null) return;
+    try {
+      await _db.rpc('erp_remove_business_workspace_member', params: {
+        'p_workspace_id': id, 'p_member_user_id': userId,
+      });
+      await _loadStructure(); _message('تم إلغاء وصول المستخدم إلى النشاط.');
+    } catch (e) { _message('تعذر إلغاء الوصول: $e'); }
   }
 
   Future<void> _addBranch() async {
@@ -304,7 +340,55 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ..._warehouses.map((w) => ListTile(dense: true, leading: const Icon(Icons.warehouse, color: _workspaceOrange), title: Text(w['name_ar'].toString()), subtitle: Text(w['warehouse_code'].toString()))),
   ]);
 
-  Widget _membersInfo() => _infoPanel('مستخدمين نشاطي', 'سيتم ربط المستخدمين الفرعيين بحساباتهم الموجودة بالفعل في سلسلة. إدارة الصلاحيات ستكون على مستوى الشاشة والإجراء، مع تحديد الفروع والمخازن لكل مستخدم. لا يتم إنشاء حساب دخول مكرر.');
+  Widget _membersInfo() => ListView(children: [
+    _sectionTitle('مستخدمين نشاطي', 'اربط حساباً نشطاً موجوداً بالفعل في سلسلة دون إنشاء حساب مكرر'),
+    Row(children: [
+      Expanded(child: TextField(controller: _memberPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم هاتف المستخدم المسجل'))),
+      const SizedBox(width: 8),
+      SizedBox(width: 150, child: DropdownButtonFormField<String>(value: _memberRole,
+        decoration: const InputDecoration(labelText: 'الدور'),
+        items: const [
+          DropdownMenuItem(value: 'staff', child: Text('مستخدم')),
+          DropdownMenuItem(value: 'manager', child: Text('مدير')),
+          DropdownMenuItem(value: 'accountant', child: Text('محاسب')),
+          DropdownMenuItem(value: 'warehouse', child: Text('مسؤول مخزن')),
+          DropdownMenuItem(value: 'sales', child: Text('مبيعات')),
+          DropdownMenuItem(value: 'viewer', child: Text('عرض فقط')),
+          DropdownMenuItem(value: 'admin', child: Text('مدير كامل')),
+        ], onChanged: (v) { if (v != null) setState(() => _memberRole = v); })),
+      IconButton(onPressed: _addMember, icon: const Icon(Icons.person_add_alt_1, color: _workspacePurple)),
+    ]),
+    const SizedBox(height: 8),
+    const Text('الصلاحيات الممنوحة لهذا المستخدم', style: TextStyle(color: _workspacePurple, fontWeight: FontWeight.w900)),
+    ..._memberPermissions.entries.map((entry) => SwitchListTile(
+      dense: true, contentPadding: EdgeInsets.zero, title: Text(_permissionLabel(entry.key), style: const TextStyle(fontSize: 12)),
+      value: entry.value, onChanged: (v) => setState(() => _memberPermissions[entry.key] = v),
+    )),
+    const Divider(),
+    _sectionTitle('المستخدمون المرتبطون', 'إلغاء الوصول لا يحذف حساب المستخدم من سلسلة'),
+    ..._members.map((m) => ListTile(
+      dense: true, leading: const Icon(Icons.account_circle_outlined, color: _workspacePurple),
+      title: Text((m['member_display_name'] ?? 'مستخدم سلسلة').toString()),
+      subtitle: Text('\${m['member_role']} • \${m['is_active'] == true ? 'نشط' : 'غير نشط'}'),
+      trailing: m['member_role'] == 'owner' ? const Text('المالك') : IconButton(
+        tooltip: 'إلغاء الوصول', icon: const Icon(Icons.person_remove_alt_1, color: Colors.redAccent),
+        onPressed: () => _removeMember(m['user_id'].toString()),
+      ),
+    )),
+  ]);
+
+  String _permissionLabel(String key) => const {
+    'workspace.enter':'الدخول إلى إدارة النشاط',
+    'members.read':'عرض المستخدمين','members.manage':'إدارة المستخدمين',
+    'master.read':'عرض الفروع والمخازن','master.manage':'إدارة الفروع والمخازن',
+    'items.read':'عرض الأصناف','items.propose':'اقتراح أصناف جديدة',
+    'inventory.read':'عرض المخزون','inventory.manage':'إدارة الأرصدة والتحويلات والتسويات',
+    'purchases.read':'عرض المشتريات','purchases.manage':'إدارة المشتريات والمرتجعات',
+    'sales.read':'عرض المبيعات','sales.manage':'إدارة المبيعات والمرتجعات',
+    'cash.read':'عرض النقدية','cash.manage':'إدارة الصرف والتوريد',
+    'hr.read':'عرض الموظفين','hr.manage':'إدارة الموظفين',
+    'reports.read':'عرض التقارير','audit.read':'عرض سجل العمليات',
+  }[key] ?? key;
   Widget _stockInfo() => _infoPanel('رصيد مخازني', 'دليل الأصناف يقرأ الأصناف المرجعية المعتمدة في سلسلة فقط. تفعيل الصنف داخل النشاط مستقل، والرصيد الافتتاحي والحركات تخص مخازن هذا النشاط. الأصناف المقترحة تظل مسودات حتى اعتمادها مركزياً.');
   Widget _employeesInfo() => _infoPanel('موظفين نشاطي', 'هيكل إدارات وأقسام وموظفون مبسطون خاصون بالنشاط، مع كود موظف ومرتب وجدول عمل وإجازات. لا يتم خلطهم بموظفي سلسلة.');
 
