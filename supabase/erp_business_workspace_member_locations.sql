@@ -34,6 +34,8 @@ begin
  if v_user is null then return false; end if;
  if exists(select 1 from public.erp_business_workspaces w where w.id=p_workspace_id and w.owner_user_id=v_user and w.is_active) then return true; end if;
  if not exists(select 1 from public.erp_business_workspace_members m where m.workspace_id=p_workspace_id and m.user_id=v_user and m.is_active and m.can_open_workspace) then return false; end if;
+ if p_branch_id is not null and not exists(select 1 from public.erp_business_workspace_branches b where b.id=p_branch_id and b.workspace_id=p_workspace_id and b.is_active) then return false; end if;
+ if p_warehouse_id is not null and not exists(select 1 from public.erp_business_workspace_warehouses w where w.id=p_warehouse_id and w.workspace_id=p_workspace_id and w.is_active) then return false; end if;
  if v_branch is null and p_warehouse_id is not null then select branch_id into v_branch from public.erp_business_workspace_warehouses where id=p_warehouse_id and workspace_id=p_workspace_id; end if;
  select exists(select 1 from public.erp_business_workspace_member_locations l where l.workspace_id=p_workspace_id and l.user_id=v_user),
         exists(select 1 from public.erp_business_workspace_member_locations l where l.workspace_id=p_workspace_id and l.user_id=v_user and l.is_allowed)
