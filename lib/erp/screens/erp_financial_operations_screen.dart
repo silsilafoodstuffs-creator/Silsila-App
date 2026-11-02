@@ -92,7 +92,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     try { await action(); if(!mounted)return; setState(() {saving=false;message=ok;}); await load(); }
     catch(e) { if(mounted)setState(() {saving=false;error='تعذر التنفيذ: '+e.toString();}); }
   }
-  void resetForm() { amount.clear(); description.clear(); fromName.clear(); toName.clear(); partyName.clear(); chequeAmount.clear(); firstCheck.clear(); orderPartyId=null; fromId=null;toId=null;chequeId=null;counterAccountId=null; setState(() {error=null;message='نموذج جديد جاهز.';}); }
+  void resetForm() { amount.clear(); description.clear(); fromName.clear(); toName.clear(); partyName.clear(); chequeAmount.clear(); firstCheck.clear(); issueDate.text=_todayDisplay();dueDate.text=_todayDisplay();movementDate.text=_todayDisplay();orderPartyId=null; fromId=null;toId=null;chequeId=null;counterAccountId=null; setState(() {error=null;message='نموذج جديد جاهز.';}); }
   String cashboxName(String id) { final a=cashboxes.where((x)=>s(x['id'])==id); return a.isEmpty?'غير محدد':s(a.first['cashbox_name']); }
   String entityName(Map<String,dynamic> r) => s(r['party_name']).isNotEmpty?s(r['party_name']):s(r['account_name']).isNotEmpty?s(r['account_name']):s(r['cashbox_name']);
   String entityCode(Map<String,dynamic> r) => s(r['party_code']).isNotEmpty?s(r['party_code']):s(r['account_code']).isNotEmpty?s(r['account_code']):s(r['cashbox_code']);
