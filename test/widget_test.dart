@@ -33,7 +33,7 @@ void main() {
 
   testWidgets('English selection translates app labels and switches layout direction',
       (tester) async {
-    await SilsilaLanguage.setLanguage('en');
+    SilsilaLanguage.locale.value = const Locale('en');
     await tester.pumpWidget(const SilsilaApp());
     await tester.pump();
 
@@ -48,7 +48,7 @@ void main() {
     );
     expect(direction.textDirection, TextDirection.ltr);
 
-    await SilsilaLanguage.setLanguage('ar');
+    SilsilaLanguage.locale.value = const Locale('ar');
     await tester.pump();
   });
 
