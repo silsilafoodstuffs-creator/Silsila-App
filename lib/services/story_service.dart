@@ -134,9 +134,17 @@ class StoryService {
       if (policy?['is_enabled'] != true || !appliesToUser) return 60;
       final maximumValue = int.tryParse((policy?['policy_value'] ?? '60').toString()) ?? 60;
       final unitPolicy = await _requireClient.from('erp_program_policies')
-          .select('policy_value').eq('company_id', companyId)
+          .select('policy_value,is_enabled,apply_to_all,user_ids')
+          .eq('company_id', companyId)
           .eq('policy_key', 'trader_market.story_duration_unit').maybeSingle();
-      final unit = (unitPolicy?['policy_value'] ?? 'دقيقة').toString();
+      final selectedUnitUsers = (unitPolicy?['user_ids'] as List?)
+              ?.map((value) => value.toString()).toSet() ??
+          <String>{};
+      final unitAppliesToUser = unitPolicy?['apply_to_all'] == true ||
+          selectedUnitUsers.contains((erpUser?['id'] ?? '').toString());
+      final unit = unitPolicy?['is_enabled'] == true && unitAppliesToUser
+          ? (unitPolicy?['policy_value'] ?? 'دقيقة').toString()
+          : 'دقيقة';
       return (maximumValue * (unit == 'ساعة' ? 60 : 1)).clamp(1, 1440).toInt();
     } catch (_) {
       return 60;
