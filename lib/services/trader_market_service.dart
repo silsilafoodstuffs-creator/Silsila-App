@@ -425,6 +425,11 @@ class TraderMarketService {
   }
 
 
+  Future<List<Map<String, dynamic>>> getAllPostsForModeration() async {
+    final rows = await _requireClient.from('trader_market_posts').select().order('created_at', ascending: false).limit(500);
+    return _mapRows(rows);
+  }
+
   Future<List<Map<String, dynamic>>> getMyPostHistory() async {
     final rows = await _requireClient.from('trader_market_posts').select()
       .eq('user_id', _userId).order('created_at', ascending: false).limit(200);
