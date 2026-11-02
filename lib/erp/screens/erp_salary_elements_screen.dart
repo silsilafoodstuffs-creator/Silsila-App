@@ -79,7 +79,6 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   String _s(dynamic value) => (value ?? '').toString();
   String _currencyLabel(String code) { if (code == 'USD') return String.fromCharCode(36); return const {'EGP':'ج.م','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[code] ?? code; }
   bool _locked(Map<String,dynamic> row) => row['is_system_locked'] == true || _s(row['element_code']) == 'SYSSTOCKSHORTAGE';
-  Map<String,dynamic>? get _firstEditable => _rows.cast<Map<String,dynamic>?>().firstWhere((r)=>r!=null&&!_locked(r),orElse:()=>null);
   String _nextCode() {
     var max = 0;
     for (final row in _rows) {
