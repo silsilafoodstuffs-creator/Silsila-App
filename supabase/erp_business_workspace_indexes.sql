@@ -25,3 +25,5 @@ create index if not exists erp_biz_ws_moves_creator_idx on public.erp_business_w
 create index if not exists erp_biz_ws_opening_creator_idx on public.erp_business_workspace_stock_openings(created_by);
 create index if not exists erp_biz_ws_opening_item_idx on public.erp_business_workspace_stock_openings(item_link_id,workspace_id);
 create index if not exists erp_biz_ws_opening_wh_idx on public.erp_business_workspace_stock_openings(warehouse_id,workspace_id);
+
+create index if not exists erp_business_workspaces_platform_company_idx on public.erp_business_workspaces(platform_company_id);
