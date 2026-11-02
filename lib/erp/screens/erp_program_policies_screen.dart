@@ -27,6 +27,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'trader_market.buy_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أشتري (بالساعات)','en':'Maximum buy request duration (hours)','value':'24','enabled_default':true},
     {'key':'trader_market.transfer_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أنقل (بالساعات)','en':'Maximum transfer request duration (hours)','value':'24'},
     {'key':'trader_market.story_duration','category':'بيعية','ar':'الحد الأقصى لمدة القصة','en':'Maximum story duration','value':'60','options':['1','5','10','15','30','45','60'],'enabled_default':true},
+    {'key':'trader_market.story_duration_unit','category':'بيعية','ar':'وحدة قياس مدة القصة','en':'Story duration unit','value':'دقيقة','options':['دقيقة','ساعة'],'enabled_default':true},
     {'key':'customer_default_rep','category':'بيعية','ar':'إمكانية تغيير المندوب الافتراضي للعميل','en':'Allow changing customer default sales representative'},
     {'key':'customer_default_price_policy','category':'بيعية','ar':'إمكانية تغيير سياسة الأسعار الافتراضية للعميل','en':'Allow changing customer default price policy'},
     {'key':'edit_other_user_document','category':'بيعية','ar':'إمكانية تعديل المستند لغير المستخدم الأصلي','en':'Allow editing documents created by another user'},
