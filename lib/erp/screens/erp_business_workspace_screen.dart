@@ -253,7 +253,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       final now = DateTime.now();
       final prefix = _documentType.toUpperCase();
       final docNo = 'ACT-$prefix-${now.microsecondsSinceEpoch}';
-      final docId = await _db.rpc('erp_create_business_workspace_document', params: {
+      await _db.rpc('erp_create_business_workspace_document', params: {
         'p_workspace_id':id,'p_branch_id':branchId,'p_warehouse_id':warehouseId,
         'p_document_no':docNo,'p_document_type':_documentType,
         'p_document_date':now.toIso8601String().substring(0,10),
@@ -1004,7 +1004,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ..._members.map((m)=>ListTile(dense:true,leading:const Icon(Icons.account_circle_outlined,color:_workspacePurple),
       title:Text((m['member_display_name']??'مستخدم سلسلة').toString()),
       subtitle:Text('${m['member_role']} • ${m['is_active']==true?'نشط':'غير نشط'}'),
-      trailing:m['member_role']=='owner'?const Text('المالك'):Wrap(mainAxisSize:MainAxisSize.min,children:[
+      trailing:m['member_role']=='owner'?const Text('المالك'):Row(mainAxisSize:MainAxisSize.min,children:[
         IconButton(tooltip:'تعديل الصلاحيات',icon:const Icon(Icons.tune,color:_workspacePurple),onPressed:()=>_editMember(m)),
         IconButton(tooltip:'إلغاء الوصول',icon:const Icon(Icons.person_remove_alt_1,color:Colors.redAccent),onPressed:()=>_removeMember(m['user_id'].toString())),
       ]),
@@ -1183,7 +1183,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ..._employees.map((e)=>ListTile(dense:true,leading:const Icon(Icons.badge_outlined,color:_workspaceOrange),
       title:Text(e['full_name'].toString()),
       subtitle:Text('${e['employee_code']} • ${e['job_title'] ?? 'بدون وظيفة'}'),
-      trailing:Wrap(mainAxisSize:MainAxisSize.min,children:[Text('${e['monthly_salary']}',style:const TextStyle(color:_workspacePurple,fontWeight:FontWeight.w800)),Switch(value:e['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_employees').update({'is_active':v}).eq('id',e['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(err){_message('تعذر تحديث حالة الموظف: $err');}})]),
+      trailing:Row(mainAxisSize:MainAxisSize.min,children:[Text('${e['monthly_salary']}',style:const TextStyle(color:_workspacePurple,fontWeight:FontWeight.w800)),Switch(value:e['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_employees').update({'is_active':v}).eq('id',e['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(err){_message('تعذر تحديث حالة الموظف: $err');}})]),
     )),
   ]);
 
