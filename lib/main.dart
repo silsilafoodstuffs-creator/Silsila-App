@@ -6882,30 +6882,62 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       return;
     }
 
+    final itemsData = <Map<String,dynamic>>[];
+    for (final name in selectedProducts) {
+      final qtyText = _productQuantities[name]?.text.trim() ?? '1';
+      final qty = double.tryParse(qtyText);
+      final price = double.tryParse(_productPrices[name]?.text.trim() ?? '0');
+      if (qty == null || !qty.isFinite || qty <= 0 || qty > 9999.999 ||
+          ((qty * 1000).roundToDouble() - qty * 1000).abs() > 0.000001 ||
+          price == null || !price.isFinite || price < 0) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('راجع كمية وسعر كل صنف؛ الكمية حتى 4 أرقام و3 منازل عشرية.')));
+        return;
+      }
+      final product = _marketProducts.where((p)=>(p['name']??'').toString()==name).firstOrNull;
+      itemsData.add({
+        'product_id':product?['id'],'product_name':name,'quantity':qty,
+        'unit':_productUnits[name] ?? product?['unit'] ?? 'وحدة',
+        'price':price,'is_negotiable':isNegotiable,
+      });
+    }
+    if (itemsData.isEmpty && selectedProducts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('اختر صنفًا واحدًا على الأقل.')));
+      return;
+    }
     setState(() => busy = true);
     try {
+      final preview = await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+        title:Text(type=='buy'?'معاينة عايز أشتري':type=='transfer'?'معاينة عايز أنقل':'معاينة عايز أبيع'),
+        content:SizedBox(width:480,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Text(titleController.text.trim(),style:const TextStyle(fontWeight:FontWeight.bold)),
+          Text(detailsController.text.trim()),
+          const Divider(),
+          ...itemsData.map((item)=>ListTile(contentPadding:EdgeInsets.zero,title:Text(item['product_name'].toString()),subtitle:Text('${item['quantity']} ${item['unit']} • ${item['price']} ج.م'))),
+        ]))),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('تعديل')),TextButton(onPressed:()=>Navigator.pop(ctx,null),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد ونشر'))],
+      ));
+      if (preview != true) return;
       await TraderMarketService().createPost(
         title: titleController.text.trim(),
         description: [
           detailsController.text.trim(),
-          if (selectedProducts.isNotEmpty)
-            'الأصناف: ${widget.availableProducts.where((p) => selectedProducts.contains(p.name)).map((p) => p.name).join('، ')}',
+          if (itemsData.isNotEmpty) 'الأصناف: ' + itemsData.map((p)=>p['product_name'].toString()).join('، '),
         ].join('\n'),
         postType: type,
         activityType: 'مواد غذائية',
-        quantity: quantity,
-        unit: unitController.text.trim().isEmpty ? null : unitController.text.trim(),
-        targetPrice: targetPrice,
+        quantity: itemsData.fold<double>(0,(sum,item)=>sum+(item['quantity'] as double)),
+        unit: itemsData.length==1?itemsData.first['unit'] as String:null,
+        targetPrice: itemsData.length==1?itemsData.first['price'] as double:targetPrice,
         governorate: governorateController.text.trim().isEmpty ? null : governorateController.text.trim(),
         category: categoryController.text.trim().isEmpty ? null : categoryController.text.trim(),
         contactPhone: contactPhoneController.text.trim().isEmpty ? null : normalizePhoneForAuth(contactPhoneController.text),
         durationHours: 24,
+        itemsData: itemsData,
+        qualityPreference: 'any',
         isNegotiable: isNegotiable,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(silsilaText(silsilaText('تم نشر الإعلان في سوق التجار.')))),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم نشر الطلب وتسجيل وقت النشر.')));
         Navigator.pop(context, true);
       }
     } catch (_) {
