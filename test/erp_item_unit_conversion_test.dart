@@ -41,6 +41,20 @@ void main() {
       expect(rows[0]['is_selectable'], isTrue);
     });
 
+    test('hides non-base aliases whose conversion factor is one', () {
+      final rows = ErpItemUnitConversion.buildUnits(
+        majorName: 'عبوة 1 كجم',
+        minorName: 'كجم',
+        majorInnerQuantity: 1,
+      );
+      expect(rows.length, 3);
+      expect(rows[0]['conversion_factor'], 1);
+      expect(rows[0]['is_base_unit'], isFalse);
+      expect(rows[0]['is_selectable'], isFalse);
+      expect(rows[2]['is_base_unit'], isTrue);
+      expect(rows[2]['is_selectable'], isTrue);
+    });
+
     test('supports one-unit items as 1:1', () {
       final rows = ErpItemUnitConversion.buildUnits(
         majorName: 'قطعة',
