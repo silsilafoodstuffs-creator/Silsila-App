@@ -178,7 +178,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       if (!mounted) return;
       setState(() {
         _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _workspaceItemProposals = values[4]; _isManagementUser = isManagementUser; _itemUnits = extra[0];
-        _selectedSharedItemId = _items.any((item)=>_s(item['id'])==_selectedSharedItemId) ? _selectedSharedItemId : (_items.isNotEmpty ? _s(_items.first['id']) : null); _warehouseItemSettings = extra[1]; _geoRows = geoRows;
+        _selectedSharedItemId = _items.any((item)=>_s(item['id'])==_selectedSharedItemId) ? _selectedSharedItemId : (_items.isNotEmpty ? _s(_items.first['id']) : null); if (!isManagementUser && (_view=='proposals'||_view=='shared_stock')) _view='items'; _warehouseItemSettings = extra[1]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
@@ -422,7 +422,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           value:_items.any((item)=>_s(item['id'])==_selectedSharedItemId)?_selectedSharedItemId:null,
           isExpanded:true,decoration:const InputDecoration(labelText:'الصنف المركزي'),
           items:_items.map((item)=>DropdownMenuItem(value:_s(item['id']),child:Text('${_s(item['item_name'])} • ${_s(item['item_code'])}'))).toList(),
-          onChanged:(v)=>setState(()=>_selectedSharedItemId=v),
+          onChanged:(v)=>setState(()=>{_selectedSharedItemId=v;_sharedStockLoaded=false;_sharedWorkspaceStock=[];}),
         )),
         const SizedBox(width:8),
         FilledButton.icon(onPressed:_loading?null:_loadSharedWorkspaceStock,icon:const Icon(Icons.refresh),label:const Text('عرض الأرصدة')),
