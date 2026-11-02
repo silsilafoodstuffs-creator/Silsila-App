@@ -182,6 +182,39 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
     catch(e){if(mounted)setState(()=>_error='تعذر تعطيل العنصر: $e');}
   }
 
+  void _previewElements() {
+    final rows=List<Map<String,dynamic>>.from(_rows);
+    showDialog<void>(
+      context:context,
+      builder:(ctx)=>AlertDialog(
+        title:const Text('معاينة عناصر المرتبات'),
+        content:SizedBox(
+          width:700,
+          height:480,
+          child:rows.isEmpty
+            ? const Center(child:Text('لا توجد عناصر مرتبات للمعاينة.'))
+            :ListView.separated(
+              itemCount:rows.length,
+              separatorBuilder:(_,__)=>const Divider(height:1),
+              itemBuilder:(ctx,index){
+                final row=rows[index];
+                final nature=_s(row['nature']);
+                final unit=nature=='value'?_currencyLabel(_currency):nature=='days'?'يوم':'دقيقة';
+                return ListTile(
+                  dense:true,
+                  leading:_locked(row)?const Icon(Icons.lock_outline,color:Colors.grey):Text((index+1).toString()),
+                  title:Text(_s(row['element_code'])+' — '+_s(row['name_ar'])),
+                  subtitle:Text((_s(row['element_type'])=='earning'?'استحقاق':'استقطاع')+' • '+(_s(row['value_mode'])=='fixed'?'ثابت':'متغير')+' • '+_s(row['default_value'])+' '+unit),
+                  trailing:Text(row['is_active']==true?'نشط':'موقوف'),
+                );
+              },
+            ),
+        ),
+        actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))],
+      ),
+    );
+  }
+
   Future<Map<String,dynamic>?> _chooseEditableElement(String action) async {
     final candidates=_rows.where((row)=>!_locked(row)).toList();
     if(candidates.isEmpty)return null;
@@ -232,7 +265,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
         ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:_loading||!_showNewRow?null:_saveNewRow),
         ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:_loading||_showNewRow||_rows.every(_locked)?null:_quickEdit),
         ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:_loading||_showNewRow||_rows.every(_locked)?null:_quickDelete),
-        ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:_load),
+        ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:_previewElements),
         ErpQuickTaskButton(label:'طباعة',icon:Icons.print,onPressed:()=>_printElements(share:false)),
         ErpQuickTaskButton(label:'Excel',icon:Icons.file_download,onPressed:_exportElementsExcel),
         ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf,onPressed:()=>_printElements(share:true)),
