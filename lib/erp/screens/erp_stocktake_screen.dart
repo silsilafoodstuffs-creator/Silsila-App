@@ -235,7 +235,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
     for(final controller in shortageCounts.values){controller.dispose();}
     shortageCounts.clear();
     setState(() {
-      docId=null; lines=[]; editing=false; countMode='default';
+      docId=null; lines=[]; editing=false; countMode='default'; targetId=null; targetType='employee';
       sourceMode=_manualSettlementScreen?'manual':'stocktake';
       message='اختر مصدر المستند والمخزن ثم اضغط إضافة.';
       error=null;
@@ -311,7 +311,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
         ),
         TextField(controller:notes,decoration:InputDecoration(labelText:_manualSettlementScreen?'ملاحظات التسوية':'ملاحظات المحضر')),
         const SizedBox(height:8),const Text('المحاضر السابقة',style:TextStyle(fontWeight:FontWeight.w800)),
-         DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.where((d)=>_manualSettlementScreen?['manual','stocktake'].contains(s(d['source'])):s(d['source'])=='stocktake').map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+(s(d['source'])=='manual'?'يدوي':'جرد فعلي')+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(() { docId=v; editing=false; final selected=docs.where((d)=>s(d['id'])==v);if(selected.isNotEmpty){countMode=s(selected.first['count_mode']).isEmpty?'detailed':s(selected.first['count_mode']);} });if(v!=null)await loadLines(v);}),
+         DropdownButtonFormField<String>(value:docId,isExpanded:true,decoration:const InputDecoration(labelText:'اختر محضراً'),items:docs.where((d)=>_manualSettlementScreen?['manual','stocktake'].contains(s(d['source'])):s(d['source'])=='stocktake').map((d)=>DropdownMenuItem(value:s(d['id']),child:Text(warehouseName(d['warehouse_id'])+' • '+(s(d['source'])=='manual'?'يدوي':'جرد فعلي')+' • '+s(d['status'])+' • '+s(d['created_at']).split('T').first,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v)async{setState(() { docId=v; editing=false; targetId=null; targetType='employee'; final selected=docs.where((d)=>s(d['id'])==v);if(selected.isNotEmpty){countMode=s(selected.first['count_mode']).isEmpty?'detailed':s(selected.first['count_mode']);} });if(v!=null)await loadLines(v);}),
         Align(alignment:AlignmentDirectional.centerStart,child:TextButton.icon(onPressed:startNewDocument,icon:const Icon(Icons.add_circle_outline),label:const Text('مستند جديد'))),
       ]))),
       if(current!=null)...[
