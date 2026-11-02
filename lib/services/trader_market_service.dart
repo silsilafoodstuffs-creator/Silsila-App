@@ -111,6 +111,16 @@ class TraderMarketService {
     return 24;
   }
 
+  Future<int> getMaximumDurationHours({
+    required String postType,
+    String? ownerId,
+  }) {
+    return _maximumDurationHoursForUser(
+      ownerId: ownerId ?? _userId,
+      postType: postType,
+    );
+  }
+
   /// نشر طلب شراء أو عرض بيع في سوق التجار.
   Future<Map<String, dynamic>> createPost({
     required String title,
