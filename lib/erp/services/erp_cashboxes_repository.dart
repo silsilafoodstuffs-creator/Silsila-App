@@ -14,7 +14,7 @@ class ErpCashboxesRepository {
 
   Future<List<Map<String, dynamic>>> fetchCashboxes(String companyId) async {
     final rows = await _db.from('erp_cashboxes')
-      .select('id, cashbox_code, cashbox_name, cashbox_name_en, branch_id, account_id, is_bank_account, bank_name, account_number_masked, is_active')
+      .select('id, cashbox_code, cashbox_name, cashbox_name_en, branch_id, account_id, is_bank_account, bank_name, account_number_masked, is_active, checkbook_sheet_count')
       .eq('company_id', companyId.trim()).order('cashbox_code');
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
