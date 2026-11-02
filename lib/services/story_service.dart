@@ -186,7 +186,7 @@ class StoryService {
         final unitPolicy = await _requireClient.from('erp_program_policies').select('policy_value,is_enabled').eq('company_id', companyId).eq('policy_key', 'trader_market.story_duration_unit').maybeSingle();
         final unit = (unitPolicy?['policy_value'] ?? 'دقيقة').toString();
         final maximumMinutes = (maximumValue ?? 60) * (unit == 'ساعة' ? 60 : 1);
-        if (policy?['is_enabled'] == true && maximumMinutes > 0 && effectiveDuration.inMinutes > maximumMinutes) effectiveDuration = Duration(minutes: maximumMinutes.clamp(1,1440));
+        if (policy?['is_enabled'] == true && maximumMinutes > 0 && effectiveDuration.inMinutes > maximumMinutes) effectiveDuration = Duration(minutes: maximumMinutes.clamp(1,1440).toInt());
       }
     } catch (_) { /* Keep the 60-minute default if company policy is unavailable. */ }
     if (effectiveDuration <= Duration.zero ||
