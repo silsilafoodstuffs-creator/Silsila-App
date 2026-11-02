@@ -506,12 +506,10 @@ class WelcomeScreen extends StatelessWidget {
     return Scaffold(
       body: Container(
         width: double.infinity,
+        // Match the exact Silsila logo background purple; avoid a lighter
+        // gradient that makes the welcome screen look visually patched.
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-            colors: [purple, Color(0xFF6E2BA6), Color(0xFF32105A)],
-          ),
+          color: purple,
         ),
         child: SafeArea(
           child: Padding(
