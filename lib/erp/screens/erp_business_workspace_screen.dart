@@ -29,6 +29,24 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _branches = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _members = [];
+  List<Map<String, dynamic>> _platformItems = [];
+  List<Map<String, dynamic>> _itemLinks = [];
+  List<Map<String, dynamic>> _openings = [];
+  List<Map<String, dynamic>> _proposals = [];
+  int _stockTab = 0;
+  String? _selectedPlatformItemId;
+  String? _selectedStockWarehouseId;
+  String? _selectedStockItemLinkId;
+  final _itemSearch = TextEditingController();
+  final _localItemCode = TextEditingController();
+  final _reorderLevel = TextEditingController(text: '0');
+  final _openingQuantity = TextEditingController();
+  final _openingCost = TextEditingController(text: '0');
+  final _proposalName = TextEditingController();
+  final _proposalNameEn = TextEditingController();
+  final _proposalCategory = TextEditingController();
+  final _proposalUnit = TextEditingController(text: 'قطعة');
+  final _proposalDescription = TextEditingController();
   final _memberPhone = TextEditingController();
   String _memberRole = 'staff';
   final Map<String, bool> _memberPermissions = {
@@ -47,6 +65,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   void dispose() {
     _name.dispose(); _activity.dispose(); _branchName.dispose();
     _warehouseName.dispose(); _branchCode.dispose(); _warehouseCode.dispose(); _memberPhone.dispose();
+    _itemSearch.dispose(); _localItemCode.dispose(); _reorderLevel.dispose(); _openingQuantity.dispose(); _openingCost.dispose();
+    _proposalName.dispose(); _proposalNameEn.dispose(); _proposalCategory.dispose(); _proposalUnit.dispose(); _proposalDescription.dispose();
     super.dispose();
   }
 
@@ -80,12 +100,20 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _db.from('erp_business_workspace_branches').select().eq('workspace_id', id).order('name_ar'),
         _db.from('erp_business_workspace_warehouses').select().eq('workspace_id', id).order('name_ar'),
         _db.from('erp_business_workspace_members').select('id,user_id,member_role,is_active,can_open_workspace,member_display_name,permissions').eq('workspace_id', id).order('created_at'),
+        _db.from('erp_business_workspace_item_links').select('id,workspace_id,platform_item_id,is_enabled,local_code,reorder_level,erp_items(item_code,item_name,base_unit)').eq('workspace_id', id).order('created_at'),
+        _db.from('erp_business_workspace_stock_openings').select('id,warehouse_id,item_link_id,quantity,unit_cost,opening_date').eq('workspace_id', id).order('created_at'),
+        _db.from('erp_business_workspace_item_proposals').select('id,name_ar,name_en,proposed_category,unit_name,status,review_note,created_at').eq('workspace_id', id).order('created_at', ascending: false),
       ]);
       if (!mounted) return;
       setState(() {
         _branches = List<Map<String, dynamic>>.from(result[0]);
         _warehouses = List<Map<String, dynamic>>.from(result[1]);
         _members = List<Map<String, dynamic>>.from(result[2]);
+        _itemLinks = List<Map<String, dynamic>>.from(result[3]);
+        _openings = List<Map<String, dynamic>>.from(result[4]);
+        _proposals = List<Map<String, dynamic>>.from(result[5]);
+        _selectedStockWarehouseId ??= _warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null;
+        _selectedStockItemLinkId ??= _itemLinks.isNotEmpty ? _itemLinks.first['id'].toString() : null;
       });
     } catch (e) {
       if (mounted) setState(() => _error = 'تعذر تحميل الفروع والمخازن: $e');
@@ -116,6 +144,83 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       _message('تم إنشاء مساحة النشاط المستقلة.');
     } catch (e) { _message('لم يتم إنشاء النشاط: $e'); }
     finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  Future<void> _loadPlatformItems() async {
+    try {
+      final rows = await _db.from('erp_items')
+          .select('id,item_code,item_name,item_name_en,base_unit,category_id')
+          .eq('is_active', true).order('item_name').limit(500);
+      if (!mounted) return;
+      setState(() {
+        _platformItems = List<Map<String, dynamic>>.from(rows);
+        if (_selectedPlatformItemId == null && _platformItems.isNotEmpty) {
+          _selectedPlatformItemId = _platformItems.first['id'].toString();
+        }
+      });
+    } catch (e) {
+      _message('تعذر تحميل دليل أصناف سلسلة: $e');
+    }
+  }
+
+  Future<void> _addItemLink() async {
+    final id = _selected?['id']?.toString();
+    final itemId = _selectedPlatformItemId;
+    if (id == null || itemId == null) { _message('اختر صنفاً من دليل سلسلة أولاً.'); return; }
+    try {
+      await _db.from('erp_business_workspace_item_links').insert({
+        'workspace_id': id,
+        'platform_item_id': itemId,
+        'local_code': _localItemCode.text.trim().isEmpty ? null : _localItemCode.text.trim(),
+        'reorder_level': double.tryParse(_reorderLevel.text.trim()) ?? 0,
+        'is_enabled': true,
+      });
+      _localItemCode.clear(); _reorderLevel.text = '0';
+      await _loadStructure();
+      _message('تم تفعيل الصنف داخل هذا النشاط فقط.');
+    } catch (e) { _message('تعذر ربط الصنف: $e'); }
+  }
+
+  Future<void> _recordOpening() async {
+    final id = _selected?['id']?.toString();
+    final warehouseId = _selectedStockWarehouseId;
+    final itemLinkId = _selectedStockItemLinkId;
+    final quantity = double.tryParse(_openingQuantity.text.trim());
+    final cost = double.tryParse(_openingCost.text.trim()) ?? 0;
+    if (id == null || warehouseId == null || itemLinkId == null || quantity == null || quantity < 0 || cost < 0) {
+      _message('اختر المخزن والصنف وأدخل كمية وتكلفة صحيحتين.'); return;
+    }
+    try {
+      await _db.rpc('erp_record_business_workspace_opening', params: {
+        'p_workspace_id': id, 'p_warehouse_id': warehouseId,
+        'p_item_link_id': itemLinkId, 'p_quantity': quantity,
+        'p_unit_cost': cost,
+      });
+      _openingQuantity.clear(); _openingCost.text = '0';
+      await _loadStructure();
+      _message('تم تسجيل الرصيد الافتتاحي وترحيله لحركة المخزون.');
+    } catch (e) { _message('تعذر تسجيل الرصيد الافتتاحي: $e'); }
+  }
+
+  Future<void> _proposeItem() async {
+    final id = _selected?['id']?.toString();
+    final name = _proposalName.text.trim();
+    if (id == null || name.length < 2) { _message('أدخل اسم الصنف المقترح.'); return; }
+    try {
+      await _db.from('erp_business_workspace_item_proposals').insert({
+        'workspace_id': id, 'proposed_by': _db.auth.currentUser!.id,
+        'name_ar': name,
+        'name_en': _proposalNameEn.text.trim().isEmpty ? null : _proposalNameEn.text.trim(),
+        'proposed_category': _proposalCategory.text.trim().isEmpty ? null : _proposalCategory.text.trim(),
+        'unit_name': _proposalUnit.text.trim().isEmpty ? 'قطعة' : _proposalUnit.text.trim(),
+        'description': _proposalDescription.text.trim().isEmpty ? null : _proposalDescription.text.trim(),
+        'payload': <String, dynamic>{'source':'business_workspace'},
+        'status': 'pending',
+      });
+      _proposalName.clear(); _proposalNameEn.clear(); _proposalCategory.clear(); _proposalDescription.clear();
+      await _loadStructure();
+      _message('تم إرسال الصنف للمراجعة المركزية. لن يظهر في دليل سلسلة قبل اعتماده.');
+    } catch (e) { _message('تعذر إرسال الصنف المقترح: $e'); }
   }
 
   Future<void> _addMember() async {
@@ -389,7 +494,106 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     'hr.read':'عرض الموظفين','hr.manage':'إدارة الموظفين',
     'reports.read':'عرض التقارير','audit.read':'عرض سجل العمليات',
   }[key] ?? key;
-  Widget _stockInfo() => _infoPanel('رصيد مخازني', 'دليل الأصناف يقرأ الأصناف المرجعية المعتمدة في سلسلة فقط. تفعيل الصنف داخل النشاط مستقل، والرصيد الافتتاحي والحركات تخص مخازن هذا النشاط. الأصناف المقترحة تظل مسودات حتى اعتمادها مركزياً.');
+  Widget _stockInfo() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+    _sectionTitle('رصيد مخازني', 'اختر الأصناف المعتمدة في سلسلة ثم فعّل ما يحتاجه نشاطك فقط'),
+    Wrap(spacing: 6, runSpacing: 6, children: [
+      ChoiceChip(label: const Text('اختيار الأصناف'), selected: _stockTab == 0, onSelected: (_) async { setState(() => _stockTab = 0); if (_platformItems.isEmpty) await _loadPlatformItems(); }),
+      ChoiceChip(label: const Text('افتتاحي مخازني'), selected: _stockTab == 1, onSelected: (_) => setState(() => _stockTab = 1)),
+      ChoiceChip(label: const Text('إضافة صنف جديد'), selected: _stockTab == 2, onSelected: (_) => setState(() => _stockTab = 2)),
+    ]),
+    const SizedBox(height: 10),
+    Expanded(child: IndexedStack(index: _stockTab, children: [
+      _itemSelectionTab(), _openingStockTab(), _itemProposalTab(),
+    ])),
+  ]);
+
+  Widget _itemSelectionTab() => ListView(children: [
+    TextField(controller: _itemSearch, decoration: const InputDecoration(labelText: 'بحث في أصناف سلسلة', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()), onChanged: (_) => setState(() {})),
+    const SizedBox(height: 8),
+    DropdownButtonFormField<String>(
+      value: _platformItems.any((x) => x['id'].toString() == _selectedPlatformItemId) ? _selectedPlatformItemId : null,
+      isExpanded: true, decoration: const InputDecoration(labelText: 'الصنف المعتمد في سلسلة'),
+      items: _platformItems.where((x) {
+        final q = _itemSearch.text.trim().toLowerCase();
+        return q.isEmpty || ('${x['item_name']} ${x['item_code']}'.toLowerCase().contains(q));
+      }).map((x) => DropdownMenuItem(value: x['id'].toString(), child: Text('${x['item_name']} • ${x['item_code'] ?? ''}'))).toList(),
+      onChanged: (v) => setState(() => _selectedPlatformItemId = v),
+    ),
+    const SizedBox(height: 8),
+    Row(children: [
+      Expanded(child: TextField(controller: _localItemCode, decoration: const InputDecoration(labelText: 'كود محلي اختياري'))),
+      const SizedBox(width: 8),
+      Expanded(child: TextField(controller: _reorderLevel, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'حد إعادة الطلب'))),
+      IconButton(onPressed: _addItemLink, tooltip: 'تفعيل الصنف في نشاطي', icon: const Icon(Icons.add_circle, color: _workspacePurple)),
+    ]),
+    const Divider(),
+    _sectionTitle('أصناف هذا النشاط', '${_itemLinks.length} صنف مرتبط • لا تتم إضافة صنف جديد إلى سلسلة من هنا'),
+    ..._itemLinks.map((x) {
+      final item = x['erp_items'] is Map ? Map<String,dynamic>.from(x['erp_items']) : <String,dynamic>{};
+      return ListTile(dense: true, leading: const Icon(Icons.inventory_2_outlined, color: _workspacePurple),
+        title: Text((item['item_name'] ?? 'صنف').toString()),
+        subtitle: Text('${item['item_code'] ?? ''} • ${item['base_unit'] ?? ''} • حد الطلب: ${x['reorder_level']}'),
+        trailing: Switch(value: x['is_enabled'] == true, onChanged: (v) async {
+          try { await _db.from('erp_business_workspace_item_links').update({'is_enabled':v}).eq('id',x['id'].toString()).eq('workspace_id',_selected!['id'].toString()); await _loadStructure(); }
+          catch(e) { _message('تعذر تحديث تفعيل الصنف: $e'); }
+        }),
+      );
+    }),
+  ]);
+
+  Widget _openingStockTab() => ListView(children: [
+    _sectionTitle('الأرصدة الافتتاحية', 'يسجل الرصيد لكل صنف في كل مخزن، ويُنشئ حركة افتتاحية في دفتر المخزون تلقائياً'),
+    DropdownButtonFormField<String>(
+      value: _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : null,
+      decoration: const InputDecoration(labelText: 'المخزن'),
+      items: _warehouses.map((w) => DropdownMenuItem(value: w['id'].toString(), child: Text(w['name_ar'].toString()))).toList(),
+      onChanged: (v) => setState(() => _selectedStockWarehouseId = v),
+    ),
+    const SizedBox(height: 8),
+    DropdownButtonFormField<String>(
+      value: _itemLinks.any((x) => x['id'].toString() == _selectedStockItemLinkId && x['is_enabled'] == true) ? _selectedStockItemLinkId : null,
+      decoration: const InputDecoration(labelText: 'الصنف'),
+      items: _itemLinks.where((x) => x['is_enabled'] == true).map((x) {
+        final item = x['erp_items'] is Map ? Map<String,dynamic>.from(x['erp_items']) : <String,dynamic>{};
+        return DropdownMenuItem(value: x['id'].toString(), child: Text((item['item_name'] ?? 'صنف').toString()));
+      }).toList(),
+      onChanged: (v) => setState(() => _selectedStockItemLinkId = v),
+    ),
+    const SizedBox(height: 8),
+    Row(children: [
+      Expanded(child: TextField(controller: _openingQuantity, keyboardType: const TextInputType.numberWithOptions(decimal:true), decoration: const InputDecoration(labelText: 'الكمية الافتتاحية'))),
+      const SizedBox(width: 8),
+      Expanded(child: TextField(controller: _openingCost, keyboardType: const TextInputType.numberWithOptions(decimal:true), decoration: const InputDecoration(labelText: 'تكلفة الوحدة'))),
+      IconButton(onPressed: _recordOpening, tooltip: 'حفظ الرصيد', icon: const Icon(Icons.save, color: _workspacePurple)),
+    ]),
+    const Divider(),
+    _sectionTitle('الأرصدة المسجلة', '${_openings.length} رصيد افتتاحي'),
+    ..._openings.map((o) {
+      final wh = _warehouses.where((x) => x['id'].toString() == o['warehouse_id'].toString()).firstOrNull;
+      final link = _itemLinks.where((x) => x['id'].toString() == o['item_link_id'].toString()).firstOrNull;
+      final item = link?['erp_items'] is Map ? Map<String,dynamic>.from(link!['erp_items']) : <String,dynamic>{};
+      return ListTile(dense:true, title:Text((item['item_name'] ?? 'صنف').toString()),
+        subtitle:Text('${wh?['name_ar'] ?? 'مخزن'} • تكلفة الوحدة: ${o['unit_cost']}'),
+        trailing:Text(o['quantity'].toString(),style:const TextStyle(fontWeight:FontWeight.bold,color:_workspacePurple)));
+    }),
+  ]);
+
+  Widget _itemProposalTab() => ListView(children: [
+    _sectionTitle('اقتراح صنف جديد', 'يُحفظ كمسودة لدى سلسلة، ولا يدخل الدليل المركزي إلا بعد مراجعة واعتماد صاحب الصلاحية'),
+    TextField(controller: _proposalName, decoration: const InputDecoration(labelText: 'اسم الصنف بالعربية *')),
+    TextField(controller: _proposalNameEn, decoration: const InputDecoration(labelText: 'اسم الصنف بالإنجليزية')),
+    TextField(controller: _proposalCategory, decoration: const InputDecoration(labelText: 'الفئة المقترحة')),
+    TextField(controller: _proposalUnit, decoration: const InputDecoration(labelText: 'وحدة القياس')),
+    TextField(controller: _proposalDescription, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'الوصف والمواصفات')),
+    const SizedBox(height: 8),
+    Align(alignment: Alignment.centerLeft, child: FilledButton.icon(onPressed: _proposeItem, icon: const Icon(Icons.send), label: const Text('إرسال للمراجعة'))),
+    const Divider(),
+    _sectionTitle('طلبات الأصناف السابقة', '${_proposals.length} طلب'),
+    ..._proposals.map((p) => ListTile(dense:true, leading:const Icon(Icons.pending_actions,color:_workspaceOrange),
+      title:Text(p['name_ar'].toString()), subtitle:Text('${p['proposed_category'] ?? 'بدون فئة'} • ${p['status']}'),
+      trailing:p['status']=='pending'?const Text('قيد المراجعة'):Text(p['status'].toString()),
+    )),
+  ]);
   Widget _employeesInfo() => _infoPanel('موظفين نشاطي', 'هيكل إدارات وأقسام وموظفون مبسطون خاصون بالنشاط، مع كود موظف ومرتب وجدول عمل وإجازات. لا يتم خلطهم بموظفي سلسلة.');
 
   Widget _infoPanel(String title, String body) => Card(
