@@ -80,8 +80,8 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
         movements=maps(r[5]); orders=maps(r[6]); books=maps(r[7]); cheques=maps(r[8]);
         directMode=p==null || s(p['cash_issue_mode'])!='sales_order_only';
         requireApproval=p?['require_cash_order_approval']!=false; allowCredit=p?['allow_credit_cheques']!=false;
-        chequeEditRoles=p?['cheque_edit_roles'] is List?(p!['cheque_edit_roles'] as List).map((x)=>x.toString()).toList():['owner','admin','accountant'];
-        chequeDateRoles=p?['cheque_issue_date_edit_roles'] is List?(p!['cheque_issue_date_edit_roles'] as List).map((x)=>x.toString()).toList():['owner','admin','accountant'];
+        chequeEditRoles=p!=null&&p['cheque_edit_roles'] is List?(p['cheque_edit_roles'] as List).map((x)=>x.toString()).toList():['owner','admin','accountant'];
+        chequeDateRoles=p!=null&&p['cheque_issue_date_edit_roles'] is List?(p['cheque_issue_date_edit_roles'] as List).map((x)=>x.toString()).toList():['owner','admin','accountant'];
         loading=false; error=null;
       });
     } catch(e) { if(mounted)setState(() {loading=false;error='تعذر تحميل البيانات: '+e.toString();}); }
