@@ -196,7 +196,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     final rows=exportRows();if(rows.isEmpty){notify('لا توجد سجلات لتصديرها.');return;}
     setState(() {loading=true;error=null;message=null;});
     try{
-      final book=Excel.createExcel();final sheet=book[tabNames[tabs.index]];
+      final book=Excel.createExcel();final sheet=book[tabNames[tabs.index].replaceAll('/','-').substring(0,tabNames[tabs.index].replaceAll('/','-').length>31?31:tabNames[tabs.index].replaceAll('/','-').length)];
       sheet.appendRow(exportHeaders().map((x)=>TextCellValue(x)).toList());
       for(final row in rows){sheet.appendRow(row.map((x)=>TextCellValue(x)).toList());}
       final bytes=book.encode();if(bytes==null||bytes.isEmpty)throw StateError('تعذر إنشاء ملف Excel.');
