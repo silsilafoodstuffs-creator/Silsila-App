@@ -6738,6 +6738,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
               ownerDisplayName: (post['owner_display_name'] ?? '').toString(),
               ownerPhone: (post['owner_phone'] ?? contactPhone).toString(),
               ownerAddress: (post['owner_address'] ?? '').toString(),
+              publishedAt: (post['published_at'] ?? post['created_at'] ?? '').toString(),
               color: color,
             );
           }).toList(),
@@ -8388,6 +8389,7 @@ class MarketCard extends StatefulWidget {
     this.ownerDisplayName = '',
     this.ownerPhone = '',
     this.ownerAddress = '',
+    this.publishedAt = '',
     required this.color,
   });
 
@@ -8401,6 +8403,7 @@ class MarketCard extends StatefulWidget {
   final String ownerDisplayName;
   final String ownerPhone;
   final String ownerAddress;
+  final String publishedAt;
   final Color color;
 
   @override
@@ -8617,6 +8620,7 @@ class _MarketCardState extends State<MarketCard> {
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                       Text(_remainingTime(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+                      if (widget.publishedAt.isNotEmpty) Text('نشر: ' + widget.publishedAt.replaceFirst('T',' ').split('.').first, style: const TextStyle(color: Colors.white, fontSize: 9)),
                       if (widget.ownerDisplayName.isNotEmpty) Text(widget.ownerDisplayName, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                       if (widget.ownerPhone.isNotEmpty) Text(widget.ownerPhone, style: const TextStyle(color: Colors.white, fontSize: 10)),
                       if (widget.ownerAddress.isNotEmpty) Text(widget.ownerAddress, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 10)),
