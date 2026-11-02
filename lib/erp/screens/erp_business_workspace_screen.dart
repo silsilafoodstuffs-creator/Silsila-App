@@ -990,7 +990,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     _sectionTitle('المستخدمون المرتبطون','تعديل الصلاحيات أو إلغاء الوصول لا يحذف حساب المستخدم من سلسلة'),
     ..._members.map((m)=>ListTile(dense:true,leading:const Icon(Icons.account_circle_outlined,color:_workspacePurple),
       title:Text((m['member_display_name']??'مستخدم سلسلة').toString()),
-      subtitle:Text('\${m['member_role']} • \${m['is_active']==true?'نشط':'غير نشط'}'),
+      subtitle:Text('${m['member_role']} • ${m['is_active']==true?'نشط':'غير نشط'}'),
       trailing:m['member_role']=='owner'?const Text('المالك'):Wrap(mainAxisSize:MainAxisSize.min,children:[
         IconButton(tooltip:'تعديل الصلاحيات',icon:const Icon(Icons.tune,color:_workspacePurple),onPressed:()=>_editMember(m)),
         IconButton(tooltip:'إلغاء الوصول',icon:const Icon(Icons.person_remove_alt_1,color:Colors.redAccent),onPressed:()=>_removeMember(m['user_id'].toString())),
@@ -1016,8 +1016,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         onChanged:(v)=>setState(()=>_selectedLocationMemberUserId=v),
       ),
       if(_selectedLocationMemberUserId!=null)..._branches.map((b)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('السماح بالفرع بالكامل: \${b['name_ar']}'),value:_memberHasBranchAccess(_selectedLocationMemberUserId!,b['id'].toString()),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'branch',b['id'].toString(),null,v)),
-        Padding(padding:const EdgeInsets.only(right:22),child:Column(children:_warehouses.where((w)=>w['branch_id'].toString()==b['id'].toString()).map((w)=>SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('مخزن: \${w['name_ar']}'),value:_memberHasWarehouseAccess(_selectedLocationMemberUserId!,w),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'warehouse',b['id'].toString(),w['id'].toString(),v))).toList())),
+        SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('السماح بالفرع بالكامل: ${b['name_ar']}'),value:_memberHasBranchAccess(_selectedLocationMemberUserId!,b['id'].toString()),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'branch',b['id'].toString(),null,v)),
+        Padding(padding:const EdgeInsets.only(right:22),child:Column(children:_warehouses.where((w)=>w['branch_id'].toString()==b['id'].toString()).map((w)=>SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('مخزن: ${w['name_ar']}'),value:_memberHasWarehouseAccess(_selectedLocationMemberUserId!,w),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'warehouse',b['id'].toString(),w['id'].toString(),v))).toList())),
       ])),
     ]else const Text('أضف مستخدماً فرعياً أولاً لتحديد الفروع والمخازن المتاحة له.'),
   ]);
