@@ -7120,8 +7120,12 @@ class _MyMarketPostsScreenState extends State<MyMarketPostsScreen> {
   }
   Future<void> _reload() async { final f=_load(); setState(()=>_future=f); try { await f; } catch (_) {} }
   Future<void> _extend(Map<String,dynamic> post) async {
-    final ctl=TextEditingController(text:'24');
-    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('زيادة مدة عرض الطلب'),content:TextField(controller:ctl,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'عدد الساعات الإضافية')),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد'))]));
+    final maximumHours = await _service.getMaximumDurationHours(
+      postType: (post['post_type'] ?? 'buy').toString(),
+      ownerId: _admin ? (post['user_id'] ?? '').toString() : null,
+    );
+    final ctl=TextEditingController(text:maximumHours.toString());
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('زيادة مدة عرض الطلب'),content:TextField(controller:ctl,keyboardType:TextInputType.number,decoration:InputDecoration(labelText:'عدد الساعات الإضافية (الحد الأقصى $maximumHours ساعة)')),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد'))]));
     final hours=int.tryParse(ctl.text.trim())??0; ctl.dispose();
     if(ok!=true)return;
     try { if (_admin) { await _service.extendPostForModeration(post['id'].toString(),hours); } else { await _service.extendPost(post['id'].toString(),hours); } await _reload(); } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تمديد الطلب: '+e.toString()))); }
