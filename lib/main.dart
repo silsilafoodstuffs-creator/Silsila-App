@@ -6953,6 +6953,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         category: categoryController.text.trim().isEmpty ? null : categoryController.text.trim(),
         contactPhone: contactPhoneController.text.trim().isEmpty ? null : normalizePhoneForAuth(contactPhoneController.text),
         durationHours: 24,
+        requestedAt: type == 'transfer' ? _transportAt : null,
         itemsData: itemsData,
         qualityPreference: preferNearExpiry ? 'near_expiry' : preferGoodExpiry ? 'good' : 'any',
         expiryConditionDate: type == 'sell' ? expiryDate : null,
