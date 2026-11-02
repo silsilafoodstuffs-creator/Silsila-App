@@ -50,6 +50,11 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
+  List<Map<String, dynamic>> _workspaceItemProposals = [];
+  bool _isManagementUser = false;
+  final Map<String,String> _proposalNameEdits = {};
+  final Map<String,String> _proposalUnitEdits = {};
+  final Map<String,String?> _proposalCategorySelections = {};
   List<Map<String, dynamic>> _itemUnits = [];
   List<Map<String, dynamic>> _warehouseItemSettings = [];
   final Map<String, Future<Uint8List?>> _itemImageFutures = <String, Future<Uint8List?>>{};
@@ -118,6 +123,14 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     try {
       final companyId = _company.text.trim();
       final loadErrors = <String>[];
+      var isManagementUser = false;
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+      if (currentUserId != null) {
+        try {
+          final profile = await Supabase.instance.client.from('profiles').select('role,account_status').eq('id',currentUserId).maybeSingle();
+          isManagementUser = profile?['role']=='management' && profile?['account_status']=='active';
+        } catch (_) {}
+      }
       Future<List<Map<String, dynamic>>> loadPart(
         String label,
         Future<List<Map<String, dynamic>>> Function() action,
@@ -134,6 +147,13 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         loadPart('الأصناف', () => _repo.fetchItems(companyId, pageSize: 500, search: _itemSearch.text)),
         loadPart('الفروع', () => _repo.fetchBranches(companyId)),
         loadPart('فئات الأصناف', () => _repo.fetchCategories(companyId)),
+        loadPart('أصناف مقترحة', () async {
+          if (!isManagementUser) return <Map<String,dynamic>>[];
+          final rows = await Supabase.instance.client.from('erp_business_workspace_item_proposals')
+            .select('id,workspace_id,name_ar,name_en,proposed_category,unit_name,description,status,created_at,review_note,erp_business_workspaces(workspace_name,activity_type)')
+            .eq('status','pending').order('created_at',ascending:false);
+          return List<Map<String,dynamic>>.from(rows);
+        }),
       ]);
       // Optional item-unit settings must never block the primary warehouse/branch
       // directory. Load each auxiliary dataset independently and preserve the
@@ -154,7 +174,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _itemUnits = extra[0]; _warehouseItemSettings = extra[1]; _geoRows = geoRows;
+        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _workspaceItemProposals = values[4]; _isManagementUser = isManagementUser; _itemUnits = extra[0]; _warehouseItemSettings = extra[1]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
@@ -337,6 +357,10 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   void _newCurrentRecord() {
+    if (_view == 'proposals') {
+      setState(() => _message = 'مراجعة الأصناف المقترحة تتم من خلال أزرار الاعتماد أو الرفض داخل كل طلب.');
+      return;
+    }
     final currentFields = _view == 'warehouses'
         ? [_warehouseCode.text, _warehouseName.text, _warehouseNameEn.text, _warehouseLocation.text, _warehousePhone.text, _warehouseLandline.text, _address.text]
         : [_itemCode.text, _itemName.text, _barcode.text,
@@ -362,9 +386,72 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     });
   }
 
+  Future<void> _reviewWorkspaceItemProposal(Map<String,dynamic> proposal,String decision) async {
+    final id=_s(proposal['id']);
+    final name=_proposalNameEdits[id] ?? _s(proposal['name_ar']);
+    final unit=_proposalUnitEdits[id] ?? _s(proposal['unit_name']);
+    if(decision=='approve' && name.trim().length<2) {
+      setState(()=>_error='اسم الصنف المعتمد يجب أن يتكون من حرفين على الأقل.');
+      return;
+    }
+    setState(()=>_saving=true);
+    try {
+      await Supabase.instance.client.rpc('erp_review_business_workspace_item_proposal',params:{
+        'p_proposal_id':id,'p_decision':decision,'p_company_id':_company.text.trim(),
+        'p_category_id':_proposalCategorySelections[id],
+        'p_item_code':null,'p_item_name':name.trim(),
+        'p_item_name_en':_s(proposal['name_en']),
+        'p_unit_name':unit.trim(),'p_note':decision=='approve'?'تم الاعتماد من دليل الأصناف':'تم رفض الاقتراح',
+      });
+      await _load(clearMessage:false);
+      if(!mounted)return;
+      setState(()=>_message=decision=='approve'?'تم اعتماد الصنف وإضافته إلى دليل الأصناف المركزي.':'تم رفض اقتراح الصنف.');
+    } catch(e) {
+      if(!mounted)return;
+      setState(()=>_error='تعذرت مراجعة الصنف المقترح: $e');
+    } finally {
+      if(mounted)setState(()=>_saving=false);
+    }
+  }
+
+  Widget _workspaceProposalsView() => Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    Text('أصناف مقترحة من الأنشطة • ${_workspaceItemProposals.length} طلب قيد المراجعة',style:const TextStyle(fontWeight:FontWeight.w900,fontSize:17,color:Color(0xFF3E007D))),
+    const SizedBox(height:8),
+    Expanded(child:_workspaceItemProposals.isEmpty
+      ? const Center(child:Text('لا توجد أصناف مقترحة بانتظار المراجعة.'))
+      : ListView(children:_workspaceItemProposals.map((proposal){
+        final id=_s(proposal['id']);
+        final workspace=proposal['erp_business_workspaces'] is Map?Map<String,dynamic>.from(proposal['erp_business_workspaces']):<String,dynamic>{};
+        final categoryValue=_proposalCategorySelections.containsKey(id)?_proposalCategorySelections[id]:_categories.where((c)=>_s(c['category_name']).toLowerCase()==_s(proposal['proposed_category']).toLowerCase()).map((c)=>_s(c['id'])).firstOrNull;
+        return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          Text(_s(workspace['workspace_name']).isEmpty?'نشاط غير محدد':_s(workspace['workspace_name']),style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF3E007D))),
+          Text('النشاط: ${_s(workspace['activity_type'])} • تاريخ الطلب: ${_s(proposal['created_at']).split('T').first}',style:const TextStyle(color:Colors.black54,fontSize:12)),
+          TextField(key:ValueKey('proposal-name-$id'),controller:TextEditingController(text:_proposalNameEdits[id]??_s(proposal['name_ar']))..selection=TextSelection.collapsed(offset:(_proposalNameEdits[id]??_s(proposal['name_ar'])).length),decoration:const InputDecoration(labelText:'اسم الصنف بعد المراجعة'),onChanged:(v)=>_proposalNameEdits[id]=v),
+          TextField(key:ValueKey('proposal-unit-$id'),controller:TextEditingController(text:_proposalUnitEdits[id]??_s(proposal['unit_name'])),decoration:const InputDecoration(labelText:'وحدة القياس'),onChanged:(v)=>_proposalUnitEdits[id]=v),
+          DropdownButtonFormField<String>(
+            value:_categories.any((c)=>_s(c['id'])==categoryValue)?categoryValue:null,
+            decoration:const InputDecoration(labelText:'الفئة المركزية'),
+            items:[const DropdownMenuItem<String>(value:null,child:Text('بدون فئة')), ..._categories.where((c)=>c['is_active']==true).map((c)=>DropdownMenuItem(value:_s(c['id']),child:Text('${_s(c['category_code'])} — ${_s(c['category_name'])}')))],
+            onChanged:(v)=>setState(()=>_proposalCategorySelections[id]=v),
+          ),
+          if(_s(proposal['description']).isNotEmpty)Text(_s(proposal['description']),style:const TextStyle(color:Colors.black54)),
+          const SizedBox(height:8),
+          Wrap(spacing:8,children:[
+            FilledButton.icon(onPressed:_saving?null:()=>_reviewWorkspaceItemProposal(proposal,'approve'),icon:const Icon(Icons.check_circle),label:const Text('اعتماد وإضافة')),
+            OutlinedButton.icon(onPressed:_saving?null:()=>_reviewWorkspaceItemProposal(proposal,'reject'),icon:const Icon(Icons.close),label:const Text('رفض')),
+          ]),
+        ])));
+      }).toList())),
+  ]);
+
   Future<void> _saveCurrentRecord() async {
+    if (_view == 'proposals') {
+      setState(() => _message = 'اختر اعتماد أو رفض من بطاقة الصنف المقترح.');
+      return;
+    }
     if (_view == 'warehouses') { await _createWarehouse(); }
-    else { await _createItem(); }
+    else if (_view == 'items') { await _createItem(); }
+    else { setState(() => _message='لا توجد عملية حفظ عامة في تبويب الأصناف المقترحة.'); }
   }
 
   Future<void> _exportMasterExcel() async {
@@ -597,14 +684,17 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       if (_message != null) _notice(_message!, Colors.green),
       const SizedBox(height: 10),
       SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(value: 'warehouses', label: Text('المخازن'), icon: Icon(Icons.warehouse_outlined)),
-          ButtonSegment(value: 'items', label: Text('الأصناف'), icon: Icon(Icons.inventory_2_outlined)),
+        segments: [
+          const ButtonSegment(value: 'warehouses', label: Text('المخازن'), icon: Icon(Icons.warehouse_outlined)),
+          const ButtonSegment(value: 'items', label: Text('الأصناف'), icon: Icon(Icons.inventory_2_outlined)),
+          if (_isManagementUser) const ButtonSegment(value: 'proposals', label: Text('أصناف مقترحة'), icon: Icon(Icons.pending_actions_outlined)),
         ],
         selected: {_view}, onSelectionChanged: (v) => setState(() => _view = v.first),
       ),
       const SizedBox(height: 10),
-      if (_view == 'warehouses') ...[
+      if (_view == 'proposals') ...[
+        SizedBox(height:650,child:_workspaceProposalsView()),
+      ] else if (_view == 'warehouses') ...[
         Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
