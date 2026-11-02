@@ -347,6 +347,20 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     }
     issue.dispose();due.dispose();value.dispose();payee.dispose();notes.dispose();
   }
+  Future<void> cancelCheque(Map<String,dynamic> cheque) async {
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:Text('إلغاء الشيك رقم '+s(cheque['check_number'])),
+      content:const Text('سيتم إلغاء الشيك ومنع استخدام رقمه مرة أخرى، مع الاحتفاظ بسجله للمراجعة وعدم حذفه نهائيًا.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('رجوع')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:const Text('تأكيد الإلغاء'))],
+    ));
+    if(yes!=true)return;
+    await run(()async{
+      final oldNotes=s(cheque['notes']).trim();
+      final note=[oldNotes,'إلغاء الشيك بواسطة المستخدم بتاريخ '+_todayDisplay()].where((x)=>x.isNotEmpty).join(' • ');
+      await db!.from('erp_cheques').update({'status':'cancelled','notes':note,'updated_by':db!.auth.currentUser?.id,'updated_at':DateTime.now().toIso8601String()})
+        .eq('id',s(cheque['id'])).eq('company_id',company).inFilter('status',['available','issued','under_collection']);
+    },'تم إلغاء الشيك مع الاحتفاظ بسجل المراجعة وعدم إعادة استخدام رقمه.');
+  }
   Future<void> settle(Map<String,dynamic> c) async {
     final date=TextEditingController(text:_todayDisplay());String result='paid';String? cashbox;String? counterAccount;
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,local)=>AlertDialog(
@@ -414,7 +428,13 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       grid(['مسلسل الأمر','رقم الشيك','النوع','الجهة','القيمة','الحالة'],orders.where((o)=>s(o['instrument_type'])=='cheque').map((o)=>[s(o['order_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['check_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['cheque_type']),s(o['party_name']),money(o['amount']),s(o['status'])]).toList()),
     ] else ...[
       section('حركة الشيكات',cheques.length),
-      grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),displayDate(c['issue_date']),displayDate(c['due_date']),chequeAmountLabel(c),s(c['status'])]).toList(),actions:cheques.map((c)=>s(c['status'])=='paid'||s(c['status'])=='returned'||s(c['status'])=='cashed_from_cashbox'||s(c['status'])=='cancelled'?const Icon(Icons.lock,color:Colors.grey):IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple))).toList()),
+      grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),displayDate(c['issue_date']),displayDate(c['due_date']),chequeAmountLabel(c),s(c['status'])]).toList(),actions:cheques.map((c){
+        final settled=['paid','returned','cashed_from_cashbox','cancelled'].contains(s(c['status']));
+        return settled?const Icon(Icons.lock,color:Colors.grey):Row(mainAxisSize:MainAxisSize.min,children:[
+          IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple)),
+          IconButton(tooltip:'إلغاء الشيك مع الاحتفاظ بالسجل',onPressed:saving?null:()=>cancelCheque(c),icon:const Icon(Icons.delete_outline,color:Colors.red)),
+        ]);
+      }).toList()),
     ]
   ]);
   Widget booksView()=>Column(children:[
