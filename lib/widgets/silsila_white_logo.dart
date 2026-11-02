@@ -78,7 +78,13 @@ class SilsilaWhiteLogo extends StatelessWidget {
       builder: (context, snapshot) {
         final bytes = snapshot.data;
         if (bytes == null) {
-          return SizedBox(width: width, height: height);
+          // Keep the brand mark visible if byte loading is unavailable.
+          return Image.asset(
+            'assets/images/silsila_logo.png',
+            width: width,
+            height: height,
+            fit: fit,
+          );
         }
         return Image.memory(bytes, width: width, height: height, fit: fit);
       },
