@@ -146,6 +146,23 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     if(id.isEmpty){notify('لا يوجد سند خزينة مرتبط بهذه الحركة.');return;}
     await run(()async{await db!.rpc('erp_post_cash_voucher',params:{'p_voucher_id':id});},'تم ترحيل سند الحركة وتحديث القيد المحاسبي.');
   }
+  Future<void> approveOrder(Map<String,dynamic> row) async {
+    await run(()async{await db!.from('erp_cash_orders').update({'status':'approved','approved_by':db!.auth.currentUser?.id,'approved_at':DateTime.now().toIso8601String(),'updated_at':DateTime.now().toIso8601String()}).eq('id',s(row['id'])).eq('status','draft');},'تم اعتماد أمر الصرف / التوريد.');
+  }
+  Future<void> convertOrder(Map<String,dynamic> row) async {
+    String? cashbox;String? account;
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,local)=>AlertDialog(
+      title:Text('تنفيذ الأمر '+s(row['order_number'])),
+      content:SizedBox(width:440,child:Column(mainAxisSize:MainAxisSize.min,children:[
+        drop('الخزينة',cashbox,[const DropdownMenuItem<String>(value:null,child:Text('اختر الخزينة')),...cashboxes.where((b)=>b['is_bank_account']!=true).map((b)=>DropdownMenuItem(value:s(b['id']),child:Text(s(b['cashbox_name']))))],(v)=>local(()=>cashbox=v)),
+        const SizedBox(height:8),drop('الحساب المقابل',account,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب المقابل')),...accounts.map((a)=>DropdownMenuItem(value:s(a['id']),child:Text(s(a['account_code'])+' — '+s(a['account_name']))))],(v)=>local(()=>account=v)),
+      ])),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تنفيذ'))],
+    )));
+    if(ok!=true)return;
+    if(cashbox==null||account==null){notify('حدد الخزينة والحساب المقابل قبل التنفيذ.');return;}
+    await run(()async{await db!.rpc('erp_convert_cash_order',params:{'p_order_id':row['id'],'p_cashbox_id':cashbox,'p_counter_account_id':account});},'تم تنفيذ الأمر وإنشاء حركة نقدية وسند خزينة مسودة.');
+  }
   Future<void> saveOrder() async {
     final v=double.tryParse(amount.text.trim());
     if(v==null||v<=0||partyName.text.trim().isEmpty){setState(()=>error='أدخل الجهة والقيمة الموجبة.');return;}
@@ -227,7 +244,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:saveOrder,child:const Text('حفظ الأمر'))),
     ]))),
     section('أوامر الصرف / التوريد النقدية',orders.where((o)=>s(o['instrument_type'])!='cheque').length),
-    grid(['المسلسل','النوع','الجهة','القيمة','الحالة','المستخدم'],orders.where((o)=>s(o['instrument_type'])!='cheque').map((r)=>[s(r['order_number']),s(r['order_type']),s(r['party_name']),money(r['amount']),s(r['status']),users.where((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id'])).isEmpty?'عام':users.firstWhere((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id']))['name_ar'].toString()]).toList())
+    grid(['المسلسل','النوع','الجهة','القيمة','الحالة','المستخدم'],orders.where((o)=>s(o['instrument_type'])!='cheque').map((r)=>[s(r['order_number']),s(r['order_type']),s(r['party_name']),money(r['amount']),s(r['status']),users.where((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id'])).isEmpty?'عام':users.firstWhere((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id']))['name_ar'].toString()]).toList(),actions:orders.where((o)=>s(o['instrument_type'])!='cheque').map((r)=>s(r['status'])=='draft'?IconButton(tooltip:'اعتماد الأمر',onPressed:saving?null:()=>approveOrder(r),icon:const Icon(Icons.verified_outlined,color:Colors.green)):s(r['status'])=='approved'?IconButton(tooltip:'تنفيذ الأمر',onPressed:saving?null:()=>convertOrder(r),icon:const Icon(Icons.play_circle_outline,color:purple)):const Icon(Icons.check_circle,color:Colors.grey)).toList())
   ]);
   Widget chequeView(bool isOrder)=>Column(children:[
     Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
