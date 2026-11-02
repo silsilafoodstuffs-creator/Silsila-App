@@ -52,9 +52,9 @@ class SilsilaWhiteLogo extends StatelessWidget {
         final cb = vb - t * db;
         final distance = math.sqrt(cr * cr + cg * cg + cb * cb);
         if (distance > 18) continue;
-        bytes[i] = (pr + 255 - r).round().clamp(0, 255);
-        bytes[i + 1] = (255 - g).round().clamp(0, 255);
-        bytes[i + 2] = (pb + 255 - b).round().clamp(0, 255);
+        bytes[i] = (pr + 255 - r).round().clamp(0, 255).toInt();
+        bytes[i + 1] = (255 - g).round().clamp(0, 255).toInt();
+        bytes[i + 2] = (pb + 255 - b).round().clamp(0, 255).toInt();
       }
       image.dispose();
       codec.dispose();
