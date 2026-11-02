@@ -94,7 +94,7 @@ class _ErpStocktakeScreenState extends State<ErpStocktakeScreen> {
 
 
   Map<String,dynamic> unitBreakdown(dynamic itemId,double baseQuantity){
-    final list=units.where((u)=>s(u['item_id'])==s(itemId)&&u['is_selectable']==true).toList()
+    final list=units.where((u)=>s(u['item_id'])==s(itemId)&&u['is_active']==true&&u['is_selectable']==true).toList()
       ..sort((a,b)=>n(b['conversion_factor']).compareTo(n(a['conversion_factor'])));
     final larger=list.where((u)=>n(u['conversion_factor'])>1).toList();
     final base=list.where((u)=>n(u['conversion_factor'])<=1).toList();
