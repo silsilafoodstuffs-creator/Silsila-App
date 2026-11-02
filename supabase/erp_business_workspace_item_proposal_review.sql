@@ -44,6 +44,6 @@ create or replace function public.erp_review_business_workspace_item_proposal(
  p_proposal_id uuid,p_decision text,p_company_id uuid default null,p_category_id uuid default null,
  p_item_code text default null,p_item_name text default null,p_item_name_en text default null,p_unit_name text default null,p_note text default null
 ) returns uuid language sql security invoker set search_path=pg_catalog,public,auth,private
-as $$ select private.review_business_workspace_item_proposal(p_proposal_id,p_decision,p_company_id,p_category_id,p_item_code,p_item_name,p_item_name_en,p_item_name_en,p_unit_name,p_note); $$;
+as $$ select private.review_business_workspace_item_proposal(p_proposal_id,p_decision,p_company_id,p_category_id,p_item_code,p_item_name,p_item_name_en,p_unit_name,p_note); $$;
 revoke all on function public.erp_review_business_workspace_item_proposal(uuid,text,uuid,uuid,text,text,text,text,text) from public,anon;
 grant execute on function public.erp_review_business_workspace_item_proposal(uuid,text,uuid,uuid,text,text,text,text,text) to authenticated;
