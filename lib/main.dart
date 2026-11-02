@@ -4695,6 +4695,7 @@ class _StoriesScreenState extends State<StoriesScreen> {
         children: [
           Row(children: [
             Expanded(child: Text(silsilaText(silsilaText('القصص')), style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: purple))),
+            IconButton(tooltip:'سجل القصص',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const MyStoryHistoryScreen())),icon:const Icon(Icons.history,color:purple)),
             FilledButton.icon(onPressed: createStory, icon: const Icon(Icons.add), label: Text(silsilaText(silsilaText('إضافة قصة')))),
           ]),
           const SizedBox(height: 10),
@@ -4808,6 +4809,36 @@ class _StoriesScreenState extends State<StoriesScreen> {
       ),
     );
   }
+}
+
+
+class MyStoryHistoryScreen extends StatefulWidget {
+  const MyStoryHistoryScreen({super.key});
+  @override State<MyStoryHistoryScreen> createState()=>_MyStoryHistoryScreenState();
+}
+class _MyStoryHistoryScreenState extends State<MyStoryHistoryScreen>{
+  final _service=StoryService(); late Future<List<Map<String,dynamic>>> _future;
+  @override void initState(){super.initState();_future=_service.getMyStoryHistory();}
+  Future<void> _reload()async{final f=_service.getMyStoryHistory();setState(()=>_future=f);try{await f;}catch(_){}}
+  Future<void> _edit(Map<String,dynamic> story)async{
+    final caption=TextEditingController(text:(story['caption']??'').toString());
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تعديل القصة'),content:TextField(controller:caption,maxLength:300,decoration:const InputDecoration(labelText:'النص أو الوصف')),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ'))]));
+    if(ok!=true){caption.dispose();return;}
+    try{await _service.updateStory(storyId:story['id'].toString(),caption:caption.text);await _reload();}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تعديل القصة: '+e.toString())));}caption.dispose();
+  }
+  Future<void> _republish(Map<String,dynamic> story)async{
+    try{await _service.republishStory(story['id'].toString(),durationMinutes:60);await _reload();}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر إعادة نشر القصة: '+e.toString())));}
+  }
+  Future<void> _delete(Map<String,dynamic> story)async{
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('حذف القصة'),content:const Text('هل تريد حذف القصة نهائيًا؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حذف'))]));
+    if(ok!=true)return;try{await _service.deleteStory(story['id'].toString());await _reload();}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر حذف القصة: '+e.toString())));}
+  }
+  @override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:const Text('سجل القصص وإدارتها'),backgroundColor:purple,foregroundColor:Colors.white,actions:[IconButton(onPressed:_reload,icon:const Icon(Icons.refresh))]),body:FutureBuilder<List<Map<String,dynamic>>>(future:_future,builder:(context,s){
+    if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());
+    if(s.hasError)return Center(child:Text('تعذر تحميل سجل القصص: '+s.error.toString()));
+    final rows=s.data??[];if(rows.isEmpty)return const Center(child:Text('لا توجد قصص محفوظة.'));
+    return ListView.builder(itemCount:rows.length,padding:const EdgeInsets.all(12),itemBuilder:(context,i){final story=rows[i];final expired=DateTime.tryParse((story['expires_at']??'').toString())?.isBefore(DateTime.now())??true;return Card(child:ListTile(title:Text((story['caption']??story['media_type']??'قصة').toString()),subtitle:Text(expired?'منتهية — محفوظة في السجل':'نشطة'),trailing:Wrap(mainAxisSize:MainAxisSize.min,children:[IconButton(onPressed:()=>_edit(story),icon:const Icon(Icons.edit_outlined)),IconButton(onPressed:()=>_republish(story),icon:const Icon(Icons.replay,color:purple)),IconButton(onPressed:()=>_delete(story),icon:const Icon(Icons.delete_outline,color:Colors.red))])));});
+  }));
 }
 
 class StoryRepliesScreen extends StatefulWidget {
