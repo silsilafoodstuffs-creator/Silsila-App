@@ -11,6 +11,22 @@ void main() {
     expect(find.text('سلسلة Silsila'), findsOneWidget);
     expect(find.text('بنربط السوق ببعضه'), findsOneWidget);
     expect(find.text('ابدأ الآن'), findsOneWidget);
+    final welcomeScaffold = tester.widget<Scaffold>(
+      find.ancestor(
+        of: find.text('ابدأ الآن'),
+        matching: find.byType(Scaffold),
+      ).first,
+    );
+    final welcomeContainer = tester.widget<Container>(
+      find.descendant(
+        of: find.byWidget(welcomeScaffold),
+        matching: find.byType(Container),
+      ).first,
+    );
+    expect(
+      (welcomeContainer.decoration! as BoxDecoration).color,
+      const Color(0xFF3E007D),
+    );
   });
 
   testWidgets('primary action uses the Silsila color identity',
