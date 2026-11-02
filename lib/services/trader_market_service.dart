@@ -39,12 +39,12 @@ class TraderMarketService {
       throw ArgumentError('يجب أن يكون الحد بين 1 و200.');
     }
 
-    final today = DateTime.now().toIso8601String().split('T').first;
     var query = _requireClient
         .from('trader_market_posts')
         .select()
         .eq('is_active', true)
-        .or('expiry_date.is.null,expiry_date.gte.$today');
+        .eq('status', 'active')
+        .gt('expires_at', DateTime.now().toUtc().toIso8601String());
 
     final activity = _clean(activityType);
     if (activity != null) {
@@ -88,6 +88,15 @@ class TraderMarketService {
     String? contactPhone,
     DateTime? expiryDate,
     bool isNegotiable = false,
+    List<Map<String, dynamic>> itemsData = const [],
+    String qualityPreference = 'any',
+    DateTime? expiryConditionDate,
+    String? sellerBuyerRole,
+    String? freightPayer,
+    String? freightCollectionPoint,
+    String? pickupLocation,
+    String? deliveryLocation,
+    int durationHours = 24,
   }) async {
     final cleanTitle = _requiredText(
       title,
@@ -121,12 +130,21 @@ class TraderMarketService {
     _validateOptionalText(contactPhone, 'رقم التواصل', 40);
     _validateContactPhone(contactPhone);
 
+    if (durationHours < 1 || durationHours > 720) throw ArgumentError('مدة الطلب يجب أن تكون بين ساعة و720 ساعة.');
+    if (!const {'buy','sell','transfer'}.contains(cleanType)) throw ArgumentError('نوع الطلب غير صالح.');
+    final now = DateTime.now().toUtc();
     final data = <String, dynamic>{
       'user_id': _userId,
       'title': cleanTitle,
       'description': cleanDescription,
       'post_type': cleanType,
       'is_active': true,
+      'status': 'active',
+      'published_at': now.toIso8601String(),
+      'expires_at': now.add(Duration(hours: durationHours)).toIso8601String(),
+      'items_data': itemsData,
+      'quality_preference': qualityPreference,
+      'moderation_status': 'published',
     };
 
     _addIfNotEmpty(data, 'activity_type', activityType);
@@ -135,7 +153,12 @@ class TraderMarketService {
     _addIfNotEmpty(data, 'governorate', governorate);
     _addIfNotEmpty(data, 'contact_phone', contactPhone);
     data['is_negotiable'] = isNegotiable;
-    if (expiryDate != null) data['expiry_date'] = expiryDate.toIso8601String().split('T').first;
+    if (expiryConditionDate != null) data['expiry_condition_date'] = expiryConditionDate.toIso8601String().split('T').first;
+    if (sellerBuyerRole != null) data['seller_buyer_role'] = sellerBuyerRole;
+    if (freightPayer != null) data['freight_payer'] = freightPayer;
+    if (freightCollectionPoint != null) data['freight_collection_point'] = freightCollectionPoint;
+    _addIfNotEmpty(data, 'pickup_location', pickupLocation);
+    _addIfNotEmpty(data, 'delivery_location', deliveryLocation);
 
     if (quantity != null) {
       data['quantity'] = quantity;
@@ -319,6 +342,9 @@ class TraderMarketService {
     double? targetPrice,
     String? governorate,
     bool? isActive,
+    List<Map<String, dynamic>>? itemsData,
+    String? qualityPreference,
+    DateTime? expiryConditionDate,
   }) async {
     final cleanPostId = _requiredText(
       postId,
@@ -355,9 +381,10 @@ class TraderMarketService {
       'governorate': _clean(governorate),
     };
 
-    if (isActive != null) {
-      data['is_active'] = isActive;
-    }
+    if (isActive != null) data['is_active'] = isActive;
+    if (itemsData != null) data['items_data'] = itemsData;
+    if (qualityPreference != null) data['quality_preference'] = qualityPreference;
+    if (expiryConditionDate != null) data['expiry_condition_date'] = expiryConditionDate.toIso8601String().split('T').first;
 
     final response = await _requireClient
         .from('trader_market_posts')
@@ -389,6 +416,43 @@ class TraderMarketService {
         .delete()
         .eq('id', cleanPostId)
         .eq('user_id', _userId);
+  }
+
+
+  Future<List<Map<String, dynamic>>> getMyPostHistory() async {
+    final rows = await _requireClient.from('trader_market_posts').select()
+      .eq('user_id', _userId).order('created_at', ascending: false).limit(200);
+    return _mapRows(rows);
+  }
+
+  Future<Map<String, dynamic>> extendPost(String postId, int extraHours) async {
+    if (extraHours < 1 || extraHours > 720) throw ArgumentError('أدخل مدة إضافية من ساعة إلى 720 ساعة.');
+    final id = int.tryParse(postId);
+    if (id == null) throw ArgumentError('معرّف الطلب غير صالح.');
+    final current = await _requireClient.from('trader_market_posts').select('expires_at')
+      .eq('id', id).eq('user_id', _userId).maybeSingle();
+    if (current == null) throw StateError('الطلب غير موجود أو لا تملك صلاحية تمديده.');
+    final oldExpiry = DateTime.tryParse((current['expires_at'] ?? '').toString())?.toUtc();
+    final base = oldExpiry != null && oldExpiry.isAfter(DateTime.now().toUtc()) ? oldExpiry : DateTime.now().toUtc();
+    final row = await _requireClient.from('trader_market_posts').update({
+      'expires_at': base.add(Duration(hours: extraHours)).toIso8601String(),
+      'extended_hours': extraHours,
+      'is_active': true, 'status': 'active', 'moderation_status': 'published',
+      'published_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', id).eq('user_id', _userId).select().single();
+    return Map<String,dynamic>.from(row);
+  }
+
+  Future<Map<String, dynamic>> republishPost(String postId, {int durationHours = 24}) async =>
+    extendPost(postId, durationHours);
+
+  Future<void> moderatePost(String postId, {required bool publish}) async {
+    final id = int.tryParse(postId);
+    if (id == null) throw ArgumentError('معرّف الطلب غير صالح.');
+    await _requireClient.from('trader_market_posts').update({
+      'is_active': publish, 'status': publish ? 'active' : 'archived',
+      'moderation_status': publish ? 'published' : 'archived',
+    }).eq('id', id);
   }
 
   void _validateContactPhone(String? value) {
