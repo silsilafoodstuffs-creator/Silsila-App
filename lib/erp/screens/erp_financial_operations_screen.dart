@@ -39,6 +39,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   String s(dynamic v) => (v ?? '').toString();
   double n(dynamic v) => v is num ? v.toDouble() : double.tryParse(s(v)) ?? 0;
   String money(dynamic v) => n(v).toStringAsFixed(2);
+  String chequeAmountLabel(Map<String,dynamic> c)=>s(c['status'])=='available'?'غير محدد':money(c['amount']);
   List<Map<String,dynamic>> maps(dynamic x) => (x as List).map((e)=>Map<String,dynamic>.from(e as Map)).toList();
 
   int initial() {
@@ -205,7 +206,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       case 0:return movements.map((r)=>[s(r['movement_no']),s(r['movement_number']),s(r['movement_type']),s(r['from_type']),s(r['from_name']),s(r['to_type']),s(r['to_name']),money(r['amount']),displayDate(r['movement_date']),s(r['cash_voucher_id'])]).toList();
       case 1:return orders.where((o)=>s(o['instrument_type'])!='cheque').map((r)=>[s(r['order_number']),s(r['order_type']),s(r['party_type']),s(r['party_name']),money(r['amount']),s(r['status']),users.where((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id'])).isEmpty?'عام':s(users.firstWhere((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id']))['name_ar']),s(r['sales_document_id'])]).toList();
       case 2:return orders.where((o)=>s(o['instrument_type'])=='cheque').map((o)=>[s(o['order_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['check_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['cheque_type']),s(o['party_name']),money(o['amount']),s(o['status'])]).toList();
-      case 3:case 5:case 6:return cheques.where((c)=>tabs.index==3||s(c['cheque_type'])==(tabs.index==5?'bank':'credit')).map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),displayDate(c['issue_date']),displayDate(c['due_date']),money(c['amount']),s(c['payee_name']),s(c['status']),displayDate(c['settlement_date'])]).toList();
+      case 3:case 5:case 6:return cheques.where((c)=>tabs.index==3||s(c['cheque_type'])==(tabs.index==5?'bank':'credit')).map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),displayDate(c['issue_date']),displayDate(c['due_date']),chequeAmountLabel(c),s(c['payee_name']),s(c['status']),displayDate(c['settlement_date'])]).toList();
       case 4:return books.map((b)=>[s(b['book_number']),cashboxName(s(b['bank_cashbox_id'])),s(b['first_check_number']),s(b['sheet_count']),b['registered']==true?'مسجل':'مسودة']).toList();
       default:return [];
     }
@@ -409,7 +410,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       grid(['مسلسل الأمر','رقم الشيك','النوع','الجهة','القيمة','الحالة'],orders.where((o)=>s(o['instrument_type'])=='cheque').map((o)=>[s(o['order_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['check_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['cheque_type']),s(o['party_name']),money(o['amount']),s(o['status'])]).toList()),
     ] else ...[
       section('حركة الشيكات',cheques.length),
-      grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),s(c['issue_date']),s(c['due_date']),money(c['amount']),s(c['status'])]).toList(),actions:cheques.map((c)=>s(c['status'])=='paid'||s(c['status'])=='returned'||s(c['status'])=='cashed_from_cashbox'||s(c['status'])=='cancelled'?const Icon(Icons.lock,color:Colors.grey):IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple))).toList()),
+      grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),s(c['issue_date']),s(c['due_date']),chequeAmountLabel(c),s(c['status'])]).toList(),actions:cheques.map((c)=>s(c['status'])=='paid'||s(c['status'])=='returned'||s(c['status'])=='cashed_from_cashbox'||s(c['status'])=='cancelled'?const Icon(Icons.lock,color:Colors.grey):IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple))).toList()),
     ]
   ]);
   Widget booksView()=>Column(children:[
@@ -423,7 +424,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     section('دفاتر الشيكات',books.length),
     grid(['م','مسلسل الدفتر','الحساب البنكي','البداية','عدد الأوراق','الحالة'],books.map((b)=>[s(b['book_no']),s(b['book_number']),cashboxName(s(b['bank_cashbox_id'])),s(b['first_check_number']),s(b['sheet_count']),b['registered']==true?'مسجل':'مسودة']).toList()),
     section('أرقام الشيكات',cheques.length),
-    grid(['رقم الشيك','الحساب','النوع','الحالة','المستفيد','القيمة'],cheques.map((c)=>[s(c['check_number']),cashboxName(s(c['bank_cashbox_id'])),s(c['cheque_type']),s(c['status']),s(c['payee_name']),money(c['amount'])]).toList())
+    grid(['رقم الشيك','الحساب','النوع','الحالة','المستفيد','القيمة'],cheques.map((c)=>[s(c['check_number']),cashboxName(s(c['bank_cashbox_id'])),s(c['cheque_type']),s(c['status']),s(c['payee_name']),chequeAmountLabel(c)]).toList())
   ]);
   Widget trackingView(bool credit)=>Column(children:[
     if(!credit)drop('فلتر الشيكات',trackingFilter,const[DropdownMenuItem(value:'all',child:Text('كل الشيكات البنكية')),DropdownMenuItem(value:'payment',child:Text('شيكات الدفع')),DropdownMenuItem(value:'receipt',child:Text('شيكات القبض'))],(v)=>setState(()=>trackingFilter=v??'all')),
