@@ -8,6 +8,12 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../widgets/erp_quick_task_button.dart';
 
+class _CheckbookDraftRow {
+  String? bankId;
+  final TextEditingController firstCheck = TextEditingController();
+  void dispose() => firstCheck.dispose();
+}
+
 class ErpFinancialOperationsScreen extends StatefulWidget {
   const ErpFinancialOperationsScreen({super.key, required this.companyId, required this.initialView});
   final String? companyId;
@@ -31,6 +37,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   final movementDate = TextEditingController(text: _todayDisplay());
   final dueDate = TextEditingController(text: _todayDisplay()), chequeAmount = TextEditingController();
   List<Map<String,dynamic>> cashboxes=[], accounts=[], parties=[], users=[], sales=[], movements=[], orders=[], books=[], cheques=[];
+  final List<_CheckbookDraftRow> _bookDrafts = <_CheckbookDraftRow>[_CheckbookDraftRow()];
   static String _todayDisplay(){final d=DateTime.now();return d.day.toString().padLeft(2,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.year.toString().padLeft(4,'0');}
   DateTime? parseDisplayDate(String value){final t=value.trim();final iso=DateTime.tryParse(t);if(iso!=null)return iso;final p=t.split('-');if(p.length!=3)return null;final d=int.tryParse(p[0]),m=int.tryParse(p[1]),y=int.tryParse(p[2]);if(d==null||m==null||y==null)return null;final v=DateTime(y,m,d);return v.year==y&&v.month==m&&v.day==d?v:null;}
   String isoDate(String value)=>parseDisplayDate(value)?.toIso8601String().substring(0,10)??value;
@@ -52,7 +59,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     if(company.isNotEmpty) WidgetsBinding.instance.addPostFrameCallback((_)=>load());
   }
   @override void dispose() {
-    tabs.dispose(); for(final c in [amount,description,fromName,toName,partyName,firstCheck,issueDate,dueDate,chequeAmount,movementDate]) {c.dispose();} super.dispose();
+    tabs.dispose(); for(final row in _bookDrafts) { row.dispose(); } for(final c in [amount,description,fromName,toName,partyName,firstCheck,issueDate,dueDate,chequeAmount,movementDate]) {c.dispose();} super.dispose();
   }
 
   Future<void> load() async {
@@ -306,13 +313,38 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     if(!directMode&&salesId==null){setState(()=>error='السياسة تشترط ربط أمر الصرف بأمر بيع.');return;}
     await run(()async{await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':orderType,'party_type':partyType,'party_name':partyName.text.trim(),'party_id':orderPartyId,'amount':v,'description':description.text,'sales_document_id':salesId,'assigned_to_user_id':assigneeId,'status':requireApproval?'draft':'approved','created_by':db!.auth.currentUser?.id});amount.clear();partyName.clear();description.clear();orderPartyId=null;},'تم حفظ أمر الصرف / التوريد.');
   }
+  Future<void> selectBookBank(_CheckbookDraftRow row) async {
+    final selected=await pick('bank');
+    if(selected!=null && mounted) setState(()=>row.bankId=s(selected['id']));
+  }
+  Widget bookBankPicker(_CheckbookDraftRow row) => Focus(
+    onKeyEvent:(node,event){if(event is KeyDownEvent&&event.logicalKey==LogicalKeyboardKey.f1){selectBookBank(row);return KeyEventResult.handled;}return KeyEventResult.ignored;},
+    child:Row(children:[
+      Expanded(child:InputDecorator(decoration:const InputDecoration(labelText:'الحساب البنكي',border:OutlineInputBorder(),isDense:true),child:Text(row.bankId==null?'اختر الحساب البنكي':cashboxName(row.bankId!),overflow:TextOverflow.ellipsis))),
+      IconButton.filledTonal(onPressed:()=>selectBookBank(row),tooltip:'بحث F1',icon:const Icon(Icons.search)),
+    ]),
+  );
+  void addBookDraftRow(){setState(()=>_bookDrafts.add(_CheckbookDraftRow()));}
+  void removeBookDraftRow(int index){if(_bookDrafts.length<=1)return;setState(()=>_bookDrafts.removeAt(index).dispose());}
   Future<void> registerBook() async {
-    final start=int.tryParse(firstCheck.text.trim());
-    if(bankId==null||start==null||start<=0){setState(()=>error='اختر حسابًا بنكيًا وأدخل بداية الدفتر.');return;}
-    final b=cashboxes.firstWhere((x)=>s(x['id'])==bankId);
-    final count=n(b['checkbook_sheet_count']).toInt();
-    if(count<1){setState(()=>error='حدد عدد أوراق دفتر الشيكات في بيانات الحساب البنكي.');return;}
-    await run(()async{final row=await db!.from('erp_checkbooks').insert({'company_id':company,'bank_cashbox_id':bankId,'first_check_number':start,'sheet_count':count,'created_by':db!.auth.currentUser?.id}).select('id').single();await db!.rpc('erp_register_checkbook',params:{'p_checkbook_id':row['id']});firstCheck.clear();},'تم تسجيل الدفتر وإنشاء أرقام الشيكات.');
+    final valid=<Map<String,dynamic>>[];
+    for(var i=0;i<_bookDrafts.length;i++){
+      final draft=_bookDrafts[i];
+      final startNumber=int.tryParse(draft.firstCheck.text.trim());
+      final bank=cashboxes.where((x)=>s(x['id'])==draft.bankId && x['is_bank_account']==true);
+      if(bank.isEmpty||startNumber==null||startNumber<=0){setState(()=>error='راجع الحساب البنكي وبداية الدفتر في السطر '+(i+1).toString()+'.');return;}
+      final count=n(bank.first['checkbook_sheet_count']).toInt();
+      if(count<1){setState(()=>error='حدد عدد أوراق دفتر الشيكات في بيانات الحساب البنكي.');return;}
+      valid.add({'bank_id':draft.bankId,'start':startNumber,'count':count});
+    }
+    await run(()async{
+      for(final draft in valid){
+        final row=await db!.from('erp_checkbooks').insert({'company_id':company,'bank_cashbox_id':draft['bank_id'],'first_check_number':draft['start'],'sheet_count':draft['count'],'created_by':db!.auth.currentUser?.id}).select('id').single();
+        await db!.rpc('erp_register_checkbook',params:{'p_checkbook_id':row['id']});
+      }
+      for(final draft in _bookDrafts){draft.dispose();}
+      _bookDrafts..clear()..add(_CheckbookDraftRow());
+    },'تم تسجيل '+valid.length.toString()+' دفتر/دفاتر وإنشاء أرقام الشيكات المتاحة.');
   }
   Future<void> issueCheque(bool order) async {
     final v=double.tryParse(chequeAmount.text.trim()), issue=parseDisplayDate(issueDate.text), due=parseDisplayDate(dueDate.text);
@@ -440,18 +472,26 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   Widget booksView()=>Column(children:[
     section('ملخص سيريال الشيكات حسب الحساب البنكي',cashboxes.where((b)=>b['is_bank_account']==true).length),
     grid(['الحساب البنكي','عدد الدفاتر','إجمالي الشيكات','المتاح','المستخدم'],cashboxes.where((b)=>b['is_bank_account']==true).map((b){final id=s(b['id']);final cb=cheques.where((x)=>s(x['bank_cashbox_id'])==id&&s(x['cheque_type'])=='bank').toList();return [s(b['cashbox_name']),books.where((x)=>s(x['bank_cashbox_id'])==id&&x['registered']==true).length.toString(),cb.length.toString(),cb.where((x)=>s(x['status'])=='available').length.toString(),cb.where((x)=>s(x['status'])!='available').length.toString()];}).toList()),
-    section('بيانات دفتر الشيكات الجديد',1),
-    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:registerBook,icon:const Icon(Icons.save),label:const Text('حفظ وتسجيل الدفتر'))),
+    section('بيانات دفاتر الشيكات الجديدة',_bookDrafts.length),
+    Align(alignment:Alignment.centerLeft,child:Wrap(spacing:8,children:[
+      OutlinedButton.icon(onPressed:addBookDraftRow,icon:const Icon(Icons.add),label:const Text('إضافة دفتر')),
+      FilledButton.icon(onPressed:saving?null:registerBook,icon:const Icon(Icons.save),label:const Text('حفظ وتسجيل الدفاتر')),
+    ])),
     Card(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
       headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-      columns:const [DataColumn(label:Text('م')),DataColumn(label:Text('الحساب البنكي / F1')),DataColumn(label:Text('بداية الدفتر')),DataColumn(label:Text('عدد الأوراق (معاينة)')),DataColumn(label:Text('الحالة'))],
-      rows:[DataRow(cells:[
-        const DataCell(Text('1')),
-        DataCell(SizedBox(width:220,child:bankPicker('اختيار الحساب'))),
-        DataCell(SizedBox(width:160,child:integerField(firstCheck,'أول رقم شيك'))),
-        DataCell(Text(bankId==null?'—':cashboxes.where((b)=>s(b['id'])==bankId).isEmpty?'—':n(cashboxes.firstWhere((b)=>s(b['id'])==bankId)['checkbook_sheet_count']).toInt().toString())),
-        const DataCell(Text('جاهز للتسجيل')),
-      ])],
+      columns:const [DataColumn(label:Text('م')),DataColumn(label:Text('الحساب البنكي / F1')),DataColumn(label:Text('بداية الدفتر')),DataColumn(label:Text('عدد الأوراق (معاينة)')),DataColumn(label:Text('إجراء'))],
+      rows:_bookDrafts.asMap().entries.map((entry){
+        final i=entry.key;final draft=entry.value;
+        final bank=cashboxes.where((b)=>s(b['id'])==draft.bankId&&b['is_bank_account']==true);
+        final count=bank.isEmpty?'—':n(bank.first['checkbook_sheet_count']).toInt().toString();
+        return DataRow(cells:[
+          DataCell(Text((i+1).toString())),
+          DataCell(SizedBox(width:230,child:bookBankPicker(draft))),
+          DataCell(SizedBox(width:150,child:integerField(draft.firstCheck,'أول رقم شيك'))),
+          DataCell(Text(count)),
+          DataCell(IconButton(tooltip:'حذف السطر',onPressed:_bookDrafts.length==1?null:()=>removeBookDraftRow(i),icon:const Icon(Icons.delete_outline,color:Colors.red))),
+        ]);
+      }).toList(),
     ))),
     section('دفاتر الشيكات المسجلة',books.length),
     grid(['م','مسلسل الدفتر','الحساب البنكي','البداية','عدد الأوراق','الحالة'],books.map((b)=>[s(b['book_no']),s(b['book_number']),cashboxName(s(b['bank_cashbox_id'])),s(b['first_check_number']),s(b['sheet_count']),b['registered']==true?'مسجل':'مسودة']).toList()),
