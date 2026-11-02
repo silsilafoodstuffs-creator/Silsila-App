@@ -34,6 +34,14 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _openings = [];
   List<Map<String, dynamic>> _proposals = [];
   List<Map<String, dynamic>> _cashMovements = [];
+  List<Map<String, dynamic>> _departments = [];
+  List<Map<String, dynamic>> _employees = [];
+  String? _selectedDepartmentId;
+  final _departmentCode = TextEditingController();
+  final _departmentName = TextEditingController();
+  final _employeeName = TextEditingController();
+  final _employeeJob = TextEditingController();
+  final _employeeSalary = TextEditingController(text: '0');
   String? _selectedBranchForWarehouse;
   String _cashType = 'receipt';
   final _cashAmount = TextEditingController();
@@ -75,6 +83,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     _itemSearch.dispose(); _localItemCode.dispose(); _reorderLevel.dispose(); _openingQuantity.dispose(); _openingCost.dispose();
     _proposalName.dispose(); _proposalNameEn.dispose(); _proposalCategory.dispose(); _proposalUnit.dispose(); _proposalDescription.dispose();
     _cashAmount.dispose(); _cashDescription.dispose(); _cashCounterparty.dispose(); _cashReference.dispose();
+    _departmentCode.dispose(); _departmentName.dispose(); _employeeName.dispose(); _employeeJob.dispose(); _employeeSalary.dispose();
     super.dispose();
   }
 
@@ -112,6 +121,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _db.from('erp_business_workspace_stock_openings').select('id,warehouse_id,item_link_id,quantity,unit_cost,opening_date').eq('workspace_id', id).order('created_at'),
         _db.from('erp_business_workspace_item_proposals').select('id,name_ar,name_en,proposed_category,unit_name,status,review_note,created_at').eq('workspace_id', id).order('created_at', ascending: false),
         _db.from('erp_business_workspace_cash_movements').select('id,movement_no,movement_type,movement_date,amount,description,counterparty_name,payment_method,reference_no').eq('workspace_id', id).order('movement_date', ascending: false).limit(200),
+        _db.from('erp_business_workspace_departments').select('id,parent_id,department_code,name_ar,is_active').eq('workspace_id', id).order('name_ar'),
+        _db.from('erp_business_workspace_employees').select('id,department_id,employee_code,full_name,job_title,monthly_salary,is_active').eq('workspace_id', id).order('full_name'),
       ]);
       if (!mounted) return;
       setState(() {
@@ -122,6 +133,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _openings = List<Map<String, dynamic>>.from(result[4]);
         _proposals = List<Map<String, dynamic>>.from(result[5]);
         _cashMovements = List<Map<String, dynamic>>.from(result[6]);
+        _departments = List<Map<String, dynamic>>.from(result[7]);
+        _employees = List<Map<String, dynamic>>.from(result[8]);
+        _selectedDepartmentId = _departments.any((x) => x['id'].toString() == _selectedDepartmentId) ? _selectedDepartmentId : (_departments.isNotEmpty ? _departments.first['id'].toString() : null);
         _selectedBranchForWarehouse = _branches.any((x) => x['id'].toString() == _selectedBranchForWarehouse) ? _selectedBranchForWarehouse : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
         _selectedStockWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
         _selectedStockItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedStockItemLinkId) ? _selectedStockItemLinkId : (_itemLinks.isNotEmpty ? _itemLinks.first['id'].toString() : null);
@@ -155,6 +169,40 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       _message('تم إنشاء مساحة النشاط المستقلة.');
     } catch (e) { _message('لم يتم إنشاء النشاط: $e'); }
     finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  Future<void> _addDepartment() async {
+    final id = _selected?['id']?.toString();
+    final code = _departmentCode.text.trim();
+    final name = _departmentName.text.trim();
+    if (id == null || code.isEmpty || name.isEmpty) { _message('أدخل كود الإدارة واسمها.'); return; }
+    try {
+      await _db.from('erp_business_workspace_departments').insert({
+        'workspace_id':id,'department_code':code,'name_ar':name,
+      });
+      _departmentCode.clear(); _departmentName.clear();
+      await _loadStructure(); _message('تم إضافة الإدارة / القسم.');
+    } catch(e) { _message('تعذر حفظ الإدارة: $e'); }
+  }
+
+  Future<void> _addEmployee() async {
+    final id = _selected?['id']?.toString();
+    final name = _employeeName.text.trim();
+    final salary = double.tryParse(_employeeSalary.text.trim()) ?? 0;
+    if (id == null || name.length < 2 || salary < 0) { _message('أدخل اسم الموظف ومرتباً صحيحاً.'); return; }
+    try {
+      final code = 'EMP-${DateTime.now().microsecondsSinceEpoch.toString().substring(7)}';
+      await _db.from('erp_business_workspace_employees').insert({
+        'workspace_id':id,'department_id':_selectedDepartmentId,
+        'employee_code':code,'full_name':name,
+        'job_title':_employeeJob.text.trim().isEmpty?null:_employeeJob.text.trim(),
+        'monthly_salary':salary,
+        'work_schedule':<String,dynamic>{'type':'standard'},
+        'leave_policy':<String,dynamic>{},
+      });
+      _employeeName.clear(); _employeeJob.clear(); _employeeSalary.text='0';
+      await _loadStructure(); _message('تم تسجيل الموظف برقم $code.');
+    } catch(e) { _message('تعذر حفظ الموظف: $e'); }
   }
 
   Future<void> _saveCashMovement() async {
@@ -688,7 +736,37 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       trailing:p['status']=='pending'?const Text('قيد المراجعة'):Text(p['status'].toString()),
     )),
   ]);
-  Widget _employeesInfo() => _infoPanel('موظفين نشاطي', 'هيكل إدارات وأقسام وموظفون مبسطون خاصون بالنشاط، مع كود موظف ومرتب وجدول عمل وإجازات. لا يتم خلطهم بموظفي سلسلة.');
+  Widget _employeesInfo() => ListView(children: [
+    _sectionTitle('إداراتي وأقسامي', 'هيكل إداري مستقل بنظام الشجرة'),
+    Row(children:[
+      Expanded(child:TextField(controller:_departmentCode,decoration:const InputDecoration(labelText:'كود الإدارة / القسم'))),
+      const SizedBox(width:8),
+      Expanded(child:TextField(controller:_departmentName,decoration:const InputDecoration(labelText:'اسم الإدارة / القسم'))),
+      IconButton(onPressed:_addDepartment,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
+    ]),
+    ..._departments.map((d)=>ListTile(dense:true,leading:Icon(d['parent_id']==null?Icons.account_tree:Icons.subdirectory_arrow_left,color:_workspacePurple),
+      title:Text(d['name_ar'].toString()),subtitle:Text(d['department_code'].toString()))),
+    const Divider(),
+    _sectionTitle('موظفين نشاطي','بيانات مبسطة مستقلة عن موظفي سلسلة'),
+    DropdownButtonFormField<String>(
+      value:_departments.any((d)=>d['id'].toString()==_selectedDepartmentId)?_selectedDepartmentId:null,
+      decoration:const InputDecoration(labelText:'الإدارة / القسم'),
+      items:_departments.map((d)=>DropdownMenuItem(value:d['id'].toString(),child:Text(d['name_ar'].toString()))).toList(),
+      onChanged:(v)=>setState(()=>_selectedDepartmentId=v),
+    ),
+    TextField(controller:_employeeName,decoration:const InputDecoration(labelText:'اسم الموظف *')),
+    TextField(controller:_employeeJob,decoration:const InputDecoration(labelText:'الوظيفة')),
+    TextField(controller:_employeeSalary,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'المرتب الشهري')),
+    const SizedBox(height:8),
+    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_addEmployee,icon:const Icon(Icons.person_add),label:const Text('إضافة موظف'))),
+    const Divider(),
+    _sectionTitle('قوة العمل','${_employees.length} موظف مسجل'),
+    ..._employees.map((e)=>ListTile(dense:true,leading:const Icon(Icons.badge_outlined,color:_workspaceOrange),
+      title:Text(e['full_name'].toString()),
+      subtitle:Text('${e['employee_code']} • ${e['job_title'] ?? 'بدون وظيفة'}'),
+      trailing:Text('${e['monthly_salary']}',style:const TextStyle(color:_workspacePurple,fontWeight:FontWeight.w800)),
+    )),
+  ]);
 
   Widget _infoPanel(String title, String body) => Card(
     elevation: 0, color: const Color(0xFFF8F5FC),
