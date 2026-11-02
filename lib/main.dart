@@ -6698,7 +6698,7 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
             return MarketCard(
               postId: (post['id'] ?? '').toString(),
               postOwnerId: (post['user_id'] ?? '').toString(),
-              expiryDate: (post['expiry_date'] ?? '').toString(),
+              expiryDate: (post['expires_at'] ?? '').toString(),
               isNegotiable: post['is_negotiable'] == true,
               title: title,
               type: type == 'transfer' ? 'عايز أنقل' : isBuy ? 'عايز أشتري' : 'عايز أبيع',
@@ -8171,12 +8171,14 @@ class _MarketCardState extends State<MarketCard> {
   bool _closed = false;
   bool _detailsExpanded = false;
   bool _hasAccepted = false;
+  Timer? _expiryTicker;
   String? _negotiationStatus;
   late Future<List<Map<String, dynamic>>> _negotiationsFuture;
 
   @override
   void initState() {
     super.initState();
+    _expiryTicker = Timer.periodic(const Duration(seconds: 30), (_) { if (mounted) setState(() {}); });
     _negotiationsFuture = _service.getNegotiations(widget.postId);
     _service.hasInteraction(widget.postId, 'accept').then((value) {
       if (mounted) setState(() => _hasAccepted = value);
@@ -8188,8 +8190,19 @@ class _MarketCardState extends State<MarketCard> {
 
   @override
   void dispose() {
+    _expiryTicker?.cancel();
     _negotiationPrice.dispose();
     super.dispose();
+  }
+
+  String _remainingTime() {
+    final expires = DateTime.tryParse(widget.expiryDate)?.toLocal();
+    if (expires == null) return 'مدة العرض: 24 ساعة';
+    final remaining = expires.difference(DateTime.now());
+    if (remaining.isNegative || remaining == Duration.zero) return 'انتهى وقت العرض';
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes.remainder(60);
+    return 'متبقي: ${hours}س ${minutes}د';
   }
 
   Future<void> _interact(String action) async {
@@ -8354,11 +8367,13 @@ class _MarketCardState extends State<MarketCard> {
                   ),
                   const SizedBox(width: 5),
                   Expanded(
-                    child: Text(
-                      widget.type == 'طلب شراء' ? 'عايز أشتري' : 'عايز أبيع',
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text(widget.type == 'عايز أشتري' ? 'عايز أشتري' : widget.type == 'عايز أنقل' ? 'عايز أنقل' : 'عايز أبيع',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 15),
-                    ),
+                      ),
+                      Text(_remainingTime(), style: TextStyle(color: widget.color, fontSize: 10, fontWeight: FontWeight.w600)),
+                    ]),
                   ),
                   const SizedBox(width: 34),
                 ],
