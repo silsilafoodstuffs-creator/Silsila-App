@@ -142,7 +142,7 @@ class TraderMarketService {
         final policyKey = cleanType == 'sell' ? 'trader_market.sell_duration_hours' : cleanType == 'transfer' ? 'trader_market.transfer_duration_hours' : 'trader_market.buy_duration_hours';
         final policy = await _requireClient.from('erp_program_policies').select('policy_value,is_enabled').eq('company_id', companyId).eq('policy_key', policyKey).maybeSingle();
         final maximum = int.tryParse((policy?['policy_value'] ?? '24').toString());
-        if (policy?['is_enabled'] == true && maximum != null && maximum > 0) effectiveDurationHours = effectiveDurationHours.clamp(1, maximum.clamp(1,720));
+        if (policy?['is_enabled'] == true && maximum != null && maximum > 0) effectiveDurationHours = effectiveDurationHours.clamp(1, maximum.clamp(1,720)).toInt();
       }
     } catch (_) { /* Keep the documented 24-hour default if company policy is unavailable. */ }
     final now = DateTime.now().toUtc();
