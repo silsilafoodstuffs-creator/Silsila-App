@@ -6961,8 +6961,8 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         durationHours: 24,
         requestedAt: type == 'transfer' ? _transportAt : null,
         itemsData: itemsData,
-        qualityPreference: preferNearExpiry ? 'near_expiry' : preferGoodExpiry ? 'good' : 'any',
-        expiryConditionDate: type == 'sell' ? expiryDate : null,
+        qualityPreference: itemsData.any((item)=>item['quality_preference']=='near_expiry') ? 'near_expiry' : 'good',
+        expiryConditionDate: null,
         sellerBuyerRole: type == 'transfer' ? transferActor : null,
         freightPayer: type == 'transfer' ? freightPayer : null,
         freightCollectionPoint: type == 'transfer' ? freightPoint : null,
@@ -7063,13 +7063,6 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           ),
           const SizedBox(height: 8),
           SwitchListTile(contentPadding: EdgeInsets.zero, value: isNegotiable, onChanged: (value) => setState(() => isNegotiable = value), title: Text(silsilaText(silsilaText('السعر قابل للتفاوض البسيط'))), subtitle: Text(silsilaText(silsilaText('يمكن للطرف الآخر إرسال سعر مقترح للموافقة أو الرفض أو التعديل.')))),
-          const SizedBox(height: 8),
-          Wrap(spacing: 10, children: [
-            FilterChip(label: const Text('صلاحية جيدة'), selected: preferGoodExpiry, onSelected: (v) => setState(() => preferGoodExpiry = v)),
-            FilterChip(label: const Text('صلاحية قريبة'), selected: preferNearExpiry, onSelected: (v) => setState(() => preferNearExpiry = v)),
-          ]),
-          if (type == 'sell' && preferNearExpiry)
-            ListTile(contentPadding: EdgeInsets.zero, title: const Text('تاريخ انتهاء الصلاحية'), subtitle: Text(expiryDate == null ? 'اختياري — حدد التاريخ' : expiryDate!.toIso8601String().split('T').first), trailing: IconButton(icon: const Icon(Icons.calendar_month), onPressed: () async { final now=DateTime.now(); final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:expiryDate??now.add(const Duration(days:30))); if(d!=null)setState(()=>expiryDate=d); })),
           if (type == 'transfer') ...[
             const SizedBox(height: 8),
             const Text('بيانات النقل', style: TextStyle(color: Color(0xFFFF27C3), fontWeight: FontWeight.bold)),
