@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'widgets/erp_quick_task_button.dart';
+import 'widgets/silsila_white_logo.dart';
 import 'widgets/erp_keyboard_navigation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1711,11 +1712,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Widget _header(bool compact, {bool mobile = false}) => Container(height: compact ? 62 : 72, padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 12), decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFECE7F2)))), child: Row(children: [
     Padding(
       padding: const EdgeInsetsDirectional.only(end: 4),
-      child: Image.asset(
-        'assets/images/silsila_logo.png',
+      child: const SilsilaWhiteLogo(
         width: 38,
         height: 38,
-        fit: BoxFit.contain,
       ),
     ),
     if (compact)
