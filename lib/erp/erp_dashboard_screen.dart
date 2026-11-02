@@ -1151,7 +1151,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                       _page == 'بيانات المخازن' ||
                       _page == 'دليل المخازن والفروع' ||
                       _page == 'دليل المخازن' ||
-                      _page == 'دليل الأصناف'
+                      _page == 'دليل الأصناف' ||
+                      _page == 'حركة نقدية' || _page == 'أمر صرف / توريد نقدية' ||
+                      _page == 'أمر صرف شيكات' || _page == 'حركة صرف / توريد شيكات' ||
+                      _page == 'تسجيل دفاتر شيكات' || _page == 'متابعة الشيكات' ||
+                      _page == 'شيكات الائتمان' || _page == 'السياسات المحاسبية'
                     )
                         ? Padding(
                             padding: EdgeInsets.all(pagePadding),
@@ -1160,7 +1164,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                   ? ErpGeographicDataScreen(
                                       companyId: _appManagementCompanyId,
                                     )
-                                  : _page == 'الفروع'
+                                  : (_page == 'حركة نقدية' || _page == 'أمر صرف / توريد نقدية' || _page == 'أمر صرف شيكات' || _page == 'حركة صرف / توريد شيكات' || _page == 'تسجيل دفاتر شيكات' || _page == 'متابعة الشيكات' || _page == 'شيكات الائتمان' || _page == 'السياسات المحاسبية')
+                                      ? ErpFinancialOperationsScreen(companyId: _appManagementCompanyId, initialView: _page)
+                                      : _page == 'الفروع'
                                       ? ErpBranchesScreen(companyId: _appManagementCompanyId, embedded: true)
                                       : (_page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة')
                                       ? ErpCostCentersScreen(companyId: _appManagementCompanyId)
