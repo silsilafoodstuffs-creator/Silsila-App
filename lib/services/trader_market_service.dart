@@ -493,9 +493,13 @@ class TraderMarketService {
   Future<void> moderatePost(String postId, {required bool publish}) async {
     final id = int.tryParse(postId);
     if (id == null) throw ArgumentError('معرّف الطلب غير صالح.');
+    final now=DateTime.now().toUtc();
     await _requireClient.from('trader_market_posts').update({
       'is_active': publish, 'status': publish ? 'active' : 'archived',
       'moderation_status': publish ? 'published' : 'archived',
+      if(publish) 'published_at': now.toIso8601String(),
+      if(publish) 'expires_at': now.add(const Duration(hours:24)).toIso8601String(),
+      if(publish) 'duration_hours': 24,
     }).eq('id', id);
   }
 
