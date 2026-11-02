@@ -627,7 +627,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       final item=link?['erp_items'] is Map?Map<String,dynamic>.from(link!['erp_items']):<String,dynamic>{};
       return ListTile(dense:true,title:Text((item['item_name']??'صنف').toString()),
         subtitle:Text('الكمية ${line['quantity']} × ${line['unit_price']} • خصم ${line['discount']}'),
-        trailing:IconButton(icon:const Icon(Icons.close,color:Colors.redAccent),onPressed:()=>setState(()=>_draftLines.removeAt(entry.key)));
+        trailing:IconButton(icon:const Icon(Icons.close,color:Colors.redAccent),onPressed:()=>setState(()=>_draftLines.removeAt(entry.key))));
     }),
     TextField(controller:_docTax,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'ضريبة المستند')),
     TextField(controller:_docNotes,decoration:const InputDecoration(labelText:'ملاحظات')),
@@ -937,7 +937,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: count == 1 ? 4.2 : 2.4,
       children: tiles.map((t) => InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => setState(() => _area = t.$1 == 'بياناتي الأساسية' || t.$1 == 'حركات نشاطي' || t.$1 == 'تقارير نشاطي' ? t.$1 : t.$1),
+        onTap: () => setState(() { _area = t.$1; if (t.$1 == 'فاتورة شراء / مرتجع شراء') _documentType = 'purchase'; if (t.$1 == 'فاتورة بيع / مرتجع بيع') _documentType = 'sale'; }),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE8E0F0))),
