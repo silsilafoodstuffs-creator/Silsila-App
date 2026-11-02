@@ -6725,6 +6725,9 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
               if (quantity != null) 'الكمية: $quantity ${post['unit'] ?? ''}',
               if (targetPrice != null) 'السعر: $targetPrice جنيه',
               if (governorate.isNotEmpty) governorate,
+              if ((post['owner_display_name'] ?? '').toString().isNotEmpty) 'صاحب الطلب: ${post['owner_display_name']}',
+              if ((post['owner_phone'] ?? contactPhone).toString().isNotEmpty) 'الهاتف: ${post['owner_phone'] ?? contactPhone}',
+              if ((post['owner_address'] ?? '').toString().isNotEmpty) 'العنوان: ${post['owner_address']}',
               if (contactPhone.isNotEmpty) 'للتواصل: $contactPhone',
               details,
             ].where((part) => part.toString().trim().isNotEmpty).join('\n');
