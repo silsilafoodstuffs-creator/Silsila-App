@@ -35,7 +35,7 @@ class ErpCashboxesRepository {
   Future<void> createCashbox({
     required String companyId, required String code, required String name, required String nameEn,
     required String accountId, String? branchId, required bool isBank,
-    String? bankName, String? accountNumberMasked,
+    String? bankName, String? accountNumberMasked, int checkbookSheetCount = 50,
   }) async {
     if (code.trim().isEmpty || name.trim().isEmpty || nameEn.trim().isEmpty || accountId.isEmpty) {
       throw ArgumentError('كود الخزينة والاسمان العربي والإنجليزي وحساب الأستاذ حقول مطلوبة.');
@@ -49,6 +49,7 @@ class ErpCashboxesRepository {
       'account_id': accountId, 'branch_id': branchId, 'is_bank_account': isBank,
       'bank_name': _blank(bankName), 'account_number_masked': masked,
       'is_active': true,
+      'checkbook_sheet_count': isBank ? checkbookSheetCount : 50,
     });
   }
 
