@@ -150,3 +150,13 @@
 ### حدود الاعتماد النهائي
 
 نجاح CI وبناء APK لا يثبت تشغيل التطبيق على هاتف حقيقي أو اختبار دورة CRUD من جلسة مستخدم فعلية. يظل اختبار الجهاز الفعلي والواجهة التفاعلية، وتفعيل حماية كلمات المرور المسرّبة، وقرار التعامل مع جداول الأرشيف، بنودًا مفتوحة قبل إعلان اكتمال 100%.
+
+
+### معالجة ملاحظتي أداء مؤكّدتين — 2026-11-02
+
+- عرّف فحص الفهارس أن `erp_attendance_company_date_idx` و`erp_attendance_company_day_idx` لهما التعريف نفسه تمامًا: `(company_id, work_date)`. أُزيل الفهرس المكرر مع الإبقاء على الأول.
+- أُنشئ الفهرس `erp_payment_methods_cashbox_id_idx` على `erp_payment_methods(cashbox_id)` لدعم المفتاح الأجنبي `erp_payment_methods_cashbox_id_fkey`.
+- تم تنفيذ التغيير عبر migration مسجل في Supabase باسم `remove_duplicate_attendance_add_payment_cashbox_fk_index`، وأضيف ملف SQL المقابل إلى المستودع: `supabase/migrations/20261102_remove_duplicate_attendance_add_payment_cashbox_fk_index.sql`.
+- تحقق SQL بعد التطبيق أكد بقاء الفهرس الأساسي للحضور، واختفاء المكرر، ووجود فهرس cashbox.
+- إعادة فحص Performance Advisor لم تعد تعرض تحذير `unindexed_foreign_keys` ولا `duplicate_index`. زاد عدد الفهارس غير المستخدمة المرصودة مؤقتًا لأن الفهرس الجديد لم يُستخدم بعد في workload الإنتاج؛ لا يُحذف لهذا السبب قبل مراقبة فعلية.
+- Commit توثيق ومigration قاعدة البيانات: `44326cc2b192c1e0a50ace50f59c468b138c3af2`. اختبارات CI لهذا الـ commit قيد التنفيذ عند آخر فحص.
