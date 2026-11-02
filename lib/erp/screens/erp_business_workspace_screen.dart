@@ -18,6 +18,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   bool _saving = false;
   String? _error;
   String _area = 'الرئيسية';
+  String _accountKind = 'customer';
   int _basicTab = 0;
   final _name = TextEditingController();
   final _activity = TextEditingController();
@@ -89,7 +90,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         'owner_user_id': user.id,
         'workspace_name': name,
         'activity_type': _activity.text.trim(),
-        'account_kind': 'customer',
+        'account_kind': _accountKind,
       }).select().single();
       if (!mounted) return;
       setState(() {
@@ -146,6 +147,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم النشاط *')),
         const SizedBox(height: 10),
         TextField(controller: _activity, decoration: const InputDecoration(labelText: 'نوع النشاط')),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(value: _accountKind, decoration: const InputDecoration(labelText: 'نوع الحساب'), items: const [DropdownMenuItem(value: 'customer', child: Text('عميل')), DropdownMenuItem(value: 'supplier', child: Text('مورد')), DropdownMenuItem(value: 'other', child: Text('نوع آخر'))], onChanged: (v) { if (v != null) _accountKind = v; }),
       ])),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
