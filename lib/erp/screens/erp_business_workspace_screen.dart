@@ -42,6 +42,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _documents = [];
   List<Map<String, dynamic>> _stockMovements = [];
+  List<Map<String, dynamic>> _workspaceComparisonRows = [];
+  bool _comparisonLoaded = false;
+  bool _comparisonLoading = false;
   List<Map<String, dynamic>> _memberLocations = [];
   String? _selectedLocationMemberUserId;
   List<Map<String, dynamic>> _draftLines = [];
@@ -429,6 +432,58 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       _message('تم تفعيل الصنف داخل هذا النشاط فقط.');
     } catch (e) { _message('تعذر ربط الصنف: $e'); }
   }
+
+  Future<void> _loadWorkspaceStockComparison() async {
+    final workspaceId=_selected?['id']?.toString();
+    if(workspaceId==null)return;
+    setState(()=>_comparisonLoading=true);
+    try{
+      final rows=await _db.rpc('erp_get_workspace_silsila_stock',params:{
+        'p_workspace_id':workspaceId,'p_item_link_id':null,
+      });
+      if(!mounted)return;
+      setState((){
+        _workspaceComparisonRows=List<Map<String,dynamic>>.from(rows as List);
+        _comparisonLoaded=true;
+        _comparisonLoading=false;
+      });
+    }catch(e){
+      if(!mounted)return;
+      setState(()=>_comparisonLoading=false);
+      _message('تعذر مقارنة المخزون مع سلسلة: $e');
+    }
+  }
+
+  Widget _workspaceStockComparisonTab() => Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    _sectionTitle('مقارنة مخزوني مع سلسلة','يعرض رصيد نشاطك مقابل المتاح في مخازن سلسلة بعد خصم الكميات المحجوزة'),
+    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_comparisonLoading?null:_loadWorkspaceStockComparison,icon:const Icon(Icons.refresh),label:const Text('تحديث المقارنة'))),
+    const SizedBox(height:8),
+    Expanded(child:_comparisonLoading?const Center(child:CircularProgressIndicator()):!_comparisonLoaded
+      ? const Center(child:Text('اضغط تحديث المقارنة لعرض أرصدة الأصناف المرتبطة.'))
+      : _workspaceComparisonRows.isEmpty
+        ? const Center(child:Text('لا توجد أصناف مفعلة مرتبطة بدليل سلسلة في هذا النشاط.'))
+        : ListView(children:_workspaceComparisonRows.map((row){
+          final own=double.tryParse(row['workspace_quantity'].toString())??0;
+          final min=double.tryParse(row['reorder_level'].toString())??0;
+          final central=double.tryParse(row['central_available'].toString())??0;
+          final shortage=(min-own).clamp(0,double.infinity).toDouble();
+          final suggested=shortage<central?shortage:central;
+          final needs=shortage>0;
+          return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+            Text('${row['item_name']} • ${row['item_code']}',style:const TextStyle(fontWeight:FontWeight.w900,color:_workspacePurple)),
+            Text('الوحدة: ${row['base_unit']} • حد إعادة الطلب: ${min.toStringAsFixed(2)}',style:const TextStyle(color:Colors.black54,fontSize:12)),
+            const SizedBox(height:8),
+            Wrap(spacing:16,runSpacing:8,children:[
+              Text('رصيد نشاطي: ${own.toStringAsFixed(2)}'),
+              Text('متاح في سلسلة: ${central.toStringAsFixed(2)}',style:const TextStyle(fontWeight:FontWeight.w800)),
+              Text('محجوز في سلسلة: ${row['central_reserved']}'),
+            ]),
+            const Divider(),
+            Text(!needs?'رصيد نشاطك أعلى من حد إعادة الطلب':suggested>0?'كمية مقترحة لتغطية النقص: ${suggested.toStringAsFixed(2)}':'يوجد نقص، لكن لا توجد كمية متاحة حالياً في سلسلة',
+              style:TextStyle(fontWeight:FontWeight.w800,color:!needs?Colors.green:suggested>0?_workspaceOrange:Colors.redAccent)),
+          ])));
+        }).toList())),
+  ]);
 
   Future<void> _recordOpening() async {
     final id = _selected?['id']?.toString();
@@ -1116,10 +1171,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       ChoiceChip(label: const Text('اختيار الأصناف'), selected: _stockTab == 0, onSelected: (_) async { setState(() => _stockTab = 0); if (_platformItems.isEmpty) await _loadPlatformItems(); }),
       ChoiceChip(label: const Text('افتتاحي مخازني'), selected: _stockTab == 1, onSelected: (_) => setState(() => _stockTab = 1)),
       ChoiceChip(label: const Text('إضافة صنف جديد'), selected: _stockTab == 2, onSelected: (_) => setState(() => _stockTab = 2)),
+      ChoiceChip(label: const Text('مقارنة مع سلسلة'), selected: _stockTab == 3, onSelected: (_) async { setState(() => _stockTab = 3); await _loadWorkspaceStockComparison(); }),
     ]),
     const SizedBox(height: 10),
     Expanded(child: IndexedStack(index: _stockTab, children: [
-      _itemSelectionTab(), _openingStockTab(), _itemProposalTab(),
+      _itemSelectionTab(), _openingStockTab(), _itemProposalTab(), _workspaceStockComparisonTab(),
     ])),
   ]);
 
