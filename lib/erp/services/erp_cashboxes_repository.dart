@@ -56,6 +56,11 @@ class ErpCashboxesRepository {
     });
   }
 
+  Future<void> updateCheckbookSheetCount(String id, int count) async {
+    if (count < 1 || count > 1000) throw ArgumentError('عدد أوراق دفتر الشيكات يجب أن يكون بين 1 و1000.');
+    await _db.from('erp_cashboxes').update({'checkbook_sheet_count': count}).eq('id', id).eq('is_bank_account', true);
+  }
+
   Future<void> setActive(String id, bool active) async {
     await _db.from('erp_cashboxes').update({'is_active': active}).eq('id', id);
   }
