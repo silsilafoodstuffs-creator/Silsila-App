@@ -62,6 +62,16 @@ void main() {
     expect(tester.widget<Image>(find.byType(Image)).image, isA<MemoryImage>());
   });
 
+  testWidgets('login screen uses the white-background Silsila logo variant',
+      (tester) async {
+    await tester.pumpWidget(const SilsilaApp());
+    await tester.tap(find.text('ابدأ'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SilsilaWhiteLogo), findsOneWidget);
+    expect(find.text('Get Started'), findsNothing);
+  });
+
   testWidgets('login flow requests email and password, not phone OTP',
       (tester) async {
     await tester.pumpWidget(const SilsilaApp());
