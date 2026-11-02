@@ -132,8 +132,8 @@ class StoryService {
   }
 
   Future<void> deleteStory(String storyId) async {
-    final id = storyId.trim();
-    if (id.isEmpty) throw ArgumentError('معرّف القصة غير صالح.');
+    final id = int.tryParse(storyId);
+    if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
     await _requireClient.from('stories').delete().eq('id', id).eq('user_id', _userId);
   }
 
