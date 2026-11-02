@@ -36,7 +36,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   }
   @override void initState() {
     super.initState(); try { db=Supabase.instance.client; } catch (_) {}
-    tabs=TabController(length:7,vsync:this,initialIndex:initial());
+    tabs=TabController(length:8,vsync:this,initialIndex:initial());
     if(company.isNotEmpty) WidgetsBinding.instance.addPostFrameCallback((_)=>load());
   }
   @override void dispose() {
@@ -149,10 +149,13 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   }
   Future<void> issueCheque(bool order) async {
     final v=double.tryParse(chequeAmount.text.trim()), issue=DateTime.tryParse(issueDate.text), due=DateTime.tryParse(dueDate.text);
-    if(chequeId==null||v==null||v<=0||partyName.text.trim().isEmpty){setState(()=>error='اختر شيكًا متاحًا وأدخل المستفيد والقيمة الموجبة.');return;}
+    if(v==null||v<=0||partyName.text.trim().isEmpty){setState(()=>error='اختر شيكًا متاحًا أو أدخل رقم شيك ائتمان، مع المستفيد والقيمة الموجبة.');return;}
+    if(chequeType=='bank'&&chequeId==null){setState(()=>error='لا يمكن اختيار إلا رقم شيك بنكي متاح غير مستخدم.');return;}
+    if(chequeType=='credit'&&(bankId==null||int.tryParse(firstCheck.text.trim())==null)){setState(()=>error='حدد الحساب البنكي ورقم شيك الائتمان.');return;}
     if(issue==null||due==null||due.isBefore(issue)){setState(()=>error='تاريخ الاستحقاق لا يسبق تاريخ الإصدار.');return;}
     if(chequeType=='credit'&&!allowCredit){setState(()=>error='شيكات الائتمان غير مفعلة في السياسات.');return;}
-    final ch=cheques.firstWhere((x)=>s(x['id'])==chequeId);
+    Map<String,dynamic> ch={};
+    if(chequeType=='bank'){ch=cheques.firstWhere((x)=>s(x['id'])==chequeId);} else {ch=await db!.from('erp_cheques').insert({'company_id':company,'bank_cashbox_id':bankId,'check_number':int.parse(firstCheck.text.trim()),'cheque_type':'credit','direction':chequeDirection,'issue_date':issueDate.text,'amount':v,'status':'available','created_by':db!.auth.currentUser?.id}).select().single(); chequeId=s(ch['id']);}
     await run(()async{
       await db!.rpc('erp_issue_cheque',params:{'p_cheque_id':chequeId,'p_cheque_type':chequeType,'p_direction':chequeDirection,'p_issue_date':issueDate.text,'p_due_date':dueDate.text,'p_amount':v,'p_payee_type':partyType,'p_payee_id':null,'p_payee_name':partyName.text.trim(),'p_notes':description.text});
       if(order) await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':chequeDirection,'instrument_type':'cheque','cheque_id':chequeId,'party_type':partyType,'party_name':partyName.text.trim(),'amount':v,'description':'شيك رقم '+s(ch['check_number']),'created_by':db!.auth.currentUser?.id});
@@ -207,7 +210,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:saveOrder,child:const Text('حفظ الأمر'))),
     ]))),
     section('أوامر الصرف / التوريد النقدية',orders.where((o)=>s(o['instrument_type'])!='cheque').length),
-    grid(['المسلسل','النوع','الجهة','القيمة','الحالة','المستخدم'],orders.where((o)=>s(o['instrument_type'])!='cheque').map((r)=>[s(r['order_number']),s(r['order_type']),s(r['party_name']),money(r['amount']),s(r['status']),users.where((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id'])).map((u)=>s(u['name_ar'])).firstOrNull??'عام']).toList())
+    grid(['المسلسل','النوع','الجهة','القيمة','الحالة','المستخدم'],orders.where((o)=>s(o['instrument_type'])!='cheque').map((r)=>[s(r['order_number']),s(r['order_type']),s(r['party_name']),money(r['amount']),s(r['status']),users.where((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id'])).isEmpty?'عام':users.firstWhere((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id']))['name_ar'].toString()]).toList())
   ]);
   Widget chequeView(bool isOrder)=>Column(children:[
     Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
