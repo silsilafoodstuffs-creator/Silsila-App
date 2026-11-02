@@ -65,7 +65,7 @@ class StoryService {
     if (userIds.isNotEmpty) {
       try {
         final profiles = await _requireClient
-            .from('profiles')
+            .from('profile_public_directory')
             .select('id, full_name, avatar_url, role, account_type')
             .inFilter('id', userIds);
         final byId = <String, Map<String, dynamic>>{
