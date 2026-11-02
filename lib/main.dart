@@ -6739,6 +6739,9 @@ class _MarketPostsSectionState extends State<MarketPostsSection> {
               title: title,
               type: type == 'transfer' ? 'عايز أنقل' : isBuy ? 'عايز أشتري' : 'عايز أبيع',
               details: subtitle,
+              ownerDisplayName: (post['owner_display_name'] ?? '').toString(),
+              ownerPhone: (post['owner_phone'] ?? contactPhone).toString(),
+              ownerAddress: (post['owner_address'] ?? '').toString(),
               color: color,
             );
           }).toList(),
@@ -8377,6 +8380,9 @@ class MarketCard extends StatefulWidget {
     required this.title,
     required this.type,
     required this.details,
+    this.ownerDisplayName = '',
+    this.ownerPhone = '',
+    this.ownerAddress = '',
     required this.color,
   });
 
@@ -8387,6 +8393,9 @@ class MarketCard extends StatefulWidget {
   final String title;
   final String type;
   final String details;
+  final String ownerDisplayName;
+  final String ownerPhone;
+  final String ownerAddress;
   final Color color;
 
   @override
@@ -8603,6 +8612,9 @@ class _MarketCardState extends State<MarketCard> {
                       style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                       Text(_remainingTime(), style: TextStyle(color: widget.color, fontSize: 10, fontWeight: FontWeight.w600)),
+                      if (widget.ownerDisplayName.isNotEmpty) Text(widget.ownerDisplayName, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+                      if (widget.ownerPhone.isNotEmpty) Text(widget.ownerPhone, style: const TextStyle(color: Colors.white, fontSize: 10)),
+                      if (widget.ownerAddress.isNotEmpty) Text(widget.ownerAddress, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 10)),
                     ]),
                   ),
                   const SizedBox(width: 34),
