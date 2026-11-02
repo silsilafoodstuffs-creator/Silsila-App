@@ -1442,7 +1442,7 @@ class _MainShellState extends State<MainShell> {
           (row['name'] ?? '').toString(),
           category,
           price,
-          (row['unit'] ?? 'وحدة').toString(),
+          (row['unit'] ?? 'كبري').toString(),
           _iconForCategory(category),
           id: (id == null || id.isEmpty) ? null : id,
           supplierId: row['supplier_id']?.toString(),
@@ -2411,7 +2411,7 @@ class _MainShellState extends State<MainShell> {
                   if (product.brand != null)
                     Text('الماركة: ${product.brand}', style: const TextStyle(fontSize: 11, color: Colors.black54)),
                   Text(
-                    '${product.unit}${product.packageCount > 1 ? ' • ${product.packageCount} ${product.smallUnit ?? 'وحدة'}' : ''}',
+                    '${product.unit}${product.packageCount > 1 ? ' • ${product.packageCount} ${product.smallUnit ?? 'كبري'}' : ''}',
                     style: const TextStyle(fontSize: 11, color: Colors.black54),
                   ),
                   Row(children: [
@@ -3127,7 +3127,7 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
       (row['name'] ?? '').toString(),
       category,
       price,
-      (row['unit'] ?? 'وحدة').toString(),
+      (row['unit'] ?? 'كبري').toString(),
       Icons.shopping_basket,
       id: (id == null || id.isEmpty) ? null : id,
       supplierId: row['supplier_id']?.toString(),
@@ -3433,7 +3433,7 @@ class _SupplierProductsScreenState extends State<SupplierProductsScreen> {
                   ),
                 ),
                 title: Text((product['name'] ?? '').toString()),
-                subtitle: Text('${product['category'] ?? 'بدون قسم'} • ${product['price'] ?? 0} ج.م / ${product['unit'] ?? 'وحدة'}'
+                subtitle: Text('${product['category'] ?? 'بدون قسم'} • ${product['price'] ?? 0} ج.م / ${product['unit'] ?? 'كبري'}'
                     '\nالحد الأدنى: ${product['min_quantity'] ?? product['minimum_quantity'] ?? 1}'
                     '\nالمخزون: ${product['track_inventory'] == true ? product['stock_quantity'] : 'غير متتبع'}'),
                 isThreeLine: true,
@@ -6862,21 +6862,22 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         final name=(product['name']??'').toString();
         return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,value:selectedProducts.contains(name),title:Text(name),onChanged:(v)=>setState((){
-            if(v==true){selectedProducts.add(name);_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[name]=(product['unit']??'وحدة').toString();_productQuality[name]='good';_productNegotiable[name]=false;}
+            if(v==true){selectedProducts.add(name);_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[name]=(product['unit']??'كبري').toString();_productQuality[name]='good';_productNegotiable[name]=false;}
             else selectedProducts.remove(name);
             selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
           })),
           if(selectedProducts.contains(name))Padding(padding:const EdgeInsets.only(bottom:8),child:Row(children:[
             Expanded(child:TextField(controller:_productQuantities[name],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية',hintText:'0.000',isDense:true,border:OutlineInputBorder()))),
             const SizedBox(width:6),
-            Expanded(child:DropdownButtonFormField<String>(value:_productUnits[name],isExpanded:true,decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),items:{_productUnits[name]??'وحدة','كرتونة','علبة','عبوة','كيلو','جرام','طن','قطعة','لتر'}.map((u)=>DropdownMenuItem(value:u,child:Text(u,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_productUnits[name]=v);})),
+            Expanded(child:DropdownButtonFormField<String>(value:_productUnits[name],isExpanded:true,decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),items:{_productUnits[name]??'كبري','كرتونة','علبة','عبوة','كيلو','جرام','طن','قطعة','لتر'}.map((u)=>DropdownMenuItem(value:u,child:Text(u,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_productUnits[name]=v);})),
             const SizedBox(width:6),
             Expanded(child:TextField(controller:_productPrices[name],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر',isDense:true,border:OutlineInputBorder()))),
+            const SizedBox(width:4),
+            SizedBox(width:116,child:CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,controlAffinity:ListTileControlAffinity.leading,title:const Text('قابل للتفاوض',style:TextStyle(fontSize:10)),value:_productNegotiable[name]==true,onChanged:(v)=>setState(()=>_productNegotiable[name]=v==true))),
           ])),
           if(selectedProducts.contains(name)) Padding(padding:const EdgeInsets.only(bottom:6),child:Wrap(spacing:8,runSpacing:2,children:[
             FilterChip(label:const Text('صلاحية جيدة'),selected:(_productQuality[name]??'good')=='good',onSelected:(v)=>setState(()=>_productQuality[name]=v?'good':'near_expiry')),
             FilterChip(label:const Text('صلاحية قريبة'),selected:(_productQuality[name]??'good')=='near_expiry',onSelected:(v)=>setState(()=>_productQuality[name]=v?'near_expiry':'good')),
-            FilterChip(label:const Text('قابل للتفاوض'),selected:_productNegotiable[name]==true,onSelected:(v)=>setState(()=>_productNegotiable[name]=v)),
           ])),
           if(type=='sell'&&(_productQuality[name]??'good')=='near_expiry') ListTile(contentPadding:const EdgeInsets.zero,dense:true,title:const Text('تاريخ انتهاء الصلاحية'),subtitle:Text(_productExpiryDates[name]?.toIso8601String().split('T').first??'مطلوب عند اختيار صلاحية قريبة'),trailing:IconButton(icon:const Icon(Icons.calendar_month),onPressed:()async{final now=DateTime.now();final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:_productExpiryDates[name]??now.add(const Duration(days:30)));if(d!=null)setState(()=>_productExpiryDates[name]=d);})),
         ]);
@@ -6930,7 +6931,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       final product = matchingProducts.isEmpty ? null : matchingProducts.first;
       itemsData.add({
         'product_id':product?['id'],'product_name':name,'quantity':qty,
-        'unit':_productUnits[name] ?? product?['unit'] ?? 'وحدة',
+        'unit':_productUnits[name] ?? product?['unit'] ?? 'كبري',
         'price':price,'is_negotiable':_productNegotiable[name]??isNegotiable,'quality_preference':_productQuality[name]??'good','expiry_condition_date':_productExpiryDates[name]?.toIso8601String().split('T').first,
       });
     }
@@ -7025,7 +7026,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
                 onPressed: () => setState(() {
                   selectAllProducts = !selectAllProducts;
                   selectedProducts..clear()..addAll(selectAllProducts ? (_marketProducts.isNotEmpty ? _marketProducts.map((p)=>(p['name']??'').toString()) : widget.availableProducts.map((p)=>p.name)) : const <String>[]);
-                  if(selectAllProducts){for(final p in _marketProducts){final name=(p['name']??'').toString();_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(p['price']??'0').toString()));_productUnits[name]=(p['unit']??'وحدة').toString();}}
+                  if(selectAllProducts){for(final p in _marketProducts){final name=(p['name']??'').toString();_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(p['price']??'0').toString()));_productUnits[name]=(p['unit']??'كبري').toString();}}
                 }),
                 child: Text(selectAllProducts ? 'إلغاء تحديد الكل' : 'تحديد الكل'),
               ),
@@ -7130,7 +7131,7 @@ class _MyMarketPostsScreenState extends State<MyMarketPostsScreen> {
     for(final item in items){
       quantities.add(TextEditingController(text:(item['quantity']??'').toString()));
       prices.add(TextEditingController(text:(item['price']??'').toString()));
-      units.add(TextEditingController(text:(item['unit']??'وحدة').toString()));
+      units.add(TextEditingController(text:(item['unit']??'كبري').toString()));
     }
     final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
       title:const Text('تعديل طلب سوق التجار'),
