@@ -112,8 +112,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _itemLinks = List<Map<String, dynamic>>.from(result[3]);
         _openings = List<Map<String, dynamic>>.from(result[4]);
         _proposals = List<Map<String, dynamic>>.from(result[5]);
-        _selectedStockWarehouseId ??= _warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null;
-        _selectedStockItemLinkId ??= _itemLinks.isNotEmpty ? _itemLinks.first['id'].toString() : null;
+        _selectedStockWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
+        _selectedStockItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedStockItemLinkId) ? _selectedStockItemLinkId : (_itemLinks.isNotEmpty ? _itemLinks.first['id'].toString() : null);
       });
     } catch (e) {
       if (mounted) setState(() => _error = 'تعذر تحميل الفروع والمخازن: $e');
@@ -569,8 +569,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     const Divider(),
     _sectionTitle('الأرصدة المسجلة', '${_openings.length} رصيد افتتاحي'),
     ..._openings.map((o) {
-      final wh = _warehouses.where((x) => x['id'].toString() == o['warehouse_id'].toString()).firstOrNull;
-      final link = _itemLinks.where((x) => x['id'].toString() == o['item_link_id'].toString()).firstOrNull;
+      final whRows = _warehouses.where((x) => x['id'].toString() == o['warehouse_id'].toString());
+      final linkRows = _itemLinks.where((x) => x['id'].toString() == o['item_link_id'].toString());
+      final wh = whRows.isEmpty ? null : whRows.first;
+      final link = linkRows.isEmpty ? null : linkRows.first;
       final item = link?['erp_items'] is Map ? Map<String,dynamic>.from(link!['erp_items']) : <String,dynamic>{};
       return ListTile(dense:true, title:Text((item['item_name'] ?? 'صنف').toString()),
         subtitle:Text('${wh?['name_ar'] ?? 'مخزن'} • تكلفة الوحدة: ${o['unit_cost']}'),
