@@ -6866,19 +6866,19 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             else selectedProducts.remove(name);
             selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
           })),
-          if(selectedProducts.contains(name))Padding(padding:const EdgeInsetsDirectional.only(start:32,bottom:8),child:Row(children:[
+          if(selectedProducts.contains(name))Padding(padding:const EdgeInsets.only(bottom:8),child:Row(children:[
             Expanded(child:TextField(controller:_productQuantities[name],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية',hintText:'0.000',isDense:true,border:OutlineInputBorder()))),
             const SizedBox(width:6),
             Expanded(child:DropdownButtonFormField<String>(value:_productUnits[name],isExpanded:true,decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),items:{_productUnits[name]??'وحدة','كرتونة','علبة','عبوة','كيلو','جرام','طن','قطعة','لتر'}.map((u)=>DropdownMenuItem(value:u,child:Text(u,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_productUnits[name]=v);})),
             const SizedBox(width:6),
             Expanded(child:TextField(controller:_productPrices[name],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر',isDense:true,border:OutlineInputBorder()))),
           ])),
-          if(selectedProducts.contains(name)) Padding(padding:const EdgeInsetsDirectional.only(start:32,bottom:6),child:Wrap(spacing:8,runSpacing:2,children:[
+          if(selectedProducts.contains(name)) Padding(padding:const EdgeInsets.only(bottom:6),child:Wrap(spacing:8,runSpacing:2,children:[
             FilterChip(label:const Text('صلاحية جيدة'),selected:(_productQuality[name]??'good')=='good',onSelected:(v)=>setState(()=>_productQuality[name]=v?'good':'near_expiry')),
             FilterChip(label:const Text('صلاحية قريبة'),selected:(_productQuality[name]??'good')=='near_expiry',onSelected:(v)=>setState(()=>_productQuality[name]=v?'near_expiry':'good')),
             FilterChip(label:const Text('قابل للتفاوض'),selected:_productNegotiable[name]==true,onSelected:(v)=>setState(()=>_productNegotiable[name]=v)),
           ])),
-          if(type=='sell'&&(_productQuality[name]??'good')=='near_expiry') ListTile(contentPadding:const EdgeInsetsDirectional.only(start:32),dense:true,title:const Text('تاريخ انتهاء الصلاحية'),subtitle:Text(_productExpiryDates[name]?.toIso8601String().split('T').first??'اختياري — حدد التاريخ'),trailing:IconButton(icon:const Icon(Icons.calendar_month),onPressed:()async{final now=DateTime.now();final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:_productExpiryDates[name]??now.add(const Duration(days:30)));if(d!=null)setState(()=>_productExpiryDates[name]=d);})),
+          if(type=='sell'&&(_productQuality[name]??'good')=='near_expiry') ListTile(contentPadding:const EdgeInsets.zero,dense:true,title:const Text('تاريخ انتهاء الصلاحية'),subtitle:Text(_productExpiryDates[name]?.toIso8601String().split('T').first??'مطلوب عند اختيار صلاحية قريبة'),trailing:IconButton(icon:const Icon(Icons.calendar_month),onPressed:()async{final now=DateTime.now();final d=await showDatePicker(context:context,firstDate:DateTime(now.year,now.month,now.day),lastDate:DateTime(2100),initialDate:_productExpiryDates[name]??now.add(const Duration(days:30)));if(d!=null)setState(()=>_productExpiryDates[name]=d);})),
         ]);
       }),
       if(expanded)...children.map((child)=>_marketCategoryNode(child,depth+1)),
@@ -6926,7 +6926,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('راجع كمية وسعر كل صنف؛ الكمية حتى 4 أرقام و3 منازل عشرية.')));
         return;
       }
-      final matchingProducts = _marketProducts.where((p)=>(p['name']??'').toString()==name).toList();
+      if (type == 'sell' && (_productQuality[name] ?? 'good') == 'near_expiry' && _productExpiryDates[name] == null) {\n        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدد تاريخ انتهاء الصلاحية للصنف: $name')));\n        return;\n      }\n      final matchingProducts = _marketProducts.where((p)=>(p['name']??'').toString()==name).toList();
       final product = matchingProducts.isEmpty ? null : matchingProducts.first;
       itemsData.add({
         'product_id':product?['id'],'product_name':name,'quantity':qty,
@@ -6941,7 +6941,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     setState(() => busy = true);
     try {
       final preview = await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
-        title:Text(type=='buy'?'معاينة عايز أشتري':type=='transfer'?'معاينة عايز أنقل':'معاينة عايز أبيع'),
+        title:Text(type=='buy'?'معاينة طلب عايز أشتري':type=='transfer'?'معاينة طلب عايز أنقل':'معاينة طلب عايز أبيع'),
         content:SizedBox(width:480,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Text(titleController.text.trim(),style:const TextStyle(fontWeight:FontWeight.bold)),
           Text(detailsController.text.trim()),
@@ -7084,7 +7084,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           const SizedBox(height: 16),
           FilledButton(
             onPressed: busy ? null : savePost,
-            child: Text(busy ? 'جارٍ النشر...' : 'نشر الإعلان'),
+            child: Text(busy ? 'جارٍ الحفظ...' : 'حفظ ومعاينة الطلب'),
           ),
         ],
       );
