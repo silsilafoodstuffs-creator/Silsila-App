@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'widgets/erp_quick_task_button.dart';
-import 'widgets/silsila_white_logo.dart';
+import '../widgets/silsila_white_logo.dart';
 import 'widgets/erp_keyboard_navigation.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
