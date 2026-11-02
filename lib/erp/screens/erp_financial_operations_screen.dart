@@ -148,7 +148,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:loading?null:load),
       ErpQuickTaskButton(label:'إضافة',icon:Icons.add_circle_outline,onPressed:resetForm),
       ErpQuickTaskButton(label:'حفظ',icon:Icons.save_outlined,onPressed:saving?null:saveCurrent),
-      ErpQuickTaskButton(label:'تعديل',icon:Icons.edit_outlined,onPressed:()=>notify('التعديل متاح للمسودات وبحسب صلاحية المستخدم.')),
+      ErpQuickTaskButton(label:'تعديل',icon:Icons.edit_outlined,onPressed:editSelected),
       ErpQuickTaskButton(label:'حذف',icon:Icons.delete_outline,onPressed:deleteSelected),
       ErpQuickTaskButton(label:'معاينة',icon:Icons.preview_outlined,onPressed:previewData),
       ErpQuickTaskButton(label:'طباعة',icon:Icons.print_outlined,onPressed:printData),
@@ -157,6 +157,23 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     ]))
   ])));
   void notify(String m){if(mounted)setState(()=>message=m);}
+  Future<void> editSelected() async {
+    if(tabs.index==3){
+      final editable=cheques.where((c)=>!['paid','returned','cashed_from_cashbox','cancelled'].contains(s(c['status']))).toList();
+      if(editable.isEmpty){notify('لا توجد شيكات قابلة للتعديل.');return;}
+      final row=await showDialog<Map<String,dynamic>>(context:context,builder:(ctx)=>AlertDialog(title:const Text('اختيار شيك للتعديل'),content:SizedBox(width:480,height:330,child:ListView(children:editable.map((x)=>ListTile(title:Text('شيك '+s(x['check_number'])+' • '+s(x['payee_name'])),subtitle:Text(s(x['status'])+' • '+money(x['amount'])),onTap:()=>Navigator.pop(ctx,x))).toList()))));
+      if(row!=null)await editCheque(row);return;
+    }
+    if(tabs.index!=1){notify('التعديل متاح لمسودات أوامر النقدية والشيكات غير المسواة فقط.');return;}
+    final drafts=orders.where((o)=>s(o['instrument_type'])!='cheque'&&s(o['status'])=='draft').toList();
+    if(drafts.isEmpty){notify('لا توجد أوامر نقدية مسودة للتعديل.');return;}
+    final row=await showDialog<Map<String,dynamic>>(context:context,builder:(ctx)=>AlertDialog(title:const Text('اختيار أمر للتعديل'),content:SizedBox(width:480,height:330,child:ListView(children:drafts.map((x)=>ListTile(title:Text(s(x['order_number'])+' • '+s(x['party_name'])),subtitle:Text(money(x['amount'])),onTap:()=>Navigator.pop(ctx,x))).toList()))));
+    if(row==null)return;
+    final value=TextEditingController(text:money(row['amount']));final name=TextEditingController(text:s(row['party_name']));final note=TextEditingController(text:s(row['description']));
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:Text('تعديل '+s(row['order_number'])),content:SizedBox(width:450,child:Column(mainAxisSize:MainAxisSize.min,children:[field(name,'الجهة'),const SizedBox(height:8),field(value,'القيمة الموجبة',numeric:true),const SizedBox(height:8),field(note,'البيان')])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ'))]));
+    if(ok==true){final v=double.tryParse(value.text);if(v==null||v<=0||name.text.trim().isEmpty){notify('أدخل جهة صحيحة وقيمة موجبة.');}else await run(()async{await db!.from('erp_cash_orders').update({'party_name':name.text.trim(),'amount':v,'description':note.text.trim(),'updated_at':DateTime.now().toIso8601String()}).eq('id',s(row['id'])).eq('status','draft');},'تم تعديل أمر الصرف / التوريد.');}
+    value.dispose();name.dispose();note.dispose();
+  }
   Future<void> deleteSelected() async {
     final drafts=orders.where((o)=>s(o['instrument_type'])!='cheque'&&s(o['status'])=='draft').toList();
     if(tabs.index!=1||drafts.isEmpty){notify('لا يوجد مستند مسودة قابل للإلغاء في الشاشة الحالية. الحركات والشيكات المسواة محفوظة كسجل تدقيقي.');return;}
