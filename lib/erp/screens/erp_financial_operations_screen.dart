@@ -16,7 +16,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   SupabaseClient? db;
   late final TabController tabs;
   bool loading = false, saving = false, directMode = true, requireApproval = true, allowCredit = true;
-  String? error, message, fromId, toId, bankId, chequeId, assigneeId, salesId, counterAccountId;
+  String? error, message, fromId, toId, bankId, chequeId, assigneeId, salesId, counterAccountId, orderPartyId;
   String movementType = 'receipt', fromType = 'customer', toType = 'cashbox', orderType = 'payment';
   String partyType = 'supplier', chequeType = 'bank', chequeDirection = 'payment', trackingFilter = 'all';
   final amount = TextEditingController(), description = TextEditingController(), fromName = TextEditingController(), toName = TextEditingController();
@@ -176,9 +176,9 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   }
   Future<void> saveOrder() async {
     final v=double.tryParse(amount.text.trim());
-    if(v==null||v<=0||partyName.text.trim().isEmpty){setState(()=>error='أدخل الجهة والقيمة الموجبة.');return;}
+    if(v==null||v<=0||partyName.text.trim().isEmpty||orderPartyId==null){setState(()=>error='اختر الجهة من البحث وأدخل القيمة الموجبة.');return;}
     if(!directMode&&salesId==null){setState(()=>error='السياسة تشترط ربط أمر الصرف بأمر بيع.');return;}
-    await run(()async{await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':orderType,'party_type':partyType,'party_name':partyName.text.trim(),'amount':v,'description':description.text,'sales_document_id':salesId,'assigned_to_user_id':assigneeId,'status':requireApproval?'draft':'approved','created_by':db!.auth.currentUser?.id});amount.clear();partyName.clear();description.clear();},'تم حفظ أمر الصرف / التوريد.');
+    await run(()async{await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':orderType,'party_type':partyType,'party_name':partyName.text.trim(),'party_id':orderPartyId,'amount':v,'description':description.text,'sales_document_id':salesId,'assigned_to_user_id':assigneeId,'status':requireApproval?'draft':'approved','created_by':db!.auth.currentUser?.id});amount.clear();partyName.clear();description.clear();orderPartyId=null;},'تم حفظ أمر الصرف / التوريد.');
   }
   Future<void> registerBook() async {
     final start=int.tryParse(firstCheck.text.trim());
@@ -264,8 +264,8 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   ]);
   Widget orderView()=>Column(children:[
     Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
-      Row(children:[Expanded(child:drop('نوع الأمر',orderType,const[DropdownMenuItem(value:'payment',child:Text('أمر صرف نقدية')),DropdownMenuItem(value:'receipt',child:Text('أمر توريد نقدية'))],(v)=>setState(()=>orderType=v??orderType))),const SizedBox(width:8),Expanded(child:drop('نوع الجهة',partyType,const[DropdownMenuItem(value:'supplier',child:Text('مورد')),DropdownMenuItem(value:'customer',child:Text('عميل')),DropdownMenuItem(value:'expense',child:Text('بند صرف')),DropdownMenuItem(value:'bank',child:Text('بنك'))],(v)=>setState(()=>partyType=v??partyType)))]),
-      const SizedBox(height:8),field(partyName,'اسم الجهة'),const SizedBox(height:8),field(amount,'القيمة الموجبة',numeric:true),const SizedBox(height:8),field(description,'البيان'),
+      Row(children:[Expanded(child:drop('نوع الأمر',orderType,const[DropdownMenuItem(value:'payment',child:Text('أمر صرف نقدية')),DropdownMenuItem(value:'receipt',child:Text('أمر توريد نقدية'))],(v)=>setState(()=>orderType=v??orderType))),const SizedBox(width:8),Expanded(child:drop('نوع الجهة',partyType,const[DropdownMenuItem(value:'supplier',child:Text('مورد')),DropdownMenuItem(value:'customer',child:Text('عميل')),DropdownMenuItem(value:'expense',child:Text('بند صرف')),DropdownMenuItem(value:'expense',child:Text('بند صرف'))],(v)=>setState(()=>{partyType=v??partyType;orderPartyId=null;partyName.clear();})))]),
+      const SizedBox(height:8),Row(children:[Expanded(child:field(partyName,'اسم الجهة المختارة',readOnly:true)),IconButton.filledTonal(onPressed:()async{final r=await pick(partyType);if(r!=null)setState(()=>{partyName.text=entityName(r);orderPartyId=s(r['id']);});},icon:const Icon(Icons.search),tooltip:'بحث F1')]),const SizedBox(height:8),field(amount,'القيمة الموجبة',numeric:true),const SizedBox(height:8),field(description,'البيان'),
       const SizedBox(height:8),drop('يظهر لدى المستخدم',assigneeId,[const DropdownMenuItem<String>(value:null,child:Text('كل المستخدمين المصرح لهم')),...users.where((u)=>s(u['auth_user_id']).isNotEmpty).map((u)=>DropdownMenuItem(value:s(u['auth_user_id']),child:Text(s(u['name_ar']))))],(v)=>setState(()=>assigneeId=v)),
       if(!directMode)Padding(padding:const EdgeInsets.only(top:8),child:drop('أمر البيع المرتبط',salesId,[const DropdownMenuItem<String>(value:null,child:Text('اختر أمر بيع')),...sales.map((d)=>DropdownMenuItem(value:s(d['id']),child:Text('أمر '+s(d['document_number'])+' • '+money(d['grand_total']))))],(v)=>setState(()=>salesId=v))),
       Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:saveOrder,child:const Text('حفظ الأمر'))),
