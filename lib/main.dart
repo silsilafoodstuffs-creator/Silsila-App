@@ -72,7 +72,6 @@ SupabaseClient? get database {
 
 List<String> activityTypes = const <String>[];
 bool _startupIntroAdvertisementAttempted = false;
-bool _startupAdvertisementActive = false;
 
 const egyptGovernorates = [
   'القاهرة',
@@ -1087,18 +1086,17 @@ class _MainShellState extends State<MainShell> {
     if (_startupIntroAdvertisementAttempted) return;
     _startupIntroAdvertisementAttempted = true;
     final client = database;
-    _startupAdvertisementActive = true;
-    if (client == null) { _startupAdvertisementActive = false; return; }
+    if (client == null) return;
     try {
       final rows = await client.rpc('get_silsila_public_intro_ad', params: {
         'p_activity_code': activityCode,
       });
       final candidates = (rows as List).whereType<Map<String, dynamic>>();
-      if (candidates.isEmpty || !mounted) { _startupAdvertisementActive = false; return; }
+      if (candidates.isEmpty || !mounted) return;
       final row = candidates.first;
       final path = row['storage_path']?.toString() ?? '';
       final mime = row['mime_type']?.toString() ?? '';
-      if (path.isEmpty) { _startupAdvertisementActive = false; return; }
+      if (path.isEmpty) return;
       final url = client.storage.from('silsila-public-ads').getPublicUrl(path);
       final duration = ((row['duration_seconds'] as num?)?.toInt() ?? 4).clamp(1, 120).toInt();
       VideoPlayerController? video;
@@ -1108,11 +1106,11 @@ class _MainShellState extends State<MainShell> {
         await video.setLooping(true);
         await video.setVolume(0);
         await video.play();
-        if (!mounted) { await video.dispose(); _startupAdvertisementActive = false; return; }
+        if (!mounted) { await video.dispose(); return; }
         _introVideoController = video;
       }
       await Future<void>.delayed(const Duration(milliseconds: 250));
-      if (!mounted) { _startupAdvertisementActive = false; return; }
+      if (!mounted) return;
       _introAdEntry = OverlayEntry(builder: (overlayContext) => Center(
         child: Material(
           color: Colors.transparent,
@@ -1167,7 +1165,6 @@ class _MainShellState extends State<MainShell> {
     _introAdEntry = null;
     _introVideoController?.dispose();
     _introVideoController = null;
-    _startupAdvertisementActive = false;
   }
 
   Future<void> _changeActivity(String nextActivity) async {
