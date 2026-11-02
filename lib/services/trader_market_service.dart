@@ -471,9 +471,11 @@ class TraderMarketService {
   Future<Map<String, dynamic>> republishPost(String postId, {int durationHours = 24}) async =>
     extendPost(postId, durationHours);
 
-  Future<Map<String,dynamic>> updatePostDetails({required String postId,required String title,required String description}) async {
+  Future<Map<String,dynamic>> updatePostDetails({required String postId,required String title,required String description,List<Map<String,dynamic>>? itemsData}) async {
     final id=int.tryParse(postId); if(id==null) throw ArgumentError('معرّف الطلب غير صالح.');
-    final row=await _requireClient.from('trader_market_posts').update({'title':_requiredText(title,'العنوان مطلوب.',maxLength:200),'description':_requiredText(description,'التفاصيل مطلوبة.',maxLength:10000),'updated_at':DateTime.now().toUtc().toIso8601String()}).eq('id',id).eq('user_id',_userId).select().maybeSingle();
+    final data=<String,dynamic>{'title':_requiredText(title,'العنوان مطلوب.',maxLength:200),'description':_requiredText(description,'التفاصيل مطلوبة.',maxLength:10000),'updated_at':DateTime.now().toUtc().toIso8601String()};
+    if(itemsData!=null)data['items_data']=itemsData;
+    final row=await _requireClient.from('trader_market_posts').update(data).eq('id',id).eq('user_id',_userId).select().maybeSingle();
     if(row==null) throw StateError('الطلب غير موجود أو لا تملك صلاحية تعديله.');
     return Map<String,dynamic>.from(row);
   }
@@ -483,9 +485,11 @@ class TraderMarketService {
     await _requireClient.from('trader_market_posts').delete().eq('id',id);
   }
 
-  Future<Map<String,dynamic>> updatePostForModeration({required String postId,required String title,required String description}) async {
+  Future<Map<String,dynamic>> updatePostForModeration({required String postId,required String title,required String description,List<Map<String,dynamic>>? itemsData}) async {
     final id=int.tryParse(postId); if(id==null) throw ArgumentError('معرّف الطلب غير صالح.');
-    final row=await _requireClient.from('trader_market_posts').update({'title':_requiredText(title,'العنوان مطلوب.',maxLength:200),'description':_requiredText(description,'التفاصيل مطلوبة.',maxLength:10000),'updated_at':DateTime.now().toUtc().toIso8601String()}).eq('id',id).select().maybeSingle();
+    final data=<String,dynamic>{'title':_requiredText(title,'العنوان مطلوب.',maxLength:200),'description':_requiredText(description,'التفاصيل مطلوبة.',maxLength:10000),'updated_at':DateTime.now().toUtc().toIso8601String()};
+    if(itemsData!=null)data['items_data']=itemsData;
+    final row=await _requireClient.from('trader_market_posts').update(data).eq('id',id).select().maybeSingle();
     if(row==null) throw StateError('الطلب غير موجود أو لا تملك صلاحية تعديله.');
     return Map<String,dynamic>.from(row);
   }
