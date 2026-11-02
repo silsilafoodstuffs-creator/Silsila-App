@@ -530,8 +530,20 @@ class TraderMarketService {
     return Map<String, dynamic>.from(row);
   }
 
-  Future<Map<String, dynamic>> republishPost(String postId, {int durationHours = 24}) async =>
-    extendPost(postId, durationHours);
+  Future<Map<String, dynamic>> republishPost(
+    String postId, {int? durationHours}
+  ) async {
+    final id = int.tryParse(postId);
+    if (id == null) throw ArgumentError('معرّف الطلب غير صالح.');
+    final current = await _requireClient.from('trader_market_posts')
+        .select('post_type').eq('id', id).eq('user_id', _userId).maybeSingle();
+    if (current == null) throw StateError('الطلب غير موجود أو لا تملك صلاحية إعادة نشره.');
+    final maximumHours = await _maximumDurationHoursForUser(
+      ownerId: _userId,
+      postType: (current['post_type'] ?? 'buy').toString(),
+    );
+    return extendPost(postId, durationHours ?? maximumHours);
+  }
 
   Future<Map<String,dynamic>> updatePostDetails({required String postId,required String title,required String description,List<Map<String,dynamic>>? itemsData}) async {
     final id=int.tryParse(postId); if(id==null) throw ArgumentError('معرّف الطلب غير صالح.');
