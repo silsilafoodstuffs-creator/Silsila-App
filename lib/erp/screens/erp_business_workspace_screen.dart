@@ -33,6 +33,13 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _itemLinks = [];
   List<Map<String, dynamic>> _openings = [];
   List<Map<String, dynamic>> _proposals = [];
+  List<Map<String, dynamic>> _cashMovements = [];
+  String? _selectedBranchForWarehouse;
+  String _cashType = 'receipt';
+  final _cashAmount = TextEditingController();
+  final _cashDescription = TextEditingController();
+  final _cashCounterparty = TextEditingController();
+  final _cashReference = TextEditingController();
   int _stockTab = 0;
   String? _selectedPlatformItemId;
   String? _selectedStockWarehouseId;
@@ -67,6 +74,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     _warehouseName.dispose(); _branchCode.dispose(); _warehouseCode.dispose(); _memberPhone.dispose();
     _itemSearch.dispose(); _localItemCode.dispose(); _reorderLevel.dispose(); _openingQuantity.dispose(); _openingCost.dispose();
     _proposalName.dispose(); _proposalNameEn.dispose(); _proposalCategory.dispose(); _proposalUnit.dispose(); _proposalDescription.dispose();
+    _cashAmount.dispose(); _cashDescription.dispose(); _cashCounterparty.dispose(); _cashReference.dispose();
     super.dispose();
   }
 
@@ -103,6 +111,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _db.from('erp_business_workspace_item_links').select('id,workspace_id,platform_item_id,is_enabled,local_code,reorder_level,erp_items(item_code,item_name,base_unit)').eq('workspace_id', id).order('created_at'),
         _db.from('erp_business_workspace_stock_openings').select('id,warehouse_id,item_link_id,quantity,unit_cost,opening_date').eq('workspace_id', id).order('created_at'),
         _db.from('erp_business_workspace_item_proposals').select('id,name_ar,name_en,proposed_category,unit_name,status,review_note,created_at').eq('workspace_id', id).order('created_at', ascending: false),
+        _db.from('erp_business_workspace_cash_movements').select('id,movement_no,movement_type,movement_date,amount,description,counterparty_name,payment_method,reference_no').eq('workspace_id', id).order('movement_date', ascending: false).limit(200),
       ]);
       if (!mounted) return;
       setState(() {
@@ -112,6 +121,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _itemLinks = List<Map<String, dynamic>>.from(result[3]);
         _openings = List<Map<String, dynamic>>.from(result[4]);
         _proposals = List<Map<String, dynamic>>.from(result[5]);
+        _cashMovements = List<Map<String, dynamic>>.from(result[6]);
+        _selectedBranchForWarehouse = _branches.any((x) => x['id'].toString() == _selectedBranchForWarehouse) ? _selectedBranchForWarehouse : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
         _selectedStockWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
         _selectedStockItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedStockItemLinkId) ? _selectedStockItemLinkId : (_itemLinks.isNotEmpty ? _itemLinks.first['id'].toString() : null);
       });
@@ -144,6 +155,36 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       _message('تم إنشاء مساحة النشاط المستقلة.');
     } catch (e) { _message('لم يتم إنشاء النشاط: $e'); }
     finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  Future<void> _saveCashMovement() async {
+    final id = _selected?['id']?.toString();
+    final amount = double.tryParse(_cashAmount.text.trim());
+    final description = _cashDescription.text.trim();
+    if (id == null || amount == null || amount <= 0 || description.isEmpty) {
+      _message('أدخل مبلغاً صحيحاً وبياناً للحركة.'); return;
+    }
+    try {
+      final now = DateTime.now();
+      final datePart = '${now.year}${now.month.toString().padLeft(2,'0')}${now.day.toString().padLeft(2,'0')}';
+      final movementNo = 'ACT-$datePart-${now.microsecondsSinceEpoch.toString().substring(8)}';
+      await _db.from('erp_business_workspace_cash_movements').insert({
+        'workspace_id': id,
+        'branch_id': _selectedBranchForWarehouse,
+        'movement_no': movementNo,
+        'movement_type': _cashType,
+        'movement_date': now.toIso8601String().substring(0,10),
+        'amount': amount,
+        'description': description,
+        'counterparty_name': _cashCounterparty.text.trim().isEmpty ? null : _cashCounterparty.text.trim(),
+        'payment_method': 'cash',
+        'reference_no': _cashReference.text.trim().isEmpty ? null : _cashReference.text.trim(),
+        'created_by': _db.auth.currentUser!.id,
+      });
+      _cashAmount.clear(); _cashDescription.clear(); _cashCounterparty.clear(); _cashReference.clear();
+      await _loadStructure();
+      _message('تم حفظ حركة النقدية.'); 
+    } catch (e) { _message('تعذر حفظ حركة النقدية: $e'); }
   }
 
   Future<void> _loadPlatformItems() async {
@@ -269,7 +310,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     }
     try {
       await _db.from('erp_business_workspace_warehouses').insert({
-        'workspace_id': id, 'branch_id': _branches.first['id'],
+        'workspace_id': id, 'branch_id': _selectedBranchForWarehouse ?? _branches.first['id'],
         'warehouse_code': code, 'name_ar': name,
       });
       _warehouseName.clear(); _warehouseCode.clear();
@@ -356,6 +397,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   ));
 
   Widget _areaView() {
+    if (_area == 'صرف وتوريد نقدية') return _cashMovementsView();
     if (_area == 'بياناتي الأساسية') return _basicData();
     final sections = <String, List<(String, IconData, String)>>{
       'حركات نشاطي': [
@@ -418,6 +460,50 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     onSelected: (_) => setState(() => _basicTab = index),
   );
 
+  Widget _cashMovementsView() => ListView(children: [
+    _backHeader('صرف وتوريد نقدية'),
+    _sectionTitle('حركة نقدية مستقلة', 'كل حركة تخص النشاط الحالي ولا تُرحل إلى خزائن سلسلة'),
+    DropdownButtonFormField<String>(
+      value: _cashType,
+      decoration: const InputDecoration(labelText: 'نوع الحركة'),
+      items: const [
+        DropdownMenuItem(value:'receipt',child:Text('سند قبض')),
+        DropdownMenuItem(value:'payment',child:Text('سند صرف')),
+        DropdownMenuItem(value:'deposit',child:Text('توريد نقدية')),
+        DropdownMenuItem(value:'expense',child:Text('مصروف')),
+        DropdownMenuItem(value:'income',child:Text('إيراد')),
+        DropdownMenuItem(value:'transfer_in',child:Text('تحويل وارد')),
+        DropdownMenuItem(value:'transfer_out',child:Text('تحويل صادر')),
+      ],
+      onChanged:(v){if(v!=null)setState(()=>_cashType=v);},
+    ),
+    const SizedBox(height:8),
+    DropdownButtonFormField<String>(
+      value: _branches.any((x)=>x['id'].toString()==_selectedBranchForWarehouse)?_selectedBranchForWarehouse:null,
+      decoration: const InputDecoration(labelText:'الفرع'),
+      items:_branches.map((b)=>DropdownMenuItem(value:b['id'].toString(),child:Text(b['name_ar'].toString()))).toList(),
+      onChanged:(v)=>setState(()=>_selectedBranchForWarehouse=v),
+    ),
+    const SizedBox(height:8),
+    Row(children:[
+      Expanded(child:TextField(controller:_cashAmount,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'المبلغ'))),
+      const SizedBox(width:8),
+      Expanded(child:TextField(controller:_cashCounterparty,decoration:const InputDecoration(labelText:'الطرف / المستفيد'))),
+    ]),
+    TextField(controller:_cashDescription,decoration:const InputDecoration(labelText:'بيان الحركة')),
+    TextField(controller:_cashReference,decoration:const InputDecoration(labelText:'رقم مرجعي اختياري')),
+    const SizedBox(height:8),
+    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_saveCashMovement,icon:const Icon(Icons.save),label:const Text('حفظ الحركة'))),
+    const Divider(),
+    _sectionTitle('سجل الحركات النقدية','${_cashMovements.length} حركة مسجلة'),
+    ..._cashMovements.map((m)=>ListTile(dense:true,
+      leading:Icon(['receipt','deposit','income','transfer_in'].contains(m['movement_type'])?Icons.south_west:Icons.north_east,color:['receipt','deposit','income','transfer_in'].contains(m['movement_type'])?Colors.green:Colors.deepOrange),
+      title:Text(m['description'].toString()),
+      subtitle:Text('${m['movement_no']} • ${m['movement_date']} • ${m['counterparty_name'] ?? 'بدون طرف'}'),
+      trailing:Text('${m['amount']}',style:const TextStyle(fontWeight:FontWeight.w800,color:_workspacePurple)),
+    )),
+  ]);
+
   Widget _businessDetails() => ListView(children: [
     _sectionTitle('بيانات النشاط وفروعه ومخازنه', 'كل سجل ينتمي لمساحة النشاط الحالية'),
     _tileGrid([
@@ -436,6 +522,12 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ..._branches.map((b) => ListTile(dense: true, leading: const Icon(Icons.account_tree, color: _workspacePurple), title: Text(b['name_ar'].toString()), subtitle: Text(b['branch_code'].toString()))),
     const Divider(),
     _sectionTitle('مخازن نشاطي', 'يرتبط كل مخزن بفرع داخل النشاط'),
+    DropdownButtonFormField<String>(
+      value: _branches.any((x) => x['id'].toString() == _selectedBranchForWarehouse) ? _selectedBranchForWarehouse : null,
+      decoration: const InputDecoration(labelText: 'الفرع التابع له المخزن'),
+      items: _branches.map((b) => DropdownMenuItem(value: b['id'].toString(), child: Text(b['name_ar'].toString()))).toList(),
+      onChanged: (v) => setState(() => _selectedBranchForWarehouse = v),
+    ),
     Row(children: [
       Expanded(child: TextField(controller: _warehouseCode, decoration: const InputDecoration(labelText: 'كود المخزن'))),
       const SizedBox(width: 8),
