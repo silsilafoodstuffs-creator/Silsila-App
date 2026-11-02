@@ -6871,7 +6871,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
       if(expanded)...products.map((product){
         final name=(product['name']??'').toString();
         return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,value:selectedProducts.contains(name),title:Text(name),onChanged:(v)=>setState((){
+          CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),value:selectedProducts.contains(name),title:Text(name),onChanged:(v)=>setState((){
             if(v==true){selectedProducts.add(name);_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[name]=(product['unit']??'كبري').toString();_productQuality[name]='good';_productNegotiable[name]=false;}
             else selectedProducts.remove(name);
             selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
@@ -6883,7 +6883,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             const SizedBox(width:6),
             Expanded(child:TextField(controller:_productPrices[name],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر',isDense:true,border:OutlineInputBorder()))),
             const SizedBox(width:4),
-            SizedBox(width:116,child:CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,controlAffinity:ListTileControlAffinity.leading,title:const Text('قابل للتفاوض',style:TextStyle(fontSize:10)),value:_productNegotiable[name]==true,onChanged:(v)=>setState(()=>_productNegotiable[name]=v==true))),
+            SizedBox(width:116,child:CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),controlAffinity:ListTileControlAffinity.leading,title:const Text('قابل للتفاوض',style:TextStyle(fontSize:10)),value:_productNegotiable[name]==true,onChanged:(v)=>setState(()=>_productNegotiable[name]=v==true))),
           ])),
           if(selectedProducts.contains(name)) Padding(padding:const EdgeInsets.only(bottom:6),child:Wrap(spacing:8,runSpacing:2,children:[
             FilterChip(label:const Text('صلاحية جيدة'),selected:(_productQuality[name]??'good')=='good',onSelected:(v)=>setState(()=>_productQuality[name]=v?'good':'near_expiry')),
@@ -6937,7 +6937,13 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('راجع كمية وسعر كل صنف؛ الكمية حتى 4 أرقام و3 منازل عشرية.')));
         return;
       }
-      if (type == 'sell' && (_productQuality[name] ?? 'good') == 'near_expiry' && _productExpiryDates[name] == null) {\n        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('حدد تاريخ انتهاء الصلاحية للصنف: $name')));\n        return;\n      }\n      final matchingProducts = _marketProducts.where((p)=>(p['name']??'').toString()==name).toList();
+      if (type == 'sell' && (_productQuality[name] ?? 'good') == 'near_expiry' && _productExpiryDates[name] == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('حدد تاريخ انتهاء الصلاحية للصنف: $name')),
+        );
+        return;
+      }
+      final matchingProducts = _marketProducts.where((p)=>(p['name']??'').toString()==name).toList();
       final product = matchingProducts.isEmpty ? null : matchingProducts.first;
       itemsData.add({
         'product_id':product?['id'],'product_name':name,'quantity':qty,
@@ -6957,7 +6963,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           Text(titleController.text.trim(),style:const TextStyle(fontWeight:FontWeight.bold)),
           Text(detailsController.text.trim()),
           const Divider(),
-          ...itemsData.map((item)=>ListTile(contentPadding:EdgeInsets.zero,title:Text(item['product_name'].toString()),subtitle:Text('${item['quantity']} ${item['unit']} • ${item['price']} ج.م'))),
+          ...itemsData.map((item)=>ListTile(contentPadding:const EdgeInsets.all(0),title:Text(item['product_name'].toString()),subtitle:Text('${item['quantity']} ${item['unit']} • ${item['price']} ج.م'))),
         ]))),
         actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('تعديل')),TextButton(onPressed:()=>Navigator.pop(ctx,null),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد ونشر'))],
       ));
@@ -7042,7 +7048,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
               ),
             ]),
             if (_marketCategories.isNotEmpty) ..._marketCategories.where((category) => category['parent_id'] == null).map((category) => _marketCategoryNode(category, 0))
-            else ...widget.availableProducts.map((product) => CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,value:selectedProducts.contains(product.name),title:Text(product.name),subtitle:Text(product.category),onChanged:(checked)=>setState((){if(checked==true){selectedProducts.add(product.name);}else{selectedProducts.remove(product.name);}selectAllProducts=selectedProducts.length==widget.availableProducts.length;}))),
+            else ...widget.availableProducts.map((product) => CheckboxListTile(dense:true,contentPadding:const EdgeInsets.all(0),value:selectedProducts.contains(product.name),title:Text(product.name),subtitle:Text(product.category),onChanged:(checked)=>setState((){if(checked==true){selectedProducts.add(product.name);}else{selectedProducts.remove(product.name);}selectAllProducts=selectedProducts.length==widget.availableProducts.length;}))),
           ],
           const SizedBox(height: 12),
 
@@ -7084,7 +7090,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
           if (type == 'transfer') ...[
             const SizedBox(height: 8),
             const Text('بيانات النقل', style: TextStyle(color: Color(0xFFFF27C3), fontWeight: FontWeight.bold)),
-            ListTile(contentPadding:EdgeInsets.zero,title:const Text('موعد النقل المطلوب'),subtitle:Text(_transportAt==null?'حدد تاريخ ووقت التحميل':_transportAt!.toLocal().toString()),trailing:IconButton(icon:const Icon(Icons.schedule),onPressed:()async{final d=await showDatePicker(context:context,firstDate:DateTime.now(),lastDate:DateTime(2100),initialDate:_transportAt??DateTime.now());if(d==null||!mounted)return;final t=await showTimePicker(context:context,initialTime:TimeOfDay.fromDateTime(_transportAt??DateTime.now()));if(t!=null)setState(()=>_transportAt=DateTime(d.year,d.month,d.day,t.hour,t.minute));})),
+            ListTile(contentPadding:const EdgeInsets.all(0),title:const Text('موعد النقل المطلوب'),subtitle:Text(_transportAt==null?'حدد تاريخ ووقت التحميل':_transportAt!.toLocal().toString()),trailing:IconButton(icon:const Icon(Icons.schedule),onPressed:()async{final d=await showDatePicker(context:context,firstDate:DateTime.now(),lastDate:DateTime(2100),initialDate:_transportAt??DateTime.now());if(d==null||!mounted)return;final t=await showTimePicker(context:context,initialTime:TimeOfDay.fromDateTime(_transportAt??DateTime.now()));if(t!=null)setState(()=>_transportAt=DateTime(d.year,d.month,d.day,t.hour,t.minute));})),
             DropdownButtonFormField<String>(value:transferActor,decoration:const InputDecoration(labelText:'مقدم الطلب بصفته'),items:const [DropdownMenuItem(value:'seller',child:Text('البائع')),DropdownMenuItem(value:'buyer',child:Text('المشتري'))],onChanged:(v)=>setState(()=>transferActor=v??'seller')),
             DropdownButtonFormField<String>(value:freightPayer,decoration:const InputDecoration(labelText:'النولون على'),items:const [DropdownMenuItem(value:'seller',child:Text('البائع')),DropdownMenuItem(value:'buyer',child:Text('المشتري'))],onChanged:(v)=>setState(()=>freightPayer=v??'seller')),
             DropdownButtonFormField<String>(value:freightPoint,decoration:const InputDecoration(labelText:'وقت حساب النولون'),items:const [DropdownMenuItem(value:'loading',child:Text('وقت التحميل')),DropdownMenuItem(value:'unloading',child:Text('وقت التنزيل'))],onChanged:(v)=>setState(()=>freightPoint=v??'loading')),
