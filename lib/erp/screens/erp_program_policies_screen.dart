@@ -74,6 +74,19 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     } catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل السياسات. طبّق migration سياسات البرنامج أولاً. $e'; });}
   }
   Future<void> _save() async {
+    for (final key in ['trader_market.sell_duration_hours','trader_market.buy_duration_hours','trader_market.transfer_duration_hours']) {
+      final value = int.tryParse((values[key]?['value'] ?? '24').toString());
+      if (value == null || value < 1 || value > 720) {
+        setState(() { error = 'مدة طلبات سوق التجار يجب أن تكون من ساعة إلى 720 ساعة.'; });
+        return;
+      }
+    }
+    final storyValue = int.tryParse((values['trader_market.story_duration']?['value'] ?? '60').toString());
+    final storyUnit = (values['trader_market.story_duration_unit']?['value'] ?? 'دقيقة').toString();
+    if (storyValue == null || storyValue < 1 || storyValue > (storyUnit == 'ساعة' ? 24 : 1440)) {
+      setState(() { error = 'مدة القصة يجب أن تكون من 1 إلى 1440 دقيقة أو 24 ساعة.'; });
+      return;
+    }
     setState(() { saving=true; error=null; message=null; });
     try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??''}).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; });}
   }
