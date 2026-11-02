@@ -24,7 +24,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'inventory.stocktake.valuation_basis','category':'مخزنية','ar':'أساس تقييم فروق الجرد','en':'Stocktake variance valuation basis','mandatory':true,'value':'sale','options':['sale','purchase']},
     {'key':'balance_sale_price','category':'مخزنية','ar':'سعر الصنف في تقارير الأرصدة هو سعر البيع بدلاً من سعر الشراء','en':'Use sale price in balance reports'},
     {'key':'trader_market.sell_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أبيع (بالساعات)','en':'Maximum sell request duration (hours)','value':'24','enabled_default':true},
-    {'key':'trader_market.buy_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أشتري (بالساعات)','en':'Maximum buy request duration (hours)','value':'24'},
+    {'key':'trader_market.buy_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أشتري (بالساعات)','en':'Maximum buy request duration (hours)','value':'24','enabled_default':true},
     {'key':'trader_market.transfer_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أنقل (بالساعات)','en':'Maximum transfer request duration (hours)','value':'24'},
     {'key':'trader_market.story_duration','category':'بيعية','ar':'الحد الأقصى لمدة القصة','en':'Maximum story duration','value':'60','options':['1','5','10','15','30','45','60'],'enabled_default':true},
     {'key':'customer_default_rep','category':'بيعية','ar':'إمكانية تغيير المندوب الافتراضي للعميل','en':'Allow changing customer default sales representative'},
