@@ -636,6 +636,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   }
 
   Future<void> _editFirstRecord() async {
+    if(_view=='proposals'||_view=='shared_stock'){setState(()=>_message='لا يمكن تعديل سجل أصناف من تبويب التقارير أو المقترحات.');return;}
     final isWarehouse=_view=='warehouses';
     final row=await _chooseMasterRecord('edit');
     if(row==null)return;
@@ -665,6 +666,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     finally{code.dispose();name.dispose();barcode.dispose();}
   }
   Future<void> _deleteFirstRecord() async {
+    if(_view=='proposals'||_view=='shared_stock'){setState(()=>_message='لا يمكن حذف سجل من تبويب التقارير أو المقترحات.');return;}
     final selected=await _chooseMasterRecord('delete');
     if(selected==null)return;
     if(_view=='warehouses'){
@@ -682,6 +684,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
 
 
   Future<void> _exportMasterPdf({required bool share}) async {
+    if(_view=='proposals'||_view=='shared_stock'){setState(()=>_message='لا يوجد تصدير PDF عام لهذا التبويب حالياً.');return;}
     final isWarehouse=_view=='warehouses';
     final rows=isWarehouse?_warehouses:_items;
     if(rows.isEmpty){setState(()=>_message='لا توجد بيانات للتصدير.');return;}
@@ -706,6 +709,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   }
 
   Future<void> _previewMasterData() async {
+    if(_view=='proposals'||_view=='shared_stock'){setState(()=>_message='استخدم محتوى التبويب الحالي للمعاينة.');return;}
     final rows = _view == 'warehouses' ? _warehouses : _items;
     final label = _view == 'warehouses' ? 'المخازن' : 'الأصناف';
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
@@ -758,7 +762,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           const ButtonSegment(value: 'warehouses', label: Text('المخازن'), icon: Icon(Icons.warehouse_outlined)),
           const ButtonSegment(value: 'items', label: Text('الأصناف'), icon: Icon(Icons.inventory_2_outlined)),
           if (_isManagementUser) const ButtonSegment(value: 'proposals', label: Text('أصناف مقترحة'), icon: Icon(Icons.pending_actions_outlined)),
-          if (_isManagementUser) const ButtonSegment(value: 'shared_stock', label: Text('أرصدة الأنشطة'), icon: Icon(Icons.share_location_outlined)),
+          if (_isManagementUser) const ButtonSegment(value: 'shared_stock', label: Text('أرصدة الأنشطة'), icon: Icon(Icons.share)),
         ],
         selected: {_view}, onSelectionChanged: (v) => setState(() => _view = v.first),
       ),
