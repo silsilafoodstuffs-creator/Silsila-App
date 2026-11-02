@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silsila_app/main.dart';
+import 'package:silsila_app/erp/widgets/silsila_white_logo.dart';
 
 void main() {
   testWidgets('welcome screen displays Silsila branding and primary action',
@@ -45,6 +46,20 @@ void main() {
     expect(theme.snackBarTheme.backgroundColor, const Color(0xFF3E007D));
     expect(theme.progressIndicatorTheme.color, const Color(0xFFFFA015));
     expect(theme.listTileTheme.selectedTileColor, isNotNull);
+  });
+
+  testWidgets('white surfaces render the white-background Silsila logo',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: SilsilaWhiteLogo(width: 48, height: 48)),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Image), findsOneWidget);
+    expect(tester.widget<Image>(find.byType(Image)).image, isA<MemoryImage>());
   });
 
   testWidgets('login flow requests email and password, not phone OTP',
