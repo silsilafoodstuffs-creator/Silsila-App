@@ -23,6 +23,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'adjustment_sale_price','category':'مخزنية','ar':'سعر الصنف في التسوية المخزنية هو سعر البيع بدلاً من سعر الشراء','en':'Use sale price in inventory adjustments'},
     {'key':'inventory.stocktake.valuation_basis','category':'مخزنية','ar':'أساس تقييم فروق الجرد','en':'Stocktake variance valuation basis','mandatory':true,'value':'sale','options':['sale','purchase']},
     {'key':'balance_sale_price','category':'مخزنية','ar':'سعر الصنف في تقارير الأرصدة هو سعر البيع بدلاً من سعر الشراء','en':'Use sale price in balance reports'},
+    {'key':'trader_market.sell_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أبيع (بالساعات)','en':'Maximum sell request duration (hours)','value':'24'},
+    {'key':'trader_market.buy_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أشتري (بالساعات)','en':'Maximum buy request duration (hours)','value':'24'},
+    {'key':'trader_market.transfer_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أنقل (بالساعات)','en':'Maximum transfer request duration (hours)','value':'24'},
+    {'key':'trader_market.story_duration','category':'بيعية','ar':'الحد الأقصى لمدة القصة','en':'Maximum story duration','value':'60','options':['1','5','10','15','30','45','60']},
     {'key':'customer_default_rep','category':'بيعية','ar':'إمكانية تغيير المندوب الافتراضي للعميل','en':'Allow changing customer default sales representative'},
     {'key':'customer_default_price_policy','category':'بيعية','ar':'إمكانية تغيير سياسة الأسعار الافتراضية للعميل','en':'Allow changing customer default price policy'},
     {'key':'edit_other_user_document','category':'بيعية','ar':'إمكانية تعديل المستند لغير المستخدم الأصلي','en':'Allow editing documents created by another user'},
@@ -227,7 +231,16 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                           },
                                         )),
                                       ])
-                                    : p['key'] == 'supplier_bonus_variance'
+                                    : (p['key'] as String).startsWith('trader_market.') && options.isEmpty
+                                      ? TextFormField(
+                                          key: ValueKey('market-policy-' + (p['value'] ?? '').toString()),
+                                          initialValue: p['value']?.toString() ?? '24',
+                                          decoration: const InputDecoration(labelText: 'قيمة السياسة', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(fontSize: 10),
+                                          onChanged: (v) => p['value'] = v,
+                                        )
+                                      : p['key'] == 'supplier_bonus_variance'
                                       ? TextFormField(
                                           key: ValueKey('variance-' + (p['value'] ?? '').toString()),
                                           initialValue: p['value']?.toString() ?? '',
