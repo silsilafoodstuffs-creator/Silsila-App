@@ -149,7 +149,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       ErpQuickTaskButton(label:'إضافة',icon:Icons.add_circle_outline,onPressed:resetForm),
       ErpQuickTaskButton(label:'حفظ',icon:Icons.save_outlined,onPressed:saving?null:saveCurrent),
       ErpQuickTaskButton(label:'تعديل',icon:Icons.edit_outlined,onPressed:()=>notify('التعديل متاح للمسودات وبحسب صلاحية المستخدم.')),
-      ErpQuickTaskButton(label:'حذف',icon:Icons.delete_outline,onPressed:()=>notify('لا يسمح بحذف أي حركة أو شيك بعد الترحيل أو التسوية.')),
+      ErpQuickTaskButton(label:'حذف',icon:Icons.delete_outline,onPressed:deleteSelected),
       ErpQuickTaskButton(label:'معاينة',icon:Icons.preview_outlined,onPressed:previewData),
       ErpQuickTaskButton(label:'طباعة',icon:Icons.print_outlined,onPressed:printData),
       ErpQuickTaskButton(label:'Excel',icon:Icons.table_view_outlined,onPressed:exportExcel),
@@ -157,6 +157,22 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     ]))
   ])));
   void notify(String m){if(mounted)setState(()=>message=m);}
+  Future<void> deleteSelected() async {
+    final drafts=orders.where((o)=>s(o['instrument_type'])!='cheque'&&s(o['status'])=='draft').toList();
+    if(tabs.index!=1||drafts.isEmpty){notify('لا يوجد مستند مسودة قابل للإلغاء في الشاشة الحالية. الحركات والشيكات المسواة محفوظة كسجل تدقيقي.');return;}
+    final chosen=await showDialog<Map<String,dynamic>>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('اختيار أمر لإلغائه'),
+      content:SizedBox(width:520,height:360,child:ListView(children:drafts.map((o)=>ListTile(title:Text(s(o['order_number'])+' • '+s(o['party_name'])),subtitle:Text(money(o['amount'])+' • '+s(o['order_type'])),onTap:()=>Navigator.pop(ctx,o))).toList())),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))],
+    ));
+    if(chosen==null)return;
+    final confirm=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:const Text('تأكيد إلغاء الأمر'),
+      content:Text('سيتم إلغاء الأمر '+s(chosen['order_number'])+' مع الاحتفاظ بسجل المراجعة.'),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('رجوع')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('تأكيد الإلغاء'))],
+    ));
+    if(confirm==true)await run(()async{await db!.from('erp_cash_orders').update({'status':'cancelled','updated_at':DateTime.now().toIso8601String()}).eq('id',s(chosen['id'])).eq('status','draft');},'تم إلغاء الأمر مع الاحتفاظ بسجل المراجعة.');
+  }
   List<String> exportHeaders(){
     switch(tabs.index){
       case 0:return const ['م','مسلسل الحركة','النوع','من نوع','من جهة','إلى نوع','إلى جهة','القيمة','التاريخ','سند الخزينة'];
