@@ -7101,6 +7101,23 @@ class _MyMarketPostsScreenState extends State<MyMarketPostsScreen> {
     if(ok!=true)return;
     try { await _service.deletePost(post['id'].toString()); await _reload(); } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحذف: '+e.toString()))); }
   }
+  Future<void> _edit(Map<String,dynamic> post) async {
+    final title=TextEditingController(text:(post['title']??'').toString());
+    final details=TextEditingController(text:(post['description']??'').toString());
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تعديل طلب سوق التجار'),content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[TextField(controller:title,decoration:const InputDecoration(labelText:'عنوان الطلب')),TextField(controller:details,maxLines:4,decoration:const InputDecoration(labelText:'التفاصيل'))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ'))]));
+    if(ok!=true){title.dispose();details.dispose();return;}
+    try {
+      if(_admin) await _service.updatePostForModeration(postId:post['id'].toString(),title:title.text,description:details.text);
+      else await _service.updatePost(postId:post['id'].toString(),title:title.text,description:details.text);
+      await _reload();
+    } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تعديل الطلب: '+e.toString()))); }
+    title.dispose();details.dispose();
+  }
+  Future<void> _adminDelete(Map<String,dynamic> post) async {
+    final ok=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('حذف طلب من السوق'),content:const Text('تأكيد حذف الطلب من سوق التجار؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حذف'))]));
+    if(ok!=true)return;
+    try{await _service.deletePostForModeration(post['id'].toString());await _reload();}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر حذف الطلب: '+e.toString())));}
+  }
   Future<void> _moderate(Map<String,dynamic> post,bool publish) async {
     try { await _service.moderatePost(post['id'].toString(),publish:publish); await _reload(); } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تحديث حالة الطلب: '+e.toString()))); }
   }
@@ -7118,10 +7135,12 @@ class _MyMarketPostsScreenState extends State<MyMarketPostsScreen> {
         Text('تاريخ النشر: '+(p['published_at']??p['created_at']??'—').toString()),
         Text(expired?'انتهت مدة العرض':'الحالة: '+(p['status']??'نشط').toString()),
         Wrap(spacing:6,children:[
+          OutlinedButton(onPressed:()=>_edit(p),child:const Text('تعديل')),
           if(!_admin) OutlinedButton(onPressed:()=>_extend(p),child:const Text('زيادة المدة / إعادة النشر')),
           if(!_admin) OutlinedButton(onPressed:()=>_delete(p),child:const Text('حذف')),
           if(_admin) FilledButton(onPressed:()=>_moderate(p,true),child:const Text('إعادة النشر')),
           if(_admin) OutlinedButton(onPressed:()=>_moderate(p,false),child:const Text('إيقاف / أرشفة')),
+          if(_admin) OutlinedButton(onPressed:()=>_adminDelete(p),child:const Text('حذف نهائي')), 
         ]),
       ])));
     });
