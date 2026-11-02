@@ -1,6 +1,12 @@
+import 'dart:typed_data';
+import 'package:excel/excel.dart' hide Border;
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../widgets/erp_quick_task_button.dart';
 
 class ErpFinancialOperationsScreen extends StatefulWidget {
@@ -144,13 +150,79 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       ErpQuickTaskButton(label:'حفظ',icon:Icons.save_outlined,onPressed:saving?null:saveCurrent),
       ErpQuickTaskButton(label:'تعديل',icon:Icons.edit_outlined,onPressed:()=>notify('التعديل متاح للمسودات وبحسب صلاحية المستخدم.')),
       ErpQuickTaskButton(label:'حذف',icon:Icons.delete_outline,onPressed:()=>notify('لا يسمح بحذف أي حركة أو شيك بعد الترحيل أو التسوية.')),
-      ErpQuickTaskButton(label:'معاينة',icon:Icons.preview_outlined,onPressed:()=>notify('المعاينة تعرض السجلات الحالية في الجدول.')),
-      ErpQuickTaskButton(label:'طباعة',icon:Icons.print_outlined,onPressed:()=>notify('تم تجهيز بيانات المعاينة للطباعة.')),
-      ErpQuickTaskButton(label:'Excel',icon:Icons.table_view_outlined,onPressed:()=>notify('تصدير Excel سيستخدم قالب التقارير المعتمد.')),
-      ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf_outlined,onPressed:()=>notify('تصدير PDF سيستخدم قالب التقارير المعتمد.')),
+      ErpQuickTaskButton(label:'معاينة',icon:Icons.preview_outlined,onPressed:previewData),
+      ErpQuickTaskButton(label:'طباعة',icon:Icons.print_outlined,onPressed:printData),
+      ErpQuickTaskButton(label:'Excel',icon:Icons.table_view_outlined,onPressed:exportExcel),
+      ErpQuickTaskButton(label:'PDF',icon:Icons.picture_as_pdf_outlined,onPressed:exportPdf),
     ]))
   ])));
   void notify(String m){if(mounted)setState(()=>message=m);}
+  List<String> exportHeaders(){
+    switch(tabs.index){
+      case 0:return const ['م','مسلسل الحركة','النوع','من نوع','من جهة','إلى نوع','إلى جهة','القيمة','التاريخ','سند الخزينة'];
+      case 1:return const ['مسلسل الأمر','النوع','نوع الجهة','الجهة','القيمة','الحالة','المستخدم','أمر البيع'];
+      case 2:return const ['مسلسل الأمر','رقم الشيك','نوع الشيك','الجهة','القيمة','الحالة'];
+      case 3:case 5:case 6:return const ['رقم الشيك','النوع','الاتجاه','تاريخ الإصدار','الاستحقاق','القيمة','المستفيد','الحالة','تاريخ التسوية'];
+      case 4:return const ['مسلسل الدفتر','الحساب البنكي','بداية الدفتر','عدد الأوراق','الحالة'];
+      default:return const ['البند','القيمة'];
+    }
+  }
+  List<List<String>> exportRows(){
+    switch(tabs.index){
+      case 0:return movements.map((r)=>[s(r['movement_no']),s(r['movement_number']),s(r['movement_type']),s(r['from_type']),s(r['from_name']),s(r['to_type']),s(r['to_name']),money(r['amount']),displayDate(r['movement_date']),s(r['cash_voucher_id'])]).toList();
+      case 1:return orders.where((o)=>s(o['instrument_type'])!='cheque').map((r)=>[s(r['order_number']),s(r['order_type']),s(r['party_type']),s(r['party_name']),money(r['amount']),s(r['status']),users.where((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id'])).isEmpty?'عام':s(users.firstWhere((u)=>s(u['auth_user_id'])==s(r['assigned_to_user_id']))['name_ar']),s(r['sales_document_id'])]).toList();
+      case 2:return orders.where((o)=>s(o['instrument_type'])=='cheque').map((o)=>[s(o['order_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['check_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['cheque_type']),s(o['party_name']),money(o['amount']),s(o['status'])]).toList();
+      case 3:case 5:case 6:return cheques.where((c)=>tabs.index==3||s(c['cheque_type'])==(tabs.index==5?'bank':'credit')).map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),displayDate(c['issue_date']),displayDate(c['due_date']),money(c['amount']),s(c['payee_name']),s(c['status']),displayDate(c['settlement_date'])]).toList();
+      case 4:return books.map((b)=>[s(b['book_number']),cashboxName(s(b['bank_cashbox_id'])),s(b['first_check_number']),s(b['sheet_count']),b['registered']==true?'مسجل':'مسودة']).toList();
+      default:return [];
+    }
+  }
+  Future<Uint8List> exportPdfBytes() async {
+    final headers=exportHeaders().reversed.toList();
+    final rows=exportRows().map((r)=>r.reversed.toList()).toList();
+    final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+    final pdf=pw.Document();
+    pdf.addPage(pw.MultiPage(pageFormat:PdfPageFormat.a4.landscape,margin:const pw.EdgeInsets.all(20),theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
+      pw.Text('سلسلة — '+tabNames[tabs.index],textAlign:pw.TextAlign.right,style:pw.TextStyle(fontSize:16,fontWeight:pw.FontWeight.bold)),
+      pw.SizedBox(height:5),
+      pw.Text('تاريخ التقرير: '+_todayDisplay()+' • عدد السجلات: '+rows.length.toString(),textAlign:pw.TextAlign.right,style:const pw.TextStyle(fontSize:9)),
+      pw.SizedBox(height:12),
+      if(rows.isEmpty)pw.Text('لا توجد بيانات.',textAlign:pw.TextAlign.right)
+      else pw.TableHelper.fromTextArray(headers:headers,data:rows,headerStyle:pw.TextStyle(fontSize:8,fontWeight:pw.FontWeight.bold),cellStyle:const pw.TextStyle(fontSize:8),cellAlignment:pw.Alignment.centerRight,headerAlignment:pw.Alignment.centerRight),
+    ]));
+    return Uint8List.fromList(await pdf.save());
+  }
+  Future<void> exportExcel() async {
+    final rows=exportRows();if(rows.isEmpty){notify('لا توجد سجلات لتصديرها.');return;}
+    setState(()=>{loading=true;error=null;message=null;});
+    try{
+      final book=Excel.createExcel();final sheet=book[tabNames[tabs.index]];
+      sheet.appendRow(exportHeaders().map((x)=>TextCellValue(x)).toList());
+      for(final row in rows){sheet.appendRow(row.map((x)=>TextCellValue(x)).toList());}
+      final bytes=book.encode();if(bytes==null||bytes.isEmpty)throw StateError('تعذر إنشاء ملف Excel.');
+      await FileSaver.instance.saveFile(name:'silsila_finance_'+DateTime.now().millisecondsSinceEpoch.toString(),bytes:Uint8List.fromList(bytes),fileExtension:'xlsx',mimeType:MimeType.microsoftExcel);
+      if(mounted)setState(()=>message='تم تصدير '+rows.length.toString()+' سجل إلى Excel.');
+    }catch(e){if(mounted)setState(()=>error='تعذر تصدير Excel: '+e.toString());}
+    finally{if(mounted)setState(()=>loading=false);}
+  }
+  Future<void> exportPdf() async {
+    final rows=exportRows();if(rows.isEmpty){notify('لا توجد سجلات لتصديرها.');return;}
+    setState(()=>{loading=true;error=null;message=null;});
+    try{final bytes=await exportPdfBytes();await FileSaver.instance.saveFile(name:'silsila_finance_'+DateTime.now().millisecondsSinceEpoch.toString(),bytes:bytes,fileExtension:'pdf',mimeType:MimeType.pdf);if(mounted)setState(()=>message='تم إنشاء ملف PDF.');}
+    catch(e){if(mounted)setState(()=>error='تعذر إنشاء PDF: '+e.toString());}
+    finally{if(mounted)setState(()=>loading=false);}
+  }
+  Future<void> printData() async {
+    if(exportRows().isEmpty){notify('لا توجد سجلات للطباعة.');return;}
+    setState(()=>{loading=true;error=null;message=null;});
+    try{final bytes=await exportPdfBytes();await Printing.layoutPdf(onLayout:(_)=>Future.value(bytes),name:'silsila_finance.pdf');}
+    catch(e){if(mounted)setState(()=>error='تعذرت الطباعة: '+e.toString());}
+    finally{if(mounted)setState(()=>loading=false);}
+  }
+  Future<void> previewData() async {
+    final headers=exportHeaders(),rows=exportRows();
+    await showDialog<void>(context:context,builder:(ctx)=>AlertDialog(title:Text('معاينة '+tabNames[tabs.index]),content:SizedBox(width:850,height:460,child:rows.isEmpty?const Center(child:Text('لا توجد بيانات للمعاينة.')):SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(columns:headers.map((h)=>DataColumn(label:Text(h))).toList(),rows:rows.take(250).map((r)=>DataRow(cells:r.map((v)=>DataCell(Text(v))).toList())).toList()))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إغلاق'))]));
+  }
   Future<void> saveCurrent() async { switch(tabs.index){case 0:await saveMovement();break;case 1:await saveOrder();break;case 2:await issueCheque(true);break;case 3:await issueCheque(false);break;case 4:await registerBook();break;case 7:await savePolicy();break;} }
 
   Future<void> saveMovement() async {
