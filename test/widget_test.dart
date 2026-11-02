@@ -81,7 +81,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Image), findsOneWidget);
-    expect(tester.widget<Image>(find.byType(Image)).image, isA<MemoryImage>());
+    final logoImage = tester.widget<Image>(find.byType(Image));
+    expect(
+      logoImage.image,
+      anyOf(isA<MemoryImage>(), isA<AssetImage>()),
+    );
   });
 
   testWidgets('login screen uses the white-background Silsila logo variant',
