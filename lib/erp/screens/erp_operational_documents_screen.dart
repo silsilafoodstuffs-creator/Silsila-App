@@ -1909,7 +1909,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   child: const Icon(Icons.receipt_long_rounded, color: Color(0xFF3E007D), size: 24)),
                 const SizedBox(width: 12),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(_salesDocumentTitle(_documentType), key: const ValueKey('operational-document-title'), style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 22)),
+                  Text(_title, key: const ValueKey('operational-document-title'), style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.w900, fontSize: 22)),
                   const SizedBox(height: 3),
                   const Text('سلسلة • بنربط السوق ببعضه', style: TextStyle(color: Color(0xFF7B6A8E), fontSize: 12)),
                 ]),
