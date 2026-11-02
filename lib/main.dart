@@ -1227,8 +1227,7 @@ class _MainShellState extends State<MainShell> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                           decoration: BoxDecoration(color: Colors.white.withValues(alpha: .94), borderRadius: BorderRadius.circular(16)),
-                          child: Image.asset('assets/images/silsila_logo.png', height: 48,
-                            errorBuilder: (_, __, ___) => const Text('سلسلة', style: TextStyle(fontWeight: FontWeight.w900, color: purple, fontSize: 24))),
+                          child: const SilsilaWhiteLogo(height: 48),
                         ),
                       ),
                   ],
