@@ -343,7 +343,6 @@ String silsilaText(String value) {
     "إغلاق الإعلان": "Close advertisement",
     "بنربط السوق ببعضه": "Connecting the market",
     "منصة تجارة تجمع الموردين والتجار والأنشطة المختلفة في مكان واحد.": "A trading platform connecting suppliers, traders and businesses.",
-    "ابدأ": "Get started",
     "سلسلة .. بنربط السوق ببعضه": "Silsila .. Connecting the market",
     "لا توجد أنواع مستخدمين مفعّلة للظهور في التطبيق. فعّل «يظهر في التطبيق» من شاشة أنواع المستخدمين.": "No user types are enabled for the app. Enable “Show in app” in User Types.",
     "استكشاف التطبيق كزائر": "Explore as guest",
