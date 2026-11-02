@@ -114,8 +114,8 @@ class StoryService {
   Future<Map<String, dynamic>> updateStory({
     required String storyId, String? caption, Duration? duration,
   }) async {
-    final id = storyId.trim();
-    if (id.isEmpty) throw ArgumentError('معرّف القصة غير صالح.');
+    final id = int.tryParse(storyId);
+    if (id == null) throw ArgumentError('معرّف القصة غير صالح.');
     if (duration != null && (duration <= Duration.zero || duration > const Duration(hours: 1))) {
       throw ArgumentError('مدة القصة يجب أن تكون من دقيقة إلى 60 دقيقة.');
     }
