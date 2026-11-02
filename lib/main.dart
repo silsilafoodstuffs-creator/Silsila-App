@@ -6761,12 +6761,19 @@ class MarketPostScreen extends StatefulWidget {
 
 class _MarketPostScreenState extends State<MarketPostScreen> {
   final Set<String> selectedProducts = <String>{};
+  final List<Map<String,dynamic>> _marketCategories = [];
+  final List<Map<String,dynamic>> _marketProducts = [];
+  final Set<int> _expandedCategoryIds = {};
+  final Map<String,TextEditingController> _productQuantities = {};
+  final Map<String,TextEditingController> _productPrices = {};
+  final Map<String,String> _productUnits = {};
   bool selectAllProducts = false;
 
   @override
   void initState() {
     super.initState();
     type = widget.initialType;
+    _loadMarketTree();
   }
   final titleController = TextEditingController();
   final detailsController = TextEditingController();
@@ -6791,7 +6798,58 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     governorateController.dispose();
     categoryController.dispose();
     contactPhoneController.dispose();
+    for (final controller in _productQuantities.values) { controller.dispose(); }
+    for (final controller in _productPrices.values) { controller.dispose(); }
     super.dispose();
+  }
+
+
+  Future<void> _loadMarketTree() async {
+    final client = database;
+    if (client == null) return;
+    try {
+      final categories = await client.from('categories').select('id,name,parent_id,is_active').eq('is_active', true).order('sort_order');
+      final products = await client.from('products').select('id,name,category_id,unit,price,is_available').eq('is_available', true).order('name').limit(1000);
+      if (!mounted) return;
+      setState(() {
+        _marketCategories..clear()..addAll(categories.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
+        _marketProducts..clear()..addAll(products.whereType<Map>().map((e)=>Map<String,dynamic>.from(e)));
+      });
+    } catch (_) {}
+  }
+
+  List<Map<String,dynamic>> _marketCategoryChildren(int? parentId) => _marketCategories.where((row)=>(row['parent_id'] as num?)?.toInt()==parentId).toList();
+
+  Widget _marketCategoryNode(Map<String,dynamic> category, int depth) {
+    final id=(category['id'] as num).toInt();
+    final expanded=_expandedCategoryIds.contains(id);
+    final children=_marketCategoryChildren(id);
+    final products=_marketProducts.where((p)=>(p['category_id'] as num?)?.toInt()==id).toList();
+    final color=depth==0?purple:depth==1?orange:const Color(0xFFFF27C3);
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      InkWell(onTap:()=>setState(()=>expanded?_expandedCategoryIds.remove(id):_expandedCategoryIds.add(id)),child:Padding(padding:const EdgeInsets.symmetric(vertical:5),child:Row(children:[
+        Icon(expanded?Icons.expand_less:Icons.chevron_left,color:color,size:18),
+        Expanded(child:Text((category['name']??'').toString(),textAlign:TextAlign.right,style:TextStyle(color:color,fontWeight:FontWeight.w800,fontSize:depth==0?15:depth==1?13:12))),
+      ]))),
+      if(expanded)...products.map((product){
+        final name=(product['name']??'').toString();
+        return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,value:selectedProducts.contains(name),title:Text(name),onChanged:(v)=>setState((){
+            if(v==true){selectedProducts.add(name);_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(product['price']??'0').toString()));_productUnits[name]=(product['unit']??'وحدة').toString();}
+            else selectedProducts.remove(name);
+            selectAllProducts=_marketProducts.isNotEmpty&&selectedProducts.length==_marketProducts.length;
+          })),
+          if(selectedProducts.contains(name))Padding(padding:const EdgeInsetsDirectional.only(start:32,bottom:8),child:Row(children:[
+            Expanded(child:TextField(controller:_productQuantities[name],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'الكمية',hintText:'0.000',isDense:true,border:OutlineInputBorder()))),
+            const SizedBox(width:6),
+            Expanded(child:DropdownButtonFormField<String>(value:_productUnits[name],isExpanded:true,decoration:const InputDecoration(labelText:'الوحدة',isDense:true,border:OutlineInputBorder()),items:{_productUnits[name]??'وحدة','كرتونة','علبة','عبوة','كيلو','جرام','طن','قطعة','لتر'}.map((u)=>DropdownMenuItem(value:u,child:Text(u,overflow:TextOverflow.ellipsis))).toList(),onChanged:(v){if(v!=null)setState(()=>_productUnits[name]=v);})),
+            const SizedBox(width:6),
+            Expanded(child:TextField(controller:_productPrices[name],keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'السعر',isDense:true,border:OutlineInputBorder()))),
+          ])),
+        ]);
+      }),
+      if(expanded)...children.map((child)=>_marketCategoryNode(child,depth+1)),
+    ]);
   }
 
   Future<void> savePost() async {
@@ -6890,29 +6948,14 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
               TextButton(
                 onPressed: () => setState(() {
                   selectAllProducts = !selectAllProducts;
-                  selectedProducts
-                    ..clear()
-                    ..addAll(selectAllProducts ? widget.availableProducts.map((p) => p.name) : const <String>[]);
+                  selectedProducts..clear()..addAll(selectAllProducts ? (_marketProducts.isNotEmpty ? _marketProducts.map((p)=>(p['name']??'').toString()) : widget.availableProducts.map((p)=>p.name)) : const <String>[]);
+                  if(selectAllProducts){for(final p in _marketProducts){final name=(p['name']??'').toString();_productQuantities.putIfAbsent(name,()=>TextEditingController(text:'1'));_productPrices.putIfAbsent(name,()=>TextEditingController(text:(p['price']??'0').toString()));_productUnits[name]=(p['unit']??'وحدة').toString();}}
                 }),
                 child: Text(selectAllProducts ? 'إلغاء تحديد الكل' : 'تحديد الكل'),
               ),
             ]),
-            ...widget.availableProducts.map((product) => CheckboxListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              value: selectedProducts.contains(product.name),
-              title: Text(product.name),
-              subtitle: Text('${product.category} • ${product.price.toStringAsFixed(2)} ج.م / ${product.unit}'),
-              secondary: Icon(product.icon, color: purple),
-              onChanged: (checked) => setState(() {
-                if (checked == true) {
-                  selectedProducts.add(product.name);
-                } else {
-                  selectedProducts.remove(product.name);
-                }
-                selectAllProducts = selectedProducts.length == widget.availableProducts.length;
-              }),
-            )),
+            if (_marketCategories.isNotEmpty) ..._marketCategories.where((category) => category['parent_id'] == null).map((category) => _marketCategoryNode(category, 0))
+            else ...widget.availableProducts.map((product) => CheckboxListTile(dense:true,contentPadding:EdgeInsets.zero,value:selectedProducts.contains(product.name),title:Text(product.name),subtitle:Text(product.category),onChanged:(checked)=>setState((){if(checked==true){selectedProducts.add(product.name);}else{selectedProducts.remove(product.name);}selectAllProducts=selectedProducts.length==widget.availableProducts.length;}))),
           ],
           const SizedBox(height: 12),
 
