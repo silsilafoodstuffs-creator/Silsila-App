@@ -47,7 +47,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       setState(() {
         _workspaces = List<Map<String, dynamic>>.from(rows);
         if (_selected != null) {
-          _selected = _workspaces.where((w) => w['id'] == _selected!['id']).firstOrNull;
+          final matches = _workspaces.where((w) => w['id'] == _selected!['id']);
+          _selected = matches.isEmpty ? null : matches.first;
         }
         _selected ??= _workspaces.isNotEmpty ? _workspaces.first : null;
         _loading = false;
@@ -187,7 +188,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       value: w['id'].toString(), child: Text(w['workspace_name']?.toString() ?? 'نشاط'),
     )).toList(),
     onChanged: (id) async {
-      final item = _workspaces.where((w) => w['id'].toString() == id).firstOrNull;
+      final matches = _workspaces.where((w) => w['id'].toString() == id);
+      final item = matches.isEmpty ? null : matches.first;
       setState(() { _selected = item; _area = 'الرئيسية'; });
       await _loadStructure();
     },
