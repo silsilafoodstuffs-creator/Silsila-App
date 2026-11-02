@@ -133,6 +133,8 @@ class TraderMarketService {
     if (durationHours < 1 || durationHours > 720) throw ArgumentError('مدة الطلب يجب أن تكون بين ساعة و720 ساعة.');
     if (!const {'buy','sell','transfer'}.contains(cleanType)) throw ArgumentError('نوع الطلب غير صالح.');
     final now = DateTime.now().toUtc();
+    final profile = await _requireClient.from('profiles').select('full_name,phone,address,governorate,district,area').eq('id', _userId).maybeSingle();
+    final profileAddress = [profile?['governorate'], profile?['district'], profile?['area'], profile?['address']].where((v) => v != null && v.toString().trim().isNotEmpty).join(' - ');
     final data = <String, dynamic>{
       'user_id': _userId,
       'title': cleanTitle,
@@ -141,7 +143,11 @@ class TraderMarketService {
       'is_active': true,
       'status': 'active',
       'published_at': now.toIso8601String(),
+      'duration_hours': durationHours,
       'expires_at': now.add(Duration(hours: durationHours)).toIso8601String(),
+      'owner_display_name': profile?['full_name']?.toString(),
+      'owner_phone': (contactPhone ?? profile?['phone'])?.toString(),
+      'owner_address': profileAddress,
       'items_data': itemsData,
       'quality_preference': qualityPreference,
       'moderation_status': 'published',
