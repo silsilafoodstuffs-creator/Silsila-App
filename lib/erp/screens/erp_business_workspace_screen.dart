@@ -80,6 +80,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _cashReference = TextEditingController();
   int _stockTab = 0;
   int _memberSubTab = 0;
+  int _businessSubTab = 0;
   String? _selectedPlatformItemId;
   String? _selectedStockWarehouseId;
   String? _selectedStockItemLinkId;
@@ -935,40 +936,73 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     )),
   ]);
 
-  Widget _businessDetails() => ListView(children: [
-    _sectionTitle('بيانات النشاط وفروعه ومخازنه', 'كل سجل ينتمي لمساحة النشاط الحالية'),
-    _tileGrid([
-      ('بيانات النشاط', Icons.store, _selected?['workspace_name']?.toString() ?? ''),
-      ('فروع نشاطي', Icons.account_tree, '${_branches.length} فرع مسجل'),
-      ('مخازن نشاطي', Icons.warehouse, '${_warehouses.length} مخزن مسجل'),
+  Widget _businessDetails() => Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    _sectionTitle('بياناتي الأساسية','بيانات النشاط وفروعه ومخازنه في ثلاثة تبويبات مستقلة'),
+    Wrap(spacing:6,runSpacing:6,children:[
+      ChoiceChip(label:const Text('بيانات نشاطي'),selected:_businessSubTab==0,onSelected:(_)=>setState(()=>_businessSubTab=0)),
+      ChoiceChip(label:Text('فروع نشاطي (${_branches.length})'),selected:_businessSubTab==1,onSelected:(_)=>setState(()=>_businessSubTab=1)),
+      ChoiceChip(label:Text('مخازن نشاطي (${_warehouses.length})'),selected:_businessSubTab==2,onSelected:(_)=>setState(()=>_businessSubTab=2)),
     ]),
-    const SizedBox(height: 14),
-    _sectionTitle('فروع نشاطي', 'أضف فروعاً مستقلة عن فروع سلسلة'),
-    Row(children: [
-      Expanded(child: TextField(controller: _branchCode, decoration: const InputDecoration(labelText: 'كود الفرع'))),
-      const SizedBox(width: 8),
-      Expanded(child: TextField(controller: _branchName, decoration: const InputDecoration(labelText: 'اسم الفرع'))),
-      IconButton(onPressed: _addBranch, icon: const Icon(Icons.add_circle, color: _workspacePurple)),
+    const SizedBox(height:8),
+    Expanded(child:IndexedStack(index:_businessSubTab,children:[
+      _activityOverviewPanel(),_branchesPanel(),_warehousesPanel(),
+    ])),
+  ]);
+
+  Widget _activityOverviewPanel() => ListView(children:[
+    Card(elevation:0,child:Padding(padding:const EdgeInsets.all(16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+      const Icon(Icons.storefront_outlined,size:38,color:_workspacePurple),
+      const SizedBox(height:10),
+      Text((_selected?['workspace_name']??'نشاطي').toString(),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:20,color:_workspacePurple)),
+      const SizedBox(height:6),
+      Text('نوع النشاط: ${_selected?['activity_type']??'غير محدد'}'),
+      Text('نوع الحساب: ${_selected?['account_kind']??'غير محدد'}'),
+      Text('حالة النشاط: ${_selected?['is_active']==true?'نشط':'غير نشط'}'),
+      const Divider(),
+      _tileGrid([
+        ('الفروع',Icons.account_tree,'${_branches.length}'),
+        ('المخازن',Icons.warehouse,'${_warehouses.length}'),
+        ('المستخدمون',Icons.people,'${_members.length}'),
+        ('الأصناف المفعلة',Icons.inventory,'${_itemLinks.where((x)=>x['is_enabled']==true).length}'),
+      ]),
+    ]))),
+    _infoPanel('استقلال البيانات','الفواتير والمخزون والموظفون والنقدية والتقارير محفوظة داخل مساحة هذا النشاط. مشاركة أرصدة المخازن مع سلسلة لا تكشف التكلفة أو البيانات المالية الداخلية.'),
+  ]);
+
+  Widget _branchesPanel() => ListView(children:[
+    _sectionTitle('فروع نشاطي','أضف فروعاً مستقلة عن فروع سلسلة'),
+    Row(children:[
+      Expanded(child:TextField(controller:_branchCode,decoration:const InputDecoration(labelText:'كود الفرع'))),
+      const SizedBox(width:8),
+      Expanded(child:TextField(controller:_branchName,decoration:const InputDecoration(labelText:'اسم الفرع'))),
+      IconButton(onPressed:_addBranch,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
     ]),
     TextField(controller:_branchNameEn,decoration:const InputDecoration(labelText:'اسم الفرع بالإنجليزية (اختياري)')),
-    ..._branches.map((b) => ListTile(dense: true, leading: const Icon(Icons.account_tree, color: _workspacePurple), title: Text(b['name_ar'].toString()), subtitle: Text(b['branch_code'].toString()),
-      trailing:Switch(value:b['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_branches').update({'is_active':v}).eq('id',b['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث الفرع: $e');}}))),
     const Divider(),
-    _sectionTitle('مخازن نشاطي', 'يرتبط كل مخزن بفرع داخل النشاط'),
+    ..._branches.map((b)=>ListTile(dense:true,leading:const Icon(Icons.account_tree,color:_workspacePurple),
+      title:Text(b['name_ar'].toString()),subtitle:Text('${b['branch_code']} • ${b['name_en']??''}'),
+      trailing:Switch(value:b['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_branches').update({'is_active':v}).eq('id',b['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث الفرع: $e');}}))),
+  ]);
+
+  Widget _warehousesPanel() => ListView(children:[
+    _sectionTitle('مخازن نشاطي','كل مخزن يتبع فرعاً محدداً، ويمكن التحكم في ظهوره ضمن أرصدة سلسلة'),
     DropdownButtonFormField<String>(
-      value: _branches.any((x) => x['id'].toString() == _selectedBranchForWarehouse) ? _selectedBranchForWarehouse : null,
-      decoration: const InputDecoration(labelText: 'الفرع التابع له المخزن'),
-      items: _branches.map((b) => DropdownMenuItem(value: b['id'].toString(), child: Text(b['name_ar'].toString()))).toList(),
-      onChanged: (v) => setState(() => _selectedBranchForWarehouse = v),
+      value:_branches.any((x)=>x['id'].toString()==_selectedBranchForWarehouse)?_selectedBranchForWarehouse:null,
+      decoration:const InputDecoration(labelText:'الفرع التابع له المخزن'),
+      items:_branches.map((b)=>DropdownMenuItem(value:b['id'].toString(),child:Text(b['name_ar'].toString()))).toList(),
+      onChanged:(v)=>setState(()=>_selectedBranchForWarehouse=v),
     ),
-    Row(children: [
-      Expanded(child: TextField(controller: _warehouseCode, decoration: const InputDecoration(labelText: 'كود المخزن'))),
-      const SizedBox(width: 8),
-      Expanded(child: TextField(controller: _warehouseName, decoration: const InputDecoration(labelText: 'اسم المخزن'))),
-      IconButton(onPressed: _addWarehouse, icon: const Icon(Icons.add_circle, color: _workspacePurple)),
+    Row(children:[
+      Expanded(child:TextField(controller:_warehouseCode,decoration:const InputDecoration(labelText:'كود المخزن'))),
+      const SizedBox(width:8),
+      Expanded(child:TextField(controller:_warehouseName,decoration:const InputDecoration(labelText:'اسم المخزن'))),
+      IconButton(onPressed:_addWarehouse,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
     ]),
     TextField(controller:_warehouseNameEn,decoration:const InputDecoration(labelText:'اسم المخزن بالإنجليزية (اختياري)')),
-    ..._warehouses.map((w) => ListTile(dense: true, leading: const Icon(Icons.warehouse, color: _workspaceOrange), title: Text(w['name_ar'].toString()), subtitle: Text('${w['warehouse_code']} • ${w['show_balance_in_silsila']==true?'الرصيد ظاهر في سلسلة':'الرصيد غير ظاهر في سلسلة'}'),
+    const Divider(),
+    ..._warehouses.map((w)=>ListTile(dense:true,leading:const Icon(Icons.warehouse,color:_workspaceOrange),
+      title:Text(w['name_ar'].toString()),
+      subtitle:Text('${w['warehouse_code']} • ${w['show_balance_in_silsila']==true?'الرصيد ظاهر في سلسلة':'الرصيد غير ظاهر في سلسلة'}'),
       trailing:Column(mainAxisSize:MainAxisSize.min,children:[
         Row(mainAxisSize:MainAxisSize.min,children:[const Text('نشط',style:TextStyle(fontSize:10)),Switch(value:w['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'is_active':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث حالة المخزن: $e');}})]),
         Row(mainAxisSize:MainAxisSize.min,children:[const Text('إظهار الرصيد',style:TextStyle(fontSize:10)),Switch(value:w['show_balance_in_silsila']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'show_balance_in_silsila':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث سياسة ظهور الرصيد: $e');}})]),
