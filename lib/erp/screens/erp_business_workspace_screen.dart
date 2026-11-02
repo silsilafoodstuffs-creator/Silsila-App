@@ -76,6 +76,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _cashCounterparty = TextEditingController();
   final _cashReference = TextEditingController();
   int _stockTab = 0;
+  int _memberSubTab = 0;
   String? _selectedPlatformItemId;
   String? _selectedStockWarehouseId;
   String? _selectedStockItemLinkId;
@@ -955,55 +956,75 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       trailing:Switch(value:w['show_balance_in_silsila']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'show_balance_in_silsila':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث سياسة ظهور الرصيد: $e');}}))),
   ]);
 
-  Widget _membersInfo() => ListView(children: [
-    _sectionTitle('مستخدمين نشاطي', 'اربط حساباً نشطاً موجوداً بالفعل في سلسلة دون إنشاء حساب مكرر'),
-    Row(children: [
-      Expanded(child: TextField(controller: _memberPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم هاتف المستخدم المسجل'))),
-      const SizedBox(width: 8),
-      SizedBox(width: 150, child: DropdownButtonFormField<String>(value: _memberRole,
-        decoration: const InputDecoration(labelText: 'الدور'),
-        items: const [
-          DropdownMenuItem(value: 'staff', child: Text('مستخدم')),
-          DropdownMenuItem(value: 'manager', child: Text('مدير')),
-          DropdownMenuItem(value: 'accountant', child: Text('محاسب')),
-          DropdownMenuItem(value: 'warehouse', child: Text('مسؤول مخزن')),
-          DropdownMenuItem(value: 'sales', child: Text('مبيعات')),
-          DropdownMenuItem(value: 'viewer', child: Text('عرض فقط')),
-          DropdownMenuItem(value: 'admin', child: Text('مدير كامل')),
-        ], onChanged: (v) { if (v != null) setState(() => _memberRole = v); })),
-      IconButton(onPressed: _addMember, icon: const Icon(Icons.person_add_alt_1, color: _workspacePurple)),
+  Widget _membersInfo() => Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+    _sectionTitle('مستخدمين نشاطي','أربع تبويبات لإدارة العضويات والصلاحيات ونطاقات الوصول والسياسات'),
+    Wrap(spacing:6,runSpacing:6,children:[
+      ChoiceChip(label:const Text('مستخدميني'),selected:_memberSubTab==0,onSelected:(_)=>setState(()=>_memberSubTab=0)),
+      ChoiceChip(label:const Text('صلاحيات مستخدميني'),selected:_memberSubTab==1,onSelected:(_)=>setState(()=>_memberSubTab=1)),
+      ChoiceChip(label:const Text('فروع ومخازن مستخدمين'),selected:_memberSubTab==2,onSelected:(_)=>setState(()=>_memberSubTab=2)),
+      ChoiceChip(label:const Text('سياسات نشاطي'),selected:_memberSubTab==3,onSelected:(_)=>setState(()=>_memberSubTab=3)),
     ]),
-    const SizedBox(height: 8),
-    const Text('الصلاحيات الممنوحة لهذا المستخدم', style: TextStyle(color: _workspacePurple, fontWeight: FontWeight.w900)),
-    ..._memberPermissions.entries.map((entry) => SwitchListTile(
-      dense: true, contentPadding: EdgeInsets.zero, title: Text(_permissionLabel(entry.key), style: const TextStyle(fontSize: 12)),
-      value: entry.value, onChanged: (v) => setState(() => _memberPermissions[entry.key] = v),
-    )),
+    const SizedBox(height:8),
+    Expanded(child:IndexedStack(index:_memberSubTab,children:[
+      _memberUsersPanel(),_memberPermissionsPanel(),_memberLocationsPanel(),_workspacePoliciesPanel(),
+    ])),
+  ]);
+
+  Widget _memberUsersPanel() => ListView(children:[
+    _sectionTitle('إضافة مستخدم','اربط حساباً نشطاً موجوداً بالفعل في سلسلة دون إنشاء حساب دخول مكرر'),
+    Row(children:[
+      Expanded(child:TextField(controller:_memberPhone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'رقم هاتف المستخدم المسجل'))),
+      const SizedBox(width:8),
+      SizedBox(width:150,child:DropdownButtonFormField<String>(value:_memberRole,decoration:const InputDecoration(labelText:'الدور'),items:const[
+        DropdownMenuItem(value:'staff',child:Text('مستخدم')),
+        DropdownMenuItem(value:'manager',child:Text('مدير فرع')),
+        DropdownMenuItem(value:'accountant',child:Text('محاسب')),
+        DropdownMenuItem(value:'warehouse',child:Text('مسؤول مخزن')),
+        DropdownMenuItem(value:'sales',child:Text('مبيعات')),
+        DropdownMenuItem(value:'viewer',child:Text('عرض فقط')),
+        DropdownMenuItem(value:'admin',child:Text('مدير كامل')),
+      ],onChanged:(v){if(v!=null)setState(()=>_memberRole=v);})),
+      IconButton(onPressed:_addMember,icon:const Icon(Icons.person_add_alt_1,color:_workspacePurple)),
+    ]),
     const Divider(),
-    _sectionTitle('فروع ومخازن مستخدميني','حدد الفرع بالكامل أو امنح الوصول إلى مخازن معينة فقط'),
-    if(_members.where((m)=>m['member_role']!='owner').isNotEmpty) ...[
+    _sectionTitle('المستخدمون المرتبطون','تعديل الصلاحيات أو إلغاء الوصول لا يحذف حساب المستخدم من سلسلة'),
+    ..._members.map((m)=>ListTile(dense:true,leading:const Icon(Icons.account_circle_outlined,color:_workspacePurple),
+      title:Text((m['member_display_name']??'مستخدم سلسلة').toString()),
+      subtitle:Text('\${m['member_role']} • \${m['is_active']==true?'نشط':'غير نشط'}'),
+      trailing:m['member_role']=='owner'?const Text('المالك'):Wrap(mainAxisSize:MainAxisSize.min,children:[
+        IconButton(tooltip:'تعديل الصلاحيات',icon:const Icon(Icons.tune,color:_workspacePurple),onPressed:()=>_editMember(m)),
+        IconButton(tooltip:'إلغاء الوصول',icon:const Icon(Icons.person_remove_alt_1,color:Colors.redAccent),onPressed:()=>_removeMember(m['user_id'].toString())),
+      ]),
+    )),
+  ]);
+
+  Widget _memberPermissionsPanel() => ListView(children:[
+    _sectionTitle('الصلاحيات الافتراضية للمستخدم الجديد','حدد الصلاحيات قبل إضافته، ويمكن تعديل كل مستخدم لاحقاً من تبويب مستخدميني'),
+    ..._memberPermissions.entries.map((entry)=>SwitchListTile(
+      dense:true,contentPadding:EdgeInsets.zero,title:Text(_permissionLabel(entry.key),style:const TextStyle(fontSize:12)),
+      value:entry.value,onChanged:(v)=>setState(()=>_memberPermissions[entry.key]=v),
+    )),
+  ]);
+
+  Widget _memberLocationsPanel() => ListView(children:[
+    _sectionTitle('فروع ومخازن مستخدميني','يمكن السماح بفرع بالكامل أو السماح بمخازن محددة داخله. عند تحديد نطاقات، تُطبق على البيانات فعلياً عبر RLS.'),
+    if(_members.where((m)=>m['member_role']!='owner').isNotEmpty)...[
       DropdownButtonFormField<String>(
         value:_members.any((m)=>m['user_id'].toString()==_selectedLocationMemberUserId&&m['member_role']!='owner')?_selectedLocationMemberUserId:null,
         decoration:const InputDecoration(labelText:'المستخدم الفرعي'),
         items:_members.where((m)=>m['member_role']!='owner').map((m)=>DropdownMenuItem(value:m['user_id'].toString(),child:Text((m['member_display_name']??'مستخدم').toString()))).toList(),
         onChanged:(v)=>setState(()=>_selectedLocationMemberUserId=v),
       ),
-      if(_selectedLocationMemberUserId!=null) ..._branches.map((b)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-        SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('السماح بالفرع بالكامل: ${b['name_ar']}'),value:_memberHasBranchAccess(_selectedLocationMemberUserId!,b['id'].toString()),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'branch',b['id'].toString(),null,v)),
-        Padding(padding:const EdgeInsets.only(right:22),child:Column(children:_warehouses.where((w)=>w['branch_id'].toString()==b['id'].toString()).map((w)=>SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('مخزن: ${w['name_ar']}'),value:_memberHasWarehouseAccess(_selectedLocationMemberUserId!,w),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'warehouse',b['id'].toString(),w['id'].toString(),v))).toList())),
+      if(_selectedLocationMemberUserId!=null)..._branches.map((b)=>Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('السماح بالفرع بالكامل: \${b['name_ar']}'),value:_memberHasBranchAccess(_selectedLocationMemberUserId!,b['id'].toString()),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'branch',b['id'].toString(),null,v)),
+        Padding(padding:const EdgeInsets.only(right:22),child:Column(children:_warehouses.where((w)=>w['branch_id'].toString()==b['id'].toString()).map((w)=>SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,title:Text('مخزن: \${w['name_ar']}'),value:_memberHasWarehouseAccess(_selectedLocationMemberUserId!,w),onChanged:(v)=>_setMemberLocationAccess(_selectedLocationMemberUserId!,'warehouse',b['id'].toString(),w['id'].toString(),v))).toList())),
       ])),
-    ] else const Text('أضف مستخدماً فرعياً أولاً لتحديد الفروع والمخازن المتاحة له.'),
-    const Divider(),
-    _sectionTitle('المستخدمون المرتبطون', 'إلغاء الوصول لا يحذف حساب المستخدم من سلسلة'),
-    ..._members.map((m) => ListTile(
-      dense: true, leading: const Icon(Icons.account_circle_outlined, color: _workspacePurple),
-      title: Text((m['member_display_name'] ?? 'مستخدم سلسلة').toString()),
-      subtitle: Text('${m['member_role']} • ${m['is_active'] == true ? 'نشط' : 'غير نشط'}'),
-      trailing: m['member_role'] == 'owner' ? const Text('المالك') : Wrap(mainAxisSize:MainAxisSize.min,children:[
-        IconButton(tooltip:'تعديل الصلاحيات',icon:const Icon(Icons.tune,color:_workspacePurple),onPressed:()=>_editMember(m)),
-        IconButton(tooltip:'إلغاء الوصول',icon:const Icon(Icons.person_remove_alt_1,color:Colors.redAccent),onPressed:()=>_removeMember(m['user_id'].toString())),
-      ]),
-    )),
+    ]else const Text('أضف مستخدماً فرعياً أولاً لتحديد الفروع والمخازن المتاحة له.'),
+  ]);
+
+  Widget _workspacePoliciesPanel() => ListView(children:[
+    _sectionTitle('سياسات نشاطي','هذه مساحة إعدادات مستقلة لمالك النشاط. ستضاف بنودها تباعاً حسب سياسات التشغيل التي تعتمدها.'),
+    _infoPanel('سياسات النشاط','ستكون سياسات النشاط مستقلة عن سياسات سلسلة، وتُطبق على مستخدمي هذا النشاط فقط. لا يتم تفعيل أي سياسة غير معرفة أو غير معتمدة.'),
   ]);
 
   String _permissionLabel(String key) => const {
