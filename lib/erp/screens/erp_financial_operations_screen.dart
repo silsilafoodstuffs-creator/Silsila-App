@@ -22,6 +22,8 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   SupabaseClient? db;
   late final TabController tabs;
   bool loading = false, saving = false, directMode = true, requireApproval = true, allowCredit = true;
+  List<String> chequeEditRoles=['owner','admin','accountant'];
+  List<String> chequeDateRoles=['owner','admin','accountant'];
   String? error, message, fromId, toId, bankId, chequeId, assigneeId, salesId, counterAccountId, orderPartyId;
   String movementType = 'receipt', fromType = 'customer', toType = 'cashbox', orderType = 'payment';
   String partyType = 'supplier', chequeType = 'bank', chequeDirection = 'payment', trackingFilter = 'all';
@@ -78,6 +80,8 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
         movements=maps(r[5]); orders=maps(r[6]); books=maps(r[7]); cheques=maps(r[8]);
         directMode=p==null || s(p['cash_issue_mode'])!='sales_order_only';
         requireApproval=p?['require_cash_order_approval']!=false; allowCredit=p?['allow_credit_cheques']!=false;
+        chequeEditRoles=p?['cheque_edit_roles'] is List?(p!['cheque_edit_roles'] as List).map((x)=>x.toString()).toList():['owner','admin','accountant'];
+        chequeDateRoles=p?['cheque_issue_date_edit_roles'] is List?(p!['cheque_issue_date_edit_roles'] as List).map((x)=>x.toString()).toList():['owner','admin','accountant'];
         loading=false; error=null;
       });
     } catch(e) { if(mounted)setState(() {loading=false;error='تعذر تحميل البيانات: '+e.toString();}); }
@@ -360,7 +364,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     if(yes==true) await run(()async{await db!.rpc('erp_settle_cheque',params:{'p_cheque_id':c['id'],'p_result':result,'p_settlement_date':isoDate(date.text),'p_method':result=='cashed_from_cashbox'?'cashbox':'bank','p_cashbox_id':cashbox,'p_reference':null,'p_counter_account_id':counterAccount});},'تم تحديث حالة الشيك وتاريخ التسوية.');
     date.dispose();
   }
-  Future<void> savePolicy() async {await run(()async{await db!.from('erp_financial_policies').upsert({'company_id':company,'cash_issue_mode':directMode?'direct':'sales_order_only','require_cash_order_approval':requireApproval,'allow_credit_cheques':allowCredit,'updated_by':db!.auth.currentUser?.id},onConflict:'company_id');},'تم حفظ السياسات المحاسبية.');}
+  Future<void> savePolicy() async {await run(()async{await db!.from('erp_financial_policies').upsert({'company_id':company,'cash_issue_mode':directMode?'direct':'sales_order_only','require_cash_order_approval':requireApproval,'allow_credit_cheques':allowCredit,'cheque_edit_roles':chequeEditRoles,'cheque_issue_date_edit_roles':chequeDateRoles,'updated_by':db!.auth.currentUser?.id},onConflict:'company_id');},'تم حفظ السياسات المحاسبية.');}
 
   Widget grid(List<String> heads,List<List<String>> rows,{List<Widget>? actions}) {
     if(rows.isEmpty)return const Card(child:Padding(padding:EdgeInsets.all(16),child:Center(child:Text('لا توجد بيانات حتى الآن.'))));
@@ -439,12 +443,18 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     section(credit?'شيكات الائتمان':'متابعة الشيكات البنكية',cheques.where((c)=>s(c['cheque_type'])==(credit?'credit':'bank')&&(credit||s(c['status'])=='issued'||s(c['status'])=='under_collection')&&(credit||trackingFilter=='all'||s(c['direction'])==trackingFilter)).length),
     grid(['رقم الشيك','الاتجاه','الإصدار','الاستحقاق','القيمة','المستفيد','الحالة','تاريخ التسوية'],cheques.where((c)=>s(c['cheque_type'])==(credit?'credit':'bank')&&(credit||s(c['status'])=='issued'||s(c['status'])=='under_collection')&&(credit||trackingFilter=='all'||s(c['direction'])==trackingFilter)).map((c)=>[s(c['check_number']),s(c['direction']),displayDate(c['issue_date']),displayDate(c['due_date']),money(c['amount']),s(c['payee_name']),s(c['status']),displayDate(c['settlement_date'])]).toList(),actions:credit?null:cheques.where((c)=>s(c['cheque_type'])=='bank'&&(s(c['status'])=='issued'||s(c['status'])=='under_collection')&&(trackingFilter=='all'||s(c['direction'])==trackingFilter)).map((c)=>IconButton(onPressed:()=>settle(c),icon:const Icon(Icons.edit_calendar,color:purple))).toList())
   ]);
+  static const _roleOptions=[('owner','مالك الشركة'),('admin','مدير النظام'),('manager','مدير'),('accountant','محاسب'),('operator','مشغل')];
   Widget policyView()=>Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     const Text('السياسات المحاسبية',style:TextStyle(fontWeight:FontWeight.w900,fontSize:18)),
     SwitchListTile(value:directMode,onChanged:(v)=>setState(()=>directMode=v),title:const Text('السماح بالصرف المباشر دون أمر بيع'),subtitle:const Text('عند الإيقاف يجب ربط أمر الصرف بأمر بيع وتحديد المستخدم المستلم.')),
     SwitchListTile(value:requireApproval,onChanged:(v)=>setState(()=>requireApproval=v),title:const Text('اشتراط اعتماد أمر الصرف قبل تنفيذه')),
     SwitchListTile(value:allowCredit,onChanged:(v)=>setState(()=>allowCredit=v),title:const Text('السماح بشيكات الائتمان')),
-    const Text('تاريخ الإصدار الافتراضي هو تاريخ اليوم. تعديل التواريخ النهائية والشيكات المسواة محكوم بصلاحيات المستخدم ولا يسمح بتعديل شيك تم صرفه أو ارتداده.'),
+    const Divider(),
+    const Text('الأدوار المسموح لها بتعديل بيانات الشيك قبل التسوية',style:TextStyle(fontWeight:FontWeight.w800)),
+    ..._roleOptions.map((r)=>CheckboxListTile(dense:true,value:chequeEditRoles.contains(r.$1),title:Text(r.$2),onChanged:(v)=>setState(()=>v==true?chequeEditRoles.add(r.$1):chequeEditRoles.remove(r.$1)))),
+    const Text('الأدوار المسموح لها بتعديل تاريخ الإصدار',style:TextStyle(fontWeight:FontWeight.w800)),
+    ..._roleOptions.map((r)=>CheckboxListTile(dense:true,value:chequeDateRoles.contains(r.$1),title:Text(r.$2),onChanged:(v)=>setState(()=>v==true?chequeDateRoles.add(r.$1):chequeDateRoles.remove(r.$1)))),
+    const Text('تاريخ الإصدار الافتراضي هو تاريخ اليوم. لا يسمح بتعديل شيك تم صرفه أو ارتداده أو إلغاؤه.'),
     Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:savePolicy,child:const Text('حفظ السياسات')))
   ])));
   static const tabNames=['حركة نقدية','أمر صرف / توريد نقدية','أمر صرف شيكات','حركة صرف / توريد شيكات','تسجيل دفاتر شيكات','متابعة الشيكات','شيكات الائتمان','السياسات المحاسبية'];
