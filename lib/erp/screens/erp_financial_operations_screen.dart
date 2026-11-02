@@ -416,12 +416,20 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   Widget booksView()=>Column(children:[
     section('ملخص سيريال الشيكات حسب الحساب البنكي',cashboxes.where((b)=>b['is_bank_account']==true).length),
     grid(['الحساب البنكي','عدد الدفاتر','إجمالي الشيكات','المتاح','المستخدم'],cashboxes.where((b)=>b['is_bank_account']==true).map((b){final id=s(b['id']);final cb=cheques.where((x)=>s(x['bank_cashbox_id'])==id&&s(x['cheque_type'])=='bank').toList();return [s(b['cashbox_name']),books.where((x)=>s(x['bank_cashbox_id'])==id&&x['registered']==true).length.toString(),cb.length.toString(),cb.where((x)=>s(x['status'])=='available').length.toString(),cb.where((x)=>s(x['status'])!='available').length.toString()];}).toList()),
-    Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(children:[
-      bankPicker('الحساب البنكي / بحث F1'),
-      const SizedBox(height:8),integerField(firstCheck,'بداية الدفتر / أول رقم شيك'),
-      Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:registerBook,child:const Text('حفظ وتسجيل الدفتر'))),
-    ]))),
-    section('دفاتر الشيكات',books.length),
+    section('بيانات دفتر الشيكات الجديد',1),
+    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:registerBook,icon:const Icon(Icons.save),label:const Text('حفظ وتسجيل الدفتر'))),
+    Card(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
+      headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
+      columns:const [DataColumn(label:Text('م')),DataColumn(label:Text('الحساب البنكي / F1')),DataColumn(label:Text('بداية الدفتر')),DataColumn(label:Text('عدد الأوراق (معاينة)')),DataColumn(label:Text('الحالة'))],
+      rows:[DataRow(cells:[
+        const DataCell(Text('1')),
+        DataCell(SizedBox(width:220,child:bankPicker('اختيار الحساب'))),
+        DataCell(SizedBox(width:160,child:integerField(firstCheck,'أول رقم شيك'))),
+        DataCell(Text(bankId==null?'—':cashboxes.where((b)=>s(b['id'])==bankId).isEmpty?'—':n(cashboxes.firstWhere((b)=>s(b['id'])==bankId)['checkbook_sheet_count']).toInt().toString())),
+        const DataCell(Text('جاهز للتسجيل')),
+      ])],
+    ))),
+    section('دفاتر الشيكات المسجلة',books.length),
     grid(['م','مسلسل الدفتر','الحساب البنكي','البداية','عدد الأوراق','الحالة'],books.map((b)=>[s(b['book_no']),s(b['book_number']),cashboxName(s(b['bank_cashbox_id'])),s(b['first_check_number']),s(b['sheet_count']),b['registered']==true?'مسجل':'مسودة']).toList()),
     section('أرقام الشيكات',cheques.length),
     grid(['رقم الشيك','الحساب','النوع','الحالة','المستفيد','القيمة'],cheques.map((c)=>[s(c['check_number']),cashboxName(s(c['bank_cashbox_id'])),s(c['cheque_type']),s(c['status']),s(c['payee_name']),chequeAmountLabel(c)]).toList())
