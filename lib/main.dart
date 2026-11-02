@@ -6783,6 +6783,7 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
     super.initState();
     type = widget.initialType;
     _loadMarketTree();
+    _loadPublisherProfile();
   }
   final titleController = TextEditingController();
   final detailsController = TextEditingController();
@@ -6992,9 +6993,12 @@ class _MarketPostScreenState extends State<MarketPostScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 12),
             decoration: BoxDecoration(color: type == 'buy' ? purple : type == 'transfer' ? const Color(0xFFFF27C3) : orange, borderRadius: BorderRadius.circular(14)),
-            child: Text(type == 'buy' ? 'عايز أشتري' : type == 'transfer' ? 'عايز أنقل' : 'عايز أبيع',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 19)),
+            child: Column(mainAxisSize:MainAxisSize.min,children:[
+              Text(type == 'buy' ? 'عايز أشتري' : type == 'transfer' ? 'عايز أنقل' : 'عايز أبيع',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white,fontWeight:FontWeight.bold,fontSize:19)),
+              Text((_publisherProfile['full_name'] ?? 'حساب المستخدم').toString(),style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w700)),
+              Text((_publisherProfile['phone'] ?? 'رقم الهاتف من بيانات الحساب').toString(),style:const TextStyle(color:Colors.white,fontSize:11)),
+              Text([_publisherProfile['governorate'],_publisherProfile['district'],_publisherProfile['area'],_publisherProfile['address']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' - '),maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(color:Colors.white,fontSize:10)),
+            ]),
           ),
           const SizedBox(height: 12),
           TextField(controller: titleController, decoration: const InputDecoration(labelText: 'عنوان الطلب')),
