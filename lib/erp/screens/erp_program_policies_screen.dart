@@ -23,10 +23,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'adjustment_sale_price','category':'مخزنية','ar':'سعر الصنف في التسوية المخزنية هو سعر البيع بدلاً من سعر الشراء','en':'Use sale price in inventory adjustments'},
     {'key':'inventory.stocktake.valuation_basis','category':'مخزنية','ar':'أساس تقييم فروق الجرد','en':'Stocktake variance valuation basis','mandatory':true,'value':'sale','options':['sale','purchase']},
     {'key':'balance_sale_price','category':'مخزنية','ar':'سعر الصنف في تقارير الأرصدة هو سعر البيع بدلاً من سعر الشراء','en':'Use sale price in balance reports'},
-    {'key':'trader_market.sell_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أبيع (بالساعات)','en':'Maximum sell request duration (hours)','value':'24'},
+    {'key':'trader_market.sell_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أبيع (بالساعات)','en':'Maximum sell request duration (hours)','value':'24','enabled_default':true},
     {'key':'trader_market.buy_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أشتري (بالساعات)','en':'Maximum buy request duration (hours)','value':'24'},
     {'key':'trader_market.transfer_duration_hours','category':'بيعية','ar':'الحد الأقصى لمدة طلبات عايز أنقل (بالساعات)','en':'Maximum transfer request duration (hours)','value':'24'},
-    {'key':'trader_market.story_duration','category':'بيعية','ar':'الحد الأقصى لمدة القصة','en':'Maximum story duration','value':'60','options':['1','5','10','15','30','45','60']},
+    {'key':'trader_market.story_duration','category':'بيعية','ar':'الحد الأقصى لمدة القصة','en':'Maximum story duration','value':'60','options':['1','5','10','15','30','45','60'],'enabled_default':true},
     {'key':'customer_default_rep','category':'بيعية','ar':'إمكانية تغيير المندوب الافتراضي للعميل','en':'Allow changing customer default sales representative'},
     {'key':'customer_default_price_policy','category':'بيعية','ar':'إمكانية تغيير سياسة الأسعار الافتراضية للعميل','en':'Allow changing customer default price policy'},
     {'key':'edit_other_user_document','category':'بيعية','ar':'إمكانية تعديل المستند لغير المستخدم الأصلي','en':'Allow editing documents created by another user'},
@@ -45,7 +45,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
   int tab = 0; bool loading = true, saving = false; String? error, message;
   String get company => (widget.companyId ?? '').trim();
-  @override void initState(){super.initState(); for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
+  @override void initState(){super.initState(); for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
   @override void didUpdateWidget(covariant ErpProgramPoliciesScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
   Future<void> _load() async {
     if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; });return;}
@@ -53,7 +53,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     try {
       var rows=await db.from('erp_program_policies').select().eq('company_id',company);
       if ((rows as List).isEmpty) {
-        final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();
+        final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();
         await db.from('erp_program_policies').upsert(initial,onConflict:'company_id,policy_key');
         rows=await db.from('erp_program_policies').select().eq('company_id',company);
       }
