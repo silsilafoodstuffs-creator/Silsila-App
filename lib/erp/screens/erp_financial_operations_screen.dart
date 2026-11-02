@@ -106,10 +106,20 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true));
   Widget drop(String label,String? value,List<DropdownMenuItem<String>> items,ValueChanged<String?> onChanged) =>
     DropdownButtonFormField<String>(value:value,isExpanded:true,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true),items:items,onChanged:onChanged);
-  Widget picker(String label,String type,TextEditingController c,bool isFrom) => Row(children:[
-    Expanded(child:field(c,label+' • F1',readOnly:true)),
-    IconButton.filledTonal(onPressed:()async{final r=await pick(type);if(r==null)return;setState(() {c.text=entityName(r);if(isFrom)fromId=s(r['id']);else toId=s(r['id']);});},icon:const Icon(Icons.search),tooltip:'بحث F1')
-  ]);
+  Future<void> selectEndpoint(String type,TextEditingController c,bool isFrom) async {
+    final r=await pick(type);if(r==null)return;
+    setState(() {c.text=entityName(r);if(isFrom)fromId=s(r['id']);else toId=s(r['id']);});
+  }
+  Widget picker(String label,String type,TextEditingController c,bool isFrom) => Focus(
+    onKeyEvent:(node,event){
+      if(event is KeyDownEvent&&event.logicalKey==LogicalKeyboardKey.f1){selectEndpoint(type,c,isFrom);return KeyEventResult.handled;}
+      return KeyEventResult.ignored;
+    },
+    child:Row(children:[
+      Expanded(child:field(c,label+' • F1',readOnly:true)),
+      IconButton.filledTonal(onPressed:()=>selectEndpoint(type,c,isFrom),icon:const Icon(Icons.search),tooltip:'بحث F1')
+    ]),
+  );
   Widget quick() => Card(color:purple,child:Padding(padding:const EdgeInsets.all(9),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Text(tabNames[tabs.index],style:const TextStyle(color:Colors.white,fontWeight:FontWeight.w900,fontSize:19)),
     SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
