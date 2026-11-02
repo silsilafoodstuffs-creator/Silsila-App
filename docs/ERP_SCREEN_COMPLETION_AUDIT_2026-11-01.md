@@ -160,3 +160,12 @@
 - تحقق SQL بعد التطبيق أكد بقاء الفهرس الأساسي للحضور، واختفاء المكرر، ووجود فهرس cashbox.
 - إعادة فحص Performance Advisor لم تعد تعرض تحذير `unindexed_foreign_keys` ولا `duplicate_index`. زاد عدد الفهارس غير المستخدمة المرصودة مؤقتًا لأن الفهرس الجديد لم يُستخدم بعد في workload الإنتاج؛ لا يُحذف لهذا السبب قبل مراقبة فعلية.
 - Commit توثيق ومigration قاعدة البيانات: `44326cc2b192c1e0a50ace50f59c468b138c3af2`. اختبارات CI لهذا الـ commit قيد التنفيذ عند آخر فحص.
+
+
+### تقوية صلاحيات الجرد والتسويات — 2026-11-02
+
+- مراجعة تعريفات دوال SECURITY DEFINER كشفت أن أربع عمليات جرد/تسوية كانت تتحقق من عضوية الشركة النشطة فقط، دون تقييد دور العضو.
+- تم تعديل الدوال الأربع: `erp_create_physical_stocktake` و`erp_create_manual_stock_adjustment` و`erp_save_physical_stocktake_counts` و`erp_post_physical_stocktake` لتشترط دورًا من القائمة المتوافقة مع صلاحيات حركة المخزون: `owner`, `admin`, `manager`, `operator`, `accountant`.
+- التعديل نُفّذ في Supabase بمigration باسم `harden_stocktake_and_manual_adjustment_role_permissions`، ويُحفظ تعريفه في المستودع بالملف `supabase/migrations/20261102_harden_stocktake_and_manual_adjustment_role_permissions.sql`.
+- اختبار رفض مستخدم غير عضو للشركة في العمليات الأربع نجح؛ الاختبار أنشأ محضرًا مؤقتًا بصفة مالك ثم بدّل هوية الطلب إلى مستخدم غير عضو واختبر الرفض، وانتهى كله بـ ROLLBACK. تحقق لاحق أكد عدم بقاء محضر اختبار.
+- لم يتم اختبار دور عضو محدود الصلاحيات منفصلًا لأن بيانات العضويات النشطة الحالية في الشركة تحتوي مالكين فقط؛ الاختبار السابق يثبت رفض غير العضو، وليس كل تركيبات RBAC الممكنة.
