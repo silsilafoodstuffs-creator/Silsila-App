@@ -77,6 +77,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _employeeWeeklyOff = TextEditingController(text:'الجمعة');
   final _employeeAnnualLeave = TextEditingController(text:'21');
   String? _selectedBranchForWarehouse;
+  String? _selectedCashBranchId;
   String _cashType = 'receipt';
   final _cashAmount = TextEditingController();
   final _cashDescription = TextEditingController();
@@ -182,6 +183,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       if (!mounted) return;
       setState(() {
         _branches = List<Map<String, dynamic>>.from(result[0]);
+        _selectedCashBranchId = _branches.any((b)=>b['id'].toString()==_selectedCashBranchId) ? _selectedCashBranchId : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
         _warehouses = List<Map<String, dynamic>>.from(result[1]);
         _members = List<Map<String, dynamic>>.from(result[2]);
         _itemLinks = List<Map<String, dynamic>>.from(result[3]);
@@ -369,7 +371,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       final movementNo = 'ACT-$datePart-${now.microsecondsSinceEpoch.toString().substring(8)}';
       await _db.from('erp_business_workspace_cash_movements').insert({
         'workspace_id': id,
-        'branch_id': _selectedBranchForWarehouse,
+        'branch_id': _selectedCashBranchId,
         'movement_no': movementNo,
         'movement_type': _cashType,
         'movement_date': now.toIso8601String().substring(0,10),
@@ -802,7 +804,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _backHeader(_area),
         _tileGrid(sections[_area]!.map((x) => (x.$1, x.$2, x.$3 == 'exit' ? 'العودة إلى قوائم سلسلة' : 'سيتم فتح شاشة مستقلة مع صلاحيات هذا النشاط')).toList()),
         const SizedBox(height: 12),
-        const Text('تم تجهيز نقاط الدخول. ترحيل المستندات وتحديث الأرصدة لن يُفعّل قبل استكمال إجراءات الاعتماد المحاسبي والمخزني.', style: TextStyle(color: Colors.black54, height: 1.6)),
+        const Text('الشاشات التشغيلية مفعلة داخل مساحة النشاط. المسودات لا تغير الأرصدة حتى اعتماد المستند وترحيله، وتُسجل التحويلات والتسويات في دفتر حركة المخزون.', style: TextStyle(color: Colors.black54, height: 1.6)),
       ]);
     }
     return _backHeader(_area);
@@ -978,10 +980,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ),
     const SizedBox(height:8),
     DropdownButtonFormField<String>(
-      value: _branches.any((x)=>x['id'].toString()==_selectedBranchForWarehouse)?_selectedBranchForWarehouse:null,
+      value: _branches.any((x)=>x['id'].toString()==_selectedCashBranchId)?_selectedCashBranchId:null,
       decoration: const InputDecoration(labelText:'الفرع'),
       items:_branches.map((b)=>DropdownMenuItem(value:b['id'].toString(),child:Text(b['name_ar'].toString()))).toList(),
-      onChanged:(v)=>setState(()=>_selectedBranchForWarehouse=v),
+      onChanged:(v)=>setState(()=>_selectedCashBranchId=v),
     ),
     const SizedBox(height:8),
     Row(children:[
@@ -1058,6 +1060,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       trailing:Switch(value:b['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_branches').update({'is_active':v}).eq('id',b['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث الفرع: $e');}}))),
   ]);
 
+  String _branchNameForWarehouse(dynamic branchId) {
+    final matches=_branches.where((b)=>b['id'].toString()==(branchId??'').toString());
+    return matches.isEmpty?'فرع غير محدد':matches.first['name_ar'].toString();
+  }
+
   Widget _warehousesPanel() => ListView(children:[
     _sectionTitle('مخازن نشاطي','كل مخزن يتبع فرعاً محدداً، ويمكن التحكم في ظهوره ضمن أرصدة سلسلة'),
     DropdownButtonFormField<String>(
@@ -1076,7 +1083,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     const Divider(),
     ..._warehouses.map((w)=>ListTile(dense:true,leading:const Icon(Icons.warehouse,color:_workspaceOrange),
       title:Text(w['name_ar'].toString()),
-      subtitle:Text('${w['warehouse_code']} • ${w['show_balance_in_silsila']==true?'الرصيد ظاهر في سلسلة':'الرصيد غير ظاهر في سلسلة'}'),
+      subtitle:Text('${_branchNameForWarehouse(w['branch_id'])} • ${w['warehouse_code']} • ${w['show_balance_in_silsila']==true?'الرصيد ظاهر في سلسلة':'الرصيد غير ظاهر في سلسلة'}'),
       trailing:Column(mainAxisSize:MainAxisSize.min,children:[
         Row(mainAxisSize:MainAxisSize.min,children:[const Text('نشط',style:TextStyle(fontSize:10)),Switch(value:w['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'is_active':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث حالة المخزن: $e');}})]),
         Row(mainAxisSize:MainAxisSize.min,children:[const Text('إظهار الرصيد',style:TextStyle(fontSize:10)),Switch(value:w['show_balance_in_silsila']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'show_balance_in_silsila':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث سياسة ظهور الرصيد: $e');}})]),
