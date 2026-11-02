@@ -211,7 +211,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       if(chequeType=='bank'){ch=cheques.firstWhere((x)=>s(x['id'])==selectedId);}
       else {ch=await db!.from('erp_cheques').insert({'company_id':company,'bank_cashbox_id':bankId,'check_number':int.parse(firstCheck.text.trim()),'cheque_type':'credit','direction':chequeDirection,'issue_date':issueDate.text,'amount':v,'status':'available','created_by':db!.auth.currentUser?.id}).select().single();selectedId=s(ch['id']);}
       await db!.rpc('erp_issue_cheque',params:{'p_cheque_id':selectedId,'p_cheque_type':chequeType,'p_direction':chequeDirection,'p_issue_date':issueDate.text,'p_due_date':dueDate.text,'p_amount':v,'p_payee_type':partyType,'p_payee_id':null,'p_payee_name':partyName.text.trim(),'p_notes':description.text});
-      if(order) await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':chequeDirection,'instrument_type':'cheque','cheque_id':selectedId,'party_type':partyType,'party_name':partyName.text.trim(),'amount':v,'description':'شيك رقم '+s(ch['check_number']),'created_by':db!.auth.currentUser?.id});
+      if(order) await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':chequeDirection,'instrument_type':'cheque','cheque_id':selectedId,'party_type':partyType,'party_name':partyName.text.trim(),'amount':v,'description':'شيك رقم '+s(ch['check_number']),'status':'converted','created_by':db!.auth.currentUser?.id});
       chequeAmount.clear();partyName.clear();description.clear();chequeId=null;if(chequeType=='credit')firstCheck.clear();
     },order?'تم حفظ أمر الشيك.':'تم حفظ حركة الشيك.');
   }
@@ -293,8 +293,13 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       const SizedBox(height:8),field(partyName,'اسم المستفيد'),const SizedBox(height:8),field(chequeAmount,'قيمة الشيك الموجبة',numeric:true),const SizedBox(height:8),field(description,'البيان'),
       Align(alignment:Alignment.centerLeft,child:FilledButton(onPressed:()=>issueCheque(isOrder),child:Text(isOrder?'حفظ أمر الشيك':'حفظ حركة الشيك'))),
     ]))),
-    section(isOrder?'أوامر الشيكات':'حركة الشيكات',cheques.length),
-    grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),s(c['issue_date']),s(c['due_date']),money(c['amount']),s(c['status'])]).toList(),actions:cheques.map((c)=>s(c['status'])=='paid'||s(c['status'])=='returned'||s(c['status'])=='cashed_from_cashbox'||s(c['status'])=='cancelled'?const Icon(Icons.lock,color:Colors.grey):IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple))).toList())
+    if(isOrder) ...[
+      section('أوامر صرف الشيكات',orders.where((o)=>s(o['instrument_type'])=='cheque').length),
+      grid(['مسلسل الأمر','رقم الشيك','النوع','الجهة','القيمة','الحالة'],orders.where((o)=>s(o['instrument_type'])=='cheque').map((o)=>[s(o['order_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['check_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['cheque_type']),s(o['party_name']),money(o['amount']),s(o['status'])]).toList()),
+    ] else ...[
+      section('حركة الشيكات',cheques.length),
+      grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),s(c['issue_date']),s(c['due_date']),money(c['amount']),s(c['status'])]).toList(),actions:cheques.map((c)=>s(c['status'])=='paid'||s(c['status'])=='returned'||s(c['status'])=='cashed_from_cashbox'||s(c['status'])=='cancelled'?const Icon(Icons.lock,color:Colors.grey):IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple))).toList()),
+    ]
   ]);
   Widget booksView()=>Column(children:[
     section('ملخص سيريال الشيكات حسب الحساب البنكي',cashboxes.where((b)=>b['is_bank_account']==true).length),
