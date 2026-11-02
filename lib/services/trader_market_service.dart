@@ -468,6 +468,24 @@ class TraderMarketService {
     return Map<String,dynamic>.from(row);
   }
 
+  Future<Map<String, dynamic>> extendPostForModeration(String postId, int extraHours) async {
+    if (extraHours < 1 || extraHours > 720) throw ArgumentError('أدخل مدة إضافية من ساعة إلى 720 ساعة.');
+    final id = int.tryParse(postId);
+    if (id == null) throw ArgumentError('معرّف الطلب غير صالح.');
+    final current = await _requireClient.from('trader_market_posts').select('expires_at,extended_hours')
+      .eq('id', id).maybeSingle();
+    if (current == null) throw StateError('الطلب غير موجود.');
+    final oldExpiry = DateTime.tryParse((current['expires_at'] ?? '').toString())?.toUtc();
+    final base = oldExpiry != null && oldExpiry.isAfter(DateTime.now().toUtc()) ? oldExpiry : DateTime.now().toUtc();
+    final row = await _requireClient.from('trader_market_posts').update({
+      'expires_at': base.add(Duration(hours: extraHours)).toIso8601String(),
+      'extended_hours': ((current['extended_hours'] as num?)?.toInt() ?? 0) + extraHours,
+      'is_active': true, 'status': 'active', 'moderation_status': 'published',
+      'published_at': DateTime.now().toUtc().toIso8601String(),
+    }).eq('id', id).select().single();
+    return Map<String, dynamic>.from(row);
+  }
+
   Future<Map<String, dynamic>> republishPost(String postId, {int durationHours = 24}) async =>
     extendPost(postId, durationHours);
 
