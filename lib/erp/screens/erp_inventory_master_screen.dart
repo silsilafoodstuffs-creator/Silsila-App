@@ -51,6 +51,9 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   List<Map<String, dynamic>> _warehouses = [];
   List<Map<String, dynamic>> _items = [];
   List<Map<String, dynamic>> _workspaceItemProposals = [];
+  List<Map<String, dynamic>> _sharedWorkspaceStock = [];
+  String? _selectedSharedItemId;
+  bool _sharedStockLoaded = false;
   bool _isManagementUser = false;
   final Map<String,String> _proposalNameEdits = {};
   final Map<String,String> _proposalUnitEdits = {};
@@ -174,7 +177,8 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _workspaceItemProposals = values[4]; _isManagementUser = isManagementUser; _itemUnits = extra[0]; _warehouseItemSettings = extra[1]; _geoRows = geoRows;
+        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _workspaceItemProposals = values[4]; _isManagementUser = isManagementUser; _itemUnits = extra[0];
+        _selectedSharedItemId = _items.any((item)=>_s(item['id'])==_selectedSharedItemId) ? _selectedSharedItemId : (_items.isNotEmpty ? _s(_items.first['id']) : null); _warehouseItemSettings = extra[1]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
@@ -357,8 +361,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     ErpQuickTaskButton(label: label, icon: icon, onPressed: action, fallbackColor: color);
 
   void _newCurrentRecord() {
-    if (_view == 'proposals') {
-      setState(() => _message = 'مراجعة الأصناف المقترحة تتم من خلال أزرار الاعتماد أو الرفض داخل كل طلب.');
+    if (_view == 'proposals' || _view == 'shared_stock') {
+      setState(() => _message = 'استخدم أدوات التبويب الحالي بدلاً من إضافة سجل جديد.');
       return;
     }
     final currentFields = _view == 'warehouses'
@@ -384,6 +388,70 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         _itemCategoryId = null; _expiry = false; _pickedItemImage = null; _pickedItemImageBytes = null;
       }
     });
+  }
+
+  Future<void> _loadSharedWorkspaceStock() async {
+    final itemId=_selectedSharedItemId;
+    if(!_isManagementUser) { setState(()=>_error='هذا التقرير متاح لمستخدمي إدارة سلسلة المعتمدين فقط.'); return; }
+    if(itemId==null||itemId.isEmpty) { setState(()=>_error='لا يوجد صنف نشط لعرض أرصدته.'); return; }
+    setState(()=>_loading=true);
+    try {
+      final rows=await Supabase.instance.client.rpc('erp_get_shared_business_workspace_stock',params:{
+        'p_company_id':_company.text.trim(),'p_item_id':itemId,
+      });
+      if(!mounted)return;
+      setState(()=>{
+        _sharedWorkspaceStock=List<Map<String,dynamic>>.from(rows as List),
+        _sharedStockLoaded=true,
+        _loading=false,
+        _error=null,
+      });
+    } catch(e) {
+      if(!mounted)return;
+      setState(()=>{_loading=false,_error='تعذر تحميل الأرصدة المشتركة: $e'});
+    }
+  }
+
+  Widget _sharedWorkspaceStockView() {
+    final first=_sharedWorkspaceStock.isEmpty?null:_sharedWorkspaceStock.first;
+    return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+      const Text('أرصدة الأنشطة التي سمح أصحابها بمشاركة الرصيد مع سلسلة',style:TextStyle(color:Color(0xFF3E007D),fontWeight:FontWeight.w800)),
+      const SizedBox(height:8),
+      Row(children:[
+        Expanded(child:DropdownButtonFormField<String>(
+          value:_items.any((item)=>_s(item['id'])==_selectedSharedItemId)?_selectedSharedItemId:null,
+          isExpanded:true,decoration:const InputDecoration(labelText:'الصنف المركزي'),
+          items:_items.map((item)=>DropdownMenuItem(value:_s(item['id']),child:Text('${_s(item['item_name'])} • ${_s(item['item_code'])}'))).toList(),
+          onChanged:(v)=>setState(()=>_selectedSharedItemId=v),
+        )),
+        const SizedBox(width:8),
+        FilledButton.icon(onPressed:_loading?null:_loadSharedWorkspaceStock,icon:const Icon(Icons.refresh),label:const Text('عرض الأرصدة')),
+      ]),
+      if(first!=null) Card(elevation:0,child:Padding(padding:const EdgeInsets.all(12),child:Wrap(spacing:18,runSpacing:8,children:[
+        Text('رصيد سلسلة: ${first['central_on_hand']}',style:const TextStyle(fontWeight:FontWeight.w800)),
+        Text('محجوز: ${first['central_reserved']}'),
+        Text('متاح: ${first['central_available']}',style:const TextStyle(color:Color(0xFF3E007D),fontWeight:FontWeight.w900)),
+      ]))),
+      Expanded(child:_loading?const Center(child:CircularProgressIndicator()):!_sharedStockLoaded
+        ? const Center(child:Text('اختر صنفاً ثم اضغط عرض الأرصدة.'))
+        : _sharedWorkspaceStock.isEmpty
+          ? const Center(child:Text('لا توجد مخازن مشاركة لهذا الصنف. قد يكون خيار إظهار الرصيد مغلقاً لدى الأنشطة.'))
+          : ListView(children:_sharedWorkspaceStock.map((row){
+            final qty=double.tryParse(row['shared_quantity'].toString())??0;
+            final reorder=double.tryParse(row['reorder_level'].toString())??0;
+            final low=qty<reorder;
+            final account=row['account_kind']=='customer'?'عميل':row['account_kind']=='supplier'?'مورد':'نشاط';
+            return Card(child:ListTile(
+              leading:Icon(low?Icons.warning_amber_rounded:Icons.inventory_2_outlined,color:low?Colors.orange:const Color(0xFF3E007D)),
+              title:Text('${row['workspace_name']} • $account',style:const TextStyle(fontWeight:FontWeight.w800)),
+              subtitle:Text('${row['activity_type']} • ${row['branch_name']} / ${row['warehouse_name']} • حد الطلب: $reorder'),
+              trailing:Column(mainAxisSize:MainAxisSize.min,mainAxisAlignment:MainAxisAlignment.center,children:[
+                Text(qty.toStringAsFixed(2),style:const TextStyle(fontWeight:FontWeight.w900,color:Color(0xFF3E007D))),
+                if(low) const Text('أقل من الحد',style:TextStyle(color:Colors.deepOrange,fontSize:10)),
+              ]),
+            ));
+          }).toList())),
+    ]);
   }
 
   Future<void> _reviewWorkspaceItemProposal(Map<String,dynamic> proposal,String decision) async {
@@ -446,8 +514,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   ]);
 
   Future<void> _saveCurrentRecord() async {
-    if (_view == 'proposals') {
-      setState(() => _message = 'اختر اعتماد أو رفض من بطاقة الصنف المقترح.');
+    if (_view == 'proposals' || _view == 'shared_stock') {
+      setState(() => _message = 'استخدم أدوات التبويب الحالي بدلاً من الحفظ العام.');
       return;
     }
     if (_view == 'warehouses') { await _createWarehouse(); }
@@ -456,7 +524,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
   }
 
   Future<void> _exportMasterExcel() async {
-    if (_view == 'proposals') { setState(() => _message = 'تتم مراجعة الطلبات من بطاقات الأصناف المقترحة.'); return; }
+    if (_view == 'proposals' || _view == 'shared_stock') { setState(() => _message = 'لا يوجد تصدير عام لهذا التبويب حالياً.'); return; }
     final isWarehouses = _view == 'warehouses';
     List<Map<String, dynamic>> rows = isWarehouses ? _warehouses : <Map<String, dynamic>>[];
     final label = isWarehouses ? 'المخازن' : 'الأصناف';
@@ -659,7 +727,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       Card(color: const Color(0xFF3E007D), child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Text(_view == 'warehouses' ? 'بيانات المخازن' : _view == 'proposals' ? 'مراجعة الأصناف المقترحة' : 'بيانات الأصناف', style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+          Text(_view == 'warehouses' ? 'بيانات المخازن' : _view == 'proposals' ? 'مراجعة الأصناف المقترحة' : _view == 'shared_stock' ? 'أرصدة الأنشطة المشتركة' : 'بيانات الأصناف', style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
           const Text('تعريف المخازن والأصناف الأساسية قبل تسجيل الحركات.', style: TextStyle(color: Colors.white70, height: 1.5)),
           const SizedBox(height: 8),
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
@@ -690,12 +758,15 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           const ButtonSegment(value: 'warehouses', label: Text('المخازن'), icon: Icon(Icons.warehouse_outlined)),
           const ButtonSegment(value: 'items', label: Text('الأصناف'), icon: Icon(Icons.inventory_2_outlined)),
           if (_isManagementUser) const ButtonSegment(value: 'proposals', label: Text('أصناف مقترحة'), icon: Icon(Icons.pending_actions_outlined)),
+          if (_isManagementUser) const ButtonSegment(value: 'shared_stock', label: Text('أرصدة الأنشطة'), icon: Icon(Icons.share_location_outlined)),
         ],
         selected: {_view}, onSelectionChanged: (v) => setState(() => _view = v.first),
       ),
       const SizedBox(height: 10),
       if (_view == 'proposals') ...[
         SizedBox(height:650,child:_workspaceProposalsView()),
+      ] else if (_view == 'shared_stock') ...[
+        SizedBox(height:650,child:_sharedWorkspaceStockView()),
       ] else if (_view == 'warehouses') ...[
         Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
