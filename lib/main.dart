@@ -8590,8 +8590,8 @@ class _MarketCardState extends State<MarketCard> {
             Container(
               padding: const EdgeInsetsDirectional.fromSTEB(4, 4, 10, 4),
               decoration: BoxDecoration(
-                color: widget.color.withValues(alpha: .10),
-                border: Border.all(color: widget.color.withValues(alpha: .40)),
+                color: widget.color,
+                border: Border.all(color: widget.color),
                 borderRadius: BorderRadius.circular(11),
               ),
               child: Row(
@@ -8602,16 +8602,16 @@ class _MarketCardState extends State<MarketCard> {
                     constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
                     padding: EdgeInsets.zero,
                     onPressed: () => setState(() => _closed = true),
-                    icon: const Icon(Icons.close_rounded, size: 20),
+                    icon: const Icon(Icons.close_rounded, size: 20, color: Colors.white),
                   ),
                   const SizedBox(width: 5),
                   Expanded(
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       Text(widget.type == 'عايز أشتري' ? 'عايز أشتري' : widget.type == 'عايز أنقل' ? 'عايز أنقل' : 'عايز أبيع',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 15),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
                       ),
-                      Text(_remainingTime(), style: TextStyle(color: widget.color, fontSize: 10, fontWeight: FontWeight.w600)),
+                      Text(_remainingTime(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
                       if (widget.ownerDisplayName.isNotEmpty) Text(widget.ownerDisplayName, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                       if (widget.ownerPhone.isNotEmpty) Text(widget.ownerPhone, style: const TextStyle(color: Colors.white, fontSize: 10)),
                       if (widget.ownerAddress.isNotEmpty) Text(widget.ownerAddress, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 10)),
