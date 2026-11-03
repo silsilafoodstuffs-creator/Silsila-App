@@ -620,7 +620,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         Row(children:[
           Expanded(child:OutlinedButton.icon(onPressed:()async{
             final picked=await showDatePicker(context:dialogContext,initialDate:startDate??DateTime.now(),firstDate:DateTime(2000),lastDate:DateTime(2100));
-            if(picked!=null)setDialogState(()=>{startDate=picked;if(endDate!=null&&endDate!.isBefore(picked))endDate=null;});
+            if(picked!=null)setDialogState(() { startDate=picked; if(endDate!=null&&endDate!.isBefore(picked)) endDate=null; });
           },icon:const Icon(Icons.calendar_today),label:Text('من: ${fmt(startDate)}'))),
           const SizedBox(width:6),
           Expanded(child:OutlinedButton.icon(onPressed:()async{
