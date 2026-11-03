@@ -8,6 +8,12 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../widgets/erp_quick_task_button.dart';
 
+class _CheckbookDraftRow {
+  String? bankId;
+  final TextEditingController firstCheck = TextEditingController();
+  void dispose() => firstCheck.dispose();
+}
+
 class ErpFinancialOperationsScreen extends StatefulWidget {
   const ErpFinancialOperationsScreen({super.key, required this.companyId, required this.initialView});
   final String? companyId;
@@ -31,6 +37,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   final movementDate = TextEditingController(text: _todayDisplay());
   final dueDate = TextEditingController(text: _todayDisplay()), chequeAmount = TextEditingController();
   List<Map<String,dynamic>> cashboxes=[], accounts=[], parties=[], users=[], sales=[], movements=[], orders=[], books=[], cheques=[];
+  final List<_CheckbookDraftRow> _bookDrafts = <_CheckbookDraftRow>[_CheckbookDraftRow()];
   static String _todayDisplay(){final d=DateTime.now();return d.day.toString().padLeft(2,'0')+'-'+d.month.toString().padLeft(2,'0')+'-'+d.year.toString().padLeft(4,'0');}
   DateTime? parseDisplayDate(String value){final t=value.trim();final iso=DateTime.tryParse(t);if(iso!=null)return iso;final p=t.split('-');if(p.length!=3)return null;final d=int.tryParse(p[0]),m=int.tryParse(p[1]),y=int.tryParse(p[2]);if(d==null||m==null||y==null)return null;final v=DateTime(y,m,d);return v.year==y&&v.month==m&&v.day==d?v:null;}
   String isoDate(String value)=>parseDisplayDate(value)?.toIso8601String().substring(0,10)??value;
@@ -52,24 +59,34 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     if(company.isNotEmpty) WidgetsBinding.instance.addPostFrameCallback((_)=>load());
   }
   @override void dispose() {
-    tabs.dispose(); for(final c in [amount,description,fromName,toName,partyName,firstCheck,issueDate,dueDate,chequeAmount,movementDate]) {c.dispose();} super.dispose();
+    tabs.dispose(); for(final row in _bookDrafts) { row.dispose(); } for(final c in [amount,description,fromName,toName,partyName,firstCheck,issueDate,dueDate,chequeAmount,movementDate]) {c.dispose();} super.dispose();
+  }
+
+  Future<List<Map<String,dynamic>>> fetchAllRows(String table,String orderColumn) async {
+    final all=<Map<String,dynamic>>[];
+    for(var offset=0;;offset+=500){
+      final page=await db!.from(table).select('*').eq('company_id',company).order(orderColumn,ascending:false).order('id',ascending:false).range(offset,offset+499);
+      all.addAll(maps(page));
+      if(page.length<500)break;
+    }
+    return all;
   }
 
   Future<void> load() async {
     if(db==null || company.isEmpty) { setState(()=>error='لا توجد شركة مرتبطة بالمستخدم الحالي.'); return; }
     setState(()=>loading=true);
     try {
-      final r=await Future.wait([
-        db!.from('erp_cashboxes').select('id,cashbox_code,cashbox_name,is_bank_account,checkbook_sheet_count').eq('company_id',company).eq('is_active',true).order('cashbox_name'),
-        db!.from('erp_accounts').select('id,account_code,account_name').eq('company_id',company).eq('is_active',true).eq('is_postable',true).limit(2000),
-        db!.from('erp_parties').select('id,party_code,party_name,party_kind').eq('company_id',company).eq('is_active',true).limit(2000),
-        db!.from('erp_users').select('id,auth_user_id,user_code,name_ar').eq('company_id',company).eq('is_active',true).limit(1000),
-        db!.from('erp_sales_documents').select('id,document_number,grand_total').eq('company_id',company).eq('document_type','order').limit(300),
-        db!.from('erp_cash_movements').select('*').eq('company_id',company).order('movement_no',ascending:false).limit(300),
-        db!.from('erp_cash_orders').select('*').eq('company_id',company).order('order_no',ascending:false).limit(300),
-        db!.from('erp_checkbooks').select('*').eq('company_id',company).order('book_no',ascending:false).limit(300),
-        db!.from('erp_cheques').select('*').eq('company_id',company).order('check_number',ascending:false).limit(3000),
-        db!.from('erp_financial_policies').select().eq('company_id',company).maybeSingle(),
+      final r=await Future.wait<dynamic>(<Future<dynamic>>[
+        (() async => await db!.from('erp_cashboxes').select('id,cashbox_code,cashbox_name,is_bank_account,checkbook_sheet_count').eq('company_id',company).eq('is_active',true).order('cashbox_name'))(),
+        (() async => await db!.from('erp_accounts').select('id,account_code,account_name').eq('company_id',company).eq('is_active',true).eq('is_postable',true).limit(2000))(),
+        (() async => await db!.from('erp_parties').select('id,party_code,party_name,party_kind').eq('company_id',company).eq('is_active',true).limit(2000))(),
+        (() async => await db!.from('erp_users').select('id,auth_user_id,user_code,name_ar').eq('company_id',company).eq('is_active',true).limit(1000))(),
+        (() async => await db!.from('erp_sales_documents').select('id,document_number,grand_total').eq('company_id',company).eq('document_type','order').limit(300))(),
+        (() async => await db!.from('erp_cash_movements').select('*').eq('company_id',company).order('movement_no',ascending:false).limit(300))(),
+        (() async => await db!.from('erp_cash_orders').select('*').eq('company_id',company).order('order_no',ascending:false).limit(300))(),
+        fetchAllRows('erp_checkbooks','book_no'),
+        fetchAllRows('erp_cheques','check_number'),
+        (() async => await db!.from('erp_financial_policies').select().eq('company_id',company).maybeSingle())(),
       ]);
       if(!mounted)return;
       final p=r[9] as Map<String,dynamic>?;
@@ -306,13 +323,56 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     if(!directMode&&salesId==null){setState(()=>error='السياسة تشترط ربط أمر الصرف بأمر بيع.');return;}
     await run(()async{await db!.from('erp_cash_orders').insert({'company_id':company,'order_type':orderType,'party_type':partyType,'party_name':partyName.text.trim(),'party_id':orderPartyId,'amount':v,'description':description.text,'sales_document_id':salesId,'assigned_to_user_id':assigneeId,'status':requireApproval?'draft':'approved','created_by':db!.auth.currentUser?.id});amount.clear();partyName.clear();description.clear();orderPartyId=null;},'تم حفظ أمر الصرف / التوريد.');
   }
+  Future<void> selectBookBank(_CheckbookDraftRow row) async {
+    final selected=await pick('bank');
+    if(selected!=null && mounted) setState(()=>row.bankId=s(selected['id']));
+  }
+  Widget bookBankPicker(_CheckbookDraftRow row) => Focus(
+    onKeyEvent:(node,event){if(event is KeyDownEvent&&event.logicalKey==LogicalKeyboardKey.f1){selectBookBank(row);return KeyEventResult.handled;}return KeyEventResult.ignored;},
+    child:Row(children:[
+      Expanded(child:InputDecorator(decoration:const InputDecoration(labelText:'الحساب البنكي',border:OutlineInputBorder(),isDense:true),child:Text(row.bankId==null?'اختر الحساب البنكي':cashboxName(row.bankId!),overflow:TextOverflow.ellipsis))),
+      IconButton.filledTonal(onPressed:()=>selectBookBank(row),tooltip:'بحث F1',icon:const Icon(Icons.search)),
+    ]),
+  );
+  void addBookDraftRow(){setState(()=>_bookDrafts.add(_CheckbookDraftRow()));}
+  void removeBookDraftRow(int index){if(_bookDrafts.length<=1)return;setState(()=>_bookDrafts.removeAt(index).dispose());}
   Future<void> registerBook() async {
-    final start=int.tryParse(firstCheck.text.trim());
-    if(bankId==null||start==null||start<=0){setState(()=>error='اختر حسابًا بنكيًا وأدخل بداية الدفتر.');return;}
-    final b=cashboxes.firstWhere((x)=>s(x['id'])==bankId);
-    final count=n(b['checkbook_sheet_count']).toInt();
-    if(count<1){setState(()=>error='حدد عدد أوراق دفتر الشيكات في بيانات الحساب البنكي.');return;}
-    await run(()async{final row=await db!.from('erp_checkbooks').insert({'company_id':company,'bank_cashbox_id':bankId,'first_check_number':start,'sheet_count':count,'created_by':db!.auth.currentUser?.id}).select('id').single();await db!.rpc('erp_register_checkbook',params:{'p_checkbook_id':row['id']});firstCheck.clear();},'تم تسجيل الدفتر وإنشاء أرقام الشيكات.');
+    final valid=<Map<String,dynamic>>[];
+    for(var i=0;i<_bookDrafts.length;i++){
+      final draft=_bookDrafts[i];
+      final startNumber=int.tryParse(draft.firstCheck.text.trim());
+      final bank=cashboxes.where((x)=>s(x['id'])==draft.bankId && x['is_bank_account']==true);
+      if(bank.isEmpty||startNumber==null||startNumber<=0){setState(()=>error='راجع الحساب البنكي وبداية الدفتر في السطر '+(i+1).toString()+'.');return;}
+      final count=n(bank.first['checkbook_sheet_count']).toInt();
+      if(count<1){setState(()=>error='حدد عدد أوراق دفتر الشيكات في بيانات الحساب البنكي.');return;}
+      valid.add({'bank_id':draft.bankId,'start':startNumber,'count':count});
+    }
+    for(var i=0;i<valid.length;i++){
+      final current=valid[i];
+      final currentStart=current['start'] as int;
+      final currentEnd=currentStart+(current['count'] as int)-1;
+      final bankIdValue=current['bank_id'];
+      for(final existing in books.where((b)=>b['registered']==true&&s(b['bank_cashbox_id'])==s(bankIdValue))){
+        final existingStart=n(existing['first_check_number']).toInt();
+        final existingEnd=existingStart+n(existing['sheet_count']).toInt()-1;
+        if(currentStart<=existingEnd&&existingStart<=currentEnd){setState(()=>error='مدى أرقام الدفتر في السطر '+(i+1).toString()+' يتداخل مع دفتر مسجل بالفعل.');return;}
+      }
+      for(var j=0;j<i;j++){
+        final previous=valid[j];
+        if(s(previous['bank_id'])!=s(bankIdValue))continue;
+        final previousStart=previous['start'] as int;
+        final previousEnd=previousStart+(previous['count'] as int)-1;
+        if(currentStart<=previousEnd&&previousStart<=currentEnd){setState(()=>error='أرقام الدفاتر الجديدة متداخلة بين السطرين '+(j+1).toString()+' و'+(i+1).toString()+'.');return;}
+      }
+    }
+    await run(()async{
+      await db!.rpc('erp_register_checkbooks_batch',params:{
+        'p_company_id':company,
+        'p_books':valid.map((draft)=>{'bank_cashbox_id':draft['bank_id'],'first_check_number':draft['start']}).toList(),
+      });
+      for(final draft in _bookDrafts){draft.dispose();}
+      _bookDrafts..clear()..add(_CheckbookDraftRow());
+    },'تم تسجيل '+valid.length.toString()+' دفتر/دفاتر وإنشاء أرقام الشيكات المتاحة في عملية واحدة.');
   }
   Future<void> issueCheque(bool order) async {
     final v=double.tryParse(chequeAmount.text.trim()), issue=parseDisplayDate(issueDate.text), due=parseDisplayDate(dueDate.text);
@@ -347,15 +407,33 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     }
     issue.dispose();due.dispose();value.dispose();payee.dispose();notes.dispose();
   }
+  Future<void> cancelCheque(Map<String,dynamic> cheque) async {
+    final reason=TextEditingController();
+    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
+      title:Text('إلغاء الشيك رقم '+s(cheque['check_number'])),
+      content:Column(mainAxisSize:MainAxisSize.min,children:[
+        const Text('الإلغاء متاح للشيكات غير المستخدمة فقط. سيظل رقم الشيك محفوظًا ولن يعود متاحًا للصرف.'),
+        const SizedBox(height:10),TextField(controller:reason,maxLines:2,decoration:const InputDecoration(labelText:'سبب الإلغاء (مطلوب)',border:OutlineInputBorder())),
+      ]),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('رجوع')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:const Text('تأكيد الإلغاء'))],
+    ));
+    if(yes==true){
+      if(reason.text.trim().isEmpty){notify('اكتب سبب إلغاء الشيك أولًا.');}
+      else await run(()async{
+        await db!.rpc('erp_cancel_available_cheque',params:{'p_cheque_id':s(cheque['id']),'p_reason':reason.text.trim()});
+      },'تم إلغاء الشيك مع حفظ السبب وسجل المراجعة ومنع إعادة استخدام رقمه.');
+    }
+    reason.dispose();
+  }
   Future<void> settle(Map<String,dynamic> c) async {
     final date=TextEditingController(text:_todayDisplay());String result='paid';String? cashbox;String? counterAccount;
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,local)=>AlertDialog(
       title:Text('متابعة الشيك '+s(c['check_number'])),
       content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
-        DropdownButtonFormField<String>(value:result,decoration:const InputDecoration(labelText:'الحالة'),items:const[
-          DropdownMenuItem(value:'paid',child:Text('تم السداد')),DropdownMenuItem(value:'returned',child:Text('ارتداد')),DropdownMenuItem(value:'cashed_from_cashbox',child:Text('صرف من الخزينة'))
+        DropdownButtonFormField<String>(value:result,decoration:const InputDecoration(labelText:'الحالة'),items:[
+          DropdownMenuItem(value:'paid',child:Text(s(c['direction'])=='receipt'?'تم التحصيل':'تم السداد')),DropdownMenuItem(value:'returned',child:Text('ارتداد')),DropdownMenuItem(value:'cashed_from_cashbox',child:Text(s(c['direction'])=='receipt'?'تم التوريد للخزينة':'صرف من الخزينة'))
         ],onChanged:(v)=>local(()=>result=v??result)),
-        const SizedBox(height:8),field(date,'تاريخ السداد / الارتداد DD-MM-YYYY'),
+        const SizedBox(height:8),field(date,s(c['direction'])=='receipt'?'تاريخ التحصيل / التوريد / الارتداد DD-MM-YYYY':'تاريخ السداد / الصرف / الارتداد DD-MM-YYYY'),
         if(result!='returned') ...[const SizedBox(height:8),drop('الحساب المقابل للقيد',counterAccount,[const DropdownMenuItem<String>(value:null,child:Text('اختر الحساب المقابل')),...accounts.map((a)=>DropdownMenuItem(value:s(a['id']),child:Text(s(a['account_code'])+' — '+s(a['account_name']))))],(v)=>local(()=>counterAccount=v))],
         if(result=='cashed_from_cashbox')drop('الخزينة',cashbox,[...cashboxes.where((x)=>x['is_bank_account']!=true).map((x)=>DropdownMenuItem(value:s(x['id']),child:Text(s(x['cashbox_name']))))],(v)=>local(()=>cashbox=v)),
       ])),
@@ -414,24 +492,38 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       grid(['مسلسل الأمر','رقم الشيك','النوع','الجهة','القيمة','الحالة'],orders.where((o)=>s(o['instrument_type'])=='cheque').map((o)=>[s(o['order_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['check_number']),s(cheques.where((c)=>s(c['id'])==s(o['cheque_id'])).isEmpty?'':cheques.firstWhere((c)=>s(c['id'])==s(o['cheque_id']))['cheque_type']),s(o['party_name']),money(o['amount']),s(o['status'])]).toList()),
     ] else ...[
       section('حركة الشيكات',cheques.length),
-      grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),displayDate(c['issue_date']),displayDate(c['due_date']),chequeAmountLabel(c),s(c['status'])]).toList(),actions:cheques.map((c)=>s(c['status'])=='paid'||s(c['status'])=='returned'||s(c['status'])=='cashed_from_cashbox'||s(c['status'])=='cancelled'?const Icon(Icons.lock,color:Colors.grey):IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple))).toList()),
+      grid(['رقم الشيك','النوع','الاتجاه','الإصدار','الاستحقاق','القيمة','الحالة'],cheques.map((c)=>[s(c['check_number']),s(c['cheque_type']),s(c['direction']),displayDate(c['issue_date']),displayDate(c['due_date']),chequeAmountLabel(c),s(c['status'])]).toList(),actions:cheques.map((c){
+        final settled=['paid','returned','cashed_from_cashbox','cancelled'].contains(s(c['status']));
+        return settled?const Icon(Icons.lock,color:Colors.grey):Row(mainAxisSize:MainAxisSize.min,children:[
+          IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple)),
+          if(s(c['status'])=='available')IconButton(tooltip:'إلغاء الشيك غير المستخدم',onPressed:saving?null:()=>cancelCheque(c),icon:const Icon(Icons.delete_outline,color:Colors.red)),
+        ]);
+      }).toList()),
     ]
   ]);
   Widget booksView()=>Column(children:[
     section('ملخص سيريال الشيكات حسب الحساب البنكي',cashboxes.where((b)=>b['is_bank_account']==true).length),
-    grid(['الحساب البنكي','عدد الدفاتر','إجمالي الشيكات','المتاح','المستخدم'],cashboxes.where((b)=>b['is_bank_account']==true).map((b){final id=s(b['id']);final cb=cheques.where((x)=>s(x['bank_cashbox_id'])==id&&s(x['cheque_type'])=='bank').toList();return [s(b['cashbox_name']),books.where((x)=>s(x['bank_cashbox_id'])==id&&x['registered']==true).length.toString(),cb.length.toString(),cb.where((x)=>s(x['status'])=='available').length.toString(),cb.where((x)=>s(x['status'])!='available').length.toString()];}).toList()),
-    section('بيانات دفتر الشيكات الجديد',1),
-    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:registerBook,icon:const Icon(Icons.save),label:const Text('حفظ وتسجيل الدفتر'))),
+    grid(['الحساب البنكي','عدد الدفاتر','إجمالي الشيكات','المتاح','المستخدم/المصدر','الملغى'],cashboxes.where((b)=>b['is_bank_account']==true).map((b){final id=s(b['id']);final cb=cheques.where((x)=>s(x['bank_cashbox_id'])==id&&s(x['cheque_type'])=='bank').toList();return [s(b['cashbox_name']),books.where((x)=>s(x['bank_cashbox_id'])==id&&x['registered']==true).length.toString(),cb.length.toString(),cb.where((x)=>s(x['status'])=='available').length.toString(),cb.where((x)=>s(x['status'])!='available'&&s(x['status'])!='cancelled').length.toString(),cb.where((x)=>s(x['status'])=='cancelled').length.toString()];}).toList()),
+    section('بيانات دفاتر الشيكات الجديدة',_bookDrafts.length),
+    Align(alignment:Alignment.centerLeft,child:Wrap(spacing:8,children:[
+      OutlinedButton.icon(onPressed:addBookDraftRow,icon:const Icon(Icons.add),label:const Text('إضافة دفتر')),
+      FilledButton.icon(onPressed:saving?null:registerBook,icon:const Icon(Icons.save),label:const Text('حفظ وتسجيل الدفاتر')),
+    ])),
     Card(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
       headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),
-      columns:const [DataColumn(label:Text('م')),DataColumn(label:Text('الحساب البنكي / F1')),DataColumn(label:Text('بداية الدفتر')),DataColumn(label:Text('عدد الأوراق (معاينة)')),DataColumn(label:Text('الحالة'))],
-      rows:[DataRow(cells:[
-        const DataCell(Text('1')),
-        DataCell(SizedBox(width:220,child:bankPicker('اختيار الحساب'))),
-        DataCell(SizedBox(width:160,child:integerField(firstCheck,'أول رقم شيك'))),
-        DataCell(Text(bankId==null?'—':cashboxes.where((b)=>s(b['id'])==bankId).isEmpty?'—':n(cashboxes.firstWhere((b)=>s(b['id'])==bankId)['checkbook_sheet_count']).toInt().toString())),
-        const DataCell(Text('جاهز للتسجيل')),
-      ])],
+      columns:const [DataColumn(label:Text('م')),DataColumn(label:Text('الحساب البنكي / F1')),DataColumn(label:Text('بداية الدفتر')),DataColumn(label:Text('عدد الأوراق (معاينة)')),DataColumn(label:Text('إجراء'))],
+      rows:_bookDrafts.asMap().entries.map((entry){
+        final i=entry.key;final draft=entry.value;
+        final bank=cashboxes.where((b)=>s(b['id'])==draft.bankId&&b['is_bank_account']==true);
+        final count=bank.isEmpty?'—':n(bank.first['checkbook_sheet_count']).toInt().toString();
+        return DataRow(cells:[
+          DataCell(Text((i+1).toString())),
+          DataCell(SizedBox(width:230,child:bookBankPicker(draft))),
+          DataCell(SizedBox(width:150,child:integerField(draft.firstCheck,'أول رقم شيك'))),
+          DataCell(Text(count)),
+          DataCell(IconButton(tooltip:'حذف السطر',onPressed:_bookDrafts.length==1?null:()=>removeBookDraftRow(i),icon:const Icon(Icons.delete_outline,color:Colors.red))),
+        ]);
+      }).toList(),
     ))),
     section('دفاتر الشيكات المسجلة',books.length),
     grid(['م','مسلسل الدفتر','الحساب البنكي','البداية','عدد الأوراق','الحالة'],books.map((b)=>[s(b['book_no']),s(b['book_number']),cashboxName(s(b['bank_cashbox_id'])),s(b['first_check_number']),s(b['sheet_count']),b['registered']==true?'مسجل':'مسودة']).toList()),
