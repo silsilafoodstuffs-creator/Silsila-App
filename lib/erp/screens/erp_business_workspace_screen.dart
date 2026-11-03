@@ -182,8 +182,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     setState(() { _loading = true; _error = null; });
     try {
       final activityRows = await _safeRows(() => _db.from('activity_types').select('code,name,name_en').eq('is_active',true).order('name'));
-      final rows = await _db.from('erp_business_workspaces').select()
-          .eq('is_active', true).order('created_at');
+      final baseQuery = _db.from('erp_business_workspaces').select().eq('is_active', true);
+      final rows = _platformObserver ? await baseQuery.order('created_at') : await baseQuery.or('owner_user_id.eq.$currentUserId,linked_profile_id.eq.$currentUserId').order('created_at');
       if (!mounted) return;
       setState(() {
         _activityTypes = activityRows;
