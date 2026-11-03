@@ -262,7 +262,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       });
       await _loadWorkspaceMetrics(id);
     } catch (e) {
-      if (mounted) setState(() => _error = 'تعذر تحميل الفروع والمخازن: $e');
+      if (mounted && _selected?['id']?.toString() == id) {
+        setState(() => _error = 'تعذر تحميل الفروع والمخازن: $e');
+      }
     }
   }
 
@@ -636,7 +638,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         }
       });
     } catch (e) {
-      _message('تعذر تحميل دليل أصناف سلسلة: $e');
+      if (mounted && _selected?['id']?.toString() == workspaceId) {
+        _message('تعذر تحميل دليل أصناف سلسلة: $e');
+      }
     }
   }
 
@@ -673,7 +677,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _comparisonLoading=false;
       });
     }catch(e){
-      if(!mounted)return;
+      if(!mounted || _selected?['id']?.toString()!=workspaceId)return;
       setState(()=>_comparisonLoading=false);
       _message('تعذر مقارنة المخزون مع سلسلة: $e');
     }
