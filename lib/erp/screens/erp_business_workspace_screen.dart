@@ -120,6 +120,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     'purchases.manage': false, 'sales.read': false, 'sales.manage': false,
     'cash.read': false, 'cash.manage': false, 'hr.read': false, 'hr.manage': false,
     'reports.read': false, 'audit.read': false, 'audit.write': false,
+    'customers.read': false, 'customers.manage': false, 'suppliers.read': false, 'suppliers.manage': false,
   };
 
   @override
