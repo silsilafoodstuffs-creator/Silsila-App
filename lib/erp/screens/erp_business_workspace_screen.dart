@@ -1283,10 +1283,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   Widget _memberUsersPanel() => ListView(children:[
     if (_isWorkspaceOwner) ...[
       _sectionTitle('إضافة مستخدم','اربط حساباً نشطاً موجوداً بالفعل في سلسلة دون إنشاء حساب دخول مكرر'),
+      TextField(controller:_memberPhone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'رقم هاتف المستخدم المسجل')),
+      const SizedBox(height:8),
       Row(children:[
-        Expanded(child:TextField(controller:_memberPhone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'رقم هاتف المستخدم المسجل'))),
-        const SizedBox(width:8),
-        SizedBox(width:150,child:DropdownButtonFormField<String>(value:_memberRole,decoration:const InputDecoration(labelText:'الدور'),items:const[
+        Expanded(child:DropdownButtonFormField<String>(value:_memberRole,decoration:const InputDecoration(labelText:'الدور'),items:const[
           DropdownMenuItem(value:'staff',child:Text('مستخدم')),
           DropdownMenuItem(value:'manager',child:Text('مدير فرع')),
           DropdownMenuItem(value:'accountant',child:Text('محاسب')),
@@ -1295,7 +1295,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
           DropdownMenuItem(value:'viewer',child:Text('عرض فقط')),
           DropdownMenuItem(value:'admin',child:Text('مدير كامل')),
         ],onChanged:(v){if(v!=null)setState(()=>_memberRole=v);})),
-        IconButton(onPressed:_addMember,icon:const Icon(Icons.person_add_alt_1,color:_workspacePurple)),
+        const SizedBox(width:8),
+        FilledButton.icon(onPressed:_addMember,icon:const Icon(Icons.person_add_alt_1),label:const Text('ربط المستخدم')),
       ]),
     ],
     const Divider(),
@@ -1388,7 +1389,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   String _permissionLabel(String key) => const {
     'workspace.enter':'الدخول إلى إدارة النشاط',
-    'members.read':'عرض المستخدمين','members.manage':'إدارة المستخدمين',
+    'members.read':'عرض المستخدمين',
     'master.read':'عرض الفروع والمخازن','master.manage':'إدارة الفروع والمخازن',
     'items.read':'عرض الأصناف','items.propose':'اقتراح أصناف جديدة',
     'inventory.read':'عرض المخزون','inventory.manage':'إدارة الأرصدة والتحويلات والتسويات',
@@ -1591,7 +1592,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       Text(title, style: const TextStyle(color: _workspacePurple, fontWeight: FontWeight.w900, fontSize: 17)),
       const SizedBox(height: 10), Text(body, style: const TextStyle(height: 1.8)),
       const SizedBox(height: 12),
-      const Text('هذه الوحدة ضمن خطة التنفيذ، ولم يتم تفعيل عملياتها بعد.', style: TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.w700)),
+      const Text('المعلومات المعروضة تخص مساحة النشاط الحالية، وتظل مستقلة عن بيانات سلسلة وباقي الأنشطة.', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w600)),
     ])),
   );
 
