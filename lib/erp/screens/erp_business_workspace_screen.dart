@@ -505,11 +505,29 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     } catch(e) { _message('تعذر إنشاء المستند: $e'); }
   }
 
+  Future<void> _submitWorkspaceDocument(String documentId) async {
+    try {
+      await _db.rpc('erp_submit_business_workspace_document',params:{'p_document_id':documentId});
+      await _loadStructure();
+      _message('تم إرسال المستند للاعتماد. لم يتغير المخزون بعد.');
+    } catch(e) { _message('تعذر إرسال المستند للاعتماد: $e'); }
+  }
+
+  Future<void> _approveWorkspaceDocument(String documentId) async {
+    try {
+      await _db.rpc('erp_approve_business_workspace_document',params:{
+        'p_document_id':documentId,'p_approval_note':null,
+      });
+      await _loadStructure();
+      _message('تم اعتماد المستند. يمكنك ترحيله الآن.');
+    } catch(e) { _message('تعذر اعتماد المستند: $e'); }
+  }
+
   Future<void> _postWorkspaceDocument(String documentId) async {
     try {
       await _db.rpc('erp_post_business_workspace_document',params:{'p_document_id':documentId});
       await _loadStructure();
-      _message('تم اعتماد المستند وترحيل حركته إلى مخزون النشاط.');
+      _message('تم ترحيل المستند المعتمد إلى حركة مخزون النشاط.');
     } catch(e) { _message('لم يتم ترحيل المستند: $e'); }
   }
 
@@ -1162,7 +1180,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _documentsView({required bool purchase}) => ListView(children: [
     _backHeader(purchase?'فاتورة شراء / مرتجع شراء':'فاتورة بيع / مرتجع بيع'),
-    _sectionTitle(purchase?'مشتريات النشاط':'مبيعات النشاط','مستندات مستقلة بمسودات واعتماد قبل ترحيل المخزون'),
+    _sectionTitle(purchase?'مشتريات النشاط':'مبيعات النشاط','مسودة ← بانتظار الاعتماد ← معتمد ← مرحّل؛ لا يتغير المخزون قبل الترحيل'),
     Wrap(spacing:6,children:[
       ChoiceChip(label:Text(purchase?'فاتورة شراء':'فاتورة بيع'),selected:_documentType==(purchase?'purchase':'sale'),onSelected:(_){setState(()=>_documentType=purchase?'purchase':'sale');}),
       ChoiceChip(label:Text(purchase?'مرتجع شراء':'مرتجع بيع'),selected:_documentType==(purchase?'purchase_return':'sale_return'),onSelected:(_){setState(()=>_documentType=purchase?'purchase_return':'sale_return');}),
@@ -1228,7 +1246,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         subtitle:Text('${d['document_date']} • ${d['counterparty_name']??'بدون طرف'} • ${d['status']}'),
         trailing:Row(mainAxisSize:MainAxisSize.min,children:[
           Text('${d['total']}',style:const TextStyle(fontWeight:FontWeight.w800,color:_workspacePurple)),
-          if(d['status']=='draft' && _canWorkspacePermission(purchase ? 'purchases.manage' : 'sales.manage')) IconButton(tooltip:'اعتماد وترحيل',icon:const Icon(Icons.check_circle,color:Colors.green),onPressed:()=>_postWorkspaceDocument(d['id'].toString())),
+          if (_canWorkspacePermission(purchase ? 'purchases.manage' : 'sales.manage')) ...[
+            if(d['status']=='draft') IconButton(tooltip:'إرسال للاعتماد',icon:const Icon(Icons.send_outlined,color:_workspaceOrange),onPressed:()=>_submitWorkspaceDocument(d['id'].toString())),
+            if(d['status']=='pending') IconButton(tooltip:'اعتماد المستند',icon:const Icon(Icons.verified_outlined,color:_workspacePurple),onPressed:()=>_approveWorkspaceDocument(d['id'].toString())),
+            if(d['status']=='approved') IconButton(tooltip:'ترحيل المخزون',icon:const Icon(Icons.check_circle,color:Colors.green),onPressed:()=>_postWorkspaceDocument(d['id'].toString())),
+          ],
         ]),
       ),
     )),
