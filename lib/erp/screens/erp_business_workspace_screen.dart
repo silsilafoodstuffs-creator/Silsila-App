@@ -586,8 +586,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Future<void> _addEmployeeLeave() async {
     final workspaceId=_selected?['id']?.toString();
-    if(workspaceId==null||_employees.isEmpty){_message('أضف موظفاً أولاً قبل تسجيل الإجازات.');return;}
-    String? employeeId=_employees.first['id'].toString();
+    final activeEmployees=_employees.where((e)=>e['is_active']==true).toList();
+    if(workspaceId==null||activeEmployees.isEmpty){_message('أضف موظفاً نشطاً أولاً قبل تسجيل الإجازات.');return;}
+    String? employeeId=activeEmployees.first['id'].toString();
     String leaveType='annual';
     DateTime? startDate;
     DateTime? endDate;
@@ -599,7 +600,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         DropdownButtonFormField<String>(
           value:employeeId,
           decoration:const InputDecoration(labelText:'الموظف'),
-          items:_employees.where((e)=>e['is_active']==true).map((e)=>DropdownMenuItem(value:e['id'].toString(),child:Text(e['full_name'].toString()))).toList(),
+          items:activeEmployees.map((e)=>DropdownMenuItem(value:e['id'].toString(),child:Text(e['full_name'].toString()))).toList(),
           onChanged:(v)=>setDialogState(()=>employeeId=v),
         ),
         const SizedBox(height:8),
@@ -619,7 +620,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         Row(children:[
           Expanded(child:OutlinedButton.icon(onPressed:()async{
             final picked=await showDatePicker(context:dialogContext,initialDate:startDate??DateTime.now(),firstDate:DateTime(2000),lastDate:DateTime(2100));
-            if(picked!=null)setDialogState(()=>startDate=picked);
+            if(picked!=null)setDialogState(()=>{startDate=picked;if(endDate!=null&&endDate!.isBefore(picked))endDate=null;});
           },icon:const Icon(Icons.calendar_today),label:Text('من: ${fmt(startDate)}'))),
           const SizedBox(width:6),
           Expanded(child:OutlinedButton.icon(onPressed:()async{
