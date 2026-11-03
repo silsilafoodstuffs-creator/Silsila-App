@@ -51,3 +51,7 @@ returns boolean language sql security invoker set search_path=pg_catalog,public,
 as $$ select private.erp_remove_business_workspace_member(p_workspace_id,p_member_user_id); $$;
 revoke all on function public.erp_remove_business_workspace_member(uuid,uuid) from public,anon;
 grant execute on function public.erp_remove_business_workspace_member(uuid,uuid) to authenticated;
+
+-- Creation is provisioned only by the approved-profile trigger.
+revoke execute on function private.erp_create_business_workspace(text,text,text) from public,anon,authenticated;
+revoke execute on function public.erp_create_business_workspace(text,text,text) from public,anon,authenticated;
