@@ -1597,6 +1597,8 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     'cash.read':'عرض النقدية','cash.manage':'إدارة الصرف والتوريد',
     'hr.read':'عرض الموظفين','hr.manage':'إدارة الموظفين',
     'reports.read':'عرض التقارير','audit.read':'عرض سجل العمليات','audit.write':'تسجيل عمليات المراجعة',
+    'customers.read':'عرض عملاء نشاطي','customers.manage':'إدارة عملاء نشاطي',
+    'suppliers.read':'عرض موردي نشاطي','suppliers.manage':'إدارة موردي نشاطي',
   }[key] ?? key;
   Widget _stockInfo() {
     final tabs = <(String,int,Widget)>[
