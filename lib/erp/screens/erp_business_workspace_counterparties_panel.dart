@@ -113,6 +113,18 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
     });
   }
 
+  Future<void> _setActive(Map<String,dynamic> row,bool value) async {
+    if (!_canManage) return;
+    try {
+      await _db.from('erp_business_workspace_counterparties').update({'is_active':value})
+        .eq('id',row['id'].toString()).eq('workspace_id',widget.workspaceId)
+        .eq('party_type',_type);
+      await _load();
+    } catch(e) {
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تحديث الحالة: $e')));
+    }
+  }
+
   Future<void> _delete(Map<String,dynamic> row) async {
     if (!_canManage) return;
     final confirmed=await showDialog<bool>(
@@ -166,7 +178,8 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
       leading:Icon(_type=='customer'?Icons.person_outline:Icons.local_shipping_outlined,color:_partyPurple),
       title:Text('${r['party_code']} • ${r['display_name']}'),
       subtitle:Text([r['phone'],r['governorate'],r['district'],r['area']].where((x)=>x!=null&&x.toString().isNotEmpty).join(' • ')),
-      trailing:_canManage?Wrap(spacing:0,children:[
+      trailing:_canManage?Wrap(spacing:0,crossAxisAlignment:WrapCrossAlignment.center,children:[
+        Switch(value:r['is_active']==true,onChanged:(v)=>_setActive(r,v)),
         IconButton(tooltip:'تعديل',onPressed:()=>_edit(r),icon:const Icon(Icons.edit_outlined,color:_partyPurple)),
         IconButton(tooltip:'حذف من الدفتر',onPressed:()=>_delete(r),icon:const Icon(Icons.delete_outline,color:Colors.redAccent)),
       ]):Text(r['is_active']==true?'نشط':'غير نشط'),
