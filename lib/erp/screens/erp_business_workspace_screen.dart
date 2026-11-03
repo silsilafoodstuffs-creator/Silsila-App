@@ -42,6 +42,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _documents = [];
   List<Map<String, dynamic>> _stockMovements = [];
   List<Map<String, dynamic>> _workspaceComparisonRows = [];
+  final List<String> _loadWarnings = [];
   bool _comparisonLoaded = false;
   bool _comparisonLoading = false;
   List<Map<String, dynamic>> _memberLocations = [];
@@ -210,9 +211,15 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     try {
       final rows = await request();
       return List<Map<String, dynamic>>.from(rows);
-    } catch (_) {
-      // A restricted member may not have access to every module table.
-      // Keep the other permitted modules available instead of failing the whole workspace.
+    } catch (error) {
+      // RLS permission denials are expected for modules outside a member's scope.
+      // Surface other failures instead of silently presenting them as empty datasets.
+      final message = error.toString();
+      if (message.contains('42501') ||
+          message.toLowerCase().contains('permission denied')) {
+        return <Map<String, dynamic>>[];
+      }
+      _loadWarnings.add(message);
       return <Map<String, dynamic>>[];
     }
   }
@@ -220,6 +227,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   Future<void> _loadStructure() async {
     final id = _selected?['id']?.toString();
     if (id == null) return;
+    _loadWarnings.clear();
     try {
       final result = await Future.wait<List<Map<String, dynamic>>>([
         _safeRows(() => _db.from('erp_business_workspace_branches').select().eq('workspace_id', id).order('name_ar')),
@@ -983,6 +991,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
         : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _header(),
           const SizedBox(height: 14),
+          if (_loadWarnings.isNotEmpty) _loadWarningBanner(),
           if (_workspaces.isNotEmpty) _workspacePicker(),
           const SizedBox(height: 14),
           Expanded(child: _selected == null ? _noWorkspace() : _areaView()),
@@ -999,6 +1008,31 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     ])),
 
   ]);
+
+  Widget _loadWarningBanner() => Card(
+    elevation: 0,
+    color: const Color(0xFFFFF7E8),
+    child: Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: _workspaceOrange),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'تعذر تحميل بعض بيانات النشاط (${_loadWarnings.length} تنبيه). راجع الاتصال أو صلاحيات قاعدة البيانات ثم أعد المحاولة.',
+              style: const TextStyle(fontSize: 12, height: 1.5),
+            ),
+          ),
+          IconButton(
+            tooltip: 'إعادة تحميل البيانات',
+            onPressed: _loadStructure,
+            icon: const Icon(Icons.refresh, color: _workspacePurple),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _workspacePicker() => DropdownButtonFormField<String>(
     value: _selected?['id']?.toString(),
