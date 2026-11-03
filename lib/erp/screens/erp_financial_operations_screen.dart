@@ -65,7 +65,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   Future<List<Map<String,dynamic>>> fetchAllRows(String table,String orderColumn) async {
     final all=<Map<String,dynamic>>[];
     for(var offset=0;;offset+=500){
-      final page=await db!.from(table).select('*').eq('company_id',company).order(orderColumn,ascending:false).range(offset,offset+499);
+      final page=await db!.from(table).select('*').eq('company_id',company).order(orderColumn,ascending:false).order('id',ascending:false).range(offset,offset+499);
       all.addAll(maps(page));
       if(page.length<500)break;
     }
