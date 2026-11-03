@@ -908,8 +908,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   bool _memberHasBranchAccess(String userId,String branchId) {
     final rows=_memberLocations.where((l)=>l['user_id'].toString()==userId&&l['access_scope']=='branch'&&l['branch_id'].toString()==branchId);
-    if(rows.isNotEmpty) return rows.first['is_allowed']==true;
     final warehouseAllowed=_memberLocations.any((l)=>l['user_id'].toString()==userId&&l['access_scope']=='warehouse'&&l['is_allowed']==true&&_warehouses.any((w)=>w['id'].toString()==l['warehouse_id'].toString()&&w['branch_id'].toString()==branchId));
+    if(rows.isNotEmpty && rows.first['is_allowed']==true) return true;
+    if(rows.isNotEmpty && rows.first['is_allowed']==false && !warehouseAllowed) return false;
     if(warehouseAllowed) return true;
     // Once the owner has configured any location rule for this member,
     // unspecified branches are denied (not implicitly granted).
