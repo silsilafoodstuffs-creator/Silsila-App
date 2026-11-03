@@ -1386,19 +1386,30 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     'hr.read':'عرض الموظفين','hr.manage':'إدارة الموظفين',
     'reports.read':'عرض التقارير','audit.read':'عرض سجل العمليات',
   }[key] ?? key;
-  Widget _stockInfo() => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-    _sectionTitle('رصيد مخازني', 'اختر الأصناف المعتمدة في سلسلة ثم فعّل ما يحتاجه نشاطك فقط'),
-    Wrap(spacing: 6, runSpacing: 6, children: [
-      ChoiceChip(label: const Text('اختيار الأصناف'), selected: _stockTab == 0, onSelected: (_) async { setState(() => _stockTab = 0); if (_platformItems.isEmpty) await _loadPlatformItems(); }),
-      ChoiceChip(label: const Text('افتتاحي مخازني'), selected: _stockTab == 1, onSelected: (_) => setState(() => _stockTab = 1)),
-      ChoiceChip(label: const Text('إضافة صنف جديد'), selected: _stockTab == 2, onSelected: (_) => setState(() => _stockTab = 2)),
-      ChoiceChip(label: const Text('مقارنة مع سلسلة'), selected: _stockTab == 3, onSelected: (_) async { setState(() => _stockTab = 3); await _loadWorkspaceStockComparison(); }),
-    ]),
-    const SizedBox(height: 10),
-    Expanded(child: IndexedStack(index: _stockTab, children: [
-      _itemSelectionTab(), _openingStockTab(), _itemProposalTab(), _workspaceStockComparisonTab(),
-    ])),
-  ]);
+  Widget _stockInfo() {
+    final tabs = <(String,int,Widget)>[
+      if (_canWorkspacePermission('master.read')) ('اختيار الأصناف',0,_itemSelectionTab()),
+      if (_canWorkspacePermission('inventory.read')) ('افتتاحي مخازني',1,_openingStockTab()),
+      if (_canWorkspacePermission('items.propose')) ('إضافة صنف جديد',2,_itemProposalTab()),
+      if (_canWorkspacePermission('inventory.read') && _canWorkspacePermission('items.read')) ('مقارنة مع سلسلة',3,_workspaceStockComparisonTab()),
+    ];
+    if (tabs.isEmpty) return _workspacePermissionDenied('رصيد مخازني');
+    final visibleIndex=tabs.indexWhere((tab)=>tab.$2==_stockTab);
+    final safeIndex=visibleIndex<0?0:visibleIndex;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _sectionTitle('رصيد مخازني', 'اختر الأصناف المعتمدة في سلسلة ثم فعّل ما يحتاجه نشاطك فقط'),
+      Wrap(spacing:6,runSpacing:6,children:tabs.map((tab)=>ChoiceChip(
+        label:Text(tab.$1),selected:_stockTab==tab.$2,
+        onSelected:(_) async {
+          setState(()=>_stockTab=tab.$2);
+          if(tab.$2==0 && _platformItems.isEmpty) await _loadPlatformItems();
+          if(tab.$2==3) await _loadWorkspaceStockComparison();
+        },
+      )).toList()),
+      const SizedBox(height:10),
+      Expanded(child:IndexedStack(index:safeIndex,children:tabs.map((tab)=>tab.$3).toList())),
+    ]);
+  }
 
   Widget _itemSelectionTab() => ListView(children: [
     TextField(controller: _itemSearch, decoration: const InputDecoration(labelText: 'بحث في أصناف سلسلة', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()), onChanged: (_) => setState(() {})),
@@ -1413,12 +1424,13 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       onChanged: (v) => setState(() => _selectedPlatformItemId = v),
     ),
     const SizedBox(height: 8),
-    Row(children: [
-      Expanded(child: TextField(controller: _localItemCode, decoration: const InputDecoration(labelText: 'كود محلي اختياري'))),
-      const SizedBox(width: 8),
-      Expanded(child: TextField(controller: _reorderLevel, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'حد إعادة الطلب'))),
-      IconButton(onPressed: _addItemLink, tooltip: 'تفعيل الصنف في نشاطي', icon: const Icon(Icons.add_circle, color: _workspacePurple)),
-    ]),
+    if (_canWorkspacePermission('master.manage'))
+      Row(children: [
+        Expanded(child: TextField(controller: _localItemCode, decoration: const InputDecoration(labelText: 'كود محلي اختياري'))),
+        const SizedBox(width: 8),
+        Expanded(child: TextField(controller: _reorderLevel, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'حد إعادة الطلب'))),
+        IconButton(onPressed: _addItemLink, tooltip: 'تفعيل الصنف في نشاطي', icon: const Icon(Icons.add_circle, color: _workspacePurple)),
+      ],),
     const Divider(),
     _sectionTitle('أصناف هذا النشاط', '${_itemLinks.length} صنف مرتبط • لا تتم إضافة صنف جديد إلى سلسلة من هنا'),
     ..._itemLinks.map((x) {
@@ -1426,16 +1438,19 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       return ListTile(dense: true, leading: const Icon(Icons.inventory_2_outlined, color: _workspacePurple),
         title: Text((item['item_name'] ?? 'صنف').toString()),
         subtitle: Text('${item['item_code'] ?? ''} • ${item['base_unit'] ?? ''} • حد الطلب: ${x['reorder_level']}'),
-        trailing: Switch(value: x['is_enabled'] == true, onChanged: (v) async {
-          try { await _db.from('erp_business_workspace_item_links').update({'is_enabled':v}).eq('id',x['id'].toString()).eq('workspace_id',_selected!['id'].toString()); await _loadStructure(); }
-          catch(e) { _message('تعذر تحديث تفعيل الصنف: $e'); }
-        }),
+        trailing: _canWorkspacePermission('master.manage')
+            ? Switch(value: x['is_enabled'] == true, onChanged: (v) async {
+                try { await _db.from('erp_business_workspace_item_links').update({'is_enabled':v}).eq('id',x['id'].toString()).eq('workspace_id',_selected!['id'].toString()); await _loadStructure(); }
+                catch(e) { _message('تعذر تحديث تفعيل الصنف: $e'); }
+              })
+            : const Text('عرض فقط'),
       );
     }),
   ]);
 
   Widget _openingStockTab() => ListView(children: [
     _sectionTitle('الأرصدة الافتتاحية', 'يسجل الرصيد لكل صنف في كل مخزن، ويُنشئ حركة افتتاحية في دفتر المخزون تلقائياً'),
+    if (_canWorkspacePermission('inventory.manage')) ...[
     DropdownButtonFormField<String>(
       value: _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : null,
       decoration: const InputDecoration(labelText: 'المخزن'),
@@ -1459,6 +1474,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       Expanded(child: TextField(controller: _openingCost, keyboardType: const TextInputType.numberWithOptions(decimal:true), decoration: const InputDecoration(labelText: 'تكلفة الوحدة'))),
       IconButton(onPressed: _recordOpening, tooltip: 'حفظ الرصيد', icon: const Icon(Icons.save, color: _workspacePurple)),
     ]),
+    ],
     const Divider(),
     _sectionTitle('الأرصدة المسجلة', '${_openings.length} رصيد افتتاحي'),
     ..._openings.map((o) {
@@ -1475,6 +1491,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _itemProposalTab() => ListView(children: [
     _sectionTitle('اقتراح صنف جديد', 'يُحفظ كمسودة لدى سلسلة، ولا يدخل الدليل المركزي إلا بعد مراجعة واعتماد صاحب الصلاحية'),
+    if (_canWorkspacePermission('items.propose')) ...[
     TextField(controller: _proposalName, decoration: const InputDecoration(labelText: 'اسم الصنف بالعربية *')),
     TextField(controller: _proposalNameEn, decoration: const InputDecoration(labelText: 'اسم الصنف بالإنجليزية')),
     TextField(controller: _proposalCategory, decoration: const InputDecoration(labelText: 'الفئة المقترحة')),
@@ -1482,6 +1499,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     TextField(controller: _proposalDescription, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'الوصف والمواصفات')),
     const SizedBox(height: 8),
     Align(alignment: Alignment.centerLeft, child: FilledButton.icon(onPressed: _proposeItem, icon: const Icon(Icons.send), label: const Text('إرسال للمراجعة'))),
+    ],
     const Divider(),
     _sectionTitle('طلبات الأصناف السابقة', '${_proposals.length} طلب'),
     ..._proposals.map((p) => ListTile(dense:true, leading:const Icon(Icons.pending_actions,color:_workspaceOrange),
@@ -1503,6 +1521,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _departmentsPanel() => ListView(children:[
     _sectionTitle('إداراتي وأقسامي','هيكل إداري مستقل بنظام الشجرة'),
+    if (_canWorkspacePermission('hr.manage')) ...[
     DropdownButtonFormField<String>(
       value:_departments.any((d)=>d['id'].toString()==_selectedParentDepartmentId)?_selectedParentDepartmentId:null,
       decoration:const InputDecoration(labelText:'يتبع الإدارة / القسم (اختياري)'),
@@ -1515,6 +1534,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       Expanded(child:TextField(controller:_departmentName,decoration:const InputDecoration(labelText:'اسم الإدارة / القسم'))),
       IconButton(onPressed:_addDepartment,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
     ]),
+    ],
     const Divider(),
     ..._departments.map((d)=>ListTile(dense:true,leading:Icon(d['parent_id']==null?Icons.account_tree:Icons.subdirectory_arrow_left,color:_workspacePurple),
       title:Text(d['name_ar'].toString()),subtitle:Text(d['department_code'].toString()))),
@@ -1522,6 +1542,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _employeeRecordsPanel() => ListView(children:[
     _sectionTitle('موظفيني','بيانات مبسطة مستقلة عن موظفي سلسلة'),
+    if (_canWorkspacePermission('hr.manage')) ...[
     DropdownButtonFormField<String>(
       value:_departments.any((d)=>d['id'].toString()==_selectedDepartmentId)?_selectedDepartmentId:null,
       decoration:const InputDecoration(labelText:'الإدارة / القسم'),
@@ -1539,6 +1560,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     TextField(controller:_employeeAnnualLeave,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'أيام الإجازة السنوية')),
     const SizedBox(height:8),
     Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_addEmployee,icon:const Icon(Icons.person_add),label:const Text('إضافة موظف'))),
+    ],
     const Divider(),
     _sectionTitle('قوة العمل','${_employees.length} موظف مسجل'),
     ..._employees.map((e)=>ListTile(dense:true,leading:const Icon(Icons.badge_outlined,color:_workspaceOrange),
