@@ -21,7 +21,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byTooltip('حذف السطر'), findsNWidgets(2));
 
-    await tester.tap(find.byTooltip('حذف السطر').last);
+    final lastDelete = find.byTooltip('حذف السطر').last;
+    await tester.ensureVisible(lastDelete);
+    await tester.pumpAndSettle();
+    await tester.tap(lastDelete);
     await tester.pumpAndSettle();
     expect(find.byTooltip('حذف السطر'), findsOneWidget);
   });
