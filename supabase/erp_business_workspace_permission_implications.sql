@@ -56,7 +56,7 @@ begin
  return v_id;
 end $$;
 revoke all on function private.erp_create_business_workspace(text,text,text) from public,anon;
-grant execute on function private.erp_create_business_workspace(text,text,text) to authenticated;
+revoke all on function private.erp_create_business_workspace(text,text,text) from public,anon,authenticated;
 
 create or replace function private.get_workspace_silsila_stock(
  p_workspace_id uuid,p_item_link_id uuid default null
