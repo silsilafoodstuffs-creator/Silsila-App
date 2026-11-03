@@ -261,3 +261,13 @@ on public.erp_business_workspaces
 for update to authenticated
 using (private.is_business_workspace_owner(id))
 with check (private.is_business_workspace_owner(id));
+
+-- Audit history is append-only even when this legacy bootstrap is rerun.
+drop policy if exists workspace_update on public.erp_business_workspace_audit_log;
+drop policy if exists workspace_delete on public.erp_business_workspace_audit_log;
+revoke update, delete, truncate
+  on public.erp_business_workspace_audit_log
+  from anon, authenticated;
+grant select, insert
+  on public.erp_business_workspace_audit_log
+  to authenticated;
