@@ -101,6 +101,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _proposalUnit = TextEditingController(text: 'قطعة');
   final _proposalDescription = TextEditingController();
   final _memberPhone = TextEditingController();
+  final _policyTaxController = TextEditingController(text: '0');
+  String _policyCurrencyCode = 'EGP';
+  bool _policyRequireAdjustmentNotes = true;
+  bool _policyRequireCashReference = false;
+  bool _policyRequireCounterparty = false;
   String _memberRole = 'staff';
   final Map<String, bool> _memberPermissions = {
     'workspace.enter': true, 'members.read': false, 'members.manage': false,
@@ -116,6 +121,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   @override
   void dispose() {
+    _policyTaxController.dispose();
     _name.dispose(); _activity.dispose(); _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     _warehouseName.dispose(); _branchCode.dispose(); _warehouseCode.dispose(); _memberPhone.dispose();
     _itemSearch.dispose(); _localItemCode.dispose(); _reorderLevel.dispose(); _openingQuantity.dispose(); _openingCost.dispose();
@@ -144,6 +150,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _selected ??= _workspaces.isNotEmpty ? _workspaces.first : null;
         _loading = false;
       });
+      _syncWorkspacePolicyFromSelection();
       if (_selected != null) await _loadStructure();
     } catch (e) {
       if (!mounted) return;
@@ -213,6 +220,64 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     }
   }
 
+  bool get _isWorkspaceOwner =>
+      _selected?['owner_user_id']?.toString() == _db.auth.currentUser?.id;
+
+  Map<String, dynamic> get _workspacePolicy {
+    final settings = _selected?['settings'];
+    if (settings is! Map) return <String, dynamic>{};
+    final policy = settings['workspace_policy'];
+    return policy is Map ? Map<String, dynamic>.from(policy) : <String, dynamic>{};
+  }
+
+  void _syncWorkspacePolicyFromSelection() {
+    final policy = _workspacePolicy;
+    _policyTaxController.text = (policy['default_tax_rate'] ?? 0).toString();
+    const currencies = {'EGP', 'USD', 'EUR', 'SAR', 'AED'};
+    _policyCurrencyCode = currencies.contains(policy['currency_code'])
+        ? policy['currency_code'].toString() : 'EGP';
+    _policyRequireAdjustmentNotes = policy['require_adjustment_notes'] != false;
+    _policyRequireCashReference = policy['require_cash_reference'] == true;
+    _policyRequireCounterparty = policy['require_counterparty_on_documents'] == true;
+  }
+
+  Future<void> _saveWorkspacePolicies() async {
+    final workspaceId = _selected?['id']?.toString();
+    final taxRate = double.tryParse(_policyTaxController.text.trim());
+    if (workspaceId == null || taxRate == null || taxRate < 0 || taxRate > 100) {
+      _message('أدخل نسبة ضريبة افتراضية صحيحة من 0 إلى 100.');
+      return;
+    }
+    if (!_isWorkspaceOwner) {
+      _message('تعديل سياسات النشاط متاح لمالك النشاط فقط.');
+      return;
+    }
+    try {
+      await _db.rpc('erp_set_business_workspace_settings', params: {
+        'p_workspace_id': workspaceId,
+        'p_settings': <String, dynamic>{
+          'default_tax_rate': taxRate,
+          'currency_code': _policyCurrencyCode,
+          'require_adjustment_notes': _policyRequireAdjustmentNotes,
+          'require_cash_reference': _policyRequireCashReference,
+          'require_counterparty_on_documents': _policyRequireCounterparty,
+        },
+      });
+      final row = await _db.from('erp_business_workspaces').select()
+          .eq('id', workspaceId).single();
+      if (!mounted) return;
+      setState(() {
+        _selected = Map<String, dynamic>.from(row);
+        final index = _workspaces.indexWhere((w) => w['id'].toString() == workspaceId);
+        if (index >= 0) _workspaces[index] = Map<String, dynamic>.from(row);
+      });
+      _syncWorkspacePolicyFromSelection();
+      _message('تم حفظ سياسات النشاط وتطبيقها على العمليات الجديدة.');
+    } catch (e) {
+      _message('تعذر حفظ سياسات النشاط: $e');
+    }
+  }
+
   Future<void> _createWorkspace() async {
     final name = _name.text.trim();
     if (name.length < 2) { _message('أدخل اسم النشاط بصورة صحيحة.'); return; }
@@ -261,7 +326,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       _message('اختر الفرع والمخزن وأضف صنفاً واحداً على الأقل.'); return;
     }
     final tax = double.tryParse(_docTax.text.trim()) ?? 0;
-    if (tax < 0) { _message('قيمة الضريبة غير صحيحة.'); return; }
+    if (tax < 0 || tax > 100) { _message('قيمة الضريبة يجب أن تكون من 0 إلى 100.'); return; }
+    if (_policyRequireCounterparty && _docCounterparty.text.trim().isEmpty) { _message('سياسة النشاط تشترط إدخال اسم العميل أو المورد.'); return; }
     try {
       final now = DateTime.now();
       final prefix = _documentType.toUpperCase();
@@ -276,7 +342,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         'p_tax':tax,
       });
       setState(() { _draftLines.clear(); });
-      _docCounterparty.clear(); _docNotes.clear(); _docTax.text='0';
+      _docCounterparty.clear(); _docNotes.clear(); _docTax.text = _policyTaxController.text.trim().isEmpty ? '0' : _policyTaxController.text.trim();
       await _loadStructure();
       _message('تم إنشاء المستند كمسودة رقم $docNo. لم يتغير المخزون بعد.');
     } catch(e) { _message('تعذر إنشاء المستند: $e'); }
@@ -365,6 +431,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     if (id == null || amount == null || amount <= 0 || description.isEmpty) {
       _message('أدخل مبلغاً صحيحاً وبياناً للحركة.'); return;
     }
+    if (_policyRequireCashReference && _cashReference.text.trim().isEmpty) { _message('سياسة النشاط تشترط إدخال رقم مرجعي للحركة النقدية.'); return; }
     try {
       final now = DateTime.now();
       final datePart = '${now.year}${now.month.toString().padLeft(2,'0')}${now.day.toString().padLeft(2,'0')}';
@@ -390,22 +457,28 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Future<void> _loadPlatformItems() async {
     try {
+      final companyId = (_selected?['platform_company_id'] ?? '').toString().trim();
+      if (companyId.isEmpty) {
+        _message('هذا النشاط غير مربوط بدليل أصناف شركة سلسلة. راجع ربط النشاط بالشركة المركزية.');
+        return;
+      }
       final rows = await _db.from('erp_items')
           .select('id,item_code,item_name,item_name_en,base_unit,category_id,erp_item_categories(category_name,activity_code)')
-          .eq('is_active', true).order('item_name').limit(1000);
+          .eq('company_id', companyId).eq('is_active', true)
+          .order('item_name').limit(1000);
       final activity = (_selected?['activity_type'] ?? '').toString().trim();
-      var matchingCodes = <String>{};
-      if (activity.isNotEmpty) {
-        final activityRows = await _db.from('activity_types').select('code,name,name_en').eq('is_active', true);
-        matchingCodes = List<Map<String,dynamic>>.from(activityRows)
-          .where((a) => [a['code'],a['name'],a['name_en']].any((v)=>v!=null&&v.toString().trim().toLowerCase()==activity.toLowerCase()))
+      final activityRows = await _db.from('activity_types').select('code,name,name_en').eq('is_active', true);
+      final matchingCodes = List<Map<String,dynamic>>.from(activityRows)
+          .where((a) => activity.isNotEmpty && [a['code'],a['name'],a['name_en']].any((v)=>v!=null&&v.toString().trim().toLowerCase()==activity.toLowerCase()))
           .map((a)=>(a['code']??'').toString()).where((c)=>c.isNotEmpty).toSet();
-      }
       final catalog = List<Map<String,dynamic>>.from(rows);
-      final filtered = matchingCodes.isEmpty ? catalog : catalog.where((item) {
+      final filtered = activity.isEmpty ? catalog : catalog.where((item) {
         final category = item['erp_item_categories'] is Map ? Map<String,dynamic>.from(item['erp_item_categories']) : <String,dynamic>{};
         return matchingCodes.contains((category['activity_code']??'').toString());
       }).toList();
+      if (activity.isNotEmpty && matchingCodes.isEmpty) {
+        _message('نوع النشاط غير مرتبط بتصنيف أصناف معتمد؛ لن تظهر أصناف أنشطة أخرى.');
+      }
       if (!mounted) return;
       setState(() {
         _platformItems = filtered;
@@ -661,7 +734,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         'name_en': _warehouseNameEn.text.trim().isEmpty ? null : _warehouseNameEn.text.trim(),
       });
       _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseCode.clear();
-      await _loadStructure(); _message('تم حفظ المخزن وربطه بالفرع الأول.');
+      await _loadStructure(); _message('تم حفظ المخزن وربطه بفرع ${_branchNameForWarehouse(_selectedBranchForWarehouse ?? _branches.first['id'])}.');
     } catch (e) { _message('تعذر حفظ المخزن: $e'); }
   }
 
@@ -732,6 +805,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       final matches = _workspaces.where((w) => w['id'].toString() == id);
       final item = matches.isEmpty ? null : matches.first;
       setState(() { _selected = item; _area = 'الرئيسية'; });
+      _syncWorkspacePolicyFromSelection();
       await _loadStructure();
     },
   );
@@ -1157,8 +1231,51 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   ]);
 
   Widget _workspacePoliciesPanel() => ListView(children:[
-    _sectionTitle('سياسات نشاطي','هذه مساحة إعدادات مستقلة لمالك النشاط. ستضاف بنودها تباعاً حسب سياسات التشغيل التي تعتمدها.'),
-    _infoPanel('سياسات النشاط','ستكون سياسات النشاط مستقلة عن سياسات سلسلة، وتُطبق على مستخدمي هذا النشاط فقط. لا يتم تفعيل أي سياسة غير معرفة أو غير معتمدة.'),
+    _sectionTitle('سياسات نشاطي','إعدادات مستقلة لهذا النشاط، تحفظ في قاعدة البيانات وتُفرض على العمليات الجديدة من الخادم'),
+    if (!_isWorkspaceOwner)
+      const Card(child: Padding(padding: EdgeInsets.all(12), child: Text('يمكنك الاطلاع على السياسات، لكن تعديلها متاح لمالك النشاط فقط.')))
+    else ...[
+      TextField(
+        controller: _policyTaxController,
+        keyboardType: const TextInputType.numberWithOptions(decimal:true),
+        decoration: const InputDecoration(labelText:'نسبة الضريبة الافتراضية %', helperText:'تُقترح تلقائياً في فواتير النشاط ويمكن تعديلها لكل مستند'),
+      ),
+      const SizedBox(height:8),
+      DropdownButtonFormField<String>(
+        value:_policyCurrencyCode,
+        decoration:const InputDecoration(labelText:'العملة الافتراضية'),
+        items:const [
+          DropdownMenuItem(value:'EGP',child:Text('الجنيه المصري EGP')),
+          DropdownMenuItem(value:'USD',child:Text('الدولار الأمريكي USD')),
+          DropdownMenuItem(value:'EUR',child:Text('اليورو EUR')),
+          DropdownMenuItem(value:'SAR',child:Text('الريال السعودي SAR')),
+          DropdownMenuItem(value:'AED',child:Text('الدرهم الإماراتي AED')),
+        ],
+        onChanged:(v){if(v!=null)setState(()=>_policyCurrencyCode=v);},
+      ),
+      const Divider(),
+      SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,
+        title:const Text('إلزام سبب التسوية المخزنية'),
+        subtitle:const Text('يمنع ترحيل التسوية دون كتابة ملاحظات توضح سببها'),
+        value:_policyRequireAdjustmentNotes,
+        onChanged:(v)=>setState(()=>_policyRequireAdjustmentNotes=v)),
+      SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,
+        title:const Text('إلزام الرقم المرجعي للحركات النقدية'),
+        subtitle:const Text('يشترط إدخال رقم سند أو مرجع قبل تسجيل الحركة'),
+        value:_policyRequireCashReference,
+        onChanged:(v)=>setState(()=>_policyRequireCashReference=v)),
+      SwitchListTile(dense:true,contentPadding:EdgeInsets.zero,
+        title:const Text('إلزام تحديد العميل أو المورد في الفواتير'),
+        subtitle:const Text('لا تُحفظ مسودة الفاتورة دون اسم الطرف المقابل'),
+        value:_policyRequireCounterparty,
+        onChanged:(v)=>setState(()=>_policyRequireCounterparty=v)),
+      const SizedBox(height:12),
+      Align(alignment:Alignment.centerLeft,child:FilledButton.icon(
+        onPressed:_saveWorkspacePolicies,icon:const Icon(Icons.save_outlined),
+        label:const Text('حفظ وتطبيق السياسات'))),
+    ],
+    const SizedBox(height:12),
+    _infoPanel('حدود السياسات','هذه السياسات لا تغير إعدادات سلسلة المركزية ولا تؤثر على أنشطة أخرى. وتظل صلاحيات المستخدمين ونطاقات الفروع والمخازن مستقلة عنها.'),
   ]);
 
   String _permissionLabel(String key) => const {
