@@ -17,4 +17,4 @@ begin
 end;
 $$;
 revoke all on function public.erp_create_business_workspace(text,text,text) from public,anon;
-grant execute on function public.erp_create_business_workspace(text,text,text) to authenticated;
+revoke all on function public.erp_create_business_workspace(text,text,text) from public,anon,authenticated;
