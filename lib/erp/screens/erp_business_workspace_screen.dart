@@ -1382,6 +1382,14 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     ])),
   ]);
 
+  String _accountKindLabel(dynamic kind) {
+    switch ((kind ?? '').toString()) {
+      case 'customer': return 'عميل';
+      case 'supplier': return 'مورد';
+      default: return 'مستخدم رئيسي للنشاط';
+    }
+  }
+
   String _activityLabel(dynamic code) {
     final matches=_activityTypes.where((a)=>a['code'].toString()==(code??'').toString());
     if(matches.isEmpty) return (code??'غير محدد').toString();
@@ -1396,7 +1404,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       Text((_selected?['workspace_name']??'نشاطي').toString(),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:20,color:_workspacePurple)),
       const SizedBox(height:6),
       Text('نوع النشاط: ${_activityLabel(_selected?['activity_type'])}'),
-      Text('نوع الحساب: ${_selected?['account_kind']??'غير محدد'}'),
+      Text('نوع الحساب: ${_accountKindLabel(_selected?['account_kind'])}'),
       Text('حالة النشاط: ${_selected?['is_active']==true?'نشط':'غير نشط'}'),
       const Divider(),
       _tileGrid([
