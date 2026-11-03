@@ -77,16 +77,16 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     setState(()=>loading=true);
     try {
       final r=await Future.wait<dynamic>(<Future<dynamic>>[
-        db!.from('erp_cashboxes').select('id,cashbox_code,cashbox_name,is_bank_account,checkbook_sheet_count').eq('company_id',company).eq('is_active',true).order('cashbox_name'),
-        db!.from('erp_accounts').select('id,account_code,account_name').eq('company_id',company).eq('is_active',true).eq('is_postable',true).limit(2000),
-        db!.from('erp_parties').select('id,party_code,party_name,party_kind').eq('company_id',company).eq('is_active',true).limit(2000),
-        db!.from('erp_users').select('id,auth_user_id,user_code,name_ar').eq('company_id',company).eq('is_active',true).limit(1000),
-        db!.from('erp_sales_documents').select('id,document_number,grand_total').eq('company_id',company).eq('document_type','order').limit(300),
-        db!.from('erp_cash_movements').select('*').eq('company_id',company).order('movement_no',ascending:false).limit(300),
-        db!.from('erp_cash_orders').select('*').eq('company_id',company).order('order_no',ascending:false).limit(300),
+        (() async => await db!.from('erp_cashboxes').select('id,cashbox_code,cashbox_name,is_bank_account,checkbook_sheet_count').eq('company_id',company).eq('is_active',true).order('cashbox_name'))(),
+        (() async => await db!.from('erp_accounts').select('id,account_code,account_name').eq('company_id',company).eq('is_active',true).eq('is_postable',true).limit(2000))(),
+        (() async => await db!.from('erp_parties').select('id,party_code,party_name,party_kind').eq('company_id',company).eq('is_active',true).limit(2000))(),
+        (() async => await db!.from('erp_users').select('id,auth_user_id,user_code,name_ar').eq('company_id',company).eq('is_active',true).limit(1000))(),
+        (() async => await db!.from('erp_sales_documents').select('id,document_number,grand_total').eq('company_id',company).eq('document_type','order').limit(300))(),
+        (() async => await db!.from('erp_cash_movements').select('*').eq('company_id',company).order('movement_no',ascending:false).limit(300))(),
+        (() async => await db!.from('erp_cash_orders').select('*').eq('company_id',company).order('order_no',ascending:false).limit(300))(),
         fetchAllRows('erp_checkbooks','book_no'),
         fetchAllRows('erp_cheques','check_number'),
-        db!.from('erp_financial_policies').select().eq('company_id',company).maybeSingle(),
+        (() async => await db!.from('erp_financial_policies').select().eq('company_id',company).maybeSingle())(),
       ]);
       if(!mounted)return;
       final p=r[9] as Map<String,dynamic>?;
