@@ -52,7 +52,7 @@ begin
  if v_user is null then raise exception 'Authentication required' using errcode='28000'; end if;
  select * into v_doc from public.erp_business_workspace_documents where id=p_document_id for update;
  if not found then raise exception 'Document not found or not accessible' using errcode='P0002'; end if;
- if v_doc.status<>'draft' then raise exception 'Only draft documents can be posted' using errcode='22023'; end if;
+ if v_doc.status<>'approved' then raise exception 'Only approved documents can be posted' using errcode='22023'; end if;
  if v_doc.document_type not in ('purchase','purchase_return','sale','sale_return') then raise exception 'This document type requires a dedicated posting workflow' using errcode='22023'; end if;
  v_permission:=case when v_doc.document_type in ('purchase','purchase_return') then 'purchases.manage' else 'sales.manage' end;
  if not private.can_access_business_workspace(v_doc.workspace_id,v_permission) then raise exception 'Insufficient permission to post this document' using errcode='42501'; end if;
@@ -71,7 +71,7 @@ begin
   insert into public.erp_business_workspace_stock_movements(workspace_id,warehouse_id,item_link_id,document_id,movement_type,quantity_in,quantity_out,unit_cost,movement_date,created_by)
   values(v_doc.workspace_id,v_line.warehouse_id,v_line.item_link_id,v_doc.id,v_doc.document_type,v_in,v_out,case when v_doc.document_type in ('sale','sale_return') then v_avg_cost else v_line.unit_price end,v_doc.document_date,v_user);
  end loop;
- update public.erp_business_workspace_documents set status='posted',posted_by=v_user,posted_at=now(),updated_at=now() where id=v_doc.id and workspace_id=v_doc.workspace_id and status='draft';
+ update public.erp_business_workspace_documents set status='posted',posted_by=v_user,posted_at=now(),updated_at=now() where id=v_doc.id and workspace_id=v_doc.workspace_id and status='approved';
  if private.can_access_business_workspace(v_doc.workspace_id,'audit.write') then
   insert into public.erp_business_workspace_audit_log(workspace_id,actor_user_id,action,entity_type,entity_id,details)
   values(v_doc.workspace_id,v_user,'post','document',v_doc.id::text,jsonb_build_object('document_no',v_doc.document_no,'document_type',v_doc.document_type,'total',v_doc.total));
