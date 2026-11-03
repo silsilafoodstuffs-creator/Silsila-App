@@ -18,6 +18,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _activityTypes = [];
   Map<String, dynamic>? _selected;
   bool _loading = true;
+  bool _platformObserver = false;
   bool _saving = false;
   String? _error;
   String _area = 'الرئيسية';
@@ -181,6 +182,12 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     final previousWorkspaceId = _selected?['id']?.toString();
     setState(() { _loading = true; _error = null; });
     try {
+      final currentUserId = _db.auth.currentUser?.id;
+      if (currentUserId == null) throw StateError('يجب تسجيل الدخول أولاً.');
+      final profileRows = await _safeRows(() => _db.from('profiles').select('role,account_type').eq('id',currentUserId));
+      final role = profileRows.isEmpty ? '' : (profileRows.first['role'] ?? '').toString().toLowerCase();
+      final accountType = profileRows.isEmpty ? '' : (profileRows.first['account_type'] ?? '').toString().toLowerCase();
+      _platformObserver = {'admin','administrator','employee','staff','super_admin','superadmin'}.contains(role) || {'admin','employee','staff'}.contains(accountType);
       final activityRows = await _safeRows(() => _db.from('activity_types').select('code,name,name_en').eq('is_active',true).order('name'));
       final baseQuery = _db.from('erp_business_workspaces').select().eq('is_active', true);
       final rows = _platformObserver ? await baseQuery.order('created_at') : await baseQuery.or('owner_user_id.eq.$currentUserId,linked_profile_id.eq.$currentUserId').order('created_at');
@@ -307,6 +314,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   bool get _isWorkspaceOwner =>
       _selected?['owner_user_id']?.toString() == _db.auth.currentUser?.id;
   bool _canWorkspacePermission(String permission) {
+    if (_platformObserver) { if (permission.endsWith('.manage') || permission.endsWith('.write') || permission.endsWith('.propose')) return false; return _selected != null; }
     if (_isWorkspaceOwner) return true;
     final currentUserId = _db.auth.currentUser?.id;
     final matches = _members.where((m) => m['user_id']?.toString() == currentUserId);
