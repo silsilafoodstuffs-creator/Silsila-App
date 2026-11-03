@@ -993,7 +993,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     final tabs = <(String, int, Widget)>[
       if (_canWorkspacePermission('master.read')) ('بيانات النشاط', 0, _businessDetails()),
       if (_canWorkspacePermission('members.read')) ('مستخدمين نشاطي', 1, _membersInfo()),
-      if (_canAnyWorkspacePermission(['items.read','inventory.read','master.read'])) ('رصيد مخازني', 2, _stockInfo()),
+      if (_canAnyWorkspacePermission(['items.read','items.propose','inventory.read','master.read'])) ('رصيد مخازني', 2, _stockInfo()),
       if (_canWorkspacePermission('hr.read')) ('موظفين نشاطي', 3, _employeesInfo()),
     ];
     if (tabs.isEmpty) return _workspacePermissionDenied('بياناتي الأساسية');
