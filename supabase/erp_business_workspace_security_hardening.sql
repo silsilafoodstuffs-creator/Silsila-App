@@ -26,13 +26,13 @@ begin
  return v_id;
 end $$;
 revoke all on function private.erp_create_business_workspace(text,text,text) from public,anon;
-grant execute on function private.erp_create_business_workspace(text,text,text) to authenticated;
+revoke all on function private.erp_create_business_workspace(text,text,text) from public,anon,authenticated;
 create or replace function public.erp_create_business_workspace(
  p_workspace_name text,p_activity_type text default null,p_account_kind text default 'customer'
 ) returns uuid language sql security invoker set search_path=pg_catalog,public,auth,private
 as $$ select private.erp_create_business_workspace(p_workspace_name,p_activity_type,p_account_kind); $$;
 revoke all on function public.erp_create_business_workspace(text,text,text) from public,anon;
-grant execute on function public.erp_create_business_workspace(text,text,text) to authenticated;
+revoke all on function public.erp_create_business_workspace(text,text,text) from public,anon,authenticated;
 
 create or replace function private.erp_remove_business_workspace_member(p_workspace_id uuid,p_member_user_id uuid)
 returns boolean language plpgsql security definer set search_path=pg_catalog,public,auth,private
