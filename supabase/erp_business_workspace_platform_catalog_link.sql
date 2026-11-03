@@ -25,3 +25,6 @@ begin
  return v_id;
 end;
 $$;
+
+-- Workspace creation is provisioned only by the approved-profile trigger.
+revoke all on function private.erp_create_business_workspace(text,text,text) from public, anon, authenticated;
