@@ -391,6 +391,8 @@ String silsilaText(String value) {
     "نسيت كلمة المرور؟": "Forgot password?",
     "إنشاء مستخدم جديد": "Create new user",
     "إنشاء نشاط جديد": "Create new business activity",
+    "تسجيل حساب نشاط": "Register business account",
+    "اسم النشاط التجاري / صاحب الحساب": "Business name / account holder",
     "تعذر تحميل إعلانات السوق من قاعدة البيانات.": "Could not load marketplace ads from the database.",
     "لا توجد إعلانات منشورة حتى الآن.": "No ads have been published yet.",
     "أدخل عنوان الإعلان والتفاصيل.": "Enter the ad title and details.",
