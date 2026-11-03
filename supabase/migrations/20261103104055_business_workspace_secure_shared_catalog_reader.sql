@@ -8,8 +8,8 @@ begin
  if (select auth.uid()) is null or not private.can_access_business_workspace(p_workspace_id,'items.read') then
   raise exception 'Insufficient permission to read the shared item catalog for this workspace' using errcode='42501';
  end if;
- select platform_company_id,activity_type into v_company,v_activity
- from public.erp_business_workspaces where id=p_workspace_id and is_active;
+ select w.platform_company_id,w.activity_type into v_company,v_activity
+ from public.erp_business_workspaces w where w.id=p_workspace_id and w.is_active;
  if v_company is null then raise exception 'The workspace is not linked to a Silsila company catalog' using errcode='22023'; end if;
  return query
  select i.id,i.item_code,i.item_name,i.item_name_en,i.base_unit,i.category_id,c.category_name
