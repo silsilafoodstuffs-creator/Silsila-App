@@ -39,7 +39,7 @@ returns boolean language plpgsql security definer set search_path=pg_catalog,pub
 as $$
 begin
  if (select auth.uid()) is null then raise exception 'Authentication required' using errcode='28000'; end if;
- if not exists(select 1 from public.erp_business_workspaces w where w.id=p_workspace_id and w.owner_user_id=(select auth.uid())) then raise exception 'Only the workspace owner can remove members' using errcode='42501'; end if;
+ if not private.is_business_workspace_owner(p_workspace_id) then raise exception 'Only the workspace owner can remove members' using errcode='42501'; end if;
  if p_member_user_id=(select auth.uid()) then raise exception 'The workspace owner cannot remove themselves' using errcode='22023'; end if;
  delete from public.erp_business_workspace_members where workspace_id=p_workspace_id and user_id=p_member_user_id;
  return found;
