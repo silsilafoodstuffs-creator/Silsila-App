@@ -1260,6 +1260,21 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     }),
   ]);
 
+  String _workspaceDocumentStatusLabel(dynamic status) => const {
+    'draft':'مسودة',
+    'pending':'بانتظار الاعتماد',
+    'approved':'معتمد',
+    'posted':'مرحّل',
+    'cancelled':'ملغي',
+  }[status] ?? (status??'').toString();
+
+  String _workspaceDocumentTypeLabel(dynamic type) => const {
+    'purchase':'فاتورة شراء',
+    'purchase_return':'مرتجع شراء',
+    'sale':'فاتورة بيع',
+    'sale_return':'مرتجع بيع',
+  }[type] ?? (type??'').toString();
+
   Widget _documentsView({required bool purchase}) => ListView(children: [
     _backHeader(purchase?'فاتورة شراء / مرتجع شراء':'فاتورة بيع / مرتجع بيع'),
     _sectionTitle(purchase?'مشتريات النشاط':'مبيعات النشاط','مسودة ← بانتظار الاعتماد ← معتمد ← مرحّل؛ لا يتغير المخزون قبل الترحيل'),
@@ -1324,8 +1339,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     _sectionTitle('مستندات النشاط','${_documents.where((d)=>purchase?['purchase','purchase_return'].contains(d['document_type']):['sale','sale_return'].contains(d['document_type'])).length} مستند'),
     ..._documents.where((d)=>purchase?['purchase','purchase_return'].contains(d['document_type']):['sale','sale_return'].contains(d['document_type'])).map((d)=>Card(
       elevation:0,child:ListTile(dense:true,
-        title:Text('${d['document_no']} • ${d['document_type']}'),
-        subtitle:Text('${d['document_date']} • ${d['counterparty_name']??'بدون طرف'} • ${d['status']}'),
+        title:Text('${d['document_no']} • ${_workspaceDocumentTypeLabel(d['document_type'])}'),
+        subtitle:Text('${d['document_date']} • ${d['counterparty_name']??'بدون طرف'} • ${_workspaceDocumentStatusLabel(d['status'])}'),
         trailing:Row(mainAxisSize:MainAxisSize.min,children:[
           Text('${d['total']}',style:const TextStyle(fontWeight:FontWeight.w800,color:_workspacePurple)),
           if (_canWorkspacePermission(purchase ? 'purchases.manage' : 'sales.manage')) ...[
