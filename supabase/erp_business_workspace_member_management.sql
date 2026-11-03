@@ -1,3 +1,32 @@
+-- Normalize Egyptian local/international phone formats for linking existing
+-- Silsila profiles. This helper is required before the member RPC below.
+create or replace function private.normalize_phone_for_profile_match(p_phone text)
+returns text
+language sql
+immutable
+parallel safe
+strict
+set search_path = ''
+as $function$
+  with digits as (
+    select pg_catalog.regexp_replace(
+      pg_catalog.translate(
+        p_phone,
+        '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹',
+        '01234567890123456789'
+      ),
+      '[^0-9]', '', 'g'
+    ) as value
+  )
+  select case
+    when value like '0020%' then pg_catalog.substr(value,5)
+    when value like '20%' and pg_catalog.length(value)=12 then pg_catalog.substr(value,3)
+    when value like '0%' and pg_catalog.length(value)=11 then pg_catalog.substr(value,2)
+    else value
+  end
+  from digits
+$function$;
+
 alter table public.erp_business_workspace_members
   add column if not exists member_display_name text;
 
