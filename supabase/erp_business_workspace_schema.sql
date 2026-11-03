@@ -247,3 +247,17 @@ drop policy if exists business_workspace_update on public.erp_business_workspace
 create policy business_workspace_update on public.erp_business_workspaces for update to authenticated using(owner_user_id=(select auth.uid())) with check(owner_user_id=(select auth.uid()));
 revoke all on sequence public.erp_business_workspace_audit_log_id_seq from anon,authenticated;
 commit;
+
+ 
+-- Final hardening: do not restore self-service workspace creation when this
+-- legacy bootstrap script is reapplied. Only the approved-profile trigger
+-- provisions a workspace. Platform observers remain read-only.
+drop policy if exists business_workspace_insert on public.erp_business_workspaces;
+revoke insert, delete, truncate, references, trigger on public.erp_business_workspaces from authenticated, anon;
+grant select, update on public.erp_business_workspaces to authenticated;
+drop policy if exists business_workspace_update on public.erp_business_workspaces;
+create policy business_workspace_update
+on public.erp_business_workspaces
+for update to authenticated
+using (private.is_business_workspace_owner(id))
+with check (private.is_business_workspace_owner(id));
