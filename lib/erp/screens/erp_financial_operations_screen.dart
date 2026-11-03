@@ -62,6 +62,16 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     tabs.dispose(); for(final row in _bookDrafts) { row.dispose(); } for(final c in [amount,description,fromName,toName,partyName,firstCheck,issueDate,dueDate,chequeAmount,movementDate]) {c.dispose();} super.dispose();
   }
 
+  Future<List<Map<String,dynamic>>> fetchAllRows(String table,String orderColumn) async {
+    final all=<Map<String,dynamic>>[];
+    for(var offset=0;;offset+=500){
+      final page=await db!.from(table).select('*').eq('company_id',company).order(orderColumn,ascending:false).range(offset,offset+499);
+      all.addAll(maps(page));
+      if(page.length<500)break;
+    }
+    return all;
+  }
+
   Future<void> load() async {
     if(db==null || company.isEmpty) { setState(()=>error='لا توجد شركة مرتبطة بالمستخدم الحالي.'); return; }
     setState(()=>loading=true);
@@ -74,8 +84,8 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
         db!.from('erp_sales_documents').select('id,document_number,grand_total').eq('company_id',company).eq('document_type','order').limit(300),
         db!.from('erp_cash_movements').select('*').eq('company_id',company).order('movement_no',ascending:false).limit(300),
         db!.from('erp_cash_orders').select('*').eq('company_id',company).order('order_no',ascending:false).limit(300),
-        db!.from('erp_checkbooks').select('*').eq('company_id',company).order('book_no',ascending:false).limit(300),
-        db!.from('erp_cheques').select('*').eq('company_id',company).order('check_number',ascending:false).limit(3000),
+        fetchAllRows('erp_checkbooks','book_no'),
+        fetchAllRows('erp_cheques','check_number'),
         db!.from('erp_financial_policies').select().eq('company_id',company).maybeSingle(),
       ]);
       if(!mounted)return;
@@ -356,13 +366,13 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       }
     }
     await run(()async{
-      for(final draft in valid){
-        final row=await db!.from('erp_checkbooks').insert({'company_id':company,'bank_cashbox_id':draft['bank_id'],'first_check_number':draft['start'],'sheet_count':draft['count'],'created_by':db!.auth.currentUser?.id}).select('id').single();
-        await db!.rpc('erp_register_checkbook',params:{'p_checkbook_id':row['id']});
-      }
+      await db!.rpc('erp_register_checkbooks_batch',params:{
+        'p_company_id':company,
+        'p_books':valid.map((draft)=>{'bank_cashbox_id':draft['bank_id'],'first_check_number':draft['start']}).toList(),
+      });
       for(final draft in _bookDrafts){draft.dispose();}
       _bookDrafts..clear()..add(_CheckbookDraftRow());
-    },'تم تسجيل '+valid.length.toString()+' دفتر/دفاتر وإنشاء أرقام الشيكات المتاحة.');
+    },'تم تسجيل '+valid.length.toString()+' دفتر/دفاتر وإنشاء أرقام الشيكات المتاحة في عملية واحدة.');
   }
   Future<void> issueCheque(bool order) async {
     final v=double.tryParse(chequeAmount.text.trim()), issue=parseDisplayDate(issueDate.text), due=parseDisplayDate(dueDate.text);
@@ -398,18 +408,22 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     issue.dispose();due.dispose();value.dispose();payee.dispose();notes.dispose();
   }
   Future<void> cancelCheque(Map<String,dynamic> cheque) async {
+    final reason=TextEditingController();
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
       title:Text('إلغاء الشيك رقم '+s(cheque['check_number'])),
-      content:const Text('سيتم إلغاء الشيك ومنع استخدام رقمه مرة أخرى، مع الاحتفاظ بسجله للمراجعة وعدم حذفه نهائيًا.'),
+      content:Column(mainAxisSize:MainAxisSize.min,children:[
+        const Text('الإلغاء متاح للشيكات غير المستخدمة فقط. سيظل رقم الشيك محفوظًا ولن يعود متاحًا للصرف.'),
+        const SizedBox(height:10),TextField(controller:reason,maxLines:2,decoration:const InputDecoration(labelText:'سبب الإلغاء (مطلوب)',border:OutlineInputBorder())),
+      ]),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('رجوع')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:const Text('تأكيد الإلغاء'))],
     ));
-    if(yes!=true)return;
-    await run(()async{
-      final oldNotes=s(cheque['notes']).trim();
-      final note=[oldNotes,'إلغاء الشيك بواسطة المستخدم بتاريخ '+_todayDisplay()].where((x)=>x.isNotEmpty).join(' • ');
-      await db!.from('erp_cheques').update({'status':'cancelled','notes':note,'updated_by':db!.auth.currentUser?.id,'updated_at':DateTime.now().toIso8601String()})
-        .eq('id',s(cheque['id'])).eq('company_id',company).inFilter('status',['available','issued','under_collection']);
-    },'تم إلغاء الشيك مع الاحتفاظ بسجل المراجعة وعدم إعادة استخدام رقمه.');
+    if(yes==true){
+      if(reason.text.trim().isEmpty){notify('اكتب سبب إلغاء الشيك أولًا.');}
+      else await run(()async{
+        await db!.rpc('erp_cancel_available_cheque',params:{'p_cheque_id':s(cheque['id']),'p_reason':reason.text.trim()});
+      },'تم إلغاء الشيك مع حفظ السبب وسجل المراجعة ومنع إعادة استخدام رقمه.');
+    }
+    reason.dispose();
   }
   Future<void> settle(Map<String,dynamic> c) async {
     final date=TextEditingController(text:_todayDisplay());String result='paid';String? cashbox;String? counterAccount;
@@ -482,7 +496,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
         final settled=['paid','returned','cashed_from_cashbox','cancelled'].contains(s(c['status']));
         return settled?const Icon(Icons.lock,color:Colors.grey):Row(mainAxisSize:MainAxisSize.min,children:[
           IconButton(tooltip:'تعديل الشيك',onPressed:saving?null:()=>editCheque(c),icon:const Icon(Icons.edit,color:purple)),
-          IconButton(tooltip:'إلغاء الشيك مع الاحتفاظ بالسجل',onPressed:saving?null:()=>cancelCheque(c),icon:const Icon(Icons.delete_outline,color:Colors.red)),
+          if(s(c['status'])=='available')IconButton(tooltip:'إلغاء الشيك غير المستخدم',onPressed:saving?null:()=>cancelCheque(c),icon:const Icon(Icons.delete_outline,color:Colors.red)),
         ]);
       }).toList()),
     ]
