@@ -51,6 +51,14 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
     _governorate.dispose(); _district.dispose(); _area.dispose(); super.dispose();
   }
   bool get _canManage => _type == 'customer' ? widget.canManageCustomers : widget.canManageSuppliers;
+
+  String _asciiDigits(String value) => value.replaceAllMapped(
+    RegExp(r'[٠-٩۰-۹]'),
+    (match) {
+      final code=match.group(0)!.codeUnitAt(0);
+      return String.fromCharCode(0x30 + (code>=0x0660&&code<=0x0669 ? code-0x0660 : code-0x06F0));
+    },
+  );
   Future<void> _load() async {
     final workspaceId=widget.workspaceId;
     setState(()=>_loading=true);
@@ -70,11 +78,12 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
   }
   Future<void> _previewPhone(String value) async {
     final workspaceId=widget.workspaceId;
-    final digits=value.replaceAll(RegExp(r'[^0-9]'),'');
+    final normalizedValue=_asciiDigits(value);
+    final digits=normalizedValue.replaceAll(RegExp(r'[^0-9]'),'');
     if(digits.length<10){setState(()=>_preview=null);return;}
     try {
       final result=await _db.rpc('erp_find_silsila_profile_by_phone',params:{
-        'p_workspace_id':workspaceId,'p_phone':value,
+        'p_workspace_id':workspaceId,'p_phone':normalizedValue,
       });
       if(!mounted||widget.workspaceId!=workspaceId||_phone.text!=value)return;
       final rows=List<Map<String,dynamic>>.from(result as List);
@@ -89,7 +98,7 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
     try {
       final values = <String,dynamic>{
         'party_code':_code.text.trim(),'display_name':_name.text.trim(),
-        'phone':_phone.text.trim().isEmpty?null:_phone.text.trim(),
+        'phone':_phone.text.trim().isEmpty?null:_asciiDigits(_phone.text.trim()),
         'address':_address.text.trim().isEmpty?null:_address.text.trim(),
         'governorate':_governorate.text.trim().isEmpty?null:_governorate.text.trim(),
         'district':_district.text.trim().isEmpty?null:_district.text.trim(),
