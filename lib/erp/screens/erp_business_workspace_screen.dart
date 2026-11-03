@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'erp_business_workspace_counterparties_panel.dart';
 
 const _workspacePurple = Color(0xFF3E007D);
 const _workspaceOrange = Color(0xFFFFA015);
@@ -1169,6 +1170,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       if (_canWorkspacePermission('members.read')) ('مستخدمين نشاطي', 1, _membersInfo()),
       if (_canAnyWorkspacePermission(['items.read','items.propose','inventory.read','master.read'])) ('رصيد مخازني', 2, _stockInfo()),
       if (_canWorkspacePermission('hr.read')) ('موظفين نشاطي', 3, _employeesInfo()),
+      if (_canAnyWorkspacePermission(['customers.read','customers.manage','suppliers.read','suppliers.manage'])) ('عملاء وموردو نشاطي', 4, ErpBusinessWorkspaceCounterpartiesPanel(workspaceId:_selected!['id'].toString(),canManageCustomers:_canWorkspacePermission('customers.manage'),canManageSuppliers:_canWorkspacePermission('suppliers.manage'))),
     ];
     if (tabs.isEmpty) return _workspacePermissionDenied('بياناتي الأساسية');
     final visibleIndex = tabs.indexWhere((tab) => tab.$2 == _basicTab);
