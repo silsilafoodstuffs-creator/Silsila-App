@@ -2,7 +2,7 @@ create or replace function public.erp_get_business_workspace_metrics(p_workspace
 returns jsonb
 language plpgsql
 stable
-security definer
+security invoker
 set search_path=pg_catalog,public,auth,private
 as $$
 declare
