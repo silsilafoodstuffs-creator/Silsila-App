@@ -46,6 +46,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   bool _comparisonLoaded = false;
   bool _comparisonLoading = false;
   List<Map<String, dynamic>> _memberLocations = [];
+  List<Map<String, dynamic>> _auditRows = [];
   String? _selectedLocationMemberUserId;
   List<Map<String, dynamic>> _draftLines = [];
   String _documentType = 'purchase';
@@ -186,6 +187,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _safeRows(() => _db.from('erp_business_workspace_documents').select('id,document_no,document_type,document_date,counterparty_name,status,total,created_at').eq('workspace_id', id).order('created_at', ascending: false).limit(200)),
         _safeRows(() => _db.from('erp_business_workspace_stock_movements').select('id,warehouse_id,item_link_id,movement_type,quantity_in,quantity_out,unit_cost,movement_date').eq('workspace_id', id).order('movement_date', ascending: false).limit(1000)),
         _safeRows(() => _db.from('erp_business_workspace_member_locations').select('id,user_id,access_scope,branch_id,warehouse_id,is_allowed').eq('workspace_id', id)),
+        _safeRows(() => _db.from('erp_business_workspace_audit_log').select('id,actor_user_id,action,entity_type,entity_id,details,created_at').eq('workspace_id', id).order('created_at', ascending:false).limit(200)),
       ]);
       if (!mounted) return;
       setState(() {
@@ -202,6 +204,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _documents = List<Map<String, dynamic>>.from(result[9]);
         _stockMovements = List<Map<String, dynamic>>.from(result[10]);
         _memberLocations = List<Map<String, dynamic>>.from(result[11]);
+        _auditRows = List<Map<String, dynamic>>.from(result[12]);
         final selectableMembers = _members.where((m)=>m['member_role']!='owner').toList();
         _selectedLocationMemberUserId = selectableMembers.any((m)=>m['user_id'].toString()==_selectedLocationMemberUserId) ? _selectedLocationMemberUserId : (selectableMembers.isNotEmpty ? selectableMembers.first['user_id'].toString() : null);
         _selectedDocBranchId = _branches.any((x) => x['id'].toString() == _selectedDocBranchId) ? _selectedDocBranchId : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
@@ -300,6 +303,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     _policyRequireAdjustmentNotes = policy['require_adjustment_notes'] != false;
     _policyRequireCashReference = policy['require_cash_reference'] == true;
     _policyRequireCounterparty = policy['require_counterparty_on_documents'] == true;
+    _docTax.text = _policyTaxController.text;
   }
 
   Future<void> _saveWorkspacePolicies() async {
@@ -425,6 +429,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     if(workspaceId==null||itemId==null||qty==null||qty<=0||cost<0||_sourceWarehouseId==null){
       _message('اختر الصنف والمخزن وأدخل كمية صحيحة.'); return;
     }
+    if (_inventoryMode == 'adjustment' && _policyRequireAdjustmentNotes && _inventoryNotes.text.trim().isEmpty) { _message('سياسة النشاط تشترط كتابة سبب التسوية.'); return; }
     final now=DateTime.now();
     final docNo='ACT-STK-${now.microsecondsSinceEpoch}';
     try{
@@ -1214,7 +1219,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     const Divider(),
     ..._branches.map((b)=>ListTile(dense:true,leading:const Icon(Icons.account_tree,color:_workspacePurple),
       title:Text(b['name_ar'].toString()),subtitle:Text('${b['branch_code']} • ${b['name_en']??''}'),
-      trailing:Switch(value:b['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_branches').update({'is_active':v}).eq('id',b['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث الفرع: $e');}}))),
+      trailing:_canWorkspacePermission('master.manage') ? Switch(value:b['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_branches').update({'is_active':v}).eq('id',b['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث الفرع: $e');}}) : const Text('عرض فقط'))),
   ]);
 
   String _branchNameForWarehouse(dynamic branchId) {
@@ -1568,7 +1573,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       subtitle:Text('${e['employee_code']} • ${e['job_title'] ?? 'بدون وظيفة'}'),
       trailing:Row(mainAxisSize:MainAxisSize.min,children:[
         Text('${e['monthly_salary']}',style:const TextStyle(color:_workspacePurple,fontWeight:FontWeight.w800)),
-        Switch(value:e['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_employees').update({'is_active':v}).eq('id',e['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(err){_message('تعذر تحديث حالة الموظف: $err');}}),
+        if (_canWorkspacePermission('hr.manage')) Switch(value:e['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_employees').update({'is_active':v}).eq('id',e['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(err){_message('تعذر تحديث حالة الموظف: $err');}}),
       ]),
     )),
   ]);
@@ -1629,6 +1634,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         ]),
         const Divider(),
         ...posted.take(20).map((d)=>ListTile(dense:true,title:Text(d['document_no'].toString()),subtitle:Text('${d['document_type']} • ${d['document_date']}'),trailing:Text('${d['total']}'))),
+        if (_canWorkspacePermission('audit.read')) ...[
+          const Divider(),
+          _sectionTitle('سجل المراجعة','${_auditRows.length} عملية موثقة'),
+          ..._auditRows.take(30).map((a)=>ListTile(dense:true,leading:const Icon(Icons.history,color:_workspacePurple),title:Text('${a['action']} • ${a['entity_type']}'),subtitle:Text('${a['created_at']} • ${a['entity_id'] ?? ''}'))),
+        ],
       ],
     ]);
   }
