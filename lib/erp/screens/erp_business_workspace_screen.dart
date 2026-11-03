@@ -117,7 +117,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     'inventory.read': false, 'inventory.manage': false, 'purchases.read': false,
     'purchases.manage': false, 'sales.read': false, 'sales.manage': false,
     'cash.read': false, 'cash.manage': false, 'hr.read': false, 'hr.manage': false,
-    'reports.read': false, 'audit.read': false,
+    'reports.read': false, 'audit.read': false, 'audit.write': false,
   };
 
   @override
@@ -1633,7 +1633,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   String _permissionLabel(String key) => const {
     'workspace.enter':'الدخول إلى إدارة النشاط',
-    'members.read':'عرض المستخدمين',
+    'members.read':'عرض المستخدمين','members.manage':'إدارة المستخدمين والصلاحيات',
     'master.read':'عرض الفروع والمخازن','master.manage':'إدارة الفروع والمخازن',
     'items.read':'عرض الأصناف','items.propose':'اقتراح أصناف جديدة',
     'inventory.read':'عرض المخزون','inventory.manage':'إدارة الأرصدة والتحويلات والتسويات',
@@ -1641,7 +1641,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     'sales.read':'عرض المبيعات','sales.manage':'إدارة المبيعات والمرتجعات',
     'cash.read':'عرض النقدية','cash.manage':'إدارة الصرف والتوريد',
     'hr.read':'عرض الموظفين','hr.manage':'إدارة الموظفين',
-    'reports.read':'عرض التقارير','audit.read':'عرض سجل العمليات',
+    'reports.read':'عرض التقارير','audit.read':'عرض سجل العمليات','audit.write':'تسجيل عمليات المراجعة',
   }[key] ?? key;
   Widget _stockInfo() {
     final tabs = <(String,int,Widget)>[
