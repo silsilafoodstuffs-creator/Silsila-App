@@ -250,7 +250,14 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   bool _canOpenWorkspaceArea(String area) {
     switch (area) {
       case 'بياناتي الأساسية':
-        return _canAnyWorkspacePermission(['master.read','members.read','items.read','inventory.read','hr.read']);
+      case 'بيانات نشاطي':
+        return _canWorkspacePermission('master.read');
+      case 'مستخدمين نشاطي':
+        return _canWorkspacePermission('members.read');
+      case 'رصيد مخازني':
+        return _canAnyWorkspacePermission(['master.read','items.read','inventory.read','items.propose']);
+      case 'موظفين نشاطي':
+        return _canWorkspacePermission('hr.read');
       case 'فاتورة شراء / مرتجع شراء':
         return _canWorkspacePermission('purchases.read');
       case 'فاتورة بيع / مرتجع بيع':
@@ -923,31 +930,47 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       ],
     };
     if (_area == 'الرئيسية') {
+      final basicTiles = <(String,IconData,String)>[
+        if (_canOpenWorkspaceArea('بيانات نشاطي')) ('بيانات نشاطي',Icons.storefront_outlined,'بيانات النشاط والفروع والمخازن'),
+        if (_canOpenWorkspaceArea('مستخدمين نشاطي')) ('مستخدمين نشاطي',Icons.people_alt_outlined,'المستخدمون والصلاحيات ونطاقات الوصول'),
+        if (_canOpenWorkspaceArea('رصيد مخازني')) ('رصيد مخازني',Icons.inventory_2_outlined,'الأصناف والأرصدة الافتتاحية ومقارنة سلسلة'),
+        if (_canOpenWorkspaceArea('موظفين نشاطي')) ('موظفين نشاطي',Icons.badge_outlined,'الإدارات والأقسام وموظفو النشاط'),
+      ];
+      final movementTiles = <(String,IconData,String)>[
+        if (_canOpenWorkspaceArea('فاتورة شراء / مرتجع شراء')) ('فاتورة شراء / مرتجع شراء',Icons.shopping_bag_outlined,'المشتريات والمرتجعات'),
+        if (_canOpenWorkspaceArea('فاتورة بيع / مرتجع بيع')) ('فاتورة بيع / مرتجع بيع',Icons.point_of_sale_outlined,'المبيعات والمرتجعات'),
+        if (_canOpenWorkspaceArea('تحويلات وتسويات مخزنية')) ('تحويلات وتسويات مخزنية',Icons.warehouse_outlined,'التحويلات والتسويات'),
+        if (_canOpenWorkspaceArea('صرف وتوريد نقدية')) ('صرف وتوريد نقدية',Icons.payments_outlined,'المقبوضات والمدفوعات'),
+      ];
+      final reportTiles = <(String,IconData,String)>[
+        if (_canWorkspacePermission('reports.read')) ('تقارير البيانات الأساسية',Icons.list_alt,'تقارير الفروع والمخازن والمستخدمين'),
+        if (_canWorkspacePermission('reports.read')) ('تقارير الحركات',Icons.receipt_long,'حركة المستندات والمخزون والنقدية'),
+        if (_canWorkspacePermission('reports.read')) ('تقارير مالية وتحليلات',Icons.query_stats,'ملخص النتائج المالية'),
+        ('خروج من إدارة نشاطي',Icons.logout,'العودة إلى قوائم سلسلة'),
+      ];
       return ListView(children: [
-        _sectionTitle('مساحة العمل', 'بيانات وحركات وتقارير خاصة بهذا النشاط فقط'),
+        _sectionTitle('مساحة العمل', 'كل إطار يفتح شاشة مستقلة داخل نشاطك، مع احترام صلاحيات المستخدم والفروع والمخازن'),
+        if (basicTiles.isNotEmpty) _dashboardSection('بياناتي الأساسية','إعداد وإدارة بيانات النشاط',basicTiles),
+        if (movementTiles.isNotEmpty) _dashboardSection('حركات نشاطي','تسجيل ومتابعة حركات النشاط اليومية',movementTiles),
+        if (reportTiles.isNotEmpty) _dashboardSection('تقارير نشاطي','متابعة الأداء والبيانات والنتائج',reportTiles),
+        if (basicTiles.isEmpty && movementTiles.isEmpty && reportTiles.length==1)
+          _workspacePermissionDenied('وحدات إدارة النشاط'),
+        const SizedBox(height: 12),
+        _sectionTitle('ملخص النشاط', 'الأرصدة والمؤشرات المستخرجة من بيانات هذا النشاط فقط'),
         _tileGrid([
-          if (_canOpenWorkspaceArea('بياناتي الأساسية'))
-            ('بياناتي الأساسية', Icons.business_outlined, 'تهيئة النشاط والفروع والمخازن والمستخدمين والموظفين'),
-          if (_canAnyWorkspacePermission(['purchases.read','sales.read','inventory.read','cash.read']))
-            ('حركات نشاطي', Icons.swap_horiz_rounded, 'مشتريات ومبيعات وتحويلات وتسويات ونقدية'),
-          if (_canWorkspacePermission('reports.read'))
-            ('تقارير نشاطي', Icons.analytics_outlined, 'تقارير تشغيلية ومالية خاصة بالنشاط'),
-        ]),
-        const SizedBox(height: 16),
-        _sectionTitle('ملخص النشاط', 'الأرصدة ستظهر بعد إدخال واعتماد الحركات'),
-        _tileGrid([
-          ('الفروع', Icons.account_tree_outlined, '${_branches.length} فرع'),
-          ('المخازن', Icons.warehouse_outlined, '${_warehouses.length} مخزن'),
-          ('الأصناف', Icons.inventory_2_outlined, '${_itemLinks.where((x)=>x['is_enabled']==true).length} صنف مفعل'),
-          ('مستندات مرحلة', Icons.receipt_long, '${_documents.where((x)=>x['status']=='posted').length} مستند'),
+          if (_canWorkspacePermission('master.read')) ('الفروع', Icons.account_tree_outlined, '${_branches.length} فرع'),
+          if (_canWorkspacePermission('master.read')) ('المخازن', Icons.warehouse_outlined, '${_warehouses.length} مخزن'),
+          if (_canWorkspacePermission('master.read')) ('الأصناف', Icons.inventory_2_outlined, '${_itemLinks.where((x)=>x['is_enabled']==true).length} صنف مفعل'),
+          if (_canAnyWorkspacePermission(['purchases.read','sales.read'])) ('مستندات مرحلة', Icons.receipt_long, '${_documents.where((x)=>x['status']=='posted').length} مستند'),
         ]),
         const SizedBox(height:12),
-        _sectionTitle('مؤشرات النشاط','ملخص تشغيلي من البيانات المسجلة داخل هذه المساحة'),
+        if (_canAnyWorkspacePermission(['sales.read','purchases.read','cash.read']))
+          _sectionTitle('مؤشرات النشاط','ملخص تشغيلي من البيانات المسموح لك بالاطلاع عليها'),
         _tileGrid([
-          ('إجمالي المبيعات', Icons.trending_up, '${_documentTotal('sale')} $_policyCurrencyCode'),
-          ('إجمالي المشتريات', Icons.shopping_cart_outlined, '${_documentTotal('purchase')} $_policyCurrencyCode'),
-          ('الوارد النقدي', Icons.south_west, '${_cashTotal(true)} $_policyCurrencyCode'),
-          ('الصادر النقدي', Icons.north_east, '${_cashTotal(false)} $_policyCurrencyCode'),
+          if (_canWorkspacePermission('sales.read')) ('إجمالي المبيعات', Icons.trending_up, '${_documentTotal('sale')} $_policyCurrencyCode'),
+          if (_canWorkspacePermission('purchases.read')) ('إجمالي المشتريات', Icons.shopping_cart_outlined, '${_documentTotal('purchase')} $_policyCurrencyCode'),
+          if (_canWorkspacePermission('cash.read')) ('الوارد النقدي', Icons.south_west, '${_cashTotal(true)} $_policyCurrencyCode'),
+          if (_canWorkspacePermission('cash.read')) ('الصادر النقدي', Icons.north_east, '${_cashTotal(false)} $_policyCurrencyCode'),
         ]),
       ]);
     }
@@ -1697,14 +1720,42 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ]),
   );
 
+  Widget _dashboardSection(String title, String subtitle, List<(String,IconData,String)> tiles) => Card(
+    elevation:0,
+    margin:const EdgeInsets.only(bottom:12),
+    shape:RoundedRectangleBorder(
+      borderRadius:BorderRadius.circular(20),
+      side:const BorderSide(color:Color(0xFFE8E0F0)),
+    ),
+    child:Padding(
+      padding:const EdgeInsets.all(14),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        Text(title,style:const TextStyle(color:_workspacePurple,fontWeight:FontWeight.w900,fontSize:17)),
+        Text(subtitle,style:const TextStyle(color:Colors.black54,fontSize:11)),
+        const SizedBox(height:10),
+        _tileGrid(tiles),
+      ]),
+    ),
+  );
+
   Widget _tileGrid(List<(String, IconData, String)> tiles) => LayoutBuilder(builder: (context, c) {
-    final count = c.maxWidth > 1050 ? 3 : c.maxWidth > 650 ? 2 : 1;
+    final count = c.maxWidth > 1100 ? 4 : c.maxWidth > 650 ? 2 : 1;
     return GridView.count(
       crossAxisCount: count, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: count == 1 ? 4.2 : 2.4,
+      mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: count == 1 ? 4.2 : count == 4 ? 1.8 : 2.4,
       children: tiles.map((t) => InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => setState(() { _area = t.$1; if (t.$1 == 'فاتورة شراء / مرتجع شراء') _documentType = 'purchase'; if (t.$1 == 'فاتورة بيع / مرتجع بيع') _documentType = 'sale'; }),
+        onTap: () => setState(() {
+          switch (t.$1) {
+            case 'بيانات نشاطي': _area='بياناتي الأساسية'; _basicTab=0; break;
+            case 'مستخدمين نشاطي': _area='بياناتي الأساسية'; _basicTab=1; break;
+            case 'رصيد مخازني': _area='بياناتي الأساسية'; _basicTab=2; break;
+            case 'موظفين نشاطي': _area='بياناتي الأساسية'; _basicTab=3; break;
+            default: _area=t.$1;
+          }
+          if (t.$1 == 'فاتورة شراء / مرتجع شراء') _documentType = 'purchase';
+          if (t.$1 == 'فاتورة بيع / مرتجع بيع') _documentType = 'sale';
+        }),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE8E0F0))),
