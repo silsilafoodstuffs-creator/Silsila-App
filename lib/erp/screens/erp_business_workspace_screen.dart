@@ -184,7 +184,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       final profileRows = await _safeRows(() => _db.from('profiles').select('role,account_type').eq('id',currentUserId));
       final role = profileRows.isEmpty ? '' : (profileRows.first['role'] ?? '').toString().toLowerCase();
       final accountType = profileRows.isEmpty ? '' : (profileRows.first['account_type'] ?? '').toString().toLowerCase();
-      _platformObserver = {'admin','administrator','employee','staff','super_admin','superadmin'}.contains(role) || {'admin','employee','staff'}.contains(accountType);
+      _platformObserver = {'admin','administrator','management','employee','staff','super_admin','superadmin'}.contains(role) || {'admin','employee','staff','إدارة نشاط','ادمن'}.contains(accountType);
       final activityRows = await _safeRows(() => _db.from('activity_types').select('code,name,name_en').eq('is_active',true).order('name'));
       final baseQuery = _db.from('erp_business_workspaces').select().eq('is_active', true);
       final rows = _platformObserver ? await baseQuery.order('created_at') : await baseQuery.or('owner_user_id.eq.$currentUserId,linked_profile_id.eq.$currentUserId').order('created_at');
