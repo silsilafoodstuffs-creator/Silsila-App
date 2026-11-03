@@ -23,7 +23,7 @@ create or replace function private.guard_business_workspace_owner_role()
 returns trigger language plpgsql security definer set search_path=pg_catalog,public,auth,private
 as $$
 begin
- if new.member_role='owner' and (private.is_silsila_platform_user(new.user_id) or not exists(select 1 from public.erp_business_workspaces w where w.id=new.workspace_id and w.owner_user_id=new.user_id)) then
+ if new.member_role='owner' and not exists(select 1 from public.erp_business_workspaces w where w.id=new.workspace_id and w.owner_user_id=new.user_id) then
   raise exception 'Only the registered workspace owner can hold the owner role' using errcode='42501';
  end if;
  return new;
