@@ -257,7 +257,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _selectedDocItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedDocItemLinkId && x['is_enabled'] == true) ? _selectedDocItemLinkId : (_itemLinks.where((x) => x['is_enabled'] == true).isNotEmpty ? _itemLinks.firstWhere((x) => x['is_enabled'] == true)['id'].toString() : null);
         _inventoryItemLinkId = _itemLinks.any((x) => x['id'].toString() == _inventoryItemLinkId && x['is_enabled'] == true) ? _inventoryItemLinkId : (_itemLinks.where((x) => x['is_enabled'] == true).isNotEmpty ? _itemLinks.firstWhere((x) => x['is_enabled'] == true)['id'].toString() : null);
         _sourceWarehouseId = _warehouses.any((x) => x['id'].toString() == _sourceWarehouseId) ? _sourceWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
-        _targetWarehouseId = _warehouses.any((x) => x['id'].toString() == _targetWarehouseId) ? _targetWarehouseId : (_warehouses.length > 1 ? _warehouses[1]['id'].toString() : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null));
+        final transferTargets = _warehouses.where((x)=>x['id'].toString()!=_sourceWarehouseId).toList();
+        _targetWarehouseId = transferTargets.any((x)=>x['id'].toString()==_targetWarehouseId)
+            ? _targetWarehouseId
+            : (transferTargets.isNotEmpty?transferTargets.first['id'].toString():null);
         _selectedDepartmentId = _departments.any((x) => x['id'].toString() == _selectedDepartmentId) ? _selectedDepartmentId : (_departments.isNotEmpty ? _departments.first['id'].toString() : null);
         _selectedBranchForWarehouse = _branches.any((x) => x['id'].toString() == _selectedBranchForWarehouse) ? _selectedBranchForWarehouse : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
         _selectedStockWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
@@ -1107,15 +1110,21 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       value:_warehouses.any((w)=>w['id'].toString()==_sourceWarehouseId)?_sourceWarehouseId:null,
       decoration:InputDecoration(labelText:_inventoryMode=='transfer'?'المخزن المصدر':'المخزن'),
       items:_warehouses.map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
-      onChanged:(v)=>setState(()=>_sourceWarehouseId=v),
+      onChanged:(v)=>setState((){
+        _sourceWarehouseId=v;
+        final targets=_warehouses.where((w)=>w['id'].toString()!=v).toList();
+        if(!targets.any((w)=>w['id'].toString()==_targetWarehouseId)){
+          _targetWarehouseId=targets.isNotEmpty?targets.first['id'].toString():null;
+        }
+      }),
     ),
     if(_inventoryMode=='transfer') ...[
       const SizedBox(height:8),
       DropdownButtonFormField<String>(
-        value:_warehouses.any((w)=>w['id'].toString()==_targetWarehouseId)?_targetWarehouseId:null,
+        value:_warehouses.any((w)=>w['id'].toString()==_targetWarehouseId && w['id'].toString()!=_sourceWarehouseId)?_targetWarehouseId:null,
         decoration:const InputDecoration(labelText:'المخزن المستهدف'),
         items:_warehouses.where((w)=>w['id'].toString()!=_sourceWarehouseId).map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
-        onChanged:(v)=>setState(()=>_targetWarehouseId=v),
+        onChanged:_warehouses.where((w)=>w['id'].toString()!=_sourceWarehouseId).isEmpty?null:(v)=>setState(()=>_targetWarehouseId=v),
       ),
     ],
     if(_inventoryMode=='adjustment') ...[
@@ -1144,7 +1153,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     TextField(controller:_inventoryNotes,decoration:const InputDecoration(labelText:'ملاحظات')),
     if (_canWorkspacePermission('inventory.manage')) ...[
       const SizedBox(height:8),
-      Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_saveInventoryMovement,icon:const Icon(Icons.check_circle),label:const Text('ترحيل الحركة'))),
+      if(_inventoryMode=='transfer' && _warehouses.where((w)=>w['id'].toString()!=_sourceWarehouseId).isEmpty)
+        const Padding(padding:EdgeInsets.symmetric(vertical:8),child:Text('أضف مخزناً آخر إلى النشاط حتى تتمكن من إجراء تحويل مخزني.',style:TextStyle(color:Colors.deepOrange))),
+      Align(alignment:Alignment.centerLeft,child:FilledButton.icon(
+        onPressed:_inventoryMode=='transfer' && _targetWarehouseId==null?null:_saveInventoryMovement,
+        icon:const Icon(Icons.check_circle),label:const Text('ترحيل الحركة'))),
     ],
     const Divider(),
     _sectionTitle('آخر الحركات المخزنية','${_stockMovements.length} حركة في دفتر النشاط'),
