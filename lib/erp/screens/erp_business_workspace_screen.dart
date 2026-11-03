@@ -47,6 +47,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   bool _comparisonLoading = false;
   List<Map<String, dynamic>> _memberLocations = [];
   List<Map<String, dynamic>> _auditRows = [];
+  Map<String, dynamic> _workspaceMetrics = {};
   String? _selectedLocationMemberUserId;
   List<Map<String, dynamic>> _draftLines = [];
   String _documentType = 'purchase';
@@ -219,9 +220,35 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _selectedStockWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
         _selectedStockItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedStockItemLinkId) ? _selectedStockItemLinkId : (_itemLinks.isNotEmpty ? _itemLinks.first['id'].toString() : null);
       });
+      await _loadWorkspaceMetrics(id);
     } catch (e) {
       if (mounted) setState(() => _error = 'تعذر تحميل الفروع والمخازن: $e');
     }
+  }
+
+  Future<void> _loadWorkspaceMetrics(String workspaceId) async {
+    try {
+      final raw = await _db.rpc('erp_get_business_workspace_metrics', params: {'p_workspace_id': workspaceId});
+      if (!mounted || _selected?['id']?.toString() != workspaceId) return;
+      setState(() => _workspaceMetrics = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{});
+    } catch (_) {
+      if (mounted && _selected?['id']?.toString() == workspaceId) setState(() => _workspaceMetrics = {});
+    }
+  }
+
+  String _metricCount(String key, [String fallback = '0']) {
+    final value = _workspaceMetrics[key];
+    if (value == null) return fallback;
+    if (value is num) return value.toStringAsFixed(0);
+    return value.toString();
+  }
+
+  String _metricMoney(String key) {
+    final value = _workspaceMetrics[key];
+    if (value == null) return '—';
+    final amount = value is num ? value.toDouble() : double.tryParse(value.toString());
+    if (amount == null) return '—';
+    return '${amount.toStringAsFixed(2)} $_policyCurrencyCode';
   }
 
   bool get _isWorkspaceOwner =>
@@ -958,19 +985,19 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         const SizedBox(height: 12),
         _sectionTitle('ملخص النشاط', 'الأرصدة والمؤشرات المستخرجة من بيانات هذا النشاط فقط'),
         _tileGrid([
-          if (_canWorkspacePermission('master.read')) ('الفروع', Icons.account_tree_outlined, '${_branches.length} فرع'),
-          if (_canWorkspacePermission('master.read')) ('المخازن', Icons.warehouse_outlined, '${_warehouses.length} مخزن'),
-          if (_canWorkspacePermission('master.read')) ('الأصناف', Icons.inventory_2_outlined, '${_itemLinks.where((x)=>x['is_enabled']==true).length} صنف مفعل'),
-          if (_canAnyWorkspacePermission(['purchases.read','sales.read'])) ('مستندات مرحلة', Icons.receipt_long, '${_documents.where((x)=>x['status']=='posted').length} مستند'),
+          if (_canWorkspacePermission('master.read')) ('الفروع', Icons.account_tree_outlined, '${_metricCount('branches_count',_branches.length.toString())} فرع'),
+          if (_canWorkspacePermission('master.read')) ('المخازن', Icons.warehouse_outlined, '${_metricCount('warehouses_count',_warehouses.length.toString())} مخزن'),
+          if (_canWorkspacePermission('master.read')) ('الأصناف', Icons.inventory_2_outlined, '${_metricCount('items_count',_itemLinks.where((x)=>x['is_enabled']==true).length.toString())} صنف مفعل'),
+          if (_canAnyWorkspacePermission(['purchases.read','sales.read','reports.read'])) ('مستندات مرحلة', Icons.receipt_long, '${_metricCount('posted_documents_count',_documents.where((x)=>x['status']=='posted').length.toString())} مستند'),
         ]),
         const SizedBox(height:12),
         if (_canAnyWorkspacePermission(['sales.read','purchases.read','cash.read']))
           _sectionTitle('مؤشرات النشاط','ملخص تشغيلي من البيانات المسموح لك بالاطلاع عليها'),
         _tileGrid([
-          if (_canWorkspacePermission('sales.read')) ('إجمالي المبيعات', Icons.trending_up, '${_documentTotal('sale')} $_policyCurrencyCode'),
-          if (_canWorkspacePermission('purchases.read')) ('إجمالي المشتريات', Icons.shopping_cart_outlined, '${_documentTotal('purchase')} $_policyCurrencyCode'),
-          if (_canWorkspacePermission('cash.read')) ('الوارد النقدي', Icons.south_west, '${_cashTotal(true)} $_policyCurrencyCode'),
-          if (_canWorkspacePermission('cash.read')) ('الصادر النقدي', Icons.north_east, '${_cashTotal(false)} $_policyCurrencyCode'),
+          if (_canWorkspacePermission('sales.read')) ('إجمالي المبيعات', Icons.trending_up, _metricMoney('sales_total')),
+          if (_canWorkspacePermission('purchases.read')) ('إجمالي المشتريات', Icons.shopping_cart_outlined, _metricMoney('purchases_total')),
+          if (_canWorkspacePermission('cash.read')) ('الوارد النقدي', Icons.south_west, _metricMoney('cash_in_total')),
+          if (_canWorkspacePermission('cash.read')) ('الصادر النقدي', Icons.north_east, _metricMoney('cash_out_total')),
         ]),
       ]);
     }
@@ -1643,38 +1670,37 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     final basic = kind == 'تقارير البيانات الأساسية';
     final finance = kind == 'تقارير مالية وتحليلات';
     final posted = _documents.where((d)=>d['status']=='posted').toList();
-    final quantity = _stockMovements.fold<double>(0,(sum,m)=>sum+(double.tryParse(m['quantity_in'].toString())??0)-(double.tryParse(m['quantity_out'].toString())??0));
     return ListView(children:[
       _backHeader(kind),
       if (basic) ...[
-        _sectionTitle('تقرير البيانات الأساسية','إحصاء السجلات المعرفة في النشاط'),
+        _sectionTitle('تقرير البيانات الأساسية','أعداد شاملة من قاعدة البيانات وفق صلاحياتك ونطاق الفروع والمخازن'),
         _tileGrid([
-          ('الفروع',Icons.account_tree,'${_branches.length}'),
-          ('المخازن',Icons.warehouse,'${_warehouses.length}'),
-          ('المستخدمون',Icons.people,'${_members.length}'),
-          ('الأصناف المفعلة',Icons.inventory,'${_itemLinks.where((x)=>x['is_enabled']==true).length}'),
-          ('الإدارات والأقسام',Icons.corporate_fare,'${_departments.length}'),
-          ('الموظفون',Icons.badge,'${_employees.length}'),
+          ('الفروع',Icons.account_tree,_metricCount('branches_count',_branches.length.toString())),
+          ('المخازن',Icons.warehouse,_metricCount('warehouses_count',_warehouses.length.toString())),
+          if (_canWorkspacePermission('members.read')) ('المستخدمون',Icons.people,_metricCount('members_count',_members.length.toString())),
+          ('الأصناف المفعلة',Icons.inventory,_metricCount('items_count',_itemLinks.where((x)=>x['is_enabled']==true).length.toString())),
+          if (_canWorkspacePermission('hr.read')) ('الإدارات والأقسام',Icons.corporate_fare,_metricCount('departments_count',_departments.length.toString())),
+          if (_canWorkspacePermission('hr.read')) ('الموظفون',Icons.badge,_metricCount('employees_count',_employees.length.toString())),
         ]),
       ] else if (finance) ...[
-        _sectionTitle('التحليل المالي التشغيلي','المبالغ المستخرجة من المستندات والحركات المسجلة، وليست بديلاً عن قائمة مالية معتمدة'),
+        _sectionTitle('التحليل المالي التشغيلي','إجماليات شاملة من المستندات المرحلة والحركات النقدية؛ لا تمثل قائمة مالية أو إقراراً ضريبياً معتمداً'),
         _tileGrid([
-          ('مبيعات مرحلة',Icons.trending_up,'${_documentTotal('sale')} جنيه'),
-          ('مشتريات مرحلة',Icons.shopping_cart,'${_documentTotal('purchase')} جنيه'),
-          ('مرتجعات البيع',Icons.assignment_return,'${_documentTotal('sale_return')} $_policyCurrencyCode'),
-          ('مرتجعات الشراء',Icons.keyboard_return,'${_documentTotal('purchase_return')} $_policyCurrencyCode'),
-          ('مقبوضات',Icons.south_west,'${_cashTotal(true)} جنيه'),
-          ('مدفوعات',Icons.north_east,'${_cashTotal(false)} جنيه'),
+          ('مبيعات مرحلة',Icons.trending_up,_metricMoney('sales_total')),
+          ('مشتريات مرحلة',Icons.shopping_cart,_metricMoney('purchases_total')),
+          ('مرتجعات البيع',Icons.assignment_return,_metricMoney('sales_returns_total')),
+          ('مرتجعات الشراء',Icons.keyboard_return,_metricMoney('purchase_returns_total')),
+          ('مقبوضات',Icons.south_west,_metricMoney('cash_in_total')),
+          ('مدفوعات',Icons.north_east,_metricMoney('cash_out_total')),
+          ('صافي قيمة المخزون المتحركة',Icons.inventory_2,_metricMoney('stock_net_value')),
         ]),
       ] else ...[
-        _sectionTitle('تقرير الحركات','حالة المستندات والحركات المخزنية والنقدية'),
+        _sectionTitle('تقرير الحركات','إجماليات شاملة من قاعدة البيانات، مع عرض أحدث 20 مستنداً للتفاصيل'),
         _tileGrid([
-          ('كل المستندات',Icons.receipt_long,'${_documents.length}'),
-          ('مستندات مرحلة',Icons.verified,'${posted.length}'),
-          ('مسودات',Icons.edit_note,'${_documents.where((d)=>d['status']=='draft').length}'),
-          ('حركات نقدية',Icons.payments,'${_cashMovements.length}'),
-          ('حركات مخزنية',Icons.inventory_2,'${_stockMovements.length}'),
-          ('صافي كمية الحركة',Icons.scale,'${quantity.toStringAsFixed(2)}'),
+          ('كل المستندات',Icons.receipt_long,_metricCount('documents_count',_documents.length.toString())),
+          ('مستندات مرحلة',Icons.verified,_metricCount('posted_documents_count',posted.length.toString())),
+          ('مسودات',Icons.edit_note,_metricCount('draft_documents_count',_documents.where((d)=>d['status']=='draft').length.toString())),
+          ('حركات نقدية',Icons.payments,_metricCount('cash_movements_count',_cashMovements.length.toString())),
+          ('حركات مخزنية',Icons.inventory_2,_metricCount('stock_movements_count',_stockMovements.length.toString())),
         ]),
         const Divider(),
         ...posted.take(20).map((d)=>ListTile(dense:true,title:Text(d['document_no'].toString()),subtitle:Text('${d['document_type']} • ${d['document_date']}'),trailing:Text('${d['total']}'))),
