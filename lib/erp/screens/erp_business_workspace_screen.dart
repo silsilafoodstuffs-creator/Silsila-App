@@ -40,6 +40,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   List<Map<String, dynamic>> _cashMovements = [];
   List<Map<String, dynamic>> _departments = [];
   List<Map<String, dynamic>> _employees = [];
+  List<Map<String, dynamic>> _employeeLeaves = [];
   List<Map<String, dynamic>> _documents = [];
   List<Map<String, dynamic>> _stockMovements = [];
   List<Map<String, dynamic>> _workspaceComparisonRows = [];
@@ -146,6 +147,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     _cashMovements = [];
     _departments = [];
     _employees = [];
+    _employeeLeaves = [];
     _documents = [];
     _stockMovements = [];
     _memberLocations = [];
@@ -230,6 +232,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _safeRows(() => _db.from('erp_business_workspace_stock_movements').select('id,warehouse_id,item_link_id,movement_type,quantity_in,quantity_out,unit_cost,movement_date').eq('workspace_id', id).order('movement_date', ascending: false).limit(1000)),
         _safeRows(() => _db.from('erp_business_workspace_member_locations').select('id,user_id,access_scope,branch_id,warehouse_id,is_allowed').eq('workspace_id', id)),
         _safeRows(() => _db.from('erp_business_workspace_audit_log').select('id,actor_user_id,action,entity_type,entity_id,details,created_at').eq('workspace_id', id).order('created_at', ascending:false).limit(200)),
+        _safeRows(() => _db.from('erp_business_workspace_employee_leaves').select('id,employee_id,leave_type,start_date,end_date,status,notes,created_by,reviewed_by,reviewed_at').eq('workspace_id', id).order('start_date', ascending:false).limit(300)),
       ]);
       if (!mounted || _selected?['id']?.toString() != id) return;
       setState(() {
@@ -247,6 +250,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _stockMovements = List<Map<String, dynamic>>.from(result[10]);
         _memberLocations = List<Map<String, dynamic>>.from(result[11]);
         _auditRows = List<Map<String, dynamic>>.from(result[12]);
+        _employeeLeaves = List<Map<String, dynamic>>.from(result[13]);
         final selectableMembers = _members.where((m)=>m['member_role']!='owner').toList();
         _selectedLocationMemberUserId = selectableMembers.any((m)=>m['user_id'].toString()==_selectedLocationMemberUserId) ? _selectedLocationMemberUserId : (selectableMembers.isNotEmpty ? selectableMembers.first['user_id'].toString() : null);
         _selectedDocBranchId = _branches.any((x) => x['id'].toString() == _selectedDocBranchId) ? _selectedDocBranchId : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
@@ -578,6 +582,83 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       _departmentCode.clear(); _departmentName.clear();
       await _loadStructure(); _message('تم إضافة الإدارة / القسم.');
     } catch(e) { _message('تعذر حفظ الإدارة: $e'); }
+  }
+
+  Future<void> _addEmployeeLeave() async {
+    final workspaceId=_selected?['id']?.toString();
+    if(workspaceId==null||_employees.isEmpty){_message('أضف موظفاً أولاً قبل تسجيل الإجازات.');return;}
+    String? employeeId=_employees.first['id'].toString();
+    String leaveType='annual';
+    DateTime? startDate;
+    DateTime? endDate;
+    final notes=TextEditingController();
+    String fmt(DateTime? value)=>value==null?'اختر التاريخ':'${value.day.toString().padLeft(2,'0')}-${value.month.toString().padLeft(2,'0')}-${value.year}';
+    await showDialog<void>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,setDialogState)=>AlertDialog(
+      title:const Text('تسجيل إجازة موظف'),
+      content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        DropdownButtonFormField<String>(
+          value:employeeId,
+          decoration:const InputDecoration(labelText:'الموظف'),
+          items:_employees.where((e)=>e['is_active']==true).map((e)=>DropdownMenuItem(value:e['id'].toString(),child:Text(e['full_name'].toString()))).toList(),
+          onChanged:(v)=>setDialogState(()=>employeeId=v),
+        ),
+        const SizedBox(height:8),
+        DropdownButtonFormField<String>(
+          value:leaveType,
+          decoration:const InputDecoration(labelText:'نوع الإجازة'),
+          items:const [
+            DropdownMenuItem(value:'annual',child:Text('سنوية')),
+            DropdownMenuItem(value:'sick',child:Text('مرضية')),
+            DropdownMenuItem(value:'unpaid',child:Text('بدون أجر')),
+            DropdownMenuItem(value:'emergency',child:Text('عارضة')),
+            DropdownMenuItem(value:'other',child:Text('أخرى')),
+          ],
+          onChanged:(v){if(v!=null)setDialogState(()=>leaveType=v);},
+        ),
+        const SizedBox(height:8),
+        Row(children:[
+          Expanded(child:OutlinedButton.icon(onPressed:()async{
+            final picked=await showDatePicker(context:dialogContext,initialDate:startDate??DateTime.now(),firstDate:DateTime(2000),lastDate:DateTime(2100));
+            if(picked!=null)setDialogState(()=>startDate=picked);
+          },icon:const Icon(Icons.calendar_today),label:Text('من: ${fmt(startDate)}'))),
+          const SizedBox(width:6),
+          Expanded(child:OutlinedButton.icon(onPressed:()async{
+            final picked=await showDatePicker(context:dialogContext,initialDate:endDate??startDate??DateTime.now(),firstDate:startDate??DateTime(2000),lastDate:DateTime(2100));
+            if(picked!=null)setDialogState(()=>endDate=picked);
+          },icon:const Icon(Icons.event),label:Text('إلى: ${fmt(endDate)}'))),
+        ]),
+        TextField(controller:notes,decoration:const InputDecoration(labelText:'ملاحظات (اختياري)'),maxLines:2),
+      ])),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(dialogContext),child:const Text('إلغاء')),
+        FilledButton.icon(onPressed:employeeId==null||startDate==null||endDate==null||endDate!.isBefore(startDate!)?null:()async{
+          try{
+            await _db.from('erp_business_workspace_employee_leaves').insert({
+              'workspace_id':workspaceId,'employee_id':employeeId,'leave_type':leaveType,
+              'start_date':startDate!.toIso8601String().substring(0,10),
+              'end_date':endDate!.toIso8601String().substring(0,10),
+              'notes':notes.text.trim().isEmpty?null:notes.text.trim(),
+              'created_by':_db.auth.currentUser!.id,
+            });
+            if(!mounted)return;
+            Navigator.pop(dialogContext);
+            await _loadStructure();
+            _message('تم تسجيل طلب الإجازة.');
+          }catch(e){_message('تعذر تسجيل الإجازة: $e');}
+        },icon:const Icon(Icons.save),label:const Text('حفظ الإجازة')),
+      ],
+    )));
+    notes.dispose();
+  }
+
+  Future<void> _reviewEmployeeLeave(String leaveId,String status) async {
+    try{
+      await _db.from('erp_business_workspace_employee_leaves').update({
+        'status':status,'reviewed_by':_db.auth.currentUser!.id,'reviewed_at':DateTime.now().toIso8601String(),
+      }).eq('id',leaveId).eq('workspace_id',_selected!['id'].toString());
+      await _loadStructure();
+      _message(status=='approved'?'تم اعتماد الإجازة.':'تم رفض طلب الإجازة.');
+    }catch(e){_message('تعذر تحديث طلب الإجازة: $e');}
   }
 
   Future<void> _addEmployee() async {
@@ -1667,10 +1748,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     Wrap(spacing:6,children:[
       ChoiceChip(label:const Text('إداراتي وأقسامي'),selected:_employeeSubTab==0,onSelected:(_)=>setState(()=>_employeeSubTab=0)),
       ChoiceChip(label:Text('موظفيني (${_employees.length})'),selected:_employeeSubTab==1,onSelected:(_)=>setState(()=>_employeeSubTab=1)),
+      if(_canWorkspacePermission('hr.read')) ChoiceChip(label:Text('الإجازات (${_employeeLeaves.length})'),selected:_employeeSubTab==2,onSelected:(_)=>setState(()=>_employeeSubTab=2)),
     ]),
     const SizedBox(height:8),
-    Expanded(child:IndexedStack(index:_employeeSubTab,children:[
-      _departmentsPanel(),_employeeRecordsPanel(),
+    Expanded(child:IndexedStack(index:_employeeSubTab.clamp(0,2),children:[
+      _departmentsPanel(),_employeeRecordsPanel(),_employeeLeavesPanel(),
     ])),
   ]);
 
@@ -1717,7 +1799,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_addEmployee,icon:const Icon(Icons.person_add),label:const Text('إضافة موظف'))),
     ],
     const Divider(),
-    _sectionTitle('قوة العمل','${_employees.length} موظف مسجل'),
+    _sectionTitle('قوة العمل',' ${_employees.length} موظف مسجل'),
     ..._employees.map((e)=>ListTile(dense:true,leading:const Icon(Icons.badge_outlined,color:_workspaceOrange),
       title:Text(e['full_name'].toString()),
       subtitle:Text('${e['employee_code']} • ${e['job_title'] ?? 'بدون وظيفة'}'),
@@ -1726,6 +1808,32 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         if (_canWorkspacePermission('hr.manage')) Switch(value:e['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_employees').update({'is_active':v}).eq('id',e['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(err){_message('تعذر تحديث حالة الموظف: $err');}}),
       ]),
     )),
+  ]);
+
+  Widget _employeeLeavesPanel() => ListView(children:[
+    _sectionTitle('إجازات موظفيني','طلبات الإجازة ومددها وحالتها، مستقلة عن سجلات الموارد البشرية المركزية'),
+    if(_canWorkspacePermission('hr.manage'))
+      Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_addEmployeeLeave,icon:const Icon(Icons.event_available),label:const Text('تسجيل إجازة'))),
+    const Divider(),
+    if(_employeeLeaves.isEmpty) const Padding(padding:EdgeInsets.all(16),child:Text('لا توجد إجازات مسجلة لهذا النشاط.')),
+    ..._employeeLeaves.map((leave){
+      final employee=_employees.where((e)=>e['id'].toString()==leave['employee_id'].toString());
+      final name=employee.isEmpty?'موظف':employee.first['full_name'].toString();
+      final type=const {'annual':'سنوية','sick':'مرضية','unpaid':'بدون أجر','emergency':'عارضة','other':'أخرى'}[leave['leave_type']]??'أخرى';
+      final status=const {'pending':'بانتظار الاعتماد','approved':'معتمدة','rejected':'مرفوضة','cancelled':'ملغاة'}[leave['status']]??leave['status'].toString();
+      return Card(elevation:0,child:ListTile(
+        leading:const Icon(Icons.event_note,color:_workspacePurple),
+        title:Text(name),
+        subtitle:Text('$type • ${leave['start_date']} إلى ${leave['end_date']} • $status${(leave['notes']??'').toString().isEmpty?'':'\n${leave['notes']}'}'),
+        isThreeLine:(leave['notes']??'').toString().isNotEmpty,
+        trailing:leave['status']=='pending'&&_canWorkspacePermission('hr.manage')
+          ?Wrap(spacing:0,children:[
+            IconButton(tooltip:'اعتماد',onPressed:()=>_reviewEmployeeLeave(leave['id'].toString(),'approved'),icon:const Icon(Icons.check_circle_outline,color:Colors.green)),
+            IconButton(tooltip:'رفض',onPressed:()=>_reviewEmployeeLeave(leave['id'].toString(),'rejected'),icon:const Icon(Icons.cancel_outlined,color:Colors.redAccent)),
+          ])
+          :null,
+      ));
+    }),
   ]);
 
   Widget _infoPanel(String title, String body) => Card(
