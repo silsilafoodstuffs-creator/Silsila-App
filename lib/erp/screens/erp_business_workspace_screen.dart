@@ -250,7 +250,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         final selectableMembers = _members.where((m)=>m['member_role']!='owner').toList();
         _selectedLocationMemberUserId = selectableMembers.any((m)=>m['user_id'].toString()==_selectedLocationMemberUserId) ? _selectedLocationMemberUserId : (selectableMembers.isNotEmpty ? selectableMembers.first['user_id'].toString() : null);
         _selectedDocBranchId = _branches.any((x) => x['id'].toString() == _selectedDocBranchId) ? _selectedDocBranchId : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
-        _selectedDocWarehouseId = _warehouses.any((x) => x['id'].toString() == _selectedDocWarehouseId) ? _selectedDocWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
+        final documentBranchWarehouses = _warehouses.where((x)=>x['branch_id']?.toString()==_selectedDocBranchId).toList();
+        _selectedDocWarehouseId = documentBranchWarehouses.any((x) => x['id'].toString() == _selectedDocWarehouseId)
+            ? _selectedDocWarehouseId
+            : (documentBranchWarehouses.isNotEmpty ? documentBranchWarehouses.first['id'].toString() : null);
         _selectedDocItemLinkId = _itemLinks.any((x) => x['id'].toString() == _selectedDocItemLinkId && x['is_enabled'] == true) ? _selectedDocItemLinkId : (_itemLinks.where((x) => x['is_enabled'] == true).isNotEmpty ? _itemLinks.firstWhere((x) => x['is_enabled'] == true)['id'].toString() : null);
         _inventoryItemLinkId = _itemLinks.any((x) => x['id'].toString() == _inventoryItemLinkId && x['is_enabled'] == true) ? _inventoryItemLinkId : (_itemLinks.where((x) => x['is_enabled'] == true).isNotEmpty ? _itemLinks.firstWhere((x) => x['is_enabled'] == true)['id'].toString() : null);
         _sourceWarehouseId = _warehouses.any((x) => x['id'].toString() == _sourceWarehouseId) ? _sourceWarehouseId : (_warehouses.isNotEmpty ? _warehouses.first['id'].toString() : null);
@@ -464,8 +467,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     final id = _selected?['id']?.toString();
     final branchId = _selectedDocBranchId;
     final warehouseId = _selectedDocWarehouseId;
-    if (id == null || branchId == null || warehouseId == null || _draftLines.isEmpty) {
-      _message('اختر الفرع والمخزن وأضف صنفاً واحداً على الأقل.'); return;
+    final selectedDocumentWarehouse=_warehouses.where((w)=>w['id'].toString()==warehouseId).toList();
+    if (id == null || branchId == null || warehouseId == null || _draftLines.isEmpty ||
+        selectedDocumentWarehouse.isEmpty || selectedDocumentWarehouse.first['branch_id']?.toString()!=branchId) {
+      _message('اختر فرعاً ومخزناً تابعاً له وأضف صنفاً واحداً على الأقل.'); return;
     }
     final taxRate = double.tryParse(_docTax.text.trim()) ?? 0;
     if (taxRate < 0 || taxRate > 100) { _message('نسبة الضريبة يجب أن تكون من 0 إلى 100.'); return; }
@@ -1168,13 +1173,17 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       value:_branches.any((x)=>x['id'].toString()==_selectedDocBranchId)?_selectedDocBranchId:null,
       decoration:const InputDecoration(labelText:'الفرع'),
       items:_branches.map((b)=>DropdownMenuItem(value:b['id'].toString(),child:Text(b['name_ar'].toString()))).toList(),
-      onChanged:(v)=>setState(()=>_selectedDocBranchId=v),
+      onChanged:(v)=>setState((){
+        _selectedDocBranchId=v;
+        final branchWarehouses=_warehouses.where((w)=>w['branch_id']?.toString()==v).toList();
+        _selectedDocWarehouseId=branchWarehouses.isNotEmpty?branchWarehouses.first['id'].toString():null;
+      }),
     ),
     const SizedBox(height:8),
     DropdownButtonFormField<String>(
-      value:_warehouses.any((x)=>x['id'].toString()==_selectedDocWarehouseId)?_selectedDocWarehouseId:null,
+      value:_warehouses.any((x)=>x['id'].toString()==_selectedDocWarehouseId && x['branch_id']?.toString()==_selectedDocBranchId)?_selectedDocWarehouseId:null,
       decoration:const InputDecoration(labelText:'المخزن'),
-      items:_warehouses.map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
+      items:_warehouses.where((w)=>w['branch_id']?.toString()==_selectedDocBranchId).map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
       onChanged:(v)=>setState(()=>_selectedDocWarehouseId=v),
     ),
     TextField(controller:_docCounterparty,decoration:InputDecoration(labelText:purchase?'اسم المورد':'اسم العميل')),
