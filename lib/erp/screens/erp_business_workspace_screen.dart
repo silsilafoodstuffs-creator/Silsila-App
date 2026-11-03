@@ -390,9 +390,16 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     if (id == null || branchId == null || warehouseId == null || _draftLines.isEmpty) {
       _message('اختر الفرع والمخزن وأضف صنفاً واحداً على الأقل.'); return;
     }
-    final tax = double.tryParse(_docTax.text.trim()) ?? 0;
-    if (tax < 0 || tax > 100) { _message('قيمة الضريبة يجب أن تكون من 0 إلى 100.'); return; }
+    final taxRate = double.tryParse(_docTax.text.trim()) ?? 0;
+    if (taxRate < 0 || taxRate > 100) { _message('نسبة الضريبة يجب أن تكون من 0 إلى 100.'); return; }
     if (_policyRequireCounterparty && _docCounterparty.text.trim().isEmpty) { _message('سياسة النشاط تشترط إدخال اسم العميل أو المورد.'); return; }
+    final taxableSubtotal = _draftLines.fold<double>(0, (sum, line) {
+      final quantity = (line['quantity'] as num).toDouble();
+      final price = (line['unit_price'] as num).toDouble();
+      final discount = (line['discount'] as num).toDouble();
+      return sum + quantity * price - discount;
+    });
+    final tax = taxableSubtotal * taxRate / 100;
     try {
       final now = DateTime.now();
       final prefix = _documentType.toUpperCase();
@@ -1099,7 +1106,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         subtitle:Text('الكمية ${line['quantity']} × ${line['unit_price']} • خصم ${line['discount']}'),
         trailing:IconButton(icon:const Icon(Icons.close,color:Colors.redAccent),onPressed:()=>setState(()=>_draftLines.removeAt(entry.key))));
     }),
-    TextField(controller:_docTax,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'ضريبة المستند')),
+    TextField(controller:_docTax,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'نسبة الضريبة %')),
     TextField(controller:_docNotes,decoration:const InputDecoration(labelText:'ملاحظات')),
     if (_canWorkspacePermission(purchase ? 'purchases.manage' : 'sales.manage')) ...[
       const SizedBox(height:8),
