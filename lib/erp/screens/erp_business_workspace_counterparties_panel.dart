@@ -170,7 +170,7 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
       TextField(controller:_area,decoration:const InputDecoration(labelText:'المنطقة / القرية')),
       Wrap(spacing:8,children:[
         FilledButton.icon(onPressed:_saving?null:_save,icon:Icon(_editingId==null?Icons.save:Icons.edit),label:Text(_editingId==null?'حفظ':'حفظ التعديلات')),
-        if(_editingId!=null) OutlinedButton(onPressed:_clearForm,child:const Text('إلغاء التعديل')),
+        if(_editingId!=null) OutlinedButton(onPressed:()=>setState(_clearForm),child:const Text('إلغاء التعديل')),
       ]),
     ],
     const Divider(height:24),
