@@ -911,7 +911,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     if(rows.isNotEmpty) return rows.first['is_allowed']==true;
     final warehouseAllowed=_memberLocations.any((l)=>l['user_id'].toString()==userId&&l['access_scope']=='warehouse'&&l['is_allowed']==true&&_warehouses.any((w)=>w['id'].toString()==l['warehouse_id'].toString()&&w['branch_id'].toString()==branchId));
     if(warehouseAllowed) return true;
-    return !_memberLocations.any((l)=>l['user_id'].toString()==userId&&l['is_allowed']==true);
+    // Once the owner has configured any location rule for this member,
+    // unspecified branches are denied (not implicitly granted).
+    return !_memberLocations.any((l)=>l['user_id'].toString()==userId);
   }
 
   bool _memberHasWarehouseAccess(String userId,Map<String,dynamic> warehouse) {
@@ -921,7 +923,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     final branchRows=_memberLocations.where((l)=>l['user_id'].toString()==userId&&l['access_scope']=='branch'&&l['branch_id'].toString()==warehouse['branch_id'].toString());
     if(branchRows.isNotEmpty && branchRows.first['is_allowed']==false) return false;
     if(branchRows.isNotEmpty && branchRows.first['is_allowed']==true) return true;
-    return !_memberLocations.any((l)=>l['user_id'].toString()==userId&&l['is_allowed']==true);
+    // Any configured location restriction switches this member to
+    // explicit allow-list mode; a denied-only rule must never grant all.
+    return !_memberLocations.any((l)=>l['user_id'].toString()==userId);
   }
 
   Future<void> _setMemberLocationAccess(String userId,String scope,String branchId,String? warehouseId,bool allowed) async {
