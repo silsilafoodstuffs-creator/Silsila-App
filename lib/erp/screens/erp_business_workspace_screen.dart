@@ -1826,6 +1826,45 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     ])),
   ]);
 
+  List<Widget> _departmentTreeWidgets({
+    String? parentId,
+    int depth = 0,
+    Set<String>? visited,
+  }) {
+    final seen = visited ?? <String>{};
+    final children = _departments
+        .where((d) => (d['parent_id']?.toString() ?? '') == (parentId ?? ''))
+        .toList();
+    return children.where((d) => !seen.contains(d['id'].toString())).map((d) {
+      final id = d['id'].toString();
+      final nextSeen = <String>{...seen, id};
+      final descendants = _departmentTreeWidgets(
+        parentId: id,
+        depth: depth + 1,
+        visited: nextSeen,
+      );
+      final node = descendants.isEmpty
+          ? ListTile(
+              dense: true,
+              leading: const Icon(Icons.subdirectory_arrow_left, color: _workspaceOrange),
+              title: Text(d['name_ar'].toString()),
+              subtitle: Text(d['department_code'].toString()),
+            )
+          : ExpansionTile(
+              initiallyExpanded: true,
+              leading: const Icon(Icons.account_tree, color: _workspacePurple),
+              title: Text(d['name_ar'].toString(),
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
+              subtitle: Text(d['department_code'].toString()),
+              children: descendants,
+            );
+      return Padding(
+        padding: EdgeInsetsDirectional.only(start: depth == 0 ? 0 : 12),
+        child: Card(elevation: 0, margin: const EdgeInsets.only(bottom: 6), child: node),
+      );
+    }).toList();
+  }
+
   Widget _departmentsPanel() => ListView(children:[
     _sectionTitle('إداراتي وأقسامي','هيكل إداري مستقل بنظام الشجرة'),
     if (_canWorkspacePermission('hr.manage')) ...[
@@ -1843,8 +1882,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     ]),
     ],
     const Divider(),
-    ..._departments.map((d)=>ListTile(dense:true,leading:Icon(d['parent_id']==null?Icons.account_tree:Icons.subdirectory_arrow_left,color:_workspacePurple),
-      title:Text(d['name_ar'].toString()),subtitle:Text(d['department_code'].toString()))),
+    ..._departmentTreeWidgets(),
   ]);
 
   Widget _employeeRecordsPanel() => ListView(children:[
