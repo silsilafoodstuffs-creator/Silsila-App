@@ -55,11 +55,12 @@ begin
     'documents_count',
       (select count(*) from public.erp_business_workspace_documents d
        where d.workspace_id=p_workspace_id
-         and private.can_access_business_workspace(p_workspace_id,
+         and (private.can_access_business_workspace(p_workspace_id,
            case when d.document_type in ('purchase','purchase_return') then 'purchases.read'
                 when d.document_type in ('sale','sale_return') then 'sales.read'
                 else 'inventory.read' end)
-         or (d.workspace_id=p_workspace_id and private.can_access_business_workspace(p_workspace_id,'reports.read'))
+           or private.can_access_business_workspace(p_workspace_id,'reports.read'))
+         and private.can_access_business_workspace_location(p_workspace_id,d.branch_id,d.warehouse_id)
       ),
     'posted_documents_count',
       (select count(*) from public.erp_business_workspace_documents d
