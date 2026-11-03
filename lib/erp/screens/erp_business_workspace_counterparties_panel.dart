@@ -36,6 +36,16 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
   @override
   void initState() { super.initState(); _load(); }
   @override
+  void didUpdateWidget(covariant ErpBusinessWorkspaceCounterpartiesPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.workspaceId != widget.workspaceId) {
+      _rows = [];
+      _clearForm();
+      _load();
+    }
+  }
+
+  @override
   void dispose() {
     _code.dispose(); _name.dispose(); _phone.dispose(); _address.dispose();
     _governorate.dispose(); _district.dispose(); _area.dispose(); super.dispose();
