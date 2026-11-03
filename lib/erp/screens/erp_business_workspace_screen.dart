@@ -1507,53 +1507,47 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
           subtitle: Text('${branch['branch_code']} • ${branchWarehouses.length} مخزن'),
           children: branchWarehouses.isEmpty
               ? const [ListTile(dense: true, title: Text('لا توجد مخازن بهذا الفرع'))]
-              : branchWarehouses.map((w) => ListTile(
-                  dense: true,
-                  contentPadding: const EdgeInsetsDirectional.only(start: 48, end: 12),
+              : branchWarehouses.map((w) => ExpansionTile(
+                  tilePadding: const EdgeInsetsDirectional.only(start: 48, end: 12),
                   leading: const Icon(Icons.warehouse, color: _workspaceOrange),
                   title: Text(w['name_ar'].toString()),
                   subtitle: Text('${w['warehouse_code']} • ${w['show_balance_in_silsila'] == true ? 'الرصيد ظاهر في سلسلة' : 'الرصيد غير ظاهر في سلسلة'}'),
-                  trailing: _canWorkspacePermission('master.manage')
-                      ? Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(mainAxisSize: MainAxisSize.min, children: [
-                              const Text('نشط', style: TextStyle(fontSize: 10)),
-                              Switch(
-                                value: w['is_active'] == true,
-                                onChanged: (v) async {
-                                  try {
-                                    await _db.from('erp_business_workspace_warehouses')
-                                        .update({'is_active': v})
-                                        .eq('id', w['id'].toString())
-                                        .eq('workspace_id', _selected!['id'].toString());
-                                    await _loadStructure();
-                                  } catch (e) {
-                                    _message('تعذر تحديث حالة المخزن: $e');
-                                  }
-                                },
-                              ),
-                            ]),
-                            Row(mainAxisSize: MainAxisSize.min, children: [
-                              const Text('إظهار الرصيد', style: TextStyle(fontSize: 10)),
-                              Switch(
-                                value: w['show_balance_in_silsila'] == true,
-                                onChanged: (v) async {
-                                  try {
-                                    await _db.from('erp_business_workspace_warehouses')
-                                        .update({'show_balance_in_silsila': v})
-                                        .eq('id', w['id'].toString())
-                                        .eq('workspace_id', _selected!['id'].toString());
-                                    await _loadStructure();
-                                  } catch (e) {
-                                    _message('تعذر تحديث سياسة ظهور الرصيد: $e');
-                                  }
-                                },
-                              ),
-                            ]),
-                          ],
-                        )
-                      : const Text('عرض فقط'),
+                  children: [
+                    if (_canWorkspacePermission('master.manage'))
+                      SwitchListTile(
+                        dense: true,
+                        title: const Text('المخزن نشط'),
+                        value: w['is_active'] == true,
+                        onChanged: (v) async {
+                          try {
+                            await _db.from('erp_business_workspace_warehouses')
+                                .update({'is_active': v})
+                                .eq('id', w['id'].toString())
+                                .eq('workspace_id', _selected!['id'].toString());
+                            await _loadStructure();
+                          } catch (e) {
+                            _message('تعذر تحديث حالة المخزن: $e');
+                          }
+                        },
+                      ),
+                    if (_canWorkspacePermission('master.manage'))
+                      SwitchListTile(
+                        dense: true,
+                        title: const Text('إظهار رصيد المخزن في سلسلة'),
+                        value: w['show_balance_in_silsila'] == true,
+                        onChanged: (v) async {
+                          try {
+                            await _db.from('erp_business_workspace_warehouses')
+                                .update({'show_balance_in_silsila': v})
+                                .eq('id', w['id'].toString())
+                                .eq('workspace_id', _selected!['id'].toString());
+                            await _loadStructure();
+                          } catch (e) {
+                            _message('تعذر تحديث سياسة ظهور الرصيد: $e');
+                          }
+                        },
+                      ),
+                  ],
                 )).toList(),
         ),
       );
