@@ -1025,8 +1025,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       ],
     ]),
     TextField(controller:_inventoryNotes,decoration:const InputDecoration(labelText:'ملاحظات')),
-    const SizedBox(height:8),
-    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_saveInventoryMovement,icon:const Icon(Icons.check_circle),label:const Text('ترحيل الحركة'))),
+    if (_canWorkspacePermission('inventory.manage')) ...[
+      const SizedBox(height:8),
+      Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_saveInventoryMovement,icon:const Icon(Icons.check_circle),label:const Text('ترحيل الحركة'))),
+    ],
     const Divider(),
     _sectionTitle('آخر الحركات المخزنية','${_stockMovements.length} حركة في دفتر النشاط'),
     ..._stockMovements.take(50).map((m){
@@ -1094,8 +1096,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     }),
     TextField(controller:_docTax,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'ضريبة المستند')),
     TextField(controller:_docNotes,decoration:const InputDecoration(labelText:'ملاحظات')),
-    const SizedBox(height:8),
-    Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_createWorkspaceDocument,icon:const Icon(Icons.save),label:const Text('حفظ كمسودة'))),
+    if (_canWorkspacePermission(purchase ? 'purchases.manage' : 'sales.manage')) ...[
+      const SizedBox(height:8),
+      Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_createWorkspaceDocument,icon:const Icon(Icons.save),label:const Text('حفظ كمسودة'))),
+    ],
     const Divider(),
     _sectionTitle('مستندات النشاط','${_documents.where((d)=>purchase?['purchase','purchase_return'].contains(d['document_type']):['sale','sale_return'].contains(d['document_type'])).length} مستند'),
     ..._documents.where((d)=>purchase?['purchase','purchase_return'].contains(d['document_type']):['sale','sale_return'].contains(d['document_type'])).map((d)=>Card(
@@ -1104,7 +1108,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         subtitle:Text('${d['document_date']} • ${d['counterparty_name']??'بدون طرف'} • ${d['status']}'),
         trailing:Row(mainAxisSize:MainAxisSize.min,children:[
           Text('${d['total']}',style:const TextStyle(fontWeight:FontWeight.w800,color:_workspacePurple)),
-          if(d['status']=='draft') IconButton(tooltip:'اعتماد وترحيل',icon:const Icon(Icons.check_circle,color:Colors.green),onPressed:()=>_postWorkspaceDocument(d['id'].toString())),
+          if(d['status']=='draft' && _canWorkspacePermission(purchase ? 'purchases.manage' : 'sales.manage')) IconButton(tooltip:'اعتماد وترحيل',icon:const Icon(Icons.check_circle,color:Colors.green),onPressed:()=>_postWorkspaceDocument(d['id'].toString())),
         ]),
       ),
     )),
@@ -1113,6 +1117,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   Widget _cashMovementsView() => ListView(children: [
     _backHeader('صرف وتوريد نقدية'),
     _sectionTitle('حركة نقدية مستقلة', 'كل حركة تخص النشاط الحالي ولا تُرحل إلى خزائن سلسلة'),
+    if (_canWorkspacePermission('cash.manage')) ...[
     DropdownButtonFormField<String>(
       value: _cashType,
       decoration: const InputDecoration(labelText: 'نوع الحركة'),
@@ -1144,6 +1149,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     TextField(controller:_cashReference,decoration:const InputDecoration(labelText:'رقم مرجعي اختياري')),
     const SizedBox(height:8),
     Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_saveCashMovement,icon:const Icon(Icons.save),label:const Text('حفظ الحركة'))),
+    ],
     const Divider(),
     _sectionTitle('سجل الحركات النقدية','${_cashMovements.length} حركة مسجلة'),
     ..._cashMovements.map((m)=>ListTile(dense:true,
@@ -1196,6 +1202,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _branchesPanel() => ListView(children:[
     _sectionTitle('فروع نشاطي','أضف فروعاً مستقلة عن فروع سلسلة'),
+    if (_canWorkspacePermission('master.manage')) ...[
     Row(children:[
       Expanded(child:TextField(controller:_branchCode,decoration:const InputDecoration(labelText:'كود الفرع'))),
       const SizedBox(width:8),
@@ -1203,6 +1210,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       IconButton(onPressed:_addBranch,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
     ]),
     TextField(controller:_branchNameEn,decoration:const InputDecoration(labelText:'اسم الفرع بالإنجليزية (اختياري)')),
+    ],
     const Divider(),
     ..._branches.map((b)=>ListTile(dense:true,leading:const Icon(Icons.account_tree,color:_workspacePurple),
       title:Text(b['name_ar'].toString()),subtitle:Text('${b['branch_code']} • ${b['name_en']??''}'),
@@ -1216,6 +1224,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _warehousesPanel() => ListView(children:[
     _sectionTitle('مخازن نشاطي','كل مخزن يتبع فرعاً محدداً، ويمكن التحكم في ظهوره ضمن أرصدة سلسلة'),
+    if (_canWorkspacePermission('master.manage')) ...[
     DropdownButtonFormField<String>(
       value:_branches.any((x)=>x['id'].toString()==_selectedBranchForWarehouse)?_selectedBranchForWarehouse:null,
       decoration:const InputDecoration(labelText:'الفرع التابع له المخزن'),
@@ -1229,55 +1238,67 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       IconButton(onPressed:_addWarehouse,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
     ]),
     TextField(controller:_warehouseNameEn,decoration:const InputDecoration(labelText:'اسم المخزن بالإنجليزية (اختياري)')),
+    ],
     const Divider(),
     ..._warehouses.map((w)=>ListTile(dense:true,leading:const Icon(Icons.warehouse,color:_workspaceOrange),
       title:Text(w['name_ar'].toString()),
       subtitle:Text('${_branchNameForWarehouse(w['branch_id'])} • ${w['warehouse_code']} • ${w['show_balance_in_silsila']==true?'الرصيد ظاهر في سلسلة':'الرصيد غير ظاهر في سلسلة'}'),
-      trailing:Column(mainAxisSize:MainAxisSize.min,children:[
-        Row(mainAxisSize:MainAxisSize.min,children:[const Text('نشط',style:TextStyle(fontSize:10)),Switch(value:w['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'is_active':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث حالة المخزن: $e');}})]),
-        Row(mainAxisSize:MainAxisSize.min,children:[const Text('إظهار الرصيد',style:TextStyle(fontSize:10)),Switch(value:w['show_balance_in_silsila']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'show_balance_in_silsila':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث سياسة ظهور الرصيد: $e');}})]),
-      ]))),
+      trailing:_canWorkspacePermission('master.manage')
+          ? Column(mainAxisSize:MainAxisSize.min,children:[
+              Row(mainAxisSize:MainAxisSize.min,children:[const Text('نشط',style:TextStyle(fontSize:10)),Switch(value:w['is_active']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'is_active':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث حالة المخزن: $e');}})]),
+              Row(mainAxisSize:MainAxisSize.min,children:[const Text('إظهار الرصيد',style:TextStyle(fontSize:10)),Switch(value:w['show_balance_in_silsila']==true,onChanged:(v) async {try{await _db.from('erp_business_workspace_warehouses').update({'show_balance_in_silsila':v}).eq('id',w['id'].toString()).eq('workspace_id',_selected!['id'].toString());await _loadStructure();}catch(e){_message('تعذر تحديث سياسة ظهور الرصيد: $e');}})]),
+            ])
+          : const Text('عرض فقط'))),
   ]);
 
   Widget _membersInfo() => Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     _sectionTitle('مستخدمين نشاطي','أربع تبويبات لإدارة العضويات والصلاحيات ونطاقات الوصول والسياسات'),
     Wrap(spacing:6,runSpacing:6,children:[
       ChoiceChip(label:const Text('مستخدميني'),selected:_memberSubTab==0,onSelected:(_)=>setState(()=>_memberSubTab=0)),
-      ChoiceChip(label:const Text('صلاحيات مستخدميني'),selected:_memberSubTab==1,onSelected:(_)=>setState(()=>_memberSubTab=1)),
-      ChoiceChip(label:const Text('فروع ومخازن مستخدمين'),selected:_memberSubTab==2,onSelected:(_)=>setState(()=>_memberSubTab=2)),
-      ChoiceChip(label:const Text('سياسات نشاطي'),selected:_memberSubTab==3,onSelected:(_)=>setState(()=>_memberSubTab=3)),
+      if (_isWorkspaceOwner) ...[
+        ChoiceChip(label:const Text('صلاحيات مستخدميني'),selected:_memberSubTab==1,onSelected:(_)=>setState(()=>_memberSubTab=1)),
+        ChoiceChip(label:const Text('فروع ومخازن مستخدمين'),selected:_memberSubTab==2,onSelected:(_)=>setState(()=>_memberSubTab=2)),
+        ChoiceChip(label:const Text('سياسات نشاطي'),selected:_memberSubTab==3,onSelected:(_)=>setState(()=>_memberSubTab=3)),
+      ],
     ]),
     const SizedBox(height:8),
-    Expanded(child:IndexedStack(index:_memberSubTab,children:[
-      _memberUsersPanel(),_memberPermissionsPanel(),_memberLocationsPanel(),_workspacePoliciesPanel(),
+    Expanded(child:IndexedStack(index:_isWorkspaceOwner ? _memberSubTab.clamp(0,3) : 0,children:[
+      _memberUsersPanel(),
+      if (_isWorkspaceOwner) ...[_memberPermissionsPanel(),_memberLocationsPanel(),_workspacePoliciesPanel()],
     ])),
   ]);
 
   Widget _memberUsersPanel() => ListView(children:[
-    _sectionTitle('إضافة مستخدم','اربط حساباً نشطاً موجوداً بالفعل في سلسلة دون إنشاء حساب دخول مكرر'),
-    Row(children:[
-      Expanded(child:TextField(controller:_memberPhone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'رقم هاتف المستخدم المسجل'))),
-      const SizedBox(width:8),
-      SizedBox(width:150,child:DropdownButtonFormField<String>(value:_memberRole,decoration:const InputDecoration(labelText:'الدور'),items:const[
-        DropdownMenuItem(value:'staff',child:Text('مستخدم')),
-        DropdownMenuItem(value:'manager',child:Text('مدير فرع')),
-        DropdownMenuItem(value:'accountant',child:Text('محاسب')),
-        DropdownMenuItem(value:'warehouse',child:Text('مسؤول مخزن')),
-        DropdownMenuItem(value:'sales',child:Text('مبيعات')),
-        DropdownMenuItem(value:'viewer',child:Text('عرض فقط')),
-        DropdownMenuItem(value:'admin',child:Text('مدير كامل')),
-      ],onChanged:(v){if(v!=null)setState(()=>_memberRole=v);})),
-      IconButton(onPressed:_addMember,icon:const Icon(Icons.person_add_alt_1,color:_workspacePurple)),
-    ]),
+    if (_isWorkspaceOwner) ...[
+      _sectionTitle('إضافة مستخدم','اربط حساباً نشطاً موجوداً بالفعل في سلسلة دون إنشاء حساب دخول مكرر'),
+      Row(children:[
+        Expanded(child:TextField(controller:_memberPhone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'رقم هاتف المستخدم المسجل'))),
+        const SizedBox(width:8),
+        SizedBox(width:150,child:DropdownButtonFormField<String>(value:_memberRole,decoration:const InputDecoration(labelText:'الدور'),items:const[
+          DropdownMenuItem(value:'staff',child:Text('مستخدم')),
+          DropdownMenuItem(value:'manager',child:Text('مدير فرع')),
+          DropdownMenuItem(value:'accountant',child:Text('محاسب')),
+          DropdownMenuItem(value:'warehouse',child:Text('مسؤول مخزن')),
+          DropdownMenuItem(value:'sales',child:Text('مبيعات')),
+          DropdownMenuItem(value:'viewer',child:Text('عرض فقط')),
+          DropdownMenuItem(value:'admin',child:Text('مدير كامل')),
+        ],onChanged:(v){if(v!=null)setState(()=>_memberRole=v);})),
+        IconButton(onPressed:_addMember,icon:const Icon(Icons.person_add_alt_1,color:_workspacePurple)),
+      ]),
+    ],
     const Divider(),
     _sectionTitle('المستخدمون المرتبطون','تعديل الصلاحيات أو إلغاء الوصول لا يحذف حساب المستخدم من سلسلة'),
     ..._members.map((m)=>ListTile(dense:true,leading:const Icon(Icons.account_circle_outlined,color:_workspacePurple),
       title:Text((m['member_display_name']??'مستخدم سلسلة').toString()),
       subtitle:Text('${m['member_role']} • ${m['is_active']==true?'نشط':'غير نشط'}'),
-      trailing:m['member_role']=='owner'?const Text('المالك'):Row(mainAxisSize:MainAxisSize.min,children:[
-        IconButton(tooltip:'تعديل الصلاحيات',icon:const Icon(Icons.tune,color:_workspacePurple),onPressed:()=>_editMember(m)),
-        IconButton(tooltip:'إلغاء الوصول',icon:const Icon(Icons.person_remove_alt_1,color:Colors.redAccent),onPressed:()=>_removeMember(m['user_id'].toString())),
-      ]),
+      trailing:m['member_role']=='owner'
+          ? const Text('المالك')
+          : _isWorkspaceOwner
+              ? Row(mainAxisSize:MainAxisSize.min,children:[
+                  IconButton(tooltip:'تعديل الصلاحيات',icon:const Icon(Icons.tune,color:_workspacePurple),onPressed:()=>_editMember(m)),
+                  IconButton(tooltip:'إلغاء الوصول',icon:const Icon(Icons.person_remove_alt_1,color:Colors.redAccent),onPressed:()=>_removeMember(m['user_id'].toString())),
+                ])
+              : const Text('عرض فقط'),
     )),
   ]);
 
