@@ -1708,13 +1708,6 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     ])),
   );
 
-  double _documentTotal(String type) => _documents.where((d)=>d['status']=='posted' && d['document_type']==type).fold<double>(0,(sum,d)=>sum+(double.tryParse(d['total'].toString())??0));
-
-  double _cashTotal(bool incoming) {
-    final incomingTypes = ['receipt','deposit','income','transfer_in'];
-    return _cashMovements.where((m)=>incomingTypes.contains(m['movement_type'])==incoming).fold<double>(0,(sum,m)=>sum+(double.tryParse(m['amount'].toString())??0));
-  }
-
   Widget _reportsView(String kind) {
     final basic = kind == 'تقارير البيانات الأساسية';
     final finance = kind == 'تقارير مالية وتحليلات';
