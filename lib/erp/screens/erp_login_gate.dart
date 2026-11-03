@@ -33,11 +33,11 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   bool _rememberPassword = false;
   bool _recoveryInProgress = false;
   bool _newActivityPending = false;
-  String _activity = 'مواد غذائية';
+  String _activity = 'food';
   String _accountType = 'إدارة نشاط';
   String _activityUserType = 'مستخدم رئيسي للنشاط';
   String? _error;
-  List<String> _activityTypes = const <String>[];
+  List<Map<String, String>> _activityTypes = const <Map<String, String>>[];
   bool _activitiesLoading = true;
   List<String> _visibleUserTypes = const <String>[];
   bool _userTypesLoading = true;
@@ -89,16 +89,19 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
   Future<void> _loadActivityTypes() async {
     try {
       final rows = await ActivityService().getActivities();
-      final names = rows
-          .map((row) => row['name']?.toString().trim() ?? '')
-          .where((name) => name.isNotEmpty)
-          .toSet()
+      final activities = rows
+          .map((row) => <String, String>{
+                'code': row['code']?.toString().trim() ?? '',
+                'name': row['name']?.toString().trim() ?? '',
+              })
+          .where((item) => item['code']!.isNotEmpty && item['name']!.isNotEmpty)
           .toList(growable: false);
       if (!mounted) return;
       setState(() {
-        _activityTypes = names;
-        if (!_activityTypes.contains(_activity) && _activityTypes.isNotEmpty) {
-          _activity = _activityTypes.first;
+        _activityTypes = activities;
+        if (!_activityTypes.any((item) => item['code'] == _activity) &&
+            _activityTypes.isNotEmpty) {
+          _activity = _activityTypes.first['code']!;
         }
         _activitiesLoading = false;
       });
@@ -106,7 +109,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
       if (!mounted) return;
       setState(() {
         // Never display hard-coded activity options when the database is unavailable.
-        _activityTypes = const <String>[];
+        _activityTypes = const <Map<String, String>>[];
         _activitiesLoading = false;
       });
     }
@@ -213,7 +216,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
     final confirmation = TextEditingController();
     final formKey = GlobalKey<FormState>();
     var busy = false, obscure = true, obscureConfirm = true;
-    var error = '', activity = _activityTypes.contains(_activity) ? _activity : (_activityTypes.isNotEmpty ? _activityTypes.first : '');
+    var error = '', activity = _activityTypes.any((item) => item['code'] == _activity) ? _activity : (_activityTypes.isNotEmpty ? _activityTypes.first['code']! : '');
     var accountType = newActivity ? 'إدارة نشاط' : _accountType;
     try {
       await showDialog<void>(
@@ -257,14 +260,17 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                         ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
-                          value: _activityTypes.contains(activity) ? activity : null,
+                          value: _activityTypes.any((item) => item['code'] == activity) ? activity : null,
                           isExpanded: true,
                           decoration: InputDecoration(
                             labelText: 'نوع النشاط',
                             hintText: _activitiesLoading ? 'جارٍ تحميل الأنشطة...' : 'اختر النشاط',
                           ),
                           items: _activityTypes
-                              .map((v) => DropdownMenuItem<String>(value: v, child: Text(v, overflow: TextOverflow.ellipsis)))
+                              .map((item) => DropdownMenuItem<String>(
+                                    value: item['code']!,
+                                    child: Text(item['name']!, overflow: TextOverflow.ellipsis),
+                                  ))
                               .toList(),
                           onChanged: _activitiesLoading ? null : (v) {
                             if (v != null) refresh(() => activity = v);
@@ -536,7 +542,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
           Text(silsilaText('سجّل دخولك لإدارة شركتك وبياناتك بأمان'), textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF756A80), fontSize: 12, height: 1.6)),
           const SizedBox(height: 19),
           DropdownButtonFormField<String>(
-            value: _activityTypes.contains(_activity) ? _activity : null,
+            value: _activityTypes.any((item) => item['code'] == _activity) ? _activity : null,
             isExpanded: true,
             decoration: InputDecoration(
               labelText: 'نوع النشاط',
@@ -544,7 +550,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
               border: const OutlineInputBorder(),
               hintText: _activitiesLoading ? 'جارٍ تحميل الأنشطة...' : 'اختر النشاط',
             ),
-            items: _activityTypes.map((item) => DropdownMenuItem<String>(value: item, child: Text(item, overflow: TextOverflow.ellipsis))).toList(),
+            items: _activityTypes.map((item) => DropdownMenuItem<String>(value: item['code']!, child: Text(item['name']!, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: _activitiesLoading ? null : (value) {
               if (value != null) setState(() => _activity = value);
             },
