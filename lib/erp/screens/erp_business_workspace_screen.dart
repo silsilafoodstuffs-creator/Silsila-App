@@ -1044,7 +1044,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       Text('إدارة نشاطي', style: TextStyle(color: _workspacePurple, fontWeight: FontWeight.w900, fontSize: 22)),
       Text('مساحة تشغيل مستقلة مرتبطة بمنصة سلسلة', style: TextStyle(color: Colors.black54, fontSize: 12)),
     ])),
-    FilledButton.icon(onPressed: _createDialog, icon: const Icon(Icons.add), label: const Text('نشاط جديد')),
+
   ]);
 
   Widget _workspacePicker() => DropdownButtonFormField<String>(
@@ -1068,7 +1068,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Widget _noWorkspace() => Center(child: ConstrainedBox(
     constraints: const BoxConstraints(maxWidth: 480),
-    child: _emptyState('لم يتم إنشاء مساحة نشاط لهذا الحساب بعد. أنشئ نشاطك الأول لتبدأ في إضافة الفروع والمخازن وإدارة بياناته بصورة مستقلة.'),
+    child: _emptyState('لا يوجد نشاط مرتبط بهذا الحساب حتى الآن. إدارة نشاطي لا تنشئ نشاطاً جديداً؛ يجب ربطها بالنشاط المسجل بالفعل في سلسلة بواسطة الإدارة المختصة.'),
   ));
 
   Widget _emptyState(String text, {bool showRetry = false}) => Center(child: Column(
@@ -1077,7 +1077,6 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       const SizedBox(height: 12), Text(text, textAlign: TextAlign.center),
       const SizedBox(height: 12),
       if (showRetry) OutlinedButton.icon(onPressed: _load, icon: const Icon(Icons.refresh), label: const Text('إعادة المحاولة'))
-      else FilledButton.icon(onPressed: _createDialog, icon: const Icon(Icons.add), label: const Text('إنشاء نشاط')),
     ],
   ));
 
