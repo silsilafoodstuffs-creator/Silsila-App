@@ -225,7 +225,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
           textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
           child: StatefulBuilder(
             builder: (context, refresh) => AlertDialog(
-              title: Text(newActivity ? 'إنشاء نشاط جديد' : 'إنشاء مستخدم جديد'),
+              title: Text(newActivity ? 'تسجيل حساب نشاط' : 'إنشاء مستخدم جديد'),
               content: SizedBox(
                 width: 440,
                 child: SingleChildScrollView(
@@ -237,7 +237,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                         TextFormField(
                           controller: name,
                           decoration: const InputDecoration(
-                            labelText: 'اسم النشاط أو صاحب الحساب',
+                            labelText: 'اسم النشاط التجاري / صاحب الحساب',
                           ),
                           validator: (v) =>
                               v == null || v.trim().isEmpty ? 'اكتب الاسم' : null,
