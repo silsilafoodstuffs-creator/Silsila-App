@@ -15,17 +15,12 @@ class ErpBusinessWorkspaceScreen extends StatefulWidget {
 class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen> {
   final _db = Supabase.instance.client;
   List<Map<String, dynamic>> _workspaces = [];
-  List<Map<String, dynamic>> _activityTypes = [];
   Map<String, dynamic>? _selected;
   bool _loading = true;
   bool _platformObserver = false;
-  bool _saving = false;
   String? _error;
   String _area = 'الرئيسية';
-  String _accountKind = 'customer';
   int _basicTab = 0;
-  final _name = TextEditingController();
-  final _activity = TextEditingController();
   final _branchName = TextEditingController();
   final _branchNameEn = TextEditingController();
   final _warehouseName = TextEditingController();
@@ -129,7 +124,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   @override
   void dispose() {
     _policyTaxController.dispose();
-    _name.dispose(); _activity.dispose(); _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
+_branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     _warehouseName.dispose(); _branchCode.dispose(); _warehouseCode.dispose(); _memberPhone.dispose();
     _itemSearch.dispose(); _localItemCode.dispose(); _reorderLevel.dispose(); _openingQuantity.dispose(); _openingCost.dispose();
     _proposalName.dispose(); _proposalNameEn.dispose(); _proposalCategory.dispose(); _proposalUnit.dispose(); _proposalDescription.dispose();
@@ -189,12 +184,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       final role = profileRows.isEmpty ? '' : (profileRows.first['role'] ?? '').toString().toLowerCase();
       final accountType = profileRows.isEmpty ? '' : (profileRows.first['account_type'] ?? '').toString().toLowerCase();
       _platformObserver = {'admin','administrator','employee','staff','super_admin','superadmin'}.contains(role) || {'admin','employee','staff'}.contains(accountType);
-      final activityRows = await _safeRows(() => _db.from('activity_types').select('code,name,name_en').eq('is_active',true).order('name'));
       final baseQuery = _db.from('erp_business_workspaces').select().eq('is_active', true);
       final rows = _platformObserver ? await baseQuery.order('created_at') : await baseQuery.or('owner_user_id.eq.$currentUserId,linked_profile_id.eq.$currentUserId').order('created_at');
       if (!mounted) return;
       setState(() {
-        _activityTypes = activityRows;
         _workspaces = List<Map<String, dynamic>>.from(rows);
         if (_selected != null) {
           final matches = _workspaces.where((w) => w['id'] == _selected!['id']);
@@ -438,32 +431,6 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     } catch (e) {
       _message('تعذر حفظ سياسات النشاط: $e');
     }
-  }
-
-  Future<void> _createWorkspace() async {
-    final name = _name.text.trim();
-    if (name.length < 2) { _message('أدخل اسم النشاط بصورة صحيحة.'); return; }
-    setState(() => _saving = true);
-    try {
-      final user = _db.auth.currentUser;
-      if (user == null) throw StateError('يجب تسجيل الدخول أولاً.');
-      final workspaceId = await _db.rpc('erp_create_business_workspace', params: {
-        'p_workspace_name': name,
-        'p_activity_type': _activity.text.trim(),
-        'p_account_kind': _accountKind,
-      });
-      final row = await _db.from('erp_business_workspaces').select()
-          .eq('id', workspaceId.toString()).single();
-      if (!mounted) return;
-      setState(() {
-        _workspaces.add(Map<String, dynamic>.from(row));
-        _selected = Map<String, dynamic>.from(row);
-        _name.clear(); _activity.clear(); _area = 'الرئيسية';
-      });
-      await _loadStructure();
-      _message('تم إنشاء مساحة النشاط المستقلة.');
-    } catch (e) { _message('لم يتم إنشاء النشاط: $e'); }
-    finally { if (mounted) setState(() => _saving = false); }
   }
 
   void _addDocumentLine() {
@@ -1003,31 +970,6 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   void _message(String value) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
-  }
-
-  Future<void> _createDialog() async {
-    await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('إنشاء مساحة نشاط مستقلة'),
-      content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم النشاط *')),
-        const SizedBox(height: 10),
-        if (_activityTypes.isNotEmpty)
-          DropdownButtonFormField<String>(
-            value:_activityTypes.any((a)=>a['code'].toString()==_activity.text)?_activity.text:null,
-            decoration:const InputDecoration(labelText:'نوع النشاط'),
-            items:_activityTypes.map((a)=>DropdownMenuItem(value:a['code'].toString(),child:Text((a['name']??a['name_en']??a['code']).toString()))).toList(),
-            onChanged:(v){if(v!=null)_activity.text=v;},
-          )
-        else
-          TextField(controller:_activity,decoration:const InputDecoration(labelText:'نوع النشاط')),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<String>(value: _accountKind, decoration: const InputDecoration(labelText: 'نوع الحساب'), items: const [DropdownMenuItem(value: 'customer', child: Text('عميل')), DropdownMenuItem(value: 'supplier', child: Text('مورد')), DropdownMenuItem(value: 'other', child: Text('نوع آخر'))], onChanged: (v) { if (v != null) _accountKind = v; }),
-      ])),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-        FilledButton(onPressed: _saving ? null : () async { Navigator.pop(ctx); await _createWorkspace(); }, child: const Text('إنشاء')),
-      ],
-    ));
   }
 
   @override
