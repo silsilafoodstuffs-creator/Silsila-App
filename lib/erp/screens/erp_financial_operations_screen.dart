@@ -503,7 +503,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   ]);
   Widget booksView()=>Column(children:[
     section('ملخص سيريال الشيكات حسب الحساب البنكي',cashboxes.where((b)=>b['is_bank_account']==true).length),
-    grid(['الحساب البنكي','عدد الدفاتر','إجمالي الشيكات','المتاح','المستخدم'],cashboxes.where((b)=>b['is_bank_account']==true).map((b){final id=s(b['id']);final cb=cheques.where((x)=>s(x['bank_cashbox_id'])==id&&s(x['cheque_type'])=='bank').toList();return [s(b['cashbox_name']),books.where((x)=>s(x['bank_cashbox_id'])==id&&x['registered']==true).length.toString(),cb.length.toString(),cb.where((x)=>s(x['status'])=='available').length.toString(),cb.where((x)=>s(x['status'])!='available').length.toString()];}).toList()),
+    grid(['الحساب البنكي','عدد الدفاتر','إجمالي الشيكات','المتاح','المستخدم/المصدر','الملغى'],cashboxes.where((b)=>b['is_bank_account']==true).map((b){final id=s(b['id']);final cb=cheques.where((x)=>s(x['bank_cashbox_id'])==id&&s(x['cheque_type'])=='bank').toList();return [s(b['cashbox_name']),books.where((x)=>s(x['bank_cashbox_id'])==id&&x['registered']==true).length.toString(),cb.length.toString(),cb.where((x)=>s(x['status'])=='available').length.toString(),cb.where((x)=>s(x['status'])!='available'&&s(x['status'])!='cancelled').length.toString(),cb.where((x)=>s(x['status'])=='cancelled').length.toString()];}).toList()),
     section('بيانات دفاتر الشيكات الجديدة',_bookDrafts.length),
     Align(alignment:Alignment.centerLeft,child:Wrap(spacing:8,children:[
       OutlinedButton.icon(onPressed:addBookDraftRow,icon:const Icon(Icons.add),label:const Text('إضافة دفتر')),
