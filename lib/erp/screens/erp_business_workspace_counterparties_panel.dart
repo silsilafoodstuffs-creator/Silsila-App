@@ -52,26 +52,36 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
   }
   bool get _canManage => _type == 'customer' ? widget.canManageCustomers : widget.canManageSuppliers;
   Future<void> _load() async {
+    final workspaceId=widget.workspaceId;
     setState(()=>_loading=true);
     try {
       final rows=await _db.from('erp_business_workspace_counterparties').select(
         'id,party_type,party_code,display_name,phone,address,governorate,district,area,is_active'
-      ).eq('workspace_id',widget.workspaceId).order('display_name');
-      if(mounted)setState(()=>_rows=List<Map<String,dynamic>>.from(rows));
-    } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تحميل الدفتر: $e'))); }
-    finally { if(mounted)setState(()=>_loading=false); }
+      ).eq('workspace_id',workspaceId).order('display_name');
+      if(!mounted||widget.workspaceId!=workspaceId)return;
+      setState(()=>_rows=List<Map<String,dynamic>>.from(rows));
+    } catch(e) {
+      if(mounted&&widget.workspaceId==workspaceId) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تحميل الدفتر: $e')));
+      }
+    } finally {
+      if(mounted&&widget.workspaceId==workspaceId)setState(()=>_loading=false);
+    }
   }
   Future<void> _previewPhone(String value) async {
+    final workspaceId=widget.workspaceId;
     final digits=value.replaceAll(RegExp(r'[^0-9]'),'');
     if(digits.length<10){setState(()=>_preview=null);return;}
     try {
       final result=await _db.rpc('erp_find_silsila_profile_by_phone',params:{
-        'p_workspace_id':widget.workspaceId,'p_phone':value,
+        'p_workspace_id':workspaceId,'p_phone':value,
       });
-      if(!mounted||_phone.text!=value)return;
+      if(!mounted||widget.workspaceId!=workspaceId||_phone.text!=value)return;
       final rows=List<Map<String,dynamic>>.from(result as List);
       setState(()=>_preview=rows.isEmpty?null:(rows.first['profile_name']??'مسجل في سلسلة').toString());
-    } catch (_) { if(mounted&&_phone.text==value)setState(()=>_preview=null); }
+    } catch (_) {
+      if(mounted&&widget.workspaceId==workspaceId&&_phone.text==value)setState(()=>_preview=null);
+    }
   }
   Future<void> _save() async {
     if(!_canManage||_code.text.trim().isEmpty||_name.text.trim().length<2)return;
