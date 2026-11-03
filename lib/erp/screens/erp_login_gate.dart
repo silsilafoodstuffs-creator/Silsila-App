@@ -272,6 +272,9 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                                     child: Text(item['name']!, overflow: TextOverflow.ellipsis),
                                   ))
                               .toList(),
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'اختر نوع النشاط من القائمة'
+                              : null,
                           onChanged: _activitiesLoading ? null : (v) {
                             if (v != null) refresh(() => activity = v);
                           },
