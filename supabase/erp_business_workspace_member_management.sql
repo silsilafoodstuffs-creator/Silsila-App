@@ -31,10 +31,7 @@ begin
     raise exception 'Authentication required' using errcode='28000';
   end if;
 
-  if not exists (
-    select 1 from public.erp_business_workspaces w
-    where w.id=p_workspace_id and w.owner_user_id=v_actor and w.is_active
-  ) then
+  if not private.is_business_workspace_owner(p_workspace_id) then
     raise exception 'Only the workspace owner can manage members' using errcode='42501';
   end if;
 
@@ -119,10 +116,7 @@ begin
   if (select auth.uid()) is null then
     raise exception 'Authentication required' using errcode='28000';
   end if;
-  if not exists (
-    select 1 from public.erp_business_workspaces w
-    where w.id=p_workspace_id and w.owner_user_id=(select auth.uid())
-  ) then
+  if not private.is_business_workspace_owner(p_workspace_id) then
     raise exception 'Only the workspace owner can remove members' using errcode='42501';
   end if;
   if p_member_user_id=(select auth.uid()) then
