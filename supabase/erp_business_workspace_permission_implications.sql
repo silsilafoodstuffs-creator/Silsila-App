@@ -143,3 +143,7 @@ set search_path=pg_catalog,public,auth,private
 as $$ select * from private.get_workspace_silsila_stock(p_workspace_id,p_item_link_id); $$;
 revoke all on function public.erp_get_workspace_silsila_stock(uuid,uuid) from public,anon;
 grant execute on function public.erp_get_workspace_silsila_stock(uuid,uuid) to authenticated;
+
+-- Creation is provisioned only by the approved-profile trigger.
+revoke execute on function private.erp_create_business_workspace(text,text,text) from public,anon,authenticated;
+revoke execute on function public.erp_create_business_workspace(text,text,text) from public,anon,authenticated;
