@@ -76,7 +76,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     if(db==null || company.isEmpty) { setState(()=>error='لا توجد شركة مرتبطة بالمستخدم الحالي.'); return; }
     setState(()=>loading=true);
     try {
-      final r=await Future.wait([
+      final r=await Future.wait<dynamic>(<Future<dynamic>>[
         db!.from('erp_cashboxes').select('id,cashbox_code,cashbox_name,is_bank_account,checkbook_sheet_count').eq('company_id',company).eq('is_active',true).order('cashbox_name'),
         db!.from('erp_accounts').select('id,account_code,account_name').eq('company_id',company).eq('is_active',true).eq('is_postable',true).limit(2000),
         db!.from('erp_parties').select('id,party_code,party_name,party_kind').eq('company_id',company).eq('is_active',true).limit(2000),
