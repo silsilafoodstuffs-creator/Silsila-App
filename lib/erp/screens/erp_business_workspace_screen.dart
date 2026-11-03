@@ -615,39 +615,25 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   Future<void> _loadPlatformItems() async {
     final workspaceId = _selected?['id']?.toString();
+    if (workspaceId == null) return;
     try {
-      final companyId = (_selected?['platform_company_id'] ?? '').toString().trim();
-      if (companyId.isEmpty) {
-        _message('هذا النشاط غير مربوط بدليل أصناف شركة سلسلة. راجع ربط النشاط بالشركة المركزية.');
-        return;
-      }
-      final rows = await _db.from('erp_items')
-          .select('id,item_code,item_name,item_name_en,base_unit,category_id,erp_item_categories(category_name,activity_code)')
-          .eq('company_id', companyId).eq('is_active', true)
-          .order('item_name').limit(1000);
-      final activity = (_selected?['activity_type'] ?? '').toString().trim();
-      final activityRows = await _db.from('activity_types').select('code,name,name_en').eq('is_active', true);
-      final matchingCodes = List<Map<String,dynamic>>.from(activityRows)
-          .where((a) => activity.isNotEmpty && [a['code'],a['name'],a['name_en']].any((v)=>v!=null&&v.toString().trim().toLowerCase()==activity.toLowerCase()))
-          .map((a)=>(a['code']??'').toString()).where((c)=>c.isNotEmpty).toSet();
-      final catalog = List<Map<String,dynamic>>.from(rows);
-      final filtered = activity.isEmpty ? catalog : catalog.where((item) {
-        final category = item['erp_item_categories'] is Map ? Map<String,dynamic>.from(item['erp_item_categories']) : <String,dynamic>{};
-        return matchingCodes.contains((category['activity_code']??'').toString());
-      }).toList();
-      if (activity.isNotEmpty && matchingCodes.isEmpty) {
-        _message('نوع النشاط غير مرتبط بتصنيف أصناف معتمد؛ لن تظهر أصناف أنشطة أخرى.');
-      }
-      if (!mounted || _selected?['id']?.toString() != workspaceId) return;
+      final rows = await _db.rpc('erp_get_business_workspace_catalog_items',params:{
+        'p_workspace_id':workspaceId,
+      });
+      if (!mounted || _selected?['id']?.toString()!=workspaceId) return;
+      final catalog = List<Map<String,dynamic>>.from(rows as List);
       setState(() {
-        _platformItems = filtered;
-        if (_selectedPlatformItemId == null && _platformItems.isNotEmpty) {
-          _selectedPlatformItemId = _platformItems.first['id'].toString();
+        _platformItems = catalog.map((item) => <String,dynamic>{
+          ...item,
+          'erp_item_categories': item['category_name']==null ? null : {'category_name':item['category_name']},
+        }).toList();
+        if (!_platformItems.any((x)=>x['id'].toString()==_selectedPlatformItemId)) {
+          _selectedPlatformItemId = _platformItems.isEmpty ? null : _platformItems.first['id'].toString();
         }
       });
     } catch (e) {
-      if (mounted && _selected?['id']?.toString() == workspaceId) {
-        _message('تعذر تحميل دليل أصناف سلسلة: $e');
+      if (mounted && _selected?['id']?.toString()==workspaceId) {
+        _message('تعذر تحميل دليل أصناف سلسلة وفق صلاحيات النشاط: $e');
       }
     }
   }
