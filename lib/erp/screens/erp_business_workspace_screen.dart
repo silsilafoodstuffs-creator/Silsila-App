@@ -80,6 +80,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   String? _selectedBranchForWarehouse;
   String? _selectedCashBranchId;
   String _cashType = 'receipt';
+  String _cashPaymentMethod = 'cash';
   final _cashAmount = TextEditingController();
   final _cashDescription = TextEditingController();
   final _cashCounterparty = TextEditingController();
@@ -518,7 +519,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         'amount': amount,
         'description': description,
         'counterparty_name': _cashCounterparty.text.trim().isEmpty ? null : _cashCounterparty.text.trim(),
-        'payment_method': 'cash',
+        'payment_method': _cashPaymentMethod,
         'reference_no': _cashReference.text.trim().isEmpty ? null : _cashReference.text.trim(),
         'created_by': _db.auth.currentUser!.id,
       });
@@ -943,10 +944,10 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         const SizedBox(height:12),
         _sectionTitle('مؤشرات النشاط','ملخص تشغيلي من البيانات المسجلة داخل هذه المساحة'),
         _tileGrid([
-          ('إجمالي المبيعات', Icons.trending_up, '${_documentTotal('sale')} جنيه'),
-          ('إجمالي المشتريات', Icons.shopping_cart_outlined, '${_documentTotal('purchase')} جنيه'),
-          ('الوارد النقدي', Icons.south_west, '${_cashTotal(true)} جنيه'),
-          ('الصادر النقدي', Icons.north_east, '${_cashTotal(false)} جنيه'),
+          ('إجمالي المبيعات', Icons.trending_up, '${_documentTotal('sale')} $_policyCurrencyCode'),
+          ('إجمالي المشتريات', Icons.shopping_cart_outlined, '${_documentTotal('purchase')} $_policyCurrencyCode'),
+          ('الوارد النقدي', Icons.south_west, '${_cashTotal(true)} $_policyCurrencyCode'),
+          ('الصادر النقدي', Icons.north_east, '${_cashTotal(false)} $_policyCurrencyCode'),
         ]),
       ]);
     }
@@ -1150,6 +1151,18 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       decoration: const InputDecoration(labelText:'الفرع'),
       items:_branches.map((b)=>DropdownMenuItem(value:b['id'].toString(),child:Text(b['name_ar'].toString()))).toList(),
       onChanged:(v)=>setState(()=>_selectedCashBranchId=v),
+    ),
+    const SizedBox(height:8),
+    DropdownButtonFormField<String>(
+      value:_cashPaymentMethod,
+      decoration:const InputDecoration(labelText:'وسيلة الدفع / التحصيل'),
+      items:const [
+        DropdownMenuItem(value:'cash',child:Text('نقدي')),
+        DropdownMenuItem(value:'bank_transfer',child:Text('تحويل بنكي')),
+        DropdownMenuItem(value:'cheque',child:Text('شيك')),
+        DropdownMenuItem(value:'wallet',child:Text('محفظة إلكترونية')),
+      ],
+      onChanged:(v){if(v!=null)setState(()=>_cashPaymentMethod=v);},
     ),
     const SizedBox(height:8),
     Row(children:[
@@ -1625,8 +1638,8 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _tileGrid([
           ('مبيعات مرحلة',Icons.trending_up,'${_documentTotal('sale')} جنيه'),
           ('مشتريات مرحلة',Icons.shopping_cart,'${_documentTotal('purchase')} جنيه'),
-          ('مرتجعات البيع',Icons.assignment_return,'${_documentTotal('sale_return')} جنيه'),
-          ('مرتجعات الشراء',Icons.keyboard_return,'${_documentTotal('purchase_return')} جنيه'),
+          ('مرتجعات البيع',Icons.assignment_return,'${_documentTotal('sale_return')} $_policyCurrencyCode'),
+          ('مرتجعات الشراء',Icons.keyboard_return,'${_documentTotal('purchase_return')} $_policyCurrencyCode'),
           ('مقبوضات',Icons.south_west,'${_cashTotal(true)} جنيه'),
           ('مدفوعات',Icons.north_east,'${_cashTotal(false)} جنيه'),
         ]),
