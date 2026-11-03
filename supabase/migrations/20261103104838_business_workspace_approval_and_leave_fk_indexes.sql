@@ -1,0 +1,4 @@
+create index if not exists erp_business_workspace_documents_approved_by_idx on public.erp_business_workspace_documents(approved_by);
+create index if not exists erp_business_workspace_employee_leaves_created_by_idx on public.erp_business_workspace_employee_leaves(created_by);
+create index if not exists erp_business_workspace_employee_leaves_employee_idx on public.erp_business_workspace_employee_leaves(workspace_id,employee_id);
+create index if not exists erp_business_workspace_employee_leaves_reviewed_by_idx on public.erp_business_workspace_employee_leaves(reviewed_by);
