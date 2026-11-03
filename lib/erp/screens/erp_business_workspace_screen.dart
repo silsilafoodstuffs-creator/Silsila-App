@@ -15,6 +15,7 @@ class ErpBusinessWorkspaceScreen extends StatefulWidget {
 class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen> {
   final _db = Supabase.instance.client;
   List<Map<String, dynamic>> _workspaces = [];
+  List<Map<String, dynamic>> _activityTypes = [];
   Map<String, dynamic>? _selected;
   bool _loading = true;
   bool _platformObserver = false;
@@ -184,10 +185,12 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       final role = profileRows.isEmpty ? '' : (profileRows.first['role'] ?? '').toString().toLowerCase();
       final accountType = profileRows.isEmpty ? '' : (profileRows.first['account_type'] ?? '').toString().toLowerCase();
       _platformObserver = {'admin','administrator','employee','staff','super_admin','superadmin'}.contains(role) || {'admin','employee','staff'}.contains(accountType);
+      final activityRows = await _safeRows(() => _db.from('activity_types').select('code,name,name_en').eq('is_active',true).order('name'));
       final baseQuery = _db.from('erp_business_workspaces').select().eq('is_active', true);
       final rows = _platformObserver ? await baseQuery.order('created_at') : await baseQuery.or('owner_user_id.eq.$currentUserId,linked_profile_id.eq.$currentUserId').order('created_at');
       if (!mounted) return;
       setState(() {
+        _activityTypes = activityRows;
         _workspaces = List<Map<String, dynamic>>.from(rows);
         if (_selected != null) {
           final matches = _workspaces.where((w) => w['id'] == _selected!['id']);
