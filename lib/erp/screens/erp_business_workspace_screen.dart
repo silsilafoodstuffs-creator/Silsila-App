@@ -222,6 +222,67 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
 
   bool get _isWorkspaceOwner =>
       _selected?['owner_user_id']?.toString() == _db.auth.currentUser?.id;
+  bool _canWorkspacePermission(String permission) {
+    if (_isWorkspaceOwner) return true;
+    final currentUserId = _db.auth.currentUser?.id;
+    final matches = _members.where((m) => m['user_id']?.toString() == currentUserId);
+    if (matches.isEmpty) return false;
+    final member = matches.first;
+    if (member['is_active'] != true || member['can_open_workspace'] != true) return false;
+    if (member['member_role'] == 'admin') return true;
+    final raw = member['permissions'];
+    final permissions = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    if (permissions['*'] == true || permissions[permission] == true) return true;
+    if (permission.endsWith('.read')) {
+      final manageKey = permission.replaceFirst('.read', '.manage');
+      return permissions[manageKey] == true;
+    }
+    return false;
+  }
+
+  bool _canAnyWorkspacePermission(List<String> permissions) =>
+      permissions.any(_canWorkspacePermission);
+
+  bool _canOpenWorkspaceArea(String area) {
+    switch (area) {
+      case 'بياناتي الأساسية':
+        return _canAnyWorkspacePermission(['master.read','members.read','items.read','inventory.read','hr.read']);
+      case 'فاتورة شراء / مرتجع شراء':
+        return _canWorkspacePermission('purchases.read');
+      case 'فاتورة بيع / مرتجع بيع':
+        return _canWorkspacePermission('sales.read');
+      case 'تحويلات وتسويات مخزنية':
+        return _canWorkspacePermission('inventory.read');
+      case 'صرف وتوريد نقدية':
+        return _canWorkspacePermission('cash.read');
+      case 'تقارير البيانات الأساسية':
+      case 'تقارير الحركات':
+      case 'تقارير مالية وتحليلات':
+        return _canWorkspacePermission('reports.read');
+      case 'خروج من إدارة نشاطي':
+        return true;
+      default:
+        return true;
+    }
+  }
+
+  Widget _workspacePermissionDenied(String area) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 420),
+      child: Card(child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.lock_outline, size: 42, color: _workspacePurple),
+          const SizedBox(height: 10),
+          Text('لا توجد صلاحية لفتح $area', style: const TextStyle(fontWeight: FontWeight.w900, color: _workspacePurple)),
+          const SizedBox(height: 6),
+          const Text('اطلب من مالك النشاط تفعيل صلاحية العرض أو الإدارة المناسبة لحسابك.', textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(onPressed: () => setState(() => _area = 'الرئيسية'), icon: const Icon(Icons.arrow_forward), label: const Text('العودة للرئيسية')),
+        ]),
+      )),
+    ),
+  );
 
   Map<String, dynamic> get _workspacePolicy {
     final settings = _selected?['settings'];
@@ -826,6 +887,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   ));
 
   Widget _areaView() {
+    if (!_canOpenWorkspaceArea(_area)) return _workspacePermissionDenied(_area);
     if (_area == 'صرف وتوريد نقدية') return _cashMovementsView();
     if (_area == 'تحويلات وتسويات مخزنية') return _inventoryMovementsView();
     if (_area == 'خروج من إدارة نشاطي') return _exitWorkspaceView();
@@ -851,9 +913,12 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       return ListView(children: [
         _sectionTitle('مساحة العمل', 'بيانات وحركات وتقارير خاصة بهذا النشاط فقط'),
         _tileGrid([
-          ('بياناتي الأساسية', Icons.business_outlined, 'تهيئة النشاط والفروع والمخازن والمستخدمين والموظفين'),
-          ('حركات نشاطي', Icons.swap_horiz_rounded, 'مشتريات ومبيعات وتحويلات وتسويات ونقدية'),
-          ('تقارير نشاطي', Icons.analytics_outlined, 'تقارير تشغيلية ومالية خاصة بالنشاط'),
+          if (_canOpenWorkspaceArea('بياناتي الأساسية'))
+            ('بياناتي الأساسية', Icons.business_outlined, 'تهيئة النشاط والفروع والمخازن والمستخدمين والموظفين'),
+          if (_canAnyWorkspacePermission(['purchases.read','sales.read','inventory.read','cash.read']))
+            ('حركات نشاطي', Icons.swap_horiz_rounded, 'مشتريات ومبيعات وتحويلات وتسويات ونقدية'),
+          if (_canWorkspacePermission('reports.read'))
+            ('تقارير نشاطي', Icons.analytics_outlined, 'تقارير تشغيلية ومالية خاصة بالنشاط'),
         ]),
         const SizedBox(height: 16),
         _sectionTitle('ملخص النشاط', 'الأرصدة ستظهر بعد إدخال واعتماد الحركات'),
@@ -874,9 +939,13 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       ]);
     }
     if (sections.containsKey(_area)) {
+      final allowedTiles = sections[_area]!.where((x) => _canOpenWorkspaceArea(x.$1)).toList();
       return ListView(children: [
         _backHeader(_area),
-        _tileGrid(sections[_area]!.map((x) => (x.$1, x.$2, x.$3 == 'exit' ? 'العودة إلى قوائم سلسلة' : 'سيتم فتح شاشة مستقلة مع صلاحيات هذا النشاط')).toList()),
+        if (allowedTiles.isEmpty)
+          _workspacePermissionDenied(_area)
+        else
+          _tileGrid(allowedTiles.map((x) => (x.$1, x.$2, x.$3 == 'exit' ? 'العودة إلى قوائم سلسلة' : 'شاشة مستقلة بصلاحيات هذا النشاط')).toList()),
         const SizedBox(height: 12),
         const Text('الشاشات التشغيلية مفعلة داخل مساحة النشاط. المسودات لا تغير الأرصدة حتى اعتماد المستند وترحيله، وتُسجل التحويلات والتسويات في دفتر حركة المخزون.', style: TextStyle(color: Colors.black54, height: 1.6)),
       ]);
@@ -884,18 +953,24 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     return _backHeader(_area);
   }
 
-  Widget _basicData() => Column(children: [
-    _backHeader('بياناتي الأساسية'),
-    const SizedBox(height: 8),
-    Wrap(spacing: 6, runSpacing: 6, children: [
-      _tabButton('بيانات النشاط', 0), _tabButton('مستخدمين نشاطي', 1),
-      _tabButton('رصيد مخازني', 2), _tabButton('موظفين نشاطي', 3),
-    ]),
-    const SizedBox(height: 12),
-    Expanded(child: IndexedStack(index: _basicTab, children: [
-      _businessDetails(), _membersInfo(), _stockInfo(), _employeesInfo(),
-    ])),
-  ]);
+  Widget _basicData() {
+    final tabs = <(String, int, Widget)>[
+      if (_canWorkspacePermission('master.read')) ('بيانات النشاط', 0, _businessDetails()),
+      if (_canWorkspacePermission('members.read')) ('مستخدمين نشاطي', 1, _membersInfo()),
+      if (_canAnyWorkspacePermission(['items.read','inventory.read','master.read'])) ('رصيد مخازني', 2, _stockInfo()),
+      if (_canWorkspacePermission('hr.read')) ('موظفين نشاطي', 3, _employeesInfo()),
+    ];
+    if (tabs.isEmpty) return _workspacePermissionDenied('بياناتي الأساسية');
+    final visibleIndex = tabs.indexWhere((tab) => tab.$2 == _basicTab);
+    final safeIndex = visibleIndex < 0 ? 0 : visibleIndex;
+    return Column(children: [
+      _backHeader('بياناتي الأساسية'),
+      const SizedBox(height: 8),
+      Wrap(spacing: 6, runSpacing: 6, children: tabs.map((tab) => _tabButton(tab.$1, tab.$2)).toList()),
+      const SizedBox(height: 12),
+      Expanded(child: IndexedStack(index: safeIndex, children: tabs.map((tab) => tab.$3).toList())),
+    ]);
+  }
 
   Widget _tabButton(String label, int index) => ChoiceChip(
     label: Text(label), selected: _basicTab == index,
