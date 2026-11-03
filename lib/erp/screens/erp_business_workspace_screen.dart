@@ -136,7 +136,46 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     super.dispose();
   }
 
+  void _clearWorkspaceData() {
+    _branches = [];
+    _warehouses = [];
+    _members = [];
+    _itemLinks = [];
+    _openings = [];
+    _proposals = [];
+    _cashMovements = [];
+    _departments = [];
+    _employees = [];
+    _documents = [];
+    _stockMovements = [];
+    _memberLocations = [];
+    _auditRows = [];
+    _workspaceMetrics = {};
+    _platformItems = [];
+    _workspaceComparisonRows = [];
+    _comparisonLoaded = false;
+    _comparisonLoading = false;
+    _selectedLocationMemberUserId = null;
+    _selectedDocBranchId = null;
+    _selectedDocWarehouseId = null;
+    _selectedDocItemLinkId = null;
+    _selectedCashBranchId = null;
+    _selectedBranchForWarehouse = null;
+    _selectedStockWarehouseId = null;
+    _selectedStockItemLinkId = null;
+    _inventoryItemLinkId = null;
+    _sourceWarehouseId = null;
+    _targetWarehouseId = null;
+    _selectedPlatformItemId = null;
+    _draftLines.clear();
+    _basicTab = 0;
+    _businessSubTab = 0;
+    _memberSubTab = 0;
+    _stockTab = 0;
+  }
+
   Future<void> _load() async {
+    final previousWorkspaceId = _selected?['id']?.toString();
     setState(() { _loading = true; _error = null; });
     try {
       final activityRows = await _safeRows(() => _db.from('activity_types').select('code,name,name_en').eq('is_active',true).order('name'));
@@ -151,6 +190,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
           _selected = matches.isEmpty ? null : matches.first;
         }
         _selected ??= _workspaces.isNotEmpty ? _workspaces.first : null;
+        if (previousWorkspaceId != _selected?['id']?.toString()) _clearWorkspaceData();
         _loading = false;
       });
       _syncWorkspacePolicyFromSelection();
@@ -191,7 +231,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
         _safeRows(() => _db.from('erp_business_workspace_member_locations').select('id,user_id,access_scope,branch_id,warehouse_id,is_allowed').eq('workspace_id', id)),
         _safeRows(() => _db.from('erp_business_workspace_audit_log').select('id,actor_user_id,action,entity_type,entity_id,details,created_at').eq('workspace_id', id).order('created_at', ascending:false).limit(200)),
       ]);
-      if (!mounted) return;
+      if (!mounted || _selected?['id']?.toString() != id) return;
       setState(() {
         _branches = List<Map<String, dynamic>>.from(result[0]);
         _selectedCashBranchId = _branches.any((b)=>b['id'].toString()==_selectedCashBranchId) ? _selectedCashBranchId : (_branches.isNotEmpty ? _branches.first['id'].toString() : null);
@@ -564,6 +604,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   }
 
   Future<void> _loadPlatformItems() async {
+    final workspaceId = _selected?['id']?.toString();
     try {
       final companyId = (_selected?['platform_company_id'] ?? '').toString().trim();
       if (companyId.isEmpty) {
@@ -587,7 +628,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       if (activity.isNotEmpty && matchingCodes.isEmpty) {
         _message('نوع النشاط غير مرتبط بتصنيف أصناف معتمد؛ لن تظهر أصناف أنشطة أخرى.');
       }
-      if (!mounted) return;
+      if (!mounted || _selected?['id']?.toString() != workspaceId) return;
       setState(() {
         _platformItems = filtered;
         if (_selectedPlatformItemId == null && _platformItems.isNotEmpty) {
@@ -625,7 +666,7 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
       final rows=await _db.rpc('erp_get_workspace_silsila_stock',params:{
         'p_workspace_id':workspaceId,'p_item_link_id':null,
       });
-      if(!mounted)return;
+      if(!mounted || _selected?['id']?.toString()!=workspaceId)return;
       setState((){
         _workspaceComparisonRows=List<Map<String,dynamic>>.from(rows as List);
         _comparisonLoaded=true;
@@ -912,7 +953,11 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
     onChanged: (id) async {
       final matches = _workspaces.where((w) => w['id'].toString() == id);
       final item = matches.isEmpty ? null : matches.first;
-      setState(() { _selected = item; _area = 'الرئيسية'; });
+      setState(() {
+        _selected = item;
+        _area = 'الرئيسية';
+        _clearWorkspaceData();
+      });
       _syncWorkspacePolicyFromSelection();
       await _loadStructure();
     },
