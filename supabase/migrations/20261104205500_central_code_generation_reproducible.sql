@@ -1,0 +1,626 @@
+-- Reproducible central code generation schema for all ERP and business-workspace entities.
+-- The functions below are the reviewed definitions currently deployed to the Silsila Supabase project.
+begin;
+
+alter table public.erp_user_types add column if not exists type_code_display text;
+alter table public.erp_permission_templates add column if not exists template_code_display text;
+alter table public.erp_user_classifications add column if not exists classification_code_display text;
+alter table public.erp_journal_entries add column if not exists entry_number_display text;
+alter table public.erp_cash_movements add column if not exists movement_number text;
+alter table public.erp_cash_orders add column if not exists order_number text;
+alter table public.erp_checkbooks add column if not exists book_number text;
+do $$
+begin
+  if exists (select 1 from pg_attribute where attrelid='public.erp_cash_movements'::regclass and attname='movement_number' and attgenerated='s') then
+    execute 'alter table public.erp_cash_movements alter column movement_number drop expression';
+  end if;
+  if exists (select 1 from pg_attribute where attrelid='public.erp_cash_orders'::regclass and attname='order_number' and attgenerated='s') then
+    execute 'alter table public.erp_cash_orders alter column order_number drop expression';
+  end if;
+end;
+$$;
+update public.erp_user_types t set type_code_display=(select cfg.prefix||lpad(t.type_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'user_type','Typ',5) cfg) where t.type_code_display is null or t.type_code_display='';
+update public.erp_permission_templates t set template_code_display=(select cfg.prefix||lpad(t.template_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'permission_template','Tpl',5) cfg) where t.template_code_display is null or t.template_code_display='';
+update public.erp_user_classifications t set classification_code_display=(select cfg.prefix||lpad(t.classification_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'user_classification','Cls',5) cfg) where t.classification_code_display is null or t.classification_code_display='';
+update public.erp_journal_entries t set entry_number_display=(select cfg.prefix||lpad(t.entry_number::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'journal_entry','Jrn',5) cfg) where t.entry_number_display is null or t.entry_number_display='';
+alter table public.erp_user_types alter column type_code_display set not null;
+alter table public.erp_permission_templates alter column template_code_display set not null;
+alter table public.erp_user_classifications alter column classification_code_display set not null;
+alter table public.erp_journal_entries alter column entry_number_display set not null;
+create unique index if not exists erp_user_types_display_code_uidx on public.erp_user_types(company_id,type_code_display);
+create unique index if not exists erp_permission_templates_display_code_uidx on public.erp_permission_templates(company_id,template_code_display);
+create unique index if not exists erp_user_classifications_display_code_uidx on public.erp_user_classifications(company_id,classification_code_display);
+create unique index if not exists erp_journal_entries_display_number_uidx on public.erp_journal_entries(company_id,entry_number_display);
+create unique index if not exists erp_cash_movements_display_number_uidx on public.erp_cash_movements(company_id,movement_number) where movement_number is not null;
+create unique index if not exists erp_cash_orders_display_number_uidx on public.erp_cash_orders(company_id,order_number) where order_number is not null;
+
+CREATE OR REPLACE FUNCTION public.erp_code_policy_config(p_company_id uuid, p_key text, p_default_prefix text, p_default_digits integer)
+ RETURNS TABLE(prefix text, digits integer)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare v jsonb; v_cfg jsonb;
+begin
+  select case when left(policy_value, 1) = '{' then policy_value::jsonb else '{}'::jsonb end
+    into v
+  from public.erp_program_policies
+  where company_id = p_company_id and policy_key = 'code_generation_registry'
+  limit 1;
+  v_cfg := coalesce(v->'types'->p_key, '{}'::jsonb);
+  prefix := coalesce(nullif(v_cfg->>'prefix', ''), p_default_prefix);
+  digits := coalesce(nullif(v_cfg->>'digits', '')::integer, p_default_digits);
+  if prefix !~ '^[A-Za-z]{3}$' or digits < 1 or digits > 12 then
+    raise exception 'إعدادات التكويد غير صحيحة للنوع %', p_key;
+  end if;
+  if exists (
+    select 1 from jsonb_each(coalesce(v->'types', '{}'::jsonb)) as configured(key, value)
+    where configured.key <> p_key
+      and lower(coalesce(configured.value->>'prefix', '')) = lower(prefix)
+  ) then
+    raise exception 'بادئة التكويد % مستخدمة بالفعل في نوع تكويد آخر', prefix;
+  end if;
+  if lower(coalesce(v->>'item_prefix', 'itm')) = lower(prefix) then
+    raise exception 'بادئة التكويد % محجوزة للأصناف', prefix;
+  end if;
+  return next;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.erp_assign_central_code()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_company uuid;
+  v_key text;
+  v_column text;
+  v_prefix text;
+  v_digits integer;
+  v_party_kind text;
+  v_doc_type text;
+  v_voucher_type text;
+  v_max bigint;
+  v_code text;
+  v_lock text;
+begin
+  v_company := (to_jsonb(new)->>'company_id')::uuid;
+  if v_company is null then raise exception 'company_id مطلوب لتوليد الكود'; end if;
+
+  case tg_table_name
+    when 'erp_employees' then v_key := 'employee'; v_column := 'employee_code';
+    when 'erp_users' then v_key := 'user'; v_column := 'user_code';
+    when 'erp_branches' then v_key := 'branch'; v_column := 'branch_code';
+    when 'erp_warehouses' then v_key := 'warehouse'; v_column := 'warehouse_code';
+    when 'erp_item_categories' then v_key := 'category'; v_column := 'category_code';
+    when 'erp_cost_centers' then v_key := 'cost_center'; v_column := 'center_code';
+    when 'erp_price_lists' then v_key := 'price_list'; v_column := 'price_list_code';
+    when 'erp_accounts' then v_key := 'account'; v_column := 'account_code';
+    when 'erp_cashboxes' then v_key := 'cashbox'; v_column := 'cashbox_code';
+    when 'erp_parties' then
+      v_party_kind := coalesce(to_jsonb(new)->>'party_kind', 'supplier');
+      v_key := case when v_party_kind = 'customer' then 'customer' else 'supplier' end;
+      v_column := 'party_code';
+    when 'erp_sales_representatives' then v_key := 'delegate'; v_column := 'rep_code';
+    when 'erp_sales_documents' then
+      v_doc_type := to_jsonb(new)->>'document_type';
+      v_key := case v_doc_type
+        when 'quotation' then 'quotation'
+        when 'order' then 'sales_order'
+        when 'delivery' then 'sales_delivery'
+        when 'return' then 'sales_return'
+        else 'sales_invoice' end;
+      v_column := 'document_number';
+    when 'erp_purchase_documents' then
+      v_doc_type := to_jsonb(new)->>'document_type';
+      v_key := case v_doc_type
+        when 'order' then 'purchase_order'
+        when 'receipt' then 'purchase_receipt'
+        when 'return' then 'purchase_return'
+        else 'purchase_invoice' end;
+      v_column := 'document_number';
+    when 'erp_checkbooks' then v_key := 'checkbook'; v_column := 'book_number';
+    when 'erp_cash_movements' then v_key := 'cash_movement'; v_column := 'movement_number';
+    when 'erp_cash_orders' then v_key := 'cash_order'; v_column := 'order_number';
+    when 'erp_cash_vouchers' then
+      v_voucher_type := to_jsonb(new)->>'voucher_type';
+      v_key := case v_voucher_type
+        when 'payment' then 'cash_payment'
+        when 'transfer' then 'cash_transfer'
+        else 'cash_receipt' end;
+      v_column := 'voucher_number';
+    when 'erp_hr_departments' then v_key := 'department'; v_column := 'department_code';
+    when 'erp_hr_jobs' then v_key := 'job'; v_column := 'job_code';
+    when 'erp_hr_work_locations' then v_key := 'work_location'; v_column := 'location_code';
+    when 'erp_hr_job_grades' then v_key := 'grade'; v_column := 'grade_code';
+    when 'erp_payroll_runs' then v_key := 'payroll_run'; v_column := 'run_code';
+    when 'erp_hr_salary_elements' then v_key := 'salary_element'; v_column := 'element_code';
+    when 'erp_item_unit_catalog' then v_key := 'unit'; v_column := 'unit_code';
+    when 'erp_payment_methods' then v_key := 'payment_method'; v_column := 'payment_method_code';
+    when 'erp_hr_shifts' then v_key := 'shift'; v_column := 'shift_code';
+    when 'erp_commission_plans' then v_key := 'commission_plan'; v_column := 'plan_code';
+    when 'erp_sales_fulfillment_documents' then v_key := 'sales_fulfillment'; v_column := 'manual_number';
+    when 'erp_user_classifications' then v_key := 'user_classification'; v_column := 'classification_code_display';
+    when 'erp_journal_entries' then v_key := 'journal_entry'; v_column := 'entry_number_display';
+    else raise exception 'نوع سجل غير مدعوم في التكويد المركزي: %', tg_table_name;
+  end case;
+
+  if nullif(to_jsonb(new)->>v_column, '') is not null then return new; end if;
+
+  select c.prefix, c.digits into v_prefix, v_digits
+  from public.erp_code_policy_config(
+    v_company, v_key,
+    case v_key
+      when 'employee' then 'Emp'
+      when 'user' then 'Usr'
+      when 'branch' then 'Brn'
+      when 'warehouse' then 'Whs'
+      when 'category' then 'Cat'
+      when 'cost_center' then 'Cst'
+      when 'price_list' then 'Pli'
+      when 'account' then 'Acc'
+      when 'cashbox' then 'Csh'
+      when 'supplier' then 'Sup'
+      when 'customer' then 'Cus'
+      when 'department' then 'Dpt'
+      when 'job' then 'Job'
+      when 'work_location' then 'Loc'
+      when 'grade' then 'Grd'
+      when 'payroll_run' then 'Prl'
+      when 'salary_element' then 'Sal'
+      when 'unit' then 'Unt'
+      when 'payment_method' then 'Pmt'
+      when 'shift' then 'Shf'
+      when 'commission_plan' then 'Com'
+      when 'sales_fulfillment' then 'Ful'
+      when 'user_classification' then 'Cls'
+      when 'journal_entry' then 'Jrn'
+      when 'delegate' then 'Del'
+      when 'sales_invoice' then 'Siv'
+      when 'sales_order' then 'Sor'
+      when 'quotation' then 'Qot'
+      when 'sales_delivery' then 'Dlv'
+      when 'sales_return' then 'Srt'
+      when 'purchase_invoice' then 'Piv'
+      when 'purchase_order' then 'Por'
+      when 'purchase_receipt' then 'Prr'
+      when 'purchase_return' then 'Prt'
+      when 'cash_receipt' then 'Rcp'
+      when 'cash_payment' then 'Cpy'
+      when 'cash_transfer' then 'Trf'
+      when 'checkbook' then 'Ckb'
+      when 'cash_movement' then 'Cmv'
+      when 'cash_order' then 'Cso'
+      else 'Gen'
+    end, 5
+  ) c;
+
+  v_lock := v_company::text || ':' || tg_table_name || ':' || v_prefix;
+  perform pg_advisory_xact_lock(hashtextextended(v_lock, 0));
+
+  -- Prefix-wide scan prevents duplicate codes even if two types share a configured prefix.
+  execute format(
+    'select coalesce(max(substring(%I from %L)::bigint), 0) from public.%I where company_id = $1 and %I ~ $2',
+    v_column, '^' || v_prefix || '([0-9]+)$', tg_table_name, v_column
+  ) into v_max using v_company, '^' || v_prefix || '[0-9]+$';
+
+  if coalesce(v_max, 0) + 1 >= power(10::numeric, v_digits) then
+    raise exception 'انتهت خانات الكود للنوع %؛ زد عدد الخانات من سياسات التكويد', v_key;
+  end if;
+  v_code := v_prefix || lpad((coalesce(v_max, 0) + 1)::text, v_digits, '0');
+  new := jsonb_populate_record(new, jsonb_build_object(v_column, v_code));
+  return new;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.erp_assign_item_hierarchical_code()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_prefix text;
+  v_path text[] := array[]::text[];
+  v_node record;
+  v_parent uuid;
+  v_rank integer;
+  v_serial integer;
+  v_lock text;
+begin
+  if nullif(new.item_code, '') is not null then return new; end if;
+  if new.category_id is null then
+    raise exception 'اختر الفئة الثانوية قبل حفظ الصنف لتوليد كوده';
+  end if;
+
+  select coalesce(
+    nullif(
+      (case when left(policy_value, 1) = '{' then policy_value::jsonb else '{}'::jsonb end)->>'item_prefix',
+      ''
+    ),
+    'itm'
+  ) into v_prefix
+  from public.erp_program_policies
+  where company_id = new.company_id and policy_key = 'code_generation_registry'
+  limit 1;
+  v_prefix := coalesce(v_prefix, 'itm');
+  if v_prefix !~ '^[A-Za-z]{3}$' then
+    raise exception 'بادئة كود الأصناف يجب أن تكون ثلاثة أحرف إنجليزية';
+  end if;
+  if exists (
+    select 1
+    from public.erp_program_policies p,
+         jsonb_each(coalesce((case when left(p.policy_value, 1) = '{' then p.policy_value::jsonb else '{}'::jsonb end)->'types', '{}'::jsonb)) configured
+    where p.company_id = new.company_id
+      and p.policy_key = 'code_generation_registry'
+      and lower(coalesce(configured.value->>'prefix', '')) = lower(v_prefix)
+  ) then
+    raise exception 'بادئة الأصناف مستخدمة بالفعل في نوع تكويد آخر';
+  end if;
+
+  v_parent := new.category_id;
+  for i in 1..3 loop
+    select id, parent_id, category_code into v_node
+    from public.erp_item_categories
+    where id = v_parent and company_id = new.company_id and is_active = true;
+    if not found then raise exception 'الفئة المختارة غير موجودة أو غير نشطة'; end if;
+
+    select count(*) into v_rank
+    from public.erp_item_categories c
+    where c.company_id = new.company_id
+      and c.parent_id is not distinct from v_node.parent_id
+      and c.is_active = true
+      and c.activity_code is not distinct from (
+        select activity_code from public.erp_item_categories where id = new.category_id
+      )
+      and (c.category_code, c.id) <= (v_node.category_code, v_node.id);
+
+    if v_rank < 1 or v_rank > 99 then
+      raise exception 'عدد الفئات في كل مستوى يجب ألا يتجاوز 99 لتكوين كود الصنف';
+    end if;
+    v_path := array_prepend(lpad(v_rank::text, 2, '0'), v_path);
+    v_parent := v_node.parent_id;
+    if i < 3 and v_parent is null then
+      raise exception 'يجب اختيار فئة ثانوية مرتبطة بفئة رئيسية وفرعية';
+    end if;
+    if i = 3 and v_parent is not null then
+      raise exception 'مستويات فئات الأصناف يجب ألا تتجاوز ثلاثة مستويات';
+    end if;
+  end loop;
+
+  v_lock := new.company_id::text || ':item:' || v_prefix || array_to_string(v_path, '');
+  perform pg_advisory_xact_lock(hashtextextended(v_lock, 0));
+
+  select coalesce(max(right(item_code, 2)::integer), 0) into v_serial
+  from public.erp_items
+  where company_id = new.company_id
+    and item_code ~ ('^' || v_prefix || array_to_string(v_path, '') || '[0-9]{2}$');
+
+  if v_serial >= 99 then
+    raise exception 'تم الوصول إلى الحد الأقصى 99 صنفًا داخل هذه الفئات';
+  end if;
+  new.item_code := v_prefix || array_to_string(v_path, '') ||
+    lpad((coalesce(v_serial, 0) + 1)::text, 2, '0');
+  return new;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.erp_assign_workspace_central_code()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_workspace uuid;
+  v_company uuid;
+  v_key text;
+  v_column text;
+  v_prefix text;
+  v_digits integer;
+  v_party_type text;
+  v_document_type text;
+  v_max bigint;
+  v_lock text;
+begin
+  v_workspace := (to_jsonb(new)->>'workspace_id')::uuid;
+  if v_workspace is null then raise exception 'workspace_id مطلوب لتوليد كود النشاط'; end if;
+  select platform_company_id into v_company
+  from public.erp_business_workspaces where id = v_workspace;
+  if v_company is null then raise exception 'النشاط غير مرتبط بشركة سلسلة لتطبيق سياسات التكويد'; end if;
+
+  case tg_table_name
+    when 'erp_business_workspace_branches' then v_key := 'workspace_branch'; v_column := 'branch_code';
+    when 'erp_business_workspace_cash_movements' then v_key := 'workspace_cash_movement'; v_column := 'movement_no';
+    when 'erp_business_workspace_counterparties' then
+      v_party_type := to_jsonb(new)->>'party_type';
+      v_key := case when v_party_type = 'supplier' then 'workspace_supplier' else 'workspace_customer' end;
+      v_column := 'party_code';
+    when 'erp_business_workspace_departments' then v_key := 'workspace_department'; v_column := 'department_code';
+    when 'erp_business_workspace_employees' then v_key := 'workspace_employee'; v_column := 'employee_code';
+    when 'erp_business_workspace_warehouses' then v_key := 'workspace_warehouse'; v_column := 'warehouse_code';
+    when 'erp_business_workspace_documents' then
+      v_document_type := to_jsonb(new)->>'document_type';
+      v_key := case v_document_type
+        when 'purchase' then 'workspace_purchase'
+        when 'purchase_return' then 'workspace_purchase_return'
+        when 'sale' then 'workspace_sale'
+        when 'sale_return' then 'workspace_sale_return'
+        when 'transfer' then 'workspace_transfer'
+        when 'adjustment' then 'workspace_adjustment'
+        else null end;
+      if v_key is null then raise exception 'نوع مستند إدارة النشاط غير مدعوم للتكويد'; end if;
+      v_column := 'document_no';
+    else raise exception 'جدول إدارة النشاط غير مدعوم للتكويد: %', tg_table_name;
+  end case;
+
+  if nullif(to_jsonb(new)->>v_column, '') is not null then return new; end if;
+
+  select prefix, digits into v_prefix, v_digits
+  from public.erp_code_policy_config(
+    v_company, v_key,
+    case v_key
+      when 'workspace_branch' then 'Wbr'
+      when 'workspace_cash_movement' then 'Wcm'
+      when 'workspace_customer' then 'Wcu'
+      when 'workspace_supplier' then 'Wsu'
+      when 'workspace_department' then 'Wdp'
+      when 'workspace_employee' then 'Wem'
+      when 'workspace_warehouse' then 'Wwh'
+      when 'workspace_purchase' then 'Wpi'
+      when 'workspace_purchase_return' then 'Wpr'
+      when 'workspace_sale' then 'Wsi'
+      when 'workspace_sale_return' then 'Wsr'
+      when 'workspace_transfer' then 'Wtr'
+      when 'workspace_adjustment' then 'Wad'
+      else 'Wsp'
+    end, 5
+  );
+
+  v_lock := v_company::text || ':' || tg_table_name || ':' || v_prefix;
+  perform pg_advisory_xact_lock(hashtextextended(v_lock, 0));
+
+  execute format(
+    'select coalesce(max(substring(t.%I from %L)::bigint), 0) from public.%I t join public.erp_business_workspaces w on w.id = t.workspace_id where w.platform_company_id = $1 and t.%I ~ $2',
+    v_column, '^' || v_prefix || '([0-9]+)$', tg_table_name, v_column
+  ) into v_max using v_company, '^' || v_prefix || '[0-9]+$';
+
+  if coalesce(v_max, 0) + 1 >= power(10::numeric, v_digits) then
+    raise exception 'انتهت خانات كود إدارة النشاط للنوع %؛ زد عدد الخانات من سياسات التكويد', v_key;
+  end if;
+  new := jsonb_populate_record(new, jsonb_build_object(v_column, v_prefix || lpad((coalesce(v_max, 0) + 1)::text, v_digits, '0')));
+  return new;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.erp_preview_next_central_code(p_company_id uuid, p_entity_key text)
+ RETURNS text
+ LANGUAGE plpgsql
+ SET search_path TO ''
+AS $function$
+declare
+  v_table text;
+  v_column text;
+  v_prefix text;
+  v_digits integer;
+  v_policy_prefix text;
+  v_policy_digits integer;
+  v_max bigint;
+  v_workspace_scoped boolean := false;
+begin
+  if auth.uid() is null or not public.erp_user_can_access_company(p_company_id) then
+    raise exception 'غير مصرح بمعاينة أكواد هذه الشركة';
+  end if;
+
+  case p_entity_key
+    when 'employee' then v_table := 'erp_employees'; v_column := 'employee_code'; v_prefix := 'Emp';
+    when 'user' then v_table := 'erp_users'; v_column := 'user_code'; v_prefix := 'Usr';
+    when 'user_type' then v_table := 'erp_user_types'; v_column := 'type_code_display'; v_prefix := 'Typ';
+    when 'permission_template' then v_table := 'erp_permission_templates'; v_column := 'template_code_display'; v_prefix := 'Tpl';
+    when 'branch' then v_table := 'erp_branches'; v_column := 'branch_code'; v_prefix := 'Brn';
+    when 'warehouse' then v_table := 'erp_warehouses'; v_column := 'warehouse_code'; v_prefix := 'Whs';
+    when 'category' then v_table := 'erp_item_categories'; v_column := 'category_code'; v_prefix := 'Cat';
+    when 'cost_center' then v_table := 'erp_cost_centers'; v_column := 'center_code'; v_prefix := 'Cst';
+    when 'price_list' then v_table := 'erp_price_lists'; v_column := 'price_list_code'; v_prefix := 'Pli';
+    when 'account' then v_table := 'erp_accounts'; v_column := 'account_code'; v_prefix := 'Acc';
+    when 'cashbox' then v_table := 'erp_cashboxes'; v_column := 'cashbox_code'; v_prefix := 'Csh';
+    when 'supplier' then v_table := 'erp_parties'; v_column := 'party_code'; v_prefix := 'Sup';
+    when 'customer' then v_table := 'erp_parties'; v_column := 'party_code'; v_prefix := 'Cus';
+    when 'department' then v_table := 'erp_hr_departments'; v_column := 'department_code'; v_prefix := 'Dpt';
+    when 'job' then v_table := 'erp_hr_jobs'; v_column := 'job_code'; v_prefix := 'Job';
+    when 'work_location' then v_table := 'erp_hr_work_locations'; v_column := 'location_code'; v_prefix := 'Loc';
+    when 'grade' then v_table := 'erp_hr_job_grades'; v_column := 'grade_code'; v_prefix := 'Grd';
+    when 'payroll_run' then v_table := 'erp_payroll_runs'; v_column := 'run_code'; v_prefix := 'Prl';
+    when 'salary_element' then v_table := 'erp_hr_salary_elements'; v_column := 'element_code'; v_prefix := 'Sal';
+    when 'unit' then v_table := 'erp_item_unit_catalog'; v_column := 'unit_code'; v_prefix := 'Unt';
+    when 'payment_method' then v_table := 'erp_payment_methods'; v_column := 'payment_method_code'; v_prefix := 'Pmt';
+    when 'shift' then v_table := 'erp_hr_shifts'; v_column := 'shift_code'; v_prefix := 'Shf';
+    when 'commission_plan' then v_table := 'erp_commission_plans'; v_column := 'plan_code'; v_prefix := 'Com';
+    when 'sales_fulfillment' then v_table := 'erp_sales_fulfillment_documents'; v_column := 'manual_number'; v_prefix := 'Ful';
+    when 'user_classification' then v_table := 'erp_user_classifications'; v_column := 'classification_code_display'; v_prefix := 'Cls';
+    when 'journal_entry' then v_table := 'erp_journal_entries'; v_column := 'entry_number_display'; v_prefix := 'Jrn';
+    when 'delegate' then v_table := 'erp_sales_representatives'; v_column := 'rep_code'; v_prefix := 'Del';
+    when 'sales_invoice' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Siv';
+    when 'sales_order' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Sor';
+    when 'quotation' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Qot';
+    when 'sales_delivery' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Dlv';
+    when 'sales_return' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Srt';
+    when 'purchase_invoice' then v_table := 'erp_purchase_documents'; v_column := 'document_number'; v_prefix := 'Piv';
+    when 'purchase_order' then v_table := 'erp_purchase_documents'; v_column := 'document_number'; v_prefix := 'Por';
+    when 'purchase_receipt' then v_table := 'erp_purchase_documents'; v_column := 'document_number'; v_prefix := 'Prr';
+    when 'purchase_return' then v_table := 'erp_purchase_documents'; v_column := 'document_number'; v_prefix := 'Prt';
+    when 'cash_receipt' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Rcp';
+    when 'cash_payment' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Cpy';
+    when 'cash_transfer' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Trf';
+    when 'checkbook' then v_table := 'erp_checkbooks'; v_column := 'book_number'; v_prefix := 'Ckb';
+    when 'cash_movement' then v_table := 'erp_cash_movements'; v_column := 'movement_number'; v_prefix := 'Cmv';
+    when 'cash_order' then v_table := 'erp_cash_orders'; v_column := 'order_number'; v_prefix := 'Cso';
+    when 'workspace_branch' then v_table := 'erp_business_workspace_branches'; v_column := 'branch_code'; v_prefix := 'Wbr'; v_workspace_scoped := true;
+    when 'workspace_cash_movement' then v_table := 'erp_business_workspace_cash_movements'; v_column := 'movement_no'; v_prefix := 'Wcm'; v_workspace_scoped := true;
+    when 'workspace_customer' then v_table := 'erp_business_workspace_counterparties'; v_column := 'party_code'; v_prefix := 'Wcu'; v_workspace_scoped := true;
+    when 'workspace_supplier' then v_table := 'erp_business_workspace_counterparties'; v_column := 'party_code'; v_prefix := 'Wsu'; v_workspace_scoped := true;
+    when 'workspace_department' then v_table := 'erp_business_workspace_departments'; v_column := 'department_code'; v_prefix := 'Wdp'; v_workspace_scoped := true;
+    when 'workspace_employee' then v_table := 'erp_business_workspace_employees'; v_column := 'employee_code'; v_prefix := 'Wem'; v_workspace_scoped := true;
+    when 'workspace_warehouse' then v_table := 'erp_business_workspace_warehouses'; v_column := 'warehouse_code'; v_prefix := 'Wwh'; v_workspace_scoped := true;
+    when 'workspace_purchase' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wpi'; v_workspace_scoped := true;
+    when 'workspace_purchase_return' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wpr'; v_workspace_scoped := true;
+    when 'workspace_sale' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wsi'; v_workspace_scoped := true;
+    when 'workspace_sale_return' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wsr'; v_workspace_scoped := true;
+    when 'workspace_transfer' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wtr'; v_workspace_scoped := true;
+    when 'workspace_adjustment' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wad'; v_workspace_scoped := true;
+    else raise exception 'نوع التكويد غير مدعوم';
+  end case;
+
+  select
+    nullif((case when left(policy_value, 1) = '{' then policy_value::jsonb else '{}'::jsonb end)->'types'->p_entity_key->>'prefix', ''),
+    nullif((case when left(policy_value, 1) = '{' then policy_value::jsonb else '{}'::jsonb end)->'types'->p_entity_key->>'digits', '')::integer
+  into v_policy_prefix, v_policy_digits
+  from public.erp_program_policies
+  where company_id = p_company_id and policy_key = 'code_generation_registry'
+  limit 1;
+  v_prefix := coalesce(v_policy_prefix, v_prefix);
+  v_digits := coalesce(v_policy_digits, 5);
+  if v_prefix !~ '^[A-Za-z]{3}$' or v_digits < 1 or v_digits > 12 then
+    raise exception 'إعدادات التكويد غير صحيحة';
+  end if;
+  if to_regclass('public.' || v_table) is null then
+    raise exception 'جدول نوع التكويد غير متاح';
+  end if;
+  if v_workspace_scoped then
+    execute format(
+      'select coalesce(max(substring(t.%I from %L)::bigint), 0) from public.%I t join public.erp_business_workspaces w on w.id = t.workspace_id where w.platform_company_id = $1 and t.%I ~ $2',
+      v_column, '^' || v_prefix || '([0-9]+)$', v_table, v_column
+    ) into v_max using p_company_id, '^' || v_prefix || '[0-9]+$';
+  else
+    execute format(
+      'select coalesce(max(substring(%I from %L)::bigint), 0) from public.%I where company_id = $1 and %I ~ $2',
+      v_column, '^' || v_prefix || '([0-9]+)$', v_table, v_column
+    ) into v_max using p_company_id, '^' || v_prefix || '[0-9]+$';
+  end if;
+  if coalesce(v_max, 0) + 1 >= power(10::numeric, v_digits) then
+    raise exception 'انتهت خانات الكود؛ زد عدد الخانات من سياسات التكويد';
+  end if;
+  return v_prefix || lpad((coalesce(v_max, 0) + 1)::text, v_digits, '0');
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.erp_set_permission_template_display_code()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare p text; d integer;
+begin
+  select prefix, digits into p, d
+  from public.erp_code_policy_config(new.company_id, 'permission_template', 'Tpl', 5);
+  new.template_code_display := p || lpad(new.template_code::text, d, '0');
+  return new;
+end;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.erp_set_user_type_display_code()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare p text; d integer;
+begin
+  select prefix, digits into p, d
+  from public.erp_code_policy_config(new.company_id, 'user_type', 'Typ', 5);
+  new.type_code_display := p || lpad(new.type_code::text, d, '0');
+  return new;
+end;
+$function$;
+
+revoke all on function public.erp_code_policy_config(uuid,text,text,integer) from public, anon, authenticated;
+revoke all on function public.erp_assign_central_code() from public, anon, authenticated;
+revoke all on function public.erp_assign_item_hierarchical_code() from public, anon, authenticated;
+revoke all on function public.erp_assign_workspace_central_code() from public, anon, authenticated;
+revoke all on function public.erp_set_permission_template_display_code() from public, anon, authenticated;
+revoke all on function public.erp_set_user_type_display_code() from public, anon, authenticated;
+revoke all on function public.erp_preview_next_central_code(uuid,text) from public, anon;
+grant execute on function public.erp_preview_next_central_code(uuid,text) to authenticated;
+drop trigger if exists erp_accounts_central_code on public.erp_accounts;
+CREATE TRIGGER erp_accounts_central_code BEFORE INSERT ON public.erp_accounts FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_branches_central_code on public.erp_branches;
+CREATE TRIGGER erp_branches_central_code BEFORE INSERT ON public.erp_branches FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_business_workspace_branches_central_code on public.erp_business_workspace_branches;
+CREATE TRIGGER erp_business_workspace_branches_central_code BEFORE INSERT ON public.erp_business_workspace_branches FOR EACH ROW EXECUTE FUNCTION erp_assign_workspace_central_code();
+drop trigger if exists erp_business_workspace_cash_movements_central_code on public.erp_business_workspace_cash_movements;
+CREATE TRIGGER erp_business_workspace_cash_movements_central_code BEFORE INSERT ON public.erp_business_workspace_cash_movements FOR EACH ROW EXECUTE FUNCTION erp_assign_workspace_central_code();
+drop trigger if exists erp_business_workspace_counterparties_central_code on public.erp_business_workspace_counterparties;
+CREATE TRIGGER erp_business_workspace_counterparties_central_code BEFORE INSERT ON public.erp_business_workspace_counterparties FOR EACH ROW EXECUTE FUNCTION erp_assign_workspace_central_code();
+drop trigger if exists erp_business_workspace_departments_central_code on public.erp_business_workspace_departments;
+CREATE TRIGGER erp_business_workspace_departments_central_code BEFORE INSERT ON public.erp_business_workspace_departments FOR EACH ROW EXECUTE FUNCTION erp_assign_workspace_central_code();
+drop trigger if exists erp_business_workspace_documents_central_code on public.erp_business_workspace_documents;
+CREATE TRIGGER erp_business_workspace_documents_central_code BEFORE INSERT ON public.erp_business_workspace_documents FOR EACH ROW EXECUTE FUNCTION erp_assign_workspace_central_code();
+drop trigger if exists erp_business_workspace_employees_central_code on public.erp_business_workspace_employees;
+CREATE TRIGGER erp_business_workspace_employees_central_code BEFORE INSERT ON public.erp_business_workspace_employees FOR EACH ROW EXECUTE FUNCTION erp_assign_workspace_central_code();
+drop trigger if exists erp_business_workspace_warehouses_central_code on public.erp_business_workspace_warehouses;
+CREATE TRIGGER erp_business_workspace_warehouses_central_code BEFORE INSERT ON public.erp_business_workspace_warehouses FOR EACH ROW EXECUTE FUNCTION erp_assign_workspace_central_code();
+drop trigger if exists erp_cash_movements_central_code on public.erp_cash_movements;
+CREATE TRIGGER erp_cash_movements_central_code BEFORE INSERT ON public.erp_cash_movements FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_cash_orders_central_code on public.erp_cash_orders;
+CREATE TRIGGER erp_cash_orders_central_code BEFORE INSERT ON public.erp_cash_orders FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_cash_vouchers_central_code on public.erp_cash_vouchers;
+CREATE TRIGGER erp_cash_vouchers_central_code BEFORE INSERT ON public.erp_cash_vouchers FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_cashboxes_central_code on public.erp_cashboxes;
+CREATE TRIGGER erp_cashboxes_central_code BEFORE INSERT ON public.erp_cashboxes FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_checkbooks_central_code on public.erp_checkbooks;
+CREATE TRIGGER erp_checkbooks_central_code BEFORE INSERT ON public.erp_checkbooks FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_commission_plans_central_code on public.erp_commission_plans;
+CREATE TRIGGER erp_commission_plans_central_code BEFORE INSERT ON public.erp_commission_plans FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_cost_centers_central_code on public.erp_cost_centers;
+CREATE TRIGGER erp_cost_centers_central_code BEFORE INSERT ON public.erp_cost_centers FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_employees_central_code on public.erp_employees;
+CREATE TRIGGER erp_employees_central_code BEFORE INSERT ON public.erp_employees FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_hr_departments_central_code on public.erp_hr_departments;
+CREATE TRIGGER erp_hr_departments_central_code BEFORE INSERT ON public.erp_hr_departments FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_hr_job_grades_central_code on public.erp_hr_job_grades;
+CREATE TRIGGER erp_hr_job_grades_central_code BEFORE INSERT ON public.erp_hr_job_grades FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_hr_jobs_central_code on public.erp_hr_jobs;
+CREATE TRIGGER erp_hr_jobs_central_code BEFORE INSERT ON public.erp_hr_jobs FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_hr_salary_elements_central_code on public.erp_hr_salary_elements;
+CREATE TRIGGER erp_hr_salary_elements_central_code BEFORE INSERT ON public.erp_hr_salary_elements FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_hr_shifts_central_code on public.erp_hr_shifts;
+CREATE TRIGGER erp_hr_shifts_central_code BEFORE INSERT ON public.erp_hr_shifts FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_hr_work_locations_central_code on public.erp_hr_work_locations;
+CREATE TRIGGER erp_hr_work_locations_central_code BEFORE INSERT ON public.erp_hr_work_locations FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_item_categories_central_code on public.erp_item_categories;
+CREATE TRIGGER erp_item_categories_central_code BEFORE INSERT ON public.erp_item_categories FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_item_unit_catalog_central_code on public.erp_item_unit_catalog;
+CREATE TRIGGER erp_item_unit_catalog_central_code BEFORE INSERT ON public.erp_item_unit_catalog FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_journal_entries_central_code on public.erp_journal_entries;
+CREATE TRIGGER erp_journal_entries_central_code BEFORE INSERT ON public.erp_journal_entries FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_parties_central_code on public.erp_parties;
+CREATE TRIGGER erp_parties_central_code BEFORE INSERT ON public.erp_parties FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_payment_methods_central_code on public.erp_payment_methods;
+CREATE TRIGGER erp_payment_methods_central_code BEFORE INSERT ON public.erp_payment_methods FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_payroll_runs_central_code on public.erp_payroll_runs;
+CREATE TRIGGER erp_payroll_runs_central_code BEFORE INSERT ON public.erp_payroll_runs FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_permission_templates_central_display_code on public.erp_permission_templates;
+CREATE TRIGGER erp_permission_templates_central_display_code BEFORE INSERT OR UPDATE OF company_id, template_code ON public.erp_permission_templates FOR EACH ROW EXECUTE FUNCTION erp_set_permission_template_display_code();
+drop trigger if exists erp_price_lists_central_code on public.erp_price_lists;
+CREATE TRIGGER erp_price_lists_central_code BEFORE INSERT ON public.erp_price_lists FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_purchase_documents_central_code on public.erp_purchase_documents;
+CREATE TRIGGER erp_purchase_documents_central_code BEFORE INSERT ON public.erp_purchase_documents FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_sales_documents_central_code on public.erp_sales_documents;
+CREATE TRIGGER erp_sales_documents_central_code BEFORE INSERT ON public.erp_sales_documents FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_sales_fulfillment_documents_central_code on public.erp_sales_fulfillment_documents;
+CREATE TRIGGER erp_sales_fulfillment_documents_central_code BEFORE INSERT ON public.erp_sales_fulfillment_documents FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_sales_representatives_central_code on public.erp_sales_representatives;
+CREATE TRIGGER erp_sales_representatives_central_code BEFORE INSERT ON public.erp_sales_representatives FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_user_classifications_central_code on public.erp_user_classifications;
+CREATE TRIGGER erp_user_classifications_central_code BEFORE INSERT ON public.erp_user_classifications FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_user_types_central_display_code on public.erp_user_types;
+CREATE TRIGGER erp_user_types_central_display_code BEFORE INSERT OR UPDATE OF company_id, type_code ON public.erp_user_types FOR EACH ROW EXECUTE FUNCTION erp_set_user_type_display_code();
+drop trigger if exists erp_users_central_code on public.erp_users;
+CREATE TRIGGER erp_users_central_code BEFORE INSERT ON public.erp_users FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+drop trigger if exists erp_warehouses_central_code on public.erp_warehouses;
+CREATE TRIGGER erp_warehouses_central_code BEFORE INSERT ON public.erp_warehouses FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
+
+commit;
