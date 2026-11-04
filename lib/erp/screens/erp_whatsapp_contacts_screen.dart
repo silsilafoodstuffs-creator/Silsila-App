@@ -234,10 +234,13 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
             Text('سيتم توثيق موافقة ' + ids.length.toString() + ' جهة اتصال. لا تستخدم الإجراء إلا بعد الحصول على موافقة أصحاب الأرقام.'),
             const SizedBox(height: 10),
             TextField(controller: evidence, decoration: const InputDecoration(labelText: 'مرجع الموافقة / ملاحظات (اختياري)', border: OutlineInputBorder())),
-            CheckboxListTile(
-              value: checked, contentPadding: EdgeInsets.zero,
-              title: const Text('أؤكد الحصول على الموافقة المناسبة.'),
-              onChanged: (v) => refresh(() => checked = v ?? false),
+            CheckboxTheme(
+              data: const CheckboxThemeData(shape: CircleBorder()),
+              child: CheckboxListTile(
+                value: checked, contentPadding: EdgeInsets.zero,
+                title: const Text('أؤكد الحصول على الموافقة المناسبة.'),
+                onChanged: (v) => refresh(() => checked = v ?? false),
+              ),
             ),
           ])),
           actions: [
@@ -559,14 +562,17 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
                 final id = _id(row);
                 final status = _status(row);
                 final statusText = status == 'consented' ? 'موافق' : status == 'declined' ? 'غير موافق' : 'بانتظار الموافقة';
-                return CheckboxListTile(
-                  value: _selected.contains(id),
-                  onChanged: (v) => setState(() { if (v == true) { _selected.add(id); } else { _selected.remove(id); } }),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  secondary: const CircleAvatar(backgroundColor: Color(0xFFF5EFFB), child: Icon(Icons.person, color: purple)),
-                  title: Text(_s(row['contact_name']).isEmpty ? 'اسم غير مسجل' : _s(row['contact_name']), style: const TextStyle(fontWeight: FontWeight.w800)),
-                  subtitle: Text(_s(row['phone']) + ' • ' + (_s(row['group_name']).isEmpty ? 'مصدر غير محدد' : _s(row['group_name'])) + ' • ' + statusText),
-                  activeColor: purple,
+                return CheckboxTheme(
+                  data: const CheckboxThemeData(shape: CircleBorder()),
+                  child: CheckboxListTile(
+                    value: _selected.contains(id),
+                    onChanged: (v) => setState(() { if (v == true) { _selected.add(id); } else { _selected.remove(id); } }),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    secondary: const CircleAvatar(backgroundColor: Color(0xFFF5EFFB), child: Icon(Icons.person, color: purple)),
+                    title: Text(_s(row['contact_name']).isEmpty ? 'اسم غير مسجل' : _s(row['contact_name']), style: const TextStyle(fontWeight: FontWeight.w800)),
+                    subtitle: Text(_s(row['phone']) + ' • ' + (_s(row['group_name']).isEmpty ? 'مصدر غير محدد' : _s(row['group_name'])) + ' • ' + statusText),
+                    activeColor: purple,
+                  ),
                 );
               },
             )),
