@@ -44,3 +44,11 @@ Dates entered in the dashboard use **DD-MM-YYYY**; dates are stored as ISO date 
 ## Database security
 
 The four HR operational tables have row-level security enabled. Reads and writes are scoped to the company and limited to authorized company administrators/managers or a member whose own profile job title is exactly **مدير موارد بشرية**. The employee-movement trigger uses invoker rights and only applies the latest effective movement on or before the current date.
+
+## First-use checklist
+
+1. Create or complete the company member profile for the person who will manage HR.
+2. Set the job title exactly to **مدير موارد بشرية**. The database trigger assigns the company HR-manager template.
+3. Confirm that the dashboard appears for that member and remains hidden for members titled **مسئول موارد بشرية** or **مسؤول موارد بشرية**.
+4. Enter real insurance, license, training, recruitment, and employee-movement records. New HR tables intentionally start empty; the dashboard does not seed invented statuses.
+5. Recheck the dashboard after each entry. Contract and appointment-document indicators continue to use the existing employee and document records.
