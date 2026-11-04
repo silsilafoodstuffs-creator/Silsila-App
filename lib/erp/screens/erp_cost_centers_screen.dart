@@ -196,8 +196,14 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     for (final r in _centers) {
       final code = _s(r['center_code']).trim();
       if ((code.isEmpty && r['_draft'] != true) || _ar(r).trim().isEmpty) { setState(() => _error = 'الكود والاسم العربي مطلوبان في كل صف.'); return; }
-      if (r['_draft'] != true && !RegExp(r'^[A-Za-z]+-?[0-9]+ { setState(() => _error = 'الكود "$code" غير صحيح. استخدم حروفًا إنجليزية ثم شرطة وأرقامًا، مثل CC-001.'); return; }
-      if (!codes.add(code.toUpperCase())) { setState(() => _error = 'الكود "$code" مكرر.'); return; }
+      if (r['_draft'] != true && !RegExp(r'^[A-Za-z]+-?[0-9]+$').hasMatch(code)) {
+        setState(() => _error = 'الكود "$code" غير صحيح. استخدم 3 حروف إنجليزية ثم أرقامًا، مثل Cst00001.');
+        return;
+      }
+      if (r['_draft'] != true && !codes.add(code.toUpperCase())) {
+        setState(() => _error = 'الكود "$code" مكرر.');
+        return;
+      }
       if (_child(r) && !_centers.any((p) => _s(p['id']) == _s(r['parent_id']) && !_child(p))) {
         setState(() => _error = 'كل مركز فرعي يجب أن يتبع مركزًا رئيسيًا محفوظًا.'); return;
       }
