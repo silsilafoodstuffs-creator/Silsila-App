@@ -267,7 +267,7 @@ create or replace function public.erp_preview_next_central_code(
   p_company_id uuid, p_entity_key text
 )
 returns text
-language plpgsql security invoker set search_path = '' as $
+language plpgsql security invoker set search_path = '' as $$
 declare
   v_table text;
   v_column text;
