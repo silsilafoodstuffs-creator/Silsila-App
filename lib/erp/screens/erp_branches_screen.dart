@@ -130,8 +130,11 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       });
       return;
     }
-    final defaultCode = (_rows.length + 1).toString().padLeft(3, '0');
-    final code = TextEditingController(text: row == null ? defaultCode : _s(row['branch_code']));
+    var defaultCode = '';
+    if (row == null) {
+      try { defaultCode = (await _db!.rpc('erp_preview_next_central_code', params: {'p_company_id': (widget.companyId ?? '').trim(), 'p_entity_key': 'branch'})).toString(); } catch (_) { defaultCode = 'Brn00001'; }
+    } else { defaultCode = _s(row['branch_code']); }
+    final code = TextEditingController(text: defaultCode);
     var lastAutoCode = defaultCode;
     final name = TextEditingController(text: _s(row?['branch_name']));
     final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
@@ -157,14 +160,6 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
               const SizedBox(height: 10),
               TextField(
                 controller: name,
-                onChanged: (value) {
-                  final suggested = _standardBranchCode(value);
-                  if (code.text == lastAutoCode) {
-                    final nextCode = suggested.isEmpty ? defaultCode : suggested;
-                    code.text = nextCode;
-                    lastAutoCode = nextCode;
-                  }
-                },
                 decoration: const InputDecoration(labelText: 'اسم الفرع عربي *', border: OutlineInputBorder()),
               ),
               const SizedBox(height: 10),
@@ -211,13 +206,8 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     try {
       final companyId = (widget.companyId ?? '').trim();
       if (companyId.isEmpty) throw StateError('لا توجد شركة نشطة.');
-      if (code.text.trim().isEmpty || name.text.trim().isEmpty) {
-        throw ArgumentError('كود الفرع واسم الفرع مطلوبان.');
-      }
-      final cleanCode = code.text.trim();
-      const allowedCodeChars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
-      if (cleanCode.isEmpty || cleanCode.split('').any((ch) => !allowedCodeChars.contains(ch))) {
-        throw ArgumentError('كود الفرع يجب أن يتكون من حروف إنجليزية وأرقام وشرطة فقط.');
+      if (name.text.trim().isEmpty) {
+        throw ArgumentError('اسم الفرع مطلوب.');
       }
       final payload = <String, Object?>{
         'company_id': companyId,
@@ -271,8 +261,8 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
     final companyId = (widget.companyId ?? '').trim();
     final code = _editFields['branch_code']!.text.trim();
     final name = _editFields['branch_name']!.text.trim();
-    if (code.isEmpty || name.isEmpty) {
-      setState(() => _error = 'كود الفرع واسم الفرع العربي مطلوبان.');
+    if (name.isEmpty) {
+      setState(() => _error = 'اسم الفرع العربي مطلوب.');
       return;
     }
     const allowed = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-';
@@ -514,7 +504,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
           Checkbox(shape: const CircleBorder(), value: selected, onChanged: (v) => _selectBranch(id, v == true), visualDensity: VisualDensity.compact, activeColor: _branchPurple),
           const SizedBox(width: 6),
           Expanded(child: Wrap(spacing: 10, runSpacing: 7, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            editing ? inputCell('كود الفرع', 'branch_code', width: 135) : textCell('كود الفرع', _s(row['branch_code']), width: 135),
+            textCell('كود الفرع', _s(row['branch_code']), width: 135),
             editing ? inputCell('اسم الفرع عربي', 'branch_name', width: 210) : textCell('اسم الفرع عربي', _s(row['branch_name']), width: 210),
             editing ? inputCell('اسم الفرع إنجليزي', 'branch_name_en', width: 210) : textCell('اسم الفرع إنجليزي', _s(row['branch_name_en']), width: 210),
           ])),
