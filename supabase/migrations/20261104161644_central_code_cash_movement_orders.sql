@@ -1,3 +1,3 @@
--- Cash movement and treasury order code triggers are consolidated into 20261104154709_central_code_generation.sql.
--- This no-op migration preserves the applied remote migration history.
+-- Historical refinement superseded: cash movement and cash order numbers are GENERATED ALWAYS expressions.
+-- They intentionally remain outside configurable code policies; no additional DDL is required.
 select 1;
