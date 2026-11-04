@@ -97,8 +97,15 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       e['is_active'] == true && (e['contract_type'] == 'بعقد') &&
       _asDate(e['contract_end_date']) == null).length;
 
+  Map<String, dynamic>? _jobForEmployee(Map<String, dynamic> employee) {
+    for (final job in _jobs) {
+      if (job['id']?.toString() == employee['job_id']?.toString()) return job;
+    }
+    return null;
+  }
+
   int get _employeesMissingRequiredDocuments => _employees.where((employee) {
-    final job = _jobs.where((j) => j['id']?.toString() == employee['job_id']?.toString()).firstOrNull;
+    final job = _jobForEmployee(employee);
     if (job == null) return false;
     final required = <String, String>{
       'requires_photo': 'personal_id',
