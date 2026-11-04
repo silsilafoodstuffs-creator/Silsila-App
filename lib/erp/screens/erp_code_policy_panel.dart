@@ -49,8 +49,6 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'cash_receipt','name':'سندات القبض','prefix':'Rcp','digits':'5'},
     {'key':'cash_payment','name':'سندات الصرف','prefix':'Pay','digits':'5'},
     {'key':'cash_transfer','name':'سندات التحويل','prefix':'Trf','digits':'5'},
-    {'key':'cash_movement','name':'الحركات النقدية','prefix':'Cmv','digits':'5'},
-    {'key':'cash_order','name':'أوامر الخزينة','prefix':'Cso','digits':'5'},
   ];
 
   final _db = Supabase.instance.client;
