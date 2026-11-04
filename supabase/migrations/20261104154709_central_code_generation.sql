@@ -89,6 +89,11 @@ begin
     when 'erp_hr_job_grades' then v_key := 'grade'; v_column := 'grade_code';
     when 'erp_payroll_runs' then v_key := 'payroll_run'; v_column := 'run_code';
     when 'erp_hr_salary_elements' then v_key := 'salary_element'; v_column := 'element_code';
+    when 'erp_item_unit_catalog' then v_key := 'unit'; v_column := 'unit_code';
+    when 'erp_payment_methods' then v_key := 'payment_method'; v_column := 'payment_method_code';
+    when 'erp_hr_shifts' then v_key := 'shift'; v_column := 'shift_code';
+    when 'erp_commission_plans' then v_key := 'commission_plan'; v_column := 'plan_code';
+    when 'erp_sales_fulfillment_documents' then v_key := 'sales_fulfillment'; v_column := 'manual_number';
     else raise exception 'نوع سجل غير مدعوم في التكويد المركزي: %', tg_table_name;
   end case;
 
@@ -115,6 +120,11 @@ begin
       when 'grade' then 'Grd'
       when 'payroll_run' then 'Pay'
       when 'salary_element' then 'Sal'
+      when 'unit' then 'Unt'
+      when 'payment_method' then 'Pmt'
+      when 'shift' then 'Shf'
+      when 'commission_plan' then 'Com'
+      when 'sales_fulfillment' then 'Ful'
       when 'delegate' then 'Del'
       when 'sales_invoice' then 'Siv'
       when 'sales_order' then 'Sor'
@@ -160,7 +170,9 @@ begin
       ('erp_item_categories'), ('erp_cost_centers'), ('erp_price_lists'),
       ('erp_accounts'), ('erp_cashboxes'), ('erp_parties'),
       ('erp_hr_departments'), ('erp_hr_jobs'), ('erp_hr_work_locations'),
-      ('erp_hr_job_grades'), ('erp_payroll_runs'), ('erp_hr_salary_elements'), ('erp_sales_representatives'),
+      ('erp_hr_job_grades'), ('erp_payroll_runs'), ('erp_hr_salary_elements'),
+      ('erp_item_unit_catalog'), ('erp_payment_methods'), ('erp_hr_shifts'), ('erp_commission_plans'),
+      ('erp_sales_fulfillment_documents'), ('erp_sales_representatives'),
       ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers')
     ) as t(table_name)
   loop
@@ -298,6 +310,11 @@ begin
     when 'grade' then v_table := 'erp_hr_job_grades'; v_column := 'grade_code'; v_prefix := 'Grd';
     when 'payroll_run' then v_table := 'erp_payroll_runs'; v_column := 'run_code'; v_prefix := 'Pay';
     when 'salary_element' then v_table := 'erp_hr_salary_elements'; v_column := 'element_code'; v_prefix := 'Sal';
+    when 'unit' then v_table := 'erp_item_unit_catalog'; v_column := 'unit_code'; v_prefix := 'Unt';
+    when 'payment_method' then v_table := 'erp_payment_methods'; v_column := 'payment_method_code'; v_prefix := 'Pmt';
+    when 'shift' then v_table := 'erp_hr_shifts'; v_column := 'shift_code'; v_prefix := 'Shf';
+    when 'commission_plan' then v_table := 'erp_commission_plans'; v_column := 'plan_code'; v_prefix := 'Com';
+    when 'sales_fulfillment' then v_table := 'erp_sales_fulfillment_documents'; v_column := 'manual_number'; v_prefix := 'Ful';
     when 'delegate' then v_table := 'erp_sales_representatives'; v_column := 'rep_code'; v_prefix := 'Del';
     when 'sales_invoice' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Siv';
     when 'sales_order' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Sor';
