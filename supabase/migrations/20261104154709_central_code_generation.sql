@@ -371,6 +371,9 @@ drop trigger if exists erp_permission_templates_central_display_code on public.e
 create trigger erp_permission_templates_central_display_code
 before insert or update of company_id, template_code on public.erp_permission_templates
 for each row execute function public.erp_set_permission_template_display_code();
+-- Remove legacy display-code triggers so they cannot overwrite the configured prefixes.
+drop trigger if exists erp_user_types_display_code_trigger on public.erp_user_types;
+drop trigger if exists erp_permission_templates_display_code_trigger on public.erp_permission_templates;
 revoke all on function public.erp_set_user_type_display_code() from public, anon, authenticated;
 revoke all on function public.erp_set_permission_template_display_code() from public, anon, authenticated;
 
