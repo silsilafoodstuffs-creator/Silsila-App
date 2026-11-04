@@ -13,12 +13,7 @@ void main() {
     test('converts Arabic-Indic digits to ASCII', () {
       expect(
         ErpWhatsappContactsRepository.normalizePhone('٠١٠ ١٢٣٤ ٥٦٧٨'),
-        '٠١٠١٢٣٤٥٦٧٨'.replaceAllMapped(
-          RegExp(r'[٠-٩]'),
-          (match) => String.fromCharCode(
-            0x30 + match.group(0)!.runes.first - 0x0660,
-          ),
-        ),
+        '01012345678',
       );
     });
 
