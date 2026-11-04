@@ -158,9 +158,12 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
   }
 
   Future<String> _newCode() async {
+    final db = _db;
+    final companyId = (_activeCompanyId ?? widget.companyId ?? '').trim();
+    if (db == null || companyId.isEmpty) return 'Cst00001';
     try {
-      final value = await _db.rpc('erp_preview_next_central_code', params: {
-        'p_company_id': company, 'p_entity_key': 'cost_center',
+      final value = await db.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': companyId, 'p_entity_key': 'cost_center',
       });
       return value.toString();
     } catch (_) { return 'Cst00001'; }
