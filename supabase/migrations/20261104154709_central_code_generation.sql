@@ -337,6 +337,8 @@ begin
   case p_entity_key
     when 'employee' then v_table := 'erp_employees'; v_column := 'employee_code'; v_prefix := 'Emp';
     when 'user' then v_table := 'erp_users'; v_column := 'user_code'; v_prefix := 'Usr';
+    when 'user_type' then v_table := 'erp_user_types'; v_column := 'type_code_display'; v_prefix := 'Typ';
+    when 'permission_template' then v_table := 'erp_permission_templates'; v_column := 'template_code_display'; v_prefix := 'Tpl';
     when 'branch' then v_table := 'erp_branches'; v_column := 'branch_code'; v_prefix := 'Brn';
     when 'warehouse' then v_table := 'erp_warehouses'; v_column := 'warehouse_code'; v_prefix := 'Whs';
     when 'category' then v_table := 'erp_item_categories'; v_column := 'category_code'; v_prefix := 'Cat';
