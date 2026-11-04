@@ -261,7 +261,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
       const SizedBox(height: 10),
       Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Text('إنشاء قائمة جديدة', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-        TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود القائمة *')),
+        TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'كود القائمة (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم القائمة *')),
         TextField(controller: _notes, decoration: const InputDecoration(labelText: 'ملاحظات')),
         DropdownButtonFormField<String>(
