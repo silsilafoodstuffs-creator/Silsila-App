@@ -509,7 +509,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
 
   Future<void> _post(Map<String, dynamic> entry) async {
     final id = _str(entry, 'id');
-    final number = _str(entry, 'entry_number');
+    final number = _entryNumber(entry);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -550,7 +550,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       content: SizedBox(width: 760, child: _entries.isEmpty ? const Text('لا توجد قيود محمّلة.')
         : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _entries.take(100).map((entry) => ListTile(
           dense: true, leading: const Icon(Icons.receipt_long_outlined, color: Color(0xFF3E007D)),
-          title: Text('قيد ${_str(entry, 'entry_number')} — ${_str(entry, 'description')}'),
+          title: Text('قيد ${_entryNumber(entry)} — ${_str(entry, 'description')}'),
           subtitle: Text('التاريخ: ${_str(entry, 'entry_date')} • الحالة: ${_str(entry, 'status')}'),
           onTap: () { Navigator.pop(ctx); _showEntryDetails(entry); },
         )).toList()))),
@@ -634,7 +634,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                     color: posted ? Colors.green : const Color(0xFF3E007D),
                   ),
                 ),
-                title: Text('قيد رقم ${_str(entry, 'entry_number')} — ${_str(entry, 'description')}'),
+                title: Text('قيد رقم ${_entryNumber(entry)} — ${_str(entry, 'description')}'),
                 subtitle: Text(
                   'التاريخ: ${_str(entry, 'entry_date')} • الحالة: ${status == 'posted' ? 'مرحّل' : status == 'reversed' ? 'معكوس' : 'مسودة'}',
                 ),
