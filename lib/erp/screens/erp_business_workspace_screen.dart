@@ -16,6 +16,9 @@ class _ErpBusinessWorkspaceScreenState extends State<ErpBusinessWorkspaceScreen>
   final _db = Supabase.instance.client;
   List<Map<String, dynamic>> _workspaces = [];
   List<Map<String, dynamic>> _activityTypes = [];
+  List<Map<String, dynamic>> _unlinkedAccounts = [];
+  final Map<String, String> _candidateActivities = {};
+  String? _linkingProfileId;
   Map<String, dynamic>? _selected;
   bool _loading = true;
   bool _platformObserver = false;
@@ -185,11 +188,20 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       final observerResult = await _db.rpc('erp_is_silsila_workspace_observer');
       _platformObserver = observerResult == true;
       final activityRows = await _safeRows(() => _db.from('activity_types').select('code,name,name_en').eq('is_active',true).order('name'));
+      final unlinkedRows = _platformObserver ? await _safeRows(() => _db.rpc('erp_admin_list_unlinked_activity_accounts')) : <Map<String, dynamic>>[];
+      for (final account in unlinkedRows) {
+        final profileId = account['profile_id']?.toString() ?? '';
+        if (profileId.isEmpty) continue;
+        final currentActivity = account['activity_type']?.toString();
+        final matching = activityRows.where((a) => a['code']?.toString() == currentActivity || a['name']?.toString() == currentActivity);
+        _candidateActivities.putIfAbsent(profileId, () => matching.isNotEmpty ? matching.first['code'].toString() : (activityRows.isNotEmpty ? activityRows.first['code'].toString() : ''));
+      }
       final baseQuery = _db.from('erp_business_workspaces').select().eq('is_active', true);
       final rows = _platformObserver ? await baseQuery.order('created_at') : await baseQuery.or('owner_user_id.eq.$currentUserId,linked_profile_id.eq.$currentUserId').order('created_at');
       if (!mounted) return;
       setState(() {
         _activityTypes = activityRows;
+        _unlinkedAccounts = unlinkedRows;
         _workspaces = List<Map<String, dynamic>>.from(rows);
         if (_selected != null) {
           final matches = _workspaces.where((w) => w['id'] == _selected!['id']);
@@ -204,6 +216,28 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     } catch (e) {
       if (!mounted) return;
       setState(() { _loading = false; _error = 'تعذر تحميل مساحات إدارة النشاط: $e'; });
+    }
+  }
+
+  Future<void> _linkExistingActivityAccount(Map<String, dynamic> account) async {
+    final profileId = account['profile_id']?.toString();
+    final activityCode = profileId == null ? null : _candidateActivities[profileId];
+    if (profileId == null || activityCode == null || activityCode.isEmpty) {
+      _message('اختر النشاط المسجل بالفعل في سلسلة أولاً.');
+      return;
+    }
+    setState(() => _linkingProfileId = profileId);
+    try {
+      await _db.rpc('erp_admin_link_existing_activity_account', params: {
+        'p_profile_id': profileId,
+        'p_activity_code': activityCode,
+      });
+      _message('تم اعتماد الحساب وربطه بالنشاط الموجود في سلسلة. مساحة النشاط جاهزة للفتح.');
+      await _load();
+    } catch (error) {
+      _message('تعذر ربط الحساب: $error');
+    } finally {
+      if (mounted) setState(() => _linkingProfileId = null);
     }
   }
 
@@ -1053,10 +1087,80 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     },
   );
 
-  Widget _noWorkspace() => Center(child: ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 480),
-    child: _emptyState('لا يوجد نشاط مرتبط بهذا الحساب حتى الآن. إدارة نشاطي لا تنشئ نشاطاً جديداً؛ يجب ربطها بالنشاط المسجل بالفعل في سلسلة بواسطة الإدارة المختصة.'),
-  ));
+  Widget _noWorkspace() {
+    if (_platformObserver) return _adminLinkPanel();
+    return Center(child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 520),
+      child: _emptyState('لا يوجد نشاط مرتبط بحسابك حتى الآن. لم يتم إنشاء نشاط جديد. اطلب من إدارة سلسلة اعتماد حسابك وربطه بنوع النشاط المسجل بالفعل، ثم سجّل الخروج وادخل مرة أخرى.'),
+    ));
+  }
+
+  Widget _adminLinkPanel() => SingleChildScrollView(
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Card(
+          elevation: 0,
+          color: const Color(0xFFF8F4FC),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18), side: const BorderSide(color: Color(0xFFE5D9F0))),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Row(children: [
+                  Icon(Icons.admin_panel_settings_outlined, color: _workspacePurple, size: 28),
+                  SizedBox(width: 9),
+                  Expanded(child: Text('ربط حساب قائم بنشاط مسجل', style: TextStyle(color: _workspacePurple, fontSize: 19, fontWeight: FontWeight.w900))),
+                ]),
+                const SizedBox(height: 8),
+                const Text('هذه شاشة اعتماد وربط فقط؛ لا تنشئ نشاطاً جديداً ولا تنسخ بيانات الأصناف. اختر حساب العميل أو المورد المسجل بالفعل، ثم اربطه بنوع النشاط الموجود في دليل أنشطة سلسلة. سيظل حساب إدارة سلسلة للمعاينة والمتابعة فقط.',
+                  style: TextStyle(fontSize: 12, height: 1.7, color: Colors.black87)),
+                const SizedBox(height: 14),
+                if (_unlinkedAccounts.isEmpty)
+                  const Text('لا توجد حالياً حسابات عملاء أو موردين غير مرتبطة. بعد تسجيل حساب قائم سيظهر هنا إذا كان مؤهلاً للربط.', style: TextStyle(fontSize: 13, height: 1.6))
+                else
+                  ..._unlinkedAccounts.map((account) {
+                    final profileId = account['profile_id']?.toString() ?? '';
+                    final name = account['full_name']?.toString() ?? 'حساب بدون اسم';
+                    final phone = account['phone']?.toString() ?? '';
+                    final kind = account['account_type']?.toString() == 'supplier' ? 'مورد' : account['account_type']?.toString() == 'customer' ? 'عميل' : (account['role']?.toString() ?? 'حساب');
+                    final selectedCode = _candidateActivities[profileId];
+                    final busy = _linkingProfileId == profileId;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(13),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE9E1F0))),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                        Text('$name • $kind', style: const TextStyle(color: _workspacePurple, fontWeight: FontWeight.w900, fontSize: 14)),
+                        if (phone.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Text(phone, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.black54, fontSize: 12))),
+                        Padding(padding: const EdgeInsets.only(top: 3), child: Text('الحالة الحالية: ${account['account_status'] ?? 'غير محددة'}', style: const TextStyle(color: Colors.black54, fontSize: 11))),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          value: _activityTypes.any((a) => a['code']?.toString() == selectedCode) ? selectedCode : null,
+                          isExpanded: true,
+                          decoration: const InputDecoration(labelText: 'النشاط المسجل في سلسلة', border: OutlineInputBorder(), isDense: true),
+                          items: _activityTypes.map((a) => DropdownMenuItem<String>(value: a['code']?.toString(), child: Text(a['name']?.toString() ?? a['code']?.toString() ?? '', overflow: TextOverflow.ellipsis))).toList(),
+                          onChanged: busy ? null : (value) { if (value != null && mounted) setState(() => _candidateActivities[profileId] = value); },
+                        ),
+                        const SizedBox(height: 10),
+                        Align(alignment: AlignmentDirectional.centerStart, child: FilledButton.icon(
+                          onPressed: busy || selectedCode == null ? null : () => _linkExistingActivityAccount(account),
+                          style: FilledButton.styleFrom(backgroundColor: _workspacePurple, foregroundColor: Colors.white),
+                          icon: busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.link_rounded),
+                          label: Text(busy ? 'جارٍ الربط...' : 'اعتماد الحساب وربطه'),
+                        )),
+                      ]),
+                    );
+                  }),
+                Align(alignment: AlignmentDirectional.centerEnd, child: OutlinedButton.icon(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh), label: const Text('تحديث الحسابات'))),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 
   Widget _emptyState(String text, {bool showRetry = false}) => Center(child: Column(
     mainAxisSize: MainAxisSize.min, children: [
