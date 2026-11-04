@@ -1260,6 +1260,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Expanded(child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
+          ListTile(
+            dense: true,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            selected: _page == 'إدارة نشاطي',
+            selectedTileColor: const Color(0xFF7040A0),
+            leading: const Icon(Icons.storefront_rounded, color: _orange, size: 21),
+            title: const Text('إدارة نشاطي', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
+            subtitle: const Text('مساحة النشاط المرتبطة بحسابك', style: TextStyle(color: Colors.white70, fontSize: 10)),
+            onTap: () => _open('إدارة نشاط', 'بيانات أساسية', 'إدارة نشاطي'),
+          ),
+          const Divider(color: Colors.white24, height: 8),
           ..._modules.entries.map((moduleEntry) {
             final name = moduleEntry.key;
             final moduleOpen = _expandedModules.contains(name);
