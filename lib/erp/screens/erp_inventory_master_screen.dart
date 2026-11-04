@@ -232,7 +232,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   Future<void> _createWarehouse() async {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      final generatedWarehouseCode = await _repo.createWarehouse(companyId: _company.text, code: '',
+      final generatedWarehouseCode = await _repo.createWarehouse(companyId: _company.text,
         name: _warehouseName.text, branchId: _branchId, address: _address.text,
         nameEn: _warehouseNameEn.text, parentWarehouseId: _parentWarehouseId,
         location: _warehouseLocation.text, phone: _warehousePhone.text, landline: _warehouseLandline.text,
