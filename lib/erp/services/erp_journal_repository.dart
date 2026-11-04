@@ -32,7 +32,7 @@ class ErpJournalRepository {
     }
     final rows = await _db
         .from('erp_journal_entries')
-        .select('id, company_id, entry_number, entry_date, description, status, source_type, posted_at, created_at')
+        .select('id, company_id, entry_number, entry_number_display, entry_date, description, status, source_type, posted_at, created_at')
         .eq('company_id', companyId.trim())
         .order('entry_date', ascending: false)
         .order('entry_number', ascending: false)
