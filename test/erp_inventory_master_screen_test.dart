@@ -20,7 +20,8 @@ void main() {
     expect(find.byType(ListView), findsOneWidget);
     expect(find.text('بيانات المخازن'), findsOneWidget);
     expect(find.text('تحديث'), findsOneWidget);
-    expect(find.text('كود المخزن *'), findsOneWidget);
+    final warehouseCode = tester.widget<TextField>(find.byWidgetPredicate((widget) => widget is TextField && widget.decoration?.labelText == 'كود المخزن'));
+    expect(warehouseCode.enabled, isFalse);
     expect(find.text('اسم المخزن عربي *'), findsOneWidget);
     expect(find.textContaining('لم يتم العثور على شركة نشطة'), findsOneWidget);
   });
@@ -40,7 +41,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('بيانات الأصناف'), findsOneWidget);
-    expect(find.text('كود الصنف *'), findsOneWidget);
+    final itemCode = tester.widget<TextField>(find.byWidgetPredicate((widget) => widget is TextField && widget.decoration?.labelText == 'كود الصنف'));
+    expect(itemCode.enabled, isFalse);
+    expect(find.text('الفئة الثانوية للصنف *'), findsOneWidget);
     expect(find.text('اسم الصنف *'), findsOneWidget);
     expect(find.text('الوحدة الكبرى'), findsOneWidget);
   });
