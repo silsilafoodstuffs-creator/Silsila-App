@@ -83,7 +83,11 @@ class _ErpFacebookGroupLeadsScreenState
       path = path.substring(0, path.length - 1);
     }
     if (path.isEmpty) path = '/';
-    return Uri.https(host, path).toString();
+    return Uri.https(host, path, uri.queryParameters).toString();
+  }
+
+  String _facebookGroupUrl(String value) {
+    return Uri.parse(_facebookUrl(value)).replace(query: '', fragment: '').toString();
   }
 
   Future<void> _load() async {
@@ -299,7 +303,7 @@ class _ErpFacebookGroupLeadsScreenState
       await _db!.from('erp_crm_facebook_groups').insert({
         'company_id': widget.companyId,
         'group_name': values['field_0'],
-        'group_url': _facebookUrl(values['field_1']!),
+        'group_url': _facebookGroupUrl(values['field_1']!),
         'notes': values['field_2'],
         'created_by': _db!.auth.currentUser?.id,
       });
@@ -381,9 +385,7 @@ class _ErpFacebookGroupLeadsScreenState
             'company_id': widget.companyId,
             'display_name': values['field_0'],
             'profile_url': profileUrl,
-            'profile_url_normalized': Uri.parse(profileUrl)
-                .replace(query: '', fragment: '')
-                .toString(),
+            'profile_url_normalized': Uri.parse(profileUrl).replace(fragment: '').toString(),
             'avatar_url': avatar.isEmpty ? null : avatar,
             'classification': values['classification'],
             'notes': values['field_3'],
@@ -481,7 +483,7 @@ class _ErpFacebookGroupLeadsScreenState
         'display_name': values['field_0'],
         'profile_url': profileUrl,
         'profile_url_normalized':
-            Uri.parse(profileUrl).replace(query: '', fragment: '').toString(),
+            Uri.parse(profileUrl).replace(fragment: '').toString(),
         'avatar_url': avatar.isEmpty ? null : avatar,
         'classification': values['classification'],
         'notes': values['field_3'],
@@ -694,7 +696,7 @@ class _ErpFacebookGroupLeadsScreenState
       await _save(() async {
         for (final row in importedRows) {
           final profileUrl = _facebookUrl(row[1]);
-          final groupUrl = _facebookUrl(row[3]);
+          final groupUrl = _facebookGroupUrl(row[3]);
 
           final profile = await _db!
               .from('erp_crm_facebook_profiles')
@@ -702,9 +704,7 @@ class _ErpFacebookGroupLeadsScreenState
                 'company_id': widget.companyId,
                 'display_name': row[0],
                 'profile_url': profileUrl,
-                'profile_url_normalized': Uri.parse(profileUrl)
-                    .replace(query: '', fragment: '')
-                    .toString(),
+                'profile_url_normalized': Uri.parse(profileUrl).replace(fragment: '').toString(),
                 'classification': 'غير محدد',
                 'source_method': 'xlsx_import',
                 'created_by': _db!.auth.currentUser?.id,
