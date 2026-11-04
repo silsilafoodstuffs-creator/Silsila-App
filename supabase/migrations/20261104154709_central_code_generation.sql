@@ -5,6 +5,8 @@ begin;
 -- Convert previously computed cash identifiers into writable text fields; keep existing values unchanged.
 alter table public.erp_cash_movements alter column movement_number drop expression;
 alter table public.erp_cash_orders alter column order_number drop expression;
+alter table public.erp_user_classifications add column if not exists classification_code_display text;
+alter table public.erp_journal_entries add column if not exists entry_number_display text;
 
 create or replace function public.erp_code_policy_config(
   p_company_id uuid, p_key text, p_default_prefix text, p_default_digits integer
@@ -28,6 +30,21 @@ begin
 end;
 $$;
 revoke all on function public.erp_code_policy_config(uuid,text,text,integer) from public, anon, authenticated;
+
+update public.erp_user_classifications uc
+set classification_code_display = cfg.prefix || lpad(uc.classification_code::text, cfg.digits, '0')
+from lateral public.erp_code_policy_config(uc.company_id, 'user_classification', 'Cls', 5) cfg
+where uc.classification_code_display is null or uc.classification_code_display = '';
+update public.erp_journal_entries je
+set entry_number_display = cfg.prefix || lpad(je.entry_number::text, cfg.digits, '0')
+from lateral public.erp_code_policy_config(je.company_id, 'journal_entry', 'Jrn', 5) cfg
+where je.entry_number_display is null or je.entry_number_display = '';
+create unique index if not exists erp_user_classifications_display_code_uidx
+  on public.erp_user_classifications(company_id, classification_code_display);
+create unique index if not exists erp_journal_entries_display_number_uidx
+  on public.erp_journal_entries(company_id, entry_number_display);
+alter table public.erp_user_classifications alter column classification_code_display set not null;
+alter table public.erp_journal_entries alter column entry_number_display set not null;
 
 create or replace function public.erp_assign_central_code()
 returns trigger
@@ -100,6 +117,8 @@ begin
     when 'erp_hr_shifts' then v_key := 'shift'; v_column := 'shift_code';
     when 'erp_commission_plans' then v_key := 'commission_plan'; v_column := 'plan_code';
     when 'erp_sales_fulfillment_documents' then v_key := 'sales_fulfillment'; v_column := 'manual_number';
+    when 'erp_user_classifications' then v_key := 'user_classification'; v_column := 'classification_code_display';
+    when 'erp_journal_entries' then v_key := 'journal_entry'; v_column := 'entry_number_display';
     else raise exception 'نوع سجل غير مدعوم في التكويد المركزي: %', tg_table_name;
   end case;
 
@@ -131,6 +150,8 @@ begin
       when 'shift' then 'Shf'
       when 'commission_plan' then 'Com'
       when 'sales_fulfillment' then 'Ful'
+      when 'user_classification' then 'Cls'
+      when 'journal_entry' then 'Jrn'
       when 'delegate' then 'Del'
       when 'sales_invoice' then 'Siv'
       when 'sales_order' then 'Sor'
@@ -180,7 +201,7 @@ begin
       ('erp_hr_departments'), ('erp_hr_jobs'), ('erp_hr_work_locations'),
       ('erp_hr_job_grades'), ('erp_payroll_runs'), ('erp_hr_salary_elements'),
       ('erp_item_unit_catalog'), ('erp_payment_methods'), ('erp_hr_shifts'), ('erp_commission_plans'),
-      ('erp_sales_fulfillment_documents'), ('erp_sales_representatives'),
+      ('erp_sales_fulfillment_documents'), ('erp_user_classifications'), ('erp_journal_entries'), ('erp_sales_representatives'),
       ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers'),
       ('erp_cash_movements'), ('erp_cash_orders')
     ) as t(table_name)
@@ -324,6 +345,8 @@ begin
     when 'shift' then v_table := 'erp_hr_shifts'; v_column := 'shift_code'; v_prefix := 'Shf';
     when 'commission_plan' then v_table := 'erp_commission_plans'; v_column := 'plan_code'; v_prefix := 'Com';
     when 'sales_fulfillment' then v_table := 'erp_sales_fulfillment_documents'; v_column := 'manual_number'; v_prefix := 'Ful';
+    when 'user_classification' then v_table := 'erp_user_classifications'; v_column := 'classification_code_display'; v_prefix := 'Cls';
+    when 'journal_entry' then v_table := 'erp_journal_entries'; v_column := 'entry_number_display'; v_prefix := 'Jrn';
     when 'delegate' then v_table := 'erp_sales_representatives'; v_column := 'rep_code'; v_prefix := 'Del';
     when 'sales_invoice' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Siv';
     when 'sales_order' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Sor';
