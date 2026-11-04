@@ -278,7 +278,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('إنشاء مسودة مسير', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-            TextField(controller: _runCode, decoration: const InputDecoration(labelText: 'كود المسير *')),
+            TextField(controller: _runCode, readOnly: true, decoration: const InputDecoration(labelText: 'كود المسير (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
             const SizedBox(height: 8),
             OutlinedButton(onPressed: () => _pickDate(true), child: Text('بداية الفترة: ${_date(_periodStart)}')),
             OutlinedButton(onPressed: () => _pickDate(false), child: Text('نهاية الفترة: ${_date(_periodEnd)}')),
