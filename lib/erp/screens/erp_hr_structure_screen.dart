@@ -89,6 +89,9 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     _code.clear(); _ar.clear(); _en.clear();
     final isLocation = kind == 'location';
     final isJob = kind == 'job';
+    if (!isLocation && _db != null && _companyId.isNotEmpty) {
+      try { _code.text = (await _db!.rpc('erp_preview_next_central_code', params: {'p_company_id': _companyId, 'p_entity_key': isJob ? 'job' : 'department'})).toString(); } catch (_) {}
+    }
     String? selectedDepartmentId;
     String? selectedGradeId;
     String? selectedParentId;
@@ -166,7 +169,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final saved = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
       title: const Text('تعديل البيانات الأساسية'),
       content: SizedBox(width: 440, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _code, decoration: const InputDecoration(labelText: 'الكود')),
+        TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'الكود (غير قابل للتعديل)')),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'الاسم بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية')),
       ])),
@@ -453,7 +456,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final saved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('تعديل الدرجة الوظيفية'),
       content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود الدرجة')),
+        TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الدرجة (تلقائي)')),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'اسم الدرجة بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'اسم الدرجة بالإنجليزية')),
         TextField(controller: rank, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ترتيب الدرجة')),
