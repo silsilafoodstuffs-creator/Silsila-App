@@ -155,7 +155,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
             return;
           }
           try {
-            final payload={'company_id':widget.companyId!.trim(),'element_code':code.text.trim().toUpperCase(),'name_ar':ar.text.trim(),'name_en':en.text.trim(),'element_type':type,'value_mode':mode,'nature':nature,'default_value':numeric.toStringAsFixed(3),'show_on_payslip':show,'is_active':active,'updated_at':DateTime.now().toUtc().toIso8601String()};
+            final payload={'company_id':widget.companyId!.trim(),'element_code':row==null ? '' : _s(row['element_code']),'name_ar':ar.text.trim(),'name_en':en.text.trim(),'element_type':type,'value_mode':mode,'nature':nature,'default_value':numeric.toStringAsFixed(3),'show_on_payslip':show,'is_active':active,'updated_at':DateTime.now().toUtc().toIso8601String()};
             if(row==null) await _db.from('erp_hr_salary_elements').insert(payload);
             else await _db.from('erp_hr_salary_elements').update(payload).eq('id',_s(row['id'])).eq('company_id',widget.companyId!.trim());
             if(ctx.mounted)Navigator.pop(ctx);
