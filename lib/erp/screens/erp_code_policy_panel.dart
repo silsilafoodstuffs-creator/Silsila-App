@@ -64,7 +64,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   String _preview(String key) {
     final p = _prefix[key]!.text.trim();
     final n = int.tryParse(_digits[key]!.text) ?? 5;
-    return '$p ${List<String>.filled(n.clamp(1, 12), '0').join()}';
+    return '$p ${List<String>.filled(n.clamp(1, 12).toInt(), '0').join()}';
   }
 
   Future<void> _load() async {
