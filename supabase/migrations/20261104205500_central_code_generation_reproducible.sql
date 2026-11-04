@@ -626,4 +626,7 @@ CREATE TRIGGER erp_users_central_code BEFORE INSERT ON public.erp_users FOR EACH
 drop trigger if exists erp_warehouses_central_code on public.erp_warehouses;
 CREATE TRIGGER erp_warehouses_central_code BEFORE INSERT ON public.erp_warehouses FOR EACH ROW EXECUTE FUNCTION erp_assign_central_code();
 
+drop trigger if exists erp_items_hierarchical_code on public.erp_items;
+create trigger erp_items_hierarchical_code before insert on public.erp_items
+for each row execute function public.erp_assign_item_hierarchical_code();
 commit;
