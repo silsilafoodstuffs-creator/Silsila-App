@@ -78,6 +78,22 @@ class ErpWhatsappContactsRepository {
     await _db.from('erp_whatsapp_import_contacts').delete().inFilter('id', ids);
   }
 
-  static String normalizePhone(String value) => value.replaceAll(RegExp(r'[^0-9+]'), '');
+  static String normalizePhone(String value) {
+    final converted = StringBuffer();
+    for (final rune in value.runes) {
+      if (rune >= 0x0660 && rune <= 0x0669) {
+        converted.write(String.fromCharCode(0x30 + rune - 0x0660));
+      } else if (rune >= 0x06F0 && rune <= 0x06F9) {
+        converted.write(String.fromCharCode(0x30 + rune - 0x06F0));
+      } else {
+        converted.write(String.fromCharCode(rune));
+      }
+    }
+    final normalized = converted.toString().trim();
+    final hasLeadingPlus = normalized.startsWith('+');
+    final digits = normalized.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return '';
+    return (hasLeadingPlus ? '+' : '') + digits;
+  }
   static String? _blank(String? value) => value == null || value.trim().isEmpty ? null : value.trim();
 }
