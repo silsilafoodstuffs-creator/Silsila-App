@@ -408,6 +408,8 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
   Future<Uint8List> _pdfBytes() async {
     final rows = _selected.isEmpty ? _visible : _rows.where((r) => _selected.contains(_id(r))).toList();
     if (rows.isEmpty) throw StateError('لا توجد سجلات للطباعة أو PDF.');
+    final reportDate = DateTime.now();
+    final dateLabel = reportDate.day.toString().padLeft(2, '0') + '-' + reportDate.month.toString().padLeft(2, '0') + '-' + reportDate.year.toString();
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
     final pdf = pw.Document();
     pdf.addPage(pw.MultiPage(
@@ -418,7 +420,7 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
         pw.Text('سلسلة — جهات اتصال واتساب', textAlign: pw.TextAlign.right,
           style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 6),
-        pw.Text('عدد السجلات: ' + rows.length.toString() + '    •    تاريخ التقرير: ' + DateTime.now().toIso8601String().substring(0, 10),
+        pw.Text('عدد السجلات: ' + rows.length.toString() + '    •    تاريخ التقرير: ' + dateLabel,
           textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
         pw.SizedBox(height: 12),
         pw.TableHelper.fromTextArray(
