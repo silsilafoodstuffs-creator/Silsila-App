@@ -1040,7 +1040,11 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       Text('إدارة نشاطي', style: TextStyle(color: _workspacePurple, fontWeight: FontWeight.w900, fontSize: 22)),
       Text('مساحة تشغيل مستقلة مرتبطة بمنصة سلسلة', style: TextStyle(color: Colors.black54, fontSize: 12)),
     ])),
-
+    if (_platformObserver) OutlinedButton.icon(
+      onPressed: () => setState(() => _area = 'ربط حساب قائم'),
+      icon: const Icon(Icons.link_rounded, size: 17),
+      label: const Text('ربط حساب قائم'),
+    ),
   ]);
 
   Widget _loadWarningBanner() => Card(
@@ -1172,6 +1176,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   ));
 
   Widget _areaView() {
+    if (_platformObserver && _area == 'ربط حساب قائم') return _adminLinkPanel();
     if (!_canOpenWorkspaceArea(_area)) return _workspacePermissionDenied(_area);
     if (_area == 'صرف وتوريد نقدية') return _cashMovementsView();
     if (_area == 'تحويلات وتسويات مخزنية') return _inventoryMovementsView();
