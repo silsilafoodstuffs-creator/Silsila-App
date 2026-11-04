@@ -96,7 +96,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final saved = await showDialog<bool>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
       title: Text(isLocation ? 'إضافة موقع عمل' : isJob ? 'إضافة وظيفة' : 'إضافة إدارة أو قسم'),
       content: SizedBox(width: 440, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'الكود (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
+        TextField(controller: _code, readOnly: !isLocation, decoration: InputDecoration(labelText: isLocation ? 'نوع الموقع (CENT للمركزي)' : 'الكود (تلقائي)', helperText: isLocation ? 'اكتب CENT لتحديد الموقع المركزي' : 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: const Icon(Icons.auto_awesome))),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'الاسم بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية')),
         if (!isJob && !isLocation) ...[
@@ -119,7 +119,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
         FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ')),
       ],
     )));
-    if (saved != true || _code.text.trim().isEmpty || _ar.text.trim().isEmpty || _db == null) return;
+    if (saved != true || _ar.text.trim().isEmpty || _db == null) return;
     if (!isJob && !isLocation && selectedDepartmentLevel != 'directorate' && selectedParentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر الإدارة الأب للقسم أو الإدارة الفرعية.')));
       return;
