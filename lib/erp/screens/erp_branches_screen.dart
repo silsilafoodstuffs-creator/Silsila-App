@@ -153,7 +153,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
           width: 430,
           child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: code, decoration: const InputDecoration(labelText: 'كود الفرع *', border: OutlineInputBorder())),
+              TextField(controller: code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الفرع (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', border: OutlineInputBorder(), prefixIcon: Icon(Icons.auto_awesome))),
               const SizedBox(height: 10),
               TextField(
                 controller: name,
