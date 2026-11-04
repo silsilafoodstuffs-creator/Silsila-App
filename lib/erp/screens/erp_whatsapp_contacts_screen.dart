@@ -4,6 +4,10 @@ import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../services/erp_whatsapp_contacts_repository.dart';
@@ -333,6 +337,130 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
     } finally { if (mounted) setState(() => _saving = false); }
   }
 
+  Future<void> _save() async {
+    await _load();
+    if (mounted) setState(() => _message = 'تم تحديث البيانات المحفوظة من قاعدة البيانات.');
+  }
+
+  Future<void> _edit() async {
+    if (_selected.length != 1) {
+      setState(() => _message = 'حدد جهة اتصال واحدة فقط للتعديل.');
+      return;
+    }
+    final id = _selected.first;
+    final row = _rows.firstWhere((item) => _id(item) == id);
+    final name = TextEditingController(text: _s(row['contact_name']));
+    final phone = TextEditingController(text: _s(row['phone']));
+    final group = TextEditingController(text: _s(row['group_name']));
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('تعديل جهة اتصال'),
+        content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الحساب أو المستخدم')),
+          TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'رقم الموبايل')),
+          TextField(controller: group, decoration: const InputDecoration(labelText: 'اسم الجروب / المصدر')),
+        ])),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ التعديل')),
+        ],
+      ),
+    );
+    if (accepted != true) { name.dispose(); phone.dispose(); group.dispose(); return; }
+    try {
+      setState(() => _saving = true);
+      await _repo.updateContact(id: id, contactName: name.text, phone: phone.text, groupName: group.text);
+      await _load();
+      if (mounted) setState(() => _message = 'تم تعديل جهة الاتصال.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تعديل جهة الاتصال: ' + e.toString());
+    } finally {
+      name.dispose(); phone.dispose(); group.dispose();
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _preview() async {
+    final rows = _selected.isEmpty ? _visible : _rows.where((r) => _selected.contains(_id(r))).toList();
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('معاينة جهات الاتصال (' + rows.length.toString() + ')'),
+        content: SizedBox(width: 560, height: 420, child: rows.isEmpty
+          ? const Center(child: Text('لا توجد سجلات للمعاينة.'))
+          : ListView.separated(
+              itemCount: rows.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (_, i) {
+                final row = rows[i];
+                return ListTile(
+                  title: Text(_s(row['contact_name']).isEmpty ? 'اسم غير مسجل' : _s(row['contact_name'])),
+                  subtitle: Text(_s(row['phone']) + ' • ' + _s(row['group_name']) + ' • ' + (_status(row) == 'consented' ? 'موافق' : _status(row) == 'declined' ? 'غير موافق' : 'بانتظار الموافقة')),
+                );
+              },
+            )),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))],
+      ),
+    );
+  }
+
+  Future<Uint8List> _pdfBytes() async {
+    final rows = _selected.isEmpty ? _visible : _rows.where((r) => _selected.contains(_id(r))).toList();
+    if (rows.isEmpty) throw StateError('لا توجد سجلات للطباعة أو PDF.');
+    final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+    final pdf = pw.Document();
+    pdf.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4.landscape,
+      margin: const pw.EdgeInsets.all(22),
+      theme: pw.ThemeData.withFont(base: font, bold: font),
+      build: (_) => [
+        pw.Text('سلسلة — جهات اتصال واتساب', textAlign: pw.TextAlign.right,
+          style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 6),
+        pw.Text('عدد السجلات: ' + rows.length.toString() + '    •    تاريخ التقرير: ' + DateTime.now().toIso8601String().substring(0, 10),
+          textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
+        pw.SizedBox(height: 12),
+        pw.TableHelper.fromTextArray(
+          headers: ['اسم الجروب', 'اسم الحساب أو المستخدم', 'رقم موبايل', 'م'],
+          data: rows.asMap().entries.map((entry) {
+            final row = entry.value;
+            return [_s(row['group_name']), _s(row['contact_name']), _s(row['phone']), (entry.key + 1).toString()];
+          }).toList(),
+          headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+          cellStyle: const pw.TextStyle(fontSize: 8),
+          cellAlignment: pw.Alignment.centerRight,
+          headerAlignment: pw.Alignment.centerRight,
+        ),
+      ],
+    ));
+    return Uint8List.fromList(await pdf.save());
+  }
+
+  Future<void> _print() async {
+    try {
+      setState(() => _saving = true);
+      final bytes = await _pdfBytes();
+      await Printing.layoutPdf(onLayout: (_) async => bytes, name: 'silsila_whatsapp_contacts.pdf');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذرت الطباعة: ' + e.toString());
+    } finally { if (mounted) setState(() => _saving = false); }
+  }
+
+  Future<void> _exportPdf() async {
+    try {
+      setState(() => _saving = true);
+      final bytes = await _pdfBytes();
+      await FileSaver.instance.saveFile(
+        name: 'silsila_whatsapp_contacts_' + DateTime.now().millisecondsSinceEpoch.toString(),
+        bytes: bytes, fileExtension: 'pdf', mimeType: MimeType.pdf,
+      );
+      if (mounted) setState(() => _message = 'تم تصدير ملف PDF.');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'تعذر تصدير PDF: ' + e.toString());
+    } finally { if (mounted) setState(() => _saving = false); }
+  }
+
   Widget _stat(String title, int value, IconData icon, Color color) => Expanded(
     child: Card(child: Padding(padding: const EdgeInsets.all(11), child: Row(children: [
       CircleAvatar(backgroundColor: color.withValues(alpha: .12), child: Icon(icon, color: color)),
@@ -358,13 +486,13 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
             SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
               _task('تحديث', Icons.refresh, Colors.blue, _loading ? null : _load),
               _task('إضافة', Icons.person_add_alt_1, Colors.green, _saving ? null : _importFile),
-              _task('حفظ', Icons.save_outlined, Colors.green, null),
-              _task('تعديل', Icons.edit_outlined, orange, null),
+              _task('حفظ', Icons.save_outlined, Colors.green, _saving ? null : _save),
+              _task('تعديل', Icons.edit_outlined, orange, _saving ? null : _edit),
               _task('حذف', Icons.delete_outline, Colors.red, _saving ? null : _delete),
-              _task('معاينة', Icons.visibility_outlined, const Color(0xFF7040A0), null),
-              _task('طباعة', Icons.print_outlined, Colors.blueGrey, null),
+              _task('معاينة', Icons.visibility_outlined, const Color(0xFF7040A0), _preview),
+              _task('طباعة', Icons.print_outlined, Colors.blueGrey, _saving ? null : _print),
               _task('Excel', Icons.table_view_outlined, Colors.green, _saving ? null : _export),
-              _task('PDF', Icons.picture_as_pdf_outlined, Colors.red, null),
+              _task('PDF', Icons.picture_as_pdf_outlined, Colors.red, _saving ? null : _exportPdf),
             ])),
           ],
         ))),
