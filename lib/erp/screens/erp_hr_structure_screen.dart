@@ -131,13 +131,13 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     try {
       if (isLocation) {
         await _db!.from('erp_hr_work_locations').insert({
-          'company_id': _companyId, 'location_code': _code.text.trim().toUpperCase(),
+          'company_id': _companyId, 'location_code': '',
           'name_ar': _ar.text.trim(), 'location_type': _code.text.toUpperCase().contains('CENT') ? 'central' : 'branch',
           'is_active': true,
         });
       } else if (isJob) {
         await _db!.from('erp_hr_jobs').insert({
-          'company_id': _companyId, 'job_code': _code.text.trim().toUpperCase(),
+          'company_id': _companyId, 'job_code': '',
           'name_ar': _ar.text.trim(), 'name_en': _en.text.trim(),
           'department_id': selectedDepartmentId,
           'grade_id': selectedGradeId,
@@ -146,7 +146,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
         });
       } else {
         await _db!.from('erp_hr_departments').insert({
-          'company_id': _companyId, 'department_code': _code.text.trim().toUpperCase(),
+          'company_id': _companyId, 'department_code': '',
           'name_ar': _ar.text.trim(), 'name_en': _en.text.trim(),
           'department_level': selectedDepartmentLevel,
           'parent_id': selectedDepartmentLevel == 'directorate' ? null : selectedParentId,
