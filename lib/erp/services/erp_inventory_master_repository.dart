@@ -102,7 +102,7 @@ class ErpInventoryMasterRepository {
   }
 
   Future<void> createWarehouse({
-    required String companyId, required String code, required String name,
+    required String companyId, required String name,
     String? branchId, String? address, String? nameEn, String? parentWarehouseId,
     String? location, String? phone, String? landline, String? governorateId, String? districtId, String? areaId,
   }) async {
