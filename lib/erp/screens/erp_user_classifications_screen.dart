@@ -210,7 +210,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
           onSelectChanged: (_) => _select(row),
           cells: [
             DataCell(Text('${i+1}')),
-            DataCell(Text(_s(row['classification_code']).isEmpty ? 'تلقائي عند الحفظ' : _s(row['classification_code']))),
+            DataCell(Text(_s(row['classification_code_display']).isEmpty ? 'تلقائي عند الحفظ' : _s(row['classification_code_display']))),
             DataCell(SizedBox(width: 210, child: TextField(controller: _arControllers[id], enabled: canEdit,
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم التصنيف بالعربية'),
               onTap: () => _select(row)))),
