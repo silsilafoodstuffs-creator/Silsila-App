@@ -27,8 +27,6 @@ alter table public.erp_user_types alter column type_code_display set not null;
 alter table public.erp_permission_templates alter column template_code_display set not null;
 alter table public.erp_user_classifications alter column classification_code_display set not null;
 alter table public.erp_journal_entries alter column entry_number_display set not null;
-create unique index if not exists erp_user_types_display_code_uidx on public.erp_user_types(company_id,type_code_display);
-create unique index if not exists erp_permission_templates_display_code_uidx on public.erp_permission_templates(company_id,template_code_display);
 create unique index if not exists erp_user_classifications_display_code_uidx on public.erp_user_classifications(company_id,classification_code_display);
 create unique index if not exists erp_journal_entries_display_number_uidx on public.erp_journal_entries(company_id,entry_number_display);
 create unique index if not exists erp_cash_movements_display_number_uidx on public.erp_cash_movements(company_id,movement_number) where movement_number is not null;
