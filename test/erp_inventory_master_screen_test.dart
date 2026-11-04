@@ -40,7 +40,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('بيانات الأصناف'), findsOneWidget);
-    expect(find.text('كود الصنف *'), findsOneWidget);
+    expect(find.text('كود الصنف'), findsOneWidget);
+    final itemCodeField = tester.widget<TextField>(find.byWidgetPredicate((widget) => widget is TextField && widget.decoration?.labelText == 'كود الصنف'));
+    expect(itemCodeField.enabled, isFalse);
+    expect(find.text('الفئة الثانوية للصنف *'), findsOneWidget);
     expect(find.text('اسم الصنف *'), findsOneWidget);
     expect(find.text('الوحدة الكبرى'), findsOneWidget);
   });
