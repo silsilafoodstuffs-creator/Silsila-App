@@ -47,24 +47,6 @@ jobs:
             echo "Existing Android Gradle project detected; preserving it."
           fi
 
-      - name: Configure resilient Maven Central mirror for Gradle
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.gradle/init.d"
-          cat > "$HOME/.gradle/init.d/silsila-maven-mirror.gradle" <<'GRADLE'
-          // Prefer Google's read-only Maven Central mirror when Maven Central returns 403.
-          gradle.beforeSettings { settings ->
-              settings.pluginManagement.repositories.maven {
-                  name = "GoogleHostedMavenCentralMirror"
-                  url = uri("https://maven-central.storage-download.googleapis.com/maven2/")
-              }
-          }
-
-          // Keep the mirror in pluginManagement only. Do not inject project
-          // repositories: Android settings may enforce FAIL_ON_PROJECT_REPOS.
-          GRADLE
-
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
