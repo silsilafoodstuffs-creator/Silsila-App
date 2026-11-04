@@ -40,6 +40,7 @@ begin
 
   case tg_table_name
     when 'erp_employees' then v_key:='employee'; v_column:='employee_code';
+    when 'erp_item_categories' then v_key:='category'; v_column:='category_code';
     when 'erp_users' then v_key:='user'; v_column:='user_code';
     when 'erp_branches' then v_key:='branch'; v_column:='branch_code';
     when 'erp_warehouses' then v_key:='warehouse'; v_column:='warehouse_code';
@@ -65,7 +66,7 @@ begin
       when 'account' then 'Acc' when 'cashbox' then 'Csh'
       when 'supplier' then 'Sup' when 'customer' then 'Cus'
       when 'department' then 'Dpt' when 'job' then 'Job'
-      when 'work_location' then 'Loc' else 'Gen' end, 5) c;
+      when 'work_location' then 'Loc' when 'category' then 'Cat' else 'Gen' end, 5) c;
 
   v_lock := v_company::text||':'||tg_table_name||':'||v_prefix;
   perform pg_advisory_xact_lock(hashtextextended(v_lock,0));
@@ -91,12 +92,13 @@ declare r record;
 begin
   for r in
     select * from (values
-      ('erp_employees'),('erp_users'),('erp_branches'),('erp_warehouses'),
+      ('erp_employees'),('erp_users'),('erp_branches'),('erp_warehouses'),('erp_item_categories'),
       ('erp_accounts'),('erp_cashboxes'),('erp_parties'),
       ('erp_hr_departments'),('erp_hr_jobs'),('erp_hr_work_locations')
     ) as t(table_name)
   loop
     if to_regclass('public.'||r.table_name) is not null then
+      if r.table_name='erp_users' then execute 'drop trigger if exists erp_users_assign_user_code on public.erp_users'; end if;
       execute format('drop trigger if exists %I on public.%I',r.table_name||'_central_code',r.table_name);
       execute format('create trigger %I before insert on public.%I for each row execute function public.erp_assign_central_code()',r.table_name||'_central_code',r.table_name);
     end if;
@@ -184,6 +186,7 @@ begin
     when 'department' then v_table:='erp_hr_departments'; v_column:='department_code'; v_prefix:='Dpt';
     when 'job' then v_table:='erp_hr_jobs'; v_column:='job_code'; v_prefix:='Job';
     when 'work_location' then v_table:='erp_hr_work_locations'; v_column:='location_code'; v_prefix:='Loc';
+    when 'category' then v_table:='erp_item_categories'; v_column:='category_code'; v_prefix:='Cat';
     else raise exception 'نوع التكويد غير مدعوم';
   end case;
   select c.prefix,c.digits into v_prefix,v_digits from public.erp_code_policy_config(p_company_id,p_entity_key,v_prefix,5) c;
@@ -203,5 +206,25 @@ $$;
 
 revoke all on function public.erp_preview_next_central_code(uuid,text) from public;
 grant execute on function public.erp_preview_next_central_code(uuid,text) to authenticated;
+
+-- Respect configured prefixes and digit widths for identity-backed code types.
+create or replace function public.erp_set_user_type_display_code()
+returns trigger language plpgsql security definer set search_path=public as $
+declare p text; d integer;
+begin
+  select prefix,digits into p,d from public.erp_code_policy_config(new.company_id,'user_type','Typ',5);
+  new.type_code_display := p||lpad(new.type_code::text,d,'0');
+  return new;
+end;
+$;
+create or replace function public.erp_set_permission_template_display_code()
+returns trigger language plpgsql security definer set search_path=public as $
+declare p text; d integer;
+begin
+  select prefix,digits into p,d from public.erp_code_policy_config(new.company_id,'permission_template','Tpl',5);
+  new.template_code_display := p||lpad(new.template_code::text,d,'0');
+  return new;
+end;
+$;
 
 commit;
