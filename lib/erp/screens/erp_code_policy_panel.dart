@@ -16,7 +16,6 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'user','name':'المستخدمون','prefix':'Usr','digits':'5'},
     {'key':'supplier','name':'الموردون','prefix':'Sup','digits':'5'},
     {'key':'customer','name':'العملاء','prefix':'Cus','digits':'5'},
-    {'key':'shipping_company','name':'شركات الشحن','prefix':'Shp','digits':'5'},
     {'key':'delegate','name':'المندوبون','prefix':'Del','digits':'5'},
     {'key':'branch','name':'الفروع','prefix':'Brn','digits':'5'},
     {'key':'warehouse','name':'المخازن','prefix':'Whs','digits':'5'},
@@ -44,7 +43,6 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'cash_receipt','name':'سندات القبض','prefix':'Rcp','digits':'5'},
     {'key':'cash_payment','name':'سندات الصرف','prefix':'Pay','digits':'5'},
     {'key':'cash_transfer','name':'سندات التحويل','prefix':'Trf','digits':'5'},
-    {'key':'journal_entry','name':'القيود اليومية','prefix':'Jrn','digits':'5'},
   ];
 
   final _db = Supabase.instance.client;
