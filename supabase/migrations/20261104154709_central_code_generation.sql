@@ -76,6 +76,8 @@ begin
         when 'return' then 'purchase_return'
         else 'purchase_invoice' end;
       v_column := 'document_number';
+    when 'erp_cash_movements' then v_key := 'cash_movement'; v_column := 'movement_number';
+    when 'erp_cash_orders' then v_key := 'cash_order'; v_column := 'order_number';
     when 'erp_cash_vouchers' then
       v_voucher_type := to_jsonb(new)->>'voucher_type';
       v_key := case v_voucher_type
@@ -138,6 +140,8 @@ begin
       when 'cash_receipt' then 'Rcp'
       when 'cash_payment' then 'Pay'
       when 'cash_transfer' then 'Trf'
+      when 'cash_movement' then 'Cmv'
+      when 'cash_order' then 'Cso'
       else 'Gen'
     end, 5
   ) c;
@@ -173,7 +177,8 @@ begin
       ('erp_hr_job_grades'), ('erp_payroll_runs'), ('erp_hr_salary_elements'),
       ('erp_item_unit_catalog'), ('erp_payment_methods'), ('erp_hr_shifts'), ('erp_commission_plans'),
       ('erp_sales_fulfillment_documents'), ('erp_sales_representatives'),
-      ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers')
+      ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers'),
+      ('erp_cash_movements'), ('erp_cash_orders')
     ) as t(table_name)
   loop
     if to_regclass('public.' || r.table_name) is not null then
@@ -328,6 +333,8 @@ begin
     when 'cash_receipt' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Rcp';
     when 'cash_payment' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Pay';
     when 'cash_transfer' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Trf';
+    when 'cash_movement' then v_table := 'erp_cash_movements'; v_column := 'movement_number'; v_prefix := 'Cmv';
+    when 'cash_order' then v_table := 'erp_cash_orders'; v_column := 'order_number'; v_prefix := 'Cso';
     else raise exception 'نوع التكويد غير مدعوم';
   end case;
 
