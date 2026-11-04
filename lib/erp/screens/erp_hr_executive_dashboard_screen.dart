@@ -91,6 +91,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _unassignedJobs => _jobs.where((j) => j['department_id'] == null).length;
   int get _departmentsWithoutJobs => _departments.where((d) =>
       !_jobs.any((j) => j['department_id']?.toString() == d['id']?.toString())).length;
+  int get _employeesWithoutJob => _employees.where((e) => e['job_id'] == null).length;
 
   DateTime? _asDate(dynamic value) {
     if (value == null || value.toString().isEmpty) return null;
@@ -160,6 +161,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _trainingInProgress => _training.where((r) => r['status'] == 'in_progress').length;
   int get _trainingCompleted => _training.where((r) => r['status'] == 'completed').length;
   int get _trainingCertificatesExpiring => _training.where((r) { final d = _asDate(r['certificate_expires_on']); if (d == null) return false; final n=DateTime.now(); final t=DateTime(n.year,n.month,n.day); final days=d.difference(t).inDays; return days>=0 && days<=30; }).length;
+  int get _trainingCertificatesExpired => _training.where((r) { final d = _asDate(r['certificate_expires_on']); if (d == null) return false; final n=DateTime.now(); final t=DateTime(n.year,n.month,n.day); return d.isBefore(t); }).length;
   int _candidateCount(String status) => _candidates.where((r) => r['status'] == status).length;
   int get _candidateOpen => _candidates.where((r) => !const ['accepted','rejected','withdrawn'].contains(r['status'])).length;
   int get _separationsLast12Months => _movements.where((r) => const ['resignation','termination','retirement'].contains(r['movement_type']) && (_asDate(r['effective_on'])?.isAfter(DateTime.now().subtract(const Duration(days:365))) ?? false)).length;
@@ -171,6 +173,23 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     return average <= 0 ? 0 : (_separationsLast12Months / average) * 100;
   }
   int get _pendingLeaveRequests => _leaves.where((r) => !const ['approved','rejected','مقبول','مرفوض'].contains(r['status']?.toString().toLowerCase())).length;
+  List<MapEntry<String, int>> get _separationsByDepartment {
+    final counts = <String, int>{};
+    final cutoff = DateTime.now().subtract(const Duration(days: 365));
+    for (final movement in _movements) {
+      if (!const ['resignation','termination','retirement'].contains(movement['movement_type'])) continue;
+      final movedOn = _asDate(movement['effective_on']);
+      if (movedOn == null || movedOn.isBefore(cutoff)) continue;
+      Map<String, dynamic>? employee;
+      for (final row in _employees) {
+        if (row['id']?.toString() == movement['employee_id']?.toString()) { employee = row; break; }
+      }
+      final department = (employee?['department_name'] ?? 'إدارة غير محددة').toString();
+      counts[department] = (counts[department] ?? 0) + 1;
+    }
+    final rows = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    return rows;
+  }
 
 
   String? _dateValue(String value) {
@@ -424,6 +443,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _progressRow('الوظائف النشطة', _activeJobs, _jobs.length, _hrPurple),
             _progressRow('إدارات بلا وظائف مرتبطة', _departmentsWithoutJobs, _departments.length, _hrOrange),
             _progressRow('وظائف غير مرتبطة بإدارة', _unassignedJobs, _jobs.length, _hrPink),
+            _progressRow('موظفون بلا وظيفة محددة', _employeesWithoutJob, _employees.length, _hrPink),
             if (_departments.isEmpty || _jobs.isEmpty)
               _notice('استكمل تعريف الإدارات والوظائف وربط كل وظيفة بإدارتها حتى تصبح مؤشرات اكتمال الهيكل دقيقة.', Icons.account_tree_outlined, Colors.orange.shade800),
           ]),
@@ -463,6 +483,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                 _metric('رخص منتهية', '$_licensesExpired', 'تحتاج تجديدًا', Icons.assignment_late_outlined, Colors.red.shade700),
                 _metric('رخص تنتهي خلال 30 يومًا', '$_licensesExpiringSoon', 'تنبيه مسبق', Icons.event_available_outlined, _hrOrange),
                 _metric('تدريبات جارية', '$_trainingInProgress', 'برامج تدريب مفتوحة', Icons.school_outlined, _hrPurple),
+                _metric('شهادات تدريب منتهية', '$_trainingCertificatesExpired', 'تحتاج تحديثًا', Icons.workspace_premium_outlined, Colors.red.shade700),
                 _metric('شهادات تدريب تنتهي قريبًا', '$_trainingCertificatesExpiring', 'خلال 30 يومًا', Icons.workspace_premium_outlined, _hrPink),
               ],
             );
@@ -475,6 +496,15 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _progressRow('مرفوضون', _candidateCount('rejected'), _candidates.length, Colors.red.shade700),
             _alert('استقالات وإنهاء خدمة آخر 12 شهرًا', '$_separationsLast12Months حركة مسجلة خلال آخر 12 شهرًا.', _separationsLast12Months > 0 ? _hrOrange : Colors.blueGrey),
             _alert('معدل دوران العمالة التقديري', '${_turnoverRate.toStringAsFixed(1)}% بناءً على حركات انتهاء الخدمة وتواريخ تعيين الموظفين المتاحة.', Colors.blueGrey),
+          ]),
+          const SizedBox(height: 10),
+          _panel(children: [
+            const Text('الاستقالات وإنهاء الخدمة حسب الإدارة — آخر 12 شهرًا', style: TextStyle(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            if (_separationsByDepartment.isEmpty)
+              const Text('لا توجد حركات انتهاء خدمة مسجلة خلال آخر 12 شهرًا.')
+            else
+              ..._separationsByDepartment.take(8).map((entry) => _progressRow(entry.key, entry.value, _separationsLast12Months, _hrOrange)),
           ]),
           const SizedBox(height: 18),
           _sectionTitle('إدارة وتسجيل بيانات الموارد البشرية', Icons.add_task_outlined),
