@@ -16,7 +16,6 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   final _repo = ErpCashboxesRepository();
   final _company = TextEditingController();
   final _code = TextEditingController();
-  final _codeFocus = FocusNode();
   final _name = TextEditingController();
   final _nameEn = TextEditingController();
   final _bankName = TextEditingController();
@@ -44,7 +43,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   }
   @override
   void dispose() {
-    _company.dispose(); _codeFocus.dispose(); _code.dispose(); _name.dispose(); _nameEn.dispose(); _bankName.dispose(); _maskedNumber.dispose(); _checkbookSheetCount.dispose(); super.dispose();
+    _company.dispose(); _code.dispose(); _name.dispose(); _nameEn.dispose(); _bankName.dispose(); _maskedNumber.dispose(); _checkbookSheetCount.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
 
