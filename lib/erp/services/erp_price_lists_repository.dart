@@ -68,16 +68,16 @@ class ErpPriceListsRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
   Future<void> createList({
-    required String companyId, required String code, required String name,
+    required String companyId, String? code, required String name,
     required String kind, bool isDefault = false, String currency = 'EGP', String? notes,
   }) async {
-    if (companyId.trim().isEmpty || code.trim().isEmpty || name.trim().isEmpty) {
-      throw ArgumentError('الشركة وكود القائمة واسمها حقول مطلوبة.');
+    if (companyId.trim().isEmpty || name.trim().isEmpty) {
+      throw ArgumentError('الشركة واسم القائمة حقول مطلوبة.');
     }
     if (!['sale','purchase'].contains(kind)) throw ArgumentError('نوع القائمة غير صحيح.');
     await _db.rpc('erp_create_price_list', params: {
       'p_company_id': companyId.trim(),
-      'p_code': code.trim(),
+      'p_code': '',
       'p_name': name.trim(),
       'p_kind': kind,
       'p_is_default': isDefault,
