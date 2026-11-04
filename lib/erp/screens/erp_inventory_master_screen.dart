@@ -311,7 +311,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       if (imageBytes != null && imageBytes.isNotEmpty && contentType.isEmpty) {
         throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
       }
-      final generatedItemCode = await _repo.createItem(companyId: _company.text, code: '', name: _itemName.text,
+      final generatedItemCode = await _repo.createItem(companyId: _company.text, name: _itemName.text,
         barcode: _barcode.text, categoryId: _itemCategoryId, unit: _unit.text,
         middleUnit: _middleUnit.text, minorUnit: _minorUnit.text,
         majorInnerQuantity: majorInner, middleInnerQuantity: _middleUnit.text.trim().isEmpty ? null : middleInner,
