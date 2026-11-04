@@ -25,6 +25,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'work_location','name':'مواقع العمل','prefix':'Loc','digits':'5'},
     {'key':'grade','name':'الدرجات الوظيفية','prefix':'Grd','digits':'5'},
     {'key':'payroll_run','name':'مسيرات الرواتب','prefix':'Pay','digits':'5'},
+    {'key':'salary_element','name':'عناصر المرتبات','prefix':'Sal','digits':'5'},
     {'key':'user_type','name':'أنواع المستخدمين','prefix':'Typ','digits':'5'},
     {'key':'permission_template','name':'قوالب الصلاحيات','prefix':'Tpl','digits':'5'},
     {'key':'account','name':'الحسابات المالية','prefix':'Acc','digits':'5'},
