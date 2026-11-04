@@ -119,6 +119,7 @@ begin
         when 'return' then 'purchase_return'
         else 'purchase_invoice' end;
       v_column := 'document_number';
+    when 'erp_checkbooks' then v_key := 'checkbook'; v_column := 'book_number';
     when 'erp_cash_movements' then v_key := 'cash_movement'; v_column := 'movement_number';
     when 'erp_cash_orders' then v_key := 'cash_order'; v_column := 'order_number';
     when 'erp_cash_vouchers' then
@@ -187,6 +188,7 @@ begin
       when 'cash_receipt' then 'Rcp'
       when 'cash_payment' then 'Cpy'
       when 'cash_transfer' then 'Trf'
+      when 'checkbook' then 'Ckb'
       when 'cash_movement' then 'Cmv'
       when 'cash_order' then 'Cso'
       else 'Gen'
@@ -225,7 +227,7 @@ begin
       ('erp_item_unit_catalog'), ('erp_payment_methods'), ('erp_hr_shifts'), ('erp_commission_plans'),
       ('erp_sales_fulfillment_documents'), ('erp_user_classifications'), ('erp_journal_entries'), ('erp_sales_representatives'),
       ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers'),
-      ('erp_cash_movements'), ('erp_cash_orders')
+      ('erp_cash_movements'), ('erp_cash_orders'), ('erp_checkbooks')
     ) as t(table_name)
   loop
     if to_regclass('public.' || r.table_name) is not null then
@@ -349,6 +351,7 @@ declare
   v_policy_prefix text;
   v_policy_digits integer;
   v_max bigint;
+  v_workspace_scoped boolean := false;
 begin
   if auth.uid() is null or not public.erp_user_can_access_company(p_company_id) then
     raise exception 'غير مصرح بمعاينة أكواد هذه الشركة';
@@ -394,8 +397,22 @@ begin
     when 'cash_receipt' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Rcp';
     when 'cash_payment' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Cpy';
     when 'cash_transfer' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Trf';
+    when 'checkbook' then v_table := 'erp_checkbooks'; v_column := 'book_number'; v_prefix := 'Ckb';
     when 'cash_movement' then v_table := 'erp_cash_movements'; v_column := 'movement_number'; v_prefix := 'Cmv';
     when 'cash_order' then v_table := 'erp_cash_orders'; v_column := 'order_number'; v_prefix := 'Cso';
+    when 'workspace_branch' then v_table := 'erp_business_workspace_branches'; v_column := 'branch_code'; v_prefix := 'Wbr'; v_workspace_scoped := true;
+    when 'workspace_cash_movement' then v_table := 'erp_business_workspace_cash_movements'; v_column := 'movement_no'; v_prefix := 'Wcm'; v_workspace_scoped := true;
+    when 'workspace_customer' then v_table := 'erp_business_workspace_counterparties'; v_column := 'party_code'; v_prefix := 'Wcu'; v_workspace_scoped := true;
+    when 'workspace_supplier' then v_table := 'erp_business_workspace_counterparties'; v_column := 'party_code'; v_prefix := 'Wsu'; v_workspace_scoped := true;
+    when 'workspace_department' then v_table := 'erp_business_workspace_departments'; v_column := 'department_code'; v_prefix := 'Wdp'; v_workspace_scoped := true;
+    when 'workspace_employee' then v_table := 'erp_business_workspace_employees'; v_column := 'employee_code'; v_prefix := 'Wem'; v_workspace_scoped := true;
+    when 'workspace_warehouse' then v_table := 'erp_business_workspace_warehouses'; v_column := 'warehouse_code'; v_prefix := 'Wwh'; v_workspace_scoped := true;
+    when 'workspace_purchase' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wpi'; v_workspace_scoped := true;
+    when 'workspace_purchase_return' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wpr'; v_workspace_scoped := true;
+    when 'workspace_sale' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wsi'; v_workspace_scoped := true;
+    when 'workspace_sale_return' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wsr'; v_workspace_scoped := true;
+    when 'workspace_transfer' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wtr'; v_workspace_scoped := true;
+    when 'workspace_adjustment' then v_table := 'erp_business_workspace_documents'; v_column := 'document_no'; v_prefix := 'Wad'; v_workspace_scoped := true;
     else raise exception 'نوع التكويد غير مدعوم';
   end case;
 
@@ -414,10 +431,17 @@ begin
   if to_regclass('public.' || v_table) is null then
     raise exception 'جدول نوع التكويد غير متاح';
   end if;
-  execute format(
-    'select coalesce(max(substring(%I from %L)::bigint), 0) from public.%I where company_id = $1 and %I ~ $2',
-    v_column, '^' || v_prefix || '([0-9]+)$', v_table, v_column
-  ) into v_max using p_company_id, '^' || v_prefix || '[0-9]+$';
+  if v_workspace_scoped then
+    execute format(
+      'select coalesce(max(substring(t.%I from %L)::bigint), 0) from public.%I t join public.erp_business_workspaces w on w.id = t.workspace_id where w.platform_company_id = $1 and t.%I ~ $2',
+      v_column, '^' || v_prefix || '([0-9]+)$', v_table, v_column
+    ) into v_max using p_company_id, '^' || v_prefix || '[0-9]+$';
+  else
+    execute format(
+      'select coalesce(max(substring(%I from %L)::bigint), 0) from public.%I where company_id = $1 and %I ~ $2',
+      v_column, '^' || v_prefix || '([0-9]+)$', v_table, v_column
+    ) into v_max using p_company_id, '^' || v_prefix || '[0-9]+$';
+  end if;
   if coalesce(v_max, 0) + 1 >= power(10::numeric, v_digits) then
     raise exception 'انتهت خانات الكود؛ زد عدد الخانات من سياسات التكويد';
   end if;
