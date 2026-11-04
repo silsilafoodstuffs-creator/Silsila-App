@@ -118,6 +118,7 @@ String silsilaText(String value) {
     'مبيعات': 'Sales',
     'موارد بشرية': 'Human Resources',
     'علاقات عملاء': 'Customer Relations',
+    'إضافة حسابات جروبات فيسبوك': 'Facebook Group Accounts',
     'فاتورة إلكترونية': 'E-Invoice',
     'بيانات الشركة': 'Company Profile',
     'الفروع': 'Branches',
