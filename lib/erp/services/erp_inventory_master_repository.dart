@@ -100,22 +100,25 @@ class ErpInventoryMasterRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
-  Future<void> createWarehouse({
-    required String companyId, required String code, required String name,
+  Future<String> createWarehouse({
+    required String companyId, required String name,
     String? branchId, String? address, String? nameEn, String? parentWarehouseId,
     String? location, String? phone, String? landline, String? governorateId, String? districtId, String? areaId,
   }) async {
-    if (code.trim().isEmpty || name.trim().isEmpty) throw ArgumentError('كود المخزن واسمه مطلوبان.');
-    await _db.from('erp_warehouses').insert({
-      'company_id': companyId.trim(), 'warehouse_code': code.trim(), 'warehouse_name': name.trim(),
+    if (companyId.trim().isEmpty || name.trim().isEmpty) throw ArgumentError('الشركة واسم المخزن مطلوبان.');
+    final inserted = await _db.from('erp_warehouses').insert({
+      'company_id': companyId.trim(), 'warehouse_name': name.trim(),
       'branch_id': branchId, 'address': _blank(address), 'warehouse_name_en': _blank(nameEn),
       'parent_warehouse_id': parentWarehouseId, 'location': _blank(location), 'phone': _blank(phone), 'landline': _blank(landline),
       'governorate_id': governorateId, 'district_id': districtId, 'area_id': areaId, 'is_active': true,
-    });
+    }).select('warehouse_code').single();
+    final generatedCode = (inserted['warehouse_code'] ?? '').toString();
+    if (generatedCode.isEmpty) throw StateError('لم تُرجع قاعدة البيانات كود المخزن التلقائي.');
+    return generatedCode;
   }
 
-  Future<void> createItem({
-    required String companyId, required String code, required String name,
+  Future<String> createItem({
+    required String companyId, required String name,
     String? barcode, String? categoryId, String unit = 'وحدة',
     String? middleUnit, double? majorInnerQuantity,
     double? middleInnerQuantity, String? minorUnit,
@@ -130,8 +133,8 @@ class ErpInventoryMasterRepository {
     final hasMinor = minorName.isNotEmpty;
     final majorCount = majorInnerQuantity ?? 1;
     final middleCount = middleInnerQuantity ?? 1;
-    if (code.trim().isEmpty || name.trim().isEmpty || majorName.isEmpty) {
-      throw ArgumentError('كود الصنف والاسم والوحدة الكبرى حقول مطلوبة.');
+    if (companyId.trim().isEmpty || name.trim().isEmpty || majorName.isEmpty || categoryId == null || categoryId.trim().isEmpty) {
+      throw ArgumentError('الشركة والفئة الثانوية واسم الصنف والوحدة الكبرى حقول مطلوبة.');
     }
     if (hasMinor && !hasMiddle && majorCount <= 0) {
       throw ArgumentError('عدد الوحدات الصغرى داخل الوحدة الكبرى يجب أن يكون أكبر من صفر.');
@@ -158,15 +161,20 @@ class ErpInventoryMasterRepository {
     );
 
     final inserted = await _db.from('erp_items').insert({
-      'company_id': companyId.trim(), 'item_code': code.trim(), 'item_name': name.trim(), 'category_id': categoryId,
+      'company_id': companyId.trim(), 'item_name': name.trim(), 'category_id': categoryId,
       'barcode': _blank(barcode), 'base_unit': hasMinor ? minorName : hasMiddle ? middleName : majorName,
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking,
       'image_data': imageBytes == null || imageBytes.isEmpty ? null : _byteaHex(imageBytes),
       'image_mime_type': imageBytes == null || imageBytes.isEmpty ? null : _blank(imageMimeType),
       'image_url': null, 'is_active': true,
-    }).select('id').single();
+    }).select('id,item_code').single();
     final itemId = inserted['id'].toString();
+    final generatedCode = (inserted['item_code'] ?? '').toString();
+    if (generatedCode.isEmpty) {
+      await _db.from('erp_items').delete().eq('id', itemId).eq('company_id', companyId.trim());
+      throw StateError('لم تُرجع قاعدة البيانات كود الصنف التلقائي.');
+    }
     try {
       await _db.from('erp_item_units').insert(units.map((row) => <String, dynamic>{
         ...row, 'company_id': companyId.trim(), 'item_id': itemId, 'is_active': true,
@@ -175,6 +183,7 @@ class ErpInventoryMasterRepository {
       await _db.from('erp_items').delete().eq('id', itemId).eq('company_id', companyId.trim());
       rethrow;
     }
+    return generatedCode;
   }
 
 
