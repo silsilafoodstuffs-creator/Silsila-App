@@ -105,9 +105,9 @@ class ErpInventoryMasterRepository {
     String? branchId, String? address, String? nameEn, String? parentWarehouseId,
     String? location, String? phone, String? landline, String? governorateId, String? districtId, String? areaId,
   }) async {
-    if (code.trim().isEmpty || name.trim().isEmpty) throw ArgumentError('كود المخزن واسمه مطلوبان.');
+    if (name.trim().isEmpty) throw ArgumentError('اسم المخزن مطلوب.');
     await _db.from('erp_warehouses').insert({
-      'company_id': companyId.trim(), 'warehouse_code': code.trim(), 'warehouse_name': name.trim(),
+      'company_id': companyId.trim(), 'warehouse_code': '', 'warehouse_name': name.trim(),
       'branch_id': branchId, 'address': _blank(address), 'warehouse_name_en': _blank(nameEn),
       'parent_warehouse_id': parentWarehouseId, 'location': _blank(location), 'phone': _blank(phone), 'landline': _blank(landline),
       'governorate_id': governorateId, 'district_id': districtId, 'area_id': areaId, 'is_active': true,
