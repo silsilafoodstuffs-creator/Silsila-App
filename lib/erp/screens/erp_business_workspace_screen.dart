@@ -193,8 +193,20 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
         final profileId = account['profile_id']?.toString() ?? '';
         if (profileId.isEmpty) continue;
         final currentActivity = account['activity_type']?.toString();
-        final matching = activityRows.where((a) => a['code']?.toString() == currentActivity || a['name']?.toString() == currentActivity);
-        _candidateActivities.putIfAbsent(profileId, () => matching.isNotEmpty ? matching.first['code'].toString() : '');
+        final matching = activityRows.where((a) =>
+          a['code']?.toString() == currentActivity ||
+          a['name']?.toString() == currentActivity ||
+          a['name_en']?.toString() == currentActivity,
+        );
+        final accountRole = account['role']?.toString().toLowerCase();
+        final primaryActivity = activityRows.where((a) => a['code']?.toString() == 'ACT001').toList();
+        _candidateActivities.putIfAbsent(profileId, () =>
+          matching.isNotEmpty
+            ? matching.first['code'].toString()
+            : accountRole == 'customer' && primaryActivity.isNotEmpty
+              ? primaryActivity.first['code'].toString()
+              : '',
+        );
       }
       final baseQuery = _db.from('erp_business_workspaces').select().eq('is_active', true);
       final rows = _platformObserver ? await baseQuery.order('created_at') : await baseQuery.or('owner_user_id.eq.$currentUserId,linked_profile_id.eq.$currentUserId').order('created_at');
@@ -1147,6 +1159,11 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
                         Text('$name • $kind', style: const TextStyle(color: _workspacePurple, fontWeight: FontWeight.w900, fontSize: 14)),
                         if (phone.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 3), child: Text(phone, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.black54, fontSize: 12))),
                         Padding(padding: const EdgeInsets.only(top: 3), child: Text('الحالة الحالية: ${account['account_status'] ?? 'غير محددة'}', style: const TextStyle(color: Colors.black54, fontSize: 11))),
+                        if (accountRole == 'customer' && (currentActivity == null || currentActivity.trim().isEmpty))
+                          const Padding(
+                            padding: EdgeInsets.only(top: 5),
+                            child: Text('لم يحدد نشاط لهذا الحساب بعد؛ تم اقتراح النشاط الأساسي «مواد غذائية» للاختبار ويمكن تغييره قبل الاعتماد.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5)),
+                          ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
                           value: _activityTypes.any((a) => a['code']?.toString() == selectedCode) ? selectedCode : null,
