@@ -372,8 +372,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       return;
     }
     final currentFields = _view == 'warehouses'
-        ? [_warehouseCode.text, _warehouseName.text, _warehouseNameEn.text, _warehouseLocation.text, _warehousePhone.text, _warehouseLandline.text, _address.text]
-        : [_itemCode.text, _itemName.text, _barcode.text,
+        ? [_warehouseName.text, _warehouseNameEn.text, _warehouseLocation.text, _warehousePhone.text, _warehouseLandline.text, _address.text]
+        : [_itemName.text, _barcode.text,
                 _unit.text == 'وحدة' ? '' : _unit.text, _middleUnit.text, _minorUnit.text, _majorInner.text, _middleInner.text,
                 _purchasePrice.text == '0' ? '' : _purchasePrice.text,
                 _salePrice.text == '0' ? '' : _salePrice.text,
