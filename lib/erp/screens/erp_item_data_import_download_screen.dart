@@ -21,9 +21,7 @@ Widget _kindCell(_ImportRow row, VoidCallback refresh) => SizedBox(
         selected: row.kind == 'صنف',
         onTap: () {
           row.kind = 'صنف';
-          if (row.codeMode == 'جديد') {
-            row.code = 'ITM${row.id.replaceAll(RegExp(r'\\D'), '').padLeft(5, '0')}';
-          }
+          if (row.codeMode == 'جديد') row.code = '';
           refresh();
         },
       ),
@@ -33,9 +31,7 @@ Widget _kindCell(_ImportRow row, VoidCallback refresh) => SizedBox(
         selected: row.kind == 'فئة',
         onTap: () {
           row.kind = 'فئة';
-          if (row.codeMode == 'جديد') {
-            row.code = 'CAT${row.id.replaceAll(RegExp(r'\\D'), '').padLeft(5, '0')}';
-          }
+          if (row.codeMode == 'جديد') row.code = '';
           refresh();
         },
       ),
@@ -134,9 +130,7 @@ Widget _codeModeCell(_ImportRow row, VoidCallback refresh) => SizedBox(
         selected: row.codeMode == 'جديد',
         onTap: () {
           row.codeMode = 'جديد';
-          if (row.code.isEmpty) {
-            row.code = '${row.kind == 'فئة' ? 'CAT' : 'ITM'}${row.id.replaceAll(RegExp(r'\\D'), '').padLeft(5, '0')}';
-          }
+          row.code = '';
           refresh();
         },
       ),
