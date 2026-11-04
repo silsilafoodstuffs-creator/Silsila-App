@@ -1,37 +1,6 @@
 -- Reproducible central code generation schema for all ERP and business-workspace entities.
 -- The functions below are the reviewed definitions currently deployed to the Silsila Supabase project.
 begin;
-
-alter table public.erp_user_types add column if not exists type_code_display text;
-alter table public.erp_permission_templates add column if not exists template_code_display text;
-alter table public.erp_user_classifications add column if not exists classification_code_display text;
-alter table public.erp_journal_entries add column if not exists entry_number_display text;
-alter table public.erp_cash_movements add column if not exists movement_number text;
-alter table public.erp_cash_orders add column if not exists order_number text;
-alter table public.erp_checkbooks add column if not exists book_number text;
-do $$
-begin
-  if exists (select 1 from pg_attribute where attrelid='public.erp_cash_movements'::regclass and attname='movement_number' and attgenerated='s') then
-    execute 'alter table public.erp_cash_movements alter column movement_number drop expression';
-  end if;
-  if exists (select 1 from pg_attribute where attrelid='public.erp_cash_orders'::regclass and attname='order_number' and attgenerated='s') then
-    execute 'alter table public.erp_cash_orders alter column order_number drop expression';
-  end if;
-end;
-$$;
-update public.erp_user_types t set type_code_display=(select cfg.prefix||lpad(t.type_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'user_type','Typ',5) cfg) where t.type_code_display is null or t.type_code_display='';
-update public.erp_permission_templates t set template_code_display=(select cfg.prefix||lpad(t.template_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'permission_template','Tpl',5) cfg) where t.template_code_display is null or t.template_code_display='';
-update public.erp_user_classifications t set classification_code_display=(select cfg.prefix||lpad(t.classification_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'user_classification','Cls',5) cfg) where t.classification_code_display is null or t.classification_code_display='';
-update public.erp_journal_entries t set entry_number_display=(select cfg.prefix||lpad(t.entry_number::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'journal_entry','Jrn',5) cfg) where t.entry_number_display is null or t.entry_number_display='';
-alter table public.erp_user_types alter column type_code_display set not null;
-alter table public.erp_permission_templates alter column template_code_display set not null;
-alter table public.erp_user_classifications alter column classification_code_display set not null;
-alter table public.erp_journal_entries alter column entry_number_display set not null;
-create unique index if not exists erp_user_classifications_display_code_uidx on public.erp_user_classifications(company_id,classification_code_display);
-create unique index if not exists erp_journal_entries_display_number_uidx on public.erp_journal_entries(company_id,entry_number_display);
-create unique index if not exists erp_cash_movements_display_number_uidx on public.erp_cash_movements(company_id,movement_number) where movement_number is not null;
-create unique index if not exists erp_cash_orders_display_number_uidx on public.erp_cash_orders(company_id,order_number) where order_number is not null;
-
 CREATE OR REPLACE FUNCTION public.erp_code_policy_config(p_company_id uuid, p_key text, p_default_prefix text, p_default_digits integer)
  RETURNS TABLE(prefix text, digits integer)
  LANGUAGE plpgsql
@@ -64,6 +33,39 @@ begin
   return next;
 end;
 $function$;
+
+
+alter table public.erp_user_types add column if not exists type_code_display text;
+alter table public.erp_permission_templates add column if not exists template_code_display text;
+alter table public.erp_user_classifications add column if not exists classification_code_display text;
+alter table public.erp_journal_entries add column if not exists entry_number_display text;
+alter table public.erp_cash_movements add column if not exists movement_number text;
+alter table public.erp_cash_orders add column if not exists order_number text;
+alter table public.erp_checkbooks add column if not exists book_number text;
+do $$
+begin
+  if exists (select 1 from pg_attribute where attrelid='public.erp_cash_movements'::regclass and attname='movement_number' and attgenerated='s') then
+    execute 'alter table public.erp_cash_movements alter column movement_number drop expression';
+  end if;
+  if exists (select 1 from pg_attribute where attrelid='public.erp_cash_orders'::regclass and attname='order_number' and attgenerated='s') then
+    execute 'alter table public.erp_cash_orders alter column order_number drop expression';
+  end if;
+end;
+$$;
+update public.erp_user_types t set type_code_display=(select cfg.prefix||lpad(t.type_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'user_type','Typ',5) cfg) where t.type_code_display is null or t.type_code_display='';
+update public.erp_permission_templates t set template_code_display=(select cfg.prefix||lpad(t.template_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'permission_template','Tpl',5) cfg) where t.template_code_display is null or t.template_code_display='';
+update public.erp_user_classifications t set classification_code_display=(select cfg.prefix||lpad(t.classification_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'user_classification','Cls',5) cfg) where t.classification_code_display is null or t.classification_code_display='';
+update public.erp_journal_entries t set entry_number_display=(select cfg.prefix||lpad(t.entry_number::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'journal_entry','Jrn',5) cfg) where t.entry_number_display is null or t.entry_number_display='';
+alter table public.erp_user_types alter column type_code_display set not null;
+alter table public.erp_permission_templates alter column template_code_display set not null;
+alter table public.erp_user_classifications alter column classification_code_display set not null;
+alter table public.erp_journal_entries alter column entry_number_display set not null;
+create unique index if not exists erp_user_classifications_display_code_uidx on public.erp_user_classifications(company_id,classification_code_display);
+create unique index if not exists erp_journal_entries_display_number_uidx on public.erp_journal_entries(company_id,entry_number_display);
+create unique index if not exists erp_cash_movements_display_number_uidx on public.erp_cash_movements(company_id,movement_number) where movement_number is not null;
+create unique index if not exists erp_cash_orders_display_number_uidx on public.erp_cash_orders(company_id,order_number) where order_number is not null;
+
+
 
 CREATE OR REPLACE FUNCTION public.erp_assign_central_code()
  RETURNS trigger
