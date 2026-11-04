@@ -406,8 +406,9 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
   }
 
   Future<Uint8List> _pdfBytes() async {
-    final rows = _selected.isEmpty ? _visible : _rows.where((r) => _selected.contains(_id(r))).toList();
-    if (rows.isEmpty) throw StateError('لا توجد سجلات للطباعة أو PDF.');
+    final candidates = _selected.isEmpty ? _visible : _rows.where((r) => _selected.contains(_id(r))).toList();
+    final rows = candidates.where((r) => _status(r) == 'consented').toList();
+    if (rows.isEmpty) throw StateError('لا توجد سجلات موثقة الموافقة للطباعة أو PDF.');
     final reportDate = DateTime.now();
     final dateLabel = reportDate.day.toString().padLeft(2, '0') + '-' + reportDate.month.toString().padLeft(2, '0') + '-' + reportDate.year.toString();
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
