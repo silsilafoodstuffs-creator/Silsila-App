@@ -215,7 +215,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _executiveSummaryAllowed = true;
   bool _hrDashboardAccessChecked = false;
   bool _hrDashboardAllowed = false;
-  bool _hrDashboardBlockedByJobTitle = false;
   bool _executivePartialConfigured = false;
   final Set<String> _executiveAllowedSections = <String>{};
   static const Map<String, String> _executivePermissionSectionKeys = {
@@ -363,7 +362,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (mounted) setState(() {
         _hrDashboardAccessChecked = true;
         _hrDashboardAllowed = false;
-        _hrDashboardBlockedByJobTitle = false;
         _executiveAccessChecked = true;
         _executiveSummaryAllowed = true;
         _executivePartialConfigured = false;
@@ -417,7 +415,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       setState(() {
         _hrDashboardAccessChecked = true;
         _hrDashboardAllowed = hrDashboardAllowed;
-        _hrDashboardBlockedByJobTitle = isHrResponsible;
         _executiveAccessChecked = true;
         _executiveSummaryAllowed = hasParent ? permissions[parentKey] == true : true;
         _executivePartialConfigured = configuredChildren.isNotEmpty;
