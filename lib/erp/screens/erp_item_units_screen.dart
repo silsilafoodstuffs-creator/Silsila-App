@@ -20,8 +20,6 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
   SupabaseClient? _db;
   String? _company, _message, _selectedId;
   String _activityCode = '';
-  String _unitPrefix = 'Unt';
-  int _unitDigits = 5;
   List<Map<String, dynamic>> _activities = [];
   List<Map<String, dynamic>> _rows = [];
   bool _loading = false, _saving = false, _editMode = false;
@@ -39,15 +37,20 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
     _load();
   }
 
-  String _nextUnitCode() {
-    var maxNumber = 0;
-    final pattern = RegExp('^' + RegExp.escape(_unitPrefix) + r'([0-9]+)$', caseSensitive: false);
-    for (final row in _rows) {
-      final match = pattern.firstMatch(_s(row['unit_code']).trim());
-      final number = int.tryParse(match?.group(1) ?? '') ?? 0;
-      if (number > maxNumber) maxNumber = number;
+  Future<String> _nextUnitCode() async {
+    final db = _db;
+    final company = _company;
+    if (db == null || company == null) return 'تلقائي';
+    try {
+      final result = await db.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': company,
+        'p_entity_key': 'item_unit',
+      });
+      final code = (result ?? '').toString().trim();
+      return code.isEmpty ? 'تلقائي' : code;
+    } catch (_) {
+      return 'تلقائي';
     }
-    return _unitPrefix + (maxNumber + 1).toString().padLeft(_unitDigits, '0');
   }
 
   Future<void> _load() async {
@@ -102,18 +105,20 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
     }
   }
 
-  void _add() {
+  Future<void> _add() async {
     if (_activityCode.isEmpty) { setState(() => _message = 'اختر نوع النشاط أولاً.'); return; }
+    final previewCode = await _nextUnitCode();
+    if (!mounted) return;
     setState(() {
       _editMode = true;
       final row = <String, dynamic>{
         'id': null, 'company_id': _company, 'activity_code': _activityCode,
-        'unit_code': _nextUnitCode(), 'unit_name_ar': '', 'unit_name_en': '',
+        'unit_code': previewCode, 'unit_name_ar': '', 'unit_name_en': '',
         'is_active': true, '_draft': true,
       };
       _rows.add(row);
       _selectedId = _s(row['unit_code']);
-      _message = 'تم إنشاء كود الوحدة تلقائيًا. أكمل الاسم العربي والإنجليزي ثم اضغط حفظ.';
+      _message = 'معاينة الكود القادم: $previewCode. يُعتمد الكود النهائي عند الحفظ من قاعدة البيانات.';
     });
   }
 
@@ -121,17 +126,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
     final db = _db; final company = _company;
     if (db == null || company == null) return;
     final current = _activityRows;
-    final seen = <String>{};
     for (final row in current) {
-      final code = _s(row['unit_code']).trim().toUpperCase();
-      if (!RegExp('^' + RegExp.escape(_unitPrefix) + '[0-9]{' + _unitDigits.toString() + r'}$', caseSensitive: false).hasMatch(code)) {
-        setState(() => _message = 'كود الوحدة غير صحيح. سيُنشأ تلقائيًا وفق سياسات التكويد.');
-        return;
-      }
-      if (!seen.add(code)) {
-        setState(() => _message = 'يوجد كود وحدة مكرر: $code');
-        return;
-      }
       if (_s(row['unit_name_ar']).trim().isEmpty) {
         setState(() => _message = 'الاسم العربي مطلوب لكل وحدة قبل الحفظ.');
         return;
@@ -142,7 +137,6 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
       for (final row in current) {
         final payload = <String, dynamic>{
           'company_id': company, 'activity_code': _activityCode,
-          'unit_code': row['_draft'] == true ? '' : _s(row['unit_code']).trim(),
           'unit_name_ar': _s(row['unit_name_ar']).trim(),
           'unit_name_en': _s(row['unit_name_en']).trim().isEmpty ? null : _s(row['unit_name_en']).trim(),
           'is_active': row['is_active'] == true,
@@ -150,6 +144,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
         if (_s(row['id']).isNotEmpty) {
           await db.from('erp_item_unit_catalog').update(payload).eq('id', row['id']).eq('company_id', company);
         } else {
+          payload['unit_code'] = '';
           await db.from('erp_item_unit_catalog').insert(payload);
         }
       }
@@ -308,7 +303,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
       ))),
       if (_loading || _saving) const LinearProgressIndicator(),
       Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), child: Text(
-        'عدد الوحدات: ${_activityRows.length} • ${_editMode ? 'وضع التعديل' : 'عرض فقط'} • كود الوحدة تلقائي UNT0001',
+        'عدد الوحدات: ${_activityRows.length} • ${_editMode ? 'وضع التعديل' : 'عرض فقط'} • كود الوحدة يُنشأ تلقائيًا وفق سياسة التكويد',
         style: const TextStyle(fontWeight: FontWeight.w800),
       )),
       Expanded(child: _activityRows.isEmpty
