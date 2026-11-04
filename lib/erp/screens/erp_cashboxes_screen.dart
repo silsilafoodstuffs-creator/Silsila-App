@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_cashboxes_repository.dart';
@@ -16,7 +17,6 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   final _repo = ErpCashboxesRepository();
   final _company = TextEditingController();
   final _code = TextEditingController();
-  final _codeFocus = FocusNode();
   final _name = TextEditingController();
   final _nameEn = TextEditingController();
   final _bankName = TextEditingController();
@@ -44,7 +44,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   }
   @override
   void dispose() {
-    _company.dispose(); _codeFocus.dispose(); _code.dispose(); _name.dispose(); _nameEn.dispose(); _bankName.dispose(); _maskedNumber.dispose(); _checkbookSheetCount.dispose(); super.dispose();
+    _company.dispose(); _code.dispose(); _name.dispose(); _nameEn.dispose(); _bankName.dispose(); _maskedNumber.dispose(); _checkbookSheetCount.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
 
@@ -74,18 +74,12 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   Future<void> _generateNextCode() async {
     if (_code.text.trim().isNotEmpty || _company.text.trim().isEmpty) return;
     try {
-      final rows = await _repo.fetchCashboxes(_company.text.trim());
-      var max = 0;
-      for (final row in rows) {
-        final match = RegExp(r'^[A-Za-z]+-?(\d+)$').firstMatch(_s(row['cashbox_code']));
-        final number = match == null ? 0 : (int.tryParse(match.group(1) ?? '') ?? 0);
-        if (number > max) max = number;
-      }
-      if (mounted && _code.text.trim().isEmpty) {
-        setState(() => _code.text = 'CSH-' + (max + 1).toString().padLeft(4, '0'));
-      }
+      final preview = await Supabase.instance.client.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': _company.text.trim(), 'p_entity_key': 'cashbox',
+      });
+      if (mounted && _code.text.trim().isEmpty) setState(() => _code.text = preview.toString());
     } catch (_) {
-      if (mounted && _code.text.trim().isEmpty) setState(() => _code.text = 'CSH-0001');
+      if (mounted && _code.text.trim().isEmpty) setState(() => _code.text = 'Csh00001');
     }
   }
 
@@ -104,7 +98,6 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
       _error = null;
       _message = 'نموذج جديد جاهز. أدخل البيانات ثم اضغط F8 للحفظ.';
     });
-    _codeFocus.requestFocus();
     _generateNextCode();
   }
 
@@ -295,7 +288,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('إضافة خزينة / بنك', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            TextField(controller: _code, focusNode: _codeFocus, decoration: const InputDecoration(labelText: 'الكود *')),
+            TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الخزينة (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
             TextField(controller: _name, decoration: const InputDecoration(labelText: 'الاسم بالعربية *')),
             TextField(controller: _nameEn, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية *')),
             const SizedBox(height: 8),

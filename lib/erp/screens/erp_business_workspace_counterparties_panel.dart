@@ -93,11 +93,11 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
     }
   }
   Future<void> _save() async {
-    if(!_canManage||_code.text.trim().isEmpty||_name.text.trim().length<2)return;
+    if(!_canManage||_name.text.trim().length<2)return;
     setState(()=>_saving=true);
     try {
       final values = <String,dynamic>{
-        'party_code':_code.text.trim(),'display_name':_name.text.trim(),
+        'display_name':_name.text.trim(),
         'phone':_phone.text.trim().isEmpty?null:_asciiDigits(_phone.text.trim()),
         'address':_address.text.trim().isEmpty?null:_address.text.trim(),
         'governorate':_governorate.text.trim().isEmpty?null:_governorate.text.trim(),
@@ -108,7 +108,7 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
       if (editingId == null) {
         await _db.from('erp_business_workspace_counterparties').insert({
           ...values,
-          'workspace_id':widget.workspaceId,'party_type':_type,
+          'workspace_id':widget.workspaceId,'party_type':_type,'party_code':'',
           'created_by':_db.auth.currentUser!.id,
         });
       } else {
@@ -190,7 +190,7 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
       ChoiceChip(label:const Text('موردو نشاطي'),selected:_type=='supplier',onSelected:(_)=>setState(()=>_type='supplier')),
     ]),
     if(_canManage)...[
-      TextField(controller:_code,decoration:const InputDecoration(labelText:'رقم العميل / المورد')),
+      TextField(controller:_code,readOnly:true,decoration:const InputDecoration(labelText:'رقم العميل / المورد (تلقائي)',hintText:'يُنشأ عند الحفظ')),
       TextField(controller:_name,decoration:const InputDecoration(labelText:'اسم العميل / المورد')),
       TextField(controller:_phone,keyboardType:TextInputType.phone,onChanged:_previewPhone,decoration:const InputDecoration(labelText:'رقم الموبايل')),
       if(_preview!=null) Container(margin:const EdgeInsets.symmetric(vertical:6),padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:Colors.blue.withValues(alpha:.08),borderRadius:BorderRadius.circular(10)),child:Text('معاينة فقط — الاسم المسجل في سلسلة: $_preview',style:const TextStyle(color:Colors.blue,fontWeight:FontWeight.w700))),

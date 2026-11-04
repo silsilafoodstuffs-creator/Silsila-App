@@ -89,6 +89,9 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     _code.clear(); _ar.clear(); _en.clear();
     final isLocation = kind == 'location';
     final isJob = kind == 'job';
+    if (!isLocation && _db != null && _companyId.isNotEmpty) {
+      try { _code.text = (await _db!.rpc('erp_preview_next_central_code', params: {'p_company_id': _companyId, 'p_entity_key': isJob ? 'job' : 'department'})).toString(); } catch (_) {}
+    }
     String? selectedDepartmentId;
     String? selectedGradeId;
     String? selectedParentId;
@@ -96,7 +99,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final saved = await showDialog<bool>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, setDialogState) => AlertDialog(
       title: Text(isLocation ? 'إضافة موقع عمل' : isJob ? 'إضافة وظيفة' : 'إضافة إدارة أو قسم'),
       content: SizedBox(width: 440, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _code, decoration: const InputDecoration(labelText: 'الكود (حروف إنجليزية ثم أرقام)')),
+        TextField(controller: _code, readOnly: !isLocation, decoration: InputDecoration(labelText: isLocation ? 'نوع الموقع (CENT للمركزي)' : 'الكود (تلقائي)', helperText: isLocation ? 'اكتب CENT لتحديد الموقع المركزي' : 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: const Icon(Icons.auto_awesome))),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'الاسم بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية')),
         if (!isJob && !isLocation) ...[
@@ -119,7 +122,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
         FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ')),
       ],
     )));
-    if (saved != true || _code.text.trim().isEmpty || _ar.text.trim().isEmpty || _db == null) return;
+    if (saved != true || _ar.text.trim().isEmpty || _db == null) return;
     if (!isJob && !isLocation && selectedDepartmentLevel != 'directorate' && selectedParentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر الإدارة الأب للقسم أو الإدارة الفرعية.')));
       return;
@@ -131,13 +134,13 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     try {
       if (isLocation) {
         await _db!.from('erp_hr_work_locations').insert({
-          'company_id': _companyId, 'location_code': _code.text.trim().toUpperCase(),
+          'company_id': _companyId, 'location_code': '',
           'name_ar': _ar.text.trim(), 'location_type': _code.text.toUpperCase().contains('CENT') ? 'central' : 'branch',
           'is_active': true,
         });
       } else if (isJob) {
         await _db!.from('erp_hr_jobs').insert({
-          'company_id': _companyId, 'job_code': _code.text.trim().toUpperCase(),
+          'company_id': _companyId, 'job_code': '',
           'name_ar': _ar.text.trim(), 'name_en': _en.text.trim(),
           'department_id': selectedDepartmentId,
           'grade_id': selectedGradeId,
@@ -146,7 +149,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
         });
       } else {
         await _db!.from('erp_hr_departments').insert({
-          'company_id': _companyId, 'department_code': _code.text.trim().toUpperCase(),
+          'company_id': _companyId, 'department_code': '',
           'name_ar': _ar.text.trim(), 'name_en': _en.text.trim(),
           'department_level': selectedDepartmentLevel,
           'parent_id': selectedDepartmentLevel == 'directorate' ? null : selectedParentId,
@@ -166,7 +169,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final saved = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
       title: const Text('تعديل البيانات الأساسية'),
       content: SizedBox(width: 440, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _code, decoration: const InputDecoration(labelText: 'الكود')),
+        TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'الكود (غير قابل للتعديل)')),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'الاسم بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية')),
       ])),
@@ -427,20 +430,21 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
 
   Future<void> _addGrade() async {
     _code.clear(); _ar.clear(); _en.clear();
+    if (_db != null && _companyId.isNotEmpty) { try { _code.text = (await _db!.rpc('erp_preview_next_central_code', params: {'p_company_id': _companyId, 'p_entity_key': 'grade'})).toString(); } catch (_) {} }
     final rank = TextEditingController(text: (_grades.length + 1).toString());
     final saved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('إضافة درجة وظيفية'),
       content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود الدرجة مثل GRD-015')),
+        TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الدرجة (تلقائي)', helperText: 'يُنشأ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'اسم الدرجة بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'اسم الدرجة بالإنجليزية')),
         TextField(controller: rank, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ترتيب الدرجة')),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ'))],
     ));
-    if (saved == true && _code.text.trim().isNotEmpty && _ar.text.trim().isNotEmpty && _db != null) {
+    if (saved == true && _ar.text.trim().isNotEmpty && _db != null) {
       try {
-        await _db!.from('erp_hr_job_grades').insert({'company_id':_companyId,'grade_code':_code.text.trim().toUpperCase(),'name_ar':_ar.text.trim(),'name_en':_en.text.trim(),'rank_order':int.tryParse(rank.text) ?? _grades.length + 1,'is_active':true});
+        await _db!.from('erp_hr_job_grades').insert({'company_id':_companyId,'grade_code':'','name_ar':_ar.text.trim(),'name_en':_en.text.trim(),'rank_order':int.tryParse(rank.text) ?? _grades.length + 1,'is_active':true});
         await _load();
       } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الدرجة: ' + e.toString()))); }
     }
@@ -453,7 +457,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final saved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('تعديل الدرجة الوظيفية'),
       content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود الدرجة')),
+        TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الدرجة (تلقائي)')),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'اسم الدرجة بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'اسم الدرجة بالإنجليزية')),
         TextField(controller: rank, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ترتيب الدرجة')),

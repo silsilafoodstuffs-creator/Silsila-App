@@ -540,8 +540,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _createDraft() async {
-    if (_partyId == null || _warehouseId == null || _documentNumber.text.trim().isEmpty) {
-      setState(() => _error = 'أكمل رقم المستند والطرف والمخزن.');
+    if (_partyId == null || _warehouseId == null) {
+      setState(() => _error = 'أكمل الطرف والمخزن.');
       return;
     }
     final requiredSourcePolicy = widget.kind == ErpOperationalKind.sales
@@ -1868,8 +1868,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         ? (gross - lineDiscounts - invoiceDiscount + taxTotal).clamp(0, double.infinity)
         : _n(doc['grand_total']);
     final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' + _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
-    InputDecoration field(String label, {Widget? suffix}) => InputDecoration(
-      labelText: label, suffixIcon: suffix, isDense: true, filled: true, fillColor: const Color(0xFFFCFBFE),
+    InputDecoration field(String label, {Widget? suffix, String? helperText}) => InputDecoration(
+      labelText: label, helperText: helperText, suffixIcon: suffix, isDense: true, filled: true, fillColor: const Color(0xFFFCFBFE),
       contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 13),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
@@ -1997,7 +1997,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   ]);
                   final serialField = TextField(
                     controller: _documentNumber,
-                    decoration: field('المسلسل اليدوي (غير مكرر) *', suffix: const Icon(Icons.tag)),
+                    decoration: field('رقم المستند (تلقائي)', helperText: 'يُنشأ من سياسات التكويد عند الحفظ', suffix: const Icon(Icons.auto_awesome)),
+                    readOnly: true,
                     enabled: !hasDraft,
                   );
                   final fiscalField = DropdownButtonFormField<String>(

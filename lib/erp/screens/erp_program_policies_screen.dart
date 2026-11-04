@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'erp_code_policy_panel.dart';
 
 class ErpProgramPoliciesScreen extends StatefulWidget {
   const ErpProgramPoliciesScreen({super.key, required this.companyId});
@@ -174,6 +175,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                     : ListView(
                         padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
                         children: [
+                          if (tab == 1) SizedBox(height: 520, child: ErpCodePolicyPanel(companyId: company)),
                           Card(
                             margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
                             elevation: 0, color: const Color(0xFFF5EFFB),

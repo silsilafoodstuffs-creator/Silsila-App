@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,8 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
   SupabaseClient? _db;
   String? _company, _message, _selectedId;
   String _activityCode = '';
+  String _unitPrefix = 'Unt';
+  int _unitDigits = 5;
   List<Map<String, dynamic>> _activities = [];
   List<Map<String, dynamic>> _rows = [];
   bool _loading = false, _saving = false, _editMode = false;
@@ -37,10 +40,14 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
   }
 
   String _nextUnitCode() {
-    final used = _activityRows.map((r) => _s(r['unit_code']).toUpperCase()).toSet();
-    var n = 1;
-    while (used.contains('UNT${n.toString().padLeft(4, '0')}')) { n++; }
-    return 'UNT${n.toString().padLeft(4, '0')}';
+    var maxNumber = 0;
+    final pattern = RegExp('^' + RegExp.escape(_unitPrefix) + r'([0-9]+)$', caseSensitive: false);
+    for (final row in _rows) {
+      final match = pattern.firstMatch(_s(row['unit_code']).trim());
+      final number = int.tryParse(match?.group(1) ?? '') ?? 0;
+      if (number > maxNumber) maxNumber = number;
+    }
+    return _unitPrefix + (maxNumber + 1).toString().padLeft(_unitDigits, '0');
   }
 
   Future<void> _load() async {
@@ -57,6 +64,20 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
         if (company.isEmpty || !ids.contains(company)) company = ids.isEmpty ? '' : ids.first;
       }
       if (company.isEmpty) throw StateError('لا توجد شركة نشطة مرتبطة بالمستخدم.');
+      final policy = await db.from('erp_program_policies').select('policy_value')
+          .eq('company_id', company).eq('policy_key', 'code_generation_registry').maybeSingle();
+      if (policy != null) {
+        final raw = policy['policy_value'];
+        final data = raw is String ? jsonDecode(raw) as Map<String, dynamic> : Map<String, dynamic>.from(raw as Map);
+        final types = Map<String, dynamic>.from(data['types'] as Map? ?? {});
+        final unit = Map<String, dynamic>.from(types['unit'] as Map? ?? {});
+        final prefix = (unit['prefix'] ?? 'Unt').toString();
+        final digits = int.tryParse((unit['digits'] ?? 5).toString()) ?? 5;
+        if (RegExp(r'^[A-Za-z]{3}$').hasMatch(prefix) && digits >= 1 && digits <= 12) {
+          _unitPrefix = prefix;
+          _unitDigits = digits;
+        }
+      }
       final results = await Future.wait([
         db.from('activity_types').select('code,name').eq('is_active', true).order('sort_order'),
         db.from('erp_item_unit_catalog')
@@ -103,8 +124,8 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
     final seen = <String>{};
     for (final row in current) {
       final code = _s(row['unit_code']).trim().toUpperCase();
-      if (!RegExp(r'^UNT[0-9]{4,}$').hasMatch(code)) {
-        setState(() => _message = 'كود الوحدة غير صحيح. استخدم التكويد التلقائي UNT0001 وما يليه.');
+      if (!RegExp('^' + RegExp.escape(_unitPrefix) + '[0-9]{' + _unitDigits.toString() + r'}$', caseSensitive: false).hasMatch(code)) {
+        setState(() => _message = 'كود الوحدة غير صحيح. سيُنشأ تلقائيًا وفق سياسات التكويد.');
         return;
       }
       if (!seen.add(code)) {
@@ -121,7 +142,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
       for (final row in current) {
         final payload = <String, dynamic>{
           'company_id': company, 'activity_code': _activityCode,
-          'unit_code': _s(row['unit_code']).trim().toUpperCase(),
+          'unit_code': row['_draft'] == true ? '' : _s(row['unit_code']).trim(),
           'unit_name_ar': _s(row['unit_name_ar']).trim(),
           'unit_name_en': _s(row['unit_name_en']).trim().isEmpty ? null : _s(row['unit_name_en']).trim(),
           'is_active': row['is_active'] == true,

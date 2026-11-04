@@ -125,6 +125,9 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     final editing = account != null;
     final id = editing ? _value(account, 'account_id') : '';
     final code = TextEditingController(text: editing ? _value(account, 'account_code') : '');
+    if (!editing && _company.text.trim().isNotEmpty) {
+      try { code.text = (await Supabase.instance.client.rpc('erp_preview_next_central_code', params: {'p_company_id': _company.text.trim(), 'p_entity_key': 'account'})).toString(); } catch (_) { code.text = 'Acc00001'; }
+    }
     final name = TextEditingController(text: editing ? _value(account, 'account_name') : '');
     String type = editing ? _value(account, 'account_type') : 'asset';
     String nature = editing ? _value(account, 'normal_balance') : 'debit';
@@ -150,7 +153,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: code, decoration: const InputDecoration(labelText: 'كود الحساب *')),
+                  TextField(controller: code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الحساب (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
                   TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الحساب *')),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
@@ -207,7 +210,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
             FilledButton(
               onPressed: () async {
-                if (code.text.trim().isEmpty || name.text.trim().isEmpty) {
+                if ((editing && code.text.trim().isEmpty) || name.text.trim().isEmpty) {
                   refresh(() {});
                   return;
                 }

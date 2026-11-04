@@ -523,8 +523,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     final tax = taxableSubtotal * taxRate / 100;
     try {
       final now = DateTime.now();
-      final prefix = _documentType.toUpperCase();
-      final docNo = 'ACT-$prefix-${now.microsecondsSinceEpoch}';
+      const docNo = '';
       await _db.rpc('erp_create_business_workspace_document', params: {
         'p_workspace_id':id,'p_branch_id':branchId,'p_warehouse_id':warehouseId,
         'p_document_no':docNo,'p_document_type':_documentType,
@@ -537,7 +536,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       setState(() { _draftLines.clear(); });
       _docCounterparty.clear(); _docNotes.clear(); _docTax.text = _policyTaxController.text.trim().isEmpty ? '0' : _policyTaxController.text.trim();
       await _loadStructure();
-      _message('تم إنشاء المستند كمسودة رقم $docNo. لم يتغير المخزون بعد.');
+      _message('تم إنشاء المستند كمسودة برقم تلقائي وفق سياسات التكويد. لم يتغير المخزون بعد.');
     } catch(e) { _message('تعذر إنشاء المستند: $e'); }
   }
 
@@ -577,7 +576,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     }
     if (_inventoryMode == 'adjustment' && _policyRequireAdjustmentNotes && _inventoryNotes.text.trim().isEmpty) { _message('سياسة النشاط تشترط كتابة سبب التسوية.'); return; }
     final now=DateTime.now();
-    final docNo='ACT-STK-${now.microsecondsSinceEpoch}';
+    const docNo='';
     try{
       if(_inventoryMode=='transfer'){
         if(_targetWarehouseId==null||_targetWarehouseId==_sourceWarehouseId){_message('اختر مخزناً مستهدفاً مختلفاً.');return;}
@@ -604,12 +603,11 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
 
   Future<void> _addDepartment() async {
     final id = _selected?['id']?.toString();
-    final code = _departmentCode.text.trim();
     final name = _departmentName.text.trim();
-    if (id == null || code.isEmpty || name.isEmpty) { _message('أدخل كود الإدارة واسمها.'); return; }
+    if (id == null || name.isEmpty) { _message('أدخل اسم الإدارة.'); return; }
     try {
       await _db.from('erp_business_workspace_departments').insert({
-        'workspace_id':id,'department_code':code,'name_ar':name,'parent_id':_selectedParentDepartmentId,
+        'workspace_id':id,'department_code':'','name_ar':name,'parent_id':_selectedParentDepartmentId,
       });
       _departmentCode.clear(); _departmentName.clear();
       await _loadStructure(); _message('تم إضافة الإدارة / القسم.');
@@ -700,17 +698,16 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     final salary = double.tryParse(_employeeSalary.text.trim()) ?? 0;
     if (id == null || name.length < 2 || salary < 0) { _message('أدخل اسم الموظف ومرتباً صحيحاً.'); return; }
     try {
-      final code = 'EMP-${DateTime.now().microsecondsSinceEpoch.toString().substring(7)}';
       await _db.from('erp_business_workspace_employees').insert({
         'workspace_id':id,'department_id':_selectedDepartmentId,
-        'employee_code':code,'full_name':name,
+        'employee_code':'','full_name':name,
         'job_title':_employeeJob.text.trim().isEmpty?null:_employeeJob.text.trim(),
         'monthly_salary':salary,
         'work_schedule':<String,dynamic>{'type':'standard','hours':_employeeWorkHours.text.trim(),'weekly_off':_employeeWeeklyOff.text.trim()},
         'leave_policy':<String,dynamic>{'annual_days':int.tryParse(_employeeAnnualLeave.text.trim())??21},
       });
       _employeeName.clear(); _employeeJob.clear(); _employeeSalary.text='0';
-      await _loadStructure(); _message('تم تسجيل الموظف برقم $code.');
+      await _loadStructure(); _message('تم تسجيل الموظف، وتم إنشاء كوده تلقائيًا.');
     } catch(e) { _message('تعذر حفظ الموظف: $e'); }
   }
 
@@ -724,12 +721,10 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     if (_policyRequireCashReference && _cashReference.text.trim().isEmpty) { _message('سياسة النشاط تشترط إدخال رقم مرجعي للحركة النقدية.'); return; }
     try {
       final now = DateTime.now();
-      final datePart = '${now.year}${now.month.toString().padLeft(2,'0')}${now.day.toString().padLeft(2,'0')}';
-      final movementNo = 'ACT-$datePart-${now.microsecondsSinceEpoch.toString().substring(8)}';
       await _db.from('erp_business_workspace_cash_movements').insert({
         'workspace_id': id,
         'branch_id': _selectedCashBranchId,
-        'movement_no': movementNo,
+        'movement_no': '',
         'movement_type': _cashType,
         'movement_date': now.toIso8601String().substring(0,10),
         'amount': amount,
@@ -992,11 +987,10 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   Future<void> _addBranch() async {
     final id = _selected?['id']?.toString();
     final name = _branchName.text.trim();
-    final code = _branchCode.text.trim();
-    if (id == null || name.isEmpty || code.isEmpty) { _message('أدخل كود الفرع واسمه.'); return; }
+    if (id == null || name.isEmpty) { _message('أدخل اسم الفرع.'); return; }
     try {
       await _db.from('erp_business_workspace_branches').insert({
-        'workspace_id': id, 'branch_code': code, 'name_ar': name,
+        'workspace_id': id, 'branch_code': '', 'name_ar': name,
         'name_en': _branchNameEn.text.trim().isEmpty ? null : _branchNameEn.text.trim(),
       });
       _branchName.clear(); _branchNameEn.clear(); _branchCode.clear();
@@ -1007,14 +1001,13 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   Future<void> _addWarehouse() async {
     final id = _selected?['id']?.toString();
     final name = _warehouseName.text.trim();
-    final code = _warehouseCode.text.trim();
-    if (id == null || _branches.isEmpty || name.isEmpty || code.isEmpty) {
-      _message('أضف فرعاً أولاً ثم أدخل كود المخزن واسمه.'); return;
+    if (id == null || _branches.isEmpty || name.isEmpty) {
+      _message('أضف فرعاً أولاً ثم أدخل اسم المخزن.'); return;
     }
     try {
       await _db.from('erp_business_workspace_warehouses').insert({
         'workspace_id': id, 'branch_id': _selectedBranchForWarehouse ?? _branches.first['id'],
-        'warehouse_code': code, 'name_ar': name,
+        'warehouse_code': '', 'name_ar': name,
         'name_en': _warehouseNameEn.text.trim().isEmpty ? null : _warehouseNameEn.text.trim(),
       });
       _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseCode.clear();
@@ -1591,7 +1584,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     _sectionTitle('فروع نشاطي','أضف فروعاً مستقلة عن فروع سلسلة'),
     if (_canWorkspacePermission('master.manage')) ...[
     Row(children:[
-      Expanded(child:TextField(controller:_branchCode,decoration:const InputDecoration(labelText:'كود الفرع'))),
+      Expanded(child:TextField(controller:_branchCode,readOnly:true,decoration:const InputDecoration(labelText:'كود الفرع (تلقائي)',hintText:'يُنشأ عند الحفظ'))),
       const SizedBox(width:8),
       Expanded(child:TextField(controller:_branchName,decoration:const InputDecoration(labelText:'اسم الفرع'))),
       IconButton(onPressed:_addBranch,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
@@ -1619,7 +1612,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       onChanged:(v)=>setState(()=>_selectedBranchForWarehouse=v),
     ),
     Row(children:[
-      Expanded(child:TextField(controller:_warehouseCode,decoration:const InputDecoration(labelText:'كود المخزن'))),
+      Expanded(child:TextField(controller:_warehouseCode,readOnly:true,decoration:const InputDecoration(labelText:'كود المخزن (تلقائي)',hintText:'يُنشأ عند الحفظ'))),
       const SizedBox(width:8),
       Expanded(child:TextField(controller:_warehouseName,decoration:const InputDecoration(labelText:'اسم المخزن'))),
       IconButton(onPressed:_addWarehouse,icon:const Icon(Icons.add_circle,color:_workspacePurple)),
@@ -2011,7 +2004,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       onChanged:(v)=>setState(()=>_selectedParentDepartmentId=v),
     ),
     Row(children:[
-      Expanded(child:TextField(controller:_departmentCode,decoration:const InputDecoration(labelText:'كود الإدارة / القسم'))),
+      Expanded(child:TextField(controller:_departmentCode,readOnly:true,decoration:const InputDecoration(labelText:'كود الإدارة / القسم (تلقائي)',hintText:'يُنشأ عند الحفظ'))),
       const SizedBox(width:8),
       Expanded(child:TextField(controller:_departmentName,decoration:const InputDecoration(labelText:'اسم الإدارة / القسم'))),
       IconButton(onPressed:_addDepartment,icon:const Icon(Icons.add_circle,color:_workspacePurple)),

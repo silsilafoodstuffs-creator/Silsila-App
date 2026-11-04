@@ -90,6 +90,12 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     _purchasePrice.dispose(); _salePrice.dispose(); _taxRate.dispose(); _reorder.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
+  bool _isSecondaryCategory(Map<String, dynamic> category) {
+    final parentId = _s(category['parent_id']);
+    if (parentId.isEmpty) return false;
+    final parents = _categories.where((row) => _s(row['id']) == parentId).toList();
+    return parents.isNotEmpty && _s(parents.first['parent_id']).isNotEmpty;
+  }
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
   Future<void> _load({bool clearMessage = true}) async {
@@ -232,14 +238,14 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   Future<void> _createWarehouse() async {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      await _repo.createWarehouse(companyId: _company.text, code: _warehouseCode.text,
+      final generatedWarehouseCode = await _repo.createWarehouse(companyId: _company.text,
         name: _warehouseName.text, branchId: _branchId, address: _address.text,
         nameEn: _warehouseNameEn.text, parentWarehouseId: _parentWarehouseId,
         location: _warehouseLocation.text, phone: _warehousePhone.text, landline: _warehouseLandline.text,
         governorateId: _governorateId, districtId: _districtId, areaId: _areaId);
       if (!mounted) return;
       _warehouseCode.clear(); _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseLocation.clear(); _warehousePhone.clear(); _warehouseLandline.clear(); _address.clear(); _parentWarehouseId = null; _governorateId = null; _districtId = null; _areaId = null;
-      setState(() { _saving = false; _message = 'تمت إضافة المخزن.'; });
+      setState(() { _saving = false; _message = 'تمت إضافة المخزن بالكود التلقائي: $generatedWarehouseCode'; });
       await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
@@ -311,7 +317,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       if (imageBytes != null && imageBytes.isNotEmpty && contentType.isEmpty) {
         throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
       }
-      await _repo.createItem(companyId: _company.text, code: _itemCode.text, name: _itemName.text,
+      final generatedItemCode = await _repo.createItem(companyId: _company.text, name: _itemName.text,
         barcode: _barcode.text, categoryId: _itemCategoryId, unit: _unit.text,
         middleUnit: _middleUnit.text, minorUnit: _minorUnit.text,
         majorInnerQuantity: majorInner, middleInnerQuantity: _middleUnit.text.trim().isEmpty ? null : middleInner,
@@ -320,7 +326,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         imageBytes: imageBytes, imageMimeType: imageBytes == null ? null : contentType);
       if (!mounted) return;
       _itemCode.clear(); _itemName.clear(); _barcode.clear(); _middleUnit.clear(); _minorUnit.clear(); _majorInner.text = '1'; _middleInner.text = '1'; _pickedItemImage = null; _pickedItemImageBytes = null; _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
-      setState(() { _saving = false; _message = 'تمت إضافة الصنف.'; });
+      setState(() { _saving = false; _message = 'تمت إضافة الصنف بالكود التلقائي: $generatedItemCode'; });
       await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
@@ -776,7 +782,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(_parentWarehouseId == null ? 'إضافة مخزن رئيسي' : 'إضافة مخزن فرعي', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            TextField(controller: _warehouseCode, decoration: const InputDecoration(labelText: 'كود المخزن *')),
+            const TextField(enabled: false, decoration: InputDecoration(labelText: 'كود المخزن', hintText: 'يُنشأ تلقائيًا عند الحفظ', prefixIcon: Icon(Icons.auto_awesome))),
             TextField(controller: _warehouseName, decoration: const InputDecoration(labelText: 'اسم المخزن عربي *')),
             TextField(controller: _warehouseNameEn, decoration: const InputDecoration(labelText: 'اسم المخزن إنجليزي')),
             TextField(controller: _warehouseLocation, decoration: const InputDecoration(labelText: 'الموقع / وصف المكان')),
@@ -860,12 +866,12 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('إضافة صنف', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            TextField(controller: _itemCode, decoration: const InputDecoration(labelText: 'كود الصنف *')),
+            const TextField(enabled: false, decoration: InputDecoration(labelText: 'كود الصنف', hintText: 'يُنشأ تلقائيًا بعد الحفظ', prefixIcon: Icon(Icons.auto_awesome))),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _itemCategoryId, isExpanded: true,
-              decoration: const InputDecoration(labelText: 'فئة الصنف (اختياري)'),
-              items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فئة')), ..._categories.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis)))],
+              decoration: const InputDecoration(labelText: 'الفئة الثانوية للصنف *', helperText: 'اختر الفئة الثانوية المرتبطة بفئة رئيسية وفرعية لإكمال الكود التلقائي'),
+              items: _categories.where((g) => g['is_active'] == true && _isSecondaryCategory(g)).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis))).toList(),
               onChanged: (v) => setState(() => _itemCategoryId = v),
             ),
             TextField(controller: _itemName, decoration: const InputDecoration(labelText: 'اسم الصنف *')),
