@@ -84,7 +84,6 @@ class ErpMasterDataService {
     bool isActive = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    _require(code, 'كود الفئة مطلوب.');
     _require(name, 'اسم الفئة مطلوب.');
     final payload = <String, Object?>{
       'company_id': companyId,
@@ -203,7 +202,6 @@ class ErpMasterDataService {
     bool isActive = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    _require(code, 'كود الطرف مطلوب.');
     _require(name, 'اسم الطرف مطلوب.');
     if (!const {'supplier', 'customer', 'both'}.contains(kind)) {
       throw ArgumentError('نوع الطرف يجب أن يكون supplier أو customer أو both.');
