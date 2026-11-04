@@ -117,6 +117,7 @@ String silsilaText(String value) {
     'مشتريات': 'Purchasing',
     'مبيعات': 'Sales',
     'موارد بشرية': 'Human Resources',
+    'ملخص إدارة موارد بشرية': 'HR Executive Summary',
     'علاقات عملاء': 'Customer Relations',
     'إضافة حسابات جروبات فيسبوك': 'Facebook Group Accounts',
     'فاتورة إلكترونية': 'E-Invoice',
