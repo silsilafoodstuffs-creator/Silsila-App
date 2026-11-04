@@ -34,6 +34,16 @@ begin
   if prefix !~ '^[A-Za-z]{3}$' or digits < 1 or digits > 12 then
     raise exception 'إعدادات التكويد غير صحيحة للنوع %', p_key;
   end if;
+  if exists (
+    select 1 from jsonb_each(coalesce(v->'types', '{}'::jsonb)) as configured(key, value)
+    where configured.key <> p_key
+      and lower(coalesce(configured.value->>'prefix', '')) = lower(prefix)
+  ) then
+    raise exception 'بادئة التكويد % مستخدمة بالفعل في نوع تكويد آخر', prefix;
+  end if;
+  if lower(coalesce(v->>'item_prefix', 'itm')) = lower(prefix) then
+    raise exception 'بادئة التكويد % محجوزة للأصناف', prefix;
+  end if;
   return next;
 end;
 $$;
@@ -146,7 +156,7 @@ begin
       when 'warehouse' then 'Whs'
       when 'category' then 'Cat'
       when 'cost_center' then 'Cst'
-      when 'price_list' then 'Prc'
+      when 'price_list' then 'Pli'
       when 'account' then 'Acc'
       when 'cashbox' then 'Csh'
       when 'supplier' then 'Sup'
@@ -155,7 +165,7 @@ begin
       when 'job' then 'Job'
       when 'work_location' then 'Loc'
       when 'grade' then 'Grd'
-      when 'payroll_run' then 'Pay'
+      when 'payroll_run' then 'Prl'
       when 'salary_element' then 'Sal'
       when 'unit' then 'Unt'
       when 'payment_method' then 'Pmt'
@@ -172,10 +182,10 @@ begin
       when 'sales_return' then 'Srt'
       when 'purchase_invoice' then 'Piv'
       when 'purchase_order' then 'Por'
-      when 'purchase_receipt' then 'Prc'
+      when 'purchase_receipt' then 'Prr'
       when 'purchase_return' then 'Prt'
       when 'cash_receipt' then 'Rcp'
-      when 'cash_payment' then 'Pay'
+      when 'cash_payment' then 'Cpy'
       when 'cash_transfer' then 'Trf'
       when 'cash_movement' then 'Cmv'
       when 'cash_order' then 'Cso'
@@ -263,6 +273,16 @@ begin
   if v_prefix !~ '^[A-Za-z]{3}$' then
     raise exception 'بادئة كود الأصناف يجب أن تكون ثلاثة أحرف إنجليزية';
   end if;
+  if exists (
+    select 1
+    from public.erp_program_policies p,
+         jsonb_each(coalesce((case when left(p.policy_value, 1) = '{' then p.policy_value::jsonb else '{}'::jsonb end)->'types', '{}'::jsonb)) configured
+    where p.company_id = new.company_id
+      and p.policy_key = 'code_generation_registry'
+      and lower(coalesce(configured.value->>'prefix', '')) = lower(v_prefix)
+  ) then
+    raise exception 'بادئة الأصناف مستخدمة بالفعل في نوع تكويد آخر';
+  end if;
 
   v_parent := new.category_id;
   for i in 1..3 loop
@@ -343,7 +363,7 @@ begin
     when 'warehouse' then v_table := 'erp_warehouses'; v_column := 'warehouse_code'; v_prefix := 'Whs';
     when 'category' then v_table := 'erp_item_categories'; v_column := 'category_code'; v_prefix := 'Cat';
     when 'cost_center' then v_table := 'erp_cost_centers'; v_column := 'center_code'; v_prefix := 'Cst';
-    when 'price_list' then v_table := 'erp_price_lists'; v_column := 'price_list_code'; v_prefix := 'Prc';
+    when 'price_list' then v_table := 'erp_price_lists'; v_column := 'price_list_code'; v_prefix := 'Pli';
     when 'account' then v_table := 'erp_accounts'; v_column := 'account_code'; v_prefix := 'Acc';
     when 'cashbox' then v_table := 'erp_cashboxes'; v_column := 'cashbox_code'; v_prefix := 'Csh';
     when 'supplier' then v_table := 'erp_parties'; v_column := 'party_code'; v_prefix := 'Sup';
@@ -352,7 +372,7 @@ begin
     when 'job' then v_table := 'erp_hr_jobs'; v_column := 'job_code'; v_prefix := 'Job';
     when 'work_location' then v_table := 'erp_hr_work_locations'; v_column := 'location_code'; v_prefix := 'Loc';
     when 'grade' then v_table := 'erp_hr_job_grades'; v_column := 'grade_code'; v_prefix := 'Grd';
-    when 'payroll_run' then v_table := 'erp_payroll_runs'; v_column := 'run_code'; v_prefix := 'Pay';
+    when 'payroll_run' then v_table := 'erp_payroll_runs'; v_column := 'run_code'; v_prefix := 'Prl';
     when 'salary_element' then v_table := 'erp_hr_salary_elements'; v_column := 'element_code'; v_prefix := 'Sal';
     when 'unit' then v_table := 'erp_item_unit_catalog'; v_column := 'unit_code'; v_prefix := 'Unt';
     when 'payment_method' then v_table := 'erp_payment_methods'; v_column := 'payment_method_code'; v_prefix := 'Pmt';
@@ -369,10 +389,10 @@ begin
     when 'sales_return' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Srt';
     when 'purchase_invoice' then v_table := 'erp_purchase_documents'; v_column := 'document_number'; v_prefix := 'Piv';
     when 'purchase_order' then v_table := 'erp_purchase_documents'; v_column := 'document_number'; v_prefix := 'Por';
-    when 'purchase_receipt' then v_table := 'erp_purchase_documents'; v_column := 'document_number'; v_prefix := 'Prc';
+    when 'purchase_receipt' then v_table := 'erp_purchase_documents'; v_column := 'document_number'; v_prefix := 'Prr';
     when 'purchase_return' then v_table := 'erp_purchase_documents'; v_column := 'document_number'; v_prefix := 'Prt';
     when 'cash_receipt' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Rcp';
-    when 'cash_payment' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Pay';
+    when 'cash_payment' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Cpy';
     when 'cash_transfer' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Trf';
     when 'cash_movement' then v_table := 'erp_cash_movements'; v_column := 'movement_number'; v_prefix := 'Cmv';
     when 'cash_order' then v_table := 'erp_cash_orders'; v_column := 'order_number'; v_prefix := 'Cso';
