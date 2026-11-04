@@ -58,27 +58,28 @@ class ErpPayrollRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
-  Future<void> createRun({
+  Future<String> createRun({
     required String companyId,
-    required String runCode,
     required DateTime start,
     required DateTime end,
     required String expenseAccountId,
     required String payableAccountId,
     required String deductionsAccountId,
   }) async {
-    if (runCode.trim().isEmpty || start.isAfter(end)) throw ArgumentError('راجع كود المسير والفترة.');
-    await _db.from('erp_payroll_runs').insert({
+    if (companyId.trim().isEmpty || start.isAfter(end)) throw ArgumentError('راجع الشركة والفترة.');
+    final inserted = await _db.from('erp_payroll_runs').insert({
       'company_id': companyId.trim(),
       'created_by': _db.auth.currentUser?.id,
-      'run_code': runCode.trim(),
       'period_start': _dateOnly(start),
       'period_end': _dateOnly(end),
       'expense_account_id': expenseAccountId,
       'payable_account_id': payableAccountId,
       'deductions_account_id': deductionsAccountId,
       'status': 'draft',
-    });
+    }).select('run_code').single();
+    final generatedCode = (inserted['run_code'] ?? '').toString();
+    if (generatedCode.isEmpty) throw StateError('لم تُرجع قاعدة البيانات كود مسير الرواتب التلقائي.');
+    return generatedCode;
   }
 
   Future<void> addLine({
