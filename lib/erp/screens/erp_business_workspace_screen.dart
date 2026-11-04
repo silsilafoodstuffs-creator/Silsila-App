@@ -576,7 +576,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     }
     if (_inventoryMode == 'adjustment' && _policyRequireAdjustmentNotes && _inventoryNotes.text.trim().isEmpty) { _message('سياسة النشاط تشترط كتابة سبب التسوية.'); return; }
     final now=DateTime.now();
-    final docNo='ACT-STK-${now.microsecondsSinceEpoch}';
+    const docNo='';
     try{
       if(_inventoryMode=='transfer'){
         if(_targetWarehouseId==null||_targetWarehouseId==_sourceWarehouseId){_message('اختر مخزناً مستهدفاً مختلفاً.');return;}
