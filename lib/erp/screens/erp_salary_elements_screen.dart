@@ -45,14 +45,13 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   void _cancelNewRow() => setState(() { _showNewRow=false; _message='تم إلغاء سطر الإضافة.'; });
   Future<void> _saveNewRow() async {
     if (!_showNewRow) { setState(() => _message='اضغط إضافة لإنشاء سطر جديد داخل الجدول.'); return; }
-    final code=_newCode.text.trim().toUpperCase(), amount=double.tryParse(_newValue.text.trim());
-    if (!RegExp(r'^[A-Z0-9]+$').hasMatch(code) || _newAr.text.trim().isEmpty || amount==null || amount<0) { setState(()=>_error='أدخل كودًا إنجليزيًا/رقميًا واسمًا عربيًا وقيمة صحيحة غير سالبة.'); return; }
-    if (_rows.any((r)=>_s(r['element_code']).toUpperCase()==code)) { setState(()=>_error='كود العنصر مستخدم بالفعل؛ اختر كودًا آخر.'); return; }
+    final amount=double.tryParse(_newValue.text.trim());
+    if (_newAr.text.trim().isEmpty || amount==null || amount<0) { setState(()=>_error='أدخل اسمًا عربيًا وقيمة صحيحة غير سالبة.'); return; }
     final company=(widget.companyId??'').trim();
     if(company.isEmpty){setState(()=>_error='يجب تحديد الشركة أولًا.');return;}
     setState(()=>_loading=true);
     try {
-      await _db.from('erp_hr_salary_elements').insert({'company_id':company,'element_code':code,'name_ar':_newAr.text.trim(),'name_en':_newEn.text.trim(),'element_type':_newType,'value_mode':_newMode,'nature':_newNature,'default_value':amount,'show_on_payslip':_newShowOnPayslip,'is_active':_newActive,'is_system_locked':false});
+      await _db.from('erp_hr_salary_elements').insert({'company_id':company,'element_code':'','name_ar':_newAr.text.trim(),'name_en':_newEn.text.trim(),'element_type':_newType,'value_mode':_newMode,'nature':_newNature,'default_value':amount,'show_on_payslip':_newShowOnPayslip,'is_active':_newActive,'is_system_locked':false});
       if(!mounted)return;
       setState(()=>_showNewRow=false);
       await _load();
