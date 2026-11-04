@@ -1148,6 +1148,8 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
                     final profileId = account['profile_id']?.toString() ?? '';
                     final name = account['full_name']?.toString() ?? 'حساب بدون اسم';
                     final phone = account['phone']?.toString() ?? '';
+                    final currentActivity = account['activity_type']?.toString();
+                    final accountRole = account['role']?.toString().toLowerCase();
                     final kind = account['account_type']?.toString() == 'supplier' ? 'مورد' : account['account_type']?.toString() == 'customer' ? 'عميل' : (account['role']?.toString() ?? 'حساب');
                     final selectedCode = _candidateActivities[profileId];
                     final busy = _linkingProfileId == profileId;
