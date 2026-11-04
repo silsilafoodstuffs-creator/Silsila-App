@@ -311,7 +311,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       if (imageBytes != null && imageBytes.isNotEmpty && contentType.isEmpty) {
         throw ArgumentError('صيغة الصورة غير مدعومة. استخدم JPG أو PNG أو WEBP.');
       }
-      await _repo.createItem(companyId: _company.text, code: _itemCode.text, name: _itemName.text,
+      final generatedItemCode = await _repo.createItem(companyId: _company.text, code: '', name: _itemName.text,
         barcode: _barcode.text, categoryId: _itemCategoryId, unit: _unit.text,
         middleUnit: _middleUnit.text, minorUnit: _minorUnit.text,
         majorInnerQuantity: majorInner, middleInnerQuantity: _middleUnit.text.trim().isEmpty ? null : middleInner,
@@ -320,7 +320,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         imageBytes: imageBytes, imageMimeType: imageBytes == null ? null : contentType);
       if (!mounted) return;
       _itemCode.clear(); _itemName.clear(); _barcode.clear(); _middleUnit.clear(); _minorUnit.clear(); _majorInner.text = '1'; _middleInner.text = '1'; _pickedItemImage = null; _pickedItemImageBytes = null; _purchasePrice.text = '0'; _salePrice.text = '0'; _taxRate.text = '0'; _reorder.text = '0';
-      setState(() { _saving = false; _message = 'تمت إضافة الصنف.'; });
+      setState(() { _saving = false; _message = 'تمت إضافة الصنف بالكود التلقائي: $generatedItemCode'; });
       await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
@@ -860,11 +860,11 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('إضافة صنف', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            TextField(controller: _itemCode, decoration: const InputDecoration(labelText: 'كود الصنف *')),
+            const TextField(enabled: false, decoration: InputDecoration(labelText: 'كود الصنف', hintText: 'يُنشأ تلقائيًا بعد الحفظ', prefixIcon: Icon(Icons.auto_awesome))),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _itemCategoryId, isExpanded: true,
-              decoration: const InputDecoration(labelText: 'فئة الصنف (اختياري)'),
+              decoration: const InputDecoration(labelText: 'فئة الصنف *'),
               items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فئة')), ..._categories.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis)))],
               onChanged: (v) => setState(() => _itemCategoryId = v),
             ),
