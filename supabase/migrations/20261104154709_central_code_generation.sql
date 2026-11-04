@@ -2,9 +2,17 @@
 -- Existing records and their codes are preserved. Blank codes on new rows are generated atomically.
 begin;
 
--- Convert previously computed cash identifiers into writable text fields; keep existing values unchanged.
-alter table public.erp_cash_movements alter column movement_number drop expression;
-alter table public.erp_cash_orders alter column order_number drop expression;
+-- Convert previously computed cash identifiers into writable text fields only when still generated.
+do $$
+begin
+  if exists (select 1 from pg_attribute where attrelid = 'public.erp_cash_movements'::regclass and attname = 'movement_number' and attgenerated = 's') then
+    execute 'alter table public.erp_cash_movements alter column movement_number drop expression';
+  end if;
+  if exists (select 1 from pg_attribute where attrelid = 'public.erp_cash_orders'::regclass and attname = 'order_number' and attgenerated = 's') then
+    execute 'alter table public.erp_cash_orders alter column order_number drop expression';
+  end if;
+end;
+$$;
 alter table public.erp_user_classifications add column if not exists classification_code_display text;
 alter table public.erp_journal_entries add column if not exists entry_number_display text;
 
