@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'erp_item_unit_conversion.dart';
-import 'erp_code_policy_service.dart';
 
 class ErpInventoryMasterRepository {
   ErpInventoryMasterRepository({SupabaseClient? client}) : _client = client ?? _tryClient();
@@ -150,8 +149,6 @@ class ErpInventoryMasterRepository {
       throw ArgumentError('الأسعار وحد إعادة الطلب لا تقبل القيم السالبة، ونسبة الضريبة من 0 إلى 100.');
     }
 
-    final generatedCode = await ErpCodePolicyService(_db).nextItemCode(companyId: companyId.trim(), categoryId: categoryId);
-
     final units = ErpItemUnitConversion.buildUnits(
       majorName: majorName,
       middleName: hasMiddle ? middleName : null,
@@ -161,15 +158,16 @@ class ErpInventoryMasterRepository {
     );
 
     final inserted = await _db.from('erp_items').insert({
-      'company_id': companyId.trim(), 'item_code': generatedCode, 'item_name': name.trim(), 'category_id': categoryId,
+      'company_id': companyId.trim(), 'item_code': '', 'item_name': name.trim(), 'category_id': categoryId,
       'barcode': _blank(barcode), 'base_unit': hasMinor ? minorName : hasMiddle ? middleName : majorName,
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking,
       'image_data': imageBytes == null || imageBytes.isEmpty ? null : _byteaHex(imageBytes),
       'image_mime_type': imageBytes == null || imageBytes.isEmpty ? null : _blank(imageMimeType),
       'image_url': null, 'is_active': true,
-    }).select('id').single();
+    }).select('id,item_code').single();
     final itemId = inserted['id'].toString();
+    final generatedCode = inserted['item_code'].toString();
     try {
       await _db.from('erp_item_units').insert(units.map((row) => <String, dynamic>{
         ...row, 'company_id': companyId.trim(), 'item_id': itemId, 'is_active': true,
