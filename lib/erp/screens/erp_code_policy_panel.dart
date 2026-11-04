@@ -28,6 +28,8 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'payroll_run','name':'مسيرات الرواتب','prefix':'Pay','digits':'5'},
     {'key':'user_type','name':'أنواع المستخدمين','prefix':'Typ','digits':'5'},
     {'key':'permission_template','name':'قوالب الصلاحيات','prefix':'Tpl','digits':'5'},
+    {'key':'cost_center','name':'مراكز التكلفة','prefix':'Cst','digits':'5'},
+    {'key':'price_list','name':'قوائم الأسعار','prefix':'Prc','digits':'5'},
     {'key':'account','name':'الحسابات المالية','prefix':'Acc','digits':'5'},
     {'key':'cashbox','name':'الخزائن والحسابات البنكية','prefix':'Csh','digits':'5'},
     {'key':'cost_center','name':'مراكز التكلفة','prefix':'Cst','digits':'5'},
