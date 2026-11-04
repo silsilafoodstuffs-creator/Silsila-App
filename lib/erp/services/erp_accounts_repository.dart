@@ -52,13 +52,10 @@ class ErpAccountsRepository {
     String? parentId,
     bool isPostable = false,
   }) async {
-    final normalizedCode = code.trim();
     final normalizedName = name.trim();
     final normalizedCompany = companyId.trim();
-    if (normalizedCompany.isEmpty ||
-        normalizedCode.isEmpty ||
-        normalizedName.isEmpty) {
-      throw ArgumentError('الشركة وكود الحساب واسم الحساب حقول إلزامية.');
+    if (normalizedCompany.isEmpty || normalizedName.isEmpty) {
+      throw ArgumentError('الشركة واسم الحساب حقول إلزامية.');
     }
     _validateTypeAndBalance(accountType, normalBalance);
     parentId = _normalizeParent(parentId);
@@ -70,7 +67,7 @@ class ErpAccountsRepository {
     );
     final inserted = await client.from('erp_accounts').insert({
       'company_id': normalizedCompany,
-      'account_code': normalizedCode,
+      'account_code': '',
       'account_name': normalizedName,
       'account_type': accountType,
       'normal_balance': normalBalance,

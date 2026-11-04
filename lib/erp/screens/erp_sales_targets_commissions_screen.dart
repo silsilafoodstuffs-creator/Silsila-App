@@ -550,7 +550,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
           final created = await _db.from('erp_sales_representatives').insert({
             'company_id': c,
             'employee_id': employeeId,
-            'rep_code': 'REP-$representativeCode',
+            'rep_code': '',
             'rep_name': representativeName,
             'is_active': employee['is_active'] ?? true,
             'has_target': false,

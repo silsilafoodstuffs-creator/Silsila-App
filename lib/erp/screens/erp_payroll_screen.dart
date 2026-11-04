@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_payroll_repository.dart';
@@ -37,12 +38,23 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
   String? _error;
   String? _message;
 
+  Future<void> _previewGeneratedCode() async {
+    if (_company.text.trim().isEmpty) return;
+    try {
+      final preview = await Supabase.instance.client.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': _company.text.trim(),
+        'p_entity_key': 'payroll_run',
+      });
+      if (mounted) setState(() => _runCode.text = preview.toString());
+    } catch (_) { if (mounted) setState(() => _runCode.clear()); }
+  }
+
   @override
   void initState() {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
     if (_company.text.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+      WidgetsBinding.instance.addPostFrameCallback((_) async { await _load(); await _previewGeneratedCode(); });
     }
   }
   @override
@@ -110,16 +122,9 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
 
   void _newPayrollRun() {
     if (_saving || _loading) return;
-    if (_runCode.text.trim().isNotEmpty) {
-      setState(() {
-        _error = 'احفظ مسير الرواتب الحالي باستخدام زر حفظ أو F8 قبل بدء مسير جديد؛ لم يتم مسح أي بيانات.';
-        _message = null;
-      });
-      return;
-    }
     setState(() {
       _error = null;
-      _message = 'نموذج مسير جديد جاهز. أدخل الكود ثم اضغط F8 للحفظ.';
+      _message = 'نموذج مسير جديد جاهز. سيُنشأ الكود تلقائيًا عند الحفظ.';
     });
   }
 
@@ -141,7 +146,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
       if (!mounted) return;
       _runCode.clear();
       setState(() { _saving = false; _message = 'تم إنشاء مسودة مسير الرواتب.'; });
-      await _load();
+      await _load(); await _previewGeneratedCode();
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر إنشاء المسير: $e'; });
@@ -278,7 +283,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('إنشاء مسودة مسير', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-            TextField(controller: _runCode, decoration: const InputDecoration(labelText: 'كود المسير *')),
+            TextField(controller: _runCode, readOnly: true, decoration: const InputDecoration(labelText: 'كود المسير (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
             const SizedBox(height: 8),
             OutlinedButton(onPressed: () => _pickDate(true), child: Text('بداية الفترة: ${_date(_periodStart)}')),
             OutlinedButton(onPressed: () => _pickDate(false), child: Text('نهاية الفترة: ${_date(_periodEnd)}')),

@@ -378,7 +378,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
         final selectedBytes = _imageBytes[id];
         final payload = <String,dynamic>{
-          'company_id':_company, 'activity_code':_selectedActivityCode, 'category_code':_s(row['category_code']), 'category_name':ar,
+          'company_id':_company, 'activity_code':_selectedActivityCode, 'category_code':row['_draft'] == true ? '' : _s(row['category_code']), 'category_name':ar,
           'category_name_en':en, 'parent_id':row['parent_id'], 'is_active':row['is_active'] == true,
           'show_in_app':row['show_in_app'] == true,
           'image_url':(selectedBytes != null || row['_remove_image'] == true) ? null : row['image_url'],

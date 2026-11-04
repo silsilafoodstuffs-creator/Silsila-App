@@ -157,29 +157,47 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
         : roots;
   }
 
-  String _newCode() {
-    var max = 0;
-    for (final r in _centers) {
-      final m = RegExp(r'(\d+)$').firstMatch(_s(r['center_code']));
-      final n = int.tryParse(m?.group(1) ?? '') ?? 0;
-      if (n > max) max = n;
+  Future<String> _newCode() async {
+    final db = _db;
+    final companyId = (_activeCompanyId ?? widget.companyId ?? '').trim();
+    if (db == null || companyId.isEmpty) return 'Cst00001';
+    try {
+      final preview = (await db.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': companyId, 'p_entity_key': 'cost_center',
+      })).toString();
+      final match = RegExp(r'^([A-Za-z]{3})([0-9]+)$').firstMatch(preview);
+      if (match == null) return preview;
+      final prefix = match.group(1)!;
+      final width = match.group(2)!.length;
+      var number = int.tryParse(match.group(2)!) ?? 1;
+      var candidate = preview;
+      while (_centers.any((row) => _s(row['center_code']).toUpperCase() == candidate.toUpperCase())) {
+        number++;
+        candidate = prefix + number.toString().padLeft(width, '0');
+      }
+      return candidate;
+    } catch (_) {
+      return 'Cst00001';
     }
-    return 'CC-${(max + 1).toString().padLeft(3, '0')}';
   }
 
-  void _addMain() {
+  Future<void> _addMain() async {
+    final code = await _newCode();
+    if (!mounted) return;
     setState(() {
-      _centers.add({'id': null, 'center_code': _newCode(), 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': null, 'parent_id': null, 'is_active': true, '_draft': true});
+      _centers.add({'id': null, 'center_code': code, 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': null, 'parent_id': null, 'is_active': true, '_draft': true});
       _message = 'أُضيف صف مركز رئيسي. أكمل البيانات واضغط حفظ.';
       _error = null;
     });
   }
 
-  void _addChild(Map<String, dynamic> parent) {
+  Future<void> _addChild(Map<String, dynamic> parent) async {
     if (_s(parent['id']).isEmpty) { setState(() => _error = 'احفظ المركز الرئيسي أولًا ثم أضف المركز الفرعي.'); return; }
     if (_child(parent)) { setState(() => _error = 'المركز الفرعي لا يمكن أن يكون أبًا لمركز آخر.'); return; }
+    final code = await _newCode();
+    if (!mounted) return;
     setState(() {
-      _centers.add({'id': null, 'center_code': _newCode(), 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': parent['branch_id'], 'parent_id': parent['id'], 'is_active': true, '_draft': true});
+      _centers.add({'id': null, 'center_code': code, 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': parent['branch_id'], 'parent_id': parent['id'], 'is_active': true, '_draft': true});
       _message = 'أُضيف صف فرعي تحت المركز الرئيسي المحدد.';
       _error = null;
     });
@@ -195,9 +213,13 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     final codes = <String>{};
     for (final r in _centers) {
       final code = _s(r['center_code']).trim();
-      if (code.isEmpty || _ar(r).trim().isEmpty) { setState(() => _error = 'الكود والاسم العربي مطلوبان في كل صف.'); return; }
-      if (!RegExp(r'^[A-Za-z]+-[0-9]+$').hasMatch(code)) { setState(() => _error = 'الكود "$code" غير صحيح. استخدم حروفًا إنجليزية ثم شرطة وأرقامًا، مثل CC-001.'); return; }
-      if (!codes.add(code.toUpperCase())) { setState(() => _error = 'الكود "$code" مكرر.'); return; }
+      if (_ar(r).trim().isEmpty) { setState(() => _error = 'الاسم العربي مطلوب في كل صف.'); return; }
+      if (r['_draft'] != true && (code.isEmpty || !RegExp(r'^[A-Za-z]+-?[0-9]+$').hasMatch(code))) {
+        setState(() => _error = 'كود المركز "$code" غير صحيح.'); return;
+      }
+      if (r['_draft'] != true && !codes.add(code.toUpperCase())) {
+        setState(() => _error = 'الكود "$code" مكرر.'); return;
+      }
       if (_child(r) && !_centers.any((p) => _s(p['id']) == _s(r['parent_id']) && !_child(p))) {
         setState(() => _error = 'كل مركز فرعي يجب أن يتبع مركزًا رئيسيًا محفوظًا.'); return;
       }
@@ -209,7 +231,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
         final ar = _ar(r).trim();
         final branch = _s(r['branch_id']).trim();
         final payload = <String, dynamic>{
-          'company_id': company, 'center_code': _s(r['center_code']).trim(),
+          'company_id': company, 'center_code': r['_draft'] == true ? '' : _s(r['center_code']).trim(),
           'center_name': ar, 'center_name_ar': ar,
           'center_name_en': _s(r['center_name_en']).trim().isEmpty ? null : _s(r['center_name_en']).trim(),
           'branch_id': branch.isEmpty ? null : branch,
@@ -383,8 +405,8 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
                   DataCell(Checkbox(shape: const CircleBorder(), visualDensity: VisualDensity.compact, value: selected, activeColor: _costPurple,
                     onChanged: draft ? null : (v) => setState(() { if (v == true) { _selectedIds.add(id); } else { _selectedIds.remove(id); } }))),
                   DataCell(SizedBox(width: 25, child: Text('${i + 1}', style: const TextStyle(fontSize: 12)))),
-                  DataCell(SizedBox(width: 115, child: TextFormField(key: ValueKey('code-$id-$i'), initialValue: _s(r['center_code']),
-                    onChanged: (v) => r['center_code'] = v, decoration: _dec('CC-001'), style: const TextStyle(fontSize: 12)))),
+                  DataCell(SizedBox(width: 115, child: TextFormField(key: ValueKey('code-$id-$i'), initialValue: _s(r['center_code']), readOnly: true,
+                    decoration: _dec('تلقائي'), style: const TextStyle(fontSize: 12)))),
                   DataCell(SizedBox(width: 165, child: Padding(
                     padding: EdgeInsetsDirectional.only(start: isChild ? 16 : 0),
                     child: TextFormField(key: ValueKey('ar-$id-$i'), initialValue: _ar(r),

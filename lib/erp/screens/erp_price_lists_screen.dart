@@ -1,5 +1,6 @@
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_price_lists_repository.dart';
 
 class ErpPriceListsScreen extends StatefulWidget {
@@ -48,13 +49,24 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   String? _error;
   String? _message;
 
+  Future<void> _previewGeneratedCode() async {
+    if (_company.text.trim().isEmpty) return;
+    try {
+      final preview = await Supabase.instance.client.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': _company.text.trim(),
+        'p_entity_key': 'price_list',
+      });
+      if (mounted) setState(() => _code.text = preview.toString());
+    } catch (_) { if (mounted) setState(() => _code.clear()); }
+  }
+
   @override
   void initState() {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
     _kind = widget.initialKind;
     if (_company.text.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+      WidgetsBinding.instance.addPostFrameCallback((_) async { await _load(); await _previewGeneratedCode(); });
     }
   }
   @override
@@ -130,7 +142,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   }
   void _newPriceList() {
     if (_saving || _loading) return;
-    if ([_code.text, _name.text, _notes.text].any((value) => value.trim().isNotEmpty)) {
+    if ([_name.text, _notes.text].any((value) => value.trim().isNotEmpty)) {
       setState(() {
         _error = 'احفظ قائمة الأسعار الحالية باستخدام زر حفظ أو F8 قبل بدء قائمة جديدة؛ لم يتم مسح أي بيانات.';
         _message = null;
@@ -150,7 +162,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         kind: _kind, isDefault: _default, currency: _currencyCode, notes: _notes.text);
       if (!mounted) return;
       _code.clear(); _name.clear(); _notes.clear(); setState(() { _saving = false; _message = 'تم إنشاء قائمة الأسعار.'; });
-      await _load();
+      await _load(); await _previewGeneratedCode();
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر إنشاء القائمة: $e'; });
@@ -261,7 +273,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
       const SizedBox(height: 10),
       Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Text('إنشاء قائمة جديدة', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-        TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود القائمة *')),
+        TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'كود القائمة (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم القائمة *')),
         TextField(controller: _notes, decoration: const InputDecoration(labelText: 'ملاحظات')),
         DropdownButtonFormField<String>(

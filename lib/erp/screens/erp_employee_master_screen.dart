@@ -149,17 +149,15 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   }
 
   Future<void> _generateNextCode() async {
-    if (_code.text.trim().isNotEmpty || _cid.isEmpty || _db == null) return;
+    if (_selectedEmployeeId != null || _cid.isEmpty || _db == null) return;
     try {
-      final rows = await _db!.from('erp_employees').select('employee_code').eq('company_id', _cid).limit(5000);
-      var maxNumber = 0;
-      for (final row in rows) {
-        final match = RegExp(r'^[A-Za-z]+-?(\d+)$').firstMatch(_s(row['employee_code']));
-        final number = match == null ? 0 : (int.tryParse(match.group(1) ?? '') ?? 0);
-        if (number > maxNumber) maxNumber = number;
-      }
-      if (mounted && _code.text.trim().isEmpty) setState(() => _code.text = 'EMP-' + (maxNumber + 1).toString().padLeft(4, '0'));
-    } catch (_) { if (mounted && _code.text.trim().isEmpty) setState(() => _code.text = 'EMP-0001'); }
+      final preview = await _db!.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': _cid, 'p_entity_key': 'employee',
+      });
+      if (mounted && _selectedEmployeeId == null) setState(() => _code.text = preview.toString());
+    } catch (_) {
+      if (mounted && _selectedEmployeeId == null) setState(() => _code.text = 'Emp00001');
+    }
   }
   DateTime? _parseDate(String value) {
     final match = RegExp(r'^(\d{2})-(\d{2})-(\d{4})$').firstMatch(value.trim());
@@ -395,7 +393,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     final depName = _first(_deps.where((x) => x['id'] == (_dep ?? _admin)).map((x) => _s(x['name_ar'])));
     final jobName = _first(_jobs.where((x) => x['id'] == _job).map((x) => _s(x['name_ar'])));
     final payload = <String, dynamic>{
-      'company_id': _cid, 'employee_code': _code.text.trim().toUpperCase(),
+      'company_id': _cid, 'employee_code': _selectedEmployeeId == null ? '' : _code.text.trim(),
       'full_name': _ar.text.trim(), 'full_name_en': _en.text.trim(), 'national_id': _nationalId.text.trim(), 'national_id_last4': _nationalId.text.trim().length == 14 ? _nationalId.text.trim().substring(10) : null, 'country': _country,
       'governorate': _gov, 'district': _district, 'locality': _locality,
       'address': _address.text.trim(), 'map_url': _map.text.trim(),
@@ -414,9 +412,9 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
     if (_selectedEmployeeId != null && _nationalId.text.trim().isEmpty) { payload.remove('national_id'); payload.remove('national_id_last4'); }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      if (_selectedEmployeeId == null) { await _db!.from('erp_employees').insert(payload); } else { await _db!.from('erp_employees').update(payload).eq('id', _selectedEmployeeId!).eq('company_id', _cid); }
+      String? savedCode; if (_selectedEmployeeId == null) { final inserted = await _db!.from('erp_employees').insert(payload).select('employee_code').single(); savedCode = _s(inserted['employee_code']); } else { await _db!.from('erp_employees').update(payload).eq('id', _selectedEmployeeId!).eq('company_id', _cid); savedCode = _code.text.trim(); }
       if (!mounted) return;
-      setState(() { _saving = false; _message = _selectedEmployeeId == null ? 'تم حفظ بيانات الموظف بنجاح.' : 'تم تعديل بيانات الموظف بنجاح.'; });
+      setState(() { _saving = false; _message = _selectedEmployeeId == null ? 'تم حفظ بيانات الموظف بنجاح. الكود: $savedCode' : 'تم تعديل بيانات الموظف بنجاح. الكود: $savedCode'; });
       _clear(generateCode: false);
       await _load();
     } catch (e) {
@@ -744,7 +742,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       Expanded(child: SingleChildScrollView(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       IgnorePointer(ignoring: _readOnly, child: Form(key: _form, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _section('بيانات أولية', Icons.badge_outlined, [
-          _field(_code, 'كود الموظف التلقائي *', required: true, width: 185),
+          _field(_code, 'كود الموظف التلقائي', required: false, width: 185),
           _field(_ar, 'اسم الموظف عربي *', required: true, width: 220), _field(_en, 'اسم الموظف إنجليزي', width: 220),
           _drop('الدولة', _country, ['مصر','السعودية','الإمارات','أخرى'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), (v) => setState(() { _country = v ?? 'مصر'; }), width: 125),
           _drop('المحافظة', _geoRows.isEmpty ? (_gov.isEmpty ? null : _gov) : _govGeoId,
