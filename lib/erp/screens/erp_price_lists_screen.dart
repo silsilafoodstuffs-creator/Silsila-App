@@ -57,7 +57,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         'p_entity_key': 'price_list',
       });
       if (mounted) setState(() => _code.text = preview.toString());
-    } catch (_) { if (mounted) setState(() => _code.text = 'Prc00001'); }
+    } catch (_) { if (mounted) setState(() => _code.clear()); }
   }
 
   @override
@@ -142,7 +142,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   }
   void _newPriceList() {
     if (_saving || _loading) return;
-    if ([_code.text, _name.text, _notes.text].any((value) => value.trim().isNotEmpty)) {
+    if ([_name.text, _notes.text].any((value) => value.trim().isNotEmpty)) {
       setState(() {
         _error = 'احفظ قائمة الأسعار الحالية باستخدام زر حفظ أو F8 قبل بدء قائمة جديدة؛ لم يتم مسح أي بيانات.';
         _message = null;
