@@ -120,6 +120,10 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
         _canDirectLoad = canDirect;
         _loading = false;
       });
+      for (final row in saved) {
+        final id = _s(row['invoice_id']);
+        if (id.isNotEmpty) _controller(_manualNumbers, id).text = _s(row['manual_number']);
+      }
     } catch (e) {
       if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل مستندات البيع: $e'; });
     }
@@ -428,7 +432,7 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
                 DataColumn(label: Text('قيمة الفاتورة')),
                 DataColumn(label: Text('الوزن كجم')),
                 DataColumn(label: Text('الحمولة كجم')),
-                DataColumn(label: Text('رقم الإذن اليدوي *')),
+                DataColumn(label: Text('رقم الإذن (تلقائي)')),
               ],
               rows: _selectedInvoiceIds.map((id) {
                 final invoice = _invoices.firstWhere((r) => _s(r['id']) == id);
