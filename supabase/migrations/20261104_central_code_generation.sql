@@ -25,7 +25,7 @@ begin
   return next;
 end;
 $$;
-revoke all on function public.erp_code_policy_config(uuid,text,text,integer) from public, anon;
+revoke all on function public.erp_code_policy_config(uuid,text,text,integer) from public, anon, authenticated;
 
 create or replace function public.erp_assign_central_code()
 returns trigger
@@ -267,12 +267,14 @@ create or replace function public.erp_preview_next_central_code(
   p_company_id uuid, p_entity_key text
 )
 returns text
-language plpgsql security definer set search_path = '' as $$
+language plpgsql security invoker set search_path = '' as $
 declare
   v_table text;
   v_column text;
   v_prefix text;
   v_digits integer;
+  v_policy_prefix text;
+  v_policy_digits integer;
   v_max bigint;
 begin
   if auth.uid() is null or not public.erp_user_can_access_company(p_company_id) then
@@ -312,8 +314,95 @@ begin
     else raise exception 'نوع التكويد غير مدعوم';
   end case;
 
-  select c.prefix, c.digits into v_prefix, v_digits
-  from public.erp_code_policy_config(p_company_id, p_entity_key, v_prefix, 5) c;
+  select
+    nullif((case when left(policy_value, 1) = '{' then policy_value::jsonb else '{}'::jsonb end)->'types'->p_entity_key->>'prefix', ''),
+    nullif((case when left(policy_value, 1) = '{' then policy_value::jsonb else '{}'::jsonb end)->'types'->p_entity_key->>'digits', '')::integer
+  into v_policy_prefix, v_policy_digits
+  from public.erp_program_policies
+  where company_id = p_company_id and policy_key = 'code_generation_registry'
+  limit 1;
+  v_prefix := coalesce(v_policy_prefix, v_prefix);
+  v_digits := coalesce(v_policy_digits, 5);
+  if v_prefix !~ '^[A-Za-z]{3}
+    raise exception 'جدول نوع التكويد غير متاح';
+  end if;
+  execute format(
+    'select coalesce(max(substring(%I from %L)::bigint), 0) from public.%I where company_id = $1 and %I ~ $2',
+    v_column, '^' || v_prefix || '([0-9]+)$', v_table, v_column
+  ) into v_max using p_company_id, '^' || v_prefix || '[0-9]+$';
+  if coalesce(v_max, 0) + 1 >= power(10::numeric, v_digits) then
+    raise exception 'انتهت خانات الكود؛ زد عدد الخانات من سياسات التكويد';
+  end if;
+  return v_prefix || lpad((coalesce(v_max, 0) + 1)::text, v_digits, '0');
+end;
+$$;
+revoke all on function public.erp_preview_next_central_code(uuid, text) from public, anon;
+grant execute on function public.erp_preview_next_central_code(uuid, text) to authenticated;
+
+create or replace function public.erp_set_user_type_display_code()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare p text; d integer;
+begin
+  select prefix, digits into p, d
+  from public.erp_code_policy_config(new.company_id, 'user_type', 'Typ', 5);
+  new.type_code_display := p || lpad(new.type_code::text, d, '0');
+  return new;
+end;
+$$;
+create or replace function public.erp_set_permission_template_display_code()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare p text; d integer;
+begin
+  select prefix, digits into p, d
+  from public.erp_code_policy_config(new.company_id, 'permission_template', 'Tpl', 5);
+  new.template_code_display := p || lpad(new.template_code::text, d, '0');
+  return new;
+end;
+$$;
+
+drop trigger if exists erp_user_types_central_display_code on public.erp_user_types;
+create trigger erp_user_types_central_display_code
+before insert or update of company_id, type_code on public.erp_user_types
+for each row execute function public.erp_set_user_type_display_code();
+drop trigger if exists erp_permission_templates_central_display_code on public.erp_permission_templates;
+create trigger erp_permission_templates_central_display_code
+before insert or update of company_id, template_code on public.erp_permission_templates
+for each row execute function public.erp_set_permission_template_display_code();
+revoke all on function public.erp_set_user_type_display_code() from public, anon, authenticated;
+revoke all on function public.erp_set_permission_template_display_code() from public, anon, authenticated;
+
+-- Preserve price-list default switching in one transaction while the trigger assigns its code.
+create or replace function public.erp_create_price_list(
+  p_company_id uuid, p_code text, p_name text, p_kind text,
+  p_is_default boolean default false, p_currency_code text default 'EGP', p_notes text default null
+)
+returns uuid language plpgsql security definer set search_path = '' set row_security = off as $$
+declare v_id uuid; v_currency text := upper(coalesce(nullif(trim(p_currency_code), ''), 'EGP'));
+begin
+  if not public.erp_user_has_company_role(p_company_id, array['owner','admin','manager','accountant']::text[]) then
+    raise exception 'ليست لديك صلاحية إنشاء قوائم الأسعار';
+  end if;
+  if nullif(trim(p_name), '') is null then raise exception 'اسم قائمة الأسعار مطلوب'; end if;
+  if p_kind is null or p_kind not in ('sale','purchase') then raise exception 'نوع قائمة الأسعار غير صحيح'; end if;
+  if length(v_currency) <> 3 then raise exception 'رمز العملة يجب أن يتكون من ثلاثة أحرف'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(p_company_id::text || ':price-list:' || p_kind, 0));
+  if coalesce(p_is_default, false) then
+    update public.erp_price_lists set is_default=false, updated_at=now()
+    where company_id=p_company_id and price_kind=p_kind and is_active and is_default;
+  end if;
+  insert into public.erp_price_lists(company_id,price_list_code,price_list_name,price_kind,currency_code,is_default,is_active,notes)
+  values(p_company_id,'',trim(p_name),p_kind,v_currency::char(3),coalesce(p_is_default,false),true,nullif(trim(p_notes),''))
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+revoke all on function public.erp_create_price_list(uuid,text,text,text,boolean,text,text) from public, anon;
+grant execute on function public.erp_create_price_list(uuid,text,text,text,boolean,text,text) to authenticated;
+
+commit;
+ or v_digits < 1 or v_digits > 12 then
+    raise exception 'إعدادات التكويد غير صحيحة';
+  end if;
   if to_regclass('public.' || v_table) is null then
     raise exception 'جدول نوع التكويد غير متاح';
   end if;
