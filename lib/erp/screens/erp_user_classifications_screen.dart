@@ -129,7 +129,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
         final en = (_enControllers[id]?.text ?? _s(row['name_en'])).trim();
         if (ar.isEmpty) {
           if (row['_draft'] == true) continue;
-          throw StateError('اسم التصنيف العربي مطلوب (الكود ${row['classification_code'] ?? ''}).');
+          throw StateError('اسم التصنيف العربي مطلوب (الكود ${row['classification_code_display'] ?? row['classification_code'] ?? ''}).');
         }
         final payload = <String,dynamic>{
           'company_id': _company, 'user_type_id': _typeId,
