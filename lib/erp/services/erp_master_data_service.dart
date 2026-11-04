@@ -46,11 +46,10 @@ class ErpMasterDataService {
     bool isActive = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    _require(code, 'كود الفرع مطلوب.');
-    _require(name, 'اسم الفرع مطلوب.');
+        _require(name, 'اسم الفرع مطلوب.');
     final payload = <String, Object?>{
       'company_id': companyId,
-      'branch_code': code.trim(),
+      'branch_code': (id == null || id.trim().isEmpty) ? '' : code.trim(),
       'branch_name': name.trim(),
       'phone': _nullable(phone),
       'address': _nullable(address),
@@ -90,7 +89,7 @@ class ErpMasterDataService {
     final payload = <String, Object?>{
       'company_id': companyId,
       'parent_id': _nullable(parentId),
-      'category_code': code.trim(),
+      'category_code': (id == null || id.trim().isEmpty) ? '' : code.trim(),
       'category_name': name.trim(),
       'is_active': isActive,
     };
@@ -212,7 +211,7 @@ class ErpMasterDataService {
     if (creditLimit < 0) throw ArgumentError('حد الائتمان لا يمكن أن يكون سالبًا.');
     final payload = <String, Object?>{
       'company_id': companyId,
-      'party_code': code.trim(),
+      'party_code': (id == null || id.trim().isEmpty) ? '' : code.trim(),
       'party_name': name.trim(),
       'party_kind': kind,
       'phone': _nullable(phone),
