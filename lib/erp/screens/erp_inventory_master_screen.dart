@@ -652,18 +652,18 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
       title:Text(isWarehouse?'تعديل بيانات المخزن':'تعديل بيانات الصنف'),
       content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
-        TextField(controller:code,decoration:const InputDecoration(labelText:'الكود')),
+        TextField(controller:code,readOnly:true,decoration:const InputDecoration(labelText:'الكود',helperText:'كود تلقائي ثابت لا يمكن تغييره')),
         TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم بالعربية')),
         if(!isWarehouse)TextField(controller:barcode,decoration:const InputDecoration(labelText:'الباركود')),
       ])),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ التعديل'))],
     ));
     try{
-      if(yes==true&&code.text.trim().isNotEmpty&&name.text.trim().isNotEmpty){
+      if(yes==true&&name.text.trim().isNotEmpty){
         if(isWarehouse){
-          await Supabase.instance.client.from('erp_warehouses').update({'warehouse_code':code.text.trim().toUpperCase(),'warehouse_name':name.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
+          await Supabase.instance.client.from('erp_warehouses').update({'warehouse_name':name.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
         }else{
-          await Supabase.instance.client.from('erp_items').update({'item_code':code.text.trim().toUpperCase(),'item_name':name.text.trim(),'barcode':barcode.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
+          await Supabase.instance.client.from('erp_items').update({'item_name':name.text.trim(),'barcode':barcode.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
         }
         await _load(clearMessage:false);
         if(mounted)setState(()=>_message='تم تعديل السجل المحدد.');
