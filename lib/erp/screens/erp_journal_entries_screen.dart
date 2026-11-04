@@ -422,7 +422,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, refresh) => AlertDialog(
-          title: Text('إنشاء قيد عكس — رقم ${_str(entry, 'entry_number')}'),
+          title: Text('إنشاء قيد عكس — رقم ${_entryNumber(entry)}'),
           content: SizedBox(
             width: 460,
             child: Column(
