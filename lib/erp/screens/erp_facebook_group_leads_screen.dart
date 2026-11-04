@@ -99,6 +99,7 @@ class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScree
   final v=await form('تسجيل تواصل مع '+s(p['display_name']),['نوع التواصل','ملاحظات']);if(v==null||v['v0']!.trim().isEmpty)return;
   await save(()async{await db!.from('erp_crm_facebook_interactions').insert({'company_id':widget.companyId,'profile_id':p['id'],'interaction_type':v['v0'],'notes':v['v1'],'created_by':db!.auth.currentUser?.id});},'تم تسجيل التواصل.');
  }
+ Future<void> openSelectedGroup()async{final selected=groups.where((g)=>s(g['id'])==groupFilter);if(selected.isEmpty){toast('اختر جروباً من قائمة التصفية أولاً.');return;}await openProfile(s(selected.first['group_url']));}
  Future<void> openProfile(String url)async{try{if(!await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication))toast('تعذر فتح الرابط.');}catch(e){toast('تعذر فتح الملف الشخصي: '+e.toString());}}
  Future<void> exportExcel()async{
   final rows=<List<String>>[];
@@ -147,7 +148,7 @@ class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScree
    const SizedBox(height:10),
    Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFFFF4DE),borderRadius:BorderRadius.circular(12)),child:const Text('تنبيه تكامل: واجهة Meta الرسمية لا تتيح حالياً جلب أعضاء مجموعات Facebook. لا يوجد سحب آلي أو طلب كلمة مرور. أضف الحسابات التي تختارها يدوياً أو استورد بيانات مصرحاً لك باستخدامها، وافتح الملف لإرسال طلب الصداقة بنفسك.',style:TextStyle(color:Color(0xFF795000),height:1.5,fontWeight:FontWeight.w600))),
    const SizedBox(height:10),
-   Wrap(spacing:8,runSpacing:8,children:[action('إضافة جروب',Icons.group_add,_fbPurple,addGroup),action('إضافة حساب',Icons.person_add_alt_1,_fbOrange,groups.isEmpty?null:addProfile),action('استيراد Excel',Icons.file_upload,Colors.green,importExcel),action('تصدير Excel',Icons.file_download,Colors.green,profiles.isEmpty?null:exportExcel),action('فتح فيسبوك',Icons.open_in_new,const Color(0xFF1877F2),()=>openProfile('https://www.facebook.com/'))]),
+   Wrap(spacing:8,runSpacing:8,children:[action('إضافة جروب',Icons.group_add,_fbPurple,addGroup),action('إضافة حساب',Icons.person_add_alt_1,_fbOrange,groups.isEmpty?null:addProfile),action('استيراد Excel',Icons.file_upload,Colors.green,importExcel),action('تصدير Excel',Icons.file_download,Colors.green,profiles.isEmpty?null:exportExcel),action('فتح الجروب المحدد',Icons.groups,const Color(0xFF1877F2),groupFilter=='all'?null:openSelectedGroup),action('فتح فيسبوك',Icons.open_in_new,const Color(0xFF1877F2),()=>openProfile('https://www.facebook.com/'))]),
    const SizedBox(height:10),Row(children:[metric('الجروبات',groups.length),const SizedBox(width:7),metric('الحسابات الفريدة',profiles.length),const SizedBox(width:7),metric('سجلات التواصل',interactions.length)]),
    const SizedBox(height:10),
    Wrap(spacing:8,runSpacing:8,children:[
