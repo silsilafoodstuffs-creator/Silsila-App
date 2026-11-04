@@ -432,7 +432,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       if (mounted) setState(() {
         _hrDashboardAccessChecked = true;
         _hrDashboardAllowed = false;
-        _hrDashboardBlockedByJobTitle = false;
         _executiveAccessChecked = true;
         _executiveSummaryAllowed = true;
         _executivePartialConfigured = false;
