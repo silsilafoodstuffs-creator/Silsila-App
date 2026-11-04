@@ -60,18 +60,18 @@ class ErpPayrollRepository {
 
   Future<void> createRun({
     required String companyId,
-    required String runCode,
+    String? runCode,
     required DateTime start,
     required DateTime end,
     required String expenseAccountId,
     required String payableAccountId,
     required String deductionsAccountId,
   }) async {
-    if (runCode.trim().isEmpty || start.isAfter(end)) throw ArgumentError('راجع كود المسير والفترة.');
+    if (companyId.trim().isEmpty || start.isAfter(end)) throw ArgumentError('راجع الشركة وفترة المسير.');
     await _db.from('erp_payroll_runs').insert({
       'company_id': companyId.trim(),
       'created_by': _db.auth.currentUser?.id,
-      'run_code': runCode.trim(),
+      'run_code': '',
       'period_start': _dateOnly(start),
       'period_end': _dateOnly(end),
       'expense_account_id': expenseAccountId,
