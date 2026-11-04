@@ -181,6 +181,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     final average = (start + current) / 2;
     return average <= 0 ? 0 : (_separationsLast12Months / average) * 100;
   }
+  String get _turnoverRateDisplay => _movements.isEmpty
+      ? 'غير متاح — لا توجد حركات خدمة مسجلة'
+      : '${_turnoverRate.toStringAsFixed(1)}%';
   int get _pendingLeaveRequests => _leaves.where((r) => !const ['approved','rejected','مقبول','مرفوض'].contains(r['status']?.toString().toLowerCase())).length;
   List<MapEntry<String, int>> get _separationsByDepartment {
     final counts = <String, int>{};
@@ -578,7 +581,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _progressRow('مقبولون', _candidateCount('accepted'), _candidates.length, Colors.green.shade700),
             _progressRow('مرفوضون', _candidateCount('rejected'), _candidates.length, Colors.red.shade700),
             _alert('استقالات وإنهاء خدمة آخر 12 شهرًا', '$_separationsLast12Months حركة مسجلة خلال آخر 12 شهرًا.', _separationsLast12Months > 0 ? _hrOrange : Colors.blueGrey),
-            _alert('معدل دوران العمالة التقديري', '${_turnoverRate.toStringAsFixed(1)}% بناءً على حركات انتهاء الخدمة وتواريخ تعيين الموظفين المتاحة.', Colors.blueGrey),
+            _alert('معدل دوران العمالة من الحركات المسجلة', '$_turnoverRateDisplay. يعتمد الحساب على تواريخ التعيين وحركات انتهاء الخدمة المسجلة خلال آخر 12 شهرًا.', Colors.blueGrey),
           ]),
           const SizedBox(height: 10),
           _panel(children: [
