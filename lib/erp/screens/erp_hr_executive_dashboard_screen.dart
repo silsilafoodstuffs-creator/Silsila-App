@@ -51,16 +51,16 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       final dateStart = '${monthStart.year.toString().padLeft(4, '0')}-${monthStart.month.toString().padLeft(2, '0')}-01';
       final dateEnd = '${monthEnd.year.toString().padLeft(4, '0')}-${monthEnd.month.toString().padLeft(2, '0')}-${monthEnd.day.toString().padLeft(2, '0')}';
       final results = await Future.wait([
-        _db.from('erp_employees').select('id,employee_code,full_name,department_name,job_title,is_active,employment_status,work_unit,job_id,hire_date,contract_type,contract_start_date,contract_end_date').eq('company_id', companyId),
-        _db.from('erp_hr_departments').select('id,department_code,name_ar,department_level,parent_id,is_active').eq('company_id', companyId),
-        _db.from('erp_hr_jobs').select('id,job_code,name_ar,department_id,is_active,requires_photo,requires_birth_certificate,requires_qualification_certificate,requires_work_card,requires_insurance_printout,requires_military_service,requires_criminal_record,requires_trust_receipt,requires_health_certificate,requires_driving_license,requires_id_copy,requires_bank_account').eq('company_id', companyId),
-        _db.from('erp_employee_documents').select('employee_id,doc_type').eq('company_id', companyId),
-        _db.from('erp_attendance_records').select('employee_id,work_date,attendance_status,late_minutes,overtime_minutes').eq('company_id', companyId).gte('work_date', dateStart).lte('work_date', dateEnd),
+        _db.from('erp_employees').select('id,employee_code,full_name,department_name,job_title,is_active,employment_status,work_unit,job_id,hire_date,contract_type,contract_start_date,contract_end_date').eq('company_id', companyId).limit(3000),
+        _db.from('erp_hr_departments').select('id,department_code,name_ar,department_level,parent_id,is_active').eq('company_id', companyId).limit(1000),
+        _db.from('erp_hr_jobs').select('id,job_code,name_ar,department_id,is_active,requires_photo,requires_birth_certificate,requires_qualification_certificate,requires_work_card,requires_insurance_printout,requires_military_service,requires_criminal_record,requires_trust_receipt,requires_health_certificate,requires_driving_license,requires_id_copy,requires_bank_account').eq('company_id', companyId).limit(1000),
+        _db.from('erp_employee_documents').select('employee_id,doc_type').eq('company_id', companyId).limit(10000),
+        _db.from('erp_attendance_records').select('employee_id,work_date,attendance_status,late_minutes,overtime_minutes').eq('company_id', companyId).gte('work_date', dateStart).lte('work_date', dateEnd).limit(10000),
         _db.from('erp_payroll_runs').select('id,run_code,period_start,period_end,status,employee_count,gross_total,net_total').eq('company_id', companyId).order('period_start', ascending: false).limit(12),
-        _db.from('erp_hr_employee_compliance').select('id,employee_id,record_type,status,expires_on,created_at').eq('company_id', companyId).order('created_at', ascending: false),
-        _db.from('erp_hr_training_records').select('id,employee_id,course_name,status,certificate_expires_on,ends_on').eq('company_id', companyId),
-        _db.from('erp_hr_recruitment_candidates').select('id,status,applied_on,decision_on,job_id').eq('company_id', companyId),
-        _db.from('erp_hr_employee_movements').select('id,employee_id,movement_type,effective_on,reason').eq('company_id', companyId),
+        _db.from('erp_hr_employee_compliance').select('id,employee_id,record_type,status,expires_on,created_at').eq('company_id', companyId).order('created_at', ascending: false).limit(2000),
+        _db.from('erp_hr_training_records').select('id,employee_id,course_name,status,certificate_expires_on,ends_on').eq('company_id', companyId).order('created_at', ascending: false).limit(2000),
+        _db.from('erp_hr_recruitment_candidates').select('id,status,applied_on,decision_on,job_id').eq('company_id', companyId).order('applied_on', ascending: false).limit(2000),
+        _db.from('erp_hr_employee_movements').select('id,employee_id,movement_type,effective_on,reason').eq('company_id', companyId).order('effective_on', ascending: false).limit(5000),
         _db.from('erp_leave_requests').select('id,employee_id,status,starts_on,ends_on,requested_days').eq('company_id', companyId).gte('starts_on', dateStart).lte('starts_on', dateEnd),
       ]);
       if (!mounted) return;
