@@ -186,7 +186,6 @@ class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScree
   },'تم تحديث بيانات الحساب.');
  }
 }
-class _Field{const _Field(this.key,this.label,{this.url=false,this.multi=false,this.hint});final String key,label;final bool url,multi;final String? hint;}
 ),'');
   return Uri.https(h,path.isEmpty?'/':path).toString();
  }
