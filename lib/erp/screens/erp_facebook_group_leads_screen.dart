@@ -191,7 +191,7 @@ class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScree
  }
  Future<void> load()async{
   if(db==null||(widget.companyId??'').isEmpty){if(mounted)setState(()=>loading=false);return;}
-  setState(()=>{loading=true,error=null,message=null});
+  setState(() { loading=true; error=null; message=null; });
   try{
    final r=await Future.wait([
     db!.from('erp_crm_facebook_groups').select().eq('company_id',widget.companyId!).order('group_name'),
@@ -217,7 +217,7 @@ class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScree
  void toast(String m){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}
  Future<void> save(Future<void> Function() fn,String ok)async{
   if(db==null||(widget.companyId??'').isEmpty){toast('اختر شركة نشطة أولاً.');return;}
-  setState(()=>{busy=true,error=null,message=null});
+  setState(() { busy=true; error=null; message=null; });
   try{await fn();await load();if(mounted)setState(()=>message=ok);}
   catch(e){if(mounted)setState(()=>error='تعذر حفظ البيانات: '+e.toString());}
   finally{if(mounted)setState(()=>busy=false);}
@@ -227,7 +227,7 @@ class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScree
   String cls=initial['class']??classes.first;
   final result=await showDialog<Map<String,String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
    title:Text(title),content:SizedBox(width:430,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    for(var i=0;i<labels.length;i++)Padding(padding:const EdgeInsets.only(bottom:10),child:TextField(controller:c[i],maxLines:labels[i]=='ملاحظات'?3:1,decoration:InputDecoration(labelText:labels[i],border:const OutlineInputBorder()))),
+    for(var i=0;i<labels.length;i++)if(labels[i]!='تصنيف الحساب')Padding(padding:const EdgeInsets.only(bottom:10),child:TextField(controller:c[i],maxLines:labels[i]=='ملاحظات'?3:1,decoration:InputDecoration(labelText:labels[i],border:const OutlineInputBorder()))),
     if(labels.contains('تصنيف الحساب'))DropdownButtonFormField<String>(value:cls,decoration:const InputDecoration(labelText:'تصنيف الحساب',border:OutlineInputBorder()),items:classes.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>refresh(()=>cls=v??cls)),
    ]))),
    actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,{for(var i=0;i<c.length;i++)'v'+i.toString():c[i].text.trim(),'class':cls}),child:const Text('حفظ'))],
@@ -241,7 +241,7 @@ class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScree
  }
  Future<void> addProfile()async{
   if(groups.isEmpty){toast('أضف جروباً أولاً.');return;}
-  final v=await form('إضافة حساب إلى الجروب',['اسم الحساب أو المستخدم','رابط الملف الشخصي','رابط صورة الحساب (اختياري)','ملاحظات']);if(v==null)return;
+  final v=await form('إضافة حساب إلى الجروب',['اسم الحساب أو المستخدم','رابط الملف الشخصي','رابط صورة الحساب (اختياري)','تصنيف الحساب','ملاحظات']);if(v==null)return;
   if(v['v0']!.isEmpty||v['v1']!.isEmpty){toast('اسم الحساب ورابطه مطلوبان.');return;}
   String gid=groupFilter=='all'?s(groups.first['id']):groupFilter;
   final chosen=await showDialog<String>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
@@ -252,7 +252,7 @@ class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScree
    if(av.isNotEmpty&&Uri.tryParse(av)?.scheme!='https')throw const FormatException('رابط الصورة يجب أن يبدأ بـ HTTPS.');
    final p=await db!.from('erp_crm_facebook_profiles').upsert({
     'company_id':widget.companyId,'display_name':v['v0'],'profile_url':url,'profile_url_normalized':Uri.parse(url).replace(query:'',fragment:'').toString(),
-    'avatar_url':av.isEmpty?null:av,'classification':'غير محدد','notes':v['v3'],'created_by':db!.auth.currentUser?.id,
+    'avatar_url':av.isEmpty?null:av,'classification':v['class'],'notes':v['v4'],'created_by':db!.auth.currentUser?.id,
    },onConflict:'company_id,profile_url_normalized').select().single();
    await db!.from('erp_crm_facebook_group_profiles').upsert({'company_id':widget.companyId,'group_id':chosen,'profile_id':p['id'],'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_id,profile_id',ignoreDuplicates:true);
   },'تم حفظ الحساب وربطه دون تكرار.');
@@ -342,10 +342,9 @@ class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScree
   if(v==null)return;await save(()async{await db!.from('erp_crm_facebook_group_profiles').upsert({'company_id':widget.companyId,'group_id':v,'profile_id':p['id'],'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_id,profile_id',ignoreDuplicates:true);},'تم الربط دون تكرار الحساب.');
  }
  Future<void> editProfile(Map<String,dynamic> p)async{
-  final v=await form('تعديل بيانات الحساب',['اسم الحساب أو المستخدم','رابط الملف الشخصي','رابط الصورة','ملاحظات'],initial:{'v0':s(p['display_name']),'v1':s(p['profile_url']),'v2':s(p['avatar_url']),'v3':s(p['notes'])});if(v==null)return;
+  final v=await form('تعديل بيانات الحساب',['اسم الحساب أو المستخدم','رابط الملف الشخصي','رابط الصورة','تصنيف الحساب','ملاحظات'],initial:{'v0':s(p['display_name']),'v1':s(p['profile_url']),'v2':s(p['avatar_url']),'v4':s(p['notes']),'class':s(p['classification'])});if(v==null)return;
   await save(()async{final u=fbUrl(v['v1']!),a=v['v2']!.trim();if(a.isNotEmpty&&Uri.tryParse(a)?.scheme!='https')throw const FormatException('رابط الصورة يجب أن يبدأ HTTPS.');
-   await db!.from('erp_crm_facebook_profiles').update({'display_name':v['v0'],'profile_url':u,'profile_url_normalized':Uri.parse(u).replace(query:'',fragment:'').toString(),'avatar_url':a.isEmpty?null:a,'notes':v['v3']}).eq('id',p['id']).eq('company_id',widget.companyId!);
+   await db!.from('erp_crm_facebook_profiles').update({'display_name':v['v0'],'profile_url':u,'profile_url_normalized':Uri.parse(u).replace(query:'',fragment:'').toString(),'avatar_url':a.isEmpty?null:a,'classification':v['class'],'notes':v['v4']}).eq('id',p['id']).eq('company_id',widget.companyId!);
   },'تم تحديث بيانات الحساب.');
  }
 }
-class _Field{const _Field(this.key,this.label,{this.url=false,this.multi=false,this.hint});final String key,label;final bool url,multi;final String? hint;}
