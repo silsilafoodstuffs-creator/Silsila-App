@@ -295,7 +295,7 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('إضافة خزينة / بنك', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            TextField(controller: _code, focusNode: _codeFocus, decoration: const InputDecoration(labelText: 'الكود *')),
+            TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الخزينة (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
             TextField(controller: _name, decoration: const InputDecoration(labelText: 'الاسم بالعربية *')),
             TextField(controller: _nameEn, decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية *')),
             const SizedBox(height: 8),
