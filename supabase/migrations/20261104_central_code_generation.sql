@@ -376,7 +376,7 @@ create or replace function public.erp_create_price_list(
   p_company_id uuid, p_code text, p_name text, p_kind text,
   p_is_default boolean default false, p_currency_code text default 'EGP', p_notes text default null
 )
-returns uuid language plpgsql security definer set search_path = '' set row_security = off as $$
+returns uuid language plpgsql security invoker set search_path = '' as $$
 declare v_id uuid; v_currency text := upper(coalesce(nullif(trim(p_currency_code), ''), 'EGP'));
 begin
   if not public.erp_user_has_company_role(p_company_id, array['owner','admin','manager','accountant']::text[]) then
