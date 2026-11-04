@@ -157,29 +157,32 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
         : roots;
   }
 
-  String _newCode() {
-    var max = 0;
-    for (final r in _centers) {
-      final m = RegExp(r'(\d+)$').firstMatch(_s(r['center_code']));
-      final n = int.tryParse(m?.group(1) ?? '') ?? 0;
-      if (n > max) max = n;
-    }
-    return 'Cst${(max + 1).toString().padLeft(5, '0')}';
+  Future<String> _newCode() async {
+    try {
+      final value = await _db.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': company, 'p_entity_key': 'cost_center',
+      });
+      return value.toString();
+    } catch (_) { return 'Cst00001'; }
   }
 
-  void _addMain() {
+  Future<void> _addMain() async {
+    final code = await _newCode();
+    if (!mounted) return;
     setState(() {
-      _centers.add({'id': null, 'center_code': _newCode(), 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': null, 'parent_id': null, 'is_active': true, '_draft': true});
+      _centers.add({'id': null, 'center_code': code, 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': null, 'parent_id': null, 'is_active': true, '_draft': true});
       _message = 'أُضيف صف مركز رئيسي. أكمل البيانات واضغط حفظ.';
       _error = null;
     });
   }
 
-  void _addChild(Map<String, dynamic> parent) {
+  Future<void> _addChild(Map<String, dynamic> parent) async {
     if (_s(parent['id']).isEmpty) { setState(() => _error = 'احفظ المركز الرئيسي أولًا ثم أضف المركز الفرعي.'); return; }
     if (_child(parent)) { setState(() => _error = 'المركز الفرعي لا يمكن أن يكون أبًا لمركز آخر.'); return; }
+    final code = await _newCode();
+    if (!mounted) return;
     setState(() {
-      _centers.add({'id': null, 'center_code': _newCode(), 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': parent['branch_id'], 'parent_id': parent['id'], 'is_active': true, '_draft': true});
+      _centers.add({'id': null, 'center_code': code, 'center_name': '', 'center_name_ar': '', 'center_name_en': '', 'branch_id': parent['branch_id'], 'parent_id': parent['id'], 'is_active': true, '_draft': true});
       _message = 'أُضيف صف فرعي تحت المركز الرئيسي المحدد.';
       _error = null;
     });
