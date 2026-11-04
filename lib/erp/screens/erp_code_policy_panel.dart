@@ -53,6 +53,20 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'cash_transfer','name':'سندات التحويل','prefix':'Trf','digits':'5'},
     {'key':'cash_movement','name':'الحركات النقدية','prefix':'Cmv','digits':'5'},
     {'key':'cash_order','name':'أوامر الخزينة','prefix':'Cso','digits':'5'},
+    {'key':'checkbook','name':'دفاتر الشيكات','prefix':'Ckb','digits':'5'},
+    {'key':'workspace_branch','name':'فروع إدارة النشاط','prefix':'Wbr','digits':'5'},
+    {'key':'workspace_cash_movement','name':'حركات نقدية إدارة النشاط','prefix':'Wcm','digits':'5'},
+    {'key':'workspace_customer','name':'عملاء إدارة النشاط','prefix':'Wcu','digits':'5'},
+    {'key':'workspace_supplier','name':'موردو إدارة النشاط','prefix':'Wsu','digits':'5'},
+    {'key':'workspace_department','name':'إدارات إدارة النشاط','prefix':'Wdp','digits':'5'},
+    {'key':'workspace_employee','name':'موظفو إدارة النشاط','prefix':'Wem','digits':'5'},
+    {'key':'workspace_warehouse','name':'مخازن إدارة النشاط','prefix':'Wwh','digits':'5'},
+    {'key':'workspace_purchase','name':'مستندات شراء إدارة النشاط','prefix':'Wpi','digits':'5'},
+    {'key':'workspace_purchase_return','name':'مرتجعات شراء إدارة النشاط','prefix':'Wpr','digits':'5'},
+    {'key':'workspace_sale','name':'مستندات بيع إدارة النشاط','prefix':'Wsi','digits':'5'},
+    {'key':'workspace_sale_return','name':'مرتجعات بيع إدارة النشاط','prefix':'Wsr','digits':'5'},
+    {'key':'workspace_transfer','name':'تحويلات إدارة النشاط','prefix':'Wtr','digits':'5'},
+    {'key':'workspace_adjustment','name':'تسويات إدارة النشاط','prefix':'Wad','digits':'5'},
   ];
 
   final _db = Supabase.instance.client;
