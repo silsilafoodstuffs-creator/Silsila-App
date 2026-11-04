@@ -50,6 +50,8 @@ begin
     when 'erp_branches' then v_key := 'branch'; v_column := 'branch_code';
     when 'erp_warehouses' then v_key := 'warehouse'; v_column := 'warehouse_code';
     when 'erp_item_categories' then v_key := 'category'; v_column := 'category_code';
+    when 'erp_cost_centers' then v_key := 'cost_center'; v_column := 'center_code';
+    when 'erp_price_lists' then v_key := 'price_list'; v_column := 'price_list_code';
     when 'erp_accounts' then v_key := 'account'; v_column := 'account_code';
     when 'erp_cashboxes' then v_key := 'cashbox'; v_column := 'cashbox_code';
     when 'erp_parties' then
@@ -75,6 +77,8 @@ begin
       when 'branch' then 'Brn'
       when 'warehouse' then 'Whs'
       when 'category' then 'Cat'
+      when 'cost_center' then 'Cst'
+      when 'price_list' then 'Prc'
       when 'account' then 'Acc'
       when 'cashbox' then 'Csh'
       when 'supplier' then 'Sup'
@@ -119,7 +123,7 @@ begin
   for r in
     select * from (values
       ('erp_employees'), ('erp_users'), ('erp_branches'), ('erp_warehouses'),
-      ('erp_item_categories'), ('erp_accounts'), ('erp_cashboxes'), ('erp_parties'),
+      ('erp_item_categories'), ('erp_cost_centers'), ('erp_price_lists'), ('erp_accounts'), ('erp_cashboxes'), ('erp_parties'),
       ('erp_hr_departments'), ('erp_hr_jobs'), ('erp_hr_work_locations'),
       ('erp_hr_job_grades'), ('erp_payroll_runs')
     ) as t(table_name)
@@ -246,6 +250,8 @@ begin
     when 'branch' then v_table := 'erp_branches'; v_column := 'branch_code'; v_prefix := 'Brn';
     when 'warehouse' then v_table := 'erp_warehouses'; v_column := 'warehouse_code'; v_prefix := 'Whs';
     when 'category' then v_table := 'erp_item_categories'; v_column := 'category_code'; v_prefix := 'Cat';
+    when 'cost_center' then v_table := 'erp_cost_centers'; v_column := 'center_code'; v_prefix := 'Cst';
+    when 'price_list' then v_table := 'erp_price_lists'; v_column := 'price_list_code'; v_prefix := 'Prc';
     when 'account' then v_table := 'erp_accounts'; v_column := 'account_code'; v_prefix := 'Acc';
     when 'cashbox' then v_table := 'erp_cashboxes'; v_column := 'cashbox_code'; v_prefix := 'Csh';
     when 'supplier' then v_table := 'erp_parties'; v_column := 'party_code'; v_prefix := 'Sup'; v_kind := 'supplier';
@@ -307,5 +313,33 @@ begin
   return new;
 end;
 $$;
+
+-- Keep price-list default replacement atomic while delegating its code to the central trigger.
+create or replace function public.erp_create_price_list(
+  p_company_id uuid, p_code text, p_name text, p_kind text,
+  p_is_default boolean default false, p_currency_code text default 'EGP', p_notes text default null
+)
+returns uuid language plpgsql security definer set search_path=public set row_security=off as $
+declare v_id uuid; v_currency text := upper(coalesce(nullif(trim(p_currency_code), ''), 'EGP'));
+begin
+  if not public.erp_user_has_company_role(p_company_id, array['owner','admin','manager','accountant']::text[]) then
+    raise exception 'ليست لديك صلاحية إنشاء قوائم الأسعار';
+  end if;
+  if nullif(trim(p_name), '') is null then raise exception 'اسم قائمة الأسعار مطلوب'; end if;
+  if p_kind is null or p_kind not in ('sale','purchase') then raise exception 'نوع قائمة الأسعار غير صحيح'; end if;
+  if length(v_currency) <> 3 then raise exception 'رمز العملة يجب أن يتكون من ثلاثة أحرف'; end if;
+  perform pg_advisory_xact_lock(hashtextextended(p_company_id::text || ':price-list:' || p_kind, 0));
+  if coalesce(p_is_default, false) then
+    update public.erp_price_lists set is_default=false, updated_at=now()
+    where company_id=p_company_id and price_kind=p_kind and is_active and is_default;
+  end if;
+  insert into public.erp_price_lists(company_id,price_list_code,price_list_name,price_kind,currency_code,is_default,is_active,notes)
+  values(p_company_id,'',trim(p_name),p_kind,v_currency::char(3),coalesce(p_is_default,false),true,nullif(trim(p_notes),''))
+  returning id into v_id;
+  return v_id;
+end;
+$;
+revoke all on function public.erp_create_price_list(uuid,text,text,text,boolean,text,text) from public,anon;
+grant execute on function public.erp_create_price_list(uuid,text,text,text,boolean,text,text) to authenticated;
 
 commit;
