@@ -181,6 +181,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     final average = (start + current) / 2;
     return average <= 0 ? 0 : (_separationsLast12Months / average) * 100;
   }
+  // Avoid reporting a false zero turnover rate before service-movement history is recorded.
   String get _turnoverRateDisplay => _movements.isEmpty
       ? 'غير متاح — لا توجد حركات خدمة مسجلة'
       : '${_turnoverRate.toStringAsFixed(1)}%';
