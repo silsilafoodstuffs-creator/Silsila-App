@@ -232,14 +232,14 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   Future<void> _createWarehouse() async {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      await _repo.createWarehouse(companyId: _company.text, code: _warehouseCode.text,
+      final generatedWarehouseCode = await _repo.createWarehouse(companyId: _company.text, code: '',
         name: _warehouseName.text, branchId: _branchId, address: _address.text,
         nameEn: _warehouseNameEn.text, parentWarehouseId: _parentWarehouseId,
         location: _warehouseLocation.text, phone: _warehousePhone.text, landline: _warehouseLandline.text,
         governorateId: _governorateId, districtId: _districtId, areaId: _areaId);
       if (!mounted) return;
       _warehouseCode.clear(); _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseLocation.clear(); _warehousePhone.clear(); _warehouseLandline.clear(); _address.clear(); _parentWarehouseId = null; _governorateId = null; _districtId = null; _areaId = null;
-      setState(() { _saving = false; _message = 'تمت إضافة المخزن.'; });
+      setState(() { _saving = false; _message = 'تمت إضافة المخزن بالكود التلقائي: $generatedWarehouseCode'; });
       await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
@@ -776,7 +776,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(_parentWarehouseId == null ? 'إضافة مخزن رئيسي' : 'إضافة مخزن فرعي', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            TextField(controller: _warehouseCode, decoration: const InputDecoration(labelText: 'كود المخزن *')),
+            const TextField(enabled: false, decoration: InputDecoration(labelText: 'كود المخزن', hintText: 'يُنشأ تلقائيًا عند الحفظ', prefixIcon: Icon(Icons.auto_awesome))),
             TextField(controller: _warehouseName, decoration: const InputDecoration(labelText: 'اسم المخزن عربي *')),
             TextField(controller: _warehouseNameEn, decoration: const InputDecoration(labelText: 'اسم المخزن إنجليزي')),
             TextField(controller: _warehouseLocation, decoration: const InputDecoration(labelText: 'الموقع / وصف المكان')),
