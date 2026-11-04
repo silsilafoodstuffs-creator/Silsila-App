@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
@@ -67,20 +66,6 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
         if (company.isEmpty || !ids.contains(company)) company = ids.isEmpty ? '' : ids.first;
       }
       if (company.isEmpty) throw StateError('لا توجد شركة نشطة مرتبطة بالمستخدم.');
-      final policy = await db.from('erp_program_policies').select('policy_value')
-          .eq('company_id', company).eq('policy_key', 'code_generation_registry').maybeSingle();
-      if (policy != null) {
-        final raw = policy['policy_value'];
-        final data = raw is String ? jsonDecode(raw) as Map<String, dynamic> : Map<String, dynamic>.from(raw as Map);
-        final types = Map<String, dynamic>.from(data['types'] as Map? ?? {});
-        final unit = Map<String, dynamic>.from(types['unit'] as Map? ?? {});
-        final prefix = (unit['prefix'] ?? 'Unt').toString();
-        final digits = int.tryParse((unit['digits'] ?? 5).toString()) ?? 5;
-        if (RegExp(r'^[A-Za-z]{3}$').hasMatch(prefix) && digits >= 1 && digits <= 12) {
-          _unitPrefix = prefix;
-          _unitDigits = digits;
-        }
-      }
       final results = await Future.wait([
         db.from('activity_types').select('code,name').eq('is_active', true).order('sort_order'),
         db.from('erp_item_unit_catalog')
