@@ -221,7 +221,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       }
       final payload = <String, Object?>{
         'company_id': companyId,
-        'branch_code': code.text.trim(),
+        'branch_code': row == null ? '' : code.text.trim(),
         'branch_name': name.text.trim(),
         'branch_name_en': nameEn.text.trim().isEmpty ? null : nameEn.text.trim(),
         'email': email.text.trim().isEmpty ? null : email.text.trim(),
