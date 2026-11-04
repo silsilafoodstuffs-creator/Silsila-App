@@ -173,8 +173,7 @@ begin
       ('erp_hr_job_grades'), ('erp_payroll_runs'), ('erp_hr_salary_elements'),
       ('erp_item_unit_catalog'), ('erp_payment_methods'), ('erp_hr_shifts'), ('erp_commission_plans'),
       ('erp_sales_fulfillment_documents'), ('erp_sales_representatives'),
-      ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers'),
-
+      ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers')
     ) as t(table_name)
   loop
     if to_regclass('public.' || r.table_name) is not null then
