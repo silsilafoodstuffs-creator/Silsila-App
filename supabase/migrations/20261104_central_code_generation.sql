@@ -6,7 +6,7 @@ create or replace function public.erp_code_policy_config(
   p_company_id uuid, p_key text, p_default_prefix text, p_default_digits integer
 )
 returns table(prefix text, digits integer)
-language plpgsql stable security definer set search_path=public as $$
+language plpgsql stable security definer set search_path=public, pg_temp as $$
 declare
   v jsonb;
   v_cfg jsonb;
@@ -29,7 +29,7 @@ revoke all on function public.erp_code_policy_config(uuid,text,text,integer) fro
 
 create or replace function public.erp_assign_central_code()
 returns trigger
-language plpgsql security definer set search_path=public as $$
+language plpgsql security definer set search_path=public, pg_temp as $$
 declare
   v_company uuid;
   v_key text;
@@ -145,7 +145,7 @@ $$;
 -- Item code: 3-letter prefix + main(2) + sub(2) + secondary(2) + serial(2).
 create or replace function public.erp_assign_item_hierarchical_code()
 returns trigger
-language plpgsql security definer set search_path=public as $$
+language plpgsql security definer set search_path=public, pg_temp as $$
 declare
   v_prefix text;
   v_path text[] := array[]::text[];
@@ -231,7 +231,7 @@ create or replace function public.erp_preview_next_central_code(
   p_company_id uuid, p_entity_key text
 )
 returns text
-language plpgsql security definer set search_path=public as $$
+language plpgsql security definer set search_path=public, pg_temp as $$
 declare
   v_table text;
   v_column text;
@@ -293,7 +293,7 @@ grant execute on function public.erp_preview_next_central_code(uuid, text) to au
 
 -- Identity-backed master-data codes use their database identity as the serial.
 create or replace function public.erp_set_user_type_display_code()
-returns trigger language plpgsql security definer set search_path=public as $$
+returns trigger language plpgsql security definer set search_path=public, pg_temp as $$
 declare p text; d integer;
 begin
   select prefix, digits into p, d
@@ -304,7 +304,7 @@ end;
 $$;
 
 create or replace function public.erp_set_permission_template_display_code()
-returns trigger language plpgsql security definer set search_path=public as $$
+returns trigger language plpgsql security definer set search_path=public, pg_temp as $$
 declare p text; d integer;
 begin
   select prefix, digits into p, d
@@ -319,7 +319,7 @@ create or replace function public.erp_create_price_list(
   p_company_id uuid, p_code text, p_name text, p_kind text,
   p_is_default boolean default false, p_currency_code text default 'EGP', p_notes text default null
 )
-returns uuid language plpgsql security definer set search_path=public set row_security=off as $
+returns uuid language plpgsql security definer set search_path=public, pg_temp set row_security=off as $$
 declare v_id uuid; v_currency text := upper(coalesce(nullif(trim(p_currency_code), ''), 'EGP'));
 begin
   if not public.erp_user_has_company_role(p_company_id, array['owner','admin','manager','accountant']::text[]) then
@@ -338,8 +338,15 @@ begin
   returning id into v_id;
   return v_id;
 end;
-$;
+$$;
 revoke all on function public.erp_create_price_list(uuid,text,text,text,boolean,text,text) from public,anon;
 grant execute on function public.erp_create_price_list(uuid,text,text,text,boolean,text,text) to authenticated;
+
+drop trigger if exists erp_user_types_central_display_code on public.erp_user_types;
+create trigger erp_user_types_central_display_code before insert or update of company_id,type_code on public.erp_user_types for each row execute function public.erp_set_user_type_display_code();
+drop trigger if exists erp_permission_templates_central_display_code on public.erp_permission_templates;
+create trigger erp_permission_templates_central_display_code before insert or update of company_id,template_code on public.erp_permission_templates for each row execute function public.erp_set_permission_template_display_code();
+revoke all on function public.erp_set_user_type_display_code() from public, anon, authenticated;
+revoke all on function public.erp_set_permission_template_display_code() from public, anon, authenticated;
 
 commit;
