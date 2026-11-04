@@ -7,7 +7,7 @@ returns table(prefix text, digits integer)
 language plpgsql stable security definer set search_path=public as $$
 declare v jsonb; v_cfg jsonb;
 begin
-  select nullif(policy_value,'')::jsonb into v
+  select case when policy_value ~ '^\\s*\\{' then policy_value::jsonb else '{}'::jsonb end into v
   from public.erp_program_policies
   where company_id=p_company_id and policy_key='code_generation_registry'
   limit 1;
@@ -54,6 +54,8 @@ begin
     when 'erp_hr_departments' then v_key:='department'; v_column:='department_code';
     when 'erp_hr_jobs' then v_key:='job'; v_column:='job_code';
     when 'erp_hr_work_locations' then v_key:='work_location'; v_column:='location_code';
+    when 'erp_hr_job_grades' then v_key:='grade'; v_column:='grade_code';
+    when 'erp_payroll_runs' then v_key:='payroll_run'; v_column:='run_code';
     else raise exception 'نوع سجل غير مدعوم في التكويد المركزي: %', tg_table_name;
   end case;
 
@@ -67,7 +69,7 @@ begin
       when 'account' then 'Acc' when 'cashbox' then 'Csh'
       when 'supplier' then 'Sup' when 'customer' then 'Cus'
       when 'department' then 'Dpt' when 'job' then 'Job'
-      when 'work_location' then 'Loc' when 'category' then 'Cat' else 'Gen' end, 5) c;
+      when 'work_location' then 'Loc' when 'category' then 'Cat' when 'grade' then 'Grd' when 'payroll_run' then 'Pay' else 'Gen' end, 5) c;
 
   v_lock := v_company::text||':'||tg_table_name||':'||v_prefix;
   perform pg_advisory_xact_lock(hashtextextended(v_lock,0));
@@ -82,6 +84,7 @@ begin
       into v_max using v_company,'^'||v_prefix||'[0-9]+$';
   end if;
 
+  if coalesce(v_max,0)+1 >= power(10::numeric,v_digits) then raise exception 'انتهت خانات الكود للنوع %؛ زد عدد الخانات من سياسات التكويد',v_key; end if;
   v_code := v_prefix||lpad((coalesce(v_max,0)+1)::text,v_digits,'0');
   new := jsonb_populate_record(new,jsonb_build_object(v_column,v_code));
   return new;
@@ -95,7 +98,7 @@ begin
     select * from (values
       ('erp_employees'),('erp_users'),('erp_branches'),('erp_warehouses'),('erp_item_categories'),
       ('erp_accounts'),('erp_cashboxes'),('erp_parties'),
-      ('erp_hr_departments'),('erp_hr_jobs'),('erp_hr_work_locations')
+      ('erp_hr_departments'),('erp_hr_jobs'),('erp_hr_work_locations'),('erp_hr_job_grades'),('erp_payroll_runs')
     ) as t(table_name)
   loop
     if to_regclass('public.'||r.table_name) is not null then
@@ -119,12 +122,11 @@ declare
   v_rank integer;
   v_serial integer;
   v_lock text;
-  v_existing text;
 begin
   if nullif(new.item_code,'') is not null then return new; end if;
   if new.category_id is null then raise exception 'اختر الفئة الثانوية قبل حفظ الصنف لتوليد كوده'; end if;
 
-  select coalesce(nullif(policy_value::jsonb->>'item_prefix',''),'itm')
+  select coalesce(nullif((case when policy_value ~ '^\\s*\\{' then policy_value::jsonb else '{}'::jsonb end)->>'item_prefix',''),'itm')
     into v_prefix
   from public.erp_program_policies
   where company_id=new.company_id and policy_key='code_generation_registry'
@@ -160,7 +162,7 @@ begin
   from public.erp_items
   where company_id=new.company_id
     and item_code like v_prefix||array_to_string(v_path,'')||'__'
-    and length(item_code)=length(v_prefix)+8;
+    and item_code ~ ('^'||v_prefix||array_to_string(v_path,'')||'[0-9]{2}
   if v_serial>=99 then raise exception 'تم الوصول إلى الحد الأقصى 99 صنفًا داخل هذه الفئات'; end if;
   new.item_code := v_prefix||array_to_string(v_path,'')||lpad((coalesce(v_serial,0)+1)::text,2,'0');
   return new;
@@ -188,6 +190,80 @@ begin
     when 'department' then v_table:='erp_hr_departments'; v_column:='department_code'; v_prefix:='Dpt';
     when 'job' then v_table:='erp_hr_jobs'; v_column:='job_code'; v_prefix:='Job';
     when 'work_location' then v_table:='erp_hr_work_locations'; v_column:='location_code'; v_prefix:='Loc';
+    when 'grade' then v_table:='erp_hr_job_grades'; v_column:='grade_code'; v_prefix:='Grd';
+    when 'payroll_run' then v_table:='erp_payroll_runs'; v_column:='run_code'; v_prefix:='Pay';
+    when 'category' then v_table:='erp_item_categories'; v_column:='category_code'; v_prefix:='Cat';
+    else raise exception 'نوع التكويد غير مدعوم';
+  end case;
+  select c.prefix,c.digits into v_prefix,v_digits from public.erp_code_policy_config(p_company_id,p_entity_key,v_prefix,5) c;
+  if to_regclass('public.'||v_table) is null then raise exception 'جدول نوع التكويد غير متاح'; end if;
+  if v_kind is null then
+    execute format('select coalesce(max(nullif(substring(%I from %L), '''')::bigint),0) from public.%I where company_id=$1 and %I ~ $2',
+      v_column,'^'||v_prefix||'([0-9]+)$',v_table,v_column)
+      into v_max using p_company_id,'^'||v_prefix||'[0-9]+$';
+  else
+    execute format('select coalesce(max(nullif(substring(%I from %L), '''')::bigint),0) from public.%I where company_id=$1 and party_kind=$2 and %I ~ $3',
+      v_column,'^'||v_prefix||'([0-9]+)$',v_table,v_column)
+      into v_max using p_company_id,v_kind,'^'||v_prefix||'[0-9]+$';
+  end if;
+  return v_prefix||lpad((coalesce(v_max,0)+1)::text,v_digits,'0');
+end;
+$$;
+
+revoke all on function public.erp_preview_next_central_code(uuid,text) from public;
+grant execute on function public.erp_preview_next_central_code(uuid,text) to authenticated;
+
+-- Respect configured prefixes and digit widths for identity-backed code types.
+create or replace function public.erp_set_user_type_display_code()
+returns trigger language plpgsql security definer set search_path=public as $
+declare p text; d integer;
+begin
+  select prefix,digits into p,d from public.erp_code_policy_config(new.company_id,'user_type','Typ',5);
+  new.type_code_display := p||lpad(new.type_code::text,d,'0');
+  return new;
+end;
+$;
+create or replace function public.erp_set_permission_template_display_code()
+returns trigger language plpgsql security definer set search_path=public as $
+declare p text; d integer;
+begin
+  select prefix,digits into p,d from public.erp_code_policy_config(new.company_id,'permission_template','Tpl',5);
+  new.template_code_display := p||lpad(new.template_code::text,d,'0');
+  return new;
+end;
+$;
+
+commit;
+);
+  if v_serial>=99 then raise exception 'تم الوصول إلى الحد الأقصى 99 صنفًا داخل هذه الفئات'; end if;
+  new.item_code := v_prefix||array_to_string(v_path,'')||lpad((coalesce(v_serial,0)+1)::text,2,'0');
+  return new;
+end;
+$$;
+
+drop trigger if exists erp_items_hierarchical_code on public.erp_items;
+create trigger erp_items_hierarchical_code before insert on public.erp_items
+for each row execute function public.erp_assign_item_hierarchical_code();
+
+create or replace function public.erp_preview_next_central_code(p_company_id uuid,p_entity_key text)
+returns text
+language plpgsql security definer set search_path=public as $$
+declare v_table text; v_column text; v_prefix text; v_digits integer; v_max bigint; v_kind text;
+begin
+  case p_entity_key
+    when 'employee' then v_table:='erp_employees'; v_column:='employee_code'; v_prefix:='Emp';
+    when 'user' then v_table:='erp_users'; v_column:='user_code'; v_prefix:='Usr';
+    when 'branch' then v_table:='erp_branches'; v_column:='branch_code'; v_prefix:='Brn';
+    when 'warehouse' then v_table:='erp_warehouses'; v_column:='warehouse_code'; v_prefix:='Whs';
+    when 'account' then v_table:='erp_accounts'; v_column:='account_code'; v_prefix:='Acc';
+    when 'cashbox' then v_table:='erp_cashboxes'; v_column:='cashbox_code'; v_prefix:='Csh';
+    when 'supplier' then v_table:='erp_parties'; v_column:='party_code'; v_prefix:='Sup'; v_kind:='supplier';
+    when 'customer' then v_table:='erp_parties'; v_column:='party_code'; v_prefix:='Cus'; v_kind:='customer';
+    when 'department' then v_table:='erp_hr_departments'; v_column:='department_code'; v_prefix:='Dpt';
+    when 'job' then v_table:='erp_hr_jobs'; v_column:='job_code'; v_prefix:='Job';
+    when 'work_location' then v_table:='erp_hr_work_locations'; v_column:='location_code'; v_prefix:='Loc';
+    when 'grade' then v_table:='erp_hr_job_grades'; v_column:='grade_code'; v_prefix:='Grd';
+    when 'payroll_run' then v_table:='erp_payroll_runs'; v_column:='run_code'; v_prefix:='Pay';
     when 'category' then v_table:='erp_item_categories'; v_column:='category_code'; v_prefix:='Cat';
     else raise exception 'نوع التكويد غير مدعوم';
   end case;
