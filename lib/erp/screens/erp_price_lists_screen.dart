@@ -158,10 +158,10 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   Future<void> _createList() async {
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      await _repo.createList(companyId: _company.text, code: _code.text, name: _name.text,
+      final generatedCode = await _repo.createList(companyId: _company.text, code: _code.text, name: _name.text,
         kind: _kind, isDefault: _default, currency: _currencyCode, notes: _notes.text);
       if (!mounted) return;
-      _code.clear(); _name.clear(); _notes.clear(); setState(() { _saving = false; _message = 'تم إنشاء قائمة الأسعار.'; });
+      _code.clear(); _name.clear(); _notes.clear(); setState(() { _saving = false; _message = 'تم إنشاء قائمة الأسعار بالكود التلقائي: $generatedCode'; });
       await _load(); await _previewGeneratedCode();
     } catch (e) {
       if (!mounted) return;
