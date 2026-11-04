@@ -554,7 +554,10 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       final existing = (await db.from('erp_employees').select('id,employee_code,full_name').eq('company_id', _cid)).map((r) => Map<String,dynamic>.from(r)).toList();
       var maxEmployee = 0;
       for (final row in existing) {
-        final suffix = RegExp(r'(\\d+)
+        final digits = _s(row['employee_code']).replaceAll(RegExp('[^0-9]'), '');
+        final n = int.tryParse(digits) ?? 0;
+        if (n > maxEmployee) maxEmployee = n;
+      }
       var createdEmployees = 0;
       final idsByName = <String,String>{for (final row in existing) _s(row['full_name']):_s(row['id'])};
       for (final item in data) {
