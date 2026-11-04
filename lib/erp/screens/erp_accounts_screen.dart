@@ -150,7 +150,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: code, decoration: const InputDecoration(labelText: 'كود الحساب *')),
+                  TextField(controller: code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الحساب (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
                   TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم الحساب *')),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
