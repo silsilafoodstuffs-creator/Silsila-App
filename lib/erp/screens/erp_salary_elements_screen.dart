@@ -150,14 +150,10 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
         TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),
         FilledButton(onPressed:()async{
           final numeric=double.tryParse(value.text.trim());
-          final normalizedCode = code.text.trim().toUpperCase();
-          final suffix = normalizedCode.startsWith('SAL') ? normalizedCode.substring(3) : '';
-          final suffixNumber = int.tryParse(suffix);
-          if(suffix.length < 4 || suffixNumber == null || suffixNumber.toString() != suffix || ar.text.trim().isEmpty || numeric == null || numeric < 0 || numeric > 999.999) {
-            refresh(() => error='استخدم كودًا تلقائيًا بنمط SAL0001، مع اسم عربي وقيمة صحيحة حتى 999.999.');
+          if(ar.text.trim().isEmpty || numeric == null || numeric < 0 || numeric > 999.999) {
+            refresh(() => error='أدخل اسمًا عربيًا وقيمة صحيحة حتى 999.999.');
             return;
           }
-          if (_rows.any((r) => _s(r['element_code']).toUpperCase() == code.text.trim().toUpperCase() && _s(r['id']) != _s(row?['id']))) { refresh(() => error='كود عنصر المرتب مستخدم بالفعل.'); return; }
           try {
             final payload={'company_id':widget.companyId!.trim(),'element_code':code.text.trim().toUpperCase(),'name_ar':ar.text.trim(),'name_en':en.text.trim(),'element_type':type,'value_mode':mode,'nature':nature,'default_value':numeric.toStringAsFixed(3),'show_on_payslip':show,'is_active':active,'updated_at':DateTime.now().toUtc().toIso8601String()};
             if(row==null) await _db.from('erp_hr_salary_elements').insert(payload);
