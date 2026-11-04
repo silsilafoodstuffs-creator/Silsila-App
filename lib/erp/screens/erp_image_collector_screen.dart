@@ -159,27 +159,11 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
 
   Future<void> _loadSuggestedItemCode() async {
     if (_suggestedCodeLoaded) return;
-    try {
-      final company = await _activeCompanyId();
-      final rows = await Supabase.instance.client.from('erp_items')
-          .select('item_code').eq('company_id', company)
-          .like('item_code', 'ITEM-%').limit(5000);
-      var max = 0;
-      for (final row in (rows as List)) {
-        final code = (row['item_code'] ?? '').toString();
-        final dash = code.lastIndexOf('-');
-        if (dash >= 0) {
-          final number = int.tryParse(code.substring(dash + 1)) ?? 0;
-          if (number > max) max = number;
-        }
-      }
-      if (!mounted) return;
+    if (mounted) {
       setState(() {
-        _nextSuggestedItemCode = 'ITEM-${(max + 1).toString().padLeft(4, '0')}';
+        _nextSuggestedItemCode = 'تلقائي';
         _suggestedCodeLoaded = true;
       });
-    } catch (_) {
-      if (mounted) setState(() => _suggestedCodeLoaded = true);
     }
   }
 
@@ -1639,7 +1623,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                     padding: const EdgeInsets.symmetric(horizontal:3),
                     child: Text(kind=='category'
                       ? 'كود الفئة: يُنشأ تلقائيًا عند الحفظ'
-                      : 'الكود المقترح: ${_suggestedCodeLoaded ? _nextSuggestedItemCode : 'جارٍ التحديد…'}',
+                      : 'كود الصنف: يُنشأ تلقائيًا حسب الفئة عند الحفظ',
                       style: const TextStyle(fontSize:11,fontWeight:FontWeight.w800,color:_purple)),
                   ),
                   const SizedBox(width:2),
@@ -1686,7 +1670,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                       SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
                         dropdown('save_as','نوع الصورة',kind,const ['product','category'],width:112),
                         const SizedBox(width:6),
-                        field(mode=='old'?'legacy_code':'item_code','كود الصنف',width:125,initial:mode=='old'?'':_excelValue(item,['item_code','sku','product_code'])),const SizedBox(width:6),
+                        if(mode=='old') field('legacy_code','كود الصنف القديم',width:125,initial:'' ) else Container(width:125,padding:const EdgeInsets.symmetric(horizontal:6,vertical:10),child:const Text('كود تلقائي',style:TextStyle(fontWeight:FontWeight.w800,color:_purple))),const SizedBox(width:6),
                         field('item_name_ar','اسم صنف عربي',width:175,initial:productName),const SizedBox(width:6),
                         field('item_name_en','اسم صنف إنجليزي',width:155,initial:_excelValue(item,['product_name_en','english_name','name_en'])),const SizedBox(width:6),
                       ])),
