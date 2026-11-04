@@ -80,21 +80,21 @@ class ErpMasterDataService {
     String? id,
     required String companyId,
     String? parentId,
-    required String code,
+    String? code,
     required String name,
     bool isActive = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    _require(code, 'كود الفئة مطلوب.');
+
     _require(name, 'اسم الفئة مطلوب.');
     final payload = <String, Object?>{
       'company_id': companyId,
       'parent_id': _nullable(parentId),
-      'category_code': code.trim(),
       'category_name': name.trim(),
       'is_active': isActive,
     };
     if (id == null || id.trim().isEmpty) {
+      payload['category_code'] = '';
       await _db.from('erp_item_categories').insert(payload);
     } else {
       await _db.from('erp_item_categories').update(payload)
@@ -127,7 +127,7 @@ class ErpMasterDataService {
     String? id,
     required String companyId,
     String? categoryId,
-    required String code,
+    String? code,
     String? barcode,
     required String name,
     String baseUnit = 'وحدة',
@@ -138,7 +138,6 @@ class ErpMasterDataService {
     bool isActive = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    _require(code, 'كود الصنف مطلوب.');
     _require(name, 'اسم الصنف مطلوب.');
     if (purchasePrice < 0 || salePrice < 0 || reorderLevel < 0) {
       throw ArgumentError('الأسعار وحد إعادة الطلب لا يمكن أن تكون سالبة.');
@@ -146,7 +145,6 @@ class ErpMasterDataService {
     final payload = <String, Object?>{
       'company_id': companyId,
       'category_id': _nullable(categoryId),
-      'item_code': code.trim(),
       'barcode': _nullable(barcode),
       'item_name': name.trim(),
       'base_unit': baseUnit.trim().isEmpty ? 'وحدة' : baseUnit.trim(),
@@ -157,6 +155,7 @@ class ErpMasterDataService {
       'is_active': isActive,
     };
     if (id == null || id.trim().isEmpty) {
+      payload['item_code'] = '';
       await _db.from('erp_items').insert(payload);
     } else {
       await _db.from('erp_items').update(payload)
@@ -189,7 +188,7 @@ class ErpMasterDataService {
   Future<void> saveParty({
     String? id,
     required String companyId,
-    required String code,
+    String? code,
     required String name,
     required String kind,
     String? phone,
@@ -204,7 +203,6 @@ class ErpMasterDataService {
     bool isActive = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    _require(code, 'كود الطرف مطلوب.');
     _require(name, 'اسم الطرف مطلوب.');
     if (!const {'supplier', 'customer', 'both'}.contains(kind)) {
       throw ArgumentError('نوع الطرف يجب أن يكون supplier أو customer أو both.');
@@ -212,7 +210,6 @@ class ErpMasterDataService {
     if (creditLimit < 0) throw ArgumentError('حد الائتمان لا يمكن أن يكون سالبًا.');
     final payload = <String, Object?>{
       'company_id': companyId,
-      'party_code': code.trim(),
       'party_name': name.trim(),
       'party_kind': kind,
       'phone': _nullable(phone),
@@ -227,6 +224,7 @@ class ErpMasterDataService {
       'is_active': isActive,
     };
     if (id == null || id.trim().isEmpty) {
+      payload['party_code'] = '';
       await _db.from('erp_parties').insert(payload);
     } else {
       await _db.from('erp_parties').update(payload)
