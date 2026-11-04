@@ -213,6 +213,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   bool _utilitySidebarVisible = true;
   bool _executiveAccessChecked = false;
   bool _executiveSummaryAllowed = true;
+  bool _hrDashboardAccessChecked = false;
+  bool _hrDashboardAllowed = false;
+  bool _hrDashboardBlockedByJobTitle = false;
   bool _executivePartialConfigured = false;
   final Set<String> _executiveAllowedSections = <String>{};
   static const Map<String, String> _executivePermissionSectionKeys = {
@@ -361,7 +364,27 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       return;
     }
     try {
-      final rows = await Supabase.instance.client
+      final db = Supabase.instance.client;
+      String jobTitle = '';
+      String memberRole = '';
+      try {
+        final profile = await db.from('erp_company_member_profiles')
+            .select('job_title')
+            .eq('company_id', companyId)
+            .eq('user_id', userId)
+            .maybeSingle();
+        jobTitle = (profile?['job_title'] ?? '').toString().trim();
+      } catch (_) {}
+      try {
+        final member = await db.from('erp_company_members')
+            .select('member_role')
+            .eq('company_id', companyId)
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .maybeSingle();
+        memberRole = (member?['member_role'] ?? '').toString().trim().toLowerCase();
+      } catch (_) {}
+      final rows = await db
           .from('erp_user_permissions')
           .select('menu_key,allow_access')
           .eq('company_id', companyId)
@@ -370,6 +393,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         for (final row in (rows as List).whereType<Map<String, dynamic>>())
           (row['menu_key'] ?? '').toString(): row['allow_access'] == true,
       };
+      const hrDashboardKey = 'موارد بشرية::بيانات أساسية::ملخص إدارة موارد بشرية';
+      final isHrManager = jobTitle == 'مدير موارد بشرية';
+      final isHrResponsible = jobTitle == 'مسئول موارد بشرية' || jobTitle == 'مسؤول موارد بشرية';
+      final isCompanyAdmin = memberRole == 'owner' || memberRole == 'admin';
+      final hrDashboardAllowed = !isHrResponsible &&
+          (isHrManager || isCompanyAdmin || permissions[hrDashboardKey] == true);
       const parentKey = 'التقارير والتحليلات::تقارير::الملخص التنفيذي';
       final childKeys = _executivePermissionSectionKeys.values
           .map((label) => 'التقارير والتحليلات::تقارير::$label')
@@ -378,6 +407,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final configuredChildren = childKeys.where(permissions.containsKey).toList();
       if (!mounted) return;
       setState(() {
+        _hrDashboardAccessChecked = true;
+        _hrDashboardAllowed = hrDashboardAllowed;
+        _hrDashboardBlockedByJobTitle = isHrResponsible;
         _executiveAccessChecked = true;
         _executiveSummaryAllowed = hasParent ? permissions[parentKey] == true : true;
         _executivePartialConfigured = configuredChildren.isNotEmpty;
@@ -393,6 +425,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     } catch (_) {
       // Keep the summary usable until the permissions schema is installed.
       if (mounted) setState(() {
+        _hrDashboardAccessChecked = true;
+        _hrDashboardAllowed = false;
+        _hrDashboardBlockedByJobTitle = false;
         _executiveAccessChecked = true;
         _executiveSummaryAllowed = true;
         _executivePartialConfigured = false;
@@ -1391,7 +1426,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                         ),
                       ]),
                       if (groupOpen)
-                        ...groupEntry.value.map((page) => Padding(
+                        ...groupEntry.value
+                            .where((page) => page != 'ملخص إدارة موارد بشرية' ||
+                                (_hrDashboardAccessChecked && _hrDashboardAllowed))
+                            .map((page) => Padding(
                           padding: const EdgeInsetsDirectional.only(start: 20, end: 5),
                           child: ListTile(
                             dense: true,
@@ -2799,6 +2837,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   });
 
   void _open(String module, String group, String page) {
+    if (page == 'ملخص إدارة موارد بشرية' &&
+        (!_hrDashboardAccessChecked || !_hrDashboardAllowed)) {
+      return;
+    }
     setState(() {
       _module = module;
       _group = group;
