@@ -1,0 +1,1 @@
+drop trigger if exists erp_company_member_profiles_hr_template_trigger on public.erp_company_member_profiles; create trigger erp_company_member_profiles_hr_template_trigger before insert or update of job_title, company_id, permission_template_id on public.erp_company_member_profiles for each row execute function public.erp_assign_hr_manager_permission_template();
