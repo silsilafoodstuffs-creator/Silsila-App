@@ -38,14 +38,14 @@ class ErpPartiesRepository {
     double creditLimit = 0,
     double openingBalance = 0,
   }) async {
-    if (companyId.trim().isEmpty || code.trim().isEmpty || name.trim().isEmpty) {
-      throw ArgumentError('الشركة وكود الطرف والاسم حقول إلزامية.');
+    if (companyId.trim().isEmpty || name.trim().isEmpty) {
+      throw ArgumentError('الشركة واسم الطرف حقول إلزامية.');
     }
     if (!['supplier','customer','both'].contains(kind)) throw ArgumentError('نوع الطرف غير صحيح.');
     if (creditLimit < 0) throw ArgumentError('حد الائتمان لا يمكن أن يكون سالبًا.');
     await _db.from('erp_parties').insert({
       'company_id': companyId.trim(),
-      'party_code': code.trim(),
+      'party_code': '',
       'party_name': name.trim(),
       'party_kind': kind,
       'phone': _blank(phone),
