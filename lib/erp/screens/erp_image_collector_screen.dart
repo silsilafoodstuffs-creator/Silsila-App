@@ -934,13 +934,43 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     finally{if(mounted)setState(()=>_loading=false);}
   }
 
-  Future<Map<String,dynamic>> _ensureRowCategory(SupabaseClient db,String company,List<Map<String,dynamic>> categories,String name,String? parent,String prefix,{String englishName=''}) async{
-    final normalized=name.trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase();
-    for(final g in categories){if((g['parent_id']?.toString()??'')==(parent??'')&&(g['category_name']??'').toString().trim().replaceAll(RegExp(r'\s+'),' ').toLowerCase()==normalized){if(englishName.trim().isNotEmpty){await db.from('erp_item_categories').update({'category_name_en':englishName.trim()}).eq('id',g['id'].toString()).eq('company_id',company);g['category_name_en']=englishName.trim();}return g;}}
-    var max=0;for(final g in categories){final m=RegExp('^'+prefix+r'(\d+)$',caseSensitive:false).firstMatch((g['category_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}
-    final code=prefix+(max+1).toString().padLeft(4,'0');
-    final row=await db.from('erp_item_categories').insert({'company_id':company,'parent_id':parent,'category_code':code,'category_name':name.trim(),'category_name_en':englishName.trim(),'is_active':true,'show_in_app':true,'image_url':null}).select('id,parent_id,category_code:category_code,category_name:category_name').single();
-    final created=Map<String,dynamic>.from(row);categories.add(created);return created;
+  Future<Map<String,dynamic>> _ensureRowCategory(
+    SupabaseClient db,
+    String company,
+    List<Map<String,dynamic>> categories,
+    String name,
+    String? parent, {
+    String englishName = '',
+  }) async {
+    final normalized = name.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+    for (final category in categories) {
+      final sameParent = (category['parent_id']?.toString() ?? '') == (parent ?? '');
+      final sameName = (category['category_name'] ?? '').toString().trim()
+          .replaceAll(RegExp(r'\s+'), ' ').toLowerCase() == normalized;
+      if (sameParent && sameName) {
+        if (englishName.trim().isNotEmpty) {
+          await db.from('erp_item_categories')
+              .update({'category_name_en': englishName.trim()})
+              .eq('id', category['id'].toString())
+              .eq('company_id', company);
+          category['category_name_en'] = englishName.trim();
+        }
+        return category;
+      }
+    }
+    final row = await db.from('erp_item_categories').insert({
+      'company_id': company,
+      'parent_id': parent,
+      'category_code': '',
+      'category_name': name.trim(),
+      'category_name_en': englishName.trim(),
+      'is_active': true,
+      'show_in_app': true,
+      'image_url': null,
+    }).select('id,parent_id,category_code:category_code,category_name:category_name').single();
+    final created = Map<String,dynamic>.from(row);
+    categories.add(created);
+    return created;
   }
 
   Future<void> _finishSavedRow(Map<String,dynamic> item,String message) async{
@@ -978,9 +1008,9 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
         if(third!=null&&thirdName.isNotEmpty)await db.from('erp_item_categories').update({'category_name':thirdName,'category_name_en':thirdEn}).eq('id',third['id'].toString()).eq('company_id',company);
         target=byId(item['category_target_id'])!;
       }else{
-        final root=await _ensureRowCategory(db,company,categories,main,null,'C',englishName:mainEn);Map<String,dynamic>? sub,third;
-        if(level!='root')sub=await _ensureRowCategory(db,company,categories,subName,root['id'].toString(),'S',englishName:subEn);
-        if(level=='secondary'){if(sub==null)throw Exception('الفئة الثانوية تتطلب فئة فرعية.');third=await _ensureRowCategory(db,company,categories,thirdName,sub['id'].toString(),'T',englishName:thirdEn);}
+        final root=await _ensureRowCategory(db,company,categories,main,null,englishName:mainEn);Map<String,dynamic>? sub,third;
+        if(level!='root')sub=await _ensureRowCategory(db,company,categories,subName,root['id'].toString(),englishName:subEn);
+        if(level=='secondary'){if(sub==null)throw Exception('الفئة الثانوية تتطلب فئة فرعية.');third=await _ensureRowCategory(db,company,categories,thirdName,sub['id'].toString(),englishName:thirdEn);}
         target=third??sub??root;
       }
       final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
@@ -1010,18 +1040,38 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
     final oldCode=_rowController(item,'legacy_code').text.trim();if(mode=='old'&&(item['database_item_id']==null||oldCode.isEmpty)){setState(()=>_error='ابحث عن كود الصنف القديم أولًا.');return;}
     setState(()=>_loading=true);
     try{
-      var code=oldCode;
-      if(mode=='new'){final rows=await db.from('erp_items').select('item_code').eq('company_id',company).like('item_code','ITEM-%').limit(5000);var max=0;for(final r in (rows as List)){final m=RegExp(r'-(\d+)$').firstMatch((r['item_code']??'').toString());if(m!=null){final n=int.tryParse(m.group(1)!)??0;if(n>max)max=n;}}code='ITEM-'+(max+1).toString().padLeft(4,'0');}
+      var code = oldCode;
+      final selectedCategoryId = item['category_secondary_id']?.toString()
+          ?? item['category_sub_id']?.toString()
+          ?? item['category_root_id']?.toString();
+      if (mode == 'new' && (selectedCategoryId == null || selectedCategoryId.isEmpty)) {
+        setState(() => _error = 'اختر فئة الصنف قبل الحفظ حتى يُنشأ الكود الهرمي تلقائيًا.');
+        return;
+      }
       final downloaded=await _invoke({'action':'download','url':item['url'].toString(),'referer':_pageUrl ?? _url.text.trim()});final b64=downloaded['base64']?.toString();if(b64==null||b64.isEmpty)throw Exception('لم تصل بيانات الصورة.');
       final sourceBytes=Uint8List.fromList(base64Decode(b64));final png=await compute(_processTransparentPngInBackground,{'bytes':sourceBytes,'minWidth':300,'minHeight':300});
       final values=<String,dynamic>{'item_name':ar,'item_name_en':en,'base_unit':minor,'sale_price':price,'tax_rate':tax,'pricing_area':area,'package_description':middle.isNotEmpty
         ? major+' = '+count.toStringAsFixed(3)+' '+middle+' = '+middleCount!.toStringAsFixed(3)+' '+minor
         : major+' = '+count.toStringAsFixed(3)+' '+minor,'weight_kg':double.tryParse(_rowController(item,'weight_kg').text.trim()) ?? 0,'length_cm':double.tryParse(_rowController(item,'length_cm').text.trim()) ?? 0,'width_cm':double.tryParse(_rowController(item,'width_cm').text.trim()) ?? 0,'height_cm':double.tryParse(_rowController(item,'height_cm').text.trim()) ?? 0,'image_data':_byteaHex(png),'image_mime_type':'image/png','image_url':null,'source_name':'جامع صور سلسلة','source_url':item['url'].toString(),'is_active':true};
-      final selectedCategoryId = item['category_secondary_id']?.toString() ?? item['category_sub_id']?.toString() ?? item['category_root_id']?.toString();
-      if (selectedCategoryId != null && selectedCategoryId.isNotEmpty) values['category_id'] = selectedCategoryId;
+      if (selectedCategoryId != null && selectedCategoryId.isNotEmpty) {
+        values['category_id'] = selectedCategoryId;
+      }
       String id;
-      if(mode=='new'){final inserted=await db.from('erp_items').insert({...values,'company_id':company,'item_code':code,'purchase_price':0,'category_id':selectedCategoryId}).select('id').single();id=inserted['id'].toString();}
-      else{id=item['database_item_id'].toString();await db.from('erp_items').update(values).eq('id',id).eq('company_id',company);}
+      if (mode == 'new') {
+        final inserted = await db.from('erp_items').insert({
+          ...values,
+          'company_id': company,
+          'item_code': '',
+          'purchase_price': 0,
+          'category_id': selectedCategoryId,
+        }).select('id,item_code').single();
+        id = inserted['id'].toString();
+        code = (inserted['item_code'] ?? '').toString();
+        if (code.isEmpty) throw StateError('لم تُنشئ قاعدة البيانات كود الصنف تلقائيًا.');
+      } else {
+        id = item['database_item_id'].toString();
+        await db.from('erp_items').update(values).eq('id', id).eq('company_id', company);
+      }
       await db.from('erp_item_units').update({'is_active':false,'is_selectable':false,'is_base_unit':false}).eq('company_id',company).eq('item_id',id);
       final unitRows = ErpItemUnitConversion.buildUnits(
         majorName: major,
