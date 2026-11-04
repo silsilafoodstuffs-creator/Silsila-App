@@ -37,22 +37,21 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   bool _newActive = true;
   @override
   void dispose() { _newCode.dispose(); _newAr.dispose(); _newEn.dispose(); _newValue.dispose(); super.dispose(); }
-  void _startNewRow() {
+  Future<void> _startNewRow() async {
     if (_showNewRow) return;
-    _newCode.text = _nextCode(); _newAr.clear(); _newEn.clear(); _newValue.text = '0.000';
+    _newCode.text = await _nextCode(); _newAr.clear(); _newEn.clear(); _newValue.text = '0.000';
     setState(() { _newType='earning'; _newMode='fixed'; _newNature='value'; _newShowOnPayslip=true; _newActive=true; _showNewRow=true; _error=null; _message='أضف بيانات العنصر في السطر الجديد ثم اضغط حفظ السطر.'; });
   }
   void _cancelNewRow() => setState(() { _showNewRow=false; _message='تم إلغاء سطر الإضافة.'; });
   Future<void> _saveNewRow() async {
     if (!_showNewRow) { setState(() => _message='اضغط إضافة لإنشاء سطر جديد داخل الجدول.'); return; }
-    final code=_newCode.text.trim().toUpperCase(), amount=double.tryParse(_newValue.text.trim());
-    if (!RegExp(r'^[A-Z0-9]+$').hasMatch(code) || _newAr.text.trim().isEmpty || amount==null || amount<0) { setState(()=>_error='أدخل كودًا إنجليزيًا/رقميًا واسمًا عربيًا وقيمة صحيحة غير سالبة.'); return; }
-    if (_rows.any((r)=>_s(r['element_code']).toUpperCase()==code)) { setState(()=>_error='كود العنصر مستخدم بالفعل؛ اختر كودًا آخر.'); return; }
+    final amount=double.tryParse(_newValue.text.trim());
+    if (_newAr.text.trim().isEmpty || amount==null || amount<0) { setState(()=>_error='أدخل اسمًا عربيًا وقيمة صحيحة غير سالبة.'); return; }
     final company=(widget.companyId??'').trim();
     if(company.isEmpty){setState(()=>_error='يجب تحديد الشركة أولًا.');return;}
     setState(()=>_loading=true);
     try {
-      await _db.from('erp_hr_salary_elements').insert({'company_id':company,'element_code':code,'name_ar':_newAr.text.trim(),'name_en':_newEn.text.trim(),'element_type':_newType,'value_mode':_newMode,'nature':_newNature,'default_value':amount,'show_on_payslip':_newShowOnPayslip,'is_active':_newActive,'is_system_locked':false});
+      await _db.from('erp_hr_salary_elements').insert({'company_id':company,'element_code':'','name_ar':_newAr.text.trim(),'name_en':_newEn.text.trim(),'element_type':_newType,'value_mode':_newMode,'nature':_newNature,'default_value':amount,'show_on_payslip':_newShowOnPayslip,'is_active':_newActive,'is_system_locked':false});
       if(!mounted)return;
       setState(()=>_showNewRow=false);
       await _load();
@@ -78,16 +77,15 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   String _s(dynamic value) => (value ?? '').toString();
   String _currencyLabel(String code) { if (code == 'USD') return String.fromCharCode(36); return const {'EGP':'ج.م','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[code] ?? code; }
   bool _locked(Map<String,dynamic> row) => row['is_system_locked'] == true || _s(row['element_code']) == 'SYSSTOCKSHORTAGE';
-  String _nextCode() {
-    var max = 0;
-    for (final row in _rows) {
-      final code = _s(row['element_code']).trim().toUpperCase();
-      if (!code.startsWith('SAL') || code.length <= 3) continue;
-      final suffix = code.substring(3);
-      final number = int.tryParse(suffix);
-      if (number != null && number > max) max = number;
-    }
-    return 'SAL' + (max + 1).toString().padLeft(4, '0');
+  Future<String> _nextCode() async {
+    final company = (widget.companyId ?? '').trim();
+    if (company.isEmpty) return 'Sal00001';
+    try {
+      final value = await _db.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': company, 'p_entity_key': 'salary_element',
+      });
+      return value.toString();
+    } catch (_) { return 'Sal00001'; }
   }
 
   @override
@@ -117,7 +115,8 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
 
   Future<void> _edit({Map<String,dynamic>? row}) async {
     if (row != null && _locked(row)) { setState(() => _message = 'عنصر عجز جرد عنصر نظامي ثابت ولا يمكن تعديله.'); return; }
-    final code = TextEditingController(text: _s(row?['element_code']).isEmpty ? _nextCode() : _s(row?['element_code']));
+    final codeText = row == null ? await _nextCode() : _s(row['element_code']);
+    final code = TextEditingController(text: codeText);
     final ar = TextEditingController(text: _s(row?['name_ar']));
     final en = TextEditingController(text: _s(row?['name_en']));
     final value = TextEditingController(text: _s(row?['default_value']).isEmpty ? '0.000' : _s(row?['default_value']));

@@ -129,7 +129,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
         final en = (_enControllers[id]?.text ?? _s(row['name_en'])).trim();
         if (ar.isEmpty) {
           if (row['_draft'] == true) continue;
-          throw StateError('اسم التصنيف العربي مطلوب (الكود ${row['classification_code'] ?? ''}).');
+          throw StateError('اسم التصنيف العربي مطلوب (الكود ${row['classification_code_display'] ?? row['classification_code'] ?? ''}).');
         }
         final payload = <String,dynamic>{
           'company_id': _company, 'user_type_id': _typeId,
@@ -210,7 +210,7 @@ class _ErpUserClassificationsScreenState extends State<ErpUserClassificationsScr
           onSelectChanged: (_) => _select(row),
           cells: [
             DataCell(Text('${i+1}')),
-            DataCell(Text(_s(row['classification_code']).isEmpty ? 'تلقائي عند الحفظ' : _s(row['classification_code']))),
+            DataCell(Text(_s(row['classification_code_display']).isEmpty ? 'تلقائي عند الحفظ' : _s(row['classification_code_display']))),
             DataCell(SizedBox(width: 210, child: TextField(controller: _arControllers[id], enabled: canEdit,
               decoration: const InputDecoration(isDense: true, border: InputBorder.none, hintText: 'اسم التصنيف بالعربية'),
               onTap: () => _select(row)))),
