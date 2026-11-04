@@ -88,6 +88,7 @@ begin
     when 'erp_hr_work_locations' then v_key := 'work_location'; v_column := 'location_code';
     when 'erp_hr_job_grades' then v_key := 'grade'; v_column := 'grade_code';
     when 'erp_payroll_runs' then v_key := 'payroll_run'; v_column := 'run_code';
+    when 'erp_hr_salary_elements' then v_key := 'salary_element'; v_column := 'element_code';
     else raise exception 'نوع سجل غير مدعوم في التكويد المركزي: %', tg_table_name;
   end case;
 
@@ -113,6 +114,7 @@ begin
       when 'work_location' then 'Loc'
       when 'grade' then 'Grd'
       when 'payroll_run' then 'Pay'
+      when 'salary_element' then 'Sal'
       when 'delegate' then 'Del'
       when 'sales_invoice' then 'Siv'
       when 'sales_order' then 'Sor'
@@ -158,7 +160,7 @@ begin
       ('erp_item_categories'), ('erp_cost_centers'), ('erp_price_lists'),
       ('erp_accounts'), ('erp_cashboxes'), ('erp_parties'),
       ('erp_hr_departments'), ('erp_hr_jobs'), ('erp_hr_work_locations'),
-      ('erp_hr_job_grades'), ('erp_payroll_runs'), ('erp_sales_representatives'),
+      ('erp_hr_job_grades'), ('erp_payroll_runs'), ('erp_hr_salary_elements'), ('erp_sales_representatives'),
       ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers')
     ) as t(table_name)
   loop
@@ -295,6 +297,7 @@ begin
     when 'work_location' then v_table := 'erp_hr_work_locations'; v_column := 'location_code'; v_prefix := 'Loc';
     when 'grade' then v_table := 'erp_hr_job_grades'; v_column := 'grade_code'; v_prefix := 'Grd';
     when 'payroll_run' then v_table := 'erp_payroll_runs'; v_column := 'run_code'; v_prefix := 'Pay';
+    when 'salary_element' then v_table := 'erp_hr_salary_elements'; v_column := 'element_code'; v_prefix := 'Sal';
     when 'delegate' then v_table := 'erp_sales_representatives'; v_column := 'rep_code'; v_prefix := 'Del';
     when 'sales_invoice' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Siv';
     when 'sales_order' then v_table := 'erp_sales_documents'; v_column := 'document_number'; v_prefix := 'Sor';
