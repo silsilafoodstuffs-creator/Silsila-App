@@ -90,6 +90,12 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     _purchasePrice.dispose(); _salePrice.dispose(); _taxRate.dispose(); _reorder.dispose(); super.dispose();
   }
   String _s(dynamic v) => (v ?? '').toString();
+  bool _isSecondaryCategory(Map<String, dynamic> category) {
+    final parentId = _s(category['parent_id']);
+    if (parentId.isEmpty) return false;
+    final parents = _categories.where((row) => _s(row['id']) == parentId).toList();
+    return parents.isNotEmpty && _s(parents.first['parent_id']).isNotEmpty;
+  }
   double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse(_s(v)) ?? 0;
   String _money(dynamic v) => _n(v).toStringAsFixed(2);
   Future<void> _load({bool clearMessage = true}) async {
@@ -865,7 +871,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             DropdownButtonFormField<String>(
               value: _itemCategoryId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'الفئة الثانوية للصنف *', helperText: 'اختر الفئة الثانوية المرتبطة بفئة رئيسية وفرعية لإكمال الكود التلقائي'),
-              items: _categories.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis))).toList(),
+              items: _categories.where((g) => g['is_active'] == true && _isSecondaryCategory(g)).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis))).toList(),
               onChanged: (v) => setState(() => _itemCategoryId = v),
             ),
             TextField(controller: _itemName, decoration: const InputDecoration(labelText: 'اسم الصنف *')),
