@@ -360,7 +360,15 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   Future<void> _loadExecutivePermissions(String companyId) async {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
-      if (mounted) setState(() { _executiveAccessChecked = true; _executiveSummaryAllowed = true; _executivePartialConfigured = false; _executiveAllowedSections.clear(); });
+      if (mounted) setState(() {
+        _hrDashboardAccessChecked = true;
+        _hrDashboardAllowed = false;
+        _hrDashboardBlockedByJobTitle = false;
+        _executiveAccessChecked = true;
+        _executiveSummaryAllowed = true;
+        _executivePartialConfigured = false;
+        _executiveAllowedSections.clear();
+      });
       return;
     }
     try {
