@@ -124,7 +124,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
     final seen = <String>{};
     for (final row in current) {
       final code = _s(row['unit_code']).trim().toUpperCase();
-      if (!RegExp('^' + RegExp.escape(_unitPrefix) + '[0-9]{' + _unitDigits.toString() + '}.hasMatch(code)) {
+      if (!RegExp('^' + RegExp.escape(_unitPrefix) + '[0-9]{' + _unitDigits.toString() + r'}$', caseSensitive: false).hasMatch(code)) {
         setState(() => _message = 'كود الوحدة غير صحيح. سيُنشأ تلقائيًا وفق سياسات التكويد.');
         return;
       }
