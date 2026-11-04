@@ -37,12 +37,23 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
   String? _error;
   String? _message;
 
+  Future<void> _previewGeneratedCode() async {
+    if (_company.text.trim().isEmpty) return;
+    try {
+      final preview = await Supabase.instance.client.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': _company.text.trim(),
+        'p_entity_key': 'payroll_run',
+      });
+      if (mounted) setState(() => _runCode.text = preview.toString());
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
     if (_company.text.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+      WidgetsBinding.instance.addPostFrameCallback((_) async { await _load(); await _previewGeneratedCode(); });
     }
   }
   @override
@@ -141,7 +152,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
       if (!mounted) return;
       _runCode.clear();
       setState(() { _saving = false; _message = 'تم إنشاء مسودة مسير الرواتب.'; });
-      await _load();
+      await _load(); await _previewGeneratedCode();
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر إنشاء المسير: $e'; });
