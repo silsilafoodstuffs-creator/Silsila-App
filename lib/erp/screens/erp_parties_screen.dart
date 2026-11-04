@@ -272,11 +272,13 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     final client = db;
     final cid = companyId;
     if (client == null || cid == null || cid.isEmpty) return '';
-    final preview = await client.rpc('erp_preview_next_central_code', params: {
-      'p_company_id': cid,
-      'p_entity_key': kind == 'customer' ? 'customer' : 'supplier',
-    });
-    return preview.toString();
+    try {
+      final preview = await client.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': cid,
+        'p_entity_key': kind == 'customer' ? 'customer' : 'supplier',
+      });
+      return preview.toString();
+    } catch (_) { return kind == 'customer' ? 'Cus00001' : 'Sup00001'; }
   }
   void _select(Map<String,dynamic> row) {
     setState(() { editing = false; selectedPartyId = s(row['id']); selectedClassification = classifications.where((c) => s(c['name_ar']) == s(row['customer_type'])).map((c) => s(c['id'])).firstOrNull; selectedGovernorate = geos.where((g) => s(g['name_ar']) == s(row['governorate']) && s(g['level']) == 'governorate').map((g) => s(g['id'])).firstOrNull; selectedRep = s(row['sales_rep_employee_id']).isEmpty ? null : s(row['sales_rep_employee_id']); });
