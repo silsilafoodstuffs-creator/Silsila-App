@@ -48,13 +48,24 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
   String? _error;
   String? _message;
 
+  Future<void> _previewGeneratedCode() async {
+    if (_company.text.trim().isEmpty) return;
+    try {
+      final preview = await Supabase.instance.client.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': _company.text.trim(),
+        'p_entity_key': 'price_list',
+      });
+      if (mounted) setState(() => _code.text = preview.toString());
+    } catch (_) {}
+  }
+
   @override
   void initState() {
     super.initState();
     _company.text = widget.initialCompanyId ?? '';
     _kind = widget.initialKind;
     if (_company.text.trim().isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+      WidgetsBinding.instance.addPostFrameCallback((_) async { await _load(); await _previewGeneratedCode(); });
     }
   }
   @override
@@ -150,7 +161,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         kind: _kind, isDefault: _default, currency: _currencyCode, notes: _notes.text);
       if (!mounted) return;
       _code.clear(); _name.clear(); _notes.clear(); setState(() { _saving = false; _message = 'تم إنشاء قائمة الأسعار.'; });
-      await _load();
+      await _load(); await _previewGeneratedCode();
     } catch (e) {
       if (!mounted) return;
       setState(() { _saving = false; _error = 'تعذر إنشاء القائمة: $e'; });
