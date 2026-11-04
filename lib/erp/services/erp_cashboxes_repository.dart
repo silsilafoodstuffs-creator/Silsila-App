@@ -37,8 +37,8 @@ class ErpCashboxesRepository {
     required String accountId, String? branchId, required bool isBank,
     String? bankName, String? accountNumberMasked, int checkbookSheetCount = 50,
   }) async {
-    if (code.trim().isEmpty || name.trim().isEmpty || nameEn.trim().isEmpty || accountId.isEmpty) {
-      throw ArgumentError('كود الخزينة والاسمان العربي والإنجليزي وحساب الأستاذ حقول مطلوبة.');
+    if (name.trim().isEmpty || nameEn.trim().isEmpty || accountId.isEmpty) {
+      throw ArgumentError('اسما الخزينة العربي والإنجليزي وحساب الأستاذ حقول مطلوبة.');
     }
     if (isBank && (checkbookSheetCount < 1 || checkbookSheetCount > 1000)) {
       throw ArgumentError('عدد أوراق دفتر الشيكات يجب أن يكون بين 1 و1000.');
@@ -48,7 +48,7 @@ class ErpCashboxesRepository {
       throw ArgumentError('أدخل آخر أربعة أرقام فقط من الحساب البنكي.');
     }
     await _db.from('erp_cashboxes').insert({
-      'company_id': companyId.trim(), 'cashbox_code': code.trim().toUpperCase(), 'cashbox_name': name.trim(), 'cashbox_name_en': nameEn.trim(),
+      'company_id': companyId.trim(), 'cashbox_code': '', 'cashbox_name': name.trim(), 'cashbox_name_en': nameEn.trim(),
       'account_id': accountId, 'branch_id': branchId, 'is_bank_account': isBank,
       'bank_name': _blank(bankName), 'account_number_masked': masked,
       'is_active': true,
