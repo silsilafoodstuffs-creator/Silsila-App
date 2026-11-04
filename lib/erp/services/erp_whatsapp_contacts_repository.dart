@@ -54,6 +54,24 @@ class ErpWhatsappContactsRepository {
     }
   }
 
+  Future<void> updateContact({
+    required String id,
+    required String contactName,
+    required String phone,
+    required String groupName,
+  }) async {
+    final normalized = normalizePhone(phone);
+    if (normalized.replaceAll('+', '').length < 7) {
+      throw ArgumentError('رقم الموبايل غير صحيح.');
+    }
+    await _db.from('erp_whatsapp_import_contacts').update({
+      'contact_name': contactName.trim(),
+      'phone': phone.trim(),
+      'normalized_phone': normalized,
+      'group_name': groupName.trim(),
+    }).eq('id', id);
+  }
+
   Future<void> markConsented(List<String> ids, {String? evidence}) async {
     if (ids.isEmpty) return;
     final userId = _db.auth.currentUser?.id;
