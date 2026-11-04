@@ -291,7 +291,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     final area=geos.where((g)=>s(g['id'])==selectedArea).firstOrNull;
     final cls=classifications.where((c)=>s(c['id'])==selectedClassification).firstOrNull;
     final payload=<String,dynamic>{
-      'company_id':companyId,'party_code':fields['party_code']!.text.trim(),'party_name':fields['name_ar']!.text.trim(),
+      'company_id':companyId,'party_code':selectedPartyId==null?'':fields['party_code']!.text.trim(),'party_name':fields['name_ar']!.text.trim(),
       'party_name_en':fields['name_en']!.text.trim().isEmpty?null:fields['name_en']!.text.trim(),'party_kind':kind,
       'country':fields['country']!.text.trim().isEmpty?'مصر':fields['country']!.text.trim(),'address':fields['address']!.text.trim().isEmpty?null:fields['address']!.text.trim(),
       'governorate':gov==null?null:s(gov['name_ar']),'district':dist==null?null:s(dist['name_ar']),'area':area==null?null:s(area['name_ar']),
