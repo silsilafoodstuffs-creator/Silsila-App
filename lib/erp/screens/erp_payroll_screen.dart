@@ -46,7 +46,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
         'p_entity_key': 'payroll_run',
       });
       if (mounted) setState(() => _runCode.text = preview.toString());
-    } catch (_) {}
+    } catch (_) { if (mounted) setState(() => _runCode.text = 'Pay00001'); }
   }
 
   @override
