@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+
+// CRM movement catalog: keep this tree aligned with ERP navigation.
 import '../widgets/erp_keyboard_navigation.dart';
 import '../widgets/erp_quick_task_button.dart';
 import 'package:flutter/services.dart';
