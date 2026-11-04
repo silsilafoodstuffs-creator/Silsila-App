@@ -67,7 +67,7 @@ class ErpPriceListsRepository {
       .order('item_id').range(offset, offset + pageSize - 1);
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
-  Future<void> createList({
+  Future<String> createList({
     required String companyId, required String code, required String name,
     required String kind, bool isDefault = false, String currency = 'EGP', String? notes,
   }) async {
@@ -75,7 +75,7 @@ class ErpPriceListsRepository {
       throw ArgumentError('الشركة وكود القائمة واسمها حقول مطلوبة.');
     }
     if (!['sale','purchase'].contains(kind)) throw ArgumentError('نوع القائمة غير صحيح.');
-    await _db.rpc('erp_create_price_list', params: {
+    final createdId = await _db.rpc('erp_create_price_list', params: {
       'p_company_id': companyId.trim(),
       'p_code': code.trim(),
       'p_name': name.trim(),
@@ -84,6 +84,12 @@ class ErpPriceListsRepository {
       'p_currency_code': currency.trim().isEmpty ? 'EGP' : currency.trim().toUpperCase(),
       'p_notes': _blank(notes),
     });
+    final created = await _db.from('erp_price_lists')
+      .select('price_list_code').eq('id', createdId.toString())
+      .eq('company_id', companyId.trim()).single();
+    final generatedCode = (created['price_list_code'] ?? '').toString();
+    if (generatedCode.isEmpty) throw StateError('لم تُرجع قاعدة البيانات كود قائمة الأسعار التلقائي.');
+    return generatedCode;
   }
   Future<void> addLine({
     required String companyId, required String listId, required String itemId,
