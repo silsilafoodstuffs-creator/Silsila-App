@@ -57,7 +57,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         'p_entity_key': 'price_list',
       });
       if (mounted) setState(() => _code.text = preview.toString());
-    } catch (_) {}
+    } catch (_) { if (mounted) setState(() => _code.text = 'Prc00001'); }
   }
 
   @override
