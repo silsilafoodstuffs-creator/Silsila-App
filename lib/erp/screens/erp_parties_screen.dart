@@ -269,11 +269,14 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     fields['party_code']!.text=await _nextCode();
   }
   Future<String> _nextCode() async {
-    final prefix=kind=='customer'?'CUS':'SUP';
-    final used=rows.map((r)=>s(r['party_code'])).toList();
-    var n=used.length+1; var code='$prefix-${n.toString().padLeft(5,'0')}';
-    while(used.contains(code)){n++;code='$prefix-${n.toString().padLeft(5,'0')}';}
-    return code;
+    final client = db;
+    final cid = companyId;
+    if (client == null || cid == null || cid.isEmpty) return '';
+    final preview = await client.rpc('erp_preview_next_central_code', params: {
+      'p_company_id': cid,
+      'p_entity_key': kind == 'customer' ? 'customer' : 'supplier',
+    });
+    return preview.toString();
   }
   void _select(Map<String,dynamic> row) {
     setState(() { editing = false; selectedPartyId = s(row['id']); selectedClassification = classifications.where((c) => s(c['name_ar']) == s(row['customer_type'])).map((c) => s(c['id'])).firstOrNull; selectedGovernorate = geos.where((g) => s(g['name_ar']) == s(row['governorate']) && s(g['level']) == 'governorate').map((g) => s(g['id'])).firstOrNull; selectedRep = s(row['sales_rep_employee_id']).isEmpty ? null : s(row['sales_rep_employee_id']); });
@@ -284,7 +287,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   }
   Future<void> _save() async {
     final client=db; if(client==null||companyId==null)return;
-    if(fields['party_code']!.text.trim().isEmpty||fields['name_ar']!.text.trim().isEmpty){setState(()=>error='كود ${kind=='customer'?'العميل':'المورد'} والاسم العربي مطلوبان.');return;}
+    if(fields['name_ar']!.text.trim().isEmpty){setState(()=>error='الاسم العربي مطلوب.');return;}
     setState(() { saving = true; error = null; message = null; });
     final gov=geos.where((g)=>s(g['id'])==selectedGovernorate).firstOrNull;
     final dist=geos.where((g)=>s(g['id'])==selectedDistrict).firstOrNull;
@@ -366,7 +369,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     final uri=Uri.https('www.google.com','/maps/search/',{'api':'1','query':address});
     if(!await launchUrl(uri,mode:LaunchMode.platformDefault)&&mounted)setState(()=>error='تعذر فتح خرائط Google.');
   }
-  Widget _text(String key,String label,{bool enabled=true})=>TextField(controller:fields[key],enabled:editing&&enabled,decoration:InputDecoration(labelText:label,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:10)));
+  Widget _text(String key,String label,{bool enabled=true})=>TextField(controller:fields[key],enabled:editing&&enabled,readOnly:key=='party_code',decoration:InputDecoration(labelText:label,helperText:key=='party_code'?'تلقائي وفق سياسات التكويد':null,prefixIcon:key=='party_code'?const Icon(Icons.auto_awesome):null,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:10)));
   Widget _drop({required String label,required String? value,required List<DropdownMenuItem<String>> items,required ValueChanged<String?>? onChanged})=>DropdownButtonFormField<String>(value:items.any((e)=>e.value==value)?value:null,isExpanded:true,decoration:InputDecoration(labelText:label,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:9,vertical:10)),items:items,onChanged:editing?onChanged:null);
   Widget _geoDrop(String level,String label,String? value,ValueChanged<String?> change,[String? parent])=>_drop(label:label,value:value,items:_geoLevel(level,parent).map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['name_ar']),overflow:TextOverflow.ellipsis))).toList(),onChanged:change);
   Widget _partyCard(Map<String, dynamic> row, int index) {
