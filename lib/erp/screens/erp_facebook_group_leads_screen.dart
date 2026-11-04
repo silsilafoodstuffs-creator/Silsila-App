@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+
 import 'package:excel/excel.dart' as xls;
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
@@ -6,346 +7,1113 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-const _fbPurple=Color(0xFF3E007D),_fbOrange=Color(0xFFFFA015);
-class ErpFacebookGroupLeadsScreen extends StatefulWidget{
- const ErpFacebookGroupLeadsScreen({super.key,required this.companyId});
- final String? companyId;
- @override State<ErpFacebookGroupLeadsScreen> createState()=>_ErpFacebookGroupLeadsScreenState();
+const _facebookPurple = Color(0xFF3E007D);
+const _facebookOrange = Color(0xFFFFA015);
+
+class ErpFacebookGroupLeadsScreen extends StatefulWidget {
+  const ErpFacebookGroupLeadsScreen({super.key, required this.companyId});
+
+  final String? companyId;
+
+  @override
+  State<ErpFacebookGroupLeadsScreen> createState() =>
+      _ErpFacebookGroupLeadsScreenState();
 }
-class _ErpFacebookGroupLeadsScreenState extends State<ErpFacebookGroupLeadsScreen>{
- SupabaseClient? db;bool loading=true,busy=false;String? error,message;
- String search='',groupFilter='all',classFilter='all';
- List<Map<String,dynamic>> groups=[],profiles=[],links=[],interactions=[];
- static const classes=['غير محدد','عميل محتمل','مورد محتمل','تاجر جملة','مستهلك','شركة شحن','غير مناسب'];
- String s(dynamic v)=>(v??'').toString().trim();
- @override void initState(){super.initState();try{db=Supabase.instance.client;}catch(_){}load();}
- @override void didUpdateWidget(covariant ErpFacebookGroupLeadsScreen old){super.didUpdateWidget(old);if(old.companyId!=widget.companyId)load();}
- String fbUrl(String value){
-  final u=Uri.tryParse(value.trim());
-  if(u==null||!u.hasAuthority||u.scheme!='https')throw const FormatException('أدخل رابط HTTPS صحيحاً.');
-  final h=u.host.toLowerCase();
-  if(!(h=='facebook.com'||h.endsWith('.facebook.com')||h=='fb.com'||h.endsWith('.fb.com')))throw const FormatException('يجب أن يكون الرابط تابعاً لفيسبوك.');
-  final path=u.path.replaceAll(RegExp(r'/+
- }
- Future<void> load()async{
-  if(db==null||(widget.companyId??'').isEmpty){if(mounted)setState(()=>loading=false);return;}
-  setState(() { loading=true; error=null; message=null; });
-  try{
-   final r=await Future.wait([
-    db!.from('erp_crm_facebook_groups').select().eq('company_id',widget.companyId!).order('group_name'),
-    db!.from('erp_crm_facebook_profiles').select().eq('company_id',widget.companyId!).order('display_name'),
-    db!.from('erp_crm_facebook_group_profiles').select().eq('company_id',widget.companyId!),
-    db!.from('erp_crm_facebook_interactions').select().eq('company_id',widget.companyId!),
-   ]);
-   if(!mounted)return;setState((){
-    groups=(r[0] as List).cast<Map<String,dynamic>>();profiles=(r[1] as List).cast<Map<String,dynamic>>();
-    links=(r[2] as List).cast<Map<String,dynamic>>();interactions=(r[3] as List).cast<Map<String,dynamic>>();
-    if(groupFilter!='all'&&!groups.any((g)=>s(g['id'])==groupFilter))groupFilter='all';
-   });
-  }catch(e){if(mounted)setState(()=>error='تعذر تحميل البيانات. تأكد من تطبيق ترحيل قاعدة البيانات والصلاحيات.\n'+e.toString());}
-  finally{if(mounted)setState(()=>loading=false);}
- }
- List<Map<String,dynamic>> get visible=>profiles.where((p){
-  final id=s(p['id']);final ids=links.where((l)=>s(l['profile_id'])==id).map((l)=>s(l['group_id'])).toSet();
-  final names=groups.where((g)=>ids.contains(s(g['id']))).map((g)=>s(g['group_name'])).join(' ');
-  final q=search.toLowerCase().trim();
-  return ids.isNotEmpty&&(groupFilter=='all'||ids.contains(groupFilter))&&(classFilter=='all'||s(p['classification'])==classFilter)&&
-   (q.isEmpty||(s(p['display_name'])+' '+names+' '+s(p['profile_url'])).toLowerCase().contains(q));
- }).toList();
- void toast(String m){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}
- Future<void> save(Future<void> Function() fn,String ok)async{
-  if(db==null||(widget.companyId??'').isEmpty){toast('اختر شركة نشطة أولاً.');return;}
-  setState(() { busy=true; error=null; message=null; });
-  try{await fn();await load();if(mounted)setState(()=>message=ok);}
-  catch(e){if(mounted)setState(()=>error='تعذر حفظ البيانات: '+e.toString());}
-  finally{if(mounted)setState(()=>busy=false);}
- }
- Future<Map<String,String>?> form(String title,List<String> labels,{Map<String,String> initial=const{}})async{
-  final c=[for(var i=0;i<labels.length;i++)TextEditingController(text:initial['v'+i.toString()]??'')];
-  String cls=initial['class']??classes.first;
-  final result=await showDialog<Map<String,String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
-   title:Text(title),content:SizedBox(width:430,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    for(var i=0;i<labels.length;i++)if(labels[i]!='تصنيف الحساب')Padding(padding:const EdgeInsets.only(bottom:10),child:TextField(controller:c[i],maxLines:labels[i]=='ملاحظات'?3:1,decoration:InputDecoration(labelText:labels[i],border:const OutlineInputBorder()))),
-    if(labels.contains('تصنيف الحساب'))DropdownButtonFormField<String>(value:cls,decoration:const InputDecoration(labelText:'تصنيف الحساب',border:OutlineInputBorder()),items:classes.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>refresh(()=>cls=v??cls)),
-   ]))),
-   actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,{for(var i=0;i<c.length;i++)'v'+i.toString():c[i].text.trim(),'class':cls}),child:const Text('حفظ'))],
-  ))));
-  for(final x in c){x.dispose();}return result;
- }
- Future<void> addGroup()async{
-  final v=await form('إضافة جروب فيسبوك',['اسم الجروب','رابط الجروب','ملاحظات']);if(v==null)return;
-  if(v['v0']!.isEmpty||v['v1']!.isEmpty){toast('اسم الجروب والرابط مطلوبان.');return;}
-  await save(()async{await db!.from('erp_crm_facebook_groups').insert({'company_id':widget.companyId,'group_name':v['v0'],'group_url':fbUrl(v['v1']!), 'notes':v['v2'],'created_by':db!.auth.currentUser?.id});},'تمت إضافة الجروب.');
- }
- Future<void> addProfile()async{
-  if(groups.isEmpty){toast('أضف جروباً أولاً.');return;}
-  final v=await form('إضافة حساب إلى الجروب',['اسم الحساب أو المستخدم','رابط الملف الشخصي','رابط صورة الحساب (اختياري)','تصنيف الحساب','ملاحظات']);if(v==null)return;
-  if(v['v0']!.isEmpty||v['v1']!.isEmpty){toast('اسم الحساب ورابطه مطلوبان.');return;}
-  String gid=groupFilter=='all'?s(groups.first['id']):groupFilter;
-  final chosen=await showDialog<String>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
-   title:const Text('اختيار الجروب'),content:DropdownButtonFormField<String>(value:gid,items:groups.map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['group_name'])))).toList(),onChanged:(x){gid=x??gid;}),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,gid),child:const Text('متابعة'))])));
-  if(chosen==null)return;
-  await save(()async{
-   final url=fbUrl(v['v1']!),av=v['v2']!.trim();
-   if(av.isNotEmpty&&Uri.tryParse(av)?.scheme!='https')throw const FormatException('رابط الصورة يجب أن يبدأ بـ HTTPS.');
-   final p=await db!.from('erp_crm_facebook_profiles').upsert({
-    'company_id':widget.companyId,'display_name':v['v0'],'profile_url':url,'profile_url_normalized':Uri.parse(url).replace(query:'',fragment:'').toString(),
-    'avatar_url':av.isEmpty?null:av,'classification':v['class'],'notes':v['v4'],'created_by':db!.auth.currentUser?.id,
-   },onConflict:'company_id,profile_url_normalized').select().single();
-   await db!.from('erp_crm_facebook_group_profiles').upsert({'company_id':widget.companyId,'group_id':chosen,'profile_id':p['id'],'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_id,profile_id',ignoreDuplicates:true);
-  },'تم حفظ الحساب وربطه دون تكرار.');
- }
- Future<void> interaction(Map<String,dynamic> p)async{
-  final v=await form('تسجيل تواصل مع '+s(p['display_name']),['نوع التواصل','ملاحظات']);if(v==null||v['v0']!.trim().isEmpty)return;
-  await save(()async{await db!.from('erp_crm_facebook_interactions').insert({'company_id':widget.companyId,'profile_id':p['id'],'interaction_type':v['v0'],'notes':v['v1'],'created_by':db!.auth.currentUser?.id});},'تم تسجيل التواصل.');
- }
- Future<void> openSelectedGroup()async{final selected=groups.where((g)=>s(g['id'])==groupFilter);if(selected.isEmpty){toast('اختر جروباً من قائمة التصفية أولاً.');return;}await openProfile(s(selected.first['group_url']));}
- Future<void> openProfile(String url)async{try{if(!await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication))toast('تعذر فتح الرابط.');}catch(e){toast('تعذر فتح الملف الشخصي: '+e.toString());}}
- Future<void> exportExcel()async{
-  final rows=<List<String>>[];
-  for(final l in links){final pp=profiles.where((p)=>s(p['id'])==s(l['profile_id']));final gg=groups.where((g)=>s(g['id'])==s(l['group_id']));
-   if(pp.isEmpty||gg.isEmpty)continue;final p=pp.first,g=gg.first;
-   if(groupFilter!='all'&&s(g['id'])!=groupFilter)continue;if(classFilter!='all'&&s(p['classification'])!=classFilter)continue;
-   final q=search.toLowerCase().trim();if(q.isNotEmpty&&!(s(p['display_name'])+' '+s(g['group_name'])).toLowerCase().contains(q))continue;
-   rows.add([s(p['display_name']),s(g['group_name'])]);
+
+class _ErpFacebookGroupLeadsScreenState
+    extends State<ErpFacebookGroupLeadsScreen> {
+  SupabaseClient? _db;
+  bool _loading = true;
+  bool _busy = false;
+  String? _error;
+  String? _message;
+  String _search = '';
+  String _groupFilter = 'all';
+  String _classFilter = 'all';
+
+  List<Map<String, dynamic>> _groups = [];
+  List<Map<String, dynamic>> _profiles = [];
+  List<Map<String, dynamic>> _links = [];
+  List<Map<String, dynamic>> _interactions = [];
+
+  static const List<String> _classes = [
+    'غير محدد',
+    'عميل محتمل',
+    'مورد محتمل',
+    'تاجر جملة',
+    'مستهلك',
+    'شركة شحن',
+    'غير مناسب',
+  ];
+
+  String _s(dynamic value) => (value ?? '').toString().trim();
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      _db = Supabase.instance.client;
+    } catch (_) {}
+    _load();
   }
-  if(rows.isEmpty){toast('لا توجد بيانات للتصدير.');return;}
-  try{final book=xls.Excel.createExcel(),sh=book['حسابات الجروبات'];sh.appendRow([xls.TextCellValue('م'),xls.TextCellValue('اسم الحساب أو المستخدم'),xls.TextCellValue('اسم الجروب')]);
-   for(var i=0;i<rows.length;i++){sh.appendRow([xls.IntCellValue(i+1),xls.TextCellValue(rows[i][0]),xls.TextCellValue(rows[i][1])]);}
-   final b=book.encode();if(b==null||b.isEmpty)throw StateError('تعذر إنشاء ملف Excel.');
-   await FileSaver.instance.saveFile(name:'silsila_facebook_groups_'+DateTime.now().millisecondsSinceEpoch.toString(),bytes:Uint8List.fromList(b),fileExtension:'xlsx',mimeType:MimeType.microsoftExcel);
-   if(mounted)setState(()=>message='تم تصدير '+rows.length.toString()+' صفاً إلى Excel.');
-  }catch(e){if(mounted)setState(()=>error='تعذر تصدير Excel: '+e.toString());}
- }
- Future<void> importExcel()async{
-  try{
-   final picked=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:const['xlsx'],withData:true);if(picked==null||picked.files.isEmpty)return;
-   final b=picked.files.single.bytes;if(b==null||b.isEmpty)throw StateError('الملف فارغ.');
-   final book=xls.Excel.decodeBytes(b),sheet=book.tables.values.firstWhere((x)=>x.rows.isNotEmpty),rows=sheet.rows;
-   String cell(int r,int c)=>c<rows[r].length?(rows[r][c]?.value?.toString().trim()??''):'';
-   final h=rows.first.map((x)=>x?.value?.toString().trim()??'').toList();
-   int col(List<String> names)=>h.indexWhere((x)=>names.any((n)=>x.toLowerCase()==n.toLowerCase()));
-   final ni=col(['اسم الحساب أو المستخدم','اسم الحساب']),pi=col(['رابط الحساب','رابط الملف الشخصي']),gi=col(['اسم الجروب']),ui=col(['رابط الجروب']);
-   if([ni,pi,gi,ui].any((x)=>x<0))throw StateError('الأعمدة المطلوبة: اسم الحساب أو المستخدم، رابط الحساب، اسم الجروب، رابط الجروب.');
-   final data=<List<String>>[];for(var i=1;i<rows.length;i++){final row=[cell(i,ni),cell(i,pi),cell(i,gi),cell(i,ui)];if(row.every((x)=>x.isEmpty))continue;if(row.any((x)=>x.isEmpty))throw FormatException('بيانات ناقصة في الصف '+(i+1).toString());data.add(row);}
-   if(data.isEmpty)throw StateError('لا توجد صفوف مكتملة.');
-   final ok=await showDialog<bool>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(title:const Text('تأكيد الاستيراد'),content:Text('سيتم استيراد '+data.length.toString()+' صفاً ودمج الحسابات المتكررة حسب الرابط.'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('استيراد'))])));
-   if(ok!=true)return;
-   await save(()async{for(final row in data){
-    final pu=fbUrl(row[1]),gu=fbUrl(row[3]);
-    final p=await db!.from('erp_crm_facebook_profiles').upsert({'company_id':widget.companyId,'display_name':row[0],'profile_url':pu,'profile_url_normalized':Uri.parse(pu).replace(query:'',fragment:'').toString(),'classification':'غير محدد','source_method':'xlsx_import','created_by':db!.auth.currentUser?.id},onConflict:'company_id,profile_url_normalized').select().single();
-    final g=await db!.from('erp_crm_facebook_groups').upsert({'company_id':widget.companyId,'group_name':row[2],'group_url':gu,'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_url_normalized').select().single();
-    await db!.from('erp_crm_facebook_group_profiles').upsert({'company_id':widget.companyId,'group_id':g['id'],'profile_id':p['id'],'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_id,profile_id',ignoreDuplicates:true);
-   }},'تم استيراد '+data.length.toString()+' صفاً.');
-  }catch(e){if(mounted)setState(()=>error='تعذر استيراد Excel: '+e.toString());}
- }
- Widget action(String t,IconData i,Color c,VoidCallback? fn)=>FilledButton.icon(onPressed:busy?null:fn,style:FilledButton.styleFrom(backgroundColor:c,foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(horizontal:12,vertical:12)),icon:Icon(i,size:18),label:Text(t));
- Widget metric(String label,int n)=>Expanded(child:Container(padding:const EdgeInsets.all(9),decoration:BoxDecoration(color:const Color(0xFFF7F3FA),borderRadius:BorderRadius.circular(10)),child:Column(children:[Text(n.toString(),style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:_fbPurple)),Text(label,style:const TextStyle(fontSize:10,color:Colors.black54))])));
- @override Widget build(BuildContext context){
-  final rows=visible;
-  return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-   Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_fbPurple,Color(0xFF7140A4)]),borderRadius:BorderRadius.circular(17)),child:Row(children:[const Icon(Icons.groups_rounded,color:_fbOrange,size:38),const SizedBox(width:12),const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('إضافة حسابات جروبات فيسبوك',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),Text('إدارة الجروبات والحسابات المحتملة داخل علاقات العملاء',style:TextStyle(color:Color(0xFFEDE3F7)))])),IconButton(onPressed:busy||loading?null:load,icon:const Icon(Icons.refresh,color:Colors.white))])),
-   const SizedBox(height:10),
-   Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFFFF4DE),borderRadius:BorderRadius.circular(12)),child:const Text('تنبيه تكامل: واجهة Meta الرسمية لا تتيح حالياً جلب أعضاء مجموعات Facebook. لا يوجد سحب آلي أو طلب كلمة مرور. أضف الحسابات التي تختارها يدوياً أو استورد بيانات مصرحاً لك باستخدامها، وافتح الملف لإرسال طلب الصداقة بنفسك.',style:TextStyle(color:Color(0xFF795000),height:1.5,fontWeight:FontWeight.w600))),
-   const SizedBox(height:10),
-   Wrap(spacing:8,runSpacing:8,children:[action('إضافة جروب',Icons.group_add,_fbPurple,addGroup),action('إضافة حساب',Icons.person_add_alt_1,_fbOrange,groups.isEmpty?null:addProfile),action('استيراد Excel',Icons.file_upload,Colors.green,importExcel),action('تصدير Excel',Icons.file_download,Colors.green,profiles.isEmpty?null:exportExcel),action('فتح الجروب المحدد',Icons.groups,const Color(0xFF1877F2),groupFilter=='all'?null:openSelectedGroup),action('فتح فيسبوك',Icons.open_in_new,const Color(0xFF1877F2),()=>openProfile('https://www.facebook.com/'))]),
-   const SizedBox(height:10),Row(children:[metric('الجروبات',groups.length),const SizedBox(width:7),metric('الحسابات الفريدة',profiles.length),const SizedBox(width:7),metric('سجلات التواصل',interactions.length)]),
-   const SizedBox(height:10),
-   Wrap(spacing:8,runSpacing:8,children:[
-    SizedBox(width:245,child:TextField(onChanged:(v)=>setState(()=>search=v),decoration:const InputDecoration(labelText:'بحث باسم الحساب أو الجروب',prefixIcon:Icon(Icons.search),border:OutlineInputBorder(),isDense:true))),
-    SizedBox(width:210,child:DropdownButtonFormField<String>(value:groups.any((g)=>s(g['id'])==groupFilter)?groupFilter:'all',isExpanded:true,decoration:const InputDecoration(labelText:'الجروب',border:OutlineInputBorder(),isDense:true),items:[const DropdownMenuItem(value:'all',child:Text('كل الجروبات')),...groups.map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['group_name']),overflow:TextOverflow.ellipsis)))],onChanged:(v)=>setState(()=>groupFilter=v??'all'))),
-    SizedBox(width:190,child:DropdownButtonFormField<String>(value:classFilter,isExpanded:true,decoration:const InputDecoration(labelText:'التصنيف',border:OutlineInputBorder(),isDense:true),items:[const DropdownMenuItem(value:'all',child:Text('كل التصنيفات')),...classes.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>setState(()=>classFilter=v??'all'))),
-   ]),
-   if(error!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text(error!,style:const TextStyle(color:Colors.red))),
-   if(message!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text(message!,style:const TextStyle(color:Colors.green,fontWeight:FontWeight.w700))),
-   const SizedBox(height:8),
-   if(loading)const Expanded(child:Center(child:CircularProgressIndicator()))
-   else if(db==null||(widget.companyId??'').isEmpty)const Expanded(child:Center(child:Text('اختر شركة نشطة لبدء إدارة حسابات الجروبات.')))
-   else if(rows.isEmpty)Expanded(child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.groups_2_outlined,size:50,color:_fbPurple),const SizedBox(height:8),const Text('لا توجد حسابات مرتبطة بالجروب المحدد.'),TextButton.icon(onPressed:groups.isEmpty?addGroup:addProfile,icon:const Icon(Icons.add),label:Text(groups.isEmpty?'إضافة أول جروب':'إضافة حساب'))])))
-   else Expanded(child:ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:7),itemBuilder:(ctx,i){
-    final p=rows[i],pid=s(p['id']);final gids=links.where((l)=>s(l['profile_id'])==pid).map((l)=>s(l['group_id'])).toSet();
-    final names=groups.where((g)=>gids.contains(s(g['id']))).map((g)=>s(g['group_name'])).join(' • ');final av=s(p['avatar_url']);
-    return Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFE9E2F0)),borderRadius:BorderRadius.circular(13)),child:Row(children:[
-     CircleAvatar(radius:24,backgroundColor:const Color(0xFFF0E9F7),backgroundImage:av.isEmpty?null:NetworkImage(av),child:av.isEmpty?const Icon(Icons.person,color:_fbPurple):null),
-     const SizedBox(width:11),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(s(p['display_name']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:15)),Text(names,style:const TextStyle(color:Colors.black54,fontSize:12)),Text(s(p['classification']),style:const TextStyle(color:_fbPurple,fontSize:12,fontWeight:FontWeight.w700))])),
-     IconButton(tooltip:'فتح الملف لإرسال طلب صداقة يدوياً',onPressed:()=>openProfile(s(p['profile_url'])),icon:const Icon(Icons.person_search,color:Color(0xFF1877F2))),
-     IconButton(tooltip:'تسجيل تواصل',onPressed:()=>interaction(p),icon:const Icon(Icons.forum_outlined,color:_fbPurple)),
-     PopupMenuButton<String>(onSelected:(v)=>v=='edit'?editProfile(p):linkAnother(p),itemBuilder:(_)=>const[PopupMenuItem(value:'link',child:Text('ربط بجروب آخر')),PopupMenuItem(value:'edit',child:Text('تعديل البيانات'))]),
-    ]));
-   })),
-  ]));
- }
- Future<void> linkAnother(Map<String,dynamic> p)async{
-  String gid=groups.isEmpty?'':s(groups.first['id']);
-  final v=await showDialog<String>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(title:const Text('ربط الحساب بجروب آخر'),content:DropdownButtonFormField<String>(value:gid,items:groups.map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['group_name'])))).toList(),onChanged:(x)=>refresh(()=>gid=x??gid)),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,gid),child:const Text('ربط'))])));
-  if(v==null)return;await save(()async{await db!.from('erp_crm_facebook_group_profiles').upsert({'company_id':widget.companyId,'group_id':v,'profile_id':p['id'],'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_id,profile_id',ignoreDuplicates:true);},'تم الربط دون تكرار الحساب.');
- }
- Future<void> editProfile(Map<String,dynamic> p)async{
-  final v=await form('تعديل بيانات الحساب',['اسم الحساب أو المستخدم','رابط الملف الشخصي','رابط الصورة','تصنيف الحساب','ملاحظات'],initial:{'v0':s(p['display_name']),'v1':s(p['profile_url']),'v2':s(p['avatar_url']),'v4':s(p['notes']),'class':s(p['classification'])});if(v==null)return;
-  await save(()async{final u=fbUrl(v['v1']!),a=v['v2']!.trim();if(a.isNotEmpty&&Uri.tryParse(a)?.scheme!='https')throw const FormatException('رابط الصورة يجب أن يبدأ HTTPS.');
-   await db!.from('erp_crm_facebook_profiles').update({'display_name':v['v0'],'profile_url':u,'profile_url_normalized':Uri.parse(u).replace(query:'',fragment:'').toString(),'avatar_url':a.isEmpty?null:a,'classification':v['class'],'notes':v['v4']}).eq('id',p['id']).eq('company_id',widget.companyId!);
-  },'تم تحديث بيانات الحساب.');
- }
-}
-),'');
-  return Uri.https(h,path.isEmpty?'/':path).toString();
- }
- Future<void> load()async{
-  if(db==null||(widget.companyId??'').isEmpty){if(mounted)setState(()=>loading=false);return;}
-  setState(() { loading=true; error=null; message=null; });
-  try{
-   final r=await Future.wait([
-    db!.from('erp_crm_facebook_groups').select().eq('company_id',widget.companyId!).order('group_name'),
-    db!.from('erp_crm_facebook_profiles').select().eq('company_id',widget.companyId!).order('display_name'),
-    db!.from('erp_crm_facebook_group_profiles').select().eq('company_id',widget.companyId!),
-    db!.from('erp_crm_facebook_interactions').select().eq('company_id',widget.companyId!),
-   ]);
-   if(!mounted)return;setState((){
-    groups=(r[0] as List).cast<Map<String,dynamic>>();profiles=(r[1] as List).cast<Map<String,dynamic>>();
-    links=(r[2] as List).cast<Map<String,dynamic>>();interactions=(r[3] as List).cast<Map<String,dynamic>>();
-    if(groupFilter!='all'&&!groups.any((g)=>s(g['id'])==groupFilter))groupFilter='all';
-   });
-  }catch(e){if(mounted)setState(()=>error='تعذر تحميل البيانات. تأكد من تطبيق ترحيل قاعدة البيانات والصلاحيات.\n'+e.toString());}
-  finally{if(mounted)setState(()=>loading=false);}
- }
- List<Map<String,dynamic>> get visible=>profiles.where((p){
-  final id=s(p['id']);final ids=links.where((l)=>s(l['profile_id'])==id).map((l)=>s(l['group_id'])).toSet();
-  final names=groups.where((g)=>ids.contains(s(g['id']))).map((g)=>s(g['group_name'])).join(' ');
-  final q=search.toLowerCase().trim();
-  return ids.isNotEmpty&&(groupFilter=='all'||ids.contains(groupFilter))&&(classFilter=='all'||s(p['classification'])==classFilter)&&
-   (q.isEmpty||(s(p['display_name'])+' '+names+' '+s(p['profile_url'])).toLowerCase().contains(q));
- }).toList();
- void toast(String m){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));}
- Future<void> save(Future<void> Function() fn,String ok)async{
-  if(db==null||(widget.companyId??'').isEmpty){toast('اختر شركة نشطة أولاً.');return;}
-  setState(() { busy=true; error=null; message=null; });
-  try{await fn();await load();if(mounted)setState(()=>message=ok);}
-  catch(e){if(mounted)setState(()=>error='تعذر حفظ البيانات: '+e.toString());}
-  finally{if(mounted)setState(()=>busy=false);}
- }
- Future<Map<String,String>?> form(String title,List<String> labels,{Map<String,String> initial=const{}})async{
-  final c=[for(var i=0;i<labels.length;i++)TextEditingController(text:initial['v'+i.toString()]??'')];
-  String cls=initial['class']??classes.first;
-  final result=await showDialog<Map<String,String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
-   title:Text(title),content:SizedBox(width:430,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-    for(var i=0;i<labels.length;i++)if(labels[i]!='تصنيف الحساب')Padding(padding:const EdgeInsets.only(bottom:10),child:TextField(controller:c[i],maxLines:labels[i]=='ملاحظات'?3:1,decoration:InputDecoration(labelText:labels[i],border:const OutlineInputBorder()))),
-    if(labels.contains('تصنيف الحساب'))DropdownButtonFormField<String>(value:cls,decoration:const InputDecoration(labelText:'تصنيف الحساب',border:OutlineInputBorder()),items:classes.map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>refresh(()=>cls=v??cls)),
-   ]))),
-   actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,{for(var i=0;i<c.length;i++)'v'+i.toString():c[i].text.trim(),'class':cls}),child:const Text('حفظ'))],
-  ))));
-  for(final x in c){x.dispose();}return result;
- }
- Future<void> addGroup()async{
-  final v=await form('إضافة جروب فيسبوك',['اسم الجروب','رابط الجروب','ملاحظات']);if(v==null)return;
-  if(v['v0']!.isEmpty||v['v1']!.isEmpty){toast('اسم الجروب والرابط مطلوبان.');return;}
-  await save(()async{await db!.from('erp_crm_facebook_groups').insert({'company_id':widget.companyId,'group_name':v['v0'],'group_url':fbUrl(v['v1']!), 'notes':v['v2'],'created_by':db!.auth.currentUser?.id});},'تمت إضافة الجروب.');
- }
- Future<void> addProfile()async{
-  if(groups.isEmpty){toast('أضف جروباً أولاً.');return;}
-  final v=await form('إضافة حساب إلى الجروب',['اسم الحساب أو المستخدم','رابط الملف الشخصي','رابط صورة الحساب (اختياري)','تصنيف الحساب','ملاحظات']);if(v==null)return;
-  if(v['v0']!.isEmpty||v['v1']!.isEmpty){toast('اسم الحساب ورابطه مطلوبان.');return;}
-  String gid=groupFilter=='all'?s(groups.first['id']):groupFilter;
-  final chosen=await showDialog<String>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
-   title:const Text('اختيار الجروب'),content:DropdownButtonFormField<String>(value:gid,items:groups.map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['group_name'])))).toList(),onChanged:(x){gid=x??gid;}),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,gid),child:const Text('متابعة'))])));
-  if(chosen==null)return;
-  await save(()async{
-   final url=fbUrl(v['v1']!),av=v['v2']!.trim();
-   if(av.isNotEmpty&&Uri.tryParse(av)?.scheme!='https')throw const FormatException('رابط الصورة يجب أن يبدأ بـ HTTPS.');
-   final p=await db!.from('erp_crm_facebook_profiles').upsert({
-    'company_id':widget.companyId,'display_name':v['v0'],'profile_url':url,'profile_url_normalized':Uri.parse(url).replace(query:'',fragment:'').toString(),
-    'avatar_url':av.isEmpty?null:av,'classification':v['class'],'notes':v['v4'],'created_by':db!.auth.currentUser?.id,
-   },onConflict:'company_id,profile_url_normalized').select().single();
-   await db!.from('erp_crm_facebook_group_profiles').upsert({'company_id':widget.companyId,'group_id':chosen,'profile_id':p['id'],'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_id,profile_id',ignoreDuplicates:true);
-  },'تم حفظ الحساب وربطه دون تكرار.');
- }
- Future<void> interaction(Map<String,dynamic> p)async{
-  final v=await form('تسجيل تواصل مع '+s(p['display_name']),['نوع التواصل','ملاحظات']);if(v==null||v['v0']!.trim().isEmpty)return;
-  await save(()async{await db!.from('erp_crm_facebook_interactions').insert({'company_id':widget.companyId,'profile_id':p['id'],'interaction_type':v['v0'],'notes':v['v1'],'created_by':db!.auth.currentUser?.id});},'تم تسجيل التواصل.');
- }
- Future<void> openProfile(String url)async{try{if(!await launchUrl(Uri.parse(url),mode:LaunchMode.externalApplication))toast('تعذر فتح الرابط.');}catch(e){toast('تعذر فتح الملف الشخصي: '+e.toString());}}
- Future<void> exportExcel()async{
-  final rows=<List<String>>[];
-  for(final l in links){final pp=profiles.where((p)=>s(p['id'])==s(l['profile_id']));final gg=groups.where((g)=>s(g['id'])==s(l['group_id']));
-   if(pp.isEmpty||gg.isEmpty)continue;final p=pp.first,g=gg.first;
-   if(groupFilter!='all'&&s(g['id'])!=groupFilter)continue;if(classFilter!='all'&&s(p['classification'])!=classFilter)continue;
-   final q=search.toLowerCase().trim();if(q.isNotEmpty&&!(s(p['display_name'])+' '+s(g['group_name'])).toLowerCase().contains(q))continue;
-   rows.add([s(p['display_name']),s(g['group_name'])]);
+
+  @override
+  void didUpdateWidget(covariant ErpFacebookGroupLeadsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.companyId != widget.companyId) {
+      _load();
+    }
   }
-  if(rows.isEmpty){toast('لا توجد بيانات للتصدير.');return;}
-  try{final book=xls.Excel.createExcel(),sh=book['حسابات الجروبات'];sh.appendRow([xls.TextCellValue('م'),xls.TextCellValue('اسم الحساب أو المستخدم'),xls.TextCellValue('اسم الجروب')]);
-   for(var i=0;i<rows.length;i++){sh.appendRow([xls.IntCellValue(i+1),xls.TextCellValue(rows[i][0]),xls.TextCellValue(rows[i][1])]);}
-   final b=book.encode();if(b==null||b.isEmpty)throw StateError('تعذر إنشاء ملف Excel.');
-   await FileSaver.instance.saveFile(name:'silsila_facebook_groups_'+DateTime.now().millisecondsSinceEpoch.toString(),bytes:Uint8List.fromList(b),fileExtension:'xlsx',mimeType:MimeType.microsoftExcel);
-   if(mounted)setState(()=>message='تم تصدير '+rows.length.toString()+' صفاً إلى Excel.');
-  }catch(e){if(mounted)setState(()=>error='تعذر تصدير Excel: '+e.toString());}
- }
- Future<void> importExcel()async{
-  try{
-   final picked=await FilePicker.platform.pickFiles(type:FileType.custom,allowedExtensions:const['xlsx'],withData:true);if(picked==null||picked.files.isEmpty)return;
-   final b=picked.files.single.bytes;if(b==null||b.isEmpty)throw StateError('الملف فارغ.');
-   final book=xls.Excel.decodeBytes(b),sheet=book.tables.values.firstWhere((x)=>x.rows.isNotEmpty),rows=sheet.rows;
-   String cell(int r,int c)=>c<rows[r].length?(rows[r][c]?.value?.toString().trim()??''):'';
-   final h=rows.first.map((x)=>x?.value?.toString().trim()??'').toList();
-   int col(List<String> names)=>h.indexWhere((x)=>names.any((n)=>x.toLowerCase()==n.toLowerCase()));
-   final ni=col(['اسم الحساب أو المستخدم','اسم الحساب']),pi=col(['رابط الحساب','رابط الملف الشخصي']),gi=col(['اسم الجروب']),ui=col(['رابط الجروب']);
-   if([ni,pi,gi,ui].any((x)=>x<0))throw StateError('الأعمدة المطلوبة: اسم الحساب أو المستخدم، رابط الحساب، اسم الجروب، رابط الجروب.');
-   final data=<List<String>>[];for(var i=1;i<rows.length;i++){final row=[cell(i,ni),cell(i,pi),cell(i,gi),cell(i,ui)];if(row.every((x)=>x.isEmpty))continue;if(row.any((x)=>x.isEmpty))throw FormatException('بيانات ناقصة في الصف '+(i+1).toString());data.add(row);}
-   if(data.isEmpty)throw StateError('لا توجد صفوف مكتملة.');
-   final ok=await showDialog<bool>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(title:const Text('تأكيد الاستيراد'),content:Text('سيتم استيراد '+data.length.toString()+' صفاً ودمج الحسابات المتكررة حسب الرابط.'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('استيراد'))])));
-   if(ok!=true)return;
-   await save(()async{for(final row in data){
-    final pu=fbUrl(row[1]),gu=fbUrl(row[3]);
-    final p=await db!.from('erp_crm_facebook_profiles').upsert({'company_id':widget.companyId,'display_name':row[0],'profile_url':pu,'profile_url_normalized':Uri.parse(pu).replace(query:'',fragment:'').toString(),'classification':'غير محدد','source_method':'xlsx_import','created_by':db!.auth.currentUser?.id},onConflict:'company_id,profile_url_normalized').select().single();
-    final g=await db!.from('erp_crm_facebook_groups').upsert({'company_id':widget.companyId,'group_name':row[2],'group_url':gu,'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_url_normalized').select().single();
-    await db!.from('erp_crm_facebook_group_profiles').upsert({'company_id':widget.companyId,'group_id':g['id'],'profile_id':p['id'],'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_id,profile_id',ignoreDuplicates:true);
-   }},'تم استيراد '+data.length.toString()+' صفاً.');
-  }catch(e){if(mounted)setState(()=>error='تعذر استيراد Excel: '+e.toString());}
- }
- Widget action(String t,IconData i,Color c,VoidCallback? fn)=>FilledButton.icon(onPressed:busy?null:fn,style:FilledButton.styleFrom(backgroundColor:c,foregroundColor:Colors.white,padding:const EdgeInsets.symmetric(horizontal:12,vertical:12)),icon:Icon(i,size:18),label:Text(t));
- Widget metric(String label,int n)=>Expanded(child:Container(padding:const EdgeInsets.all(9),decoration:BoxDecoration(color:const Color(0xFFF7F3FA),borderRadius:BorderRadius.circular(10)),child:Column(children:[Text(n.toString(),style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:_fbPurple)),Text(label,style:const TextStyle(fontSize:10,color:Colors.black54))])));
- @override Widget build(BuildContext context){
-  final rows=visible;
-  return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-   Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_fbPurple,Color(0xFF7140A4)]),borderRadius:BorderRadius.circular(17)),child:Row(children:[const Icon(Icons.groups_rounded,color:_fbOrange,size:38),const SizedBox(width:12),const Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('إضافة حسابات جروبات فيسبوك',style:TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),Text('إدارة الجروبات والحسابات المحتملة داخل علاقات العملاء',style:TextStyle(color:Color(0xFFEDE3F7)))])),IconButton(onPressed:busy||loading?null:load,icon:const Icon(Icons.refresh,color:Colors.white))])),
-   const SizedBox(height:10),
-   Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFFFF4DE),borderRadius:BorderRadius.circular(12)),child:const Text('تنبيه تكامل: واجهة Meta الرسمية لا تتيح حالياً جلب أعضاء مجموعات Facebook. لا يوجد سحب آلي أو طلب كلمة مرور. أضف الحسابات التي تختارها يدوياً أو استورد بيانات مصرحاً لك باستخدامها، وافتح الملف لإرسال طلب الصداقة بنفسك.',style:TextStyle(color:Color(0xFF795000),height:1.5,fontWeight:FontWeight.w600))),
-   const SizedBox(height:10),
-   Wrap(spacing:8,runSpacing:8,children:[action('إضافة جروب',Icons.group_add,_fbPurple,addGroup),action('إضافة حساب',Icons.person_add_alt_1,_fbOrange,groups.isEmpty?null:addProfile),action('استيراد Excel',Icons.file_upload,Colors.green,importExcel),action('تصدير Excel',Icons.file_download,Colors.green,profiles.isEmpty?null:exportExcel),action('فتح فيسبوك',Icons.open_in_new,const Color(0xFF1877F2),()=>openProfile('https://www.facebook.com/'))]),
-   const SizedBox(height:10),Row(children:[metric('الجروبات',groups.length),const SizedBox(width:7),metric('الحسابات الفريدة',profiles.length),const SizedBox(width:7),metric('سجلات التواصل',interactions.length)]),
-   const SizedBox(height:10),
-   Wrap(spacing:8,runSpacing:8,children:[
-    SizedBox(width:245,child:TextField(onChanged:(v)=>setState(()=>search=v),decoration:const InputDecoration(labelText:'بحث باسم الحساب أو الجروب',prefixIcon:Icon(Icons.search),border:OutlineInputBorder(),isDense:true))),
-    SizedBox(width:210,child:DropdownButtonFormField<String>(value:groups.any((g)=>s(g['id'])==groupFilter)?groupFilter:'all',isExpanded:true,decoration:const InputDecoration(labelText:'الجروب',border:OutlineInputBorder(),isDense:true),items:[const DropdownMenuItem(value:'all',child:Text('كل الجروبات')),...groups.map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['group_name']),overflow:TextOverflow.ellipsis)))],onChanged:(v)=>setState(()=>groupFilter=v??'all'))),
-    SizedBox(width:190,child:DropdownButtonFormField<String>(value:classFilter,isExpanded:true,decoration:const InputDecoration(labelText:'التصنيف',border:OutlineInputBorder(),isDense:true),items:[const DropdownMenuItem(value:'all',child:Text('كل التصنيفات')),...classes.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>setState(()=>classFilter=v??'all'))),
-   ]),
-   if(error!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text(error!,style:const TextStyle(color:Colors.red))),
-   if(message!=null)Padding(padding:const EdgeInsets.only(top:8),child:Text(message!,style:const TextStyle(color:Colors.green,fontWeight:FontWeight.w700))),
-   const SizedBox(height:8),
-   if(loading)const Expanded(child:Center(child:CircularProgressIndicator()))
-   else if(db==null||(widget.companyId??'').isEmpty)const Expanded(child:Center(child:Text('اختر شركة نشطة لبدء إدارة حسابات الجروبات.')))
-   else if(rows.isEmpty)Expanded(child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.groups_2_outlined,size:50,color:_fbPurple),const SizedBox(height:8),const Text('لا توجد حسابات مرتبطة بالجروب المحدد.'),TextButton.icon(onPressed:groups.isEmpty?addGroup:addProfile,icon:const Icon(Icons.add),label:Text(groups.isEmpty?'إضافة أول جروب':'إضافة حساب'))])))
-   else Expanded(child:ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:7),itemBuilder:(ctx,i){
-    final p=rows[i],pid=s(p['id']);final gids=links.where((l)=>s(l['profile_id'])==pid).map((l)=>s(l['group_id'])).toSet();
-    final names=groups.where((g)=>gids.contains(s(g['id']))).map((g)=>s(g['group_name'])).join(' • ');final av=s(p['avatar_url']);
-    return Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:Colors.white,border:Border.all(color:const Color(0xFFE9E2F0)),borderRadius:BorderRadius.circular(13)),child:Row(children:[
-     CircleAvatar(radius:24,backgroundColor:const Color(0xFFF0E9F7),backgroundImage:av.isEmpty?null:NetworkImage(av),child:av.isEmpty?const Icon(Icons.person,color:_fbPurple):null),
-     const SizedBox(width:11),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(s(p['display_name']),style:const TextStyle(fontWeight:FontWeight.w900,fontSize:15)),Text(names,style:const TextStyle(color:Colors.black54,fontSize:12)),Text(s(p['classification']),style:const TextStyle(color:_fbPurple,fontSize:12,fontWeight:FontWeight.w700))])),
-     IconButton(tooltip:'فتح الملف لإرسال طلب صداقة يدوياً',onPressed:()=>openProfile(s(p['profile_url'])),icon:const Icon(Icons.person_search,color:Color(0xFF1877F2))),
-     IconButton(tooltip:'تسجيل تواصل',onPressed:()=>interaction(p),icon:const Icon(Icons.forum_outlined,color:_fbPurple)),
-     PopupMenuButton<String>(onSelected:(v)=>v=='edit'?editProfile(p):linkAnother(p),itemBuilder:(_)=>const[PopupMenuItem(value:'link',child:Text('ربط بجروب آخر')),PopupMenuItem(value:'edit',child:Text('تعديل البيانات'))]),
-    ]));
-   })),
-  ]));
- }
- Future<void> linkAnother(Map<String,dynamic> p)async{
-  String gid=groups.isEmpty?'':s(groups.first['id']);
-  final v=await showDialog<String>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(title:const Text('ربط الحساب بجروب آخر'),content:DropdownButtonFormField<String>(value:gid,items:groups.map((g)=>DropdownMenuItem(value:s(g['id']),child:Text(s(g['group_name'])))).toList(),onChanged:(x)=>refresh(()=>gid=x??gid)),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,gid),child:const Text('ربط'))])));
-  if(v==null)return;await save(()async{await db!.from('erp_crm_facebook_group_profiles').upsert({'company_id':widget.companyId,'group_id':v,'profile_id':p['id'],'created_by':db!.auth.currentUser?.id},onConflict:'company_id,group_id,profile_id',ignoreDuplicates:true);},'تم الربط دون تكرار الحساب.');
- }
- Future<void> editProfile(Map<String,dynamic> p)async{
-  final v=await form('تعديل بيانات الحساب',['اسم الحساب أو المستخدم','رابط الملف الشخصي','رابط الصورة','تصنيف الحساب','ملاحظات'],initial:{'v0':s(p['display_name']),'v1':s(p['profile_url']),'v2':s(p['avatar_url']),'v4':s(p['notes']),'class':s(p['classification'])});if(v==null)return;
-  await save(()async{final u=fbUrl(v['v1']!),a=v['v2']!.trim();if(a.isNotEmpty&&Uri.tryParse(a)?.scheme!='https')throw const FormatException('رابط الصورة يجب أن يبدأ HTTPS.');
-   await db!.from('erp_crm_facebook_profiles').update({'display_name':v['v0'],'profile_url':u,'profile_url_normalized':Uri.parse(u).replace(query:'',fragment:'').toString(),'avatar_url':a.isEmpty?null:a,'classification':v['class'],'notes':v['v4']}).eq('id',p['id']).eq('company_id',widget.companyId!);
-  },'تم تحديث بيانات الحساب.');
- }
+
+  String _facebookUrl(String value) {
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null || !uri.hasAuthority || uri.scheme != 'https') {
+      throw const FormatException('أدخل رابط HTTPS صحيحاً.');
+    }
+    final host = uri.host.toLowerCase();
+    final validHost = host == 'facebook.com' ||
+        host.endsWith('.facebook.com') ||
+        host == 'fb.com' ||
+        host.endsWith('.fb.com');
+    if (!validHost) {
+      throw const FormatException('يجب أن يكون الرابط تابعاً لفيسبوك.');
+    }
+    var path = uri.path;
+    while (path.endsWith('/') && path.isNotEmpty) {
+      path = path.substring(0, path.length - 1);
+    }
+    if (path.isEmpty) path = '/';
+    return Uri.https(host, path).toString();
+  }
+
+  Future<void> _load() async {
+    final companyId = widget.companyId;
+    if (_db == null || companyId == null || companyId.isEmpty) {
+      if (mounted) setState(() => _loading = false);
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+      _message = null;
+    });
+
+    try {
+      final results = await Future.wait([
+        _db!.from('erp_crm_facebook_groups').select()
+            .eq('company_id', companyId).order('group_name'),
+        _db!.from('erp_crm_facebook_profiles').select()
+            .eq('company_id', companyId).order('display_name'),
+        _db!.from('erp_crm_facebook_group_profiles').select()
+            .eq('company_id', companyId),
+        _db!.from('erp_crm_facebook_interactions').select()
+            .eq('company_id', companyId),
+      ]);
+
+      if (!mounted) return;
+      setState(() {
+        _groups = (results[0] as List).cast<Map<String, dynamic>>();
+        _profiles = (results[1] as List).cast<Map<String, dynamic>>();
+        _links = (results[2] as List).cast<Map<String, dynamic>>();
+        _interactions = (results[3] as List).cast<Map<String, dynamic>>();
+        if (_groupFilter != 'all' &&
+            !_groups.any((g) => _s(g['id']) == _groupFilter)) {
+          _groupFilter = 'all';
+        }
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = 'تعذر تحميل البيانات. تأكد من تطبيق ترحيل قاعدة البيانات والصلاحيات. ' +
+              error.toString();
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  List<Map<String, dynamic>> get _visibleProfiles {
+    final query = _search.toLowerCase().trim();
+    return _profiles.where((profile) {
+      final profileId = _s(profile['id']);
+      final groupIds = _links
+          .where((link) => _s(link['profile_id']) == profileId)
+          .map((link) => _s(link['group_id']))
+          .toSet();
+      final groupNames = _groups
+          .where((group) => groupIds.contains(_s(group['id'])))
+          .map((group) => _s(group['group_name']))
+          .join(' ');
+      final searchable = [
+        _s(profile['display_name']),
+        _s(profile['profile_url']),
+        groupNames,
+      ].join(' ').toLowerCase();
+
+      return groupIds.isNotEmpty &&
+          (_groupFilter == 'all' || groupIds.contains(_groupFilter)) &&
+          (_classFilter == 'all' ||
+              _s(profile['classification']) == _classFilter) &&
+          (query.isEmpty || searchable.contains(query));
+    }).toList();
+  }
+
+  void _toast(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  Future<void> _save(
+    Future<void> Function() operation, {
+    required String successMessage,
+  }) async {
+    if (_db == null || (widget.companyId ?? '').isEmpty) {
+      _toast('اختر شركة نشطة أولاً.');
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _error = null;
+      _message = null;
+    });
+
+    try {
+      await operation();
+      await _load();
+      if (mounted) setState(() => _message = successMessage);
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = 'تعذر حفظ البيانات: ' + error.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<Map<String, String>?> _showForm({
+    required String title,
+    required List<String> fields,
+    Map<String, String> initial = const {},
+    bool withClassification = false,
+  }) async {
+    final controllers = <String, TextEditingController>{};
+    for (var i = 0; i < fields.length; i++) {
+      controllers['field_' + i.toString()] = TextEditingController(
+        text: initial['field_' + i.toString()] ?? '',
+      );
+    }
+    var classification = initial['classification'] ?? _classes.first;
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: Text(title),
+            content: SizedBox(
+              width: 440,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (var i = 0; i < fields.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: TextField(
+                          controller: controllers['field_' + i.toString()],
+                          maxLines: fields[i] == 'ملاحظات' ? 3 : 1,
+                          decoration: InputDecoration(
+                            labelText: fields[i],
+                            border: const OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                    if (withClassification)
+                      DropdownButtonFormField<String>(
+                        value: classification,
+                        decoration: const InputDecoration(
+                          labelText: 'تصنيف الحساب',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: _classes
+                            .map((value) => DropdownMenuItem(
+                                  value: value,
+                                  child: Text(value),
+                                ))
+                            .toList(),
+                        onChanged: (value) => refresh(
+                          () => classification = value ?? classification,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final values = <String, String>{};
+                  for (var i = 0; i < fields.length; i++) {
+                    values['field_' + i.toString()] =
+                        controllers['field_' + i.toString()]!.text.trim();
+                  }
+                  values['classification'] = classification;
+                  Navigator.pop(dialogContext, values);
+                },
+                child: const Text('حفظ'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    for (final controller in controllers.values) {
+      controller.dispose();
+    }
+    return result;
+  }
+
+  Future<void> _addGroup() async {
+    final values = await _showForm(
+      title: 'إضافة جروب فيسبوك',
+      fields: const ['اسم الجروب', 'رابط الجروب', 'ملاحظات'],
+    );
+    if (values == null) return;
+    if (values['field_0']!.isEmpty || values['field_1']!.isEmpty) {
+      _toast('اسم الجروب والرابط مطلوبان.');
+      return;
+    }
+
+    await _save(() async {
+      await _db!.from('erp_crm_facebook_groups').insert({
+        'company_id': widget.companyId,
+        'group_name': values['field_0'],
+        'group_url': _facebookUrl(values['field_1']!),
+        'notes': values['field_2'],
+        'created_by': _db!.auth.currentUser?.id,
+      });
+    }, successMessage: 'تمت إضافة الجروب.');
+  }
+
+  Future<void> _addProfile() async {
+    if (_groups.isEmpty) {
+      _toast('أضف جروباً أولاً.');
+      return;
+    }
+
+    final values = await _showForm(
+      title: 'إضافة حساب إلى الجروب',
+      fields: const [
+        'اسم الحساب أو المستخدم',
+        'رابط الملف الشخصي',
+        'رابط صورة الحساب (اختياري)',
+        'ملاحظات',
+      ],
+      withClassification: true,
+    );
+    if (values == null) return;
+    if (values['field_0']!.isEmpty || values['field_1']!.isEmpty) {
+      _toast('اسم الحساب ورابطه مطلوبان.');
+      return;
+    }
+
+    var selectedGroupId = _groupFilter == 'all'
+        ? _s(_groups.first['id'])
+        : _groupFilter;
+
+    final chosenGroup = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('اختيار الجروب'),
+            content: DropdownButtonFormField<String>(
+              value: selectedGroupId,
+              items: _groups
+                  .map((group) => DropdownMenuItem(
+                        value: _s(group['id']),
+                        child: Text(_s(group['group_name'])),
+                      ))
+                  .toList(),
+              onChanged: (value) => refresh(
+                () => selectedGroupId = value ?? selectedGroupId,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.pop(dialogContext, selectedGroupId),
+                child: const Text('متابعة'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (chosenGroup == null) return;
+
+    await _save(() async {
+      final profileUrl = _facebookUrl(values['field_1']!);
+      final avatar = values['field_2']!.trim();
+      if (avatar.isNotEmpty && Uri.tryParse(avatar)?.scheme != 'https') {
+        throw const FormatException('رابط الصورة يجب أن يبدأ بـ HTTPS.');
+      }
+
+      final profile = await _db!
+          .from('erp_crm_facebook_profiles')
+          .upsert({
+            'company_id': widget.companyId,
+            'display_name': values['field_0'],
+            'profile_url': profileUrl,
+            'profile_url_normalized': Uri.parse(profileUrl)
+                .replace(query: '', fragment: '')
+                .toString(),
+            'avatar_url': avatar.isEmpty ? null : avatar,
+            'classification': values['classification'],
+            'notes': values['field_3'],
+            'created_by': _db!.auth.currentUser?.id,
+          }, onConflict: 'company_id,profile_url_normalized')
+          .select()
+          .single();
+
+      await _db!.from('erp_crm_facebook_group_profiles').upsert({
+        'company_id': widget.companyId,
+        'group_id': chosenGroup,
+        'profile_id': profile['id'],
+        'created_by': _db!.auth.currentUser?.id,
+      }, onConflict: 'company_id,group_id,profile_id', ignoreDuplicates: true);
+    }, successMessage: 'تم حفظ الحساب وربطه بالجروب دون تكرار.');
+  }
+
+  Future<void> _linkAnotherGroup(Map<String, dynamic> profile) async {
+    var selectedGroupId =
+        _groups.isEmpty ? '' : _s(_groups.first['id']);
+
+    final chosenGroup = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, refresh) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('ربط الحساب بجروب آخر'),
+            content: DropdownButtonFormField<String>(
+              value: selectedGroupId.isEmpty ? null : selectedGroupId,
+              items: _groups
+                  .map((group) => DropdownMenuItem(
+                        value: _s(group['id']),
+                        child: Text(_s(group['group_name'])),
+                      ))
+                  .toList(),
+              onChanged: (value) => refresh(
+                () => selectedGroupId = value ?? selectedGroupId,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.pop(dialogContext, selectedGroupId),
+                child: const Text('ربط'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (chosenGroup == null || chosenGroup.isEmpty) return;
+
+    await _save(() async {
+      await _db!.from('erp_crm_facebook_group_profiles').upsert({
+        'company_id': widget.companyId,
+        'group_id': chosenGroup,
+        'profile_id': profile['id'],
+        'created_by': _db!.auth.currentUser?.id,
+      }, onConflict: 'company_id,group_id,profile_id', ignoreDuplicates: true);
+    }, successMessage: 'تم ربط الحساب بالجروب دون تكرار.');
+  }
+
+  Future<void> _editProfile(Map<String, dynamic> profile) async {
+    final values = await _showForm(
+      title: 'تعديل بيانات الحساب',
+      fields: const [
+        'اسم الحساب أو المستخدم',
+        'رابط الملف الشخصي',
+        'رابط الصورة',
+        'ملاحظات',
+      ],
+      initial: {
+        'field_0': _s(profile['display_name']),
+        'field_1': _s(profile['profile_url']),
+        'field_2': _s(profile['avatar_url']),
+        'field_3': _s(profile['notes']),
+        'classification': _s(profile['classification']),
+      },
+      withClassification: true,
+    );
+    if (values == null) return;
+
+    await _save(() async {
+      final profileUrl = _facebookUrl(values['field_1']!);
+      final avatar = values['field_2']!.trim();
+      if (avatar.isNotEmpty && Uri.tryParse(avatar)?.scheme != 'https') {
+        throw const FormatException('رابط الصورة يجب أن يبدأ بـ HTTPS.');
+      }
+      await _db!.from('erp_crm_facebook_profiles').update({
+        'display_name': values['field_0'],
+        'profile_url': profileUrl,
+        'profile_url_normalized':
+            Uri.parse(profileUrl).replace(query: '', fragment: '').toString(),
+        'avatar_url': avatar.isEmpty ? null : avatar,
+        'classification': values['classification'],
+        'notes': values['field_3'],
+      }).eq('id', profile['id']).eq('company_id', widget.companyId!);
+    }, successMessage: 'تم تحديث بيانات الحساب.');
+  }
+
+  Future<void> _recordInteraction(Map<String, dynamic> profile) async {
+    final values = await _showForm(
+      title: 'تسجيل تواصل مع ' + _s(profile['display_name']),
+      fields: const ['نوع التواصل', 'ملاحظات'],
+    );
+    if (values == null || values['field_0']!.isEmpty) return;
+
+    await _save(() async {
+      await _db!.from('erp_crm_facebook_interactions').insert({
+        'company_id': widget.companyId,
+        'profile_id': profile['id'],
+        'interaction_type': values['field_0'],
+        'notes': values['field_1'],
+        'created_by': _db!.auth.currentUser?.id,
+      });
+    }, successMessage: 'تم تسجيل التواصل.');
+  }
+
+  Future<void> _openFacebook(String url) async {
+    try {
+      final opened = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened) _toast('تعذر فتح الرابط.');
+    } catch (error) {
+      _toast('تعذر فتح الرابط: ' + error.toString());
+    }
+  }
+
+  Future<void> _openSelectedGroup() async {
+    final selected =
+        _groups.where((group) => _s(group['id']) == _groupFilter);
+    if (selected.isEmpty) {
+      _toast('اختر جروباً من قائمة التصفية أولاً.');
+      return;
+    }
+    await _openFacebook(_s(selected.first['group_url']));
+  }
+
+  Future<void> _exportExcel() async {
+    final rows = <List<String>>[];
+    for (final link in _links) {
+      final profileRows = _profiles.where(
+        (profile) => _s(profile['id']) == _s(link['profile_id']),
+      );
+      final groupRows = _groups.where(
+        (group) => _s(group['id']) == _s(link['group_id']),
+      );
+      if (profileRows.isEmpty || groupRows.isEmpty) continue;
+
+      final profile = profileRows.first;
+      final group = groupRows.first;
+      if (_groupFilter != 'all' &&
+          _s(group['id']) != _groupFilter) continue;
+      if (_classFilter != 'all' &&
+          _s(profile['classification']) != _classFilter) continue;
+
+      final query = _search.toLowerCase().trim();
+      final searchable =
+          (_s(profile['display_name']) + ' ' + _s(group['group_name']))
+              .toLowerCase();
+      if (query.isNotEmpty && !searchable.contains(query)) continue;
+
+      rows.add([
+        _s(profile['display_name']),
+        _s(group['group_name']),
+      ]);
+    }
+
+    if (rows.isEmpty) {
+      _toast('لا توجد بيانات للتصدير.');
+      return;
+    }
+
+    try {
+      final workbook = xls.Excel.createExcel();
+      final sheet = workbook['حسابات الجروبات'];
+      sheet.appendRow([
+        xls.TextCellValue('م'),
+        xls.TextCellValue('اسم الحساب أو المستخدم'),
+        xls.TextCellValue('اسم الجروب'),
+      ]);
+      for (var i = 0; i < rows.length; i++) {
+        sheet.appendRow([
+          xls.IntCellValue(i + 1),
+          xls.TextCellValue(rows[i][0]),
+          xls.TextCellValue(rows[i][1]),
+        ]);
+      }
+      final bytes = workbook.encode();
+      if (bytes == null || bytes.isEmpty) {
+        throw StateError('تعذر إنشاء ملف Excel.');
+      }
+      await FileSaver.instance.saveFile(
+        name: 'silsila_facebook_groups_' +
+            DateTime.now().millisecondsSinceEpoch.toString(),
+        bytes: Uint8List.fromList(bytes),
+        fileExtension: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      if (mounted) {
+        setState(() => _message =
+            'تم تصدير ' + rows.length.toString() + ' صفاً إلى Excel.');
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = 'تعذر تصدير Excel: ' + error.toString());
+      }
+    }
+  }
+
+  Future<void> _importExcel() async {
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['xlsx'],
+        withData: true,
+      );
+      if (picked == null || picked.files.isEmpty) return;
+      final bytes = picked.files.single.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        throw StateError('الملف فارغ.');
+      }
+
+      final workbook = xls.Excel.decodeBytes(bytes);
+      final sheets =
+          workbook.tables.values.where((sheet) => sheet.rows.isNotEmpty);
+      if (sheets.isEmpty) throw StateError('ملف Excel لا يحتوي بيانات.');
+      final rows = sheets.first.rows;
+
+      String cell(int row, int column) {
+        if (column >= rows[row].length) return '';
+        return rows[row][column]?.value?.toString().trim() ?? '';
+      }
+
+      final headers =
+          rows.first.map((cell) => cell?.value?.toString().trim() ?? '').toList();
+      int findColumn(List<String> candidates) {
+        return headers.indexWhere((header) =>
+            candidates.any((candidate) =>
+                header.toLowerCase() == candidate.toLowerCase()));
+      }
+
+      final nameColumn =
+          findColumn(['اسم الحساب أو المستخدم', 'اسم الحساب']);
+      final profileColumn =
+          findColumn(['رابط الحساب', 'رابط الملف الشخصي']);
+      final groupNameColumn = findColumn(['اسم الجروب']);
+      final groupUrlColumn = findColumn(['رابط الجروب']);
+
+      if ([nameColumn, profileColumn, groupNameColumn, groupUrlColumn]
+          .any((column) => column < 0)) {
+        throw StateError(
+          'الأعمدة المطلوبة: اسم الحساب أو المستخدم، رابط الحساب، اسم الجروب، رابط الجروب.',
+        );
+      }
+
+      final importedRows = <List<String>>[];
+      for (var i = 1; i < rows.length; i++) {
+        final row = [
+          cell(i, nameColumn),
+          cell(i, profileColumn),
+          cell(i, groupNameColumn),
+          cell(i, groupUrlColumn),
+        ];
+        if (row.every((value) => value.isEmpty)) continue;
+        if (row.any((value) => value.isEmpty)) {
+          throw FormatException('بيانات ناقصة في الصف ' + (i + 1).toString());
+        }
+        importedRows.add(row);
+      }
+      if (importedRows.isEmpty) {
+        throw StateError('لا توجد صفوف مكتملة.');
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('تأكيد الاستيراد'),
+            content: Text(
+              'سيتم استيراد ' +
+                  importedRows.length.toString() +
+                  ' صفاً ودمج الحسابات المتكررة حسب رابط الحساب.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('استيراد'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (confirmed != true) return;
+
+      await _save(() async {
+        for (final row in importedRows) {
+          final profileUrl = _facebookUrl(row[1]);
+          final groupUrl = _facebookUrl(row[3]);
+
+          final profile = await _db!
+              .from('erp_crm_facebook_profiles')
+              .upsert({
+                'company_id': widget.companyId,
+                'display_name': row[0],
+                'profile_url': profileUrl,
+                'profile_url_normalized': Uri.parse(profileUrl)
+                    .replace(query: '', fragment: '')
+                    .toString(),
+                'classification': 'غير محدد',
+                'source_method': 'xlsx_import',
+                'created_by': _db!.auth.currentUser?.id,
+              }, onConflict: 'company_id,profile_url_normalized')
+              .select()
+              .single();
+
+          final group = await _db!
+              .from('erp_crm_facebook_groups')
+              .upsert({
+                'company_id': widget.companyId,
+                'group_name': row[2],
+                'group_url': groupUrl,
+                'created_by': _db!.auth.currentUser?.id,
+              }, onConflict: 'company_id,group_url_normalized')
+              .select()
+              .single();
+
+          await _db!.from('erp_crm_facebook_group_profiles').upsert({
+            'company_id': widget.companyId,
+            'group_id': group['id'],
+            'profile_id': profile['id'],
+            'created_by': _db!.auth.currentUser?.id,
+          }, onConflict: 'company_id,group_id,profile_id', ignoreDuplicates: true);
+        }
+      }, successMessage: 'تم استيراد ' + importedRows.length.toString() + ' صفاً.');
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = 'تعذر استيراد Excel: ' + error.toString());
+      }
+    }
+  }
+
+  Widget _actionButton(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback? onPressed,
+  ) {
+    return FilledButton.icon(
+      onPressed: _busy ? null : onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+    );
+  }
+
+  Widget _metric(String label, int value) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F3FA),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Text(
+              value.toString(),
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: _facebookPurple,
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 10, color: Colors.black54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profiles = _visibleProfiles;
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_facebookPurple, Color(0xFF7140A4)],
+              ),
+              borderRadius: BorderRadius.circular(17),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.groups_rounded,
+                    color: _facebookOrange, size: 38),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'إضافة حسابات جروبات فيسبوك',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      Text(
+                        'إدارة الجروبات والحسابات المحتملة داخل علاقات العملاء',
+                        style: TextStyle(color: Color(0xFFEDE3F7)),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: _busy || _loading ? null : _load,
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF4DE),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'تنبيه تكامل: واجهة Meta الرسمية لا تتيح حالياً جلب أعضاء مجموعات Facebook. لا يوجد سحب آلي أو طلب كلمة مرور. أضف الحسابات التي تختارها يدوياً أو استورد بيانات مصرحاً لك باستخدامها، وافتح الملف لإرسال طلب الصداقة بنفسك.',
+              style: TextStyle(
+                color: Color(0xFF795000),
+                height: 1.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _actionButton(
+                  'إضافة جروب', Icons.group_add, _facebookPurple, _addGroup),
+              _actionButton(
+                'إضافة حساب',
+                Icons.person_add_alt_1,
+                _facebookOrange,
+                _groups.isEmpty ? null : _addProfile,
+              ),
+              _actionButton(
+                  'استيراد Excel', Icons.file_upload, Colors.green, _importExcel),
+              _actionButton(
+                'تصدير Excel',
+                Icons.file_download,
+                Colors.green,
+                _profiles.isEmpty ? null : _exportExcel,
+              ),
+              _actionButton(
+                'فتح الجروب المحدد',
+                Icons.groups,
+                const Color(0xFF1877F2),
+                _groupFilter == 'all' ? null : _openSelectedGroup,
+              ),
+              _actionButton(
+                'فتح فيسبوك',
+                Icons.open_in_new,
+                const Color(0xFF1877F2),
+                () => _openFacebook('https://www.facebook.com/'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _metric('الجروبات', _groups.length),
+              const SizedBox(width: 7),
+              _metric('الحسابات الفريدة', _profiles.length),
+              const SizedBox(width: 7),
+              _metric('سجلات التواصل', _interactions.length),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              SizedBox(
+                width: 245,
+                child: TextField(
+                  onChanged: (value) => setState(() => _search = value),
+                  decoration: const InputDecoration(
+                    labelText: 'بحث باسم الحساب أو الجروب',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 210,
+                child: DropdownButtonFormField<String>(
+                  value: _groups.any((group) =>
+                          _s(group['id']) == _groupFilter)
+                      ? _groupFilter
+                      : 'all',
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'الجروب',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                        value: 'all', child: Text('كل الجروبات')),
+                    ..._groups.map((group) => DropdownMenuItem(
+                          value: _s(group['id']),
+                          child: Text(
+                            _s(group['group_name']),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _groupFilter = value ?? 'all'),
+                ),
+              ),
+              SizedBox(
+                width: 190,
+                child: DropdownButtonFormField<String>(
+                  value: _classFilter,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'التصنيف',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                        value: 'all', child: Text('كل التصنيفات')),
+                    ..._classes.map((value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(value),
+                        )),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _classFilter = value ?? 'all'),
+                ),
+              ),
+            ],
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+            ),
+          if (_message != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                _message!,
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          if (_loading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else if (_db == null || (widget.companyId ?? '').isEmpty)
+            const Expanded(
+              child: Center(
+                child: Text('اختر شركة نشطة لبدء إدارة حسابات الجروبات.'),
+              ),
+            )
+          else if (profiles.isEmpty)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.groups_2_outlined,
+                        size: 50, color: _facebookPurple),
+                    const SizedBox(height: 8),
+                    const Text('لا توجد حسابات مرتبطة بالجروب المحدد.'),
+                    TextButton.icon(
+                      onPressed: _groups.isEmpty ? _addGroup : _addProfile,
+                      icon: const Icon(Icons.add),
+                      label: Text(
+                          _groups.isEmpty ? 'إضافة أول جروب' : 'إضافة حساب'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.separated(
+                itemCount: profiles.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 7),
+                itemBuilder: (context, index) {
+                  final profile = profiles[index];
+                  final profileId = _s(profile['id']);
+                  final groupIds = _links
+                      .where((link) => _s(link['profile_id']) == profileId)
+                      .map((link) => _s(link['group_id']))
+                      .toSet();
+                  final groupNames = _groups
+                      .where((group) => groupIds.contains(_s(group['id'])))
+                      .map((group) => _s(group['group_name']))
+                      .join(' • ');
+                  final avatar = _s(profile['avatar_url']);
+
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: const Color(0xFFE9E2F0)),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: const Color(0xFFF0E9F7),
+                          backgroundImage:
+                              avatar.isEmpty ? null : NetworkImage(avatar),
+                          child: avatar.isEmpty
+                              ? const Icon(Icons.person,
+                                  color: _facebookPurple)
+                              : null,
+                        ),
+                        const SizedBox(width: 11),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _s(profile['display_name']),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              Text(
+                                groupNames,
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                _s(profile['classification']),
+                                style: const TextStyle(
+                                  color: _facebookPurple,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'فتح الملف لإرسال طلب صداقة يدوياً',
+                          onPressed: () =>
+                              _openFacebook(_s(profile['profile_url'])),
+                          icon: const Icon(Icons.person_search,
+                              color: Color(0xFF1877F2)),
+                        ),
+                        IconButton(
+                          tooltip: 'تسجيل تواصل',
+                          onPressed: () => _recordInteraction(profile),
+                          icon: const Icon(Icons.forum_outlined,
+                              color: _facebookPurple),
+                        ),
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              _editProfile(profile);
+                            } else {
+                              _linkAnotherGroup(profile);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'link',
+                              child: Text('ربط بجروب آخر'),
+                            ),
+                            PopupMenuItem(
+                              value: 'edit',
+                              child: Text('تعديل البيانات'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
