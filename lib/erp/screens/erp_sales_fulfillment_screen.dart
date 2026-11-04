@@ -248,12 +248,6 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
       setState(() => _error = 'التحميل بدون تجهيز يحتاج صلاحية خاصة من شاشة صلاحيات المستخدمين.');
       return;
     }
-    for (final invoiceId in _selectedInvoiceIds) {
-      if (_controller(_manualNumbers, invoiceId).text.trim().isEmpty) {
-        setState(() => _error = 'رقم الإذن اليدوي مطلوب لكل فاتورة.');
-        return;
-      }
-    }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       for (final invoiceId in _selectedInvoiceIds) {
@@ -268,7 +262,7 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
           'invoice_id': invoiceId,
           'source_fulfillment_ids': prepIds,
           'source_mode': _isPreparation ? 'invoice' : _sourceMode,
-          'manual_number': _controller(_manualNumbers, invoiceId).text.trim(),
+           'manual_number': _saved.where((r) => _s(r['invoice_id']) == invoiceId).isEmpty ? '' : _s(_saved.firstWhere((r) => _s(r['invoice_id']) == invoiceId)['manual_number']),
           'customer_name': _customer(_s(invoice['customer_id'])),
           'area_name': _area(_s(invoice['customer_id'])),
           'invoice_amount': _n(invoice['grand_total']),
@@ -278,10 +272,10 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
           'created_by': _db.auth.currentUser?.id,
         }, onConflict: 'company_id,kind,invoice_id');
       }
-      if (mounted) setState(() { _saving = false; _message = 'تم حفظ ${_selectedInvoiceIds.length} إذن بنجاح. أرقام الأذون اليدوية فريدة على مستوى الشركة ونوع الإذن.'; });
+      if (mounted) setState(() { _saving = false; _message = 'تم حفظ ${_selectedInvoiceIds.length} إذن بنجاح. تم إنشاء أرقام الأذون تلقائيًا وفق سياسات التكويد.'; });
       await _load();
     } catch (e) {
-      if (mounted) setState(() { _saving = false; _error = 'تعذر حفظ الإذن؛ تأكد من عدم تكرار رقم الإذن اليدوي: $e'; });
+      if (mounted) setState(() { _saving = false; _error = 'تعذر حفظ الإذن: $e'; });
     }
   }
 
@@ -313,7 +307,7 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
           items: _saved.map((r) => DropdownMenuItem(value: _s(r['id']), child: Text('${_s(r['manual_number'])} • ${_s(r['customer_name'])}'))).toList(),
           onChanged: (v) { if (v != null) { setDialog(() => selected = v); number.text = _s(_saved.firstWhere((r) => _s(r['id']) == v)['manual_number']); } },
         ),
-        TextField(controller: number, decoration: const InputDecoration(labelText: 'رقم الإذن اليدوي')),
+        TextField(controller: number, readOnly: true, decoration: const InputDecoration(labelText: 'رقم الإذن (تلقائي)', helperText: 'لا يمكن تعديل رقم الإذن بعد إنشائه')),
       ])),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
@@ -445,7 +439,7 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
                   DataCell(Text('${_money(invoice['grand_total'])} ج.م')),
                   DataCell(SizedBox(width: 95, child: TextField(controller: _controller(_weights, id, '0'), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
                   DataCell(SizedBox(width: 95, child: TextField(controller: _controller(_loads, id, '0'), keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(isDense: true, border: OutlineInputBorder())))),
-                  DataCell(SizedBox(width: 145, child: TextField(controller: _controller(_manualNumbers, id), decoration: const InputDecoration(isDense: true, hintText: 'رقم غير مكرر', border: OutlineInputBorder())))),
+                  DataCell(SizedBox(width: 145, child: TextField(controller: _controller(_manualNumbers, id), readOnly: true, decoration: const InputDecoration(isDense: true, hintText: 'يُنشأ تلقائيًا', border: OutlineInputBorder())))),
                 ]);
               }).toList(),
             )),
