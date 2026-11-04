@@ -115,7 +115,8 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
 
   Future<void> _edit({Map<String,dynamic>? row}) async {
     if (row != null && _locked(row)) { setState(() => _message = 'عنصر عجز جرد عنصر نظامي ثابت ولا يمكن تعديله.'); return; }
-    final code = TextEditingController(text: _s(row?['element_code']).isEmpty ? _nextCode() : _s(row?['element_code']));
+    final codeText = row == null ? await _nextCode() : _s(row['element_code']);
+    final code = TextEditingController(text: codeText);
     final ar = TextEditingController(text: _s(row?['name_ar']));
     final en = TextEditingController(text: _s(row?['name_en']));
     final value = TextEditingController(text: _s(row?['default_value']).isEmpty ? '0.000' : _s(row?['default_value']));
