@@ -38,7 +38,7 @@ class ErpMasterDataService {
   Future<void> saveBranch({
     String? id,
     required String companyId,
-    required String code,
+    String? code,
     required String name,
     String? phone,
     String? address,
@@ -46,11 +46,9 @@ class ErpMasterDataService {
     bool isActive = true,
   }) async {
     _require(companyId, 'معرّف الشركة مطلوب.');
-    _require(code, 'كود الفرع مطلوب.');
     _require(name, 'اسم الفرع مطلوب.');
     final payload = <String, Object?>{
       'company_id': companyId,
-      'branch_code': code.trim(),
       'branch_name': name.trim(),
       'phone': _nullable(phone),
       'address': _nullable(address),
@@ -58,6 +56,7 @@ class ErpMasterDataService {
       'is_active': isActive,
     };
     if (id == null || id.trim().isEmpty) {
+      payload['branch_code'] = '';
       await _db.from('erp_branches').insert(payload);
     } else {
       await _db.from('erp_branches').update(payload)
