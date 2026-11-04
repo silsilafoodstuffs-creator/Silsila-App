@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'erp_item_unit_conversion.dart';
+import 'erp_code_policy_service.dart';
 
 class ErpInventoryMasterRepository {
   ErpInventoryMasterRepository({SupabaseClient? client}) : _client = client ?? _tryClient();
@@ -114,7 +115,7 @@ class ErpInventoryMasterRepository {
     });
   }
 
-  Future<void> createItem({
+  Future<String> createItem({
     required String companyId, required String code, required String name,
     String? barcode, String? categoryId, String unit = 'وحدة',
     String? middleUnit, double? majorInnerQuantity,
@@ -130,7 +131,7 @@ class ErpInventoryMasterRepository {
     final hasMinor = minorName.isNotEmpty;
     final majorCount = majorInnerQuantity ?? 1;
     final middleCount = middleInnerQuantity ?? 1;
-    if (code.trim().isEmpty || name.trim().isEmpty || majorName.isEmpty) {
+    if (name.trim().isEmpty || majorName.isEmpty) {
       throw ArgumentError('كود الصنف والاسم والوحدة الكبرى حقول مطلوبة.');
     }
     if (hasMinor && !hasMiddle && majorCount <= 0) {
@@ -149,6 +150,8 @@ class ErpInventoryMasterRepository {
       throw ArgumentError('الأسعار وحد إعادة الطلب لا تقبل القيم السالبة، ونسبة الضريبة من 0 إلى 100.');
     }
 
+    final generatedCode = await ErpCodePolicyService(_db).nextItemCode(companyId: companyId.trim(), categoryId: categoryId);
+
     final units = ErpItemUnitConversion.buildUnits(
       majorName: majorName,
       middleName: hasMiddle ? middleName : null,
@@ -158,7 +161,7 @@ class ErpInventoryMasterRepository {
     );
 
     final inserted = await _db.from('erp_items').insert({
-      'company_id': companyId.trim(), 'item_code': code.trim(), 'item_name': name.trim(), 'category_id': categoryId,
+      'company_id': companyId.trim(), 'item_code': generatedCode, 'item_name': name.trim(), 'category_id': categoryId,
       'barcode': _blank(barcode), 'base_unit': hasMinor ? minorName : hasMiddle ? middleName : majorName,
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking,
@@ -175,6 +178,7 @@ class ErpInventoryMasterRepository {
       await _db.from('erp_items').delete().eq('id', itemId).eq('company_id', companyId.trim());
       rethrow;
     }
+    return generatedCode;
   }
 
 
