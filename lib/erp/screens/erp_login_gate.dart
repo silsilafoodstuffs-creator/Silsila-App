@@ -655,7 +655,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                 FilledButton.icon(
                   onPressed: () => _openRegisterDialog(newActivity: true),
                   icon: const Icon(Icons.add_business_rounded),
-                  label: Text(silsilaText('إنشاء نشاط جديد')),
+                  label: Text(silsilaText('تسجيل حساب نشاط')),
                   style: FilledButton.styleFrom(backgroundColor: _silsilaOrange, foregroundColor: _silsilaPurple, padding: const EdgeInsets.symmetric(vertical: 13)),
                 ),
               ],
