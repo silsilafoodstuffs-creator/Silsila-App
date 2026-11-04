@@ -139,13 +139,13 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      await _repo.createRun(companyId: _company.text, runCode: _runCode.text,
+      final generatedCode = await _repo.createRun(companyId: _company.text,
         start: _periodStart, end: _periodEnd,
         expenseAccountId: _expenseAccountId!, payableAccountId: _payableAccountId!,
         deductionsAccountId: _deductionsAccountId!);
       if (!mounted) return;
       _runCode.clear();
-      setState(() { _saving = false; _message = 'تم إنشاء مسودة مسير الرواتب.'; });
+      setState(() { _saving = false; _message = 'تم إنشاء مسودة مسير الرواتب بالكود التلقائي: $generatedCode'; });
       await _load(); await _previewGeneratedCode();
     } catch (e) {
       if (!mounted) return;
