@@ -135,8 +135,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   String _imageKind = 'product';
   List<Map<String, dynamic>> _categoryOptions = <Map<String, dynamic>>[];
   bool _categoryOptionsLoaded = false;
-  String _nextSuggestedItemCode = 'ITEM-0001';
-  bool _suggestedCodeLoaded = false;
   int _previouslyImportedCount = 0;
   int _duplicateCount = 0;
   final Set<String> _downloadingUrls = <String>{};
@@ -154,17 +152,6 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
   void initState() {
     super.initState();
     _clearLegacyTestHistory();
-    _loadSuggestedItemCode();
-  }
-
-  Future<void> _loadSuggestedItemCode() async {
-    if (_suggestedCodeLoaded) return;
-    if (mounted) {
-      setState(() {
-        _nextSuggestedItemCode = 'تلقائي';
-        _suggestedCodeLoaded = true;
-      });
-    }
   }
 
   Future<void> _loadCategoryOptions() async {
