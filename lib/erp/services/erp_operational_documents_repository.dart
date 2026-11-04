@@ -169,14 +169,14 @@ class ErpOperationalDocumentsRepository {
     String sourceChannel = 'manual',
     List<String> sourceDocumentIds = const [],
   }) async {
-    if (documentNumber.trim().isEmpty || partyId.isEmpty || warehouseId.isEmpty) {
-      throw ArgumentError('رقم المستند والطرف والمخزن حقول إلزامية.');
+    if (partyId.isEmpty || warehouseId.isEmpty) {
+      throw ArgumentError('الطرف والمخزن حقول إلزامية.');
     }
     final payload = <String, dynamic>{
       'company_id': companyId.trim(),
       'created_by': _db.auth.currentUser?.id,
       'warehouse_id': warehouseId,
-      'document_number': documentNumber.trim(),
+      'document_number': '',
       'document_date': (documentDate ?? DateTime.now()).toIso8601String().substring(0, 10),
       'document_timestamp': DateTime.now().toUtc().toIso8601String(),
       'document_type': documentType,
