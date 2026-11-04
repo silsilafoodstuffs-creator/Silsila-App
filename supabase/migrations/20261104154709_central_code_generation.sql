@@ -40,12 +40,16 @@ $$;
 revoke all on function public.erp_code_policy_config(uuid,text,text,integer) from public, anon, authenticated;
 
 update public.erp_user_classifications uc
-set classification_code_display = cfg.prefix || lpad(uc.classification_code::text, cfg.digits, '0')
-from lateral public.erp_code_policy_config(uc.company_id, 'user_classification', 'Cls', 5) cfg
+set classification_code_display = (
+  select cfg.prefix || lpad(uc.classification_code::text, cfg.digits, '0')
+  from public.erp_code_policy_config(uc.company_id, 'user_classification', 'Cls', 5) cfg
+)
 where uc.classification_code_display is null or uc.classification_code_display = '';
 update public.erp_journal_entries je
-set entry_number_display = cfg.prefix || lpad(je.entry_number::text, cfg.digits, '0')
-from lateral public.erp_code_policy_config(je.company_id, 'journal_entry', 'Jrn', 5) cfg
+set entry_number_display = (
+  select cfg.prefix || lpad(je.entry_number::text, cfg.digits, '0')
+  from public.erp_code_policy_config(je.company_id, 'journal_entry', 'Jrn', 5) cfg
+)
 where je.entry_number_display is null or je.entry_number_display = '';
 create unique index if not exists erp_user_classifications_display_code_uidx
   on public.erp_user_classifications(company_id, classification_code_display);
