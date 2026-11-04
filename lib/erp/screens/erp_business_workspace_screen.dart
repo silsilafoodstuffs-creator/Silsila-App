@@ -1117,6 +1117,14 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
                   SizedBox(width: 9),
                   Expanded(child: Text('ربط حساب قائم بنشاط مسجل', style: TextStyle(color: _workspacePurple, fontSize: 19, fontWeight: FontWeight.w900))),
                 ]),
+                if (_selected != null) Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    onPressed: () => setState(() => _area = 'الرئيسية'),
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('العودة لمعاينة النشاط'),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 const Text('هذه شاشة اعتماد وربط فقط؛ لا تنشئ نشاطاً جديداً ولا تنسخ بيانات الأصناف. اختر حساب العميل أو المورد المسجل بالفعل، ثم اربطه بنوع النشاط الموجود في دليل أنشطة سلسلة. سيظل حساب إدارة سلسلة للمعاينة والمتابعة فقط.',
                   style: TextStyle(fontSize: 12, height: 1.7, color: Colors.black87)),
