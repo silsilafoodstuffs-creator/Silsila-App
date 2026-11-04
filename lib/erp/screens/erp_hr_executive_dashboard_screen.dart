@@ -7,8 +7,9 @@ const _hrPink = Color(0xFFFF27C3);
 const _hrBg = Color(0xFFFAF8FC);
 
 class ErpHrExecutiveDashboardScreen extends StatefulWidget {
-  const ErpHrExecutiveDashboardScreen({super.key, this.companyId});
+  const ErpHrExecutiveDashboardScreen({super.key, this.companyId, this.canManage = false});
   final String? companyId;
+  final bool canManage;
 
   @override
   State<ErpHrExecutiveDashboardScreen> createState() => _ErpHrExecutiveDashboardScreenState();
@@ -150,7 +151,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _pendingPayrollRuns => _payrollRuns.where((r) => !const ['approved', 'posted', 'paid'].contains(r['status']?.toString().toLowerCase())).length;
   int _complianceCount(String type, String status) => _compliance.where((r) => r['record_type'] == type && r['status'] == status).length;
   int get _healthInsured => _complianceCount('health_insurance', 'insured');
+  int get _healthUninsured => _complianceCount('health_insurance', 'uninsured');
   int get _socialInsured => _complianceCount('social_insurance', 'insured');
+  int get _socialUninsured => _complianceCount('social_insurance', 'uninsured');
   int get _insuranceInProgress => _compliance.where((r) => r['status'] == 'in_progress').length;
   int get _licensesExpired => _compliance.where((r) => r['record_type'] == 'license' && (r['status'] == 'expired' || (_asDate(r['expires_on'])?.isBefore(DateTime.now()) ?? false))).length;
   int get _licensesExpiringSoon => _compliance.where((r) { final d = _asDate(r['expires_on']); if (r['record_type'] != 'license' || d == null) return false; final n = DateTime.now(); final t = DateTime(n.year,n.month,n.day); final days = d.difference(t).inDays; return days >= 0 && days <= 30; }).length;
@@ -453,7 +456,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: count == 1 ? 3.4 : 2.2,
               children: [
                 _metric('تأمين صحي مسجل', '$_healthInsured', 'سجلات بحالة مؤمن', Icons.health_and_safety_outlined, _hrPurple),
+                _metric('تأمين صحي غير مكتمل', '$_healthUninsured', 'سجلات بحالة غير مؤمن', Icons.health_and_safety_outlined, Colors.red.shade700),
                 _metric('تأمين اجتماعي مسجل', '$_socialInsured', 'سجلات بحالة مؤمن', Icons.account_balance_outlined, _hrOrange),
+                _metric('تأمين اجتماعي غير مكتمل', '$_socialUninsured', 'سجلات بحالة غير مؤمن', Icons.account_balance_outlined, Colors.red.shade700),
                 _metric('طلبات تأمين جارية', '$_insuranceInProgress', 'سجلات قيد الإجراء', Icons.pending_actions_outlined, _hrPink),
                 _metric('رخص منتهية', '$_licensesExpired', 'تحتاج تجديدًا', Icons.assignment_late_outlined, Colors.red.shade700),
                 _metric('رخص تنتهي خلال 30 يومًا', '$_licensesExpiringSoon', 'تنبيه مسبق', Icons.event_available_outlined, _hrOrange),
@@ -473,7 +478,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           ]),
           const SizedBox(height: 18),
           _sectionTitle('إدارة وتسجيل بيانات الموارد البشرية', Icons.add_task_outlined),
-          Wrap(spacing: 8, runSpacing: 8, children: [
+          if (widget.canManage) Wrap(spacing: 8, runSpacing: 8, children: [
             OutlinedButton.icon(onPressed: _loading ? null : _addCompliance, icon: const Icon(Icons.health_and_safety_outlined), label: const Text('إضافة تأمين / رخصة')),
             OutlinedButton.icon(onPressed: _loading ? null : _addTraining, icon: const Icon(Icons.school_outlined), label: const Text('تسجيل تدريب')),
             OutlinedButton.icon(onPressed: _loading ? null : _addCandidate, icon: const Icon(Icons.person_search_outlined), label: const Text('إضافة متقدم وظيفة')),
@@ -488,7 +493,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _alert('العقود', 'عقود تنتهي خلال 30 يومًا: $_contractsExpiringSoon، عقود منتهية: $_contractsExpired، وعقود نشطة بلا تاريخ نهاية: $_contractsWithoutEndDate.', _contractsExpired + _contractsExpiringSoon + _contractsWithoutEndDate > 0 ? Colors.orange : Colors.green),
             _alert('مسوغات التعيين', 'عدد الموظفين الذين تنقص ملفاتهم مستندات مطلوبة حسب الوظيفة: $_employeesMissingRequiredDocuments. راجع متطلبات الوظائف وسجل مستندات الموظفين.', _employeesMissingRequiredDocuments > 0 ? Colors.orange : Colors.green),
             _alert('الحضور والانصراف', 'خلال الشهر الحالي: $_absenceAttendanceCount حالات غياب و$_lateAttendanceCount حالات تأخير، وإجمالي الوقت الإضافي المسجل $_overtimeMinutes دقيقة.', Colors.blueGrey),
-            _alert('التأمينات الصحية والاجتماعية', 'تأمين صحي: $_healthInsured، تأمين اجتماعي: $_socialInsured، قيد الإجراء: $_insuranceInProgress.', Colors.blueGrey),
+            _alert('التأمينات الصحية والاجتماعية', 'تأمين صحي: $_healthInsured مؤمن / $_healthUninsured غير مؤمن، وتأمين اجتماعي: $_socialInsured مؤمن / $_socialUninsured غير مؤمن، وقيد الإجراء: $_insuranceInProgress.', Colors.blueGrey),
             _alert('الرخص', 'رخص منتهية: $_licensesExpired، ورخص تنتهي خلال 30 يومًا: $_licensesExpiringSoon.', _licensesExpired + _licensesExpiringSoon > 0 ? Colors.orange : Colors.blueGrey),
             _alert('التدريب', 'تدريبات جارية: $_trainingInProgress، مكتملة: $_trainingCompleted، وشهادات تنتهي قريبًا: $_trainingCertificatesExpiring.', Colors.blueGrey),
             _alert('التوظيف والاستقالات', 'متقدمون مفتوحون: $_candidateOpen، مقبولون: ${_candidateCount('accepted')}، مرفوضون: ${_candidateCount('rejected')}، وحركات انتهاء الخدمة خلال 12 شهرًا: $_separationsLast12Months.', Colors.blueGrey),
