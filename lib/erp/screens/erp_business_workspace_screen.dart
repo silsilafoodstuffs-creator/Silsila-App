@@ -194,7 +194,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
         if (profileId.isEmpty) continue;
         final currentActivity = account['activity_type']?.toString();
         final matching = activityRows.where((a) => a['code']?.toString() == currentActivity || a['name']?.toString() == currentActivity);
-        _candidateActivities.putIfAbsent(profileId, () => matching.isNotEmpty ? matching.first['code'].toString() : (activityRows.isNotEmpty ? activityRows.first['code'].toString() : ''));
+        _candidateActivities.putIfAbsent(profileId, () => matching.isNotEmpty ? matching.first['code'].toString() : '');
       }
       final baseQuery = _db.from('erp_business_workspaces').select().eq('is_active', true);
       final rows = _platformObserver ? await baseQuery.order('created_at') : await baseQuery.or('owner_user_id.eq.$currentUserId,linked_profile_id.eq.$currentUserId').order('created_at');
