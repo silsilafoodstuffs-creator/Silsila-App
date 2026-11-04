@@ -430,6 +430,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
 
   Future<void> _addGrade() async {
     _code.clear(); _ar.clear(); _en.clear();
+    if (_db != null && _companyId.isNotEmpty) { try { _code.text = (await _db!.rpc('erp_preview_next_central_code', params: {'p_company_id': _companyId, 'p_entity_key': 'grade'})).toString(); } catch (_) {} }
     final rank = TextEditingController(text: (_grades.length + 1).toString());
     final saved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('إضافة درجة وظيفية'),
