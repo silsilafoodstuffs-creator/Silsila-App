@@ -46,7 +46,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
         'p_entity_key': 'payroll_run',
       });
       if (mounted) setState(() => _runCode.text = preview.toString());
-    } catch (_) { if (mounted) setState(() => _runCode.text = 'Pay00001'); }
+    } catch (_) { if (mounted) setState(() => _runCode.clear()); }
   }
 
   @override
@@ -122,16 +122,9 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
 
   void _newPayrollRun() {
     if (_saving || _loading) return;
-    if (_runCode.text.trim().isNotEmpty) {
-      setState(() {
-        _error = 'احفظ مسير الرواتب الحالي باستخدام زر حفظ أو F8 قبل بدء مسير جديد؛ لم يتم مسح أي بيانات.';
-        _message = null;
-      });
-      return;
-    }
     setState(() {
       _error = null;
-      _message = 'نموذج مسير جديد جاهز. أدخل الكود ثم اضغط F8 للحفظ.';
+      _message = 'نموذج مسير جديد جاهز. سيُنشأ الكود تلقائيًا عند الحفظ.';
     });
   }
 
