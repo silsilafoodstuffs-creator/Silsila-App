@@ -1868,8 +1868,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         ? (gross - lineDiscounts - invoiceDiscount + taxTotal).clamp(0, double.infinity)
         : _n(doc['grand_total']);
     final dateText = _documentDate.day.toString().padLeft(2, '0') + '/' + _documentDate.month.toString().padLeft(2, '0') + '/' + _documentDate.year.toString();
-    InputDecoration field(String label, {Widget? suffix}) => InputDecoration(
-      labelText: label, suffixIcon: suffix, isDense: true, filled: true, fillColor: const Color(0xFFFCFBFE),
+    InputDecoration field(String label, {Widget? suffix, String? helperText}) => InputDecoration(
+      labelText: label, helperText: helperText, suffixIcon: suffix, isDense: true, filled: true, fillColor: const Color(0xFFFCFBFE),
       contentPadding: const EdgeInsets.symmetric(horizontal: 11, vertical: 13),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
       enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(9), borderSide: const BorderSide(color: Color(0xFFE1D9EB))),
