@@ -1,0 +1,1 @@
+revoke execute on function public.erp_hr_apply_employee_movement() from anon, authenticated;
