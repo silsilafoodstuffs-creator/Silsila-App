@@ -23,8 +23,8 @@ begin
   if not public.erp_user_has_company_role(p_company_id, array['owner','admin','manager','accountant']::text[]) then
     raise exception 'ليست لديك صلاحية إنشاء قوائم الأسعار';
   end if;
-  if nullif(trim(p_code), '') is null or nullif(trim(p_name), '') is null then
-    raise exception 'كود قائمة الأسعار واسمها مطلوبان';
+  if nullif(trim(p_name), '') is null then
+    raise exception 'اسم قائمة الأسعار مطلوب';
   end if;
   if p_kind is null or p_kind not in ('sale','purchase') then
     raise exception 'نوع قائمة الأسعار غير صحيح';
@@ -38,11 +38,12 @@ begin
     where company_id = p_company_id and price_kind = p_kind and is_active and is_default;
   end if;
 
+  -- Keep p_code for RPC compatibility; the BEFORE INSERT trigger owns the authoritative code.
   insert into public.erp_price_lists(
     company_id, price_list_code, price_list_name, price_kind,
     currency_code, is_default, is_active, notes
   ) values (
-    p_company_id, trim(p_code), trim(p_name), p_kind,
+    p_company_id, '', trim(p_name), p_kind,
     v_currency::char(3), coalesce(p_is_default, false), true, nullif(trim(p_notes), '')
   ) returning id into v_id;
   return v_id;
