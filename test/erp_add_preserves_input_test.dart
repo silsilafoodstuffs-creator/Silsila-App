@@ -5,6 +5,7 @@ import 'package:silsila_app/erp/screens/erp_payroll_screen.dart';
 import 'package:silsila_app/erp/screens/erp_price_lists_screen.dart';
 
 // Regression coverage for database-generated, read-only code fields.
+// These widget tests verify the UI contract without persisting test records.
 Finder field(String label) => find.byWidgetPredicate(
   (widget) => widget is TextField && widget.decoration?.labelText == label,
 );
