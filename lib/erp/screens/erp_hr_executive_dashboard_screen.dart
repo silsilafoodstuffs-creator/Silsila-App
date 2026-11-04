@@ -92,6 +92,15 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _departmentsWithoutJobs => _departments.where((d) =>
       !_jobs.any((j) => j['department_id']?.toString() == d['id']?.toString())).length;
   int get _employeesWithoutJob => _employees.where((e) => e['job_id'] == null).length;
+  List<MapEntry<String, int>> get _employeesByDepartment {
+    final counts = <String, int>{};
+    for (final employee in _employees.where((e) => e['is_active'] == true)) {
+      final department = (employee['department_name'] ?? 'إدارة غير محددة').toString();
+      counts[department] = (counts[department] ?? 0) + 1;
+    }
+    final rows = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    return rows;
+  }
 
   DateTime? _asDate(dynamic value) {
     if (value == null || value.toString().isEmpty) return null;
@@ -448,6 +457,15 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               _notice('استكمل تعريف الإدارات والوظائف وربط كل وظيفة بإدارتها حتى تصبح مؤشرات اكتمال الهيكل دقيقة.', Icons.account_tree_outlined, Colors.orange.shade800),
           ]),
           const SizedBox(height: 18),
+          const SizedBox(height: 10),
+          _panel(children: [
+            const Text('توزيع الموظفين النشطين حسب الإدارة', style: TextStyle(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            if (_employeesByDepartment.isEmpty)
+              const Text('لا توجد بيانات موظفين نشطين موزعة على الإدارات.')
+            else
+              ..._employeesByDepartment.take(8).map((entry) => _progressRow(entry.key, entry.value, _activeEmployees, _hrPurple)),
+          ]),
           const SizedBox(height: 18),
           _sectionTitle('مؤشرات الالتزام والتشغيل', Icons.fact_check_outlined),
           LayoutBuilder(builder: (context, c) {
