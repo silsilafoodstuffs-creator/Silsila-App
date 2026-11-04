@@ -201,13 +201,27 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   }
 
 
-  String _displayDate(DateTime date) => '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year.toString().padLeft(4, '0')}';
+  String _displayDate(DateTime date) =>
+      date.day.toString().padLeft(2, '0') + '-' +
+      date.month.toString().padLeft(2, '0') + '-' +
+      date.year.toString().padLeft(4, '0');
 
   String? _dateValue(String value) {
     final v = value.trim();
     if (v.isEmpty) return null;
     DateTime? parsed;
-    if (RegExp(r'^\\d{2}-\\d{2}-\\d{4}
+    if (RegExp(r'^\d{2}-\d{2}-\d{4}$').hasMatch(v)) {
+      final parts = v.split('-');
+      parsed = DateTime.tryParse(parts[2] + '-' + parts[1] + '-' + parts[0]);
+      if (parsed != null && _displayDate(parsed) != v) parsed = null;
+    } else {
+      parsed = DateTime.tryParse(v);
+    }
+    if (parsed == null) throw FormatException('اكتب التاريخ بصيغة DD-MM-YYYY');
+    return parsed.year.toString().padLeft(4, '0') + '-' +
+        parsed.month.toString().padLeft(2, '0') + '-' +
+        parsed.day.toString().padLeft(2, '0');
+  }
 
   Widget _employeePicker(String? selected, ValueChanged<String?> onChanged) {
     final items = _employees.map((e) => DropdownMenuItem<String>(
