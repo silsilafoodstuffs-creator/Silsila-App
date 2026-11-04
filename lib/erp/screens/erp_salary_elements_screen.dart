@@ -80,10 +80,12 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   Future<String> _nextCode() async {
     final company = (widget.companyId ?? '').trim();
     if (company.isEmpty) return 'Sal00001';
-    final value = await _db.rpc('erp_preview_next_central_code', params: {
-      'p_company_id': company, 'p_entity_key': 'salary_element',
-    });
-    return value.toString();
+    try {
+      final value = await _db.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': company, 'p_entity_key': 'salary_element',
+      });
+      return value.toString();
+    } catch (_) { return 'Sal00001'; }
   }
 
   @override
