@@ -84,13 +84,17 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _contractsExpiringSoon => _employees.where((e) {
     final end = _asDate(e['contract_end_date']);
     if (end == null || e['is_active'] != true) return false;
-    final days = end.difference(DateTime.now()).inDays;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final days = end.difference(today).inDays;
     return days >= 0 && days <= 30;
   }).length;
 
   int get _contractsExpired => _employees.where((e) {
     final end = _asDate(e['contract_end_date']);
-    return end != null && end.isBefore(DateTime.now()) && e['is_active'] == true;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return end != null && end.isBefore(today) && e['is_active'] == true;
   }).length;
 
   int get _contractsWithoutEndDate => _employees.where((e) =>
@@ -126,7 +130,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   }).length;
 
   int get _lateAttendanceCount => _attendance.where((r) => (r['late_minutes'] as num? ?? 0) > 0).length;
-  int get _absenceAttendanceCount => _attendance.where((r) => (r['attendance_status']?.toString().toLowerCase() ?? '').contains('absent') || (r['attendance_status']?.toString() ?? '').contains('غائب')).length;
+  int get _absenceAttendanceCount => _attendance.where((r) => (r['attendance_status']?.toString().toLowerCase() ?? '').contains('absent') || (r['attendance_status']?.toString() ?? '').contains('غائب') || (r['attendance_status']?.toString() ?? '').contains('غياب')).length;
   int get _overtimeMinutes => _attendance.fold<int>(0, (sum, r) => sum + ((r['overtime_minutes'] as num?)?.toInt() ?? 0));
   int get _pendingPayrollRuns => _payrollRuns.where((r) => !const ['approved', 'posted', 'paid'].contains(r['status']?.toString().toLowerCase())).length;
 
