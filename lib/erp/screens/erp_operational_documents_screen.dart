@@ -540,8 +540,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
   }
 
   Future<void> _createDraft() async {
-    if (_partyId == null || _warehouseId == null || _documentNumber.text.trim().isEmpty) {
-      setState(() => _error = 'أكمل رقم المستند والطرف والمخزن.');
+    if (_partyId == null || _warehouseId == null) {
+      setState(() => _error = 'أكمل الطرف والمخزن.');
       return;
     }
     final requiredSourcePolicy = widget.kind == ErpOperationalKind.sales
@@ -1997,7 +1997,8 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
                   ]);
                   final serialField = TextField(
                     controller: _documentNumber,
-                    decoration: field('المسلسل اليدوي (غير مكرر) *', suffix: const Icon(Icons.tag)),
+                    decoration: field('رقم المستند (تلقائي)', helperText: 'يُنشأ من سياسات التكويد عند الحفظ', suffix: const Icon(Icons.auto_awesome)),
+                    readOnly: true,
                     enabled: !hasDraft,
                   );
                   final fiscalField = DropdownButtonFormField<String>(
