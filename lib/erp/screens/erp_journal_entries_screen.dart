@@ -39,6 +39,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
 
   String _str(Map<String, dynamic> row, String key) =>
       (row[key] ?? '').toString();
+  String _entryNumber(Map<String, dynamic> row) => _str(row, 'entry_number_display').isNotEmpty ? _str(row, 'entry_number_display') : _str(row, 'entry_number');
 
   Future<void> _load() async {
     if (_company.text.trim().isEmpty) {
@@ -137,7 +138,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, refresh) => AlertDialog(
-          title: Text(existing == null ? 'إنشاء قيد يومية — مسودة' : 'تعديل مسودة القيد رقم ${_str(existing, 'entry_number')}'),
+          title: Text(existing == null ? 'إنشاء قيد يومية — مسودة' : 'تعديل مسودة القيد رقم ${_entryNumber(existing)}'),
           content: SizedBox(
             width: 760,
             child: SingleChildScrollView(
@@ -364,7 +365,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text('تفاصيل القيد رقم ${_str(entry, 'entry_number')}'),
+          title: Text('تفاصيل القيد رقم ${_entryNumber(entry)}'),
           content: SizedBox(
             width: 720,
             child: SingleChildScrollView(
