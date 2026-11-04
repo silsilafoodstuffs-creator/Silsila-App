@@ -130,7 +130,7 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
       title: Text(row == null ? 'إضافة عنصر مرتب' : 'تعديل عنصر مرتب'),
       content: SizedBox(width: 720, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Wrap(spacing: 10, runSpacing: 8, children: [
-          SizedBox(width: 180, child: TextField(controller: code, decoration: const InputDecoration(labelText: 'كود العنصر *', helperText: 'حروف إنجليزية وأرقام فقط — مثال SAL0001'), textCapitalization: TextCapitalization.characters, inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]'))])),
+          SizedBox(width: 180, child: TextField(controller: code, readOnly: true, decoration: const InputDecoration(labelText: 'كود العنصر', helperText: 'يُنشأ تلقائيًا ولا يمكن تعديله'))),
           SizedBox(width: 230, child: TextField(controller: ar, decoration: const InputDecoration(labelText: 'اسم عنصر عربي *'))),
           SizedBox(width: 230, child: TextField(controller: en, decoration: const InputDecoration(labelText: 'اسم إنجليزي'))),
         ]),
