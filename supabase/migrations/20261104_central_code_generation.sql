@@ -41,6 +41,7 @@ begin
   case tg_table_name
     when 'erp_employees' then v_key:='employee'; v_column:='employee_code';
     when 'erp_item_categories' then v_key:='category'; v_column:='category_code';
+    when 'erp_item_categories' then v_key:='category'; v_column:='category_code';
     when 'erp_users' then v_key:='user'; v_column:='user_code';
     when 'erp_branches' then v_key:='branch'; v_column:='branch_code';
     when 'erp_warehouses' then v_key:='warehouse'; v_column:='warehouse_code';
@@ -187,7 +188,6 @@ begin
     when 'department' then v_table:='erp_hr_departments'; v_column:='department_code'; v_prefix:='Dpt';
     when 'job' then v_table:='erp_hr_jobs'; v_column:='job_code'; v_prefix:='Job';
     when 'work_location' then v_table:='erp_hr_work_locations'; v_column:='location_code'; v_prefix:='Loc';
-    when 'category' then v_table:='erp_item_categories'; v_column:='category_code'; v_prefix:='Cat';
     when 'category' then v_table:='erp_item_categories'; v_column:='category_code'; v_prefix:='Cat';
     else raise exception 'نوع التكويد غير مدعوم';
   end case;
