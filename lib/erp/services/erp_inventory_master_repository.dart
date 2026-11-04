@@ -100,8 +100,8 @@ class ErpInventoryMasterRepository {
     return rows.map((r) => Map<String, dynamic>.from(r)).toList();
   }
 
-  Future<void> createWarehouse({
-    required String companyId, required String name,
+  Future<String> createWarehouse({
+    required String companyId, required String code, required String name,
     String? branchId, String? address, String? nameEn, String? parentWarehouseId,
     String? location, String? phone, String? landline, String? governorateId, String? districtId, String? areaId,
   }) async {
@@ -111,11 +111,12 @@ class ErpInventoryMasterRepository {
       'branch_id': branchId, 'address': _blank(address), 'warehouse_name_en': _blank(nameEn),
       'parent_warehouse_id': parentWarehouseId, 'location': _blank(location), 'phone': _blank(phone), 'landline': _blank(landline),
       'governorate_id': governorateId, 'district_id': districtId, 'area_id': areaId, 'is_active': true,
-    });
+    }).select('warehouse_code').single();
+    return inserted['warehouse_code'].toString();
   }
 
   Future<String> createItem({
-    required String companyId, required String code, required String name,
+    required String companyId, required String name,
     String? barcode, String? categoryId, String unit = 'وحدة',
     String? middleUnit, double? majorInnerQuantity,
     double? middleInnerQuantity, String? minorUnit,
@@ -131,7 +132,7 @@ class ErpInventoryMasterRepository {
     final majorCount = majorInnerQuantity ?? 1;
     final middleCount = middleInnerQuantity ?? 1;
     if (name.trim().isEmpty || majorName.isEmpty) {
-      throw ArgumentError('كود الصنف والاسم والوحدة الكبرى حقول مطلوبة.');
+      throw ArgumentError('اسم الصنف والوحدة الكبرى حقول مطلوبة.');
     }
     if (hasMinor && !hasMiddle && majorCount <= 0) {
       throw ArgumentError('عدد الوحدات الصغرى داخل الوحدة الكبرى يجب أن يكون أكبر من صفر.');
