@@ -432,14 +432,13 @@ update public.erp_user_types ut
 set type_code_display = (
   select cfg.prefix || lpad(ut.type_code::text, cfg.digits, '0')
   from public.erp_code_policy_config(ut.company_id, 'user_type', 'Typ', 5) cfg
-)
+);
 
 update public.erp_permission_templates pt
 set template_code_display = (
   select cfg.prefix || lpad(pt.template_code::text, cfg.digits, '0')
   from public.erp_code_policy_config(pt.company_id, 'permission_template', 'Tpl', 5) cfg
-)
-
+);
 
 drop trigger if exists erp_user_types_central_display_code on public.erp_user_types;
 create trigger erp_user_types_central_display_code
