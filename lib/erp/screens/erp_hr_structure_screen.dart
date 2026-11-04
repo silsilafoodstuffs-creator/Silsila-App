@@ -431,16 +431,16 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     final saved = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('إضافة درجة وظيفية'),
       content: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: _code, decoration: const InputDecoration(labelText: 'كود الدرجة مثل GRD-015')),
+        TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'كود الدرجة (تلقائي)', helperText: 'يُنشأ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
         TextField(controller: _ar, decoration: const InputDecoration(labelText: 'اسم الدرجة بالعربية')),
         TextField(controller: _en, decoration: const InputDecoration(labelText: 'اسم الدرجة بالإنجليزية')),
         TextField(controller: rank, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'ترتيب الدرجة')),
       ])),
       actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('إلغاء')), FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('حفظ'))],
     ));
-    if (saved == true && _code.text.trim().isNotEmpty && _ar.text.trim().isNotEmpty && _db != null) {
+    if (saved == true && _ar.text.trim().isNotEmpty && _db != null) {
       try {
-        await _db!.from('erp_hr_job_grades').insert({'company_id':_companyId,'grade_code':_code.text.trim().toUpperCase(),'name_ar':_ar.text.trim(),'name_en':_en.text.trim(),'rank_order':int.tryParse(rank.text) ?? _grades.length + 1,'is_active':true});
+        await _db!.from('erp_hr_job_grades').insert({'company_id':_companyId,'grade_code':'','name_ar':_ar.text.trim(),'name_en':_en.text.trim(),'rank_order':int.tryParse(rank.text) ?? _grades.length + 1,'is_active':true});
         await _load();
       } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الدرجة: ' + e.toString()))); }
     }
