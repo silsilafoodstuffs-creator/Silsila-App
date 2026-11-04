@@ -52,7 +52,6 @@ class ErpAccountsRepository {
     String? parentId,
     bool isPostable = false,
   }) async {
-    final normalizedCode = code.trim();
     final normalizedName = name.trim();
     final normalizedCompany = companyId.trim();
     if (normalizedCompany.isEmpty || normalizedName.isEmpty) {
