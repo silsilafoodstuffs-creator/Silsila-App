@@ -33,6 +33,8 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'sales_fulfillment','name':'أذون التجهيز والتسليم','prefix':'Ful','digits':'5'},
     {'key':'user_type','name':'أنواع المستخدمين','prefix':'Typ','digits':'5'},
     {'key':'permission_template','name':'قوالب الصلاحيات','prefix':'Tpl','digits':'5'},
+    {'key':'user_classification','name':'تصنيفات المستخدمين','prefix':'Cls','digits':'5'},
+    {'key':'journal_entry','name':'القيود اليومية','prefix':'Jrn','digits':'5'},
     {'key':'account','name':'الحسابات المالية','prefix':'Acc','digits':'5'},
     {'key':'cashbox','name':'الخزائن والحسابات البنكية','prefix':'Csh','digits':'5'},
     {'key':'cost_center','name':'مراكز التكلفة','prefix':'Cst','digits':'5'},
