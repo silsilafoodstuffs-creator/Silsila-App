@@ -53,14 +53,13 @@ class ErpCashVouchersRepository {
     required double amount,
     required String description,
   }) async {
-    if (companyId.trim().isEmpty || voucherNumber.trim().isEmpty ||
-        sourceCashboxId.isEmpty || description.trim().isEmpty || amount <= 0) {
-      throw ArgumentError('أكمل الشركة ورقم السند والخزينة والقيمة والبيان.');
+    if (companyId.trim().isEmpty || sourceCashboxId.isEmpty || description.trim().isEmpty || amount <= 0) {
+      throw ArgumentError('أكمل الشركة والخزينة والقيمة والبيان.');
     }
     await _db.from('erp_cash_vouchers').insert({
       'company_id': companyId.trim(),
       'created_by': _db.auth.currentUser?.id,
-      'voucher_number': voucherNumber.trim(),
+      'voucher_number': '',
       'voucher_date': DateTime.now().toIso8601String().substring(0, 10),
       'voucher_type': voucherType,
       'source_cashbox_id': sourceCashboxId,
