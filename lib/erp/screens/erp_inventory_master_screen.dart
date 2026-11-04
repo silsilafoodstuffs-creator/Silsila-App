@@ -864,8 +864,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _itemCategoryId, isExpanded: true,
-              decoration: const InputDecoration(labelText: 'فئة الصنف *'),
-              items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فئة')), ..._categories.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis)))],
+              decoration: const InputDecoration(labelText: 'الفئة الثانوية للصنف *', helperText: 'اختر الفئة الثانوية المرتبطة بفئة رئيسية وفرعية لإكمال الكود التلقائي'),
+              items: _categories.where((g) => g['is_active'] == true).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis))).toList(),
               onChanged: (v) => setState(() => _itemCategoryId = v),
             ),
             TextField(controller: _itemName, decoration: const InputDecoration(labelText: 'اسم الصنف *')),
