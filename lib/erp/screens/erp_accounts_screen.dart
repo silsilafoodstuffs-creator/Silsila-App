@@ -126,7 +126,7 @@ class _ErpAccountsScreenState extends State<ErpAccountsScreen> {
     final id = editing ? _value(account, 'account_id') : '';
     final code = TextEditingController(text: editing ? _value(account, 'account_code') : '');
     if (!editing && _company.text.trim().isNotEmpty) {
-      try { code.text = (await Supabase.instance.client.rpc('erp_preview_next_central_code', params: {'p_company_id': _company.text.trim(), 'p_entity_key': 'account'})).toString(); } catch (_) {}
+      try { code.text = (await Supabase.instance.client.rpc('erp_preview_next_central_code', params: {'p_company_id': _company.text.trim(), 'p_entity_key': 'account'})).toString(); } catch (_) { code.text = 'Acc00001'; }
     }
     final name = TextEditingController(text: editing ? _value(account, 'account_name') : '');
     String type = editing ? _value(account, 'account_type') : 'asset';
