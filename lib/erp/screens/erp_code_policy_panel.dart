@@ -123,7 +123,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'يجب أن تكون كل بادئة فريدة، وألا تتكرر مع بادئة الأصناف.');
       return;
     }
-    if (!RegExp(r'^[A-Za-z]{3}
+    if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(_itemPrefix.text.trim())) {
       setState(() => _error = 'بادئة الأصناف يجب أن تكون 3 حروف إنجليزية بالضبط.');
       return;
     }
