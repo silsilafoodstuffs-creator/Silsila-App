@@ -9,34 +9,36 @@ Finder field(String label) => find.byWidgetPredicate(
 );
 
 void main() {
-  testWidgets('adding a price list does not clear an unsaved code or name', (tester) async {
+  testWidgets('price list code is generated automatically and adding preserves the unsaved name', (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(body: SingleChildScrollView(child: ErpPriceListsScreen())),
     ));
     await tester.pumpAndSettle();
 
-    await tester.enterText(field('كود القائمة *'), 'PL-TEST');
+    final generatedCode = tester.widget<TextField>(field('كود القائمة (تلقائي)'));
+    expect(generatedCode.readOnly, isTrue);
     await tester.enterText(field('اسم القائمة *'), 'قائمة اختبار');
     await tester.tap(find.text('إضافة').first);
     await tester.pump();
 
-    expect(tester.widget<TextField>(field('كود القائمة *')).controller!.text, 'PL-TEST');
+    expect(tester.widget<TextField>(field('كود القائمة (تلقائي)')).readOnly, isTrue);
     expect(tester.widget<TextField>(field('اسم القائمة *')).controller!.text, 'قائمة اختبار');
     expect(find.textContaining('لم يتم مسح أي بيانات'), findsOneWidget);
   });
 
-  testWidgets('adding a payroll run does not clear an unsaved run code', (tester) async {
+  testWidgets('payroll run code is generated automatically and remains read-only', (tester) async {
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(body: SingleChildScrollView(child: ErpPayrollScreen())),
     ));
     await tester.pumpAndSettle();
 
-    await tester.enterText(field('كود المسير *'), 'PAY-TEST');
+    final generatedCode = tester.widget<TextField>(field('كود المسير (تلقائي)'));
+    expect(generatedCode.readOnly, isTrue);
     await tester.tap(find.text('إضافة').first);
     await tester.pump();
 
-    expect(tester.widget<TextField>(field('كود المسير *')).controller!.text, 'PAY-TEST');
-    expect(find.textContaining('لم يتم مسح أي بيانات'), findsOneWidget);
+    expect(tester.widget<TextField>(field('كود المسير (تلقائي)')).readOnly, isTrue);
+    expect(find.textContaining('سيُنشأ الكود تلقائيًا عند الحفظ'), findsOneWidget);
   });
 
   testWidgets('adding an inventory movement preserves a manually entered unit cost', (tester) async {
