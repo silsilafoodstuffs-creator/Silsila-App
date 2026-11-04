@@ -37,9 +37,9 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   bool _newActive = true;
   @override
   void dispose() { _newCode.dispose(); _newAr.dispose(); _newEn.dispose(); _newValue.dispose(); super.dispose(); }
-  void _startNewRow() {
+  Future<void> _startNewRow() async {
     if (_showNewRow) return;
-    _newCode.text = _nextCode(); _newAr.clear(); _newEn.clear(); _newValue.text = '0.000';
+    _newCode.text = await _nextCode(); _newAr.clear(); _newEn.clear(); _newValue.text = '0.000';
     setState(() { _newType='earning'; _newMode='fixed'; _newNature='value'; _newShowOnPayslip=true; _newActive=true; _showNewRow=true; _error=null; _message='أضف بيانات العنصر في السطر الجديد ثم اضغط حفظ السطر.'; });
   }
   void _cancelNewRow() => setState(() { _showNewRow=false; _message='تم إلغاء سطر الإضافة.'; });
@@ -77,16 +77,13 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
   String _s(dynamic value) => (value ?? '').toString();
   String _currencyLabel(String code) { if (code == 'USD') return String.fromCharCode(36); return const {'EGP':'ج.م','SAR':'ر.س','AED':'د.إ','KWD':'د.ك','EUR':'€','GBP':'£'}[code] ?? code; }
   bool _locked(Map<String,dynamic> row) => row['is_system_locked'] == true || _s(row['element_code']) == 'SYSSTOCKSHORTAGE';
-  String _nextCode() {
-    var max = 0;
-    for (final row in _rows) {
-      final code = _s(row['element_code']).trim().toUpperCase();
-      if (!code.startsWith('SAL') || code.length <= 3) continue;
-      final suffix = code.substring(3);
-      final number = int.tryParse(suffix);
-      if (number != null && number > max) max = number;
-    }
-    return 'SAL' + (max + 1).toString().padLeft(4, '0');
+  Future<String> _nextCode() async {
+    final company = (widget.companyId ?? '').trim();
+    if (company.isEmpty) return 'Sal00001';
+    final value = await _db.rpc('erp_preview_next_central_code', params: {
+      'p_company_id': company, 'p_entity_key': 'salary_element',
+    });
+    return value.toString();
   }
 
   @override
