@@ -169,6 +169,219 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   }
   int get _pendingLeaveRequests => _leaves.where((r) => !const ['approved','rejected','مقبول','مرفوض'].contains(r['status']?.toString().toLowerCase())).length;
 
+
+  String? _dateValue(String value) {
+    final v = value.trim();
+    if (v.isEmpty) return null;
+    final parsed = DateTime.tryParse(v);
+    if (parsed == null) throw FormatException('اكتب التاريخ بصيغة YYYY-MM-DD');
+    return '${parsed.year.toString().padLeft(4, '0')}-${parsed.month.toString().padLeft(2, '0')}-${parsed.day.toString().padLeft(2, '0')}';
+  }
+
+  Widget _employeePicker(String? selected, ValueChanged<String?> onChanged) {
+    final items = _employees.map((e) => DropdownMenuItem<String>(
+      value: e['id'].toString(),
+      child: Text('${e['employee_code'] ?? ''} • ${e['full_name'] ?? ''}', overflow: TextOverflow.ellipsis),
+    )).toList();
+    return DropdownButtonFormField<String>(
+      value: _employees.any((e) => e['id']?.toString() == selected) ? selected : null,
+      isExpanded: true,
+      decoration: const InputDecoration(labelText: 'الموظف *'),
+      items: items,
+      onChanged: onChanged,
+    );
+  }
+
+  Future<void> _insertHrRecord(String table, Map<String, dynamic> values) async {
+    final companyId = widget.companyId;
+    if (companyId == null || companyId.isEmpty) throw StateError('معرّف الشركة غير متاح.');
+    await _db.from(table).insert({
+      ...values,
+      'company_id': companyId,
+      'created_by': _db.auth.currentUser?.id,
+    });
+    if (mounted) await _load();
+  }
+
+  Future<void> _addCompliance() async {
+    if (_employees.isEmpty) { _showMessage('أضف الموظفين أولًا حتى يمكن ربط سجل التأمين أو الرخصة.'); return; }
+    final provider = TextEditingController(), reference = TextEditingController(), issued = TextEditingController(), expires = TextEditingController(), notes = TextEditingController();
+    String? employeeId = _employees.first['id']?.toString();
+    String type = 'health_insurance', status = 'in_progress';
+    try {
+      await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
+        title: const Text('إضافة سجل تأمين أو رخصة'),
+        content: SizedBox(width: 480, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          _employeePicker(employeeId, (v) => refresh(() => employeeId = v)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(value: type, decoration: const InputDecoration(labelText: 'نوع السجل'), items: const [
+            DropdownMenuItem(value: 'health_insurance', child: Text('تأمين صحي')),
+            DropdownMenuItem(value: 'social_insurance', child: Text('تأمين اجتماعي')),
+            DropdownMenuItem(value: 'license', child: Text('رخصة')),
+          ], onChanged: (v) => refresh(() { type = v ?? type; status = type == 'license' ? 'valid' : 'in_progress'; })),
+          DropdownButtonFormField<String>(value: status, decoration: const InputDecoration(labelText: 'الحالة'), items: const [
+            DropdownMenuItem(value: 'insured', child: Text('مؤمن')),
+            DropdownMenuItem(value: 'uninsured', child: Text('غير مؤمن')),
+            DropdownMenuItem(value: 'in_progress', child: Text('جارٍ')),
+            DropdownMenuItem(value: 'valid', child: Text('سارية')),
+            DropdownMenuItem(value: 'expired', child: Text('منتهية')),
+            DropdownMenuItem(value: 'not_required', child: Text('غير مطلوب')),
+          ], onChanged: (v) => refresh(() => status = v ?? status)),
+          TextField(controller: provider, decoration: const InputDecoration(labelText: 'الجهة / شركة التأمين')),
+          TextField(controller: reference, decoration: const InputDecoration(labelText: 'رقم الوثيقة / الرخصة')),
+          TextField(controller: issued, decoration: const InputDecoration(labelText: 'تاريخ الإصدار YYYY-MM-DD')),
+          TextField(controller: expires, decoration: const InputDecoration(labelText: 'تاريخ الانتهاء YYYY-MM-DD')),
+          TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات')),
+        ]))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          FilledButton(onPressed: () async {
+            if (employeeId == null) { _showMessage('اختر الموظف.'); return; }
+            try {
+              await _insertHrRecord('erp_hr_employee_compliance', {
+                'employee_id': employeeId, 'record_type': type, 'status': status,
+                'provider': provider.text.trim(), 'reference_number': reference.text.trim(),
+                'issued_on': _dateValue(issued.text), 'expires_on': _dateValue(expires.text), 'notes': notes.text.trim(),
+              });
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) { _showMessage('تعذر حفظ السجل: $e'); }
+          }, child: const Text('حفظ')),
+        ],
+      )));
+    } finally { provider.dispose(); reference.dispose(); issued.dispose(); expires.dispose(); notes.dispose(); }
+  }
+
+  Future<void> _addTraining() async {
+    if (_employees.isEmpty) { _showMessage('أضف الموظفين أولًا حتى يمكن ربط التدريب بهم.'); return; }
+    final course = TextEditingController(), provider = TextEditingController(), starts = TextEditingController(), ends = TextEditingController(), expiry = TextEditingController(), notes = TextEditingController();
+    String? employeeId = _employees.first['id']?.toString();
+    String status = 'planned';
+    try {
+      await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
+        title: const Text('تسجيل برنامج تدريبي'),
+        content: SizedBox(width: 480, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          _employeePicker(employeeId, (v) => refresh(() => employeeId = v)),
+          TextField(controller: course, decoration: const InputDecoration(labelText: 'اسم البرنامج التدريبي *')),
+          TextField(controller: provider, decoration: const InputDecoration(labelText: 'جهة التدريب')),
+          DropdownButtonFormField<String>(value: status, decoration: const InputDecoration(labelText: 'الحالة'), items: const [
+            DropdownMenuItem(value: 'planned', child: Text('مخطط')),
+            DropdownMenuItem(value: 'in_progress', child: Text('جارٍ')),
+            DropdownMenuItem(value: 'completed', child: Text('مكتمل')),
+            DropdownMenuItem(value: 'expired', child: Text('منتهي')),
+            DropdownMenuItem(value: 'cancelled', child: Text('ملغي')),
+          ], onChanged: (v) => refresh(() => status = v ?? status)),
+          TextField(controller: starts, decoration: const InputDecoration(labelText: 'تاريخ البداية YYYY-MM-DD')),
+          TextField(controller: ends, decoration: const InputDecoration(labelText: 'تاريخ النهاية YYYY-MM-DD')),
+          TextField(controller: expiry, decoration: const InputDecoration(labelText: 'انتهاء الشهادة YYYY-MM-DD')),
+          TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات')),
+        ]))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          FilledButton(onPressed: () async {
+            if (employeeId == null || course.text.trim().isEmpty) { _showMessage('اختر الموظف واكتب اسم البرنامج.'); return; }
+            try {
+              await _insertHrRecord('erp_hr_training_records', {
+                'employee_id': employeeId, 'course_name': course.text.trim(), 'provider': provider.text.trim(),
+                'status': status, 'starts_on': _dateValue(starts.text), 'ends_on': _dateValue(ends.text),
+                'certificate_expires_on': _dateValue(expiry.text), 'notes': notes.text.trim(),
+              });
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) { _showMessage('تعذر حفظ التدريب: $e'); }
+          }, child: const Text('حفظ')),
+        ],
+      )));
+    } finally { course.dispose(); provider.dispose(); starts.dispose(); ends.dispose(); expiry.dispose(); notes.dispose(); }
+  }
+
+  Future<void> _addCandidate() async {
+    final name = TextEditingController(), phone = TextEditingController(), email = TextEditingController(), source = TextEditingController(), notes = TextEditingController();
+    String status = 'new';
+    String? jobId;
+    try {
+      await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
+        title: const Text('إضافة متقدم لوظيفة'),
+        content: SizedBox(width: 480, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم المتقدم *')),
+          TextField(controller: phone, decoration: const InputDecoration(labelText: 'رقم الهاتف')),
+          TextField(controller: email, decoration: const InputDecoration(labelText: 'البريد الإلكتروني')),
+          DropdownButtonFormField<String>(value: jobId, decoration: const InputDecoration(labelText: 'الوظيفة المطلوبة (اختياري)'), items: [
+            const DropdownMenuItem<String>(value: null, child: Text('غير محددة')),
+            ..._jobs.map((j) => DropdownMenuItem<String>(value: j['id'].toString(), child: Text(j['name_ar']?.toString() ?? 'وظيفة'))),
+          ], onChanged: (v) => refresh(() => jobId = v)),
+          DropdownButtonFormField<String>(value: status, decoration: const InputDecoration(labelText: 'حالة الطلب'), items: const [
+            DropdownMenuItem(value: 'new', child: Text('جديد')),
+            DropdownMenuItem(value: 'screening', child: Text('فرز')),
+            DropdownMenuItem(value: 'interview', child: Text('مقابلة')),
+            DropdownMenuItem(value: 'accepted', child: Text('مقبول')),
+            DropdownMenuItem(value: 'rejected', child: Text('مرفوض')),
+            DropdownMenuItem(value: 'withdrawn', child: Text('منسحب')),
+          ], onChanged: (v) => refresh(() => status = v ?? status)),
+          TextField(controller: source, decoration: const InputDecoration(labelText: 'مصدر المتقدم')),
+          TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات')),
+        ]))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          FilledButton(onPressed: () async {
+            if (name.text.trim().isEmpty) { _showMessage('اكتب اسم المتقدم.'); return; }
+            try {
+              await _insertHrRecord('erp_hr_recruitment_candidates', {
+                'candidate_name': name.text.trim(), 'phone': phone.text.trim(), 'email': email.text.trim(),
+                'job_id': jobId, 'status': status, 'source': source.text.trim(), 'notes': notes.text.trim(),
+                'decision_on': const ['accepted','rejected','withdrawn'].contains(status) ? DateTime.now().toIso8601String().substring(0,10) : null,
+              });
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) { _showMessage('تعذر حفظ المتقدم: $e'); }
+          }, child: const Text('حفظ')),
+        ],
+      )));
+    } finally { name.dispose(); phone.dispose(); email.dispose(); source.dispose(); notes.dispose(); }
+  }
+
+  Future<void> _addMovement() async {
+    if (_employees.isEmpty) { _showMessage('لا يوجد موظفون لربط الحركة بهم.'); return; }
+    final reason = TextEditingController(), notes = TextEditingController(), effective = TextEditingController(text: DateTime.now().toIso8601String().substring(0,10));
+    String? employeeId = _employees.first['id']?.toString();
+    String type = 'resignation';
+    try {
+      await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
+        title: const Text('تسجيل حركة موظف'),
+        content: SizedBox(width: 480, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+          _employeePicker(employeeId, (v) => refresh(() => employeeId = v)),
+          DropdownButtonFormField<String>(value: type, decoration: const InputDecoration(labelText: 'نوع الحركة'), items: const [
+            DropdownMenuItem(value: 'resignation', child: Text('استقالة')),
+            DropdownMenuItem(value: 'termination', child: Text('إنهاء خدمة')),
+            DropdownMenuItem(value: 'retirement', child: Text('تقاعد')),
+            DropdownMenuItem(value: 'transfer', child: Text('نقل')),
+            DropdownMenuItem(value: 'suspension', child: Text('إيقاف مؤقت')),
+            DropdownMenuItem(value: 'return_to_work', child: Text('عودة للعمل')),
+            DropdownMenuItem(value: 'hire', child: Text('تعيين')),
+          ], onChanged: (v) => refresh(() => type = v ?? type)),
+          TextField(controller: effective, decoration: const InputDecoration(labelText: 'تاريخ سريان الحركة YYYY-MM-DD')),
+          TextField(controller: reason, decoration: const InputDecoration(labelText: 'سبب الحركة')),
+          TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'ملاحظات')),
+        ]))),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          FilledButton(onPressed: () async {
+            if (employeeId == null) { _showMessage('اختر الموظف.'); return; }
+            try {
+              await _insertHrRecord('erp_hr_employee_movements', {
+                'employee_id': employeeId, 'movement_type': type, 'effective_on': _dateValue(effective.text) ?? DateTime.now().toIso8601String().substring(0,10),
+                'reason': reason.text.trim(), 'notes': notes.text.trim(),
+              });
+              if (ctx.mounted) Navigator.pop(ctx);
+            } catch (e) { _showMessage('تعذر حفظ الحركة: $e'); }
+          }, child: const Text('حفظ')),
+        ],
+      )));
+    } finally { reason.dispose(); notes.dispose(); effective.dispose(); }
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
