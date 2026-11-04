@@ -50,6 +50,9 @@ begin
   if exists (select 1 from pg_attribute where attrelid='public.erp_cash_orders'::regclass and attname='order_number' and attgenerated='s') then
     execute 'alter table public.erp_cash_orders alter column order_number drop expression';
   end if;
+  if exists (select 1 from pg_attribute where attrelid='public.erp_checkbooks'::regclass and attname='book_number' and attgenerated='s') then
+    execute 'alter table public.erp_checkbooks alter column book_number drop expression';
+  end if;
 end;
 $$;
 update public.erp_user_types t set type_code_display=(select cfg.prefix||lpad(t.type_code::text,cfg.digits,'0') from public.erp_code_policy_config(t.company_id,'user_type','Typ',5) cfg) where t.type_code_display is null or t.type_code_display='';
