@@ -693,44 +693,39 @@ class _ErpFacebookGroupLeadsScreenState
       );
       if (confirmed != true) return;
 
-      await _save(() async {
-        for (final row in importedRows) {
+      // Validate every URL before sending any row. The database RPC then
+      // applies the whole workbook in one transaction (all-or-nothing).
+      final rpcRows = <Map<String, dynamic>>[];
+      for (var index = 0; index < importedRows.length; index++) {
+        final row = importedRows[index];
+        try {
           final profileUrl = _facebookUrl(row[1]);
           final groupUrl = _facebookGroupUrl(row[3]);
-
-          final profile = await _db!
-              .from('erp_crm_facebook_profiles')
-              .upsert({
-                'company_id': widget.companyId,
-                'display_name': row[0],
-                'profile_url': profileUrl,
-                'profile_url_normalized': Uri.parse(profileUrl).replace(fragment: '').toString(),
-                'classification': 'غير محدد',
-                'source_method': 'xlsx_import',
-                'created_by': _db!.auth.currentUser?.id,
-              }, onConflict: 'company_id,profile_url_normalized')
-              .select()
-              .single();
-
-          final group = await _db!
-              .from('erp_crm_facebook_groups')
-              .upsert({
-                'company_id': widget.companyId,
-                'group_name': row[2],
-                'group_url': groupUrl,
-                'created_by': _db!.auth.currentUser?.id,
-              }, onConflict: 'company_id,group_url_normalized')
-              .select()
-              .single();
-
-          await _db!.from('erp_crm_facebook_group_profiles').upsert({
-            'company_id': widget.companyId,
-            'group_id': group['id'],
-            'profile_id': profile['id'],
-            'created_by': _db!.auth.currentUser?.id,
-          }, onConflict: 'company_id,group_id,profile_id', ignoreDuplicates: true);
+          rpcRows.add({
+            'display_name': row[0],
+            'profile_url': profileUrl,
+            'profile_url_normalized':
+                Uri.parse(profileUrl).replace(fragment: '').toString(),
+            'group_name': row[2],
+            'group_url': groupUrl,
+          });
+        } on FormatException catch (error) {
+          throw FormatException(
+            'رابط غير صالح في الصف ' + (index + 2).toString() + ': ' + error.message,
+          );
         }
-      }, successMessage: 'تم استيراد ' + importedRows.length.toString() + ' صفاً.');
+      }
+
+      await _save(() async {
+        await _db!.rpc(
+          'erp_crm_facebook_import_group_leads',
+          params: {
+            'p_company_id': widget.companyId,
+            'p_rows': rpcRows,
+          },
+        );
+      }, successMessage: 'تم استيراد ' + importedRows.length.toString() +
+          ' صفاً بنجاح في عملية واحدة.');
     } catch (error) {
       if (mounted) {
         setState(() => _error = 'تعذر استيراد Excel: ' + error.toString());
