@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// Code values are generated atomically by database triggers; item codes follow the three-level category path.
 class ErpCodePolicyPanel extends StatefulWidget {
   const ErpCodePolicyPanel({super.key, required this.companyId});
   final String companyId;
