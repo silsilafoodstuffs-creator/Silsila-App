@@ -59,7 +59,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
         _db.from('erp_payroll_runs').select('id,run_code,period_start,period_end,status,employee_count,gross_total,net_total').eq('company_id', companyId).order('period_start', ascending: false).limit(12),
         _db.from('erp_hr_employee_compliance').select('id,employee_id,record_type,status,expires_on,created_at').eq('company_id', companyId).order('created_at', ascending: false).limit(2000),
         _db.from('erp_hr_training_records').select('id,employee_id,course_name,status,certificate_expires_on,ends_on').eq('company_id', companyId).order('created_at', ascending: false).limit(2000),
-        _db.from('erp_hr_recruitment_candidates').select('id,status,applied_on,decision_on,job_id').eq('company_id', companyId).order('applied_on', ascending: false).limit(2000),
+        _db.from('erp_hr_recruitment_candidates').select('id,candidate_name,status,applied_on,decision_on,job_id').eq('company_id', companyId).order('applied_on', ascending: false).limit(2000),
         _db.from('erp_hr_employee_movements').select('id,employee_id,movement_type,effective_on,reason').eq('company_id', companyId).order('effective_on', ascending: false).limit(5000),
         _db.from('erp_leave_requests').select('id,employee_id,status,starts_on,ends_on,requested_days').eq('company_id', companyId).gte('starts_on', dateStart).lte('starts_on', dateEnd).limit(5000),
       ]);
@@ -422,6 +422,57 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     } finally { reason.dispose(); notes.dispose(); effective.dispose(); }
   }
 
+
+  String _employeeLabel(dynamic id) {
+    for (final employee in _employees) {
+      if (employee['id']?.toString() == id?.toString()) {
+        return '${employee['employee_code'] ?? ''} • ${employee['full_name'] ?? ''}';
+      }
+    }
+    return 'موظف غير محدد';
+  }
+
+  String _hrStatusLabel(String status) => const {
+    'new':'جديد','screening':'فرز','interview':'مقابلة','accepted':'مقبول',
+    'rejected':'مرفوض','withdrawn':'منسحب','insured':'مؤمن','uninsured':'غير مؤمن',
+    'in_progress':'جارٍ','valid':'سارية','expired':'منتهية','not_required':'غير مطلوب',
+    'planned':'مخطط','completed':'مكتمل','cancelled':'ملغي',
+  }[status] ?? status;
+
+  Future<void> _changeHrRecordStatus({
+    required String table,
+    required String id,
+    required String current,
+    required List<(String, String)> options,
+    bool recruitment = false,
+  }) async {
+    String selected = current;
+    await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
+      title: const Text('تحديث حالة السجل'),
+      content: DropdownButtonFormField<String>(
+        value: selected,
+        decoration: const InputDecoration(labelText: 'الحالة الجديدة'),
+        items: options.map((o) => DropdownMenuItem<String>(value: o.$1, child: Text(o.$2))).toList(),
+        onChanged: (v) => refresh(() => selected = v ?? selected),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+        FilledButton(onPressed: () async {
+          try {
+            final values = <String, dynamic>{'status': selected, 'updated_at': DateTime.now().toIso8601String()};
+            if (recruitment) {
+              values['decision_on'] = const ['accepted','rejected','withdrawn'].contains(selected)
+                  ? DateTime.now().toIso8601String().substring(0, 10) : null;
+            }
+            await _db.from(table).update(values).eq('id', id).eq('company_id', widget.companyId!);
+            if (ctx.mounted) Navigator.pop(ctx);
+            if (mounted) await _load();
+          } catch (e) { _showMessage('تعذر تحديث الحالة: $e'); }
+        }, child: const Text('حفظ')),
+      ],
+    )));
+  }
+
   void _showMessage(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -546,6 +597,64 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             OutlinedButton.icon(onPressed: _loading ? null : _addCandidate, icon: const Icon(Icons.person_search_outlined), label: const Text('إضافة متقدم وظيفة')),
             OutlinedButton.icon(onPressed: _loading ? null : _addMovement, icon: const Icon(Icons.swap_horiz_outlined), label: const Text('تسجيل حركة موظف')),
           ]),
+
+          if (widget.canManage) ...[
+            const SizedBox(height: 18),
+            _sectionTitle('متابعة وتحديث السجلات الحديثة', Icons.manage_history_outlined),
+            _panel(children: [
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Text('طلبات التوظيف (${_candidates.length})'),
+                children: _candidates.take(8).map((row) => ListTile(
+                  dense: true,
+                  title: Text(row['candidate_name']?.toString() ?? 'متقدم بدون اسم'),
+                  subtitle: Text('الحالة: ${_hrStatusLabel(row['status']?.toString() ?? '')}'),
+                  trailing: TextButton(
+                    onPressed: () => _changeHrRecordStatus(
+                      table: 'erp_hr_recruitment_candidates', id: row['id'].toString(),
+                      current: row['status']?.toString() ?? 'new', recruitment: true,
+                      options: const [('new','جديد'),('screening','فرز'),('interview','مقابلة'),('accepted','مقبول'),('rejected','مرفوض'),('withdrawn','منسحب')],
+                    ),
+                    child: const Text('تحديث'),
+                  ),
+                )).toList(),
+              ),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Text('سجلات التأمين والرخص (${_compliance.length})'),
+                children: _compliance.take(8).map((row) => ListTile(
+                  dense: true,
+                  title: Text('${_employeeLabel(row['employee_id'])} • ${row['record_type'] == 'license' ? 'رخصة' : row['record_type'] == 'health_insurance' ? 'تأمين صحي' : 'تأمين اجتماعي'}'),
+                  subtitle: Text('الحالة: ${_hrStatusLabel(row['status']?.toString() ?? '')} • انتهاء: ${row['expires_on'] ?? 'غير محدد'}'),
+                  trailing: TextButton(
+                    onPressed: () => _changeHrRecordStatus(
+                      table: 'erp_hr_employee_compliance', id: row['id'].toString(),
+                      current: row['status']?.toString() ?? 'in_progress',
+                      options: const [('insured','مؤمن'),('uninsured','غير مؤمن'),('in_progress','جارٍ'),('valid','سارية'),('expired','منتهية'),('not_required','غير مطلوب')],
+                    ),
+                    child: const Text('تحديث'),
+                  ),
+                )).toList(),
+              ),
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Text('برامج التدريب (${_training.length})'),
+                children: _training.take(8).map((row) => ListTile(
+                  dense: true,
+                  title: Text('${_employeeLabel(row['employee_id'])} • ${row['course_name'] ?? 'برنامج تدريبي'}'),
+                  subtitle: Text('الحالة: ${_hrStatusLabel(row['status']?.toString() ?? '')}'),
+                  trailing: TextButton(
+                    onPressed: () => _changeHrRecordStatus(
+                      table: 'erp_hr_training_records', id: row['id'].toString(),
+                      current: row['status']?.toString() ?? 'planned',
+                      options: const [('planned','مخطط'),('in_progress','جارٍ'),('completed','مكتمل'),('expired','منتهي'),('cancelled','ملغي')],
+                    ),
+                    child: const Text('تحديث'),
+                  ),
+                )).toList(),
+              ),
+            ]),
+          ],
           const SizedBox(height: 18),
           _sectionTitle('تنبيهات ومتابعات مدير الموارد البشرية', Icons.notifications_active_outlined),
           _panel(children: [
