@@ -446,7 +446,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     required String table,
     required String id,
     required String current,
-    required List<(String, String)> options,
+    required List<MapEntry<String, String>> options,
     bool recruitment = false,
   }) async {
     String selected = current;
@@ -455,7 +455,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       content: DropdownButtonFormField<String>(
         value: selected,
         decoration: const InputDecoration(labelText: 'الحالة الجديدة'),
-        items: options.map((o) => DropdownMenuItem<String>(value: o.$1, child: Text(o.$2))).toList(),
+        items: options.map((o) => DropdownMenuItem<String>(value: o.key, child: Text(o.value))).toList(),
         onChanged: (v) => refresh(() => selected = v ?? selected),
       ),
       actions: [
@@ -616,7 +616,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                     onPressed: () => _changeHrRecordStatus(
                       table: 'erp_hr_recruitment_candidates', id: row['id'].toString(),
                       current: row['status']?.toString() ?? 'new', recruitment: true,
-                      options: const [('new','جديد'),('screening','فرز'),('interview','مقابلة'),('accepted','مقبول'),('rejected','مرفوض'),('withdrawn','منسحب')],
+                      options: const [MapEntry('new','جديد'),MapEntry('screening','فرز'),MapEntry('interview','مقابلة'),MapEntry('accepted','مقبول'),MapEntry('rejected','مرفوض'),MapEntry('withdrawn','منسحب')],
                     ),
                     child: const Text('تحديث'),
                   ),
@@ -633,7 +633,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                     onPressed: () => _changeHrRecordStatus(
                       table: 'erp_hr_employee_compliance', id: row['id'].toString(),
                       current: row['status']?.toString() ?? 'in_progress',
-                      options: const [('insured','مؤمن'),('uninsured','غير مؤمن'),('in_progress','جارٍ'),('valid','سارية'),('expired','منتهية'),('not_required','غير مطلوب')],
+                      options: const [MapEntry('insured','مؤمن'),MapEntry('uninsured','غير مؤمن'),MapEntry('in_progress','جارٍ'),MapEntry('valid','سارية'),MapEntry('expired','منتهية'),MapEntry('not_required','غير مطلوب')],
                     ),
                     child: const Text('تحديث'),
                   ),
@@ -650,7 +650,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                     onPressed: () => _changeHrRecordStatus(
                       table: 'erp_hr_training_records', id: row['id'].toString(),
                       current: row['status']?.toString() ?? 'planned',
-                      options: const [('planned','مخطط'),('in_progress','جارٍ'),('completed','مكتمل'),('expired','منتهي'),('cancelled','ملغي')],
+                      options: const [MapEntry('planned','مخطط'),MapEntry('in_progress','جارٍ'),MapEntry('completed','مكتمل'),MapEntry('expired','منتهي'),MapEntry('cancelled','ملغي')],
                     ),
                     child: const Text('تحديث'),
                   ),
