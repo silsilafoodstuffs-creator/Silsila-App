@@ -273,6 +273,7 @@ declare
   v_column text;
   v_prefix text;
   v_digits integer;
+  v_max bigint;
 begin
   if auth.uid() is null or not public.erp_user_can_access_company(p_company_id) then
     raise exception 'غير مصرح بمعاينة أكواد هذه الشركة';
@@ -316,16 +317,14 @@ begin
   if to_regclass('public.' || v_table) is null then
     raise exception 'جدول نوع التكويد غير متاح';
   end if;
-  return v_prefix || lpad(
-    (coalesce((
-      execute format(
-        'select max(substring(%I from %L)::bigint) from public.%I where company_id = $1 and %I ~ $2',
-        v_column, '^' || v_prefix || '([0-9]+)$', v_table, v_column
-      ) into v_max using p_company_id, '^' || v_prefix || '[0-9]+$';
-      select v_max
-    ), 0) + 1)::text,
-    v_digits, '0'
-  );
+  execute format(
+    'select coalesce(max(substring(%I from %L)::bigint), 0) from public.%I where company_id = $1 and %I ~ $2',
+    v_column, '^' || v_prefix || '([0-9]+)$', v_table, v_column
+  ) into v_max using p_company_id, '^' || v_prefix || '[0-9]+$';
+  if coalesce(v_max, 0) + 1 >= power(10::numeric, v_digits) then
+    raise exception 'انتهت خانات الكود؛ زد عدد الخانات من سياسات التكويد';
+  end if;
+  return v_prefix || lpad((coalesce(v_max, 0) + 1)::text, v_digits, '0');
 end;
 $$;
 revoke all on function public.erp_preview_next_central_code(uuid, text) from public, anon;
