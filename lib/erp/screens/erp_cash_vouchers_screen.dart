@@ -95,8 +95,8 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
 
   Future<void> _createDraft() async {
     final amount = double.tryParse(_amount.text.trim());
-    if (_sourceId == null || amount == null || amount <= 0 || _number.text.trim().isEmpty || _description.text.trim().isEmpty) {
-      setState(() => _error = 'أكمل رقم السند والخزينة والقيمة والبيان.');
+    if (_sourceId == null || amount == null || amount <= 0 || _description.text.trim().isEmpty) {
+      setState(() => _error = 'أكمل الخزينة والقيمة والبيان.');
       return;
     }
     if (_type == 'transfer' && (_destinationId == null || _destinationId == _sourceId)) {
@@ -216,7 +216,7 @@ class _ErpCashVouchersScreenState extends State<ErpCashVouchersScreen> {
             onChanged: (v) => setState(() => _type = v ?? _type),
           ),
           const SizedBox(height: 8),
-          TextField(controller: _number, focusNode: _numberFocus, decoration: const InputDecoration(labelText: 'رقم السند *', border: OutlineInputBorder())),
+          TextField(controller: _number, readOnly: true, decoration: const InputDecoration(labelText: 'رقم السند (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', border: OutlineInputBorder(), prefixIcon: Icon(Icons.auto_awesome))),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             value: _sourceId, isExpanded: true,
