@@ -183,6 +183,8 @@ begin
     end if;
   end loop;
 end;
+$$;
+
 create or replace function public.erp_assign_workspace_central_code()
 returns trigger
 language plpgsql security definer set search_path = '' as $$
