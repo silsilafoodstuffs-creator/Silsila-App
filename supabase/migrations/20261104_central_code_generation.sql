@@ -143,6 +143,7 @@ begin
     where c.company_id=new.company_id
       and c.parent_id is not distinct from v_node.parent_id
       and c.is_active=true
+      and c.activity_code is not distinct from (select activity_code from public.erp_item_categories where id=new.category_id)
       and (c.category_code,c.id) <= (v_node.category_code,v_node.id);
     if v_rank < 1 or v_rank > 99 then raise exception 'عدد الفئات في كل مستوى يجب ألا يتجاوز 99 لتكوين كود الصنف'; end if;
     v_path := array_prepend(lpad(v_rank::text,2,'0'),v_path);
@@ -186,6 +187,7 @@ begin
     when 'department' then v_table:='erp_hr_departments'; v_column:='department_code'; v_prefix:='Dpt';
     when 'job' then v_table:='erp_hr_jobs'; v_column:='job_code'; v_prefix:='Job';
     when 'work_location' then v_table:='erp_hr_work_locations'; v_column:='location_code'; v_prefix:='Loc';
+    when 'category' then v_table:='erp_item_categories'; v_column:='category_code'; v_prefix:='Cat';
     when 'category' then v_table:='erp_item_categories'; v_column:='category_code'; v_prefix:='Cat';
     else raise exception 'نوع التكويد غير مدعوم';
   end case;
