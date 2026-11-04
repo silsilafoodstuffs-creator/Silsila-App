@@ -2,6 +2,10 @@
 -- Existing records and their codes are preserved. Blank codes on new rows are generated atomically.
 begin;
 
+-- Convert previously computed cash identifiers into writable text fields; keep existing values unchanged.
+alter table public.erp_cash_movements alter column movement_number drop expression;
+alter table public.erp_cash_orders alter column order_number drop expression;
+
 create or replace function public.erp_code_policy_config(
   p_company_id uuid, p_key text, p_default_prefix text, p_default_digits integer
 )
@@ -76,6 +80,8 @@ begin
         when 'return' then 'purchase_return'
         else 'purchase_invoice' end;
       v_column := 'document_number';
+    when 'erp_cash_movements' then v_key := 'cash_movement'; v_column := 'movement_number';
+    when 'erp_cash_orders' then v_key := 'cash_order'; v_column := 'order_number';
     when 'erp_cash_vouchers' then
       v_voucher_type := to_jsonb(new)->>'voucher_type';
       v_key := case v_voucher_type
@@ -138,6 +144,8 @@ begin
       when 'cash_receipt' then 'Rcp'
       when 'cash_payment' then 'Pay'
       when 'cash_transfer' then 'Trf'
+      when 'cash_movement' then 'Cmv'
+      when 'cash_order' then 'Cso'
       else 'Gen'
     end, 5
   ) c;
@@ -173,7 +181,8 @@ begin
       ('erp_hr_job_grades'), ('erp_payroll_runs'), ('erp_hr_salary_elements'),
       ('erp_item_unit_catalog'), ('erp_payment_methods'), ('erp_hr_shifts'), ('erp_commission_plans'),
       ('erp_sales_fulfillment_documents'), ('erp_sales_representatives'),
-      ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers')
+      ('erp_sales_documents'), ('erp_purchase_documents'), ('erp_cash_vouchers'),
+      ('erp_cash_movements'), ('erp_cash_orders')
     ) as t(table_name)
   loop
     if to_regclass('public.' || r.table_name) is not null then
@@ -270,9 +279,6 @@ end;
 $$;
 revoke all on function public.erp_assign_item_hierarchical_code() from public, anon, authenticated;
 
-drop trigger if exists erp_cash_movements_central_code on public.erp_cash_movements;
-drop trigger if exists erp_cash_orders_central_code on public.erp_cash_orders;
-
 drop trigger if exists erp_items_hierarchical_code on public.erp_items;
 create trigger erp_items_hierarchical_code before insert on public.erp_items
 for each row execute function public.erp_assign_item_hierarchical_code();
@@ -331,6 +337,8 @@ begin
     when 'cash_receipt' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Rcp';
     when 'cash_payment' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Pay';
     when 'cash_transfer' then v_table := 'erp_cash_vouchers'; v_column := 'voucher_number'; v_prefix := 'Trf';
+    when 'cash_movement' then v_table := 'erp_cash_movements'; v_column := 'movement_number'; v_prefix := 'Cmv';
+    when 'cash_order' then v_table := 'erp_cash_orders'; v_column := 'order_number'; v_prefix := 'Cso';
     else raise exception 'نوع التكويد غير مدعوم';
   end case;
 
