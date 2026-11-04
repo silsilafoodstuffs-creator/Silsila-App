@@ -135,7 +135,6 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       try { defaultCode = (await _db!.rpc('erp_preview_next_central_code', params: {'p_company_id': (widget.companyId ?? '').trim(), 'p_entity_key': 'branch'})).toString(); } catch (_) { defaultCode = 'Brn00001'; }
     } else { defaultCode = _s(row['branch_code']); }
     final code = TextEditingController(text: defaultCode);
-    var lastAutoCode = defaultCode;
     final name = TextEditingController(text: _s(row?['branch_name']));
     final nameEn = TextEditingController(text: _s(row?['branch_name_en']));
     final email = TextEditingController(text: _s(row?['email']));
