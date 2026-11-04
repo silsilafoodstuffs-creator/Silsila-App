@@ -1,5 +1,6 @@
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/erp_price_lists_repository.dart';
 
 class ErpPriceListsScreen extends StatefulWidget {
