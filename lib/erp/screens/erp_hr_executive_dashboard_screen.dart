@@ -21,6 +21,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _departments = [];
   List<Map<String, dynamic>> _jobs = [];
+  List<Map<String, dynamic>> _documents = [];
+  List<Map<String, dynamic>> _attendance = [];
+  List<Map<String, dynamic>> _payrollRuns = [];
 
   @override
   void initState() {
@@ -36,16 +39,27 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     }
     setState(() { _loading = true; _error = null; });
     try {
+      final now = DateTime.now();
+      final monthStart = DateTime(now.year, now.month, 1);
+      final monthEnd = DateTime(now.year, now.month + 1, 0);
+      final dateStart = '${monthStart.year.toString().padLeft(4, '0')}-${monthStart.month.toString().padLeft(2, '0')}-01';
+      final dateEnd = '${monthEnd.year.toString().padLeft(4, '0')}-${monthEnd.month.toString().padLeft(2, '0')}-${monthEnd.day.toString().padLeft(2, '0')}';
       final results = await Future.wait([
-        _db.from('erp_employees').select('id,employee_code,full_name,department_name,job_title,is_active,work_unit').eq('company_id', companyId),
+        _db.from('erp_employees').select('id,employee_code,full_name,department_name,job_title,is_active,employment_status,work_unit,job_id,hire_date,contract_type,contract_start_date,contract_end_date').eq('company_id', companyId),
         _db.from('erp_hr_departments').select('id,department_code,name_ar,department_level,parent_id,is_active').eq('company_id', companyId),
-        _db.from('erp_hr_jobs').select('id,job_code,name_ar,department_id,is_active').eq('company_id', companyId),
+        _db.from('erp_hr_jobs').select('id,job_code,name_ar,department_id,is_active,requires_photo,requires_birth_certificate,requires_qualification_certificate,requires_work_card,requires_insurance_printout,requires_military_service,requires_criminal_record,requires_trust_receipt,requires_health_certificate,requires_driving_license,requires_id_copy,requires_bank_account').eq('company_id', companyId),
+        _db.from('erp_employee_documents').select('employee_id,doc_type').eq('company_id', companyId),
+        _db.from('erp_attendance_records').select('employee_id,work_date,attendance_status,late_minutes,overtime_minutes').eq('company_id', companyId).gte('work_date', dateStart).lte('work_date', dateEnd),
+        _db.from('erp_payroll_runs').select('id,run_code,period_start,period_end,status,employee_count,gross_total,net_total').eq('company_id', companyId).order('period_start', ascending: false).limit(12),
       ]);
       if (!mounted) return;
       setState(() {
         _employees = List<Map<String, dynamic>>.from(results[0]);
         _departments = List<Map<String, dynamic>>.from(results[1]);
         _jobs = List<Map<String, dynamic>>.from(results[2]);
+        _documents = List<Map<String, dynamic>>.from(results[3]);
+        _attendance = List<Map<String, dynamic>>.from(results[4]);
+        _payrollRuns = List<Map<String, dynamic>>.from(results[5]);
         _loading = false;
       });
     } catch (e) {
@@ -61,6 +75,53 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _unassignedJobs => _jobs.where((j) => j['department_id'] == null).length;
   int get _departmentsWithoutJobs => _departments.where((d) =>
       !_jobs.any((j) => j['department_id']?.toString() == d['id']?.toString())).length;
+
+  DateTime? _asDate(dynamic value) {
+    if (value == null || value.toString().isEmpty) return null;
+    return DateTime.tryParse(value.toString());
+  }
+
+  int get _contractsExpiringSoon => _employees.where((e) {
+    final end = _asDate(e['contract_end_date']);
+    if (end == null || e['is_active'] != true) return false;
+    final days = end.difference(DateTime.now()).inDays;
+    return days >= 0 && days <= 30;
+  }).length;
+
+  int get _contractsExpired => _employees.where((e) {
+    final end = _asDate(e['contract_end_date']);
+    return end != null && end.isBefore(DateTime.now()) && e['is_active'] == true;
+  }).length;
+
+  int get _contractsWithoutEndDate => _employees.where((e) =>
+      e['is_active'] == true && (e['contract_type'] == 'بعقد') &&
+      _asDate(e['contract_end_date']) == null).length;
+
+  int get _employeesMissingRequiredDocuments => _employees.where((employee) {
+    final job = _jobs.where((j) => j['id']?.toString() == employee['job_id']?.toString()).firstOrNull;
+    if (job == null) return false;
+    final required = <String, String>{
+      'requires_photo': 'personal_id',
+      'requires_birth_certificate': 'birth_certificate',
+      'requires_qualification_certificate': 'qualification',
+      'requires_work_card': 'labor_card',
+      'requires_insurance_printout': 'insurance_print',
+      'requires_military_service': 'military_status',
+      'requires_criminal_record': 'criminal_record',
+      'requires_trust_receipt': 'trust_receipt',
+      'requires_health_certificate': 'health_certificate',
+      'requires_driving_license': 'driving_license',
+      'requires_id_copy': 'personal_id',
+      'requires_bank_account': 'bank_account',
+    };
+    final present = _documents.where((d) => d['employee_id']?.toString() == employee['id']?.toString()).map((d) => d['doc_type']?.toString()).toSet();
+    return required.entries.any((entry) => job[entry.key] == true && !present.contains(entry.value));
+  }).length;
+
+  int get _lateAttendanceCount => _attendance.where((r) => (r['late_minutes'] as num? ?? 0) > 0).length;
+  int get _absenceAttendanceCount => _attendance.where((r) => (r['attendance_status']?.toString().toLowerCase() ?? '').contains('absent') || (r['attendance_status']?.toString() ?? '').contains('غائب')).length;
+  int get _overtimeMinutes => _attendance.fold<int>(0, (sum, r) => sum + ((r['overtime_minutes'] as num?)?.toInt() ?? 0));
+  int get _pendingPayrollRuns => _payrollRuns.where((r) => !const ['approved', 'posted', 'paid'].contains(r['status']?.toString().toLowerCase())).length;
 
   @override
   Widget build(BuildContext context) => Directionality(
@@ -105,21 +166,41 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               _notice('استكمل تعريف الإدارات والوظائف وربط كل وظيفة بإدارتها حتى تصبح مؤشرات اكتمال الهيكل دقيقة.', Icons.account_tree_outlined, Colors.orange.shade800),
           ]),
           const SizedBox(height: 18),
+          const SizedBox(height: 18),
+          _sectionTitle('مؤشرات الالتزام والتشغيل', Icons.fact_check_outlined),
+          LayoutBuilder(builder: (context, c) {
+            final count = c.maxWidth > 900 ? 4 : c.maxWidth > 550 ? 2 : 1;
+            return GridView.count(
+              crossAxisCount: count, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: count == 1 ? 3.4 : 2.2,
+              children: [
+                _metric('عقود تنتهي خلال 30 يومًا', '$_contractsExpiringSoon', 'من الموظفين النشطين', Icons.event_busy_outlined, _hrOrange),
+                _metric('عقود منتهية', '$_contractsExpired', 'تحتاج مراجعة فورية', Icons.warning_amber_outlined, Colors.red.shade700),
+                _metric('نواقص مسوغات التعيين', '$_employeesMissingRequiredDocuments', 'وفق متطلبات الوظيفة', Icons.folder_off_outlined, _hrPink),
+                _metric('تأخيرات الشهر', '$_lateAttendanceCount', 'من سجلات الحضور المسجلة', Icons.schedule_outlined, _hrPurple),
+                _metric('غياب الشهر', '$_absenceAttendanceCount', 'من سجلات الحضور المسجلة', Icons.person_off_outlined, Colors.red.shade700),
+                _metric('إضافي مسجل', '$_overtimeMinutes دقيقة', 'إجمالي دقائق الشهر', Icons.more_time_outlined, Colors.green.shade700),
+                _metric('مسيرات غير معتمدة', '$_pendingPayrollRuns', 'من آخر 12 مسيرًا', Icons.receipt_long_outlined, _hrOrange),
+              ],
+            );
+          }),
+          const SizedBox(height: 18),
           _sectionTitle('تنبيهات ومتابعات مدير الموارد البشرية', Icons.notifications_active_outlined),
           _panel(children: [
             _alert('اكتمال الهيكل التنظيمي', _departmentsWithoutJobs + _unassignedJobs == 0 && _departments.isNotEmpty && _jobs.isNotEmpty
                 ? 'لا توجد فجوات ربط ظاهرة في البيانات الحالية.' : 'توجد إدارات بلا وظائف أو وظائف غير مرتبطة بإدارة؛ راجع الهيكل الوظيفي.', _departmentsWithoutJobs + _unassignedJobs == 0 ? Colors.green : Colors.orange),
             _alert('ملفات الموظفين غير النشطة', 'عدد الملفات غير النشطة: $_inactiveEmployees. راجع أسباب الإيقاف أو انتهاء الخدمة.', Colors.orange),
-            _alert('العقود وفترات التجربة', 'مؤشر العقود وفترات التجربة غير متاح حتى ربط سجل العقود وتواريخ بداية ونهاية العقد وفترة الاختبار.', Colors.blueGrey),
-            _alert('الرخص والمستندات', 'يلزم استكمال تواريخ انتهاء الرخص والمستندات وربطها بملف الموظف لتوليد تنبيهات الاستحقاق والانتهاء.', Colors.blueGrey),
+            _alert('العقود', 'عقود تنتهي خلال 30 يومًا: $_contractsExpiringSoon، عقود منتهية: $_contractsExpired، وعقود نشطة بلا تاريخ نهاية: $_contractsWithoutEndDate.', _contractsExpired + _contractsExpiringSoon + _contractsWithoutEndDate > 0 ? Colors.orange : Colors.green),
+            _alert('مسوغات التعيين', 'عدد الموظفين الذين تنقص ملفاتهم مستندات مطلوبة حسب الوظيفة: $_employeesMissingRequiredDocuments. راجع متطلبات الوظائف وسجل مستندات الموظفين.', _employeesMissingRequiredDocuments > 0 ? Colors.orange : Colors.green),
+            _alert('الحضور والانصراف', 'خلال الشهر الحالي: $_absenceAttendanceCount حالات غياب و$_lateAttendanceCount حالات تأخير، وإجمالي الوقت الإضافي المسجل $_overtimeMinutes دقيقة.', Colors.blueGrey),
             _alert('التأمينات الصحية والاجتماعية', 'حالات مؤمن / غير مؤمن / جارٍ تحتاج سجلات تأمين مرتبطة بالموظف؛ لا يتم احتساب أرقام تقديرية.', Colors.blueGrey),
             _alert('التوظيف والاستقالات ومعدل الدوران', 'مؤشرات المتقدمين والقبول والرفض والاستقالات وTurnover تحتاج سجل توظيف وحركات انتهاء خدمة بأسباب وتواريخ.', Colors.blueGrey),
-            _alert('مسوغات التعيين', 'راجع اكتمال المستندات المطلوبة لكل موظف وفق متطلبات الوظيفة، بعد ربط سجل المسوغات بملف الموظف.', Colors.blueGrey),
+            _alert('مسيرات الرواتب', 'يوجد $_pendingPayrollRuns مسيرًا غير معتمد ضمن آخر 12 مسيرًا تم تحميلها.', _pendingPayrollRuns > 0 ? Colors.orange : Colors.blueGrey),
           ]),
           const SizedBox(height: 18),
           _sectionTitle('تحليلات إضافية موصى بها', Icons.insights_outlined),
           _panel(children: [
-            const Text('تتضمن النسخة التشغيلية المستهدفة: معدل الغياب والتأخير، تكلفة العمالة كنسبة من المبيعات، متوسط مدة شغل الوظيفة، معدل الاحتفاظ بالموظفين، أسباب ترك العمل، توزيع الأعمار والخبرات، فجوات المهارات، انتهاء شهادات السلامة والتدريب، تقييم الأداء، العمل الإضافي، أرصدة الإجازات، ومقارنة القوى العاملة بالخطة المعتمدة.', style: TextStyle(height: 1.7)),
+            const Text('تُعرض حاليًا مؤشرات الغياب والتأخير والعمل الإضافي من سجلات الحضور، ومؤشرات العقود والمسوغات من ملفات الموظفين. وتظل تكلفة العمالة مقابل المبيعات، ومعدل دوران العمالة، والتوظيف، والتأمينات، والرخص، والتدريب، وتقييم الأداء، وأرصدة الإجازات بحاجة إلى سجلات تشغيلية مخصصة قبل احتسابها.', style: TextStyle(height: 1.7)),
           ]),
           const SizedBox(height: 10),
           const Text('ملاحظة: الأرقام المعروضة مستخرجة من سجلات الموظفين والهيكل الحالية. البنود التي لا يوجد لها مصدر بيانات متكامل تظهر كمتطلبات ربط ولا تتحول إلى أرقام افتراضية.', style: TextStyle(color: Colors.black54, fontSize: 12, height: 1.6)),
