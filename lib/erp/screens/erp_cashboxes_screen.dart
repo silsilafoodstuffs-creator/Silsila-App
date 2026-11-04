@@ -74,18 +74,12 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
   Future<void> _generateNextCode() async {
     if (_code.text.trim().isNotEmpty || _company.text.trim().isEmpty) return;
     try {
-      final rows = await _repo.fetchCashboxes(_company.text.trim());
-      var max = 0;
-      for (final row in rows) {
-        final match = RegExp(r'^[A-Za-z]+-?(\d+)$').firstMatch(_s(row['cashbox_code']));
-        final number = match == null ? 0 : (int.tryParse(match.group(1) ?? '') ?? 0);
-        if (number > max) max = number;
-      }
-      if (mounted && _code.text.trim().isEmpty) {
-        setState(() => _code.text = 'CSH-' + (max + 1).toString().padLeft(4, '0'));
-      }
+      final preview = await Supabase.instance.client.rpc('erp_preview_next_central_code', params: {
+        'p_company_id': _company.text.trim(), 'p_entity_key': 'cashbox',
+      });
+      if (mounted && _code.text.trim().isEmpty) setState(() => _code.text = preview.toString());
     } catch (_) {
-      if (mounted && _code.text.trim().isEmpty) setState(() => _code.text = 'CSH-0001');
+      if (mounted && _code.text.trim().isEmpty) setState(() => _code.text = 'Csh00001');
     }
   }
 
@@ -104,7 +98,6 @@ class _ErpCashboxesScreenState extends State<ErpCashboxesScreen> {
       _error = null;
       _message = 'نموذج جديد جاهز. أدخل البيانات ثم اضغط F8 للحفظ.';
     });
-    _codeFocus.requestFocus();
     _generateNextCode();
   }
 
