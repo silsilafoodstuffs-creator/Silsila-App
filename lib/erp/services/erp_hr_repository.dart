@@ -50,8 +50,8 @@ class ErpHrRepository {
     String? department,
     double baseSalary = 0,
   }) async {
-    if (companyId.trim().isEmpty || employeeCode.trim().isEmpty || fullName.trim().isEmpty) {
-      throw ArgumentError('الشركة وكود الموظف والاسم حقول إلزامية.');
+    if (companyId.trim().isEmpty || fullName.trim().isEmpty) {
+      throw ArgumentError('الشركة واسم الموظف حقول إلزامية.');
     }
     if (baseSalary < 0) throw ArgumentError('الراتب لا يمكن أن يكون سالبًا.');
     final normalizedNationalId = (nationalId ?? '').trim();
@@ -65,7 +65,7 @@ class ErpHrRepository {
     }
     await _db.from('erp_employees').insert({
       'company_id': companyId.trim(),
-      'employee_code': employeeCode.trim(),
+      'employee_code': '',
       'full_name': fullName.trim(),
       'phone': _blankToNull(phone),
       'job_title': _blankToNull(jobTitle),
