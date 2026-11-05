@@ -81,7 +81,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     'كشف العاملين': <String>['erp_employees'],
     'الحضور والغياب': <String>['erp_attendance_records'],
     'رصيد الإجازات': <String>['erp_leave_requests'],
-    'انتهاء العقود': <String>['erp_employees'],
+    'انتهاء العقود': <String>['erp_hr_employee_contracts'],
     'ملخص الرواتب': <String>['erp_payroll_runs'],
     'توزيع القوى العاملة': <String>['erp_employees'],
     'تكلفة العمالة حسب الإدارة': <String>['erp_payroll_lines'],
