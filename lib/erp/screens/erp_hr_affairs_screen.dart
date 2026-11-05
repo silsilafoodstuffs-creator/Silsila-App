@@ -4,6 +4,7 @@ import 'erp_hr_executive_dashboard_screen.dart';
 import 'erp_hr_leave_screen.dart';
 import 'erp_hr_operations_screen.dart';
 import 'erp_hr_records_screen.dart';
+import 'erp_hr_catalog_screen.dart';
 import 'erp_hr_structure_screen.dart';
 import 'erp_payroll_screen.dart';
 import 'erp_salary_elements_screen.dart';
@@ -30,7 +31,14 @@ class ErpHrAffairsScreen extends StatelessWidget {
     if (page == 'ملخص إدارة موارد بشرية' || page == 'ملخص تنفيذي الموارد البشرية' || page == 'توزيع القوى العاملة' || page == 'تكلفة العمالة' || page == 'معدل دوران العمالة') {
       return ErpHrExecutiveDashboardScreen(companyId: companyId, canManage: canManage);
     }
-    if (page == 'دليل الموظفين' || page == 'بيانات الموظفين' || page == 'ملف الموظف' || page == 'ملفات ومستندات الموظفين' || page == 'أنواع التوظيف' || page == 'كشف العاملين' || page == 'دليل الموظفين حسب الإدارة') {
+    if (page == 'أنواع التوظيف' || page == 'أنواع العقود') {
+      return ErpHrCatalogScreen(
+        companyId: companyId,
+        catalogType: page == 'أنواع التوظيف' ? 'employment_type' : 'contract_type',
+        title: page,
+      );
+    }
+    if (page == 'دليل الموظفين' || page == 'بيانات الموظفين' || page == 'ملف الموظف' || page == 'ملفات ومستندات الموظفين' || page == 'كشف العاملين' || page == 'دليل الموظفين حسب الإدارة') {
       return ErpEmployeeMasterScreen(initialCompanyId: companyId);
     }
     if (page == 'الهيكل التنظيمي' || page == 'بيانات الوظائف' || page == 'بيانات الإدارات' || page == 'الوظائف الشاغرة' ||
