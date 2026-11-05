@@ -42,4 +42,34 @@ on public.erp_hr_employee_contracts for each row execute function public.erp_hr_
 create trigger erp_hr_employee_contracts_updated_at before update
 on public.erp_hr_employee_contracts for each row execute function public.erp_set_updated_at();
 create index if not exists idx_hr_contracts_company_employee_dates on public.erp_hr_employee_contracts(company_id,employee_id,start_date desc);
+
+create unique index if not exists uq_hr_employee_one_active_contract
+on public.erp_hr_employee_contracts(company_id,employee_id)
+where status='active';
+
+create or replace function public.erp_hr_sync_employee_contract()
+returns trigger
+language plpgsql
+set search_path=public
+as $function$
+begin
+  if new.status='active' then
+    update public.erp_employees
+       set contract_type=new.contract_type,
+           contract_start_date=new.start_date,
+           contract_end_date=new.end_date,
+           base_salary=new.salary,
+           updated_at=now()
+     where id=new.employee_id and company_id=new.company_id;
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists erp_hr_employee_contracts_sync on public.erp_hr_employee_contracts;
+create trigger erp_hr_employee_contracts_sync
+after insert or update of status,contract_type,start_date,end_date,salary
+on public.erp_hr_employee_contracts
+for each row execute function public.erp_hr_sync_employee_contract();
+
 commit;
