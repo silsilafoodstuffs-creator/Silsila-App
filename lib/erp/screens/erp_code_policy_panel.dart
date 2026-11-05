@@ -328,7 +328,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
             child:Column(children:[
               Row(children:[
-                SizedBox(width:30,child:Text('\${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+                SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
                 Expanded(child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
                 if (key == 'customer')
                   SizedBox(width:62,child:Text('خانات إضافية',textAlign:TextAlign.center,style:const TextStyle(fontSize:9,color:Colors.black54)))
@@ -341,7 +341,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
                   _field(_prefix[key]!,max:3,letters:true,changed:(){}),
                 SizedBox(width:112,child:Text(
                   key == 'customer'
-                    ? 'Cus + منطقة 8 + \${'1'.padLeft(int.tryParse(_digits[key]!.text) ?? 4,'0')}'
+                    ? 'Cus + منطقة 8 + ${'1'.padLeft(int.tryParse(_digits[key]!.text) ?? 4,'0')}'
                     : _preview(key),
                   textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
               ]),
