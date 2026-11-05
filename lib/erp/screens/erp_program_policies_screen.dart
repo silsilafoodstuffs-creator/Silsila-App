@@ -11,7 +11,7 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['الهوية البصرية','برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية'];
+  static const tabs = ['الهوية البصرية','برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
@@ -156,7 +156,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
           )),
           TextButton.icon(onPressed: loading ? null : () { if (tab == 0) { _identityKey.currentState?._load(); } else { _load(); } }, icon: const Icon(Icons.refresh, color: Colors.white, size: 17), label: const Text('تحديث', style: TextStyle(color: Colors.white))),
-          FilledButton.icon(onPressed: saving || (tab == 0 && (_identityKey.currentState?._saving ?? false)) ? null : () { if (tab == 0) { _identityKey.currentState?._save(); } else { _save(); } }, icon: const Icon(Icons.save, size: 17), label: Text(saving || (tab == 0 && (_identityKey.currentState?._saving ?? false)) ? 'جارٍ الحفظ' : 'حفظ')),
+          if (tab != 2) FilledButton.icon(onPressed: saving || (tab == 0 && (_identityKey.currentState?._saving ?? false)) ? null : () { if (tab == 0) { _identityKey.currentState?._save(); } else { _save(); } }, icon: const Icon(Icons.save, size: 17), label: Text(saving || (tab == 0 && (_identityKey.currentState?._saving ?? false)) ? 'جارٍ الحفظ' : 'حفظ')),
         ]),
       ),
       if (error != null) Padding(padding: const EdgeInsets.all(4), child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 11))),
@@ -168,14 +168,15 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       Expanded(
         child: tab == 0
             ? ErpVisualIdentityPolicyScreen(key: _identityKey, companyId: widget.companyId)
-            : loading
+            : tab == 2
+                ? ErpCodePolicyPanel(companyId: company)
+                : loading
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
                     ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
                     : ListView(
                         padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
                         children: [
-                          if (tab == 1) SizedBox(height: 520, child: ErpCodePolicyPanel(companyId: company)),
                           Card(
                             margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
                             elevation: 0, color: const Color(0xFFF5EFFB),
@@ -303,6 +304,50 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                               ),
                             );
                           }),
+                          if (tab == 1) ...[
+                            const SizedBox(height: 10),
+                                    Card(
+                                      elevation:0,
+                                      color:const Color(0xFFF5EFFB),
+                                      shape:RoundedRectangleBorder(
+                                        side:const BorderSide(color:Color(0xFFE2D5F0)),
+                                        borderRadius:BorderRadius.circular(10),
+                                      ),
+                                      child:Padding(
+                                        padding:const EdgeInsets.all(12),
+                                        child:Column(
+                                          crossAxisAlignment:CrossAxisAlignment.start,
+                                          children:const [
+                                            Row(children:[
+                                              Icon(Icons.rule_folder_outlined,color:Color(0xFF3E007D),size:20),
+                                              SizedBox(width:7),
+                                              Expanded(child:Text('معيار التخطيط والمسافات الموحد — معتمد لكل شاشات سلسلة',
+                                                style:TextStyle(fontWeight:FontWeight.w900,fontSize:13,color:Color(0xFF3E007D)))),
+                                            ]),
+                                            SizedBox(height:8),
+                                            Text('1) بين الحقول والأعمدة المرتبطة: 12–16 بكسل، والقيمة الافتراضية 14 بكسل.',
+                                              style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('2) بين مجموعات البيانات المستقلة: 24–32 بكسل.',
+                                              style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('3) بين الأقسام الرئيسية: 32–40 بكسل.',
+                                              style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('4) لا تُستخدم مسافة 50 بكسل بين كل عمودين؛ تُقبل فقط كحد أعلى عند الحاجة للفصل البصري بين مجموعات مستقلة.',
+                                              style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('5) الجداول: تقارب مريح دون تزاحم، مع هوامش داخلية واضحة وارتفاع صفوف يسمح بقراءة البيانات.',
+                                              style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('6) العربية: ممنوع تقطيع الكلمة أو عرض الحروف رأسيًا؛ يسمح بالتفاف النص بين الكلمات، مع توسيع العمود أو التمرير الأفقي عند الحاجة.',
+                                              style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('7) الشاشات الصغيرة: إعادة توزيع العناصر أو استخدام قوائم/بطاقات وتمرير أفقي منظم، دون تصغير النص إلى درجة تضر القراءة.',
+                                              style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('8) ارتفاع صفوف الجداول القياسي 48–64 بكسل؛ وتُقبل الصفوف الأقصر فقط في الجداول الرقمية الكثيفة أو المعاينات المحدودة.',
+                                              style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('9) الاتساق: تُطبق القواعد عبر ثيم البرنامج العام، وتُوثق الاستثناءات فقط عندما تفرض طبيعة البيانات ذلك.',
+                                              style:TextStyle(fontSize:11,height:1.5)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                          ],
                         ],
                       ),
       ),
@@ -564,47 +609,6 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         ])))),
         ...rows,
         const SizedBox(height:10),
-        Card(
-          elevation:0,
-          color:const Color(0xFFF5EFFB),
-          shape:RoundedRectangleBorder(
-            side:const BorderSide(color:Color(0xFFE2D5F0)),
-            borderRadius:BorderRadius.circular(10),
-          ),
-          child:Padding(
-            padding:const EdgeInsets.all(12),
-            child:Column(
-              crossAxisAlignment:CrossAxisAlignment.start,
-              children:const [
-                Row(children:[
-                  Icon(Icons.rule_folder_outlined,color:Color(0xFF3E007D),size:20),
-                  SizedBox(width:7),
-                  Expanded(child:Text('معيار التخطيط والمسافات الموحد — معتمد لكل شاشات سلسلة',
-                    style:TextStyle(fontWeight:FontWeight.w900,fontSize:13,color:Color(0xFF3E007D)))),
-                ]),
-                SizedBox(height:8),
-                Text('1) بين الحقول والأعمدة المرتبطة: 12–16 بكسل، والقيمة الافتراضية 14 بكسل.',
-                  style:TextStyle(fontSize:11,height:1.5)),
-                Text('2) بين مجموعات البيانات المستقلة: 24–32 بكسل.',
-                  style:TextStyle(fontSize:11,height:1.5)),
-                Text('3) بين الأقسام الرئيسية: 32–40 بكسل.',
-                  style:TextStyle(fontSize:11,height:1.5)),
-                Text('4) لا تُستخدم مسافة 50 بكسل بين كل عمودين؛ تُقبل فقط كحد أعلى عند الحاجة للفصل البصري بين مجموعات مستقلة.',
-                  style:TextStyle(fontSize:11,height:1.5)),
-                Text('5) الجداول: تقارب مريح دون تزاحم، مع هوامش داخلية واضحة وارتفاع صفوف يسمح بقراءة البيانات.',
-                  style:TextStyle(fontSize:11,height:1.5)),
-                Text('6) العربية: ممنوع تقطيع الكلمة أو عرض الحروف رأسيًا؛ يسمح بالتفاف النص بين الكلمات، مع توسيع العمود أو التمرير الأفقي عند الحاجة.',
-                  style:TextStyle(fontSize:11,height:1.5)),
-                Text('7) الشاشات الصغيرة: إعادة توزيع العناصر أو استخدام قوائم/بطاقات وتمرير أفقي منظم، دون تصغير النص إلى درجة تضر القراءة.',
-                  style:TextStyle(fontSize:11,height:1.5)),
-                Text('8) ارتفاع صفوف الجداول القياسي 48–64 بكسل؛ وتُقبل الصفوف الأقصر فقط في الجداول الرقمية الكثيفة أو المعاينات المحدودة.',
-                  style:TextStyle(fontSize:11,height:1.5)),
-                Text('9) الاتساق: تُطبق القواعد عبر ثيم البرنامج العام، وتُوثق الاستثناءات فقط عندما تفرض طبيعة البيانات ذلك.',
-                  style:TextStyle(fontSize:11,height:1.5)),
-              ],
-            ),
-          ),
-        ),
       ])),
     ]);
   }
