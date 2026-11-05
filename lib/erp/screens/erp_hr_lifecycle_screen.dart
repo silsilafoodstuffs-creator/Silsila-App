@@ -11,7 +11,8 @@ class ErpHrLifecycleScreen extends StatefulWidget {
 class _ErpHrLifecycleScreenState extends State<ErpHrLifecycleScreen>{
   SupabaseClient? get db {try{return Supabase.instance.client;}catch(_){return null;}}
   String get cid=>(widget.companyId??'').trim();
-  bool get movement=>widget.initialView=='movements',getInterviews=>widget.initialView=='interviews';
+  bool get movement=>widget.initialView=='movements';
+  bool get getInterviews=>widget.initialView=='interviews';
   bool loading=false,saving=false; String? error,message;
   List<Map<String,dynamic>> candidates=[],employees=[],jobs=[],departments=[],branches=[],moves=[];
   static const stages={'new':'جديد','screening':'فرز أولي','interview':'مقابلة','accepted':'مقبول','rejected':'مرفوض','withdrawn':'منسحب'};
@@ -33,8 +34,8 @@ class _ErpHrLifecycleScreenState extends State<ErpHrLifecycleScreen>{
         db!.from('erp_hr_employee_movements').select('id,employee_id,movement_type,effective_on,reason,notes,target_branch_id,target_department_id,target_job_id').eq('company_id',cid).order('effective_on',ascending:false).limit(1500),
       ]);
       if(!mounted)return;
-      setState(()=>{candidates=List<Map<String,dynamic>>.from(r[0]);employees=List<Map<String,dynamic>>.from(r[1]);jobs=List<Map<String,dynamic>>.from(r[2]);departments=List<Map<String,dynamic>>.from(r[3]);branches=List<Map<String,dynamic>>.from(r[4]);moves=List<Map<String,dynamic>>.from(r[5]);loading=false;error=null;});
-    }catch(e){if(mounted)setState(()=>{loading=false;error='تعذر تحميل بيانات شئون الموظفين: ${e}';});}
+      setState(() { candidates=List<Map<String,dynamic>>.from(r[0]); employees=List<Map<String,dynamic>>.from(r[1]); jobs=List<Map<String,dynamic>>.from(r[2]); departments=List<Map<String,dynamic>>.from(r[3]); branches=List<Map<String,dynamic>>.from(r[4]); moves=List<Map<String,dynamic>>.from(r[5]); loading=false; error=null; });
+    }catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل بيانات شئون الموظفين: ${e}'; });}
   }
   Future<void> candidateForm([Map<String,dynamic>? row])async{
     final name=TextEditingController(text:s(row?['candidate_name'])),phone=TextEditingController(text:s(row?['phone'])),email=TextEditingController(text:s(row?['email'])),source=TextEditingController(text:s(row?['source'])),notes=TextEditingController(text:s(row?['notes']));
