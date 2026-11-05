@@ -1,0 +1,1 @@
+drop table if exists public.erp_enterprise_module_records;
