@@ -7,6 +7,7 @@ import 'erp_hr_records_screen.dart';
 import 'erp_hr_structure_screen.dart';
 import 'erp_payroll_screen.dart';
 import 'erp_salary_elements_screen.dart';
+import 'erp_sales_targets_commissions_screen.dart';
 import 'hr_attendance_rules_screen.dart';
 
 class ErpHrAffairsScreen extends StatelessWidget {
@@ -23,6 +24,9 @@ class ErpHrAffairsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (page == 'عمولات المبيعات' || page == 'عمولات المندوبين' || page == 'سياسات العمولة') {
+      return ErpSalesTargetsCommissionsScreen(companyId: companyId, initialTabIndex: page == 'سياسات العمولة' ? 2 : 1);
+    }
     if (page == 'ملخص إدارة موارد بشرية' || page == 'ملخص تنفيذي الموارد البشرية' || page == 'توزيع القوى العاملة' || page == 'تكلفة العمالة' || page == 'معدل دوران العمالة') {
       return ErpHrExecutiveDashboardScreen(companyId: companyId, canManage: canManage);
     }
