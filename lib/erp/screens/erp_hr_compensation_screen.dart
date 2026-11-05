@@ -15,6 +15,7 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
   String get table=>switch(widget.mode){'advances'=>'erp_hr_employee_advances','actions'=>'erp_hr_employee_actions','overtime'=>'erp_hr_overtime_requests',_=>'erp_hr_performance_reviews'};
   String get dateColumn=>switch(widget.mode){'advances'=>'requested_on','actions'=>'action_date','overtime'=>'work_date',_=>'period_start'};
   bool get readOnly=>(widget.title??'').startsWith('كشف')||(widget.title??'').startsWith('تقرير');
+  bool get canCreate=>!readOnly&&widget.title!='تسوية سلفة';
   bool loading=false,saving=false;String? error,message;
   List<Map<String,dynamic>> rows=[],employees=[];
   static const _statusLabels={'pending':'قيد المراجعة','approved':'معتمد','rejected':'مرفوض','disbursed':'تم الصرف','settled':'تمت التسوية','paid':'تم الصرف','applied':'تم التطبيق','draft':'مسودة','submitted':'مرسل للاعتماد'};
@@ -95,6 +96,7 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
     }catch(e){if(mounted)setState(()=>error='تعذر تحديث الحالة: ${e}');}
   }
   List<(String,String)> actionsFor(Map<String,dynamic> row){
+    if(readOnly)return [];
     final status=s(row['status']);
     if(widget.mode=='advances'){
       if(status=='pending')return [('approve','اعتماد'),('reject','رفض')];
@@ -122,7 +124,7 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
     final pending=rows.where((r)=>s(r['status'])=='pending'||s(r['status'])=='submitted').length;
     return Container(color:const Color(0xFFFAF8FC),padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Row(children:[Container(width:44,height:44,decoration:BoxDecoration(color:_hrCompPurple,borderRadius:BorderRadius.circular(12)),child:Icon(widget.mode=='advances'?Icons.account_balance_wallet:widget.mode=='overtime'?Icons.more_time:widget.mode=='reviews'?Icons.rate_review:Icons.gavel,color:Colors.white)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.title??'شئون الموظفين',style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900,color:_hrCompPurple)),const Text('إدارة ومراجعة واعتماد معاملات الموظفين',style:TextStyle(fontSize:12,color:Colors.black54))])),IconButton(onPressed:load,icon:const Icon(Icons.refresh,color:_hrCompPurple))]),
-      const SizedBox(height:10),if(!readOnly)Wrap(spacing:6,children:[ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:load),ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:addRecord)]),
+      const SizedBox(height:10),Wrap(spacing:6,children:[ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:load),if(canCreate)ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:addRecord)]),
       if(error!=null||message!=null)Container(margin:const EdgeInsets.only(top:10),padding:const EdgeInsets.all(10),decoration:BoxDecoration(color:error!=null?const Color(0xFFFFEEEE):const Color(0xFFEAF6EC),borderRadius:BorderRadius.circular(8)),child:Text(error??message!,style:TextStyle(color:error!=null?Colors.red.shade800:Colors.green.shade800))),
       if(loading)const LinearProgressIndicator(color:_hrCompOrange),
       const SizedBox(height:10),Row(children:[Expanded(child:Text('إجمالي السجلات: ${rows.length}',style:const TextStyle(color:_hrCompPurple,fontWeight:FontWeight.w800))),Text('بانتظار الإجراء: ${pending}',style:const TextStyle(color:_hrCompOrange,fontWeight:FontWeight.w800))]),
