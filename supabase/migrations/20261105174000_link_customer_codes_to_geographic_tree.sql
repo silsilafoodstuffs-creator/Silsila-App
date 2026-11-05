@@ -52,3 +52,36 @@ begin
 end;
 $$;
 grant execute on function public.erp_preview_next_customer_geo_code(uuid,uuid) to authenticated;
+
+-- Regenerate the customer code if the selected geographic area changes.
+create or replace function public.erp_assign_customer_geo_code()
+returns trigger language plpgsql security definer set search_path=''
+as $$
+declare v_geo_code text; v_prefix text:='Cus'; v_digits integer:=4; v_policy text; v_max bigint; v_lock text;
+begin
+ if coalesce(new.party_kind,'')<>'customer' then return new; end if;
+ if tg_op='UPDATE' and new.geographic_area_id is not distinct from old.geographic_area_id then return new; end if;
+ if new.geographic_area_id is null then raise exception 'اختيار المنطقة مطلوب لتوليد كود العميل المرتبط بالتقسيم الجغرافي'; end if;
+ select hierarchical_code into v_geo_code from public.erp_geographic_data where id=new.geographic_area_id and company_id=new.company_id and level='area' and is_active=true;
+ if v_geo_code is null or v_geo_code !~ '^[0-9]{8}$' then raise exception 'المنطقة المختارة لا تحتوي على كود جغرافي صحيح من 8 أرقام'; end if;
+ select policy_value into v_policy from public.erp_program_policies where company_id=new.company_id and policy_key='code_generation_registry' limit 1;
+ if v_policy is not null and left(v_policy,1)='{' then
+  v_prefix:=coalesce(nullif(v_policy::jsonb #>> '{types,customer,prefix}',''),'Cus');
+  v_digits:=coalesce(nullif(v_policy::jsonb #>> '{types,customer,digits}','')::integer,4);
+ end if;
+ if v_prefix<>'Cus' or v_digits<1 or v_digits>12 then raise exception 'سياسة كود العميل يجب أن تستخدم البادئة Cus وعدد خانات من 1 إلى 12'; end if;
+ v_lock:=new.company_id::text||':customer:'||new.geographic_area_id::text;
+ perform pg_advisory_xact_lock(hashtextextended(v_lock,0));
+ select coalesce(max(substring(party_code from (length(v_prefix||v_geo_code)+1))::bigint),0) into v_max
+ from public.erp_parties where company_id=new.company_id and party_kind='customer'
+ and geographic_area_id=new.geographic_area_id and party_code ~ ('^'||v_prefix||v_geo_code||'[0-9]+$')
+ and (tg_op='INSERT' or id<>new.id);
+ if coalesce(v_max,0)+1>=power(10::numeric,v_digits) then raise exception 'انتهت خانات تسلسل العملاء داخل هذه المنطقة؛ زد عدد الخانات من سياسات التكويد'; end if;
+ new.party_code:=v_prefix||v_geo_code||lpad((coalesce(v_max,0)+1)::text,v_digits,'0');
+ return new;
+end;
+$$;
+drop trigger if exists a_erp_parties_geo_customer_code on public.erp_parties;
+create trigger a_erp_parties_geo_customer_code
+before insert or update of geographic_area_id on public.erp_parties
+for each row execute function public.erp_assign_customer_geo_code();
