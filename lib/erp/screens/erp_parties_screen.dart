@@ -309,6 +309,10 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
   Future<void> _save() async {
     final client=db; if(client==null||companyId==null)return;
     if(fields['name_ar']!.text.trim().isEmpty){setState(()=>error='الاسم العربي مطلوب.');return;}
+    if (kind == 'customer' && (selectedGovernorate == null || selectedDistrict == null || selectedArea == null)) {
+      setState(() => error = 'لا يمكن حفظ العميل دون تحديد المحافظة والمركز/الحي والمنطقة؛ كود العميل يُولد تلقائيًا من هذا التقسيم.');
+      return;
+    }
     setState(() { saving = true; error = null; message = null; });
     final gov=geos.where((g)=>s(g['id'])==selectedGovernorate).firstOrNull;
     final dist=geos.where((g)=>s(g['id'])==selectedDistrict).firstOrNull;
