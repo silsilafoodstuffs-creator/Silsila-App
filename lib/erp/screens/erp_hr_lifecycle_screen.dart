@@ -13,6 +13,7 @@ class _ErpHrLifecycleScreenState extends State<ErpHrLifecycleScreen>{
   String get cid=>(widget.companyId??'').trim();
   bool get movement=>widget.initialView=='movements';
   bool get getInterviews=>widget.initialView=='interviews';
+  bool get readOnly=>(widget.title??'').startsWith('تقرير')||(widget.title??'').startsWith('كشف');
   bool loading=false,saving=false; String? error,message;
   List<Map<String,dynamic>> candidates=[],employees=[],jobs=[],departments=[],branches=[],moves=[];
   static const stages={'new':'جديد','screening':'فرز أولي','interview':'مقابلة','accepted':'مقبول','rejected':'مرفوض','withdrawn':'منسحب'};
