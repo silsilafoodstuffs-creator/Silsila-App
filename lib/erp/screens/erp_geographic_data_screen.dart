@@ -647,7 +647,8 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         : rows.where((row) =>
             s(row['name_ar']).toLowerCase().contains(_searchQuery) ||
             s(row['name_en']).toLowerCase().contains(_searchQuery) ||
-            s(row['geo_code']).toLowerCase().contains(_searchQuery)).toList()
+            s(row['geo_code']).toLowerCase().contains(_searchQuery) ||
+            s(row['hierarchical_code']).toLowerCase().contains(_searchQuery)).toList()
           ..sort((a, b) => s(a['geo_code']).compareTo(s(b['geo_code'])));
     final visibleRows = _viewMode == 'tree' && _searchQuery.isEmpty
         ? roots
