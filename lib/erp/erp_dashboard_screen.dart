@@ -37,7 +37,7 @@ import 'screens/erp_stocktake_screen.dart';
 import 'screens/erp_hr_operations_screen.dart';
 import 'screens/erp_hr_affairs_screen.dart';
 import 'screens/erp_business_suite_screen.dart';
-import 'screens/erp_enterprise_modules_screen.dart';
+
 import 'screens/erp_hr_executive_dashboard_screen.dart';
 import 'screens/erp_hr_leave_screen.dart';
 import 'screens/erp_employee_master_screen.dart';
@@ -1244,7 +1244,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                     )
                                   : (_page == 'حركة نقدية' || _page == 'أمر صرف / توريد نقدية' || _page == 'أمر صرف شيكات' || _page == 'حركة صرف / توريد شيكات' || _page == 'تسجيل دفاتر شيكات' || _page == 'متابعة الشيكات' || _page == 'شيكات الائتمان' || _page == 'السياسات المحاسبية')
                                       ? ErpFinancialOperationsScreen(companyId: _appManagementCompanyId, initialView: _page)
-                                      : ['أصول ثابتة','تصنيع','مقاولات','خدمة ومتابعة وعلاقات عملاء'].contains(_module) ? ErpEnterpriseModulesScreen(module: _module, group: _group, page: _page, companyId: _appManagementCompanyId)
+                                      : ['أصول ثابتة','تصنيع','مقاولات','خدمة ومتابعة وعلاقات عملاء'].contains(_module) ? ErpBusinessSuiteScreen(module: _module, group: _group, page: _page, companyId: _appManagementCompanyId)
                                       : (_module == 'شئون موظفين' || _module == 'موارد بشرية')
                                       ? ErpHrAffairsScreen(page: _page, companyId: _appManagementCompanyId, canManage: _hrDashboardCanManage)
                                       : _page == 'الفروع'
