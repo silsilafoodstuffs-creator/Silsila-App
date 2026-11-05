@@ -21,3 +21,9 @@ create policy erp_countries_member_access on public.erp_countries
   for all to authenticated
   using (public.erp_user_can_access_company(company_id))
   with check (public.erp_user_can_access_company(company_id));
+
+-- Preserve the existing geographic tree and add Egypt as a separate country master row.
+insert into public.erp_countries(company_id,country_code,name_ar,name_en,is_active)
+select distinct company_id,'20','مصر','Egypt',true
+from public.erp_geographic_data
+on conflict(company_id,country_code) do nothing;
