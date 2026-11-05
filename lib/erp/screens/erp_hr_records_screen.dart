@@ -75,7 +75,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
       return _Config(p,'erp_hr_overtime_requests',const [
         _Field('employee_id','الموظف',type:'employee',required:true),_Field('work_date','التاريخ',type:'date',required:true),
         _Field('hours','عدد الساعات',type:'number',required:true),_Field('hourly_rate','قيمة الساعة',type:'number',required:true),
-        _Field('amount','إجمالي المستحق',type:'number',required:true),_Field('reason','السبب',required:true),
+        _Field('amount','إجمالي المستحق',type:'number'),_Field('reason','السبب',required:true),
         _Field('status','الحالة',type:'choice',options:['pending','approved','rejected','paid']),_Field('notes','ملاحظات'),
       ],const [
         {'work_date':'2026-11-02','hours':'2','hourly_rate':'50','amount':'100','reason':'جرد مخزن — مثال','status':'pending'},
@@ -267,7 +267,20 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
           controller:ctrls[f.key],keyboardType:f.type=='number'?const TextInputType.numberWithOptions(decimal:true):TextInputType.text,
           maxLines:['notes','reason','strengths','improvement_areas','goals'].contains(f.key)?3:1,
           decoration:InputDecoration(labelText:f.label,border:const OutlineInputBorder(),hintText:f.type=='date'?'YYYY-MM-DD':null),
-          validator:f.required?(v)=>(v??'').trim().isEmpty?'هذا الحقل مطلوب':null:null,
+          validator:(v){
+            final value=(v??'').trim();
+            if(f.required && value.isEmpty)return 'هذا الحقل مطلوب';
+            if(value.isEmpty)return null;
+            if(f.type=='date' && DateTime.tryParse(value)==null)return 'اكتب التاريخ بصيغة YYYY-MM-DD';
+            if(f.type=='number'){
+              final number=num.tryParse(value.replaceAll(',','.'));
+              if(number==null)return 'أدخل رقمًا صحيحًا';
+              if(number<0)return 'لا يمكن إدخال قيمة سالبة';
+              if(f.key=='score' && number>100)return 'الدرجة يجب ألا تتجاوز 100';
+              if((f.key=='hours'||f.key=='installments'||(f.key=='amount' && c.table=='erp_hr_employee_advances')) && number<=0)return 'يجب أن تكون القيمة أكبر من صفر';
+            }
+            return null;
+          },
         ));
       }).toList())))),
       actions:[
