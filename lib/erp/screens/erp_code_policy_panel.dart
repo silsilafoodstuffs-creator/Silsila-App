@@ -211,8 +211,8 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           Row(children:const[
             SizedBox(width:30,child:Text('م',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             Expanded(child:Text('الشاشة / نوع التكويد',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
-            SizedBox(width:80,child:Text('3 حروف',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             SizedBox(width:66,child:Text('الخانات',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
+            SizedBox(width:80,child:Text('3 حروف',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
           ]),
         ]))),
@@ -223,9 +223,9 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             child:Row(children:[
               SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
               Expanded(child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
-              _field(_prefix[key]!,max:3,letters:true,changed:(){}),
-              const SizedBox(width:5),
               _field(_digits[key]!,max:2,letters:false,changed:(){}),
+              const SizedBox(width:5),
+              _field(_prefix[key]!,max:3,letters:true,changed:(){}),
               SizedBox(width:112,child:Text(_preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple))),
             ]));
         }),
