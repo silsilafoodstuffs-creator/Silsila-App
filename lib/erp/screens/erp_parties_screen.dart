@@ -234,7 +234,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     setState(()=>loading=true);
     try {
       final result=await Future.wait<dynamic>([
-        client.from('erp_parties').select('id,party_code,party_name,party_name_en,party_kind,country,address,governorate,district,center,area,customer_type,transaction_type,sales_rep_employee_id,is_active').eq('company_id',cid).eq('party_kind',kind).order('party_code').limit(2000),
+        client.from('erp_parties').select('id,party_code,party_name,party_name_en,party_kind,country,address,governorate,district,center,area,geo_area_id,customer_type,transaction_type,sales_rep_employee_id,is_active').eq('company_id',cid).eq('party_kind',kind).order('party_code').limit(2000),
         _fetchAllGeo(client,cid),
         client.from('erp_party_classifications').select('id,name_ar,name_en').eq('company_id',cid).eq('party_kind',kind).eq('is_active',true).order('name_ar'),
         client.from('erp_employees').select('id,employee_code,full_name,job_title').eq('company_id',cid).eq('is_active',true).order('full_name'),
@@ -269,6 +269,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     fields['party_code']!.text=await _nextCode();
   }
   Future<String> _nextCode() async {
+    if (kind == 'customer') return '';
     final client = db;
     final cid = companyId;
     if (client == null || cid == null || cid.isEmpty) return '';
@@ -280,6 +281,19 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       return preview.toString();
     } catch (_) { return kind == 'customer' ? 'Cus00001' : 'Sup00001'; }
   }
+  Future<void> _refreshCustomerCode() async {
+    if (kind != 'customer' || selectedArea == null || companyId == null) return;
+    try {
+      final value = await db!.rpc('erp_preview_next_customer_geo_code', params: {
+        'p_company_id': companyId,
+        'p_geo_area_id': selectedArea,
+      });
+      if (mounted && selectedArea != null) setState(() => fields['party_code']!.text = value.toString());
+    } catch (e) {
+      if (mounted) setState(() => error = 'تعذر معاينة كود العميل للمنطقة المحددة: $e');
+    }
+  }
+
   void _select(Map<String,dynamic> row) {
     setState(() { editing = false; selectedPartyId = s(row['id']); selectedClassification = classifications.where((c) => s(c['name_ar']) == s(row['customer_type'])).map((c) => s(c['id'])).firstOrNull; selectedGovernorate = geos.where((g) => s(g['name_ar']) == s(row['governorate']) && s(g['level']) == 'governorate').map((g) => s(g['id'])).firstOrNull; selectedRep = s(row['sales_rep_employee_id']).isEmpty ? null : s(row['sales_rep_employee_id']); });
     fields['party_code']!.text=s(row['party_code']); fields['name_ar']!.text=s(row['party_name']); fields['name_en']!.text=s(row['party_name_en']); fields['country']!.text=s(row['country']).isEmpty?'مصر':s(row['country']); fields['address']!.text=s(row['address']); fields['customer_type']!.text=s(row['customer_type']); fields['transaction_type']!.text=s(row['transaction_type']).isEmpty?'نقدي':s(row['transaction_type']);
@@ -296,10 +310,10 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     final area=geos.where((g)=>s(g['id'])==selectedArea).firstOrNull;
     final cls=classifications.where((c)=>s(c['id'])==selectedClassification).firstOrNull;
     final payload=<String,dynamic>{
-      'company_id':companyId,'party_code':selectedPartyId==null?'':fields['party_code']!.text.trim(),'party_name':fields['name_ar']!.text.trim(),
+      'company_id':companyId,'party_code':selectedPartyId==null?(kind=='customer'?'':fields['party_code']!.text.trim()):fields['party_code']!.text.trim(),'party_name':fields['name_ar']!.text.trim(),
       'party_name_en':fields['name_en']!.text.trim().isEmpty?null:fields['name_en']!.text.trim(),'party_kind':kind,
       'country':fields['country']!.text.trim().isEmpty?'مصر':fields['country']!.text.trim(),'address':fields['address']!.text.trim().isEmpty?null:fields['address']!.text.trim(),
-      'governorate':gov==null?null:s(gov['name_ar']),'district':dist==null?null:s(dist['name_ar']),'area':area==null?null:s(area['name_ar']),
+      'governorate':gov==null?null:s(gov['name_ar']),'district':dist==null?null:s(dist['name_ar']),'area':area==null?null:s(area['name_ar']),'geo_area_id':kind=='customer'?selectedArea:null,
       'customer_type':cls==null?null:s(cls['name_ar']),'transaction_type':kind=='customer'?(fields['transaction_type']!.text.isEmpty?'نقدي':fields['transaction_type']!.text):null,
       'sales_rep_employee_id':selectedRep,
     };
@@ -443,7 +457,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       if(editing)Card(child:Padding(padding:const EdgeInsets.all(10),child:Column(children:[
         Row(children:[Expanded(child:_text('party_code','كود ${kind=='customer'?'العميل':'المورد'} (إنجليزي + أرقام)')),Expanded(flex:2,child:_text('name_ar','الاسم بالعربية *')),Expanded(flex:2,child:_text('name_en','الاسم بالإنجليزية')),Expanded(child:_drop(label:'التصنيف',value:selectedClassification,items:classifications.map((c)=>DropdownMenuItem(value:s(c['id']),child:Text(s(c['name_ar'])))).toList(),onChanged:(v)=>setState(()=>selectedClassification=v))) ]),
         const SizedBox(height:8),
-        Row(children:[Expanded(child:_drop(label:'الدولة',value:fields['country']!.text.isEmpty?'مصر':fields['country']!.text,items:countries.map((c)=>DropdownMenuItem(value:c,child:Text(c))).toList(),onChanged:(v)=>setState(()=>fields['country']!.text=v??'مصر'))),Expanded(child:_geoDrop('governorate','المحافظة',selectedGovernorate,(v) => setState(() { selectedGovernorate = v; selectedDistrict = null; selectedArea = null; }))),Expanded(child:_geoDrop('district','مركز / حي',selectedDistrict,(v) => setState(() { selectedDistrict = v; selectedArea = null; }),selectedGovernorate)),Expanded(child:_geoDrop('area','منطقة / قرية',selectedArea,(v)=>setState(()=>selectedArea=v),selectedDistrict)),Expanded(flex:2,child:_text('address','العنوان')),IconButton(tooltip:'فتح خرائط Google',onPressed:_map,icon:const Icon(Icons.map_outlined,color:purple))]),
+        Row(children:[Expanded(child:_drop(label:'الدولة',value:fields['country']!.text.isEmpty?'مصر':fields['country']!.text,items:countries.map((c)=>DropdownMenuItem(value:c,child:Text(c))).toList(),onChanged:(v)=>setState(()=>fields['country']!.text=v??'مصر'))),Expanded(child:_geoDrop('governorate','المحافظة',selectedGovernorate,(v) => setState(() { selectedGovernorate = v; selectedDistrict = null; selectedArea = null; }))),Expanded(child:_geoDrop('district','مركز / حي',selectedDistrict,(v) => setState(() { selectedDistrict = v; selectedArea = null; }),selectedGovernorate)),Expanded(child:_geoDrop('area','منطقة / قرية',selectedArea,(v){ setState(()=>selectedArea=v); _refreshCustomerCode(); },selectedDistrict)),Expanded(flex:2,child:_text('address','العنوان')),IconButton(tooltip:'فتح خرائط Google',onPressed:_map,icon:const Icon(Icons.map_outlined,color:purple))]),
         const SizedBox(height:8),
         Row(children:[Expanded(child:_drop(label:'نوع العميل',value:fields['transaction_type']!.text,items:const [DropdownMenuItem(value:'نقدي',child:Text('نقدي')),DropdownMenuItem(value:'آجل',child:Text('آجل')),DropdownMenuItem(value:'بيع مباشر',child:Text('بيع مباشر'))],onChanged:null)),Expanded(child:_drop(label:'مندوب المبيعات',value:selectedRep,items:reps.map((r)=>DropdownMenuItem(value:s(r['id']),child:Text('${s(r['employee_code'])} - ${s(r['full_name'])}'))).toList(),onChanged:(v)=>setState(()=>selectedRep=v))),const Spacer()]),
         const Align(alignment:Alignment.centerRight,child:Text('نوع التعامل يبدأ «نقدي» ولا يُعدّل من هذه الشاشة؛ التغيير من شاشة ائتمان العملاء.',style:TextStyle(fontSize:12,color:Colors.deepOrange))),
