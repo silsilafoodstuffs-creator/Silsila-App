@@ -205,7 +205,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         return;
       }
     }
-    if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(_geoPrefix.text.trim())) {
+    if (_geoPrefix.text.trim() != 'Rig') {
       setState(() => _error = 'بادئة المنطقة يجب أن تكون 3 حروف إنجليزية مثل Rig.');
       return;
     }
@@ -275,7 +275,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           _segmentField('المحافظة (4)',_geoSegments['governorate']!,4),
           _segmentField('المركز/الحي (6)',_geoSegments['center']!,6),
           _segmentField('المنطقة (8)',_geoSegments['area']!,8),
-          _field(_geoPrefix,max:3,letters:true,changed:(){}),
+          SizedBox(width:76,child:TextField(controller:_geoPrefix,readOnly:true,textAlign:TextAlign.center,decoration:const InputDecoration(labelText:'بادئة المنطقة',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.all(8)))),
         ]),
         const SizedBox(height:5),
         const Text('مثال: كود مصر + المحافظة + المركز/الحي + المنطقة؛ بادئة المنطقة Rig.',style:TextStyle(fontSize:10)),
