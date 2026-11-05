@@ -234,7 +234,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     setState(()=>loading=true);
     try {
       final result=await Future.wait<dynamic>([
-        client.from('erp_parties').select('id,party_code,party_name,party_name_en,party_kind,country,address,governorate,district,center,area,geo_area_id,customer_type,transaction_type,sales_rep_employee_id,is_active').eq('company_id',cid).eq('party_kind',kind).order('party_code').limit(2000),
+        client.from('erp_parties').select('id,party_code,party_name,party_name_en,party_kind,country,address,governorate,district,center,area,geo_area_id,geographic_area_id,customer_type,transaction_type,sales_rep_employee_id,is_active').eq('company_id',cid).eq('party_kind',kind).order('party_code').limit(2000),
         _fetchAllGeo(client,cid),
         client.from('erp_party_classifications').select('id,name_ar,name_en').eq('company_id',cid).eq('party_kind',kind).eq('is_active',true).order('name_ar'),
         client.from('erp_employees').select('id,employee_code,full_name,job_title').eq('company_id',cid).eq('is_active',true).order('full_name'),
@@ -313,7 +313,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
       'company_id':companyId,'party_code':selectedPartyId==null?(kind=='customer'?'':fields['party_code']!.text.trim()):fields['party_code']!.text.trim(),'party_name':fields['name_ar']!.text.trim(),
       'party_name_en':fields['name_en']!.text.trim().isEmpty?null:fields['name_en']!.text.trim(),'party_kind':kind,
       'country':fields['country']!.text.trim().isEmpty?'مصر':fields['country']!.text.trim(),'address':fields['address']!.text.trim().isEmpty?null:fields['address']!.text.trim(),
-      'governorate':gov==null?null:s(gov['name_ar']),'district':dist==null?null:s(dist['name_ar']),'area':area==null?null:s(area['name_ar']),'geo_area_id':kind=='customer'?selectedArea:null,
+      'governorate':gov==null?null:s(gov['name_ar']),'district':dist==null?null:s(dist['name_ar']),'area':area==null?null:s(area['name_ar']),'geographic_area_id':kind=='customer'?selectedArea:null,
       'customer_type':cls==null?null:s(cls['name_ar']),'transaction_type':kind=='customer'?(fields['transaction_type']!.text.isEmpty?'نقدي':fields['transaction_type']!.text):null,
       'sales_rep_employee_id':selectedRep,
     };
