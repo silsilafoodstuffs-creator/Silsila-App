@@ -36,6 +36,8 @@ import 'screens/erp_inventory_screen.dart';
 import 'screens/erp_stocktake_screen.dart';
 import 'screens/erp_hr_operations_screen.dart';
 import 'screens/erp_hr_executive_dashboard_screen.dart';
+import 'screens/erp_hr_lifecycle_screen.dart';
+import 'screens/erp_hr_compensation_screen.dart';
 import 'screens/erp_hr_leave_screen.dart';
 import 'screens/erp_employee_master_screen.dart';
 import 'screens/erp_hr_structure_screen.dart';
@@ -109,10 +111,74 @@ const Map<String, Map<String, List<String>>> _modules = {
     'حركات': ['عروض الأصناف', 'مجلات عروض العملاء', 'عروض الترويج', 'عروض الرواكد', 'نواقص العملاء', 'عرض سعر', 'أمر بيع', 'فاتورة بيع', 'مرتجع مبيعات', 'إذن التجهيز', 'إذن التسليم', 'كشف حساب عميل', 'تحصيلات العملاء', 'متابعة المديونيات', 'طلبات العملاء', 'تسليم عهدة مندوب', 'تصفية عهدة مندوب', 'تحصيل نقدي', 'مصروفات رحلة', 'مسودات العمولات'],
     'تقارير': ['المبيعات اليومية', 'ربحية المبيعات', 'مبيعات حسب الفرع', 'أداء المندوبين', 'الطلبات المتأخرة', 'تحقيق أهداف العملاء', 'تقرير العمولات المستحقة', 'أرصدة العملاء', 'أعمار الديون', 'أفضل العملاء', 'العملاء المتوقفون', 'تصفية المندوبين', 'تحصيلات يومية', 'تكلفة خطوط السير'],
   },
-  'موارد بشرية': {
-    'بيانات أساسية': ['ملخص إدارة موارد بشرية', 'بيانات الموظفين', 'بيانات الوظائف', 'بيانات الإدارات', 'العقود', 'أنواع الإجازات', 'قواعد الورديات والحضور والانصراف', 'أجهزة البصمة وربط الحضور', 'عناصر المرتبات', 'سياسات العمولة'],
-    'حركات': ['الحضور والانصراف', 'الإجازات والأذونات', 'الجزاءات والمكافآت', 'السلف', 'تقييم الأداء', 'مسير الرواتب', 'صرف الرواتب', 'عمولات المبيعات', 'تسوية سلفة'],
-    'تقارير': ['كشف العاملين', 'الحضور والغياب', 'رصيد الإجازات', 'انتهاء العقود', 'ملخص الرواتب', 'مفردات المرتب', 'شريط قبض موظف', 'شريط قبض مجمع', 'عمولات المندوبين'],
+  'شئون موظفين': {
+    'بيانات أساسية': [
+      'ملخص إدارة موارد بشرية',
+      'بيانات الموظفين',
+      'الهيكل الوظيفي',
+      'بيانات الإدارات',
+      'بيانات الوظائف',
+      'مواقع العمل',
+      'العقود',
+      'أنواع العقود',
+      'أنواع التعيين',
+      'مصادر التوظيف',
+      'مراحل التوظيف',
+      'أنواع الإجازات',
+      'قواعد الورديات والحضور والانصراف',
+      'عناصر المرتبات',
+      'سياسات الرواتب',
+      'قواعد العمل الإضافي',
+      'قواعد الجزاءات والمكافآت',
+      'سياسات العمولات',
+      'أنواع المستندات الوظيفية',
+    ],
+    'حركات': [
+      'طلبات التوظيف',
+      'مقابلات التوظيف',
+      'طلبات التعيين',
+      'تعيين موظف',
+      'مباشرة العمل',
+      'تجديد العقود',
+      'نقل وندب الموظفين',
+      'ترقيات وتغييرات وظيفية',
+      'الحضور والانصراف',
+      'الإجازات والأذونات',
+      'العمل الإضافي',
+      'الجزاءات والمكافآت',
+      'السلف',
+      'تقييم الأداء',
+      'مسير الرواتب',
+      'اعتماد مسير الرواتب',
+      'صرف الرواتب',
+      'عمولات المبيعات',
+      'تسوية سلفة',
+      'تسوية نهاية الخدمة',
+      'إنهاء الخدمة',
+    ],
+    'تقارير': [
+      'كشف العاملين',
+      'الحضور والغياب',
+      'رصيد الإجازات',
+      'انتهاء العقود',
+      'ملخص الرواتب',
+      'مفردات المرتب',
+      'شريط قبض موظف',
+      'شريط قبض مجمع',
+      'عمولات المندوبين',
+      'تقرير التعيينات',
+      'تقرير طلبات التوظيف',
+      'تقرير المقابلات',
+      'توزيع القوى العاملة',
+      'تقرير العمل الإضافي',
+      'تقرير الجزاءات والمكافآت',
+      'كشف سلف الموظفين',
+      'تكلفة العمالة حسب الإدارة',
+      'تحليل الرواتب',
+      'تحليل دوران العمالة',
+      'تقرير تقييم الأداء',
+      'تسويات نهاية الخدمة',
+    ],
   },
   'علاقات عملاء': {
     'بيانات أساسية': ['الحملات التسويقية', 'قواعد العروض', 'شرائح العملاء', 'أنواع الطلبات', 'قنوات التواصل', 'أسباب الشكاوى'],
@@ -152,6 +218,19 @@ const Map<String, Map<String, List<String>>> _modules = {
     ],
     'تقارير': ['تقارير الفاتورة الإلكترونية'],
   },
+};
+
+
+const Set<String> _hrPlannedPages = <String>{
+  'أنواع العقود',
+  'أنواع التعيين',
+  'مصادر التوظيف',
+  'مراحل التوظيف',
+  'سياسات الرواتب',
+  'قواعد العمل الإضافي',
+  'قواعد الجزاءات والمكافآت',
+  'أنواع المستندات الوظيفية',
+  'أنواع الإجازات'
 };
 
 class ErpDashboardScreen extends StatefulWidget {
@@ -253,6 +332,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     'تحقيق أهداف العملاء', 'تقرير العمولات المستحقة',
     'كشف العاملين', 'الحضور والغياب', 'رصيد الإجازات', 'انتهاء العقود',
     'ملخص الرواتب', 'مفردات المرتب', 'شريط قبض موظف', 'شريط قبض مجمع', 'عمولات المندوبين',
+    'توزيع القوى العاملة', 'تكلفة العمالة حسب الإدارة', 'تحليل الرواتب', 'تحليل دوران العمالة',
     'أداء العروض', 'تكلفة الحملات', 'معدل الاستجابة', 'التذاكر المفتوحة',
     'زمن الاستجابة', 'رضا العملاء',
   }.contains(page);
@@ -401,7 +481,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         for (final row in (rows as List).whereType<Map<String, dynamic>>())
           (row['menu_key'] ?? '').toString(): row['allow_access'] == true,
       };
-      const hrDashboardKey = 'موارد بشرية::بيانات أساسية::ملخص إدارة موارد بشرية';
+      const hrDashboardKey = 'شئون موظفين::بيانات أساسية::ملخص إدارة موارد بشرية';
       final isHrManager = jobTitle == 'مدير موارد بشرية';
       final isHrResponsible = jobTitle == 'مسئول موارد بشرية' || jobTitle == 'مسؤول موارد بشرية';
       final isCompanyAdmin = memberRole == 'owner' || memberRole == 'admin';
@@ -1242,7 +1322,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                         ? ErpKeyboardNavigation(child: ErpBusinessWorkspaceScreen(onExit: _goHome))
                         : SingleChildScrollView(
                       padding: EdgeInsets.all(pagePadding),
-                      child: ErpKeyboardNavigation(child: _page == 'مسح جميع البيانات' ? ErpClearDataScreen(companyId: _appManagementCompanyId) : _page == 'أنواع الأنشطة' ? ErpActivityTypesScreen(companyId: _appManagementCompanyId) : _page == 'سياسات البرنامج' ? ErpProgramPoliciesScreen(companyId: _appManagementCompanyId) : _page == 'مؤجلات وعمولات الموردين' ? ErpSupplierDeferredCommissionsScreen(companyId: _appManagementCompanyId) : _page == 'عن البرنامج' ? _about() : _page == 'قاعدة العملاء المحتملين' ? ErpPublicLeadsScreen(companyId: _appManagementCompanyId) : _page == 'إضافة حسابات جروبات فيسبوك' ? ErpFacebookGroupLeadsScreen(companyId: _appManagementCompanyId) : _page == 'أهداف المبيعات' || _page == 'بيانات مندوبين المبيعات' || _page == 'عمولات المندوبين' || _page == 'عمولات المبيعات' || _page == 'خطط العمولة' || _page == 'مسودات العمولات' || _page == 'تحقيق أهداف العملاء' || _page == 'تقرير العمولات المستحقة' ? (_page == 'بيانات مندوبين المبيعات' ? ErpSalesRepresentativesScreen(companyId: _appManagementCompanyId) : ErpSalesTargetsCommissionsScreen(companyId: _appManagementCompanyId, initialTabIndex: _page == 'عمولات المندوبين' || _page == 'عمولات المبيعات' ? 1 : _page == 'خطط العمولة' ? 2 : _page == 'مسودات العمولات' || _page == 'تقرير العمولات المستحقة' ? 3 : 0)) : _page == 'بيانات العملاء' || _page == 'بيانات الموردين' ? ErpPartiesScreen(initialCompanyId: _appManagementCompanyId, initialKind: _page == 'بيانات الموردين' ? 'supplier' : 'customer') : _page == 'حدود الائتمان' ? ErpCustomerCreditScreen(companyId: _appManagementCompanyId) : (_page == 'حركة نقدية' || _page == 'أمر صرف / توريد نقدية' || _page == 'أمر صرف شيكات' || _page == 'حركة صرف / توريد شيكات' || _page == 'تسجيل دفاتر شيكات' || _page == 'متابعة الشيكات' || _page == 'شيكات الائتمان' || _page == 'السياسات المحاسبية') ? ErpFinancialOperationsScreen(companyId: _appManagementCompanyId, initialView: _page) : _page == 'طرق الدفع' ? ErpPaymentMethodsScreen(companyId: _appManagementCompanyId) : _page == 'العملات' ? ErpCurrenciesScreen(companyId: _appManagementCompanyId) : _page == 'شجرة الحسابات' ? ErpAccountsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'الفترات المالية' || _page == 'إقفال الفترة' ? ErpFiscalPeriodsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'قائمة اعتماد القيود' ? ErpJournalEntriesScreen(initialCompanyId: _appManagementCompanyId, initialStatus: 'draft') : _page == 'قيود اليومية' ? ErpJournalEntriesScreen(initialCompanyId: _appManagementCompanyId) : _page == 'ميزان المراجعة' ? ErpLedgerReportsScreen(kind: ErpLedgerReportKind.trialBalance, initialCompanyId: _appManagementCompanyId) : _page == 'الأستاذ العام' ? ErpLedgerReportsScreen(kind: ErpLedgerReportKind.generalLedger, initialCompanyId: _appManagementCompanyId) : _page == 'حركة حساب' ? ErpLedgerReportsScreen(kind: ErpLedgerReportKind.accountMovement, initialCompanyId: _appManagementCompanyId) : _page == 'الملخص التنفيذي' || _page == 'ملخص تنفيذي' ? _home() : _module == 'إعدادات عامة' && _page == 'بيانات الشركة' ? ErpCompanyProfileScreen(companyId: _appManagementCompanyId, onCompanyCreated: (companyId) async { if (!mounted) return; setState(() => _appManagementCompanyId = companyId); await _loadWorkspaceSettings(companyId); await _loadExecutiveMetrics(companyId); }) : _page == 'إدارة إعلانات التطبيق' ? ErpAppAdvertisementsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey] ?? '') : _page == 'إدارة الشعار والصور' ? ErpAppAssetsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey] ?? '', initialAssetType: 'app_logo') : _page == 'إدارة صور الأصناف والفئات' ? ErpAppAssetsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey] ?? '', initialAssetType: 'item') : _page == 'إدارة صور الموردين والعملاء' ? ErpAppAssetsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey] ?? '', initialAssetType: 'supplier') : _page == 'إدارة شركات الشحن' ? const ErpShippingCompaniesScreen() : _page == 'الفروع' ? ErpBranchesScreen(companyId: _appManagementCompanyId, embedded: true) : _page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة' ? ErpCostCentersScreen(companyId: _appManagementCompanyId) : _page == 'بيانات جغرافية' ? ErpGeographicDataScreen(companyId: _appManagementCompanyId) : _module == 'إدارة تطبيقات' && !_isDatabaseReport(_page) ? _appManagement() : _page == 'اختبار ومراجعة الحركات' ? ErpMovementAuditScreen(initialCompanyId: _appManagementCompanyId) : _page == 'جامع صور الأصناف' ? const ErpImageCollectorScreen() : _page == 'استيراد بيانات اصناف' ? const ErpItemDataImportScreen() : _page == 'تنزيل بيانات أصناف' ? const ErpItemDataDownloadScreen() : (_page == 'بيانات المخازن' || _page == 'دليل المخازن والفروع' || _page == 'دليل المخازن') ? ErpInventoryMasterScreen(key: ValueKey('$_page-$_appManagementCompanyId'), initialCompanyId: _appManagementCompanyId, initialView: 'warehouses') : _page == 'فئات الأصناف' ? ErpItemCategoriesScreen(companyId: _appManagementCompanyId) : _page == 'دليل الأصناف' ? ErpInventoryMasterScreen(key: ValueKey('$_page-$_appManagementCompanyId'), initialCompanyId: _appManagementCompanyId, initialView: 'items') : _page == 'وحدات الأصناف' ? ErpItemUnitsScreen(companyId: _appManagementCompanyId) : _page == 'جرد فعلي' || _page == 'محاضر الجرد ومراجعة الفروق' || _page == 'الجرد والفروق' || _page == 'تقارير جرد المخزن' || _page == 'تسوية جرد' ? ErpStocktakeScreen(key: ValueKey('$_page-$_appManagementCompanyId'), companyId: _appManagementCompanyId ?? '', title: _page == 'تسوية جرد' ? 'التسوية المخزنية' : (_page == 'الجرد والفروق' || _page == 'تقارير جرد المخزن') ? 'تقارير جرد المخزن' : 'الجرد الفعلي للمخازن') : _page == 'أرصدة الأصناف' || _page == 'كارت الصنف' || _page == 'الجرد والفروق' || _page == 'إذن إضافة' || _page == 'إذن صرف' || _page == 'تحويل مخزني' ? ErpInventoryScreen(initialCompanyId: _appManagementCompanyId) : _page == 'ملخص إدارة موارد بشرية' ? ErpHrExecutiveDashboardScreen(companyId: _appManagementCompanyId, canManage: _hrDashboardCanManage) : _page == 'بيانات الموظفين' || _page == 'ملف الموظف' ? ErpEmployeeMasterScreen(initialCompanyId: _appManagementCompanyId) : _page == 'بيانات الوظائف' || _page == 'بيانات الإدارات' || _page == 'مواقع العمل' || _page == 'الإدارات والأقسام' || _page == 'الوظائف والدرجات' || _page == 'الهيكل الوظيفي' ? ErpHrStructureScreen(key: ValueKey('$_page-$_appManagementCompanyId'), initialCompanyId: _appManagementCompanyId, initialTab: _page == 'بيانات الإدارات' ? 'بيانات الإدارات' : _page == 'بيانات الوظائف' ? 'بيانات الوظائف' : _page, initialView: _hrStructureView, onViewChanged: (view) => setState(() => _hrStructureView = view)) : _page == 'الحضور والانصراف' ? ErpHrOperationsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'الإجازات والأذونات' ? ErpHrLeaveScreen(initialCompanyId: _appManagementCompanyId) : _page == 'عناصر المرتبات' ? ErpSalaryElementsScreen(companyId: _appManagementCompanyId) : _page == 'شريط قبض موظف' || _page == 'شريط قبض مجمع' ? ErpPayslipReportsScreen(companyId: _appManagementCompanyId, initialTab: _page == 'شريط قبض مجمع' ? 1 : 0) : _page == 'مسير الرواتب' || _page == 'صرف الرواتب' ? ErpPayrollScreen(initialCompanyId: _appManagementCompanyId) : _page == 'عروض الأصناف' ? ErpItemOffersScreen(companyId: _appManagementCompanyId) : _page == 'مجلات عروض العملاء' ? ErpItemOffersScreen(companyId: _appManagementCompanyId, initialCampaignType: 'customer_magazine', lockCampaignType: true) : _page == 'عروض الترويج' ? ErpItemOffersScreen(companyId: _appManagementCompanyId, initialCampaignType: 'promotion', lockCampaignType: true) : _page == 'عروض الرواكد' ? ErpItemOffersScreen(companyId: _appManagementCompanyId, initialCampaignType: 'slow_moving', lockCampaignType: true) : _page == 'نواقص العملاء' ? ErpCustomerShortagesScreen(companyId: _appManagementCompanyId) : _page == 'سحب أرقام جروبات واتساب' ? ErpWhatsappContactsScreen(companyId: _appManagementCompanyId) : _page == 'قوائم أسعار البيع' ? ErpPriceListsScreen(initialCompanyId: _appManagementCompanyId, initialKind: 'sale') : _page == 'قوائم أسعار الموردين' || _page == 'قوائم أسعار الشراء' ? ErpPriceListsScreen(initialCompanyId: _appManagementCompanyId, initialKind: 'purchase') : _page == 'خريطة الحسابات التشغيلية' ? ErpOperationalAccountMappingsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'الخزائن الرئيسية والفرعية' ? ErpCashboxesScreen(initialCompanyId: _appManagementCompanyId) : _page == 'طرق الدفع' ? ErpPaymentMethodsScreen(companyId: _appManagementCompanyId) : _page == 'الحسابات البنكية' ? ErpCashboxesScreen(initialCompanyId: _appManagementCompanyId, initialBankOnly: true) : _page == 'سندات القبض' || _page == 'تحصيلات العملاء' || _page == 'تحصيل نقدي' ? ErpCashVouchersScreen(initialCompanyId: _appManagementCompanyId, initialType: 'receipt') : _page == 'سندات الصرف' ? ErpCashVouchersScreen(initialCompanyId: _appManagementCompanyId, initialType: 'payment') : _page == 'تحويل بين الخزائن' ? ErpCashVouchersScreen(initialCompanyId: _appManagementCompanyId, initialType: 'transfer') : _page == 'طلب شراء' || _page == 'أمر شراء' || _page == 'استلام مشتريات' || _page == 'فاتورة مشتريات' || _page == 'مرتجع مشتريات' ? ErpOperationalDocumentsScreen(key: ValueKey('purchase-document-$_page'), initialCompanyId: _appManagementCompanyId, kind: ErpOperationalKind.purchase, initialDocumentType: _page == 'طلب شراء' || _page == 'أمر شراء' ? 'order' : _page == 'استلام مشتريات' ? 'receipt' : _page == 'مرتجع مشتريات' ? 'return' : 'invoice') : _page == 'إذن التجهيز' ? ErpSalesFulfillmentScreen(companyId: _appManagementCompanyId ?? '', kind: 'preparation') : _page == 'إذن التسليم' || _page == 'إذن تحميل' || _page == 'تسليم طلب' ? ErpSalesFulfillmentScreen(companyId: _appManagementCompanyId ?? '', kind: 'delivery') : _page == 'عرض سعر' || _page == 'أمر بيع' || _page == 'فاتورة بيع' || _page == 'مرتجع مبيعات' ? ErpOperationalDocumentsScreen(key: ValueKey('sales-document-$_page'), initialCompanyId: _appManagementCompanyId, kind: ErpOperationalKind.sales, initialDocumentType: _page == 'عرض سعر' ? 'quotation' : _page == 'أمر بيع' ? 'order' : _page == 'مرتجع مبيعات' ? 'return' : 'invoice') : _page == 'المستخدمين' || _page == 'صلاحيات المستخدمين' || _page == 'قوالب صلاحيات المستخدمين' || _page == 'احتياطي شاشة المستخدمين' ? ErpUserAdminScreen(companyId: _appManagementCompanyId, initialView: _page == 'صلاحيات المستخدمين' ? 'permissions' : _page == 'قوالب صلاحيات المستخدمين' ? 'templates' : _page == 'احتياطي شاشة المستخدمين' ? 'hierarchy' : 'types') : _modules['فاتورة الكترونية']![_group]!.contains(_page) ? ErpEinvoiceScreen(companyId: _appManagementCompanyId, initialView: _page) : _page == 'سجل العمليات' ? ErpActivityLogScreen(companyId: _appManagementCompanyId) : _page == 'إدارة مفاتيح API' || _page == 'واجهة API والربط الخارجي' || _page == 'الربط الخارجي' ? const ErpApiManagementScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? ErpDelegateAllocationScreen(companyId: _appManagementCompanyId) : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _page == 'قواعد الورديات والحضور والانصراف' ? HrShiftRulesScreen(companyId: _appManagementCompanyId) : _page == 'أجهزة البصمة وربط الحضور' ? HrFingerprintDevicesScreen(companyId: _appManagementCompanyId) : _isDatabaseReport(_page) ? ErpReportCenterScreen(companyId: _appManagementCompanyId, reportName: _page) : _workspace()),
+                      child: ErpKeyboardNavigation(child: _page == 'مسح جميع البيانات' ? ErpClearDataScreen(companyId: _appManagementCompanyId) : _page == 'أنواع الأنشطة' ? ErpActivityTypesScreen(companyId: _appManagementCompanyId) : _page == 'سياسات البرنامج' ? ErpProgramPoliciesScreen(companyId: _appManagementCompanyId) : _page == 'مؤجلات وعمولات الموردين' ? ErpSupplierDeferredCommissionsScreen(companyId: _appManagementCompanyId) : _page == 'عن البرنامج' ? _about() : _page == 'قاعدة العملاء المحتملين' ? ErpPublicLeadsScreen(companyId: _appManagementCompanyId) : _page == 'إضافة حسابات جروبات فيسبوك' ? ErpFacebookGroupLeadsScreen(companyId: _appManagementCompanyId) : _page == 'أهداف المبيعات' || _page == 'بيانات مندوبين المبيعات' || _page == 'عمولات المندوبين' || _page == 'عمولات المبيعات' || _page == 'خطط العمولة' || _page == 'سياسات العمولات' || _page == 'مسودات العمولات' || _page == 'تحقيق أهداف العملاء' || _page == 'تقرير العمولات المستحقة' ? (_page == 'بيانات مندوبين المبيعات' ? ErpSalesRepresentativesScreen(companyId: _appManagementCompanyId) : ErpSalesTargetsCommissionsScreen(companyId: _appManagementCompanyId, initialTabIndex: _page == 'عمولات المندوبين' || _page == 'عمولات المبيعات' ? 1 : _page == 'خطط العمولة' || _page == 'سياسات العمولات' ? 2 : _page == 'مسودات العمولات' || _page == 'تقرير العمولات المستحقة' ? 3 : 0)) : _page == 'بيانات العملاء' || _page == 'بيانات الموردين' ? ErpPartiesScreen(initialCompanyId: _appManagementCompanyId, initialKind: _page == 'بيانات الموردين' ? 'supplier' : 'customer') : _page == 'حدود الائتمان' ? ErpCustomerCreditScreen(companyId: _appManagementCompanyId) : (_page == 'حركة نقدية' || _page == 'أمر صرف / توريد نقدية' || _page == 'أمر صرف شيكات' || _page == 'حركة صرف / توريد شيكات' || _page == 'تسجيل دفاتر شيكات' || _page == 'متابعة الشيكات' || _page == 'شيكات الائتمان' || _page == 'السياسات المحاسبية') ? ErpFinancialOperationsScreen(companyId: _appManagementCompanyId, initialView: _page) : _page == 'طرق الدفع' ? ErpPaymentMethodsScreen(companyId: _appManagementCompanyId) : _page == 'العملات' ? ErpCurrenciesScreen(companyId: _appManagementCompanyId) : _page == 'شجرة الحسابات' ? ErpAccountsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'الفترات المالية' || _page == 'إقفال الفترة' ? ErpFiscalPeriodsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'قائمة اعتماد القيود' ? ErpJournalEntriesScreen(initialCompanyId: _appManagementCompanyId, initialStatus: 'draft') : _page == 'قيود اليومية' ? ErpJournalEntriesScreen(initialCompanyId: _appManagementCompanyId) : _page == 'ميزان المراجعة' ? ErpLedgerReportsScreen(kind: ErpLedgerReportKind.trialBalance, initialCompanyId: _appManagementCompanyId) : _page == 'الأستاذ العام' ? ErpLedgerReportsScreen(kind: ErpLedgerReportKind.generalLedger, initialCompanyId: _appManagementCompanyId) : _page == 'حركة حساب' ? ErpLedgerReportsScreen(kind: ErpLedgerReportKind.accountMovement, initialCompanyId: _appManagementCompanyId) : _page == 'الملخص التنفيذي' || _page == 'ملخص تنفيذي' ? _home() : _module == 'إعدادات عامة' && _page == 'بيانات الشركة' ? ErpCompanyProfileScreen(companyId: _appManagementCompanyId, onCompanyCreated: (companyId) async { if (!mounted) return; setState(() => _appManagementCompanyId = companyId); await _loadWorkspaceSettings(companyId); await _loadExecutiveMetrics(companyId); }) : _page == 'إدارة إعلانات التطبيق' ? ErpAppAdvertisementsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey] ?? '') : _page == 'إدارة الشعار والصور' ? ErpAppAssetsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey] ?? '', initialAssetType: 'app_logo') : _page == 'إدارة صور الأصناف والفئات' ? ErpAppAssetsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey] ?? '', initialAssetType: 'item') : _page == 'إدارة صور الموردين والعملاء' ? ErpAppAssetsScreen(companyId: _appManagementCompanyId, appId: _managedAppIds[_selectedAppKey] ?? '', initialAssetType: 'supplier') : _page == 'إدارة شركات الشحن' ? const ErpShippingCompaniesScreen() : _page == 'الفروع' ? ErpBranchesScreen(companyId: _appManagementCompanyId, embedded: true) : _page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة' ? ErpCostCentersScreen(companyId: _appManagementCompanyId) : _page == 'بيانات جغرافية' ? ErpGeographicDataScreen(companyId: _appManagementCompanyId) : _module == 'إدارة تطبيقات' && !_isDatabaseReport(_page) ? _appManagement() : _page == 'اختبار ومراجعة الحركات' ? ErpMovementAuditScreen(initialCompanyId: _appManagementCompanyId) : _page == 'جامع صور الأصناف' ? const ErpImageCollectorScreen() : _page == 'استيراد بيانات اصناف' ? const ErpItemDataImportScreen() : _page == 'تنزيل بيانات أصناف' ? const ErpItemDataDownloadScreen() : (_page == 'بيانات المخازن' || _page == 'دليل المخازن والفروع' || _page == 'دليل المخازن') ? ErpInventoryMasterScreen(key: ValueKey('$_page-$_appManagementCompanyId'), initialCompanyId: _appManagementCompanyId, initialView: 'warehouses') : _page == 'فئات الأصناف' ? ErpItemCategoriesScreen(companyId: _appManagementCompanyId) : _page == 'دليل الأصناف' ? ErpInventoryMasterScreen(key: ValueKey('$_page-$_appManagementCompanyId'), initialCompanyId: _appManagementCompanyId, initialView: 'items') : _page == 'وحدات الأصناف' ? ErpItemUnitsScreen(companyId: _appManagementCompanyId) : _page == 'جرد فعلي' || _page == 'محاضر الجرد ومراجعة الفروق' || _page == 'الجرد والفروق' || _page == 'تقارير جرد المخزن' || _page == 'تسوية جرد' ? ErpStocktakeScreen(key: ValueKey('$_page-$_appManagementCompanyId'), companyId: _appManagementCompanyId ?? '', title: _page == 'تسوية جرد' ? 'التسوية المخزنية' : (_page == 'الجرد والفروق' || _page == 'تقارير جرد المخزن') ? 'تقارير جرد المخزن' : 'الجرد الفعلي للمخازن') : _page == 'أرصدة الأصناف' || _page == 'كارت الصنف' || _page == 'الجرد والفروق' || _page == 'إذن إضافة' || _page == 'إذن صرف' || _page == 'تحويل مخزني' ? ErpInventoryScreen(initialCompanyId: _appManagementCompanyId) : _page == 'ملخص إدارة موارد بشرية' ? ErpHrExecutiveDashboardScreen(companyId: _appManagementCompanyId, canManage: _hrDashboardCanManage) : _page == 'تسوية نهاية الخدمة' || _page == 'تسويات نهاية الخدمة' ? ErpHrCompensationScreen(companyId: _appManagementCompanyId, mode: 'settlements', title: _page) : _page == 'العقود' || _page == 'تجديد العقود' ? ErpHrCompensationScreen(companyId: _appManagementCompanyId, mode: 'contracts', title: _page) : _page == 'السلف' || _page == 'تسوية سلفة' || _page == 'كشف سلف الموظفين' ? ErpHrCompensationScreen(companyId: _appManagementCompanyId, mode: 'advances', title: _page) : _page == 'الجزاءات والمكافآت' || _page == 'تقرير الجزاءات والمكافآت' ? ErpHrCompensationScreen(companyId: _appManagementCompanyId, mode: 'actions', title: _page) : _page == 'العمل الإضافي' || _page == 'تقرير العمل الإضافي' ? ErpHrCompensationScreen(companyId: _appManagementCompanyId, mode: 'overtime', title: _page) : _page == 'تقييم الأداء' || _page == 'تقرير تقييم الأداء' ? ErpHrCompensationScreen(companyId: _appManagementCompanyId, mode: 'reviews', title: _page) : _page == 'طلبات التوظيف' || _page == 'طلبات التعيين' || _page == 'مقابلات التوظيف' || _page == 'تقرير طلبات التوظيف' || _page == 'تقرير المقابلات' ? ErpHrLifecycleScreen(companyId: _appManagementCompanyId, initialView: _page == 'مقابلات التوظيف' || _page == 'تقرير المقابلات' ? 'interviews' : 'recruitment', title: _page) : _page == 'مباشرة العمل' || _page == 'نقل وندب الموظفين' || _page == 'ترقيات وتغييرات وظيفية' || _page == 'إنهاء الخدمة' || _page == 'تقرير التعيينات' ? ErpHrLifecycleScreen(companyId: _appManagementCompanyId, initialView: 'movements', title: _page) : _page == 'تعيين موظف' || _page == 'بيانات الموظفين' || _page == 'ملف الموظف' ? ErpEmployeeMasterScreen(initialCompanyId: _appManagementCompanyId) : _page == 'بيانات الوظائف' || _page == 'بيانات الإدارات' || _page == 'مواقع العمل' || _page == 'الإدارات والأقسام' || _page == 'الوظائف والدرجات' || _page == 'الهيكل الوظيفي' ? ErpHrStructureScreen(key: ValueKey('$_page-$_appManagementCompanyId'), initialCompanyId: _appManagementCompanyId, initialTab: _page == 'بيانات الإدارات' ? 'بيانات الإدارات' : _page == 'بيانات الوظائف' ? 'بيانات الوظائف' : _page, initialView: _hrStructureView, onViewChanged: (view) => setState(() => _hrStructureView = view)) : _page == 'الحضور والانصراف' ? ErpHrOperationsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'الإجازات والأذونات' ? ErpHrLeaveScreen(initialCompanyId: _appManagementCompanyId) : _page == 'عناصر المرتبات' ? ErpSalaryElementsScreen(companyId: _appManagementCompanyId) : _page == 'شريط قبض موظف' || _page == 'شريط قبض مجمع' ? ErpPayslipReportsScreen(companyId: _appManagementCompanyId, initialTab: _page == 'شريط قبض مجمع' ? 1 : 0) : _page == 'مسير الرواتب' || _page == 'اعتماد مسير الرواتب' || _page == 'صرف الرواتب' ? ErpPayrollScreen(initialCompanyId: _appManagementCompanyId) : _page == 'عروض الأصناف' ? ErpItemOffersScreen(companyId: _appManagementCompanyId) : _page == 'مجلات عروض العملاء' ? ErpItemOffersScreen(companyId: _appManagementCompanyId, initialCampaignType: 'customer_magazine', lockCampaignType: true) : _page == 'عروض الترويج' ? ErpItemOffersScreen(companyId: _appManagementCompanyId, initialCampaignType: 'promotion', lockCampaignType: true) : _page == 'عروض الرواكد' ? ErpItemOffersScreen(companyId: _appManagementCompanyId, initialCampaignType: 'slow_moving', lockCampaignType: true) : _page == 'نواقص العملاء' ? ErpCustomerShortagesScreen(companyId: _appManagementCompanyId) : _page == 'سحب أرقام جروبات واتساب' ? ErpWhatsappContactsScreen(companyId: _appManagementCompanyId) : _page == 'قوائم أسعار البيع' ? ErpPriceListsScreen(initialCompanyId: _appManagementCompanyId, initialKind: 'sale') : _page == 'قوائم أسعار الموردين' || _page == 'قوائم أسعار الشراء' ? ErpPriceListsScreen(initialCompanyId: _appManagementCompanyId, initialKind: 'purchase') : _page == 'خريطة الحسابات التشغيلية' ? ErpOperationalAccountMappingsScreen(initialCompanyId: _appManagementCompanyId) : _page == 'الخزائن الرئيسية والفرعية' ? ErpCashboxesScreen(initialCompanyId: _appManagementCompanyId) : _page == 'طرق الدفع' ? ErpPaymentMethodsScreen(companyId: _appManagementCompanyId) : _page == 'الحسابات البنكية' ? ErpCashboxesScreen(initialCompanyId: _appManagementCompanyId, initialBankOnly: true) : _page == 'سندات القبض' || _page == 'تحصيلات العملاء' || _page == 'تحصيل نقدي' ? ErpCashVouchersScreen(initialCompanyId: _appManagementCompanyId, initialType: 'receipt') : _page == 'سندات الصرف' ? ErpCashVouchersScreen(initialCompanyId: _appManagementCompanyId, initialType: 'payment') : _page == 'تحويل بين الخزائن' ? ErpCashVouchersScreen(initialCompanyId: _appManagementCompanyId, initialType: 'transfer') : _page == 'طلب شراء' || _page == 'أمر شراء' || _page == 'استلام مشتريات' || _page == 'فاتورة مشتريات' || _page == 'مرتجع مشتريات' ? ErpOperationalDocumentsScreen(key: ValueKey('purchase-document-$_page'), initialCompanyId: _appManagementCompanyId, kind: ErpOperationalKind.purchase, initialDocumentType: _page == 'طلب شراء' || _page == 'أمر شراء' ? 'order' : _page == 'استلام مشتريات' ? 'receipt' : _page == 'مرتجع مشتريات' ? 'return' : 'invoice') : _page == 'إذن التجهيز' ? ErpSalesFulfillmentScreen(companyId: _appManagementCompanyId ?? '', kind: 'preparation') : _page == 'إذن التسليم' || _page == 'إذن تحميل' || _page == 'تسليم طلب' ? ErpSalesFulfillmentScreen(companyId: _appManagementCompanyId ?? '', kind: 'delivery') : _page == 'عرض سعر' || _page == 'أمر بيع' || _page == 'فاتورة بيع' || _page == 'مرتجع مبيعات' ? ErpOperationalDocumentsScreen(key: ValueKey('sales-document-$_page'), initialCompanyId: _appManagementCompanyId, kind: ErpOperationalKind.sales, initialDocumentType: _page == 'عرض سعر' ? 'quotation' : _page == 'أمر بيع' ? 'order' : _page == 'مرتجع مبيعات' ? 'return' : 'invoice') : _page == 'المستخدمين' || _page == 'صلاحيات المستخدمين' || _page == 'قوالب صلاحيات المستخدمين' || _page == 'احتياطي شاشة المستخدمين' ? ErpUserAdminScreen(companyId: _appManagementCompanyId, initialView: _page == 'صلاحيات المستخدمين' ? 'permissions' : _page == 'قوالب صلاحيات المستخدمين' ? 'templates' : _page == 'احتياطي شاشة المستخدمين' ? 'hierarchy' : 'types') : _modules['فاتورة الكترونية']![_group]!.contains(_page) ? ErpEinvoiceScreen(companyId: _appManagementCompanyId, initialView: _page) : _page == 'سجل العمليات' ? ErpActivityLogScreen(companyId: _appManagementCompanyId) : _page == 'إدارة مفاتيح API' || _page == 'واجهة API والربط الخارجي' || _page == 'الربط الخارجي' ? const ErpApiManagementScreen() : _page == 'سياسات التسعير والخصومات' ? _pricingPolicyScreen() : _page == 'توزيع الأصناف على المندوبين' ? ErpDelegateAllocationScreen(companyId: _appManagementCompanyId) : _page == 'قيود البيع والشراء' ? _transactionRestrictionsScreen() : _page == 'قائمة اعتماد القيود' ? _journalApprovalScreen() : _page == 'قواعد الورديات والحضور والانصراف' ? HrShiftRulesScreen(companyId: _appManagementCompanyId) : _page == 'أجهزة البصمة وربط الحضور' ? HrFingerprintDevicesScreen(companyId: _appManagementCompanyId) : _hrPlannedPages.contains(_page) ? _hrFeaturePending(_page) : _isDatabaseReport(_page) ? ErpReportCenterScreen(companyId: _appManagementCompanyId, reportName: _page) : _workspace()),
                     ),
                   ),
                   if (!mobile && _utilitySidebarVisible) SizedBox(
@@ -2835,6 +2915,42 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       ]),
     );
   }
+
+  Widget _hrFeaturePending(String page) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 620),
+      child: Card(
+        elevation: 0,
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: _purple.withValues(alpha: .14)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.pending_actions_rounded, color: _orange, size: 42),
+              const SizedBox(height: 12),
+              Text(page, textAlign: TextAlign.center,
+                style: const TextStyle(color: _purple, fontSize: 21, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 10),
+              const Text(
+                'تم إدراج هذه الشاشة ضمن هيكل شئون الموظفين. لم يتم تفعيل دورة العمل أو ربطها ببيانات تشغيلية بعد؛ حفاظًا على سرية ملفات العاملين والرواتب، لن تُحفظ بياناتها في مساحة سجلات عامة.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black87, height: 1.6),
+              ),
+              const SizedBox(height: 12),
+              const Text('سيتم ربطها بجدول متخصص وصلاحيات واعتمادات وتقارير قبل إتاحتها للتشغيل.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.black54, fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 
   void _goHome() => setState(() {
     _module = 'إعدادات عامة';

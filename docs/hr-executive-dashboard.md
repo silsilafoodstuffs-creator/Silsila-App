@@ -1,6 +1,6 @@
 # HR Executive Dashboard
 
-The HR Executive Summary is available under **موارد بشرية → بيانات أساسية → ملخص إدارة موارد بشرية**.
+The HR Executive Summary is available under **شئون موظفين → بيانات أساسية → ملخص إدارة موارد بشرية**.
 
 ## Access model
 
