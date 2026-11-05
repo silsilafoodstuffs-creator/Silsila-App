@@ -326,7 +326,12 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
   }
 
   @override Widget build(BuildContext context){
-    final c=_config;final demo=_rows.isEmpty&&c.examples.isNotEmpty;
+    final c=_config;
+    final readOnly=widget.page.contains('تقرير') || widget.page.contains('مراحل الاختيار') ||
+      widget.page.contains('حركة التعيينات') || widget.page.contains('حركة الموظفين') ||
+      widget.page.contains('انتهاء وتجديد') || widget.page.contains('أرصدة') ||
+      widget.page.contains('معدل دوران') || widget.page.contains('تكلفة العمالة');
+    final demo=_rows.isEmpty&&c.examples.isNotEmpty;
     final records=demo?c.examples.map((x)=>Map<String,dynamic>.from(x)).toList():_rows;
     final columns=c.fields.take(5).toList();
     return Directionality(textDirection:TextDirection.rtl,child:Container(
@@ -341,7 +346,8 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
                 Text(c.title,style:const TextStyle(color:_purple,fontSize:20,fontWeight:FontWeight.w900)),
                 Text(c.help,style:const TextStyle(color:Colors.black54,fontSize:12)),
               ])),
-              FilledButton.icon(onPressed:(_employees.isEmpty && c.fields.any((f)=>f.type=='employee'))?null:()=>_form(),icon:const Icon(Icons.add),label:const Text('إضافة سجل'),style:FilledButton.styleFrom(backgroundColor:_purple)),
+              if(!readOnly)FilledButton.icon(onPressed:(_employees.isEmpty && c.fields.any((f)=>f.type=='employee'))?null:()=>_form(),icon:const Icon(Icons.add),label:const Text('إضافة سجل'),style:FilledButton.styleFrom(backgroundColor:_purple)),
+              if(readOnly)const Chip(label:Text('عرض التقارير فقط')),
               IconButton(onPressed:_load,tooltip:'تحديث',icon:const Icon(Icons.refresh,color:_purple)),
             ]),
             const SizedBox(height:12),
@@ -362,7 +368,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
             columns:[...columns.map((f)=>DataColumn(label:Text(f.label,style:const TextStyle(color:_purple,fontWeight:FontWeight.w800)))),const DataColumn(label:Text('الإجراءات',style:TextStyle(color:_purple,fontWeight:FontWeight.w800)))],
             rows:records.map((r)=>DataRow(cells:[
               ...columns.map((f)=>DataCell(ConstrainedBox(constraints:const BoxConstraints(maxWidth:180),child:Text(demo?_label(r[f.key]??'—'):_value(f,r),overflow:TextOverflow.ellipsis)))),
-              DataCell(demo?const Text('—'):Row(mainAxisSize:MainAxisSize.min,children:[
+              DataCell(demo||readOnly?const Text('—'):Row(mainAxisSize:MainAxisSize.min,children:[
                 IconButton(tooltip:'تعديل',onPressed:()=>_form(row:r),icon:const Icon(Icons.edit_outlined,color:_purple)),
                 IconButton(tooltip:'حذف',onPressed:()=>_delete(r),icon:const Icon(Icons.delete_outline,color:Colors.red)),
               ])),
