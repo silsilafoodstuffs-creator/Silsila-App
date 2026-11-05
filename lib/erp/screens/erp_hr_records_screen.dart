@@ -92,6 +92,24 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         {'requested_on':'2026-10-15','amount':'2000','installments':'2','installment_amount':'1000','reason':'سلفة توضيحية','status':'disbursed'},
       ],'متابعة طلب السلفة واعتمادها وصرفها وجدولة الأقساط والتسوية.');
     }
+    if (p.contains('عهد')) {
+      return _Config(p,'erp_hr_employee_custodies',const [
+        _Field('employee_id','الموظف',type:'employee',required:true),
+        _Field('item_name','العهدة / الصنف',required:true),
+        _Field('category','تصنيف العهدة'),
+        _Field('serial_number','الرقم المسلسل'),
+        _Field('assigned_on','تاريخ التسليم',type:'date',required:true),
+        _Field('expected_return_on','موعد الإرجاع المتوقع',type:'date'),
+        _Field('returned_on','تاريخ الإرجاع',type:'date'),
+        _Field('status','الحالة',type:'choice',options:['assigned','returned','lost','damaged']),
+        _Field('condition_on_issue','الحالة عند التسليم'),
+        _Field('condition_on_return','الحالة عند الإرجاع'),
+        _Field('notes','ملاحظات'),
+      ],const [
+        {'item_name':'حاسب محمول — مثال توضيحي','category':'أجهزة','serial_number':'DEMO-001','assigned_on':'2026-11-01','expected_return_on':'2027-11-01','status':'assigned'},
+        {'item_name':'هاتف عمل — مثال توضيحي','category':'اتصالات','serial_number':'DEMO-002','assigned_on':'2026-10-15','status':'returned'},
+      ],'سجل عهد الموظفين من التسليم والاستلام إلى الإرجاع أو الفقد أو التلف، مع توثيق حالة العهدة.');
+    }
     if (p.contains('جزاء') || p.contains('مكاف') || p.contains('عهد')) {
       return _Config(p,'erp_hr_employee_actions',const [
         _Field('employee_id','الموظف',type:'employee',required:true),_Field('action_type','نوع الإجراء',type:'choice',required:true,options:['penalty','reward']),
@@ -154,7 +172,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
     'submitted':'مرسل للمراجعة','completed':'مكتمل','in_progress':'جارٍ التنفيذ','expired':'منتهي','terminated':'منتهٍ','planned':'مخطط','cancelled':'ملغي',
     'hire':'تعيين','resignation':'استقالة','termination':'إنهاء خدمة','retirement':'تقاعد','transfer':'نقل','promotion':'ترقية','suspension':'إيقاف مؤقت','return_to_work':'عودة للعمل',
     'penalty':'جزاء','reward':'مكافأة','health_insurance':'تأمين صحي','social_insurance':'تأمين اجتماعي','license':'رخصة',
-    'insured':'مؤمّن عليه','uninsured':'غير مؤمّن','valid':'ساري','not_required':'غير مطلوب',
+    'insured':'مؤمّن عليه','uninsured':'غير مؤمّن','valid':'ساري','not_required':'غير مطلوب', 'assigned':'بعهدة الموظف','returned':'تم الإرجاع','lost':'مفقود','damaged':'تالف',
   };
   String _label(dynamic v) => _labels[v.toString()] ?? v.toString();
   String _employeeName(dynamic id) {
@@ -239,6 +257,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         FilledButton(style:FilledButton.styleFrom(backgroundColor:_purple),onPressed:()async{
           if(!key.currentState!.validate())return;
           final payload=<String,dynamic>{'company_id':widget.companyId};
+          if(c.table=='erp_hr_employee_custodies' && row==null){payload['custody_code']='CST'+DateTime.now().microsecondsSinceEpoch.toString();}
           for(final f in c.fields){
             if(f.type=='choice'||f.type=='employee'||f.type=='job'){if(selected[f.key]!=null)payload[f.key]=selected[f.key];}
             else if(f.type=='bool'){payload[f.key]=bools[f.key]??false;}
