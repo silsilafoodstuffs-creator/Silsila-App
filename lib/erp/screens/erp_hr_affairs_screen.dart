@@ -23,13 +23,13 @@ class ErpHrAffairsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (page == 'ملخص إدارة موارد بشرية' || page == 'ملخص تنفيذي الموارد البشرية') {
+    if (page == 'ملخص إدارة موارد بشرية' || page == 'ملخص تنفيذي الموارد البشرية' || page == 'توزيع القوى العاملة' || page == 'تكلفة العمالة' || page == 'معدل دوران العمالة') {
       return ErpHrExecutiveDashboardScreen(companyId: companyId, canManage: canManage);
     }
-    if (page == 'دليل الموظفين' || page == 'بيانات الموظفين' || page == 'ملف الموظف' || page == 'ملفات ومستندات الموظفين') {
+    if (page == 'دليل الموظفين' || page == 'بيانات الموظفين' || page == 'ملف الموظف' || page == 'ملفات ومستندات الموظفين' || page == 'كشف العاملين' || page == 'دليل الموظفين حسب الإدارة') {
       return ErpEmployeeMasterScreen(initialCompanyId: companyId);
     }
-    if (page == 'الهيكل التنظيمي' || page == 'بيانات الوظائف' || page == 'بيانات الإدارات' ||
+    if (page == 'الهيكل التنظيمي' || page == 'بيانات الوظائف' || page == 'بيانات الإدارات' || page == 'الوظائف الشاغرة' ||
         page == 'الإدارات والأقسام' || page == 'الوظائف والدرجات' || page == 'المسميات الوظيفية' ||
         page == 'مواقع العمل' || page == 'الهيكل الوظيفي') {
       final tab = page == 'بيانات الإدارات' || page == 'الإدارات والأقسام'
@@ -64,7 +64,7 @@ class ErpHrAffairsScreen extends StatelessWidget {
     }
     if (page == 'قواعد الورديات والحضور والانصراف' || page == 'قواعد وسياسات الحضور' ||
         page == 'الورديات وجداول العمل' || page == 'الجداول والورديات' ||
-        page == 'سياسات شئون الموظفين' || page == 'أنواع التوظيف') {
+        page == 'سياسات شئون الموظفين') {
       return HrShiftRulesScreen(companyId: companyId);
     }
     return ErpHrRecordsScreen(page: page, companyId: companyId);
