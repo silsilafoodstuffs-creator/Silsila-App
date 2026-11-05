@@ -337,7 +337,8 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
     final readOnly=widget.page.contains('تقرير') || widget.page.contains('مراحل الاختيار') ||
       widget.page.contains('حركة التعيينات') || widget.page.contains('حركة الموظفين') ||
       widget.page.contains('انتهاء وتجديد') || widget.page.contains('أرصدة') ||
-      widget.page.contains('معدل دوران') || widget.page.contains('تكلفة العمالة');
+      widget.page.contains('معدل دوران') || widget.page.contains('تكلفة العمالة') ||
+      widget.page.contains('تقييمات الأداء') || widget.page.contains('ساعات العمل الإضافية');
     final demo=_rows.isEmpty&&c.examples.isNotEmpty;
     final records=demo?c.examples.map((x)=>Map<String,dynamic>.from(x)).toList():_rows;
     final columns=c.fields.take(5).toList();
