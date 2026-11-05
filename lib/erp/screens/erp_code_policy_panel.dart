@@ -169,6 +169,10 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         return;
       }
     }
+    if (_prefix['customer']!.text.trim() != 'Cus') {
+      setState(() => _error = 'بادئة كود العميل ثابتة على Cus.');
+      return;
+    }
     final prefixes = _types.map((t) => _prefix[t['key']!]!.text.trim().toLowerCase()).toList();
     if (prefixes.toSet().length != prefixes.length || prefixes.contains(_itemPrefix.text.trim().toLowerCase())) {
       setState(() => _error = 'يجب أن تكون كل بادئة فريدة، وألا تتكرر مع بادئة الأصناف.');
@@ -322,13 +326,32 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           final t=_types[i > 2 ? i-1 : i]; final key=t['key']!;
           return Container(margin:const EdgeInsets.symmetric(vertical:2),padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
             decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
-            child:Row(children:[
-              SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
-              Expanded(child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
-              _field(_digits[key]!,max:2,letters:false,changed:(){}),
-              const SizedBox(width:5),
-              _field(_prefix[key]!,max:3,letters:true,changed:(){}),
-              SizedBox(width:112,child:Text(_preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple))),
+            child:Column(children:[
+              Row(children:[
+                SizedBox(width:30,child:Text('\${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+                Expanded(child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
+                if (key == 'customer')
+                  SizedBox(width:62,child:Text('خانات إضافية',textAlign:TextAlign.center,style:const TextStyle(fontSize:9,color:Colors.black54)))
+                else
+                  _field(_digits[key]!,max:2,letters:false,changed:(){}),
+                const SizedBox(width:5),
+                if (key == 'customer')
+                  const SizedBox(width:76,child:Text('Cus',textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)))
+                else
+                  _field(_prefix[key]!,max:3,letters:true,changed:(){}),
+                SizedBox(width:112,child:Text(
+                  key == 'customer'
+                    ? 'Cus + منطقة 8 + \${'1'.padLeft(int.tryParse(_digits[key]!.text) ?? 4,'0')}'
+                    : _preview(key),
+                  textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+              ]),
+              if (key == 'customer')
+                Padding(padding:const EdgeInsetsDirectional.only(start:30,top:5),
+                  child:Row(children:[
+                    Expanded(child:Text('كود المنطقة: 8 خانات ثابتة تُسحب تلقائيًا من سياسة «تقسيم جغرافي» ولا تُعدّل من هنا.',
+                      style:const TextStyle(fontSize:10,color:Colors.black54))),
+                    _field(_digits[key]!,max:2,letters:false,changed:(){})
+                  ])),
             ]));
         }),
         Card(elevation:0,color:const Color(0xFFFFF4E5),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
