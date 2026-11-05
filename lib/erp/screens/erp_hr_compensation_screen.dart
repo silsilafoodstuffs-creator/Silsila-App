@@ -18,7 +18,7 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
   bool get canCreate=>!readOnly&&widget.title!='تسوية سلفة';
   bool loading=false,saving=false;String? error,message;
   List<Map<String,dynamic>> rows=[],employees=[];
-  static const _statusLabels={'pending':'قيد المراجعة','approved':'معتمد','rejected':'مرفوض','disbursed':'تم الصرف','settled':'تمت التسوية','paid':'تم الصرف','applied':'تم التطبيق','draft':'مسودة','submitted':'مرسل للاعتماد','active':'ساري','expired':'منتهي','terminated':'منتهي','paid':'تم الصرف'};
+  static const _statusLabels={'pending':'قيد المراجعة','approved':'معتمد','rejected':'مرفوض','disbursed':'تم الصرف','settled':'تمت التسوية','paid':'تم الصرف','applied':'تم التطبيق','draft':'مسودة','submitted':'مرسل للاعتماد','active':'ساري','expired':'منتهي' ,'terminated':'منتهي'};
   String s(dynamic v)=>(v??'').toString();
   String money(dynamic v)=>((v is num)?v:double.tryParse(s(v))??0).toStringAsFixed(2);
   String date(dynamic v){final d=DateTime.tryParse(s(v))??DateTime.now();return '${d.day.toString().padLeft(2,'0')}-${d.month.toString().padLeft(2,'0')}-${d.year}';}
