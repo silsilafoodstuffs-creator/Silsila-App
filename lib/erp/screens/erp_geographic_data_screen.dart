@@ -210,7 +210,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       String? resolvedCompanyId;
       const fields =
           'id,company_id,parent_id,geo_code,name_ar,name_en,level,is_active,'
-          'latitude,longitude,admin_type';
+          'latitude,longitude,admin_type,hierarchical_code';
 
       // Read only rows belonging to a company the signed-in user is linked to.
       // Try all active memberships in case the dashboard passed an old company id.
@@ -500,7 +500,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                         Text(
-                          '${s(row['geo_code'])}  •  ${label(level, s(row['admin_type']))}',
+                          '${level == 'area' ? 'Rig' : ''}${s(row['hierarchical_code']).isEmpty ? s(row['geo_code']) : s(row['hierarchical_code'])}  •  ${label(level, s(row['admin_type']))}',
                           style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF3E007D),
@@ -597,7 +597,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
             child: Text(s(row['name_ar']), maxLines: 2, overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
-          Expanded(flex: 2, child: Text(s(row['geo_code']))),
+          Expanded(flex: 2, child: Text(level == 'area' ? 'Rig${s(row['hierarchical_code'])}' : (s(row['hierarchical_code']).isEmpty ? s(row['geo_code']) : s(row['hierarchical_code'])))),
           Expanded(flex: 2, child: Text(label(level, s(row['admin_type'])))),
           SizedBox(
             width: 82,
