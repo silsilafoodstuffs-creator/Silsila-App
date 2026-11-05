@@ -20,6 +20,8 @@ class ErpGeographicDataScreen extends StatefulWidget {
 class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
   SupabaseClient? db;
   List<Map<String, dynamic>> rows = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _countries = <Map<String, dynamic>>[];
+  bool _countriesLoading = true;
   final Map<String, List<Map<String, dynamic>>> _children = {};
   final Set<String> _expandedIds = <String>{};
   String? error;
@@ -274,6 +276,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
         loading = false;
         error = null;
       });
+      await _loadCountries();
       // Geographic rows intentionally exclude logo bytes. The tree remains fast
       // and uses a neutral emblem until a dedicated, lazy logo viewer is opened.
     } catch (e) {
@@ -632,8 +635,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildGeographicTab() {
     final governorates = rows.where((row) => s(row['level']) == 'governorate').length;
     final districts = rows.where((row) => s(row['level']) == 'district').length;
     final areas = rows.where((row) => s(row['level']) == 'area').length;
@@ -849,4 +851,127 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
       ),
     );
   }
+  Future<void> _loadCountries() async {
+    final companyId = (_activeCompanyId ?? widget.companyId ?? '').trim();
+    if (companyId.isEmpty || db == null) {
+      if (mounted) setState(() => _countriesLoading = false);
+      return;
+    }
+    try {
+      var result = await db!.from('erp_countries')
+          .select('id,company_id,country_code,name_ar,name_en,is_active')
+          .eq('company_id', companyId).order('country_code');
+      var items = List<Map<String, dynamic>>.from(result as List);
+      if (!items.any((row) => s(row['name_ar']).trim() == 'مصر')) {
+        await db!.from('erp_countries').upsert({
+          'company_id': companyId, 'country_code': '20',
+          'name_ar': 'مصر', 'name_en': 'Egypt', 'is_active': true,
+        }, onConflict: 'company_id,country_code');
+        result = await db!.from('erp_countries')
+            .select('id,company_id,country_code,name_ar,name_en,is_active')
+            .eq('company_id', companyId).order('country_code');
+        items = List<Map<String, dynamic>>.from(result as List);
+      }
+      if (mounted) setState(() { _countries = items; _countriesLoading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _countriesLoading = false; error = 'تعذر تحميل بيانات الدول: $e'; });
+    }
+  }
+
+  Future<void> _editCountry({Map<String, dynamic>? row}) async {
+    final companyId = (_activeCompanyId ?? widget.companyId ?? '').trim();
+    if (companyId.isEmpty) return;
+    final code = TextEditingController(text: s(row?['country_code']));
+    final ar = TextEditingController(text: s(row?['name_ar']));
+    final en = TextEditingController(text: s(row?['name_en']));
+    var active = row?['is_active'] != false;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(builder: (dialogContext, refresh) =>
+        AlertDialog(
+          title: Text(row == null ? 'إضافة دولة' : 'تعديل بيانات الدولة'),
+          content: SizedBox(width: 390, child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: code, keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
+              textAlign: TextAlign.center, decoration: const InputDecoration(labelText: 'كود الدولة (رقمان) *')),
+            TextField(controller: ar, decoration: const InputDecoration(labelText: 'اسم الدولة بالعربية *')),
+            TextField(controller: en, decoration: const InputDecoration(labelText: 'اسم الدولة بالإنجليزية')),
+            CheckboxListTile(value: active, onChanged: (v) => refresh(() => active = v ?? false),
+              title: const Text('نشطة'), controlAffinity: ListTileControlAffinity.leading),
+          ])),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ')),
+          ],
+        )),
+    );
+    if (ok == true) {
+      try {
+        if (!RegExp(r'^[0-9]{2}$').hasMatch(code.text.trim()) || ar.text.trim().isEmpty) {
+          throw ArgumentError('كود الدولة يجب أن يتكون من رقمين، واسم الدولة مطلوب.');
+        }
+        final payload = {
+          'company_id': companyId, 'country_code': code.text.trim(),
+          'name_ar': ar.text.trim(), 'name_en': en.text.trim().isEmpty ? null : en.text.trim(),
+          'is_active': active, 'updated_at': DateTime.now().toUtc().toIso8601String(),
+        };
+        if (row == null) {
+          await db!.from('erp_countries').insert(payload);
+        } else {
+          await db!.from('erp_countries').update(payload).eq('id', row['id']).eq('company_id', companyId);
+        }
+        await _loadCountries();
+        if (mounted) setState(() => message = 'تم حفظ بيانات الدولة.');
+      } catch (e) {
+        if (mounted) setState(() => error = 'تعذر حفظ الدولة: $e');
+      }
+    }
+    code.dispose(); ar.dispose(); en.dispose();
+  }
+
+  Widget _buildCountriesTab() {
+    return Directionality(textDirection: TextDirection.rtl, child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Card(color: const Color(0xFF3E007D), child: Padding(
+          padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: const [
+            Text('بيانات الدول', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900)),
+            Text('مرجع أكواد الدول المستخدم في بناء الأكواد الجغرافية.', style: TextStyle(color: Colors.white70)),
+          ]))),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Wrap(spacing: 6, children: [
+            task('تحديث', Icons.refresh, Colors.blue, _countriesLoading ? null : _loadCountries),
+            task('إضافة دولة', Icons.add, const Color(0xFF168447), () => _editCountry()),
+          ])),
+        if (_countriesLoading) const LinearProgressIndicator(),
+        Expanded(child: _countries.isEmpty && !_countriesLoading
+          ? const Center(child: Text('لا توجد دول مسجلة.'))
+          : ListView.builder(itemCount: _countries.length, itemBuilder: (context, index) {
+              final row = _countries[index];
+              return Card(margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), child: ListTile(
+                leading: CircleAvatar(backgroundColor: const Color(0xFFF5EFFB),
+                  child: Text(s(row['country_code']), style: const TextStyle(color: Color(0xFF3E007D), fontWeight: FontWeight.bold))),
+                title: Text(s(row['name_ar']), style: const TextStyle(fontWeight: FontWeight.w800)),
+                subtitle: Text(s(row['name_en']) + '  •  كود الدولة: ' + s(row['country_code'])),
+                trailing: IconButton(tooltip: 'تعديل', onPressed: () => _editCountry(row: row),
+                  icon: const Icon(Icons.edit_outlined, color: Color(0xFFFFA015))),
+              ));
+            })),
+      ]));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(length: 2, child: Column(children: [
+      Material(color: Colors.white, child: const TabBar(
+        labelColor: Color(0xFF3E007D), unselectedLabelColor: Colors.black54,
+        indicatorColor: Color(0xFFFFA015),
+        tabs: [
+          Tab(icon: Icon(Icons.flag_outlined), text: 'بيانات الدول'),
+          Tab(icon: Icon(Icons.account_tree_outlined), text: 'تقسيم جغرافي'),
+        ],
+      )),
+      Expanded(child: TabBarView(children: [_buildCountriesTab(), _buildGeographicTab()])),
+    ]));
+  }
+
 }
