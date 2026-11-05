@@ -145,7 +145,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         {'course_name':'مهارات خدمة العملاء — مثال','provider':'تدريب داخلي','status':'planned','starts_on':'2026-11-20'},
       ],'خطة التدريب وسجل التنفيذ والشهادات ومدد صلاحيتها وربطها بملف الموظف.');
     }
-    if (p.contains('عقد') || p.contains('تجديد')) {
+    if (p.contains('عقد') || p.contains('عقود') || p.contains('تجديد')) {
       return _Config(p,'erp_hr_employee_contracts',const [
         _Field('employee_id','الموظف',type:'employee',required:true),_Field('contract_number','رقم العقد'),
         _Field('contract_type','نوع التعاقد',type:'choice',options:['بعقد','بدون عقد','شركة عمالة','مؤقت','يومية']),
