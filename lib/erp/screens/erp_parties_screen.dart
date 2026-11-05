@@ -282,15 +282,20 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
     } catch (_) { return kind == 'customer' ? 'Cus00001' : 'Sup00001'; }
   }
   Future<void> _refreshCustomerCode() async {
-    if (kind != 'customer' || selectedArea == null || companyId == null) return;
+    final areaId = selectedArea;
+    if (kind != 'customer' || areaId == null || companyId == null) return;
     try {
       final value = await db!.rpc('erp_preview_next_customer_geo_code', params: {
         'p_company_id': companyId,
-        'p_geo_area_id': selectedArea,
+        'p_geo_area_id': areaId,
       });
-      if (mounted && selectedArea != null) setState(() => fields['party_code']!.text = value.toString());
+      if (mounted && selectedArea == areaId) {
+        setState(() => fields['party_code']!.text = value.toString());
+      }
     } catch (e) {
-      if (mounted) setState(() => error = 'تعذر معاينة كود العميل للمنطقة المحددة: $e');
+      if (mounted && selectedArea == areaId) {
+        setState(() => error = 'تعذر معاينة كود العميل للمنطقة المحددة: $e');
+      }
     }
   }
 
