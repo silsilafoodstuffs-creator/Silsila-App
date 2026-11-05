@@ -31,6 +31,8 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
   List<Map<String,dynamic>> _rows=[];
   List<Map<String,dynamic>> _employees=[];
   List<Map<String,dynamic>> _jobs=[];
+  List<Map<String,dynamic>> _departments=[];
+  List<Map<String,dynamic>> _branches=[];
 
   _Config get _config {
     final p=widget.page;
@@ -51,7 +53,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
       return _Config(p,'erp_hr_employee_movements',const [
         _Field('employee_id','الموظف',type:'employee',required:true),
         _Field('movement_type','نوع الحركة',type:'choice',required:true,options:['hire','resignation','termination','retirement','transfer','promotion','suspension','return_to_work']),
-        _Field('effective_on','تاريخ السريان',type:'date',required:true),_Field('reason','سبب الحركة',required:true),
+        _Field('effective_on','تاريخ السريان',type:'date',required:true),_Field('target_branch_id','الفرع المستهدف',type:'branch'),_Field('target_department_id','الإدارة المستهدفة',type:'department'),_Field('target_job_id','الوظيفة المستهدفة',type:'job'),_Field('reason','سبب الحركة',required:true),
         _Field('rehire_eligible','مسموح بإعادة التعيين',type:'bool'),_Field('notes','ملاحظات'),
       ],const [
         {'movement_type':'hire','effective_on':'2026-11-01','reason':'تعيين توضيحي','rehire_eligible':'نعم'},
@@ -191,13 +193,17 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
       final result=await Future.wait([
         _db.from(c.table).select('*').eq('company_id',company).limit(500),
         _db.from('erp_employee_directory').select('id,employee_code,full_name').eq('company_id',company).order('employee_code').limit(3000),
-        _db.from('erp_hr_jobs').select('id,job_code,title_ar').eq('company_id',company).order('job_code').limit(1000),
+        _db.from('erp_hr_jobs').select('id,job_code,name_ar').eq('company_id',company).order('job_code').limit(1000),
+        _db.from('erp_hr_departments').select('id,department_code,name_ar').eq('company_id',company).eq('is_active',true).order('department_code').limit(1000),
+        _db.from('erp_branches').select('id,branch_code,branch_name').eq('company_id',company).eq('is_active',true).order('branch_code').limit(500),
       ]);
       if(!mounted)return;
       setState((){
         _rows=(result[0] as List).map((e)=>Map<String,dynamic>.from(e)).toList();
         _employees=(result[1] as List).map((e)=>Map<String,dynamic>.from(e)).toList();
         _jobs=(result[2] as List).map((e)=>Map<String,dynamic>.from(e)).toList();
+        _departments=(result[3] as List).map((e)=>Map<String,dynamic>.from(e)).toList();
+        _branches=(result[4] as List).map((e)=>Map<String,dynamic>.from(e)).toList();
         _loading=false;_error=null;
       });
     }catch(e){if(mounted)setState(()=>_loading=false);_error='تعذر تحميل البيانات: '+e.toString();}
@@ -208,7 +214,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
     if(f.type=='employee')return _employeeName(v);
     if(f.type=='job'){
       final j=_jobs.where((x)=>x['id'].toString()==v.toString());
-      return j.isEmpty?v.toString():(j.first['title_ar']??j.first['job_code']).toString();
+      return j.isEmpty?v.toString():(j.first['name_ar']??j.first['job_code']).toString();
     }
     if(f.type=='choice')return _label(v);
     if(f.type=='bool')return v==true?'نعم':'لا';
@@ -220,7 +226,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
     final ctrls=<String,TextEditingController>{};final selected=<String,String?>{};final bools=<String,bool>{};
     for(final f in c.fields){
       final old=row?[f.key];
-      if(f.type=='choice'||f.type=='employee'||f.type=='job'){
+      if(f.type=='choice'||f.type=='employee'||f.type=='job'||f.type=='department'||f.type=='branch'){
         selected[f.key]=old?.toString()??(f.options.isNotEmpty?f.options.first:null);
       }else if(f.type=='bool'){bools[f.key]=old==true;}
       else{
@@ -232,12 +238,16 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
     final ok=await showDialog<bool>(context:context,builder:(dc)=>StatefulBuilder(builder:(dc,setD)=>AlertDialog(
       title:Text(row==null?'إضافة — '+c.title:'تعديل — '+c.title,textDirection:TextDirection.rtl),
       content:SizedBox(width:560,child:Form(key:key,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:c.fields.map((f){
-        if(f.type=='employee'||f.type=='job'||f.type=='choice'){
+        if(f.type=='employee'||f.type=='job'||f.type=='choice'||f.type=='department'||f.type=='branch'){
           final items=f.type=='employee'
             ? _employees.map((e)=>DropdownMenuItem<String>(value:e['id'].toString(),child:Text(e['employee_code'].toString()+' — '+e['full_name'].toString(),overflow:TextOverflow.ellipsis))).toList()
             : f.type=='job'
-              ? _jobs.map((e)=>DropdownMenuItem<String>(value:e['id'].toString(),child:Text((e['title_ar']??e['job_code']).toString(),overflow:TextOverflow.ellipsis))).toList()
-              : f.options.map((v)=>DropdownMenuItem<String>(value:v,child:Text(_label(v)))).toList();
+              ? _jobs.map((e)=>DropdownMenuItem<String>(value:e['id'].toString(),child:Text((e['name_ar']??e['job_code']).toString(),overflow:TextOverflow.ellipsis))).toList()
+              : f.type=='department'
+                ? _departments.map((e)=>DropdownMenuItem<String>(value:e['id'].toString(),child:Text((e['name_ar']??e['department_code']).toString(),overflow:TextOverflow.ellipsis))).toList()
+                : f.type=='branch'
+                  ? _branches.map((e)=>DropdownMenuItem<String>(value:e['id'].toString(),child:Text((e['branch_name']??e['branch_code']).toString(),overflow:TextOverflow.ellipsis))).toList()
+                  : f.options.map((v)=>DropdownMenuItem<String>(value:v,child:Text(_label(v)))).toList();
           return Padding(padding:const EdgeInsets.only(bottom:12),child:DropdownButtonFormField<String>(
             value:selected[f.key],isExpanded:true,decoration:InputDecoration(labelText:f.label,border:const OutlineInputBorder()),
             items:items,onChanged:(v)=>setD(()=>selected[f.key]=v),
@@ -259,7 +269,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
           final payload=<String,dynamic>{'company_id':widget.companyId};
           if(c.table=='erp_hr_employee_custodies' && row==null){payload['custody_code']='CST'+DateTime.now().microsecondsSinceEpoch.toString();}
           for(final f in c.fields){
-            if(f.type=='choice'||f.type=='employee'||f.type=='job'){if(selected[f.key]!=null)payload[f.key]=selected[f.key];}
+            if(f.type=='choice'||f.type=='employee'||f.type=='job'||f.type=='department'||f.type=='branch'){if(selected[f.key]!=null)payload[f.key]=selected[f.key];}
             else if(f.type=='bool'){payload[f.key]=bools[f.key]??false;}
             else{
               final v=ctrls[f.key]!.text.trim();if(v.isEmpty)continue;
@@ -310,7 +320,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
                 Text(c.title,style:const TextStyle(color:_purple,fontSize:20,fontWeight:FontWeight.w900)),
                 Text(c.help,style:const TextStyle(color:Colors.black54,fontSize:12)),
               ])),
-              FilledButton.icon(onPressed:_employees.isEmpty?null:()=>_form(),icon:const Icon(Icons.add),label:const Text('إضافة سجل'),style:FilledButton.styleFrom(backgroundColor:_purple)),
+              FilledButton.icon(onPressed:(_employees.isEmpty && c.fields.any((f)=>f.type=='employee'))?null:()=>_form(),icon:const Icon(Icons.add),label:const Text('إضافة سجل'),style:FilledButton.styleFrom(backgroundColor:_purple)),
               IconButton(onPressed:_load,tooltip:'تحديث',icon:const Icon(Icons.refresh,color:_purple)),
             ]),
             const SizedBox(height:12),
