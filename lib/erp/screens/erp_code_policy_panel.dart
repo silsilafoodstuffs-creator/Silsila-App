@@ -202,7 +202,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         'item_prefix':_itemPrefix.text.trim(),
         'item_segments':itemSegments,
         'geo_prefix':_geoPrefix.text.trim(),
-        'geo_segments':{for (final entry in _geoSegments.entries) entry.key:int.parse(entry.value.text)},
+        'geo_segments':{for (final entry in _geoSegments.entries) entry.key:(entry.key == 'country' ? entry.value.text.trim() : int.parse(entry.value.text))},
       });
       await _db.from('erp_program_policies').upsert({
         'company_id':widget.companyId,
