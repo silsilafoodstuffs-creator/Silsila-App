@@ -42,6 +42,13 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('phone','رقم الهاتف'),_Field('email','البريد الإلكتروني'),
         _Field('status','مرحلة التوظيف',type:'choice',options:['new','screening','interview','accepted','rejected','withdrawn']),
         _Field('applied_on','تاريخ التقديم',type:'date',required:true),_Field('decision_on','تاريخ القرار',type:'date'),
+        _Field('interview_date','موعد المقابلة',type:'date'),
+        _Field('interview_result','نتيجة المقابلة',type:'choice',options:['pending','passed','failed','rescheduled']),
+        _Field('interview_notes','ملاحظات المقابلة'),
+        _Field('offer_salary','قيمة عرض العمل',type:'number'),
+        _Field('offer_issued_on','تاريخ إصدار العرض',type:'date'),
+        _Field('offer_expires_on','انتهاء العرض',type:'date'),
+        _Field('joining_date','تاريخ مباشرة العمل',type:'date'),
         _Field('source','مصدر الترشيح'),_Field('notes','ملاحظات'),
       ],const [
         {'candidate_name':'مرشح توضيحي — أحمد','status':'interview','applied_on':'2026-11-01','source':'ترشيح مباشر'},
@@ -169,7 +176,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
   }
 
   static const _labels=<String,String>{
-    'new':'جديد','screening':'فرز أولي','interview':'مقابلة','accepted':'مقبول','rejected':'مرفوض','withdrawn':'منسحب',
+    'new':'جديد','screening':'فرز أولي','interview':'مقابلة','accepted':'مقبول','rejected':'مرفوض','withdrawn':'منسحب','passed':'اجتاز المقابلة','failed':'لم يجتز المقابلة','rescheduled':'إعادة جدولة',
     'draft':'مسودة','pending':'قيد المراجعة','approved':'معتمد','applied':'تم التطبيق','paid':'تم الصرف','disbursed':'تم الصرف','settled':'تمت التسوية',
     'submitted':'مرسل للمراجعة','completed':'مكتمل','in_progress':'جارٍ التنفيذ','expired':'منتهي','terminated':'منتهٍ','planned':'مخطط','cancelled':'ملغي',
     'hire':'تعيين','resignation':'استقالة','termination':'إنهاء خدمة','retirement':'تقاعد','transfer':'نقل','promotion':'ترقية','suspension':'إيقاف مؤقت','return_to_work':'عودة للعمل',
