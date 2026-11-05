@@ -41,7 +41,7 @@ class ErpHrAffairsScreen extends StatelessWidget {
     if (page == 'دليل الموظفين' || page == 'بيانات الموظفين' || page == 'ملف الموظف' || page == 'ملفات ومستندات الموظفين' || page == 'كشف العاملين' || page == 'دليل الموظفين حسب الإدارة') {
       return ErpEmployeeMasterScreen(initialCompanyId: companyId);
     }
-    if (page == 'الهيكل التنظيمي' || page == 'بيانات الوظائف' || page == 'بيانات الإدارات' || page == 'الوظائف الشاغرة' ||
+    if (page == 'الهيكل التنظيمي' || page == 'بيانات الوظائف' || page == 'بيانات الإدارات' ||
         page == 'الإدارات والأقسام' || page == 'الوظائف والدرجات' || page == 'المسميات الوظيفية' ||
         page == 'مواقع العمل' || page == 'الهيكل الوظيفي') {
       final tab = page == 'بيانات الإدارات' || page == 'الإدارات والأقسام'
