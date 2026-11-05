@@ -257,7 +257,8 @@ const Set<String> _hrPlannedPages = <String>{
   'تحليل الرواتب',
   'تحليل دوران العمالة',
   'تقرير تقييم الأداء',
-  'تسويات نهاية الخدمة',
+  'تسويات نهاية الخدمة',,
+  'أنواع الإجازات'
 };
 
 class ErpDashboardScreen extends StatefulWidget {
