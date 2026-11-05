@@ -216,6 +216,14 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
       final j=_jobs.where((x)=>x['id'].toString()==v.toString());
       return j.isEmpty?v.toString():(j.first['name_ar']??j.first['job_code']).toString();
     }
+    if(f.type=='department'){
+      final d=_departments.where((x)=>x['id'].toString()==v.toString());
+      return d.isEmpty?v.toString():(d.first['name_ar']??d.first['department_code']).toString();
+    }
+    if(f.type=='branch'){
+      final b=_branches.where((x)=>x['id'].toString()==v.toString());
+      return b.isEmpty?v.toString():(b.first['branch_name']??b.first['branch_code']).toString();
+    }
     if(f.type=='choice')return _label(v);
     if(f.type=='bool')return v==true?'نعم':'لا';
     return v.toString();
