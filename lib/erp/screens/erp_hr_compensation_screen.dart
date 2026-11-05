@@ -12,13 +12,13 @@ class ErpHrCompensationScreen extends StatefulWidget {
 class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
   SupabaseClient? get db {try{return Supabase.instance.client;}catch(_){return null;}}
   String get cid=>(widget.companyId??'').trim();
-  String get table=>switch(widget.mode){'advances'=>'erp_hr_employee_advances','actions'=>'erp_hr_employee_actions','overtime'=>'erp_hr_overtime_requests',_=>'erp_hr_performance_reviews'};
-  String get dateColumn=>switch(widget.mode){'advances'=>'requested_on','actions'=>'action_date','overtime'=>'work_date',_=>'period_start'};
+  String get table=>switch(widget.mode){'advances'=>'erp_hr_employee_advances','actions'=>'erp_hr_employee_actions','overtime'=>'erp_hr_overtime_requests','contracts'=>'erp_hr_employee_contracts',_=>'erp_hr_performance_reviews'};
+  String get dateColumn=>switch(widget.mode){'advances'=>'requested_on','actions'=>'action_date','overtime'=>'work_date','contracts'=>'start_date',_=>'period_start'};
   bool get readOnly=>(widget.title??'').startsWith('كشف')||(widget.title??'').startsWith('تقرير');
   bool get canCreate=>!readOnly&&widget.title!='تسوية سلفة';
   bool loading=false,saving=false;String? error,message;
   List<Map<String,dynamic>> rows=[],employees=[];
-  static const _statusLabels={'pending':'قيد المراجعة','approved':'معتمد','rejected':'مرفوض','disbursed':'تم الصرف','settled':'تمت التسوية','paid':'تم الصرف','applied':'تم التطبيق','draft':'مسودة','submitted':'مرسل للاعتماد'};
+  static const _statusLabels={'pending':'قيد المراجعة','approved':'معتمد','rejected':'مرفوض','disbursed':'تم الصرف','settled':'تمت التسوية','paid':'تم الصرف','applied':'تم التطبيق','draft':'مسودة','submitted':'مرسل للاعتماد','active':'ساري','expired':'منتهي','terminated':'موقوف'};
   String s(dynamic v)=>(v??'').toString();
   String money(dynamic v)=>((v is num)?v:double.tryParse(s(v))??0).toStringAsFixed(2);
   String date(dynamic v){final d=DateTime.tryParse(s(v))??DateTime.now();return '${d.day.toString().padLeft(2,'0')}-${d.month.toString().padLeft(2,'0')}-${d.year}';}
@@ -37,7 +37,7 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
   }
   Future<void> addRecord()async{
     if(employees.isEmpty){setState(()=>error='أضف الموظفين أولًا.');return;}
-    String employee=s(employees.first['id']),actionType='penalty';
+    String employee=s(employees.first['id']),actionType='penalty',contractType='بعقد';
     DateTime start=DateTime.now(),end=DateTime.now();
     final amount=TextEditingController(text:'0'),installments=TextEditingController(text:'1'),hours=TextEditingController(text:'1'),rate=TextEditingController(text:'0'),score=TextEditingController(text:'80'),reason=TextEditingController(),notes=TextEditingController(),strengths=TextEditingController(),improvements=TextEditingController(),goals=TextEditingController(),rating=TextEditingController();
     final key=GlobalKey<FormState>();
@@ -45,8 +45,9 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
       title:Text('إضافة ${widget.title??'سجل موارد بشرية'}'),
       content:SizedBox(width:500,child:SingleChildScrollView(child:Form(key:key,child:Column(mainAxisSize:MainAxisSize.min,children:[
         DropdownButtonFormField<String>(value:employee,isExpanded:true,decoration:const InputDecoration(labelText:'الموظف'),items:employees.map((e)=>DropdownMenuItem(value:s(e['id']),child:Text('${s(e['employee_code'])} • ${s(e['full_name'])}'))).toList(),onChanged:(v)=>setD(()=>employee=v??employee)),
-        if(widget.mode=='advances'||widget.mode=='actions')TextFormField(controller:amount,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'المبلغ بالجنيه'),validator:(v){final n=double.tryParse(v??'');return n==null||n<0?'أدخل مبلغًا صحيحًا':null;}),
+        if(widget.mode=='advances'||widget.mode=='actions'||widget.mode=='contracts')TextFormField(controller:amount,keyboardType:TextInputType.number,decoration:InputDecoration(labelText:widget.mode=='contracts'?'الأجر الأساسي بالجنيه':'المبلغ بالجنيه'),validator:(v){final n=double.tryParse(v??'');return n==null||n<0?'أدخل مبلغًا صحيحًا':null;}),
         if(widget.mode=='advances')TextFormField(controller:installments,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'عدد الأقساط'),validator:(v){final n=int.tryParse(v??'');return n==null||n<1?'عدد الأقساط غير صحيح':null;}),
+        if(widget.mode=='contracts')DropdownButtonFormField<String>(value:contractType,isExpanded:true,decoration:const InputDecoration(labelText:'نوع العقد'),items:const['بعقد','بدون عقد','شركة عمالة','مؤقت','يومية'].map((v)=>DropdownMenuItem(value:v,child:Text(v))).toList(),onChanged:(v)=>setD(()=>contractType=v??'بعقد')),
         if(widget.mode=='actions')DropdownButtonFormField<String>(value:actionType,decoration:const InputDecoration(labelText:'نوع الإجراء'),items:const[DropdownMenuItem(value:'penalty',child:Text('جزاء / خصم')),DropdownMenuItem(value:'reward',child:Text('مكافأة'))],onChanged:(v)=>setD(()=>actionType=v??'penalty')),
         if(widget.mode=='overtime')...[
           TextFormField(controller:hours,keyboardType:TextInputType.number,decoration:const InputDecoration(labelText:'عدد الساعات'),validator:(v){final n=double.tryParse(v??'');return n==null||n<=0?'أدخل عدد ساعات صحيحًا':null;}),
@@ -59,10 +60,10 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
           TextFormField(controller:improvements,decoration:const InputDecoration(labelText:'مجالات التحسين'),maxLines:2),
           TextFormField(controller:goals,decoration:const InputDecoration(labelText:'الأهداف القادمة'),maxLines:2),
         ],
-        if(widget.mode!='reviews')TextFormField(controller:reason,decoration:const InputDecoration(labelText:'السبب / المبرر *'),validator:(v)=>(v??'').trim().isEmpty?'هذا الحقل مطلوب':null),
-        if(widget.mode=='reviews')...[
-          ListTile(title:const Text('بداية فترة التقييم'),subtitle:Text(date(start)),trailing:IconButton(icon:const Icon(Icons.calendar_month,color:_hrCompPurple),onPressed:()async{final d=await showDatePicker(context:ctx,initialDate:start,firstDate:DateTime(2000),lastDate:DateTime.now());if(d!=null)setD(()=>start=d);})),
-          ListTile(title:const Text('نهاية فترة التقييم'),subtitle:Text(date(end)),trailing:IconButton(icon:const Icon(Icons.calendar_month,color:_hrCompPurple),onPressed:()async{final d=await showDatePicker(context:ctx,initialDate:end,firstDate:DateTime(2000),lastDate:DateTime.now());if(d!=null)setD(()=>end=d);})),
+        if(widget.mode!='reviews'&&widget.mode!='contracts')TextFormField(controller:reason,decoration:const InputDecoration(labelText:'السبب / المبرر *'),validator:(v)=>(v??'').trim().isEmpty?'هذا الحقل مطلوب':null),
+        if(widget.mode=='reviews'||widget.mode=='contracts')...[
+          ListTile(title:Text(widget.mode=='contracts'?'بداية العقد':'بداية فترة التقييم'),subtitle:Text(date(start)),trailing:IconButton(icon:const Icon(Icons.calendar_month,color:_hrCompPurple),onPressed:()async{final d=await showDatePicker(context:ctx,initialDate:start,firstDate:DateTime(2000),lastDate:DateTime.now());if(d!=null)setD(()=>start=d);})),
+          ListTile(title:Text(widget.mode=='contracts'?'نهاية العقد':'نهاية فترة التقييم'),subtitle:Text(date(end)),trailing:IconButton(icon:const Icon(Icons.calendar_month,color:_hrCompPurple),onPressed:()async{final d=await showDatePicker(context:ctx,initialDate:end,firstDate:DateTime(2000),lastDate:DateTime.now());if(d!=null)setD(()=>end=d);})),
         ]else ListTile(title:const Text('التاريخ'),subtitle:Text(date(start)),trailing:IconButton(icon:const Icon(Icons.calendar_month,color:_hrCompPurple),onPressed:()async{final d=await showDatePicker(context:ctx,initialDate:start,firstDate:DateTime(2000),lastDate:DateTime.now());if(d!=null)setD(()=>start=d);})),
         TextFormField(controller:notes,decoration:const InputDecoration(labelText:'ملاحظات إضافية'),maxLines:2),
       ])))),
@@ -75,6 +76,7 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
         if(widget.mode=='advances'){final a=double.parse(amount.text),n=int.parse(installments.text);data.addAll({'requested_on':iso(start),'amount':a,'installments':n,'installment_amount':a/n,'reason':reason.text.trim(),'status':'pending'});}
         if(widget.mode=='actions'){data.addAll({'action_type':actionType,'action_date':iso(start),'amount':double.parse(amount.text),'reason':reason.text.trim(),'status':'pending'});}
         if(widget.mode=='overtime'){final h=double.parse(hours.text),r=double.parse(rate.text);data.addAll({'work_date':iso(start),'hours':h,'hourly_rate':r,'amount':h*r,'reason':reason.text.trim(),'status':'pending'});}
+        if(widget.mode=='contracts'){if(end.isBefore(start))throw ArgumentError('نهاية العقد تسبق بدايته.');data.addAll({'contract_type':contractType,'start_date':iso(start),'end_date':iso(end),'salary':double.parse(amount.text),'status':'draft'});}
         if(widget.mode=='reviews'){if(end.isBefore(start))throw ArgumentError('نهاية فترة التقييم تسبق بدايتها.');data.addAll({'period_start':iso(start),'period_end':iso(end),'score':double.parse(score.text),'rating':rating.text.trim(),'strengths':strengths.text.trim(),'improvement_areas':improvements.text.trim(),'goals':goals.text.trim(),'status':'submitted'});}
         await db!.from(table).insert(data);
         if(mounted)setState(()=>message='تم حفظ السجل بنجاح.');
@@ -87,7 +89,8 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
   Future<void> transition(Map<String,dynamic> row,String next)async{
     if(db==null)return;
     try{
-      final data=<String,dynamic>{'status':next,'approved_by':db!.auth.currentUser?.id,'approved_at':DateTime.now().toUtc().toIso8601String()};
+      final data=<String,dynamic>{'status':next};
+      if(widget.mode!='contracts'){data['approved_by']=db!.auth.currentUser?.id;data['approved_at']=DateTime.now().toUtc().toIso8601String();}
       if(widget.mode=='advances'&&next=='disbursed')data['disbursed_at']=DateTime.now().toUtc().toIso8601String();
       if(widget.mode=='advances'&&next=='settled'){data['settled_at']=DateTime.now().toUtc().toIso8601String();data['settled_amount']=row['amount'];}
       await db!.from(table).update(data).eq('id',s(row['id'])).eq('company_id',cid);
@@ -110,6 +113,10 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
     if(widget.mode=='reviews'){
       if(status=='submitted')return [('approved','اعتماد'),('rejected','إعادة للمراجعة')];
     }
+    if(widget.mode=='contracts'){
+      if(status=='draft')return [('active','تفعيل العقد')];
+      if(status=='active')return [('terminated','إنهاء العقد')];
+    }
     return [];
   }
   String titleFor(Map<String,dynamic> row,Map<String,String> employeeNames){
@@ -117,6 +124,7 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
     if(widget.mode=='advances')return name+' • '+money(row['amount'])+' جنيه';
     if(widget.mode=='actions')return name+' • '+(s(row['action_type'])=='reward'?'مكافأة':'جزاء');
     if(widget.mode=='overtime')return name+' • '+s(row['hours'])+' ساعة';
+    if(widget.mode=='contracts')return name+' • '+s(row['contract_type'])+' • '+money(row['salary'])+' جنيه';
     return name+' • تقييم '+s(row['score'])+'/100';
   }
   @override Widget build(BuildContext context){
