@@ -187,6 +187,24 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         return;
       }
     }
+    final countryCode = _geoSegments['country']!.text.trim();
+    if (!RegExp(r'^[0-9]{2}$').hasMatch(countryCode)) {
+      setState(() => _error = 'يجب تحديد كود الدولة من تبويب بيانات الدول (رقمان).');
+      return;
+    }
+    const expectedGeoLengths = {'governorate':4,'center':6,'area':8};
+    for (final entry in expectedGeoLengths.entries) {
+      final value = int.tryParse(_geoSegments[entry.key]!.text);
+      if (value != entry.value) {
+        final label = {'governorate':'المحافظة','center':'المركز/الحي','area':'المنطقة'}[entry.key];
+        setState(() => _error = 'طول كود $label يجب أن يكون ${entry.value} خانات تراكمية.');
+        return;
+      }
+    }
+    if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(_geoPrefix.text.trim())) {
+      setState(() => _error = 'بادئة المنطقة يجب أن تكون 3 حروف إنجليزية مثل Rig.');
+      return;
+    }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
       final types = <String, dynamic>{};
@@ -197,12 +215,18 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       final itemSegments = <String, int>{
         for (final entry in _itemSegments.entries) entry.key:int.parse(entry.value.text),
       };
-      if (!RegExp(r'^[A-Za-z]{3}
+      final payload = jsonEncode({
+        'version':3,
         'types':types,
         'item_prefix':_itemPrefix.text.trim(),
         'item_segments':itemSegments,
         'geo_prefix':_geoPrefix.text.trim(),
-        'geo_segments':{for (final entry in _geoSegments.entries) entry.key:(entry.key == 'country' ? entry.value.text.trim() : int.parse(entry.value.text))},
+        'geo_segments':{
+          'country':countryCode,
+          'governorate':4,
+          'center':6,
+          'area':8,
+        },
       });
       await _db.from('erp_program_policies').upsert({
         'company_id':widget.companyId,
