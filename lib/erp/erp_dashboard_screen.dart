@@ -2876,7 +2876,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _expandedModules.add(module);
       _expandedGroups.add('$module::$group');
     });
-    if (module != 'شئون موظفين' && module != 'موارد بشرية') _loadWorkspacePage(page);
+    if (module != 'شئون موظفين' && module != 'موارد بشرية' && !['أصول ثابتة', 'تصنيع', 'مقاولات', 'خدمة ومتابعة وعلاقات عملاء'].contains(module)) _loadWorkspacePage(page);
   }
 
   Future<void> _loadWorkspacePage(String page, {bool loadMore = false}) async {
