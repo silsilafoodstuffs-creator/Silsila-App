@@ -142,7 +142,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         _geoPrefix.text = (data['geo_prefix'] ?? 'Rig').toString();
         final geoSegments = Map<String, dynamic>.from(data['geo_segments'] as Map? ?? {});
         for (final key in _geoSegments.keys) {
-          if (geoSegments[key] != null) _geoSegments[key]!.text = geoSegments[key].toString();
+          if (key != 'country' && geoSegments[key] != null) _geoSegments[key]!.text = geoSegments[key].toString();
         }
         final segments = Map<String, dynamic>.from(data['item_segments'] as Map? ?? {});
         for (final key in _itemSegments.keys) {
