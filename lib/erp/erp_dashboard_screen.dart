@@ -35,7 +35,7 @@ import 'screens/erp_movement_audit_screen.dart';
 import 'screens/erp_inventory_screen.dart';
 import 'screens/erp_stocktake_screen.dart';
 import 'screens/erp_hr_operations_screen.dart';
-import 'screens/erp_hr_design_preview_screen.dart';
+import 'screens/erp_hr_affairs_screen.dart';
 import 'screens/erp_hr_executive_dashboard_screen.dart';
 import 'screens/erp_hr_leave_screen.dart';
 import 'screens/erp_employee_master_screen.dart';
@@ -1222,8 +1222,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                                     )
                                   : (_page == 'حركة نقدية' || _page == 'أمر صرف / توريد نقدية' || _page == 'أمر صرف شيكات' || _page == 'حركة صرف / توريد شيكات' || _page == 'تسجيل دفاتر شيكات' || _page == 'متابعة الشيكات' || _page == 'شيكات الائتمان' || _page == 'السياسات المحاسبية')
                                       ? ErpFinancialOperationsScreen(companyId: _appManagementCompanyId, initialView: _page)
-                                      : _module == 'شئون موظفين'
-                                      ? ErpHrDesignPreviewScreen(page: _page, group: _group)
+                                      : (_module == 'شئون موظفين' || _module == 'موارد بشرية')
+                                      ? ErpHrAffairsScreen(page: _page, companyId: _appManagementCompanyId, canManage: _hrDashboardCanManage)
                                       : _page == 'الفروع'
                                       ? ErpBranchesScreen(companyId: _appManagementCompanyId, embedded: true)
                                       : (_page == 'مراكز التكلفة' || _page == 'الفروع ومراكز التكلفة')
@@ -2855,7 +2855,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _expandedModules.add(module);
       _expandedGroups.add('$module::$group');
     });
-    if (module != 'شئون موظفين') _loadWorkspacePage(page);
+    if (module != 'شئون موظفين' && module != 'موارد بشرية') _loadWorkspacePage(page);
   }
 
   Future<void> _loadWorkspacePage(String page, {bool loadMore = false}) async {
