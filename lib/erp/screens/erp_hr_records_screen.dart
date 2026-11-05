@@ -162,7 +162,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
       _Field('accrued_leave_amount','مقابل رصيد الإجازات',type:'number'),_Field('other_entitlements','مستحقات أخرى',type:'number'),
       _Field('outstanding_advances','سلف قائمة',type:'number'),_Field('other_deductions','استقطاعات أخرى',type:'number'),
       _Field('total_entitlements','إجمالي المستحقات',type:'number'),_Field('net_amount','صافي التسوية',type:'number'),
-      _Field('reason','سبب انتهاء الخدمة'),_Field('status','الحالة',type:'choice',options:['pending','approved','rejected','paid']),_Field('notes','ملاحظات'),
+      _Field('reason','سبب انتهاء الخدمة',required:true),_Field('status','الحالة',type:'choice',options:['pending','approved','rejected','paid']),_Field('notes','ملاحظات'),
     ],const [
       {'service_start_date':'2022-01-01','separation_date':'2026-11-01','basic_salary_snapshot':'7000','accrued_leave_amount':'1200','other_entitlements':'500','outstanding_advances':'300','net_amount':'1400','status':'pending'},
     ],'إعداد تسوية نهاية الخدمة وعرض مكوناتها قبل الاعتماد والصرف. راجع القيم قبل اعتمادها.');
