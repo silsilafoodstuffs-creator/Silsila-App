@@ -1,0 +1,19 @@
+alter policy erp_hr_employee_compliance_delete_hr on public.erp_hr_employee_compliance to authenticated;
+alter policy erp_hr_employee_compliance_insert_hr on public.erp_hr_employee_compliance to authenticated;
+alter policy erp_hr_employee_compliance_select_company on public.erp_hr_employee_compliance to authenticated;
+alter policy erp_hr_employee_compliance_update_hr on public.erp_hr_employee_compliance to authenticated;
+
+alter policy erp_hr_employee_movements_delete_hr on public.erp_hr_employee_movements to authenticated;
+alter policy erp_hr_employee_movements_insert_hr on public.erp_hr_employee_movements to authenticated;
+alter policy erp_hr_employee_movements_select_company on public.erp_hr_employee_movements to authenticated;
+alter policy erp_hr_employee_movements_update_hr on public.erp_hr_employee_movements to authenticated;
+
+alter policy erp_hr_recruitment_candidates_delete_hr on public.erp_hr_recruitment_candidates to authenticated;
+alter policy erp_hr_recruitment_candidates_insert_hr on public.erp_hr_recruitment_candidates to authenticated;
+alter policy erp_hr_recruitment_candidates_select_company on public.erp_hr_recruitment_candidates to authenticated;
+alter policy erp_hr_recruitment_candidates_update_hr on public.erp_hr_recruitment_candidates to authenticated;
+
+alter policy erp_hr_training_records_delete_hr on public.erp_hr_training_records to authenticated;
+alter policy erp_hr_training_records_insert_hr on public.erp_hr_training_records to authenticated;
+alter policy erp_hr_training_records_select_company on public.erp_hr_training_records to authenticated;
+alter policy erp_hr_training_records_update_hr on public.erp_hr_training_records to authenticated;
