@@ -31,8 +31,8 @@ class _ErpHrCompensationScreenState extends State<ErpHrCompensationScreen>{
         db!.from('erp_employees').select('id,employee_code,full_name,is_active,employment_status').eq('company_id',cid).order('employee_code').limit(2000),
         db!.from(table).select('*').eq('company_id',cid).order(dateColumn,ascending:false).limit(2000),
       ]);
-      if(!mounted)return;setState(()=>{employees=List<Map<String,dynamic>>.from(r[0]);rows=List<Map<String,dynamic>>.from(r[1]);loading=false;error=null;});
-    }catch(e){if(mounted)setState(()=>{loading=false;error='تعذر تحميل السجلات: ${e}';});}
+      if(!mounted)return;setState(() { employees=List<Map<String,dynamic>>.from(r[0]); rows=List<Map<String,dynamic>>.from(r[1]); loading=false; error=null; });
+    }catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل السجلات: ${e}'; });}
   }
   Future<void> addRecord()async{
     if(employees.isEmpty){setState(()=>error='أضف الموظفين أولًا.');return;}
