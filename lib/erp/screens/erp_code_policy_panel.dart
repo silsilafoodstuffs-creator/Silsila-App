@@ -504,13 +504,36 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
               
               _field(_digits[key]!,max:2,letters:false,changed:(){}),
               
-              ...List.generate(3, (slot) => <Widget>[
-                _nameField(_fieldNames[key]![slot],readOnly:key=='customer' && slot==0),
-                
-                SizedBox(width:_countCellWidth,height:_cellHeight,child:key=='customer' && slot==0
-                  ? const Center(child:Text('8',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.bold)))
-                  : _field(_fieldCounts[key]![slot],max:2,letters:false,changed:(){})),
-              ]).expand((widgets) => widgets),
+              ...List<Widget>.generate(6, (index) {
+                final slot = index ~/ 2;
+                if (index.isEven) {
+                  return _nameField(
+                    _fieldNames[key]![slot],
+                    readOnly: key == 'customer' && slot == 0,
+                  );
+                }
+                return SizedBox(
+                  width: _countCellWidth,
+                  height: _cellHeight,
+                  child: key == 'customer' && slot == 0
+                      ? const Center(
+                          child: Text(
+                            '8',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : _field(
+                          _fieldCounts[key]![slot],
+                          max: 2,
+                          letters: false,
+                          changed: () {},
+                        ),
+                );
+              }),
               
               const SizedBox(width:124,height:_cellHeight),
               
