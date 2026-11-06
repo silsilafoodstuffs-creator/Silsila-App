@@ -690,7 +690,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           ]),
           const SizedBox(height: 10),
           _panel(children: [
-            const Text('الاستقالات وإنهاء الخدمة حسب الإدارة — آخر $_analysisPeriodDays يومًا', style: TextStyle(fontWeight: FontWeight.w800)),
+            Text('الاستقالات وإنهاء الخدمة حسب الإدارة — آخر $_analysisPeriodDays يومًا', style: const TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             if (_separationsByDepartment.isEmpty)
               const Text('لا توجد حركات انتهاء خدمة مسجلة خلال فترة التحليل المحددة.')
