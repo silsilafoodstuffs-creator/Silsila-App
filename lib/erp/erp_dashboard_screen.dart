@@ -206,7 +206,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   double? _executivePreviousSales;
   double? _executivePreviousPurchases;
   double? _executivePreviousGrossProfit;
-  double? _executivePreviousCollections;
   String? _executiveMetricsError;
   double? _executiveSales;
   double? _executiveGrossSales;
@@ -2076,7 +2075,6 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveTopItems = ((currentData['top_items'] as List?) ?? const [])
             .whereType<Map>().map((row) => row['name']?.toString() ?? '').where((name) => name.isNotEmpty).toList();
         _executivePreviousSales = numberValue(previousData, 'sales');
-        _executivePreviousCollections = numberValue(previousData, 'collections');
         _executivePreviousPurchases = numberValue(previousData, 'purchases');
         _executivePreviousGrossProfit = numberValue(previousData, 'gross_profit_estimate');
         _executiveDailySales = numberList(currentData, 'daily_sales');
