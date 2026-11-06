@@ -108,6 +108,19 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   final key='${_moduleKey}:${payload['record_type']}';
   final oldDetails=Map<String,dynamic>.from(oldRow?['details'] as Map? ?? const {});
   final existingId=oldDetails['_operational_id']?.toString();
+  if(key=='fixed_assets:asset_disposal'&&oldRow!=null&&oldRow['status']=='posted')throw Exception('استبعاد الأصل المرحّل لا يُعدّل؛ يلزم قيد عكسي وإجراء استبعاد جديد.');
+  if(key=='fixed_assets:asset_movement'&&oldRow!=null&&oldRow['status']=='approved')throw Exception('حركة الأصل المعتمدة لا تُعدّل؛ سجّل حركة تصحيحية جديدة.');
+  if(key=='contracting:construction_cost'&&oldRow!=null&&['approved','posted'].contains(oldRow['status']))throw Exception('تكلفة المشروع المعتمدة لا تُعدّل؛ سجّل تسوية تكلفة مستقلة.');
+  if(key=='contracting:material_request'&&oldRow!=null&&['approved','fulfilled'].contains(oldRow['status']))throw Exception('طلب المواد المعتمد أو المنفذ لا يُعدّل؛ أنشئ طلبًا جديدًا.');
+  if(key=='fixed_assets:depreciation'&&oldRow!=null&&['posted'].contains(oldRow['status']))throw Exception('تشغيل الإهلاك المرحّل لا يُعدّل.');
+  if(key=='fixed_assets:depreciation'&&oldRow!=null&&['approved','done'].contains(oldRow['status'])&&['period','period_start','period_end'].any((field)=>(oldDetails[field]??'')!=(d[field]??'')))throw Exception('فترة الإهلاك احتُسبت بالفعل؛ لا يمكن تغييرها بعد الاحتساب.');
+  if(key=='fixed_assets:asset'&&existingId!=null){
+   final financialFields=['method','life_months','residual','accumulated','asset_account','depreciation_account','expense_account'];
+   if(financialFields.any((field)=>(oldDetails[field]??'')!=(d[field]??''))){
+    final lines=await _db.from('erp_asset_depreciation_lines').select('id').eq('company_id',co).eq('asset_id',existingId).limit(1);
+    if(lines.isNotEmpty)throw Exception('للأصل جدول إهلاك مُنشأ؛ لا تغيّر بياناته المالية بعد بدء الإهلاك.');
+   }
+  }
   if(key=='contracting:certificate'&&oldRow!=null&&['approved','paid'].contains(oldRow['status']))throw Exception('المستخلص المعتمد أو المدفوع لا يُعدّل؛ أنشئ مستخلصًا تكميليًا أو إشعار تسوية.');
   if(key=='manufacturing:production_order'&&existingId!=null){
    final already=await _db.from('erp_production_material_movements').select('id').eq('company_id',co).eq('production_order_id',existingId).limit(1);
@@ -477,7 +490,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   if(table=='erp_construction_material_movements')blocked='حركة المخزون مرحّلة في دفتر المخزون ولا تُحذف؛ سجّل حركة عكسية بدلًا منها.';
   if(table=='erp_asset_movements'&&recordStatus=='approved')blocked='حركة الأصل معتمدة وتم تطبيقها على بيانات الأصل؛ لا تُحذف.';
   if(table=='erp_asset_disposals'&&recordStatus=='posted')blocked='استبعاد الأصل مرحّل بقيد محاسبي؛ لا يُحذف.';
-  if(table=='erp_asset_depreciation_runs'&&['calculated','posted'].contains(recordStatus))blocked='تشغيل الإهلاك احتُسب أو رُحّل؛ لا يُحذف.';
+  if(table=='erp_asset_depreciation_runs'&&['approved','done','calculated','posted'].contains(recordStatus))blocked='تشغيل الإهلاك احتُسب أو رُحّل؛ لا يُحذف.';
   if(table=='erp_construction_costs'&&['approved','posted'].contains(recordStatus))blocked='تكلفة المشروع معتمدة أو مرحّلة؛ استخدم تسوية بدل الحذف.';
   if(table=='erp_construction_payment_certificates'&&['approved','paid'].contains(recordStatus))blocked='المستخلص معتمد أو مدفوع؛ لا يُحذف.';
   if(table=='erp_construction_material_requests'&&['approved','fulfilled'].contains(recordStatus))blocked='طلب المواد معتمد أو منفذ؛ لا يُحذف.';
