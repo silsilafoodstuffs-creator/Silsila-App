@@ -170,7 +170,6 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     final amount = _numberValue(value);
     return '${amount.toStringAsFixed(2)} ج.م';
   }
-  int _complianceCount(String type, String status) => _compliance.where((r) => r['record_type'] == type && r['status'] == status).length;
   Map<String, String> _latestComplianceStatusByEmployee(String type) {
     final latest = <String, String>{};
     // Compliance rows are loaded newest-first; keep one effective status per employee and record type.
