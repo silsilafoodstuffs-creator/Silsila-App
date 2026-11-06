@@ -374,6 +374,11 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       const SizedBox(width:124,height:36,child:Center(child:Text('ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
       const SizedBox(width:50),
       _field(_itemSegments['secondary']!,max:2,letters:false,changed:(){}),
+      const SizedBox(width:50),
+      const SizedBox(width:124,height:36),
+      const SizedBox(width:50),
+      const SizedBox(width:62,height:36),
+      const SizedBox(width:50),
       SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
         _field(_itemPrefix,max:3,letters:true,changed:(){}),
         const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
@@ -384,29 +389,30 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     ])),
   );
 
-  Widget _geoPolicyCard() => Card(
-    elevation: 0,
-    color: const Color(0xFFF5EFFB),
-    child: Padding(
-      padding: const EdgeInsets.all(10),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Text('تقسيم جغرافي', style: TextStyle(color:_purple,fontWeight:FontWeight.w900,fontSize:13)),
-        const SizedBox(height:4),
-        const Text('كل مستوى جغرافي يتكون من خانة مستقلة من رقمين؛ ويُعرض الطول التراكمي للتوضيح فقط.', style:TextStyle(fontSize:10,color:Colors.black54)),
-        const SizedBox(height:8),
-        Wrap(spacing:8,runSpacing:8,children:[
-          SizedBox(width:112,child:TextField(controller:_geoSegments['country'],readOnly:true,textAlign:TextAlign.center,
-            decoration:const InputDecoration(labelText:'الدولة (2)',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.all(8)))),
-          _segmentField('المحافظة (2)',_geoSegments['governorate']!,2),
-          _segmentField('المركز/الحي (2)',_geoSegments['center']!,2),
-          _segmentField('المنطقة/القرية/التسلسل (2)',_geoSegments['area']!,2),
-          SizedBox(width:76,child:TextField(controller:_geoPrefix,readOnly:true,textAlign:TextAlign.center,decoration:const InputDecoration(labelText:'بادئة المنطقة',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.all(8)))),
-        ]),
-        const SizedBox(height:5),
-        const Text('التركيب: 20 + 2 + 2 + 2 = 8 أرقام جغرافية. الطول التراكمي: الدولة 2، المحافظة 4، المركز 6، المنطقة 8. بادئة المنطقة: Rig.',style:TextStyle(fontSize:10)),
-      ]),
-    ),
+  Widget _geoPolicyCard() => Container(
+    margin:const EdgeInsets.symmetric(vertical:2),
+    padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+    decoration:BoxDecoration(color:const Color(0xFFF5EFFB),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
+    child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+      const SizedBox(width:30,child:Text('3',textAlign:TextAlign.center,style:TextStyle(fontSize:11))),
+      const SizedBox(width:150,child:Text('التقسيم الجغرافي',style:TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
+      const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
+      const SizedBox(width:50),
+      const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
+      const SizedBox(width:50),
+      _firstFieldName(), const SizedBox(width:50), const SizedBox(width:62,height:36), const SizedBox(width:50),
+      _geoNameCell('منطقة/قرية'), const SizedBox(width:50), _geoCountCell(),
+      const SizedBox(width:50), _geoNameCell('حي/مركز/شياخة'), const SizedBox(width:50), _geoCountCell(),
+      const SizedBox(width:50), _geoNameCell('محافظة'), const SizedBox(width:50), _geoCountCell(),
+      const SizedBox(width:50), _geoNameCell('دولة'), const SizedBox(width:50), _geoCountCell(),
+      const SizedBox(width:50),
+      SizedBox(width:112,child:Text(_geoPrefix.text,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),
+      const SizedBox(width:112,child:Text('Rig + 8 أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10))),
+    ])),
   );
+
+  Widget _geoNameCell(String name) => SizedBox(width:124,height:36,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
+  Widget _geoCountCell() => const SizedBox(width:62,height:36,child:Center(child:Text('2',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))));
 
   Widget _segmentField(String label, TextEditingController controller, int max) => SizedBox(
     width:112,
@@ -460,6 +466,10 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             SizedBox(width:124,child:Text('اسم خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             const SizedBox(width:50),
             SizedBox(width:62,child:Text('عدد خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:124,child:Text('اسم خانة 5',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
+            SizedBox(width:62,child:Text('عدد خانة 5',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:112,child:Text('بادئة الكود\\n3 حروف إنجليزية فقط',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:9))),
             SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
           ])),
@@ -489,6 +499,11 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
                   : _field(_fieldCounts[key]![slot],max:2,letters:false,changed:(){})),
                 if (slot < 2) const SizedBox(width:50),
               ],
+              const SizedBox(width:50),
+              const SizedBox(width:124,height:36),
+              const SizedBox(width:50),
+              const SizedBox(width:62,height:36),
+              const SizedBox(width:50),
               SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
                 key=='customer' ? const Text('Cus',textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)) : _field(_prefix[key]!,max:3,letters:true,changed:(){}),
                 const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
