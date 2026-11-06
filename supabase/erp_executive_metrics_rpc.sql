@@ -246,6 +246,44 @@ begin
     select count(*) filter (where lower(coalesce(status,'')) in ('cancelled','canceled','ملغي','ملغى'))::integer as cancelled_count
     from public.erp_sales_fulfillment_documents where company_id = p_company_id
   ),
+  master_data_quality as (
+    select round(100.0 * coalesce(sum(filled_fields), 0) / nullif(sum(total_fields), 0), 1) as completeness_rate
+    from (
+      select
+        (case when nullif(trim(p.party_name), '') is not null then 1 else 0 end +
+         case when nullif(trim(p.party_code), '') is not null then 1 else 0 end +
+         case when nullif(trim(p.phone), '') is not null then 1 else 0 end +
+         case when nullif(trim(p.address), '') is not null then 1 else 0 end +
+         case when p.party_kind is not null then 1 else 0 end) as filled_fields,
+        5 as total_fields
+      from public.erp_parties p where p.company_id = p_company_id and p.is_active = true
+      union all
+      select
+        (case when nullif(trim(i.item_name), '') is not null then 1 else 0 end +
+         case when nullif(trim(i.item_code), '') is not null then 1 else 0 end +
+         case when nullif(trim(i.base_unit), '') is not null then 1 else 0 end +
+         case when i.purchase_price is not null then 1 else 0 end +
+         case when i.sale_price is not null then 1 else 0 end),
+        5
+      from public.erp_items i where i.company_id = p_company_id and i.is_active = true
+      union all
+      select
+        (case when nullif(trim(b.branch_name), '') is not null then 1 else 0 end +
+         case when nullif(trim(b.branch_code), '') is not null then 1 else 0 end +
+         case when nullif(trim(b.phone), '') is not null then 1 else 0 end +
+         case when nullif(trim(b.address), '') is not null then 1 else 0 end),
+        4
+      from public.erp_branches b where b.company_id = p_company_id and b.is_active = true
+      union all
+      select
+        (case when nullif(trim(e.full_name), '') is not null then 1 else 0 end +
+         case when nullif(trim(e.employee_code), '') is not null then 1 else 0 end +
+         case when nullif(trim(e.job_title), '') is not null then 1 else 0 end +
+         case when e.branch_id is not null then 1 else 0 end),
+        4
+      from public.erp_employees e where e.company_id = p_company_id and e.is_active = true
+    ) quality_rows
+  ),
   approval_metrics as (
     select (select count(*) from public.erp_sales_documents where company_id=p_company_id and status='draft' and is_demo_data=false)
       + (select count(*) from public.erp_purchase_documents where company_id=p_company_id and status='draft' and is_demo_data=false)
@@ -303,7 +341,8 @@ begin
     'top_profitable_items', ipm.rows,
     'category_sales', csm.rows,
     'inventory_turnover_rate', case when it.value > 0 then cosm.cost_of_sales / it.value else null end,
-    'fulfillment_cancelled_count', fsm.cancelled_count
+    'fulfillment_cancelled_count', fsm.cancelled_count,
+    'data_completeness_rate', mdq.completeness_rate
   ) into v_result
   from sales_totals st
   cross join purchase_totals pt
@@ -328,7 +367,8 @@ begin
   cross join item_profit_metrics ipm
   cross join category_sales_metrics csm
   cross join cost_of_sales_metrics cosm
-  cross join fulfillment_status_metrics fsm;
+  cross join fulfillment_status_metrics fsm
+  cross join master_data_quality mdq;
 
   return v_result;
 end;
