@@ -1,0 +1,2 @@
+alter table public.erp_service_tickets add column if not exists escalation_due_at timestamptz;
+create index if not exists erp_service_tickets_escalation_due_idx on public.erp_service_tickets(company_id,escalation_due_at) where escalation_due_at is not null;
