@@ -144,10 +144,6 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     return end != null && end.isBefore(today) && _isCurrentEmployee(e) && e['contract_type'] == 'بعقد';
   }).length;
 
-  int get _contractsWithoutEndDate => _realEmployees.where((e) =>
-      _isCurrentEmployee(e) && e['contract_type'] == 'بعقد' &&
-      (_asDate(e['contract_start_date']) == null || _asDate(e['contract_end_date']) == null)).length;
-
   Map<String, dynamic>? _jobForEmployee(Map<String, dynamic> employee) {
     for (final job in _jobs) {
       if (job['id']?.toString() == employee['job_id']?.toString()) return job;
