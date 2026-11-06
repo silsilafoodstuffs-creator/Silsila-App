@@ -575,7 +575,6 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                 value: _analysisPeriodDays,
                 isExpanded: true,
                 isDense: true,
-                isExpanded: true,
                 decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), border: OutlineInputBorder()),
                 items: const [
                   DropdownMenuItem(value: 30, child: Text('آخر 30 يومًا', maxLines: 1, overflow: TextOverflow.ellipsis)),
