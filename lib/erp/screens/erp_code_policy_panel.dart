@@ -75,11 +75,13 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   final Map<String, TextEditingController> _digits = {};
   final _itemPrefix = TextEditingController(text: 'itm');
   final _geoPrefix = TextEditingController(text: 'Rig');
+  // Each geographic level is one independent two-digit segment.
+  // The persisted geo_segments map remains cumulative for backward compatibility.
   final Map<String, TextEditingController> _geoSegments = {
     'country': TextEditingController(text: '20'),
-    'governorate': TextEditingController(text: '4'),
-    'center': TextEditingController(text: '6'),
-    'area': TextEditingController(text: '8'),
+    'governorate': TextEditingController(text: '2'),
+    'center': TextEditingController(text: '2'),
+    'area': TextEditingController(text: '2'),
   };
   final Map<String, TextEditingController> _itemSegments = {
     'main': TextEditingController(text: '2'),
@@ -140,9 +142,16 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         }
         _itemPrefix.text = (data['item_prefix'] ?? 'itm').toString();
         _geoPrefix.text = (data['geo_prefix'] ?? 'Rig').toString();
-        final geoSegments = Map<String, dynamic>.from(data['geo_segments'] as Map? ?? {});
-        for (final key in _geoSegments.keys) {
-          if (key != 'country' && geoSegments[key] != null) _geoSegments[key]!.text = geoSegments[key].toString();
+        // Prefer the new per-level lengths. Older policies stored cumulative
+        // lengths (4/6/8), so retain the safe 2/2/2 defaults when upgrading them.
+        final geoSegmentLengths = Map<String, dynamic>.from(
+          data['geo_segment_lengths'] as Map? ?? {},
+        );
+        for (final key in const ['governorate', 'center', 'area']) {
+          final configured = geoSegmentLengths[key];
+          if (configured != null) {
+            _geoSegments[key]!.text = configured.toString();
+          }
         }
         final segments = Map<String, dynamic>.from(data['item_segments'] as Map? ?? {});
         for (final key in _itemSegments.keys) {
@@ -186,7 +195,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       final value = int.tryParse(entry.value.text);
       final max = entry.key == 'serial' ? 8 : 4;
       if (value == null || value < 1 || value > max) {
-        final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','serial':'التسلسل'}[entry.key];
+        final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','serial':'تسلسل'}[entry.key];
         setState(() => _error = 'عدد خانات الفئة $label يجب أن يكون من 1 إلى $max.');
         return;
       }
@@ -196,12 +205,16 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'يجب تحديد كود الدولة من تبويب بيانات الدول (رقمان).');
       return;
     }
-    const expectedGeoLengths = {'governorate':4,'center':6,'area':8};
+    const expectedGeoLengths = {'governorate':2,'center':2,'area':2};
     for (final entry in expectedGeoLengths.entries) {
       final value = int.tryParse(_geoSegments[entry.key]!.text);
       if (value != entry.value) {
-        final label = {'governorate':'المحافظة','center':'المركز/الحي','area':'المنطقة'}[entry.key];
-        setState(() => _error = 'طول كود $label يجب أن يكون ${entry.value} خانات تراكمية.');
+        final label = {
+          'governorate':'المحافظة',
+          'center':'المركز/الحي',
+          'area':'المنطقة/القرية/التسلسل',
+        }[entry.key];
+        setState(() => _error = 'خانة $label يجب أن تكون رقمين بالضبط.');
         return;
       }
     }
@@ -220,13 +233,29 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         for (final entry in _itemSegments.entries) entry.key:int.parse(entry.value.text),
       };
       final payload = jsonEncode({
-        'version':3,
+        'version':4,
         'types':types,
         'item_prefix':_itemPrefix.text.trim(),
         'item_segments':itemSegments,
         'geo_prefix':_geoPrefix.text.trim(),
+        // Legacy cumulative values are intentionally preserved for existing
+        // readers and database triggers: country=2, governorate=4,
+        // center=6, area=8 total digits.
         'geo_segments':{
           'country':countryCode,
+          'governorate':4,
+          'center':6,
+          'area':8,
+        },
+        // New UI contract: each level contributes exactly two digits.
+        'geo_segment_lengths':{
+          'country':2,
+          'governorate':2,
+          'center':2,
+          'area':2,
+        },
+        'geo_cumulative_lengths':{
+          'country':2,
           'governorate':4,
           'center':6,
           'area':8,
@@ -267,18 +296,18 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         const Text('تقسيم جغرافي', style: TextStyle(color:_purple,fontWeight:FontWeight.w900,fontSize:13)),
         const SizedBox(height:4),
-        const Text('كود الدولة يؤخذ من تبويب بيانات الدول، وبقية الأكواد تراكمية حسب الشجرة الجغرافية.', style:TextStyle(fontSize:10,color:Colors.black54)),
+        const Text('كل مستوى جغرافي يتكون من خانة مستقلة من رقمين؛ ويُعرض الطول التراكمي للتوضيح فقط.', style:TextStyle(fontSize:10,color:Colors.black54)),
         const SizedBox(height:8),
         Wrap(spacing:8,runSpacing:8,children:[
           SizedBox(width:112,child:TextField(controller:_geoSegments['country'],readOnly:true,textAlign:TextAlign.center,
             decoration:const InputDecoration(labelText:'الدولة (2)',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.all(8)))),
-          _segmentField('المحافظة (4)',_geoSegments['governorate']!,4),
-          _segmentField('المركز/الحي (6)',_geoSegments['center']!,6),
-          _segmentField('المنطقة (8)',_geoSegments['area']!,8),
+          _segmentField('المحافظة (2)',_geoSegments['governorate']!,2),
+          _segmentField('المركز/الحي (2)',_geoSegments['center']!,2),
+          _segmentField('المنطقة/القرية/التسلسل (2)',_geoSegments['area']!,2),
           SizedBox(width:76,child:TextField(controller:_geoPrefix,readOnly:true,textAlign:TextAlign.center,decoration:const InputDecoration(labelText:'بادئة المنطقة',isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.all(8)))),
         ]),
         const SizedBox(height:5),
-        const Text('مثال: كود مصر + المحافظة + المركز/الحي + المنطقة؛ بادئة المنطقة Rig.',style:TextStyle(fontSize:10)),
+        const Text('التركيب: 20 + 2 + 2 + 2 = 8 أرقام جغرافية. الطول التراكمي: الدولة 2، المحافظة 4، المركز 6، المنطقة 8. بادئة المنطقة: Rig.',style:TextStyle(fontSize:10)),
       ]),
     ),
   );
@@ -368,7 +397,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             _segmentField('فئة رئيسية',_itemSegments['main']!,4),
             _segmentField('فئة فرعية',_itemSegments['sub']!,4),
             _segmentField('فئة ثانوية',_itemSegments['secondary']!,4),
-            _segmentField('التسلسل',_itemSegments['serial']!,8),
+            _segmentField('تسلسل',_itemSegments['serial']!,8),
           ]),
           const SizedBox(height:8),
           Text('الصيغة: ${_itemPrefix.text.trim()} + رئيسية (${_itemSegments['main']!.text}) + فرعية (${_itemSegments['sub']!.text}) + ثانوية (${_itemSegments['secondary']!.text}) + تسلسل (${_itemSegments['serial']!.text})',style:const TextStyle(fontSize:11)),
