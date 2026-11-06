@@ -107,8 +107,12 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    case 'fixed_assets:asset':
     final categoryName=(d['category']??'').toString();final categories=categoryName.isEmpty?[]:await _db.from('erp_asset_categories').select('id').eq('company_id',co).eq('name',categoryName).limit(1);
     table='erp_fixed_assets';data={'company_id':co,'category_id':categories.isEmpty?null:categories.first['id'],'asset_code':code,'name':name,'serial_number':d['serial'],'acquisition_date':_day(d['acquisition_date']??date),'acquisition_cost':amount,'residual_value':_n(d['residual']),'useful_life_months':_n(d['life_months'],60).round().clamp(1,1200),'depreciation_method':_assetMethod(d['method']),'location':d['location'],'custodian':d['custodian'],'supplier_name':payload['counterparty'],'purchase_reference':d['invoice'],'status':status=='active'?'active':'draft'};break;
-   case 'fixed_assets:depreciation':
-    table='erp_asset_depreciation_runs';data={'company_id':co,'run_code':code,'period_start':date,'period_end':due.isEmpty?date:due,'total_amount':amount,'status':status=='done'||status=='approved'?'calculated':'draft'};break;
+   case 'fixed_assets:depreciation':{
+    final periodDate=DateTime.tryParse((d['period']??date).toString())??DateTime.parse(date);
+    final periodStart=DateTime(periodDate.year,periodDate.month,1).toIso8601String().substring(0,10);
+    final periodEnd=DateTime(periodDate.year,periodDate.month+1,0).toIso8601String().substring(0,10);
+    table='erp_asset_depreciation_runs';data={'company_id':co,'run_code':code,'period_start':periodStart,'period_end':periodEnd,'total_amount':amount,'status':'draft'};break;
+   }
    case 'fixed_assets:asset_disposal':{
     final assetCode=(d['asset_code']??'').toString();final assets=await _db.from('erp_fixed_assets').select('id,net_book_value').eq('company_id',co).eq('asset_code',assetCode).limit(1);
     if(assets.isEmpty)throw Exception('سجل الأصل أولاً ثم أنشئ عملية الاستبعاد.');
@@ -185,6 +189,19 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    final existing=uniqueColumn==null?[]:await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).limit(1);
    if(existing.isNotEmpty){id=existing.first['id'].toString();await _db.from(table).update(data).eq('id',id).eq('company_id',co);}
    else{final inserted=await _db.from(table).insert(data).select('id').single();id=inserted['id'].toString();}
+  }
+  if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done')){
+   await _db.rpc('erp_calculate_asset_depreciation',params:{'p_company_id':co,'p_run_id':id});
+  }
+  if(table=='erp_asset_disposals'&&status=='approved'){
+   await _db.from('erp_fixed_assets').update({'status':'disposed','updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',data['asset_id']);
+  }
+  if(table=='erp_asset_movements'&&status=='approved'){
+   final updates=<String,dynamic>{'updated_at':DateTime.now().toIso8601String()};
+   if((d['to_location']??'').toString().isNotEmpty)updates['location']=d['to_location'];
+   if((d['custodian']??'').toString().isNotEmpty)updates['custodian']=d['custodian'];
+   if((d['movement_type']??'').toString().contains('صيانة'))updates['status']='under_maintenance';
+   await _db.from('erp_fixed_assets').update(updates).eq('company_id',co).eq('id',data['asset_id']);
   }
   if(table=='erp_production_orders'){
    final orderRows=await _db.from('erp_production_orders').select('warehouse_id,product_id,lot_number,planned_quantity,estimated_cost,actual_cost').eq('company_id',co).eq('id',id).limit(1);
