@@ -2424,17 +2424,17 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         LayoutBuilder(builder: (context, constraints) {
           final cards = <Widget>[
             _executiveAnalysisCard(
-              title: 'صافي نتيجة النشاط',
+              title: 'مجمل الربح التقديري',
               icon: Icons.assessment_outlined,
               trend: _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit),
               rows: [
-                _analysisRow('صافي نتيجة النشاط', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
-                _analysisRow('التغير عن الفترة السابقة', null, null),
-                _analysisRow('نسبة النتيجة', null, null, isPercent: true),
+                _analysisRow('مجمل الربح التقديري', _executiveGrossProfit, _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit)),
+                _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveGrossProfit, _executivePreviousGrossProfit), null, isPercent: true),
+                _analysisRow('هامش الربح التقديري', _executiveGrossProfit != null && _executiveSales != null && _executiveSales! > 0 ? (_executiveGrossProfit! / _executiveSales! * 100) : null, null, isPercent: true),
               ],
             ),
             _executiveAnalysisCard(
-              title: 'صافي نتيجة المبيعات',
+              title: 'صافي المبيعات',
               icon: Icons.point_of_sale_rounded,
               trend: _executiveChange(_executiveSales, _executivePreviousSales),
               rows: [
@@ -2444,7 +2444,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               ],
             ),
             _executiveAnalysisCard(
-              title: 'صافي مشتريات',
+              title: 'صافي المشتريات',
               icon: Icons.shopping_cart_outlined,
               trend: _executiveChange(_executivePurchases, _executivePreviousPurchases),
               rows: [
