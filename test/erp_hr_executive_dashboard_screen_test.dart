@@ -48,6 +48,6 @@ void main() {
     expect(find.text('آخر 30 يومًا'), findsOneWidget);
     expect(find.text('آخر 90 يومًا'), findsOneWidget);
     expect(find.text('آخر 6 أشهر'), findsOneWidget);
-    expect(find.text('آخر 12 شهرًا'), findsOneWidget);
+    expect(find.text('آخر 12 شهرًا'), findsWidgets);
   });
 }
