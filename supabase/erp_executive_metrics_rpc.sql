@@ -92,6 +92,36 @@ begin
     from public.erp_inventory_movements m
     join public.erp_items i on i.id = m.item_id and i.company_id = p_company_id
     where m.company_id = p_company_id
+  ),
+  expense_totals as (
+    select coalesce(sum(jl.debit - jl.credit),0) as total
+    from public.erp_journal_entries je
+    join public.erp_journal_lines jl on jl.entry_id = je.id
+    join public.erp_accounts a on a.id = jl.account_id and a.company_id = p_company_id
+    where je.company_id = p_company_id
+      and je.status = 'posted'
+      and je.entry_date >= p_month_start
+      and je.entry_date < p_month_end
+      and a.account_type = 'expense'
+  ),
+  fixed_asset_totals as (
+    select
+      coalesce(sum(acquisition_cost),0) as gross_value,
+      coalesce(sum(accumulated_depreciation),0) as depreciation,
+      coalesce(sum(net_book_value),0) as net_value
+    from public.erp_fixed_assets
+    where company_id = p_company_id
+      and status in ('active','under_maintenance')
+  ),
+  cash_flow_totals as (
+    select
+      coalesce(sum(case when voucher_type = 'receipt' then amount else 0 end),0) as inflows,
+      coalesce(sum(case when voucher_type = 'payment' then amount else 0 end),0) as outflows
+    from public.erp_cash_vouchers
+    where company_id = p_company_id
+      and status = 'posted'
+      and voucher_date >= p_month_start
+      and voucher_date < p_month_end
   )
   select jsonb_build_object(
     'month_start', p_month_start,
@@ -115,12 +145,22 @@ begin
     ), '[]'::jsonb),
     'inventory_category_values', coalesce((
       select jsonb_agg(value order by value desc) from inventory_by_category
-    ), '[]'::jsonb)
+    ), '[]'::jsonb),
+    'expenses', et.total,
+    'fixed_assets_gross', fat.gross_value,
+    'fixed_assets_depreciation', fat.depreciation,
+    'fixed_assets_net', fat.net_value,
+    'cash_inflows', cft.inflows,
+    'cash_outflows', cft.outflows,
+    'cash_net_flow', cft.inflows - cft.outflows
   ) into v_result
   from sales_totals st
   cross join purchase_totals pt
   cross join margin_totals mt
-  cross join inventory_total it;
+  cross join inventory_total it
+  cross join expense_totals et
+  cross join fixed_asset_totals fat
+  cross join cash_flow_totals cft;
 
   return v_result;
 end;
