@@ -221,10 +221,9 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     }
     for (final entry in _itemSegments.entries) {
       final value = int.tryParse(entry.value.text);
-      final max = entry.key == 'serial' ? 8 : 4;
-      if (value == null || value < 1 || value > max) {
+      if (value != 2) {
         final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','brand':'البراند/الماركة','serial':'تسلسل'}[entry.key];
-        setState(() => _error = 'عدد خانات الفئة $label يجب أن يكون من 1 إلى $max.');
+        setState(() => _error = 'عدد خانات $label يجب أن يكون 2 بالضبط.');
         return;
       }
     }
