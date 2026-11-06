@@ -2296,6 +2296,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           {'title': 'الأصناف الراكدة', 'value': '— صنف', 'note': 'بلا حركة', 'icon': Icons.inventory_outlined, 'color': _orange, 'details': 'الأصناف التي لم تتحرك خلال فترة محددة وقيمة رأس المال المجمد بها.'},
           {'title': 'دوران المخزون', 'value': '— مرة', 'note': 'خلال الفترة', 'icon': Icons.sync_alt_rounded, 'color': _purple, 'details': 'معدل دوران المخزون ومتوسط أيام التخزين حسب الفئة والصنف.'},
           {'title': 'تغير تكلفة الشراء', 'value': '—%', 'note': 'مقارنة بآخر شراء', 'icon': Icons.price_change_outlined, 'color': const Color(0xFF2475B8), 'details': 'تغير تكلفة الشراء ومقارنة أسعار الصنف بين الموردين.'},
+          {'title': 'أعلى الأصناف مبيعًا', 'value': '—', 'note': 'حسب الكمية والقيمة', 'icon': Icons.inventory_2_outlined, 'color': _purple, 'details': 'ترتيب الأصناف حسب صافي الكمية وقيمة المبيعات والربحية خلال الفترة المحددة؛ تظهر النتائج بعد ربط تفاصيل فواتير البيع بالأصناف.'},
+          {'title': 'الأصناف الأعلى ربحية', 'value': '—', 'note': 'حسب هامش الربح', 'icon': Icons.trending_up_rounded, 'color': _green, 'details': 'تحليل هامش الربح للصنف بعد تكلفة المبيعات والخصومات والمرتجعات.'},
+          {'title': 'مساهمة فئات الأصناف', 'value': '—%', 'note': 'من إجمالي المبيعات', 'icon': Icons.donut_large_rounded, 'color': _orange, 'details': 'توزيع صافي المبيعات والربحية على فئات الأصناف الرئيسية والفرعية.'},
+          {'title': 'الأصناف بطيئة الحركة', 'value': '— صنف', 'note': 'تحتاج مراجعة', 'icon': Icons.hourglass_bottom_rounded, 'color': _pink, 'details': 'تحديد الأصناف منخفضة الحركة وربطها بقيمة المخزون والمدة منذ آخر حركة.'},
         ],
       },
       {
@@ -2351,24 +2355,21 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         Container(
           padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: AlignmentDirectional.centerStart,
-              end: AlignmentDirectional.centerEnd,
-              colors: [Color(0xFF3E007D), Color(0xFF6330A0), Color(0xFF8A50B7)],
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: const [BoxShadow(color: Color(0x183E007D), blurRadius: 18, offset: Offset(0, 7))],
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE9E2F1)),
+            boxShadow: const [BoxShadow(color: Color(0x0D3E007D), blurRadius: 14, offset: Offset(0, 4))],
           ),
           child: Row(children: [
             Container(
               width: 42, height: 42,
-              decoration: BoxDecoration(color: Colors.white.withValues(alpha: .13), borderRadius: BorderRadius.circular(17), border: Border.all(color: Colors.white.withValues(alpha: .22))),
-              child: const Icon(Icons.insights_rounded, color: _orange, size: 34),
+              decoration: BoxDecoration(color: const Color(0xFFF5EFFB), borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFE9DDF5))),
+              child: const Icon(Icons.insights_rounded, color: _purple, size: 30),
             ),
             const SizedBox(width: 16),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: Text(silsilaText('الملخص التنفيذي'), style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -.3))),
+                Expanded(child: Text(silsilaText('الملخص التنفيذي'), style: const TextStyle(fontSize: 22, height: 1.15, fontWeight: FontWeight.w900, color: _purple, letterSpacing: -.3))),
                 const SizedBox(width: 12),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 220),
@@ -2379,7 +2380,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                     style: const TextStyle(color: _purple, fontSize: 13, fontWeight: FontWeight.w800),
                     decoration: InputDecoration(
                       labelText: 'فترة التحليلات',
-                      labelStyle: const TextStyle(color: Color(0xFFECE2F8), fontSize: 11),
+                      labelStyle: const TextStyle(color: _purple, fontSize: 11),
                       filled: true,
                       fillColor: Colors.white,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -2402,16 +2403,16 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 ),
               ]),
               const SizedBox(height: 6),
-              Text(silsilaText('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة'), style: const TextStyle(color: Color(0xFFECE2F8), fontSize: 12, height: 1.35)),
+              Text(silsilaText('مركز قيادة الأداء المالي والتشغيلي • مؤشرات وتحليلات موحدة للإدارة'), style: const TextStyle(color: Color(0xFF6D6178), fontSize: 12, height: 1.35)),
               const SizedBox(height: 5),
-              Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة للفترة المحددة…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'الفترة المحددة: $_executivePeriod • المؤشرات من الحركات المرحلة', style: const TextStyle(color: Color(0xFFFFDDA8), fontSize: 12, fontWeight: FontWeight.w700)),
+              Text(_appManagementCompanyId == null ? 'اختر شركة نشطة لعرض المؤشرات الفعلية' : _executiveMetricsLoading ? 'جارٍ تحميل الحركات المرحلة للفترة المحددة…' : _executiveMetricsError != null ? 'تعذر تحميل بعض المؤشرات؛ راجع إعدادات قاعدة البيانات' : 'الفترة المحددة: $_executivePeriod • المؤشرات من الحركات المرحلة', style: const TextStyle(color: Color(0xFFB36B00), fontSize: 11, fontWeight: FontWeight.w700)),
             ])),
             const SizedBox(width: 12),
             Column(mainAxisSize: MainAxisSize.min, children: [
               IconButton(
                 tooltip: 'تحديث الملخص',
                 onPressed: () { final companyId = _appManagementCompanyId; if (companyId != null) _loadExecutiveMetrics(companyId); },
-                style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: .12), foregroundColor: Colors.white),
+                style: IconButton.styleFrom(backgroundColor: const Color(0xFFF5EFFB), foregroundColor: _purple),
                 icon: const Icon(Icons.refresh_rounded, size: 24),
               ),
               _summaryAction('كل التحليلات', () => _showExecutiveCategoryDetails('جميع التحليلات', allItems)),
@@ -2486,8 +2487,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               GridView.extent(
-                maxCrossAxisExtent: 430,
-                childAspectRatio: 2.15,
+                maxCrossAxisExtent: 390,
+                childAspectRatio: 2.35,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 10,
@@ -2516,7 +2517,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 caption: 'مبيعات • مشتريات • المحصّل',
                 color: _orange,
                 value: _executiveMoney(_executivePurchases),
-                chart: _ExecutiveBarsPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
+                chart: _ExecutiveDonutPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
               )),
             ]),
             const SizedBox(height: 12),
@@ -2536,7 +2537,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             caption: 'مبيعات • مشتريات • المحصّل',
             color: _orange,
             value: _executiveMoney(_executivePurchases),
-            chart: _ExecutiveBarsPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
+            chart: _ExecutiveDonutPainter(values: <double>[_executiveSales ?? 0, _executivePurchases ?? 0, _executiveCollections ?? 0]),
           ),
           const SizedBox(height: 12),
           _executiveHighlights(),
@@ -3131,6 +3132,51 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     ]),
   );
 
+}
+
+class _ExecutiveDonutPainter extends CustomPainter {
+  const _ExecutiveDonutPainter({this.values = const <double>[]});
+  final List<double> values;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const palette = [_purple, _orange, _green, _pink, Color(0xFF4C9BE8)];
+    final total = values.fold<double>(0, (sum, value) => sum + (value > 0 ? value : 0));
+    final center = Offset(size.width / 2, size.height / 2);
+    final stroke = (size.shortestSide * .20).clamp(10.0, 22.0);
+    final rect = Rect.fromCircle(center: center, radius: (size.shortestSide - stroke) / 2);
+    final basePaint = Paint()
+      ..color = const Color(0xFFEFEAF4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke;
+    canvas.drawArc(rect, 0, 6.28318530718, false, basePaint);
+    if (total <= 0) return;
+    var start = -1.57079632679;
+    for (var i = 0; i < values.length; i++) {
+      final value = values[i] > 0 ? values[i] : 0;
+      if (value == 0) continue;
+      final sweep = value / total * 6.28318530718;
+      final paint = Paint()
+        ..color = palette[i % palette.length]
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..strokeCap = StrokeCap.butt;
+      canvas.drawArc(rect, start, sweep, false, paint);
+      start += sweep;
+    }
+    final label = TextPainter(
+      text: TextSpan(
+        text: '100%',
+        style: TextStyle(color: _purple, fontSize: (size.shortestSide * .12).clamp(10.0, 15.0), fontWeight: FontWeight.w900),
+      ),
+      textDirection: TextDirection.rtl,
+      textAlign: TextAlign.center,
+    )..layout(maxWidth: size.width);
+    label.paint(canvas, Offset(center.dx - label.width / 2, center.dy - label.height / 2));
+  }
+
+  @override
+  bool shouldRepaint(covariant _ExecutiveDonutPainter oldDelegate) => oldDelegate.values != values;
 }
 
 class _ExecutiveBarsPainter extends CustomPainter {
