@@ -97,6 +97,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     return hireDate == null || !hireDate.isAfter(today);
   }
   int get _temporaryEmployees => _employees.where(_isTemporarySeedEmployee).length;
+  Set<String> get _realEmployeeIds => _realEmployees.map((e) => e['id']?.toString()).whereType<String>().toSet();
   int get _upcomingHires => _realEmployees.where((employee) {
     final hireDate = _asDate(employee['hire_date']);
     final now = DateTime.now();
@@ -240,10 +241,10 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     final date = DateTime.now().subtract(Duration(days: _analysisPeriodDays));
     return DateTime(date.year, date.month, date.day);
   }
-  int get _separationsInPeriod => _movements.where((r) => const ['resignation','termination','retirement'].contains(r['movement_type']) && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).length;
-  int get _resignationsInPeriod => _movements.where((r) => r['movement_type'] == 'resignation' && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).length;
+  int get _separationsInPeriod => _movements.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && const ['resignation','termination','retirement'].contains(r['movement_type']) && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).length;
+  int get _resignationsInPeriod => _movements.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && r['movement_type'] == 'resignation' && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).length;
   int get _hiresInPeriod => _realEmployees.where((r) { final date = _asDate(r['hire_date']); final now = DateTime.now(); final today = DateTime(now.year, now.month, now.day); return date != null && date.isAfter(_analysisCutoff) && !date.isAfter(today); }).length;
-  int get _separationsLast12Months => _movements.where((r) => const ['resignation','termination','retirement'].contains(r['movement_type']) && (_asDate(r['effective_on'])?.isAfter(DateTime.now().subtract(const Duration(days:365))) ?? false)).length;
+  int get _separationsLast12Months => _movements.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && const ['resignation','termination','retirement'].contains(r['movement_type']) && (_asDate(r['effective_on'])?.isAfter(DateTime.now().subtract(const Duration(days:365))) ?? false)).length;
   double get _turnoverRate {
     final current = _activeEmployees;
     final start = current + _separationsInPeriod - _hiresInPeriod;
@@ -251,7 +252,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     return average <= 0 ? 0 : (_separationsInPeriod / average) * 100;
   }
   // Avoid reporting a false zero turnover rate before service-movement history is recorded.
-  String get _turnoverRateDisplay => _movements.where((r) => _asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false).isEmpty
+  String get _turnoverRateDisplay => _movements.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).isEmpty
       ? 'غير متاح — لا توجد حركات خدمة مسجلة في الفترة'
       : '${_turnoverRate.toStringAsFixed(1)}%';
   int get _pendingLeaveRequests => _leaves.where((r) => !const ['approved','rejected','مقبول','مرفوض'].contains(r['status']?.toString().toLowerCase())).length;
@@ -259,11 +260,11 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     final counts = <String, int>{};
     final cutoff = _analysisCutoff;
     for (final movement in _movements) {
-      if (!const ['resignation','termination','retirement'].contains(movement['movement_type'])) continue;
+      if (!_realEmployeeIds.contains(movement['employee_id']?.toString()) || !const ['resignation','termination','retirement'].contains(movement['movement_type'])) continue;
       final movedOn = _asDate(movement['effective_on']);
       if (movedOn == null || movedOn.isBefore(cutoff)) continue;
       Map<String, dynamic>? employee;
-      for (final row in _employees) {
+      for (final row in _realEmployees) {
         if (row['id']?.toString() == movement['employee_id']?.toString()) { employee = row; break; }
       }
       final department = (employee?['department_name'] ?? 'إدارة غير محددة').toString();
