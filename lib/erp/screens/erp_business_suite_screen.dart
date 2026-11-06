@@ -182,7 +182,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     final projectCode=(d['project']??'').toString();final projectRows=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',projectCode).limit(1);
     if(projectRows.isEmpty)throw Exception('أدخل كود مشروع مسجل قبل تسجيل التكلفة.');
     final costKind=(d['cost_type']??'').toString();final costType=costKind.contains('مواد')?'material':costKind.contains('عمالة')?'labor':costKind.contains('معدات')?'equipment':costKind.contains('باطن')?'subcontract':costKind.contains('غير مباشرة')?'overhead':'other';
-    table='erp_construction_costs';final costQty=_n(d['quantity'],1),unitCost=_n(d['unit_cost']);data={'company_id':co,'project_id':projectRows.first['id'],'suite_record_code':code,'cost_date':_day(d['cost_date']??date),'cost_type':costType,'description':d['description']??name,'quantity':costQty,'unit_cost':unitCost,'amount':_n(payload['amount'])>0?_n(payload['amount']):costQty*unitCost,'supplier_name':d['supplier'],'document_reference':d['reference'],'status':status=='approved'?'approved':'draft'};break;
+    table='erp_construction_costs';final costQty=_n(d['quantity'],1),unitCost=_n(d['unit_cost']);data={'company_id':co,'project_id':projectRows.first['id'],'suite_record_code':code,'cost_date':_day(d['cost_date']??date),'cost_type':costType,'description':d['description']??name,'quantity':costQty,'unit_cost':unitCost,'amount':_n(payload['amount'])>0?_n(payload['amount']):costQty*unitCost,'supplier_name':d['supplier'],'document_reference':d['reference'],'status':status=='posted'?'posted':status=='approved'?'approved':'draft'};break;
    }
    case 'contracting:site_report':{
     final projectCode=(d['project']??'').toString();final projectRows=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',projectCode).limit(1);
@@ -267,8 +267,8 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    }
   }
   if(table=='erp_construction_costs'){
-   final projectId=data['project_id'];final costs=await _db.from('erp_construction_costs').select('amount').eq('company_id',co).eq('project_id',projectId).neq('status','cancelled');
-   final actual= (costs as List).fold<double>(0,(sum,row)=>sum+_n(row['amount']));
+   final projectId=data['project_id'];final costs=await _db.from('erp_construction_costs').select('amount,status').eq('company_id',co).eq('project_id',projectId);
+   final actual=(costs as List).where((row)=>['approved','posted'].contains(row['status'])).fold<double>(0,(sum,row)=>sum+_n(row['amount']));
    await _db.from('erp_construction_projects').update({'actual_cost':actual,'updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',projectId);
   }
   if(table=='erp_construction_boq_lines'){
