@@ -14,7 +14,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
  final _db=Supabase.instance.client;final _search=TextEditingController();List<Map<String,dynamic>> _rows=[];bool _loading=true;String? _error;String _filter='all';
  String get _moduleKey=>switch(widget.module){'أصول ثابتة'=>'fixed_assets','تصنيع'=>'manufacturing','مقاولات'=>'contracting',_=>'customer_service'};
  bool get _report=>widget.group=='تقارير'||widget.page.contains('تقرير')||widget.page.contains('تحليل')||widget.page.contains('لوحة')||widget.page.contains('مؤشرات');
- String _status(dynamic s)=>const {'draft':'مسودة','active':'نشط','planned':'مخطط','in_progress':'قيد التنفيذ','waiting':'بانتظار إجراء','approved':'معتمد','done':'مكتمل','completed':'مكتمل','closed':'مغلق','cancelled':'ملغي','rejected':'مرفوض','paid':'تم الصرف'}[s?.toString()]??s?.toString()??'—';
+ String _status(dynamic s)=>const {'draft':'مسودة','active':'نشط','planned':'مخطط','in_progress':'قيد التنفيذ','waiting':'بانتظار إجراء','approved':'معتمد','done':'مكتمل','completed':'مكتمل','closed':'مغلق','cancelled':'ملغي','rejected':'مرفوض','paid':'تم الصرف','posted':'مُرحّل'}[s?.toString()]??s?.toString()??'—';
  _C get _c{
   final p=widget.page;
   if(widget.module=='أصول ثابتة'){
@@ -111,10 +111,10 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   String? table;Map<String,dynamic>? data;
   switch(key){
    case 'fixed_assets:asset_category':{
-    table='erp_asset_categories';data={'company_id':co,'category_code':d['category_code']?.toString().trim().isNotEmpty==true?d['category_code']:code,'name':name,'depreciation_method':_assetMethod(d['depreciation_method']),'useful_life_months':_n(d['useful_life_months']).round(),'asset_account_id':await _accountId(d['asset_account']),'accumulated_account_id':await _accountId(d['depreciation_account']),'expense_account_id':await _accountId(d['expense_account']),'is_active':status!='cancelled'};break;
+    table='erp_asset_categories';data={'company_id':co,'category_code':d['category_code']?.toString().trim().isNotEmpty==true?d['category_code']:code,'name':name,'depreciation_method':_assetMethod(d['depreciation_method']),'useful_life_months':_n(d['useful_life_months']).round(),'asset_account_id':await _accountId(d['asset_account'])??(categories.isEmpty?null:categories.first['asset_account_id']),'accumulated_account_id':await _accountId(d['depreciation_account'])??(categories.isEmpty?null:categories.first['accumulated_account_id']),'expense_account_id':await _accountId(d['expense_account'])??(categories.isEmpty?null:categories.first['expense_account_id']),'is_active':status!='cancelled'};break;
    }
    case 'fixed_assets:asset':{
-    final categoryName=(d['category']??'').toString();final categories=categoryName.isEmpty?[]:await _db.from('erp_asset_categories').select('id').eq('company_id',co).eq('name',categoryName).limit(1);
+    final categoryName=(d['category']??'').toString();final categories=categoryName.isEmpty?[]:await _db.from('erp_asset_categories').select('id,asset_account_id,accumulated_account_id,expense_account_id').eq('company_id',co).eq('name',categoryName).limit(1);
     table='erp_fixed_assets';data={'company_id':co,'category_id':categories.isEmpty?null:categories.first['id'],'asset_code':code,'name':name,'serial_number':d['serial'],'acquisition_date':_day(d['acquisition_date']??date),'in_service_date':_day(d['acquisition_date']??date),'acquisition_cost':amount,'residual_value':_n(d['residual']),'useful_life_months':_n(d['life_months'],60).round().clamp(1,1200),'depreciation_method':_assetMethod(d['method']),'accumulated_depreciation':_n(d['accumulated']),'location':d['location'],'custodian':d['custodian'],'supplier_name':d['supplier']??payload['counterparty'],'purchase_reference':d['invoice'],'asset_account_id':await _accountId(d['asset_account']),'accumulated_account_id':await _accountId(d['depreciation_account']),'expense_account_id':await _accountId(d['expense_account']),'status':status=='active'?'active':'draft'};break;
    }
    case 'fixed_assets:depreciation':{
@@ -214,8 +214,9 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    if(existing.isNotEmpty){id=existing.first['id'].toString();await _db.from(table).update(data).eq('id',id).eq('company_id',co);}
    else{final inserted=await _db.from(table).insert(data).select('id').single();id=inserted['id'].toString();}
   }
-  if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done')){
+  if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done'||status=='posted')){
    await _db.rpc('erp_calculate_asset_depreciation',params:{'p_company_id':co,'p_run_id':id});
+   if(status=='posted')await _db.rpc('erp_post_asset_depreciation_run',params:{'p_company_id':co,'p_run_id':id});
   }
   if(table=='erp_construction_costs'){
    final projectId=data['project_id'];final costs=await _db.from('erp_construction_costs').select('amount').eq('company_id',co).eq('project_id',projectId).neq('status','cancelled');
@@ -347,7 +348,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   String status=row?['status']?.toString()??'draft';final key=GlobalKey<FormState>();
   final ok=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,sd)=>AlertDialog(title:Text((row==null?'إنشاء ':'تعديل ')+c.title,textDirection:TextDirection.rtl),content:SizedBox(width:650,child:Form(key:key,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
    _input(code,'الكود / الرقم',required:true),_input(name,'الاسم / البيان',required:true),_input(counter,'العميل / المورد / الجهة'),
-   DropdownButtonFormField<String>(value:status,decoration:const InputDecoration(labelText:'الحالة',border:OutlineInputBorder()),items:const ['draft','active','planned','in_progress','waiting','approved','done','closed','cancelled','rejected','paid'].map((s)=>DropdownMenuItem(value:s,child:Text(_status(s)))).toList(),onChanged:(v)=>sd(()=>status=v??'draft')),
+   DropdownButtonFormField<String>(value:status,decoration:const InputDecoration(labelText:'الحالة',border:OutlineInputBorder()),items:const ['draft','active','planned','in_progress','waiting','approved','done','posted','closed','cancelled','rejected','paid'].map((s)=>DropdownMenuItem(value:s,child:Text(_status(s)))).toList(),onChanged:(v)=>sd(()=>status=v??'draft')),
    Row(children:[Expanded(child:_input(date,'التاريخ YYYY-MM-DD',date:true)),const SizedBox(width:8),Expanded(child:_input(due,'تاريخ الاستحقاق',date:true))]),
    Row(children:[Expanded(child:_input(amount,'القيمة',number:true)),const SizedBox(width:8),Expanded(child:_input(qty,'الكمية',number:true))]),
    const Divider(height:24),Align(alignment:Alignment.centerRight,child:Text('تفاصيل '+c.title,style:const TextStyle(color:_p,fontWeight:FontWeight.w800))),
