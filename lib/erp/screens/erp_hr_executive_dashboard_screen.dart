@@ -574,12 +574,13 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               SizedBox(width: 180, child: DropdownButtonFormField<int>(
                 value: _analysisPeriodDays,
                 isDense: true,
+                isExpanded: true,
                 decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), border: OutlineInputBorder()),
                 items: const [
-                  DropdownMenuItem(value: 30, child: Text('آخر 30 يومًا')),
-                  DropdownMenuItem(value: 90, child: Text('آخر 90 يومًا')),
-                  DropdownMenuItem(value: 180, child: Text('آخر 6 أشهر')),
-                  DropdownMenuItem(value: 365, child: Text('آخر 12 شهرًا')),
+                  DropdownMenuItem(value: 30, child: Text('آخر 30 يومًا', maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 90, child: Text('آخر 90 يومًا', maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 180, child: Text('آخر 6 أشهر', maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem(value: 365, child: Text('آخر 12 شهرًا', maxLines: 1, overflow: TextOverflow.ellipsis)),
                 ],
                 onChanged: (value) => setState(() => _analysisPeriodDays = value ?? 365),
               )),
