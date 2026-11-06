@@ -186,6 +186,66 @@ begin
     where company_id = p_company_id and period_start < p_month_end and period_end >= p_month_start
       and lower(status) in ('approved','posted','paid','معتمد','مرحّل','مدفوع')
   ),
+  supplier_payables as (
+    select coalesce(sum(greatest(d.grand_total - d.paid_total, 0)), 0) as outstanding,
+      count(*) filter (where d.due_date < current_date and greatest(d.grand_total - d.paid_total, 0) > 0)::integer as overdue_documents
+    from public.erp_purchase_documents d
+    where d.company_id = p_company_id and d.status = 'posted' and d.is_demo_data = false
+  ),
+  credit_exposure as (
+    select p.id, p.party_name, coalesce(p.credit_limit, 0) as credit_limit,
+      coalesce(sum(case when d.document_type = 'invoice' then greatest(d.grand_total - d.paid_total, 0)
+        when d.document_type = 'return' then -d.grand_total else 0 end), 0) as outstanding
+    from public.erp_parties p
+    join public.erp_sales_documents d on d.customer_id = p.id and d.company_id = p_company_id
+      and d.status = 'posted' and d.is_demo_data = false
+    where p.company_id = p_company_id and p.party_kind = 'customer'
+    group by p.id, p.party_name, p.credit_limit
+  ),
+  credit_limit_metrics as (
+    select count(*) filter (where credit_limit > 0 and outstanding > credit_limit)::integer as exceeded_count
+    from credit_exposure
+  ),
+  branch_sales_metrics as (
+    select coalesce(jsonb_agg(jsonb_build_object('branch_id', q.branch_id, 'name', q.branch_name, 'sales', q.net_sales)
+      order by q.net_sales desc), '[]'::jsonb) as rows
+    from (select b.id as branch_id, b.branch_name,
+      sum(case when s.document_type = 'return' then -s.grand_total else s.grand_total end) as net_sales
+      from sales s join public.erp_branches b on b.id = s.branch_id and b.company_id = p_company_id
+      where s.document_type in ('invoice', 'return') group by b.id, b.branch_name) q
+  ),
+  item_profit_metrics as (
+    select coalesce(jsonb_agg(jsonb_build_object('name', q.item_name, 'profit', q.net_profit, 'sales', q.net_sales)
+      order by q.net_profit desc), '[]'::jsonb) as rows
+    from (select i.item_name,
+      sum(case when d.document_type = 'return' then -1 else 1 end *
+        (l.line_total - coalesce(l.base_quantity, l.quantity) * i.purchase_price)) as net_profit,
+      sum(case when d.document_type = 'return' then -l.line_total else l.line_total end) as net_sales
+      from sales d join public.erp_sales_lines l on l.document_id = d.id
+      join public.erp_items i on i.id = l.item_id and i.company_id = p_company_id
+      where d.document_type in ('invoice', 'return') group by i.item_name order by net_profit desc limit 5) q
+  ),
+  category_sales_metrics as (
+    select coalesce(jsonb_agg(jsonb_build_object('name', q.category_name, 'sales', q.net_sales)
+      order by q.net_sales desc), '[]'::jsonb) as rows
+    from (select coalesce(c.category_name, 'غير مصنف') as category_name,
+      sum(case when d.document_type = 'return' then -l.line_total else l.line_total end) as net_sales
+      from sales d join public.erp_sales_lines l on l.document_id = d.id
+      join public.erp_items i on i.id = l.item_id and i.company_id = p_company_id
+      left join public.erp_item_categories c on c.id = i.category_id and c.company_id = p_company_id
+      where d.document_type in ('invoice', 'return') group by coalesce(c.category_name, 'غير مصنف')) q
+  ),
+  cost_of_sales_metrics as (
+    select coalesce(sum(case when d.document_type = 'return' then -1 else 1 end *
+      coalesce(l.base_quantity, l.quantity) * i.purchase_price), 0) as cost_of_sales
+    from sales d join public.erp_sales_lines l on l.document_id = d.id
+    join public.erp_items i on i.id = l.item_id and i.company_id = p_company_id
+    where d.document_type in ('invoice', 'return')
+  ),
+  fulfillment_status_metrics as (
+    select count(*) filter (where lower(coalesce(status,'')) in ('cancelled','canceled','ملغي','ملغى'))::integer as cancelled_count
+    from public.erp_sales_fulfillment_documents where company_id = p_company_id
+  ),
   approval_metrics as (
     select (select count(*) from public.erp_sales_documents where company_id=p_company_id and status='draft' and is_demo_data=false)
       + (select count(*) from public.erp_purchase_documents where company_id=p_company_id and status='draft' and is_demo_data=false)
@@ -235,7 +295,15 @@ begin
     'attendance_present_count', am.present_count,
     'attendance_rate', case when am.records_count > 0 then am.present_count::numeric / am.records_count * 100 else 0 end,
     'payroll_net_total', pm.net_total,
-    'pending_approval_count', apm.pending_count
+    'pending_approval_count', apm.pending_count,
+    'supplier_payables', sp.outstanding,
+    'supplier_overdue_documents', sp.overdue_documents,
+    'credit_limit_exceeded_count', clm.exceeded_count,
+    'branch_sales', bsm.rows,
+    'top_profitable_items', ipm.rows,
+    'category_sales', csm.rows,
+    'inventory_turnover_rate', case when it.value > 0 then cosm.cost_of_sales / it.value else null end,
+    'fulfillment_cancelled_count', fsm.cancelled_count
   ) into v_result
   from sales_totals st
   cross join purchase_totals pt
@@ -253,7 +321,14 @@ begin
   cross join fulfillment_metrics fm
   cross join attendance_metrics am
   cross join payroll_metrics pm
-  cross join approval_metrics apm;
+  cross join approval_metrics apm
+  cross join supplier_payables sp
+  cross join credit_limit_metrics clm
+  cross join branch_sales_metrics bsm
+  cross join item_profit_metrics ipm
+  cross join category_sales_metrics csm
+  cross join cost_of_sales_metrics cosm
+  cross join fulfillment_status_metrics fsm;
 
   return v_result;
 end;
