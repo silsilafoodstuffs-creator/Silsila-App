@@ -77,7 +77,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   final Map<String, bool> _composite = {};
   final Map<String, List<TextEditingController>> _fieldNames = {};
   final Map<String, List<TextEditingController>> _fieldCounts = {};
-  final _itemPrefix = TextEditingController(text: 'itm');
+  final _itemPrefix = TextEditingController(text: 'Itm');
   final _geoPrefix = TextEditingController(text: 'Rig');
   // Each geographic level is one independent two-digit segment.
   // The persisted geo_segments map remains cumulative for backward compatibility.
@@ -91,6 +91,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     'main': TextEditingController(text: '2'),
     'sub': TextEditingController(text: '2'),
     'secondary': TextEditingController(text: '2'),
+    'brand': TextEditingController(text: '2'),
     'serial': TextEditingController(text: '2'),
   };
   bool _itemAutomatic = true, _itemComposite = true;
@@ -165,7 +166,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             if (field['digits'] != null) _fieldCounts[key]![i].text = field['digits'].toString();
           }
         }
-        _itemPrefix.text = (data['item_prefix'] ?? 'itm').toString();
+        _itemPrefix.text = (data['item_prefix'] ?? 'Itm').toString();
         _itemAutomatic = data['item_automatic'] == null ? true : data['item_automatic'] == true;
         _itemComposite = data['item_composite'] == null ? true : data['item_composite'] == true;
         _geoPrefix.text = (data['geo_prefix'] ?? 'Rig').toString();
@@ -222,7 +223,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       final value = int.tryParse(entry.value.text);
       final max = entry.key == 'serial' ? 8 : 4;
       if (value == null || value < 1 || value > max) {
-        final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','serial':'تسلسل'}[entry.key];
+        final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','brand':'البراند/الماركة','serial':'تسلسل'}[entry.key];
         setState(() => _error = 'عدد خانات الفئة $label يجب أن يكون من 1 إلى $max.');
         return;
       }
@@ -279,9 +280,10 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         'item_composite':_itemComposite,
         'item_fields':[
           {'name':'تسلسل','digits':itemSegments['serial']},
-          {'name':'رئيسية','digits':itemSegments['main']},
-          {'name':'فرعية','digits':itemSegments['sub']},
-          {'name':'ثانوية','digits':itemSegments['secondary']},
+          {'name':'فئة ثانوية','digits':itemSegments['secondary']},
+          {'name':'براند/ ماركة','digits':itemSegments['brand']},
+          {'name':'فئة فرعية','digits':itemSegments['sub']},
+          {'name':'فئة رئيسية','digits':itemSegments['main']},
         ],
         'item_segments':itemSegments,
         'geo_prefix':_geoPrefix.text.trim(),
@@ -363,28 +365,28 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       const SizedBox(width:50),
       _field(_itemSegments['serial']!,max:2,letters:false,changed:(){}),
       const SizedBox(width:50),
-      const SizedBox(width:124,height:36,child:Center(child:Text('رئيسية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
-      const SizedBox(width:50),
-      _field(_itemSegments['main']!,max:2,letters:false,changed:(){}),
-      const SizedBox(width:50),
-      const SizedBox(width:124,height:36,child:Center(child:Text('فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
-      const SizedBox(width:50),
-      _field(_itemSegments['sub']!,max:2,letters:false,changed:(){}),
-      const SizedBox(width:50),
-      const SizedBox(width:124,height:36,child:Center(child:Text('ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:124,height:36,child:Center(child:Text('فئة ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
       const SizedBox(width:50),
       _field(_itemSegments['secondary']!,max:2,letters:false,changed:(){}),
       const SizedBox(width:50),
-      const SizedBox(width:124,height:36),
+      const SizedBox(width:124,height:36,child:Center(child:Text('براند/ ماركة',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
       const SizedBox(width:50),
-      const SizedBox(width:62,height:36),
+      _field(_itemSegments['brand']!,max:2,letters:false,changed:(){}),
+      const SizedBox(width:50),
+      const SizedBox(width:124,height:36,child:Center(child:Text('فئة فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:50),
+      _field(_itemSegments['sub']!,max:2,letters:false,changed:(){}),
+      const SizedBox(width:50),
+      const SizedBox(width:124,height:36,child:Center(child:Text('فئة رئيسية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:50),
+      _field(_itemSegments['main']!,max:2,letters:false,changed:(){}),
       const SizedBox(width:50),
       SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
         _field(_itemPrefix,max:3,letters:true,changed:(){}),
         const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
       ])),
       SizedBox(width:112,child:Text(
-        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',
+        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',
         textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
     ])),
   );
@@ -524,15 +526,16 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           const Text('تحديد عدد خانات كل مستوى — قابل للتعديل والحفظ',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
           const SizedBox(height:6),
           Wrap(spacing:8,runSpacing:8,children:[
-            _segmentField('فئة رئيسية',_itemSegments['main']!,4),
-            _segmentField('فئة فرعية',_itemSegments['sub']!,4),
-            _segmentField('فئة ثانوية',_itemSegments['secondary']!,4),
-            _segmentField('تسلسل',_itemSegments['serial']!,8),
+            _segmentField('فئة رئيسية',_itemSegments['main']!,2),
+            _segmentField('فئة فرعية',_itemSegments['sub']!,2),
+            _segmentField('فئة ثانوية',_itemSegments['secondary']!,2),
+            _segmentField('براند/ ماركة',_itemSegments['brand']!,2),
+            _segmentField('تسلسل',_itemSegments['serial']!,2),
           ]),
           const SizedBox(height:8),
-          Text('الصيغة: ${_itemPrefix.text.trim()} + رئيسية (${_itemSegments['main']!.text}) + فرعية (${_itemSegments['sub']!.text}) + ثانوية (${_itemSegments['secondary']!.text}) + تسلسل (${_itemSegments['serial']!.text})',style:const TextStyle(fontSize:11)),
-          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
-          const Text('القيم الافتراضية: 2 / 2 / 2 / 2. يمكن تغيير طول أي مستوى دون تثبيت إجمالي عدد الأرقام.',style:TextStyle(fontSize:10,color:Colors.black54)),
+          Text('الصيغة: ${_itemPrefix.text.trim()} + فئة رئيسية (${_itemSegments['main']!.text}) + فئة فرعية (${_itemSegments['sub']!.text}) + فئة ثانوية (${_itemSegments['secondary']!.text}) + براند/ ماركة (${_itemSegments['brand']!.text}) + تسلسل (${_itemSegments['serial']!.text})',style:const TextStyle(fontSize:11)),
+          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
+          const Text('القيم الافتراضية: 2 / 2 / 2 / 2 / 2. كل مستوى رقمي مكوّن من خانتين.',style:TextStyle(fontSize:10,color:Colors.black54)),
         ]))),
         if(_error!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
         if(_message!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
