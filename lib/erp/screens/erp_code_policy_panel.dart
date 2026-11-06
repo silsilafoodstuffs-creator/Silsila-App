@@ -13,7 +13,7 @@ class ErpCodePolicyPanel extends StatefulWidget {
 class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   static const _purple = Color(0xFF3E007D);
   // Shared geometry for every coding-policy cell; the serial-count cell is the reference.
-  static const double _cellHeight = 36;
+  static const double _cellHeight = 40;
   static const double _columnSpacing = 5;
   static const double _countCellWidth = 62;
   static const _types = <Map<String, String>>[
@@ -455,7 +455,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           const SizedBox(height:4),
           const Text('حدد بادئة كل نوع وعدد الخانات الرقمية. المعاينة تعرض أول كود متوقع، ويبدأ الترقيم من 1.',style:TextStyle(fontSize:11,color:Colors.black54)),
           const SizedBox(height:8),
-          const Text('معيار تنسيق الجدول: ارتفاع موحد 36 بكسل لكل الخانات، ومسافة 5 بكسل بين الأعمدة، وعرض خانة العدد 62 بكسل (المساحة 2,232 بكسل²).',style:TextStyle(fontSize:10,color:Colors.black54)),
+          const Text('معيار تنسيق الجدول: ارتفاع موحد 40 بكسل لكل الخانات، ومسافة 5 بكسل بين الأعمدة، وعرض خانة العدد 62 بكسل (المساحة 2,480 بكسل²).',style:TextStyle(fontSize:10,color:Colors.black54)),
           const SizedBox(height:8),
           SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(spacing:_columnSpacing,children:const[
             SizedBox(width:30,child:Text('م',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
