@@ -93,6 +93,10 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _departmentsWithoutJobs => _departments.where((d) =>
       !_jobs.any((j) => j['department_id']?.toString() == d['id']?.toString())).length;
   int get _employeesWithoutJob => _employees.where((e) => e['job_id'] == null).length;
+  int get _probationEmployees => _employees.where((e) {
+    final status = (e['employment_status'] ?? '').toString().toLowerCase();
+    return status.contains('probation') || status.contains('trial') || status.contains('اختبار') || status.contains('تجربة');
+  }).length;
   List<MapEntry<String, int>> get _employeesByDepartment {
     final counts = <String, int>{};
     for (final employee in _employees.where((e) => e['is_active'] == true)) {
@@ -160,6 +164,12 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _absenceAttendanceCount => _attendance.where((r) => (r['attendance_status']?.toString().toLowerCase() ?? '').contains('absent') || (r['attendance_status']?.toString() ?? '').contains('غائب') || (r['attendance_status']?.toString() ?? '').contains('غياب')).length;
   int get _overtimeMinutes => _attendance.fold<int>(0, (sum, r) => sum + ((r['overtime_minutes'] as num?)?.toInt() ?? 0));
   int get _pendingPayrollRuns => _payrollRuns.where((r) => !const ['approved', 'posted', 'paid'].contains(r['status']?.toString().toLowerCase())).length;
+  num _numberValue(dynamic value) => value is num ? value : num.tryParse(value?.toString() ?? '') ?? 0;
+  Map<String, dynamic>? get _latestPayrollRun => _payrollRuns.isEmpty ? null : _payrollRuns.first;
+  String _moneyLabel(dynamic value) {
+    final amount = _numberValue(value);
+    return '${amount.toStringAsFixed(2)} ج.م';
+  }
   int _complianceCount(String type, String status) => _compliance.where((r) => r['record_type'] == type && r['status'] == status).length;
   Map<String, String> _latestComplianceStatusByEmployee(String type) {
     final latest = <String, String>{};
@@ -187,8 +197,10 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _contractsMissing => _contractsWithoutEndDate + _employees.where((e) => e['is_active'] == true && (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty)).length;
   int get _licensesExpired => _compliance.where((r) => r['record_type'] == 'license' && (r['status'] == 'expired' || (_asDate(r['expires_on'])?.isBefore(DateTime.now()) ?? false))).length;
   int get _licensesExpiringSoon => _compliance.where((r) { final d = _asDate(r['expires_on']); if (r['record_type'] != 'license' || d == null) return false; final n = DateTime.now(); final t = DateTime(n.year,n.month,n.day); final days = d.difference(t).inDays; return days >= 0 && days <= 30; }).length;
+  int get _trainingPlanned => _training.where((r) => r['status'] == 'planned').length;
   int get _trainingInProgress => _training.where((r) => r['status'] == 'in_progress').length;
   int get _trainingCompleted => _training.where((r) => r['status'] == 'completed').length;
+  int get _trainingExpired => _training.where((r) => r['status'] == 'expired').length;
   int get _trainingCertificatesExpiring => _training.where((r) { final d = _asDate(r['certificate_expires_on']); if (d == null) return false; final n=DateTime.now(); final t=DateTime(n.year,n.month,n.day); final days=d.difference(t).inDays; return days>=0 && days<=30; }).length;
   int get _trainingCertificatesExpired => _training.where((r) { final d = _asDate(r['certificate_expires_on']); if (d == null) return false; final n=DateTime.now(); final t=DateTime(n.year,n.month,n.day); return d.isBefore(t); }).length;
   int _candidateCount(String status) => _candidates.where((r) => r['status'] == status).length;
@@ -644,7 +656,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                 _metric('طلبات تأمين جارية', '$_insuranceInProgress', 'عدد الموظفين قيد الإجراء', Icons.pending_actions_outlined, _hrPink),
                 _metric('رخص منتهية', '$_licensesExpired', 'تحتاج تجديدًا', Icons.assignment_late_outlined, Colors.red.shade700),
                 _metric('رخص تنتهي خلال 30 يومًا', '$_licensesExpiringSoon', 'تنبيه مسبق', Icons.event_available_outlined, _hrOrange),
+                _metric('تدريب مخطط', '$_trainingPlanned', 'برامج بانتظار التنفيذ', Icons.event_note_outlined, _hrOrange),
                 _metric('تدريبات جارية', '$_trainingInProgress', 'برامج تدريب مفتوحة', Icons.school_outlined, _hrPurple),
+                _metric('تدريبات مكتملة', '$_trainingCompleted', 'برامج تم إتمامها', Icons.school, Colors.green.shade700),
                 _metric('شهادات تدريب منتهية', '$_trainingCertificatesExpired', 'تحتاج تحديثًا', Icons.workspace_premium_outlined, Colors.red.shade700),
                 _metric('شهادات تدريب تنتهي قريبًا', '$_trainingCertificatesExpiring', 'خلال 30 يومًا', Icons.workspace_premium_outlined, _hrPink),
               ],
@@ -668,9 +682,21 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             const Text('الاستقالات وإنهاء الخدمة حسب الإدارة — آخر $_analysisPeriodDays يومًا', style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             if (_separationsByDepartment.isEmpty)
-              const Text('لا توجد حركات انتهاء خدمة مسجلة خلال آخر 12 شهرًا.')
+              const Text('لا توجد حركات انتهاء خدمة مسجلة خلال فترة التحليل المحددة.')
             else
-              ..._separationsByDepartment.take(8).map((entry) => _progressRow(entry.key, entry.value, _separationsLast12Months, _hrOrange)),
+              ..._separationsByDepartment.take(8).map((entry) => _progressRow(entry.key, entry.value, _separationsInPeriod, _hrOrange)),
+          ]),
+          const SizedBox(height: 18),
+          _sectionTitle('الرواتب وتكلفة العمالة', Icons.payments_outlined),
+          _panel(children: [
+            if (_latestPayrollRun == null)
+              const Text('لا توجد مسيرات رواتب مسجلة لعرض إجمالي الرواتب.')
+            else ...[
+              _alert('إجمالي الاستحقاقات في أحدث مسير', _moneyLabel(_latestPayrollRun!['gross_total']), Colors.green.shade700),
+              _alert('صافي الرواتب في أحدث مسير', _moneyLabel(_latestPayrollRun!['net_total']), _hrPurple),
+              _alert('بيانات المسير', 'الفترة: ${_latestPayrollRun!['period_start'] ?? 'غير محددة'} إلى ${_latestPayrollRun!['period_end'] ?? 'غير محددة'} • عدد الموظفين: ${_latestPayrollRun!['employee_count'] ?? 'غير محدد'} • الحالة: ${_hrStatusLabel(_latestPayrollRun!['status']?.toString() ?? '')}.', Colors.blueGrey),
+            ],
+            const Text('هذه أرقام أحدث مسير محمّل وليست متوسط تكلفة الموظف أو مقارنة تكلفة العمالة بالمبيعات.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5)),
           ]),
           const SizedBox(height: 18),
           _sectionTitle('مؤشرات إدارية متقدمة', Icons.analytics_outlined),
@@ -679,7 +705,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _progressRow('حركات انتهاء الخدمة خلال الفترة', _separationsInPeriod, _hiresInPeriod + _separationsInPeriod, _hrOrange),
             _alert('جودة بيانات الموظفين', 'موظفون بلا وظيفة محددة: $_employeesWithoutJob، وملفات غير نشطة: $_inactiveEmployees، ونواقص مسوغات التعيين: $_employeesMissingRequiredDocuments.', _employeesWithoutJob + _employeesMissingRequiredDocuments > 0 ? _hrOrange : Colors.blueGrey),
             _alert('التأمين الصحي والاجتماعي', 'غير مسجل صحيًا: $_healthNotRecorded، وغير مسجل اجتماعيًا: $_socialNotRecorded. الأعداد محسوبة على الموظفين النشطين وبحسب سجلاتهم الفردية.', _healthNotRecorded + _socialNotRecorded > 0 ? _hrOrange : Colors.blueGrey),
-            _alert('مؤشرات تتطلب مصدر بيانات إضافيًا', 'العجز الفعلي مقابل الملاك المعتمد، فترة الاختبار، تقييم الأداء، إصابات العمل، تكلفة التوظيف، وتكلفة العمالة مقارنة بالمبيعات لا تُعرض كأرقام قبل ربط مصادرها المعتمدة.', Colors.blueGrey),
+            _alert('مؤشرات تتطلب استكمال مصدر البيانات', 'العجز مقابل الملاك المعتمد يحتاج عددًا مستهدفًا لكل وظيفة. متابعة فترة الاختبار تحتاج تاريخ بداية ونهاية ونتيجة. تقييم الأداء وإصابات العمل وتكلفة التوظيف ومقارنة تكلفة العمالة بالمبيعات تحتاج سجلات متخصصة قبل احتسابها.', Colors.blueGrey),
           ]),
           const SizedBox(height: 18),
           _sectionTitle('إدارة وتسجيل بيانات الموارد البشرية', Icons.add_task_outlined),
@@ -753,13 +779,14 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _alert('اكتمال الهيكل التنظيمي', _departmentsWithoutJobs + _unassignedJobs == 0 && _departments.isNotEmpty && _jobs.isNotEmpty
                 ? 'لا توجد فجوات ربط ظاهرة في البيانات الحالية.' : 'توجد إدارات بلا وظائف أو وظائف غير مرتبطة بإدارة؛ راجع الهيكل الوظيفي.', _departmentsWithoutJobs + _unassignedJobs == 0 ? Colors.green : Colors.orange),
             _alert('ملفات الموظفين غير النشطة', 'عدد الملفات غير النشطة: $_inactiveEmployees. راجع أسباب الإيقاف أو انتهاء الخدمة.', Colors.orange),
-            _alert('العقود', 'عقود تنتهي خلال 30 يومًا: $_contractsExpiringSoon، عقود منتهية: $_contractsExpired، وعقود نشطة بلا تاريخ نهاية: $_contractsWithoutEndDate.', _contractsExpired + _contractsExpiringSoon + _contractsWithoutEndDate > 0 ? Colors.orange : Colors.green),
+            _alert('العقود', 'عقود تنتهي خلال 30 يومًا: $_contractsExpiringSoon، عقود منتهية: $_contractsExpired، وعقود تحتاج استكمال النوع أو تاريخ النهاية: $_contractsMissing.', _contractsExpired + _contractsExpiringSoon + _contractsMissing > 0 ? Colors.orange : Colors.green),
             _alert('مسوغات التعيين', 'عدد الموظفين الذين تنقص ملفاتهم مستندات مطلوبة حسب الوظيفة: $_employeesMissingRequiredDocuments. راجع متطلبات الوظائف وسجل مستندات الموظفين.', _employeesMissingRequiredDocuments > 0 ? Colors.orange : Colors.green),
             _alert('الحضور والانصراف', 'خلال الشهر الحالي: $_absenceAttendanceCount حالات غياب و$_lateAttendanceCount حالات تأخير، وإجمالي الوقت الإضافي المسجل $_overtimeMinutes دقيقة.', Colors.blueGrey),
             _alert('التأمينات الصحية والاجتماعية', 'صحي: $_healthInsured مؤمن / $_healthUninsured غير مؤمن / $_healthNotRecorded غير مسجل. اجتماعي: $_socialInsured مؤمن / $_socialUninsured غير مؤمن / $_socialNotRecorded غير مسجل. قيد الإجراء: $_insuranceInProgress.', Colors.blueGrey),
             _alert('الرخص', 'رخص منتهية: $_licensesExpired، ورخص تنتهي خلال 30 يومًا: $_licensesExpiringSoon.', _licensesExpired + _licensesExpiringSoon > 0 ? Colors.orange : Colors.blueGrey),
-            _alert('التدريب', 'تدريبات جارية: $_trainingInProgress، مكتملة: $_trainingCompleted، وشهادات تنتهي قريبًا: $_trainingCertificatesExpiring.', Colors.blueGrey),
+            _alert('التدريب', 'مخطط: $_trainingPlanned، جارٍ: $_trainingInProgress، مكتمل: $_trainingCompleted، منتهٍ: $_trainingExpired، شهادات منتهية: $_trainingCertificatesExpired، وشهادات تنتهي قريبًا: $_trainingCertificatesExpiring.', Colors.blueGrey),
             _alert('التوظيف والاستقالات', 'متقدمون مفتوحون: $_candidateOpen، مقبولون: ${_candidateCount('accepted')}، مرفوضون: ${_candidateCount('rejected')}، وحركات انتهاء الخدمة خلال آخر 12 شهرًا: $_separationsLast12Months.', Colors.blueGrey),
+            _alert('فترة الاختبار', 'عدد الموظفين الذين تحمل حالة توظيفهم وصف فترة الاختبار: $_probationEmployees. لا تتوفر في نموذج الموظف الحالي تواريخ بداية ونهاية الاختبار أو نتيجة اجتيازه.', _probationEmployees > 0 ? Colors.orange : Colors.blueGrey),
             _alert('طلبات الإجازات', 'طلبات الإجازات غير المحسومة خلال الشهر الحالي: $_pendingLeaveRequests.', _pendingLeaveRequests > 0 ? Colors.orange : Colors.blueGrey),
             _alert('مسيرات الرواتب', 'يوجد $_pendingPayrollRuns مسيرًا غير معتمد ضمن آخر 12 مسيرًا تم تحميلها.', _pendingPayrollRuns > 0 ? Colors.orange : Colors.blueGrey),
           ]),
