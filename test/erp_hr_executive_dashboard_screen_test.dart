@@ -38,11 +38,17 @@ void main() {
     expect(find.text('لوحة قيادة رأس المال البشري'), findsOneWidget);
     expect(find.text('فترة التحليل'), findsOneWidget);
     expect(find.text('إجمالي الموظفين'), findsOneWidget);
-    expect(find.text('الهيكل التنظيمي والوظائف'), findsOneWidget);
-    expect(find.text('التأمينات والرخص والتدريب'), findsOneWidget);
-    expect(find.text('التوظيف والاستقالات ودوران العمالة'), findsOneWidget);
-    expect(find.text('تنبيهات ومتابعات مدير الموارد البشرية'), findsOneWidget);
     expect(find.textContaining('افتح بيانات الشركة أولاً'), findsOneWidget);
+
+    final scrollable = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(find.text('الهيكل التنظيمي والوظائف'), 400, scrollable: scrollable);
+    expect(find.text('الهيكل التنظيمي والوظائف'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('التأمينات والرخص والتدريب'), 400, scrollable: scrollable);
+    expect(find.text('التأمينات والرخص والتدريب'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('التوظيف والاستقالات ودوران العمالة'), 400, scrollable: scrollable);
+    expect(find.text('التوظيف والاستقالات ودوران العمالة'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('تنبيهات ومتابعات مدير الموارد البشرية'), 400, scrollable: scrollable);
+    expect(find.text('تنبيهات ومتابعات مدير الموارد البشرية'), findsOneWidget);
   });
 
   testWidgets('HR executive dashboard exposes the supported analysis periods',
