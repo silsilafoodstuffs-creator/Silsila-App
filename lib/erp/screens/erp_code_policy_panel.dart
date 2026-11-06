@@ -504,13 +504,13 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
               
               _field(_digits[key]!,max:2,letters:false,changed:(){}),
               
-              for (var slot=0;slot<3;slot++) ...[
+              ...List.generate(3, (slot) => <Widget>[
                 _nameField(_fieldNames[key]![slot],readOnly:key=='customer' && slot==0),
                 
                 SizedBox(width:_countCellWidth,height:_cellHeight,child:key=='customer' && slot==0
                   ? const Center(child:Text('8',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.bold)))
                   : _field(_fieldCounts[key]![slot],max:2,letters:false,changed:(){})),
-              ],
+              ]),
               
               const SizedBox(width:124,height:_cellHeight),
               
