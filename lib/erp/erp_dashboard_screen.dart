@@ -2462,6 +2462,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ),
         const SizedBox(height: 9),
         LayoutBuilder(builder: (context, constraints) {
+          final netActivity = _executiveGrossProfit != null && _executiveExpenses != null
+              ? _executiveGrossProfit! - _executiveExpenses!
+              : null;
+          final previousNetActivity = _executivePreviousGrossProfit != null && _executivePreviousExpenses != null
+              ? _executivePreviousGrossProfit! - _executivePreviousExpenses!
+              : null;
           final cards = <Widget>[
             _executiveAnalysisCard(
               title: 'مجمل الربح التقديري',
@@ -2527,6 +2533,41 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              GridView.count(
+                crossAxisCount: constraints.maxWidth >= 900 ? 3 : constraints.maxWidth >= 560 ? 2 : 1,
+                childAspectRatio: constraints.maxWidth >= 560 ? 3.4 : 3.8,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                children: [
+                  _executiveKpiCard(
+                    title: 'صافي نتيجة النشاط',
+                    value: netActivity,
+                    change: _executiveChange(netActivity, previousNetActivity),
+                    icon: Icons.account_balance_rounded,
+                    color: _green,
+                    note: 'مجمل الربح التقديري بعد المصروفات',
+                  ),
+                  _executiveKpiCard(
+                    title: 'صافي المبيعات',
+                    value: _executiveSales,
+                    change: _executiveChange(_executiveSales, _executivePreviousSales),
+                    icon: Icons.point_of_sale_rounded,
+                    color: _purple,
+                    note: 'بعد خصم مرتجعات المبيعات',
+                  ),
+                  _executiveKpiCard(
+                    title: 'صافي المشتريات',
+                    value: _executivePurchases,
+                    change: _executiveChange(_executivePurchases, _executivePreviousPurchases),
+                    icon: Icons.shopping_cart_outlined,
+                    color: const Color(0xFF2475B8),
+                    note: 'بعد خصم مرتجعات المشتريات',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
               GridView.extent(
                 maxCrossAxisExtent: 390,
                 childAspectRatio: 2.35,
@@ -2827,6 +2868,51 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     'change': change,
     'isPercent': isPercent,
   };
+
+  Widget _executiveKpiCard({
+    required String title,
+    required double? value,
+    required double? change,
+    required IconData icon,
+    required Color color,
+    required String note,
+  }) {
+    final trendColor = change == null ? Colors.black45 : change >= 0 ? _green : Colors.red.shade700;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: color.withValues(alpha: .35), width: 1.3),
+        boxShadow: const [BoxShadow(color: Color(0x103E007D), blurRadius: 10, offset: Offset(0, 3))],
+      ),
+      child: Row(children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(color: color.withValues(alpha: .10), borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: color, size: 21),
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            Text(_executiveMoney(value), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16, color: Color(0xFF241735), fontWeight: FontWeight.w900)),
+            const SizedBox(height: 2),
+            Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9, color: Colors.black54)),
+          ],
+        )),
+        const SizedBox(width: 6),
+        Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(change == null ? Icons.remove_rounded : change >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded, color: trendColor, size: 19),
+          Text(change == null ? '—%' : '${change.abs().toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, color: trendColor, fontWeight: FontWeight.w900)),
+        ]),
+      ]),
+    );
+  }
 
   Widget _executiveAnalysisCard({
     required String title,
