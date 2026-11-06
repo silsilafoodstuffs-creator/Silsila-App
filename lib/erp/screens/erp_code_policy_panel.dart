@@ -73,6 +73,10 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   final _db = Supabase.instance.client;
   final Map<String, TextEditingController> _prefix = {};
   final Map<String, TextEditingController> _digits = {};
+  final Map<String, bool> _automatic = {};
+  final Map<String, bool> _composite = {};
+  final Map<String, List<TextEditingController>> _fieldNames = {};
+  final Map<String, List<TextEditingController>> _fieldCounts = {};
   final _itemPrefix = TextEditingController(text: 'itm');
   final _geoPrefix = TextEditingController(text: 'Rig');
   // Each geographic level is one independent two-digit segment.
@@ -97,6 +101,15 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     for (final t in _types) {
       _prefix[t['key']!] = TextEditingController(text: t['prefix']);
       _digits[t['key']!] = TextEditingController(text: t['digits']);
+      final key = t['key']!;
+      _automatic[key] = true;
+      _composite[key] = key == 'customer';
+      _fieldNames[key] = List.generate(3, (_) => TextEditingController());
+      _fieldCounts[key] = List.generate(3, (_) => TextEditingController());
+      if (key == 'customer') {
+        _fieldNames[key]![0].text = 'كود المنطقة';
+        _fieldCounts[key]![0].text = '8';
+      }
     }
     _load();
   }
@@ -104,6 +117,8 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   @override void dispose() {
     for (final c in _prefix.values) { c.dispose(); }
     for (final c in _digits.values) { c.dispose(); }
+    for (final list in _fieldNames.values) { for (final c in list) { c.dispose(); } }
+    for (final list in _fieldCounts.values) { for (final c in list) { c.dispose(); } }
     _itemPrefix.dispose();
     _geoPrefix.dispose();
     for (final controller in _geoSegments.values) { controller.dispose(); }
@@ -139,6 +154,15 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           final cfg = Map<String, dynamic>.from(configs[t['key']] as Map? ?? {});
           if (cfg['prefix'] != null) _prefix[t['key']]!.text = cfg['prefix'].toString();
           if (cfg['digits'] != null) _digits[t['key']]!.text = cfg['digits'].toString();
+          final key = t['key']!;
+          _automatic[key] = cfg['automatic'] == null ? true : cfg['automatic'] == true;
+          _composite[key] = cfg['composite'] == true;
+          final fields = (cfg['fields'] as List?) ?? const [];
+          for (var i = 0; i < 3 && i + 1 < fields.length; i++) {
+            final field = Map<String, dynamic>.from(fields[i + 1] as Map? ?? {});
+            if (field['name'] != null) _fieldNames[key]![i].text = field['name'].toString();
+            if (field['digits'] != null) _fieldCounts[key]![i].text = field['digits'].toString();
+          }
         }
         _itemPrefix.text = (data['item_prefix'] ?? 'itm').toString();
         _geoPrefix.text = (data['geo_prefix'] ?? 'Rig').toString();
@@ -227,7 +251,19 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       final types = <String, dynamic>{};
       for (final t in _types) {
         final key = t['key']!;
-        types[key] = {'prefix':_prefix[key]!.text.trim(), 'digits':int.parse(_digits[key]!.text)};
+        final fields = <Map<String, dynamic>>[
+          {'name':'تسلسل','digits':int.parse(_digits[key]!.text)},
+          for (var i = 0; i < 3; i++)
+            if (_fieldNames[key]![i].text.trim().isNotEmpty)
+              {'name':_fieldNames[key]![i].text.trim(),'digits':int.tryParse(_fieldCounts[key]![i].text) ?? 0},
+        ];
+        types[key] = {
+          'prefix':_prefix[key]!.text.trim(),
+          'digits':int.parse(_digits[key]!.text),
+          'automatic':_automatic[key] ?? true,
+          'composite':_composite[key] ?? false,
+          'fields':fields,
+        };
       }
       final itemSegments = <String, int>{
         for (final entry in _itemSegments.entries) entry.key:int.parse(entry.value.text),
@@ -342,46 +378,49 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           const SizedBox(height:4),
           const Text('حدد بادئة كل نوع وعدد الخانات الرقمية. المعاينة تعرض أول كود متوقع، ويبدأ الترقيم من 1.',style:TextStyle(fontSize:11,color:Colors.black54)),
           const SizedBox(height:8),
-          Row(children:const[
+          SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:const[
             SizedBox(width:30,child:Text('م',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
-            Expanded(child:Text('الشاشة / نوع التكويد',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
-            SizedBox(width:62,child:Text('خانات تسلسل',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
-            SizedBox(width:62,child:Text('بادئة الكود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
-            SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
-          ]),
+            SizedBox(width:150,child:Text('اسم السياسة',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
+            SizedBox(width:52,child:Text('تلقائي',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:52,child:Text('مركب',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:124,child:Text('اسم خانة 1',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:62,child:Text('عدد خانة 1',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:124,child:Text('اسم خانة 2',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:62,child:Text('عدد خانة 2',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:124,child:Text('اسم خانة 3',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:62,child:Text('عدد خانة 3',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:124,child:Text('اسم خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:62,child:Text('عدد خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:112,child:Text('بادئة الكود\\n3 حروف إنجليزية فقط',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:9))),
+            SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+          ])),
         ]))),
         ...List.generate(_types.length+1,(i){
           if (i == 2) return _geoPolicyCard();
           final t=_types[i > 2 ? i-1 : i]; final key=t['key']!;
           return Container(margin:const EdgeInsets.symmetric(vertical:2),padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
             decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
-            child:Column(children:[
-              Row(children:[
-                SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
-                Expanded(child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
-                if (key == 'customer')
-                  SizedBox(width:62,child:Text('خانات إضافية',textAlign:TextAlign.center,style:const TextStyle(fontSize:9,color:Colors.black54)))
-                else
-                  _field(_digits[key]!,max:2,letters:false,changed:(){}),
-                const SizedBox(width:5),
-                if (key == 'customer')
-                  const SizedBox(width:62,child:Text('Cus',textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)))
-                else
-                  _field(_prefix[key]!,max:3,letters:true,changed:(){}),
-                SizedBox(width:112,child:Text(
-                  key == 'customer'
-                    ? 'Cus + منطقة 8 + ${'1'.padLeft(int.tryParse(_digits[key]!.text) ?? 4,'0')}'
-                    : _preview(key),
-                  textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
-              ]),
-              if (key == 'customer')
-                Padding(padding:const EdgeInsetsDirectional.only(start:30,top:5),
-                  child:Row(children:[
-                    Expanded(child:Text('كود المنطقة: 8 خانات ثابتة تُسحب تلقائيًا من سياسة «تقسيم جغرافي» ولا تُعدّل من هنا.',
-                      style:const TextStyle(fontSize:10,color:Colors.black54))),
-                    _field(_digits[key]!,max:2,letters:false,changed:(){})
-                  ])),
-            ]));
+            child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+              SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+              SizedBox(width:150,child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
+              SizedBox(width:52,child:Checkbox(value:_automatic[key] ?? true,onChanged:(v)=>setState(()=>_automatic[key]=v ?? true),visualDensity:VisualDensity.compact)),
+              SizedBox(width:52,child:Checkbox(value:_composite[key] ?? false,onChanged:(v)=>setState(()=>_composite[key]=v ?? false),visualDensity:VisualDensity.compact)),
+              const SizedBox(width:124,child:Text('تسلسل',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+              _field(_digits[key]!,max:2,letters:false,changed:(){}),
+              for (var slot=0;slot<3;slot++) ...[
+                SizedBox(width:124,child:TextField(controller:_fieldNames[key]![slot],readOnly:key=='customer' && slot==0,textAlign:TextAlign.center,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.all(6)),style:const TextStyle(fontSize:11))),
+                SizedBox(width:62,child:key=='customer' && slot==0
+                  ? const Text('8',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.bold))
+                  : _field(_fieldCounts[key]![slot],max:2,letters:false,changed:(){})),
+              ],
+              SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
+                key=='customer' ? const Text('Cus',textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)) : _field(_prefix[key]!,max:3,letters:true,changed:(){}),
+                const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
+              ])),
+              SizedBox(width:112,child:Text(key=='customer'
+                ? 'Cus + منطقة 8 + ${'1'.padLeft(int.tryParse(_digits[key]!.text) ?? 4,'0')}'
+                : _preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+            ])));
         }),
         Card(elevation:0,color:const Color(0xFFFFF4E5),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('التكويد الخاص بالأصناف',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
