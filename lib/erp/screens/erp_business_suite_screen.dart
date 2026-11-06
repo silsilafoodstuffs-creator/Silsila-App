@@ -153,7 +153,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     final orderCode=(d['production_order']??'').toString();final orders=await _db.from('erp_production_orders').select('id').eq('company_id',co).eq('order_code',orderCode).limit(1);
     if(orders.isEmpty)throw Exception('أدخل كود أمر تصنيع موجود قبل حفظ فحص الجودة.');
     final result=(d['result']??'').toString();final normalized=result.contains('مرفوض')?'fail':result.contains('تحفظ')?'conditional':'pass';
-    table='erp_production_quality_checks';data={'company_id':co,'production_order_id':orders.first['id'],'inspection_stage':d['inspection_stage']??'final','parameter_name':d['parameter_name']??name,'measured_value':_n(d['measured_value']),'minimum_value':_n(d['minimum_value']),'maximum_value':_n(d['maximum_value']),'result':normalized,'inspected_quantity':_n(d['inspected_quantity']),'rejected_quantity':_n(d['rejected_quantity']),'inspector':d['inspector'],'notes':d['notes']};break;
+    table='erp_production_quality_checks';data={'company_id':co,'inspection_code':code,'production_order_id':orders.first['id'],'inspection_stage':d['inspection_stage']??'final','parameter_name':d['parameter_name']??name,'measured_value':_n(d['measured_value']),'minimum_value':_n(d['minimum_value']),'maximum_value':_n(d['maximum_value']),'result':normalized,'inspected_quantity':_n(d['inspected_quantity']),'rejected_quantity':_n(d['rejected_quantity']),'inspector':d['inspector'],'notes':d['notes']};break;
    }
    case 'manufacturing:production_order':{
     final productKey=(d['product']??name).toString();final productRows=await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_code',productKey).limit(1);
@@ -221,7 +221,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   }else{
    final uniqueColumn=switch(table){
     'erp_asset_categories'=>'category_code','erp_fixed_assets'=>'asset_code','erp_asset_depreciation_runs'=>'run_code','erp_asset_disposals'=>'disposal_code',
-    'erp_manufacturing_boms'=>'bom_code','erp_manufacturing_work_centers'=>'center_code','erp_production_orders'=>'order_code','erp_production_variances'=>'variance_code',
+    'erp_manufacturing_boms'=>'bom_code','erp_manufacturing_work_centers'=>'center_code','erp_production_orders'=>'order_code','erp_production_variances'=>'variance_code','erp_production_quality_checks'=>'inspection_code',
     'erp_construction_projects'=>'project_code','erp_construction_payment_certificates'=>'certificate_number','erp_construction_site_reports'=>'report_code',
     'erp_crm_leads'=>'lead_code','erp_service_sla_policies'=>'policy_code','erp_service_tickets'=>'ticket_code','erp_service_visits'=>'visit_code','erp_crm_activities'=>'activity_code',_=>null
    };
