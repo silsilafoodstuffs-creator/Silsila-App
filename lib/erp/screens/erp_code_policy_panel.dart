@@ -279,7 +279,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   }
 
   Widget _field(TextEditingController c, {required int max, required bool letters, required VoidCallback changed}) =>
-    SizedBox(width: letters ? 76 : 62, child: TextField(
+    SizedBox(width:62, child: TextField(
       controller:c, textAlign:TextAlign.center, maxLength:max,
       inputFormatters:[FilteringTextInputFormatter.allow(RegExp(letters ? '[a-zA-Z]' : '[0-9]'))],
       onChanged:(_) => setState(changed),
@@ -345,8 +345,8 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           Row(children:const[
             SizedBox(width:30,child:Text('م',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             Expanded(child:Text('الشاشة / نوع التكويد',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
-            SizedBox(width:66,child:Text('الخانات',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
-            SizedBox(width:80,child:Text('3 حروف',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
+            SizedBox(width:62,child:Text('خانات تسلسل',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:62,child:Text('بادئة الكود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
           ]),
         ]))),
@@ -365,7 +365,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
                   _field(_digits[key]!,max:2,letters:false,changed:(){}),
                 const SizedBox(width:5),
                 if (key == 'customer')
-                  const SizedBox(width:76,child:Text('Cus',textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)))
+                  const SizedBox(width:62,child:Text('Cus',textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)))
                 else
                   _field(_prefix[key]!,max:3,letters:true,changed:(){}),
                 SizedBox(width:112,child:Text(
