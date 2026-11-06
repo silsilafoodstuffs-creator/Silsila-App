@@ -818,14 +818,16 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     child: Row(children: [Icon(icon, color: _hrPurple, size: 21), const SizedBox(width: 8), Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: _hrPurple))]),
   );
 
+  bool get _hasCompany => widget.companyId?.trim().isNotEmpty == true;
+
   Widget _metric(String title, String value, String note, IconData icon, Color color) => Container(
     padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: color.withValues(alpha: .18))),
     child: Row(children: [
       CircleAvatar(backgroundColor: color.withValues(alpha: .10), child: Icon(icon, color: color)),
       const SizedBox(width: 10), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
         Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.black87)),
-        Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: color)),
-        Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+        Text(_hasCompany ? value : '—', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: color)),
+        Text(_hasCompany ? note : 'اختر شركة لعرض المؤشر', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: Colors.black54)),
       ])),
     ]),
   );
@@ -838,8 +840,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   Widget _progressRow(String label, int value, int total, Color color) {
     final ratio = total == 0 ? 0.0 : (value / total).clamp(0.0, 1.0);
     return Padding(padding: const EdgeInsets.symmetric(vertical: 7), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700))), Text('$value / $total', style: const TextStyle(fontWeight: FontWeight.w800))]),
-      const SizedBox(height: 6), ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: ratio, minHeight: 8, color: color, backgroundColor: const Color(0xFFF0EBF4))),
+      Row(children: [Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700))), Text(_hasCompany ? '$value / $total' : '—', style: const TextStyle(fontWeight: FontWeight.w800))]),
+      const SizedBox(height: 6), ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: _hasCompany ? ratio : 0, minHeight: 8, color: color, backgroundColor: const Color(0xFFF0EBF4))),
     ]));
   }
 
@@ -847,7 +849,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     padding: const EdgeInsets.symmetric(vertical: 7),
     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Icon(Icons.circle, size: 9, color: color), const SizedBox(width: 9),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 3), Text(detail, style: const TextStyle(color: Colors.black54, height: 1.5))])),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 3), Text(_hasCompany ? detail : 'اختر شركة نشطة لعرض بيانات الموارد البشرية الفعلية.', style: const TextStyle(color: Colors.black54, height: 1.5))])),
     ]),
   );
 
