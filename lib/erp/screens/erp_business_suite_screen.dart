@@ -46,6 +46,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   if(widget.module=='مقاولات'){
    if(p.contains('أنواع المشروعات')||p.contains('المواقع والمناطق'))return _C('construction_setup',p,'إعداد أنواع المشروعات ومواقع التنفيذ ونطاق الأعمال ومتطلبات الموقع.',const [_F('project_type','نوع المشروع'),_F('region','المنطقة'),_F('permit_required','التصاريح المطلوبة'),_F('default_duration','المدة الافتراضية بالأيام',type:'number'),_F('notes','ملاحظات')],[{'record_code':'CST-DEMO-01','name':'إعداد مباني إدارية — مثال','status':'active'}]);
    if(p.contains('دليل العقود')||p.contains('نماذج العقود'))return _C('contract_template',p,'نماذج العقود وشروط الدفع والضمان والاحتجاز والغرامات ومدد التنفيذ.',const [_F('contract_type','نوع العقد'),_F('payment_terms','شروط الدفع'),_F('retention_percent','نسبة الاحتجاز %',type:'number'),_F('advance_percent','نسبة الدفعة المقدمة %',type:'number'),_F('delay_penalty','غرامة التأخير',type:'number'),_F('warranty_months','مدة الضمان بالشهور',type:'number')],[{'record_code':'CTR-DEMO-01','name':'نموذج عقد تنفيذ — مثال','status':'active'}]);
+   if(p.contains('مصروفات المشروع')||p.contains('تسجيل التكاليف'))return _C('construction_cost',p,'تسجيل تكاليف المشروع وربطها ببند المقايسة والمورد وتاريخ الصرف.',const [_F('project','كود المشروع'),_F('cost_type','نوع التكلفة',type:'choice',options:['مواد','عمالة','معدات','مقاول باطن','مصروفات غير مباشرة','أخرى']),_F('cost_date','تاريخ التكلفة',type:'date'),_F('quantity','الكمية',type:'number'),_F('unit_cost','تكلفة الوحدة',type:'number'),_F('supplier','المورد'),_F('reference','مرجع المستند'),_F('description','بيان التكلفة')],[ ]);
    if(p.contains('بنود الأعمال')||p.contains('وحدات القياس')||p.contains('قوائم أسعار بنود'))return _C('construction_item',p,'دليل بنود الأعمال ووحدات القياس ومعدلات التنفيذ وأسعار الموارد والتكلفة التقديرية.',const [_F('unit','وحدة القياس'),_F('labor_rate','معدل العمالة',type:'number'),_F('material_rate','معدل المواد',type:'number'),_F('equipment_rate','معدل المعدات',type:'number'),_F('unit_price','سعر الوحدة',type:'number'),_F('specification','المواصفات')],[{'record_code':'ITM-DEMO-01','name':'أعمال خرسانة مسلحة — مثال','status':'active'}]);
    if(p.contains('المعدات')||p.contains('الآليات')||p.contains('فرق ومهندسو'))return _C('construction_resource',p,'دليل المعدات والآليات والفرق والمهندسين وتكلفة الاستخدام والتخصيص للمشروعات.',const [_F('resource_type','نوع المورد',type:'choice',options:['معدات','آلية','مهندس','فني','عمالة']),_F('capacity','الطاقة / السعة'),_F('hourly_cost','تكلفة الساعة',type:'number'),_F('availability','حالة التوفر'),_F('assigned_project','المشروع الحالي')],[{'record_code':'RES-DEMO-01','name':'حفار — مثال','status':'active'}]);
    if(p.contains('مراكز تكلفة'))return _C('project_cost_code',p,'شجرة بنود التكلفة وربطها بالموازنة ومراكز التكلفة والتحليل المالي للمشروع.',const [_F('cost_category','تصنيف التكلفة'),_F('parent_code','البند الرئيسي'),_F('budget_limit','حد الموازنة',type:'number'),_F('account_code','الحساب المالي')],[{'record_code':'COST-DEMO-01','name':'تكلفة مواد — مثال','status':'active'}]);
@@ -98,9 +99,16 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    case 'fixed_assets:asset_category':
     table='erp_asset_categories';data={'company_id':co,'category_code':d['category_code']?.toString().trim().isNotEmpty==true?d['category_code']:code,'name':name,'depreciation_method':_assetMethod(d['depreciation_method']),'useful_life_months':_n(d['useful_life_months']).round(),'is_active':status!='cancelled'};break;
    case 'fixed_assets:asset':
-    table='erp_fixed_assets';data={'company_id':co,'asset_code':code,'name':name,'serial_number':d['serial'],'acquisition_date':_day(d['acquisition_date']??date),'acquisition_cost':amount,'residual_value':_n(d['residual']),'useful_life_months':_n(d['life_months'],60).round().clamp(1,1200),'depreciation_method':_assetMethod(d['method']),'location':d['location'],'custodian':d['custodian'],'supplier_name':payload['counterparty'],'purchase_reference':d['invoice'],'status':status=='active'?'active':'draft'};break;
+    final categoryName=(d['category']??'').toString();final categories=categoryName.isEmpty?[]:await _db.from('erp_asset_categories').select('id').eq('company_id',co).eq('name',categoryName).limit(1);
+    table='erp_fixed_assets';data={'company_id':co,'category_id':categories.isEmpty?null:categories.first['id'],'asset_code':code,'name':name,'serial_number':d['serial'],'acquisition_date':_day(d['acquisition_date']??date),'acquisition_cost':amount,'residual_value':_n(d['residual']),'useful_life_months':_n(d['life_months'],60).round().clamp(1,1200),'depreciation_method':_assetMethod(d['method']),'location':d['location'],'custodian':d['custodian'],'supplier_name':payload['counterparty'],'purchase_reference':d['invoice'],'status':status=='active'?'active':'draft'};break;
    case 'fixed_assets:depreciation':
     table='erp_asset_depreciation_runs';data={'company_id':co,'run_code':code,'period_start':date,'period_end':due.isEmpty?date:due,'total_amount':amount,'status':status=='done'||status=='approved'?'calculated':'draft'};break;
+   case 'fixed_assets:asset_disposal':{
+    final assetCode=(d['asset_code']??'').toString();final assets=await _db.from('erp_fixed_assets').select('id,net_book_value').eq('company_id',co).eq('asset_code',assetCode).limit(1);
+    if(assets.isEmpty)throw Exception('سجل الأصل أولاً ثم أنشئ عملية الاستبعاد.');
+    final method=(d['method']??'').toString();final disposalMethod=method.contains('بيع')?'sale':method.contains('تخريد')?'scrap':method.contains('تبرع')?'donation':'write_off';
+    table='erp_asset_disposals';data={'company_id':co,'asset_id':assets.first['id'],'disposal_code':code,'disposal_date':date,'disposal_method':disposalMethod,'reason':d['reason'],'buyer':d['buyer'],'book_value':_n(d['book_value'],_n(assets.first['net_book_value'])),'proceeds':_n(d['sale_value']),'status':status=='approved'?'approved':'draft'};break;
+   }
    case 'fixed_assets:asset_movement':
     final assetCode=(d['asset_code']??'').toString();final assets=await _db.from('erp_fixed_assets').select('id').eq('company_id',co).eq('asset_code',assetCode).limit(1);
     if(assets.isEmpty)throw Exception('سجل الأصل أولاً ثم أنشئ حركة النقل أو العهدة له.');
@@ -110,14 +118,40 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     break;
    case 'manufacturing:work_center':
     table='erp_manufacturing_work_centers';data={'company_id':co,'center_code':code,'name':name,'center_type':d['center_type']??'production_line','capacity_per_hour':_n(d['capacity']),'hourly_cost':_n(d['hour_cost']??d['hourly_cost']),'setup_minutes':_n(d['setup_time']).round(),'location':d['location'],'supervisor':d['supervisor'],'is_active':status!='cancelled'};break;
-   case 'manufacturing:production_order':
-    table='erp_production_orders';data={'company_id':co,'order_code':code,'product_name':name,'planned_quantity':qty>0?qty:1,'produced_quantity':_n(d['produced_qty']),'scrap_quantity':_n(d['scrap_qty']),'planned_start':date,'planned_end':due,'status':status=='done'?'done':status=='in_progress'?'in_progress':status=='cancelled'?'cancelled':'draft','estimated_cost':amount,'actual_cost':_n(d['actual_cost']),'lot_number':d['lot'],'notes':d['production_stage']};break;
+   case 'manufacturing:production_order':{
+    final productKey=(d['product']??name).toString();final productRows=await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_code',productKey).limit(1);
+    final productByName=productRows.isEmpty?await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_name',productKey).limit(1):productRows;
+    final warehouseKey=(d['warehouse']??'').toString();final warehouseRows=warehouseKey.isEmpty?[]:await _db.from('erp_warehouses').select('id,branch_id,warehouse_code,warehouse_name').eq('company_id',co).eq('warehouse_code',warehouseKey).limit(1);
+    final warehouseByName=warehouseKey.isEmpty||warehouseRows.isNotEmpty?warehouseRows:await _db.from('erp_warehouses').select('id,branch_id,warehouse_code,warehouse_name').eq('company_id',co).eq('warehouse_name',warehouseKey).limit(1);
+    final bomKey=(d['bom_code']??'').toString();final bomRows=bomKey.isEmpty?[]:await _db.from('erp_manufacturing_boms').select('id').eq('company_id',co).eq('bom_code',bomKey).order('version',ascending:false).limit(1);
+    final centerKey=(d['work_center']??'').toString();final centerRows=centerKey.isEmpty?[]:await _db.from('erp_manufacturing_work_centers').select('id').eq('company_id',co).eq('center_code',centerKey).limit(1);
+    final materialText=(d['materials']??'').toString().trim();final produced=_n(d['produced_qty']);
+    if((materialText.isNotEmpty||produced>0)&&warehouseByName.isEmpty)throw Exception('اختر مخزنًا معرفًا بكوده أو اسمه قبل صرف الخامات أو استلام الإنتاج.');
+    if(produced>0&&productByName.isEmpty)throw Exception('كود أو اسم المنتج النهائي غير موجود في دليل الأصناف.');
+    table='erp_production_orders';data={'company_id':co,'order_code':code,'product_id':productByName.isEmpty?null:productByName.first['id'],'product_name':name,'planned_quantity':qty>0?qty:1,'produced_quantity':produced,'scrap_quantity':_n(d['scrap_qty']),'planned_start':date,'planned_end':due,'status':status=='done'?'done':status=='in_progress'?'in_progress':status=='cancelled'?'cancelled':'draft','estimated_cost':amount,'actual_cost':_n(d['actual_cost']),'lot_number':d['lot'],'notes':d['production_stage'],'warehouse_id':warehouseByName.isEmpty?null:warehouseByName.first['id'],'bom_id':bomRows.isEmpty?null:bomRows.first['id'],'work_center_id':centerRows.isEmpty?null:centerRows.first['id']};break;
+   }
+   case 'contracting:boq':{
+    final projectCode=(d['project']??'').toString();final projectRows=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',projectCode).limit(1);
+    if(projectRows.isEmpty)throw Exception('أدخل كود مشروع مسجل في حقل المشروع قبل إضافة بند المقايسة.');
+    table='erp_construction_boq_lines';final orderNo=_n(d['line_order']).round();data={'company_id':co,'project_id':projectRows.first['id'],'item_code':d['item_code']??code,'description':name,'unit':d['unit']??'وحدة','planned_quantity':_n(d['contract_qty'],qty),'unit_rate':_n(d['unit_price'],amount),'executed_quantity':_n(d['executed_qty']),'approved_quantity':0,'line_order':orderNo>0?orderNo:DateTime.now().millisecondsSinceEpoch%1000000,'notes':d['specification']};break;
+   }
+   case 'contracting:construction_cost':{
+    final projectCode=(d['project']??'').toString();final projectRows=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',projectCode).limit(1);
+    if(projectRows.isEmpty)throw Exception('أدخل كود مشروع مسجل قبل تسجيل التكلفة.');
+    final costKind=(d['cost_type']??'').toString();final costType=costKind.contains('مواد')?'material':costKind.contains('عمالة')?'labor':costKind.contains('معدات')?'equipment':costKind.contains('باطن')?'subcontract':costKind.contains('غير مباشرة')?'overhead':'other';
+    table='erp_construction_costs';final costQty=_n(d['quantity'],1),unitCost=_n(d['unit_cost']);data={'company_id':co,'project_id':projectRows.first['id'],'cost_date':_day(d['cost_date']??date),'cost_type':costType,'description':d['description']??name,'quantity':costQty,'unit_cost':unitCost,'amount':_n(payload['amount'],costQty*unitCost),'supplier_name':d['supplier'],'document_reference':d['reference'],'status':status=='approved'?'approved':'draft'};break;
+   }
+   case 'contracting:site_report':{
+    final projectCode=(d['project']??'').toString();final projectRows=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',projectCode).limit(1);
+    if(projectRows.isEmpty)throw Exception('أدخل كود مشروع مسجل قبل حفظ تقرير الموقع.');
+    table='erp_construction_site_reports';data={'company_id':co,'project_id':projectRows.first['id'],'report_code':code,'report_date':date,'engineer':d['engineer'],'weather':d['weather'],'labor_count':_n(d['labor']).round(),'equipment':d['equipment'],'materials':d['materials'],'work_done':d['work_done'],'issues':d['issues'],'safety':d['safety'],'status':status=='approved'?'approved':status=='done'?'submitted':'draft'};break;
+   }
    case 'contracting:project':
-    table='erp_construction_projects';data={'company_id':co,'project_code':code,'name':name,'site_address':d['site_address']??d['location'],'project_type':d['project_type'],'contract_number':d['contract_number'],'contract_value':amount,'planned_start':date,'planned_end':due,'status':status=='done'?'completed':status=='active'?'in_progress':status=='in_progress'?'in_progress':status=='cancelled'?'cancelled':'draft','project_manager':d['project_manager'],'retention_percent':_n(d['retention_percent']),'notes':d['notes']};break;
+    table='erp_construction_projects';data={'company_id':co,'project_code':code,'name':name,'site_address':d['site_address']??d['location'],'project_type':d['project_type'],'contract_number':d['contract_number'],'contract_value':_n(d['contract_value'],amount),'budget_amount':_n(d['budget']),'actual_cost':_n(d['actual_cost']),'progress_percent':_n(d['progress']),'planned_start':date,'planned_end':due,'status':status=='done'?'completed':status=='active'?'in_progress':status=='in_progress'?'in_progress':status=='cancelled'?'cancelled':'draft','project_manager':d['manager']??d['project_manager'],'retention_percent':_n(d['retention']??d['retention_percent']),'notes':d['notes']};break;
    case 'contracting:certificate':
     final pcode=(d['project_code']??d['project']??'').toString();final projects=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',pcode).limit(1);
     if(projects.isEmpty)throw Exception('أدخل كود مشروع مسجل في حقل المشروع قبل حفظ المستخلص.');
-    table='erp_construction_payment_certificates';data={'company_id':co,'project_id':projects.first['id'],'certificate_number':code,'period_start':date,'period_end':due,'gross_amount':amount,'retention_amount':_n(d['retention_amount']),'advance_recovery':_n(d['advance_recovery']),'deductions':_n(d['deductions']),'status':status=='approved'?'approved':status=='paid'?'paid':'draft','notes':d['notes']};break;
+    table='erp_construction_payment_certificates';data={'company_id':co,'project_id':projects.first['id'],'certificate_number':code,'period_start':date,'period_end':due,'gross_amount':_n(d['gross'],amount),'retention_amount':_n(d['gross'],amount)*_n(d['retention'])/100,'advance_recovery':_n(d['advance_recovery']),'deductions':_n(d['deductions'])+_n(d['taxes']),'status':status=='approved'?'approved':status=='paid'?'paid':'draft','notes':d['notes']};break;
    case 'customer_service:opportunity':
     table='erp_crm_leads';data={'company_id':co,'lead_code':code,'title':name,'contact_name':d['contact'],'phone':d['phone'],'email':d['email'],'source':d['source'],'stage':_leadStage(d['stage']),'probability':_n(d['probability']),'expected_revenue':_n(d['expected_revenue'],amount),'expected_close_date':due,'next_activity':d['next_activity'],'status':_leadStage(d['stage'])=='won'?'won':_leadStage(d['stage'])=='lost'?'lost':'open'};break;
    case 'customer_service:sla_policy':
@@ -162,7 +196,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
 
  String get _reportTable {
   final p=widget.page;
-  if(_moduleKey=='fixed_assets'){if(p.contains('إهلاك'))return 'erp_asset_depreciation_runs';if(p.contains('حركة')||p.contains('نقل'))return 'erp_asset_movements';return 'erp_fixed_assets';}
+  if(_moduleKey=='fixed_assets'){if(p.contains('إهلاك'))return 'erp_asset_depreciation_runs';if(p.contains('استبعاد')||p.contains('بيع أصل'))return 'erp_asset_disposals';if(p.contains('حركة')||p.contains('نقل'))return 'erp_asset_movements';return 'erp_fixed_assets';}
   if(_moduleKey=='manufacturing'){if(p.contains('خامات'))return 'erp_production_material_movements';if(p.contains('جودة'))return 'erp_production_quality_checks';return 'erp_production_orders';}
   if(_moduleKey=='contracting'){if(p.contains('مستخلص'))return 'erp_construction_payment_certificates';if(p.contains('تكلفة'))return 'erp_construction_costs';if(p.contains('مقايسة')||p.contains('بنود'))return 'erp_construction_boq_lines';return 'erp_construction_projects';}
   if(p.contains('فرص'))return 'erp_crm_leads';if(p.contains('زيارة'))return 'erp_service_visits';if(p.contains('نشاط'))return 'erp_crm_activities';return 'erp_service_tickets';
@@ -173,6 +207,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    case 'erp_fixed_assets':return {...r,'record_code':r['asset_code'],'name':r['name'],'amount':r['acquisition_cost']??0,'quantity':1,'record_date':r['acquisition_date'],'counterparty':r['supplier_name']};
    case 'erp_asset_depreciation_runs':return {...r,'record_code':r['run_code'],'name':'تشغيل إهلاك '+(r['period_start']??'').toString(),'amount':r['total_amount']??0,'record_date':r['period_start']};
    case 'erp_asset_movements':return {...r,'record_code':id,'name':r['movement_type'],'amount':0,'record_date':r['movement_date'],'counterparty':r['to_custodian']??r['to_location']};
+   case 'erp_asset_disposals':return {...r,'record_code':r['disposal_code'],'name':r['disposal_method'],'amount':r['proceeds']??0,'record_date':r['disposal_date'],'counterparty':r['buyer']};
    case 'erp_production_orders':return {...r,'record_code':r['order_code'],'name':r['product_name'],'amount':r['actual_cost']??r['estimated_cost']??0,'quantity':r['planned_quantity']??0,'record_date':r['planned_start']};
    case 'erp_production_material_movements':return {...r,'record_code':id,'name':r['item_name'],'amount':_n(r['quantity'])*_n(r['unit_cost']),'quantity':r['quantity'],'status':r['movement_type'],'record_date':r['movement_date']};
    case 'erp_production_quality_checks':return {...r,'record_code':id,'name':r['parameter_name'],'amount':0,'quantity':r['inspected_quantity']??0,'status':r['result']};
@@ -180,6 +215,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    case 'erp_construction_payment_certificates':return {...r,'record_code':r['certificate_number'],'name':'مستخلص مشروع','amount':r['net_amount']??0,'record_date':r['period_start']};
    case 'erp_construction_costs':return {...r,'record_code':id,'name':r['description'],'amount':r['amount']??0,'quantity':r['quantity']??0,'record_date':r['cost_date'],'counterparty':r['supplier_name']};
    case 'erp_construction_boq_lines':return {...r,'record_code':r['item_code']??id,'name':r['description'],'amount':_n(r['planned_quantity'])*_n(r['unit_rate']),'quantity':r['planned_quantity']??0,'status':'active'};
+   case 'erp_construction_site_reports':return {...r,'record_code':r['report_code'],'name':r['work_done']??'تقرير موقع','amount':0,'quantity':r['labor_count']??0,'record_date':r['report_date']};
    case 'erp_crm_leads':return {...r,'record_code':r['lead_code'],'name':r['title'],'amount':r['expected_revenue']??0,'record_date':r['expected_close_date'],'counterparty':r['contact_name'],'status':r['stage']};
    case 'erp_service_visits':return {...r,'record_code':r['visit_code'],'name':r['visit_type'],'amount':0,'record_date':r['scheduled_at'],'counterparty':r['assigned_to']};
    case 'erp_crm_activities':return {...r,'record_code':r['activity_code'],'name':r['subject'],'amount':0,'record_date':r['scheduled_at'],'counterparty':r['assigned_to']};
@@ -191,7 +227,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   setState(()=>_loading=true);try{if(_report){final table=_reportTable;var q=_db.from(table).select('*').eq('company_id',co);final data=table=='erp_construction_boq_lines'?await q.limit(1500):await q.order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>_reportRow(Map<String,dynamic>.from(e),table)).toList();}else{final data=await _db.from('erp_business_suite_records').select('*').eq('company_id',co).eq('module_key',_moduleKey).eq('record_type',_c.type).order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>Map<String,dynamic>.from(e)).toList();}}
   catch(e){_error='تعذر تحميل بيانات الشاشة: $e';}finally{if(mounted)setState(()=>_loading=false);}
  }
- bool get _demo=>!_report&&_rows.isEmpty&&_c.examples.isNotEmpty;
+ bool get _demo=>false;
  List<Map<String,dynamic>> get _display=>_demo?_c.examples:_rows;
  List<Map<String,dynamic>> get _filtered{final q=_search.text.trim().toLowerCase();return _display.where((r)=>(_filter=='all'||r['status']==_filter)&&(q.isEmpty||[r['record_code'],r['name'],r['counterparty'],r['details']].join(' ').toLowerCase().contains(q))).toList();}
  Future<void> _edit({Map<String,dynamic>? row})async{
