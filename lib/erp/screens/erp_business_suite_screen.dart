@@ -78,6 +78,80 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
  }
  @override void initState(){super.initState();_load();}
  @override void dispose(){_search.dispose();super.dispose();}
+
+ double _n(dynamic value,[double fallback=0])=>double.tryParse((value??'').toString().trim().replaceAll(',','.'))??fallback;
+ String _day(dynamic value){final d=DateTime.tryParse((value??'').toString());return d==null?DateTime.now().toIso8601String().substring(0,10):d.toIso8601String().substring(0,10);}
+ String _assetMethod(dynamic value){final v=(value??'').toString();if(v.contains('متناقص'))return 'declining_balance';if(v.contains('وحدات'))return 'units_of_production';if(v.contains('بدون'))return 'none';return 'straight_line';}
+ String _priority(dynamic value){final v=(value??'').toString();if(v.contains('عاجل'))return 'urgent';if(v.contains('عال'))return 'high';if(v.contains('منخفض'))return 'low';return 'normal';}
+ String _leadStage(dynamic value){final v=(value??'').toString();if(v.contains('فوز'))return 'won';if(v.contains('خسارة'))return 'lost';if(v.contains('تفاوض'))return 'negotiation';if(v.contains('عرض'))return 'proposal';if(v.contains('تأهيل'))return 'qualified';return 'new';}
+ String _ticketStatus(dynamic value){final v=(value??'').toString();if(v=='done'||v=='completed'||v=='resolved')return 'resolved';if(v=='closed')return 'closed';if(v=='cancelled')return 'cancelled';if(v=='waiting')return 'waiting_customer';if(v=='in_progress')return 'in_progress';if(v=='approved'||v=='active')return 'assigned';return 'open';}
+ Future<Map<String,dynamic>> _syncOperationalRecord(Map<String,dynamic> payload,{Map<String,dynamic>? oldRow}) async {
+  final d=Map<String,dynamic>.from(payload['details'] as Map? ?? const {});
+  final co=widget.companyId!;
+  final code=payload['record_code'].toString(),name=payload['name'].toString();
+  final amount=_n(payload['amount']),qty=_n(payload['quantity'],1);
+  final date=_day(payload['record_date']),due=_day(payload['due_date']);
+  final status=payload['status']?.toString()??'draft';
+  final key='${_moduleKey}:${payload['record_type']}';
+  String? table;Map<String,dynamic>? data;
+  switch(key){
+   case 'fixed_assets:asset_category':
+    table='erp_asset_categories';data={'company_id':co,'category_code':d['category_code']?.toString().trim().isNotEmpty==true?d['category_code']:code,'name':name,'depreciation_method':_assetMethod(d['depreciation_method']),'useful_life_months':_n(d['useful_life_months']).round(),'is_active':status!='cancelled'};break;
+   case 'fixed_assets:asset':
+    table='erp_fixed_assets';data={'company_id':co,'asset_code':code,'name':name,'serial_number':d['serial'],'acquisition_date':_day(d['acquisition_date']??date),'acquisition_cost':amount,'residual_value':_n(d['residual']),'useful_life_months':_n(d['life_months'],60).round().clamp(1,1200),'depreciation_method':_assetMethod(d['method']),'location':d['location'],'custodian':d['custodian'],'supplier_name':payload['counterparty'],'purchase_reference':d['invoice'],'status':status=='active'?'active':'draft'};break;
+   case 'fixed_assets:depreciation':
+    table='erp_asset_depreciation_runs';data={'company_id':co,'run_code':code,'period_start':date,'period_end':due.isEmpty?date:due,'total_amount':amount,'status':status=='done'||status=='approved'?'calculated':'draft'};break;
+   case 'fixed_assets:asset_movement':
+    final assetCode=(d['asset_code']??'').toString();final assets=await _db.from('erp_fixed_assets').select('id').eq('company_id',co).eq('asset_code',assetCode).limit(1);
+    if(assets.isEmpty)throw Exception('سجل الأصل أولاً ثم أنشئ حركة النقل أو العهدة له.');
+    table='erp_asset_movements';data={'company_id':co,'asset_id':assets.first['id'],'movement_type':(d['movement_type']??'').toString().contains('صيانة')?'maintenance_start':(d['movement_type']??'').toString().contains('عهدة')?'custody_out':'transfer','movement_date':date,'from_location':d['from_location'],'to_location':d['to_location'],'from_custodian':null,'to_custodian':d['custodian'],'condition_note':d['condition'],'status':status=='approved'?'approved':'draft'};break;
+   case 'manufacturing:bom':
+    table='erp_manufacturing_boms';data={'company_id':co,'bom_code':code,'product_name':name,'output_quantity':qty>0?qty:1,'output_unit':(d['unit']??'وحدة').toString(),'version':1,'scrap_percent':_n(d['scrap_rate']),'status':status=='active'?'active':'draft','effective_from':d['effective_from']};
+    break;
+   case 'manufacturing:work_center':
+    table='erp_manufacturing_work_centers';data={'company_id':co,'center_code':code,'name':name,'center_type':d['center_type']??'production_line','capacity_per_hour':_n(d['capacity']),'hourly_cost':_n(d['hour_cost']??d['hourly_cost']),'setup_minutes':_n(d['setup_time']).round(),'location':d['location'],'supervisor':d['supervisor'],'is_active':status!='cancelled'};break;
+   case 'manufacturing:production_order':
+    table='erp_production_orders';data={'company_id':co,'order_code':code,'product_name':name,'planned_quantity':qty>0?qty:1,'produced_quantity':_n(d['produced_qty']),'scrap_quantity':_n(d['scrap_qty']),'planned_start':date,'planned_end':due,'status':status=='done'?'done':status=='in_progress'?'in_progress':status=='cancelled'?'cancelled':'draft','estimated_cost':amount,'actual_cost':_n(d['actual_cost']),'lot_number':d['lot'],'notes':d['production_stage']};break;
+   case 'contracting:project':
+    table='erp_construction_projects';data={'company_id':co,'project_code':code,'name':name,'site_address':d['site_address']??d['location'],'project_type':d['project_type'],'contract_number':d['contract_number'],'contract_value':amount,'planned_start':date,'planned_end':due,'status':status=='done'?'completed':status=='active'?'in_progress':status=='in_progress'?'in_progress':status=='cancelled'?'cancelled':'draft','project_manager':d['project_manager'],'retention_percent':_n(d['retention_percent']),'notes':d['notes']};break;
+   case 'contracting:certificate':
+    final pcode=(d['project_code']??d['project']??'').toString();final projects=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',pcode).limit(1);
+    if(projects.isEmpty)throw Exception('أدخل كود مشروع مسجل في حقل المشروع قبل حفظ المستخلص.');
+    table='erp_construction_payment_certificates';data={'company_id':co,'project_id':projects.first['id'],'certificate_number':code,'period_start':date,'period_end':due,'gross_amount':amount,'retention_amount':_n(d['retention_amount']),'advance_recovery':_n(d['advance_recovery']),'deductions':_n(d['deductions']),'status':status=='approved'?'approved':status=='paid'?'paid':'draft','notes':d['notes']};break;
+   case 'customer_service:opportunity':
+    table='erp_crm_leads';data={'company_id':co,'lead_code':code,'title':name,'contact_name':d['contact'],'phone':d['phone'],'email':d['email'],'source':d['source'],'stage':_leadStage(d['stage']),'probability':_n(d['probability']),'expected_revenue':_n(d['expected_revenue'],amount),'expected_close_date':due,'next_activity':d['next_activity'],'status':_leadStage(d['stage'])=='won'?'won':_leadStage(d['stage'])=='lost'?'lost':'open'};break;
+   case 'customer_service:sla_policy':
+    table='erp_service_sla_policies';data={'company_id':co,'policy_code':code,'name':name,'priority':_priority(d['priority']),'first_response_minutes':(_n(d['first_response_hours'],1)*60).round().clamp(1,100000),'resolution_minutes':(_n(d['resolution_hours'],24)*60).round().clamp(1,1000000),'escalation_minutes':(_n(d['escalation_after'])*60).round()>0?(_n(d['escalation_after'])*60).round():null,'is_active':status!='cancelled'};break;
+   case 'customer_service:ticket':
+    table='erp_service_tickets';data={'company_id':co,'ticket_code':code,'subject':name,'description':d['resolution'],'channel':(d['channel']??'other').toString(),'category':d['ticket_type']??'general','priority':_priority(d['priority']),'status':_ticketStatus(status),'team_name':d['team'],'resolution':d['resolution']};break;
+   case 'customer_service:field_task':
+    table='erp_service_visits';data={'company_id':co,'visit_code':code,'scheduled_at':DateTime.tryParse((d['visit_date']??date).toString())?.toIso8601String()??DateTime.now().toIso8601String(),'address':d['address'],'visit_type':d['service_type']??'service','status':status=='done'?'completed':status=='cancelled'?'cancelled':'planned','labor_minutes':(_n(d['hours'])*60).round(),'outcome':d['worksheet']};break;
+   case 'customer_service:activity':
+    table='erp_crm_activities';final kind=(d['activity_type']??'مهمة').toString();final activityType=kind.contains('مكالمة')?'call':kind.contains('بريد')?'email':kind.contains('واتساب')?'whatsapp':kind.contains('اجتماع')?'meeting':kind.contains('زيارة')?'visit':kind.contains('تذكير')?'reminder':'task';
+    data={'company_id':co,'activity_code':code,'activity_type':activityType,'subject':name,'scheduled_at':DateTime.tryParse((d['next_date']??date).toString())?.toIso8601String(),'outcome':d['outcome'],'next_step':d['next_step'],'status':status=='done'?'done':'planned'};break;
+   default: break;
+  }
+  if(table==null||data==null)return d;
+  final oldDetails=Map<String,dynamic>.from(oldRow?['details'] as Map? ?? const {});
+  final existingId=oldDetails['_operational_id']?.toString();
+  String id;
+  if(existingId!=null&&existingId.isNotEmpty){
+   await _db.from(table).update(data).eq('id',existingId).eq('company_id',co);id=existingId;
+  }else{
+   final inserted=await _db.from(table).insert(data).select('id').single();id=inserted['id'].toString();
+  }
+  if(table=='erp_manufacturing_boms'&&(d['components']??'').toString().trim().isNotEmpty){
+   await _db.from('erp_manufacturing_bom_lines').delete().eq('company_id',co).eq('bom_id',id);
+   final lines=(d['components']??'').toString().split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty).toList();
+   var lineNo=0;final parsed=<Map<String,dynamic>>[];
+   for(final line in lines){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;lineNo++;parsed.add({'company_id':co,'bom_id':id,'line_no':lineNo,'item_name':parts[0],'quantity':q,'unit':parts.length>2&&parts[2].isNotEmpty?parts[2]:'وحدة'});}
+   if(parsed.isNotEmpty)await _db.from('erp_manufacturing_bom_lines').insert(parsed);
+  }
+  if(table=='erp_service_tickets'&&oldRow!=null&&oldRow['status']!=status){
+   await _db.from('erp_service_ticket_events').insert({'company_id':co,'ticket_id':id,'event_type':'status_change','from_status':oldRow['status'],'to_status':status,'note':'تغيير حالة التذكرة من شاشة سلسلة'});
+  }
+  return {...d,'_operational_table':table,'_operational_id':id};
+ }
  Future<void> _load()async{
   final co=(widget.companyId??'').trim();if(co.isEmpty){setState(()=>_loading=false);_error='حدد الشركة أولًا.';return;}
   setState(()=>_loading=true);try{var q=_db.from('erp_business_suite_records').select('*').eq('company_id',co).eq('module_key',_moduleKey);if(!_report)q=q.eq('record_type',_c.type);final data=await q.order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>Map<String,dynamic>.from(e)).toList();}
@@ -101,7 +175,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   ])))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(style:FilledButton.styleFrom(backgroundColor:_p),onPressed:()async{
    if(!key.currentState!.validate())return;final payload=<String,dynamic>{'company_id':widget.companyId,'module_key':_moduleKey,'record_type':c.type,'record_code':code.text.trim(),'name':name.text.trim(),'status':status,'counterparty':counter.text.trim().isEmpty?null:counter.text.trim(),'details':{for(final f in c.fields)if(ctrls[f.key]!.text.trim().isNotEmpty)f.key:ctrls[f.key]!.text.trim()}};
    if(date.text.trim().isNotEmpty)payload['record_date']=date.text.trim();if(due.text.trim().isNotEmpty)payload['due_date']=due.text.trim();if(amount.text.trim().isNotEmpty)payload['amount']=num.tryParse(amount.text.trim().replaceAll(',','.'))??0;if(qty.text.trim().isNotEmpty)payload['quantity']=num.tryParse(qty.text.trim().replaceAll(',','.'))??0;
-   try{if(row==null){await _db.from('erp_business_suite_records').insert(payload);}else{await _db.from('erp_business_suite_records').update(payload).eq('id',row['id']).eq('company_id',widget.companyId!);}if(ctx.mounted)Navigator.pop(ctx,true);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحفظ: $e')));}
+   try{payload['details']=await _syncOperationalRecord(payload,oldRow:row);if(row==null){payload['created_by']=_db.auth.currentUser?.id;await _db.from('erp_business_suite_records').insert(payload);}else{await _db.from('erp_business_suite_records').update(payload).eq('id',row['id']).eq('company_id',widget.companyId!);}if(ctx.mounted)Navigator.pop(ctx,true);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحفظ في السجل التشغيلي: $e')));}
   },child:const Text('حفظ'))])));
   for(final x in [code,name,counter,amount,qty,date,due,...ctrls.values]){x.dispose();}if(ok==true)await _load();
  }
