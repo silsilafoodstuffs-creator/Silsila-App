@@ -240,6 +240,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   int? _executiveFulfillmentCancelledCount;
   double? _executiveSupplierPayables;
   double? _executiveInventoryTurnoverRate;
+  double? _executiveDataCompletenessRate;
   List<Map<String, dynamic>> _executiveBranchSales = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _executiveTopProfitableItems = <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _executiveCategorySales = <Map<String, dynamic>>[];
@@ -2088,6 +2089,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveCreditLimitExceededCount = numberValue(currentData, 'credit_limit_exceeded_count')?.toInt();
         _executiveFulfillmentCancelledCount = numberValue(currentData, 'fulfillment_cancelled_count')?.toInt();
         _executiveInventoryTurnoverRate = numberValue(currentData, 'inventory_turnover_rate');
+        _executiveDataCompletenessRate = numberValue(currentData, 'data_completeness_rate');
         _executiveBranchSales = mapList(currentData, 'branch_sales');
         _executiveTopProfitableItems = mapList(currentData, 'top_profitable_items');
         _executiveCategorySales = mapList(currentData, 'category_sales');
@@ -2396,7 +2398,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           {'title': 'بانتظار الاعتماد', 'value': '${_executivePendingApprovalCount ?? '—'} حركة', 'note': 'مسودات البيع والشراء والقيود', 'icon': Icons.approval_rounded, 'color': _orange, 'details': 'المستندات والقيود التي تنتظر الاعتماد مع تاريخ الإنشاء والمسؤول.'},
           {'title': 'ملاحظات الحركات', 'value': '— ملاحظة', 'note': 'تحتاج مراجعة', 'icon': Icons.rule_folder_outlined, 'color': _pink, 'details': 'الحركات التي تحتاج إلى مراجعة أو استكمال بيانات أو تصحيح الربط.'},
           {'title': 'تجاوز الائتمان', 'value': '${_executiveCreditLimitExceededCount ?? '—'} عميل', 'note': 'تجاوز حد الائتمان المسجل', 'icon': Icons.credit_score_outlined, 'color': _orange, 'details': 'العملاء الذين تجاوزوا حدود الائتمان مع الرصيد والحد المعتمد.'},
-          {'title': 'اكتمال البيانات', 'value': '—%', 'note': 'البيانات الأساسية', 'icon': Icons.checklist_rounded, 'color': _green, 'details': 'مؤشر اكتمال البيانات الأساسية واكتشاف الحقول الناقصة والمكررة.'},
+          {'title': 'اكتمال البيانات', 'value': _executiveDataCompletenessRate == null ? '—%' : '${_executiveDataCompletenessRate!.toStringAsFixed(1)}%', 'note': 'اكتمال الحقول الأساسية للبيانات النشطة', 'icon': Icons.checklist_rounded, 'color': _green, 'details': 'مؤشر اكتمال البيانات الأساسية واكتشاف الحقول الناقصة والمكررة.'},
         ],
       },
     ];
