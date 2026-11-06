@@ -19,6 +19,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   final _db = Supabase.instance.client;
   bool _loading = true;
   String? _error;
+  int _analysisPeriodDays = 365;
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _departments = [];
   List<Map<String, dynamic>> _jobs = [];
@@ -160,11 +161,23 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _overtimeMinutes => _attendance.fold<int>(0, (sum, r) => sum + ((r['overtime_minutes'] as num?)?.toInt() ?? 0));
   int get _pendingPayrollRuns => _payrollRuns.where((r) => !const ['approved', 'posted', 'paid'].contains(r['status']?.toString().toLowerCase())).length;
   int _complianceCount(String type, String status) => _compliance.where((r) => r['record_type'] == type && r['status'] == status).length;
-  int get _healthInsured => _complianceCount('health_insurance', 'insured');
-  int get _healthUninsured => _complianceCount('health_insurance', 'uninsured');
-  int get _socialInsured => _complianceCount('social_insurance', 'insured');
-  int get _socialUninsured => _complianceCount('social_insurance', 'uninsured');
-  int get _insuranceInProgress => _compliance.where((r) => r['status'] == 'in_progress').length;
+  int _distinctComplianceEmployees(String type, String status) => _compliance
+      .where((r) => r['record_type'] == type && r['status'] == status && r['employee_id'] != null)
+      .map((r) => r['employee_id'].toString()).toSet().length;
+  int _distinctComplianceStatus(String type, Set<String> statuses) => _compliance
+      .where((r) => r['record_type'] == type && statuses.contains(r['status']) && r['employee_id'] != null)
+      .map((r) => r['employee_id'].toString()).toSet().length;
+  int get _healthInsured => _distinctComplianceEmployees('health_insurance', 'insured');
+  int get _healthUninsured => _distinctComplianceEmployees('health_insurance', 'uninsured');
+  int get _socialInsured => _distinctComplianceEmployees('social_insurance', 'insured');
+  int get _socialUninsured => _distinctComplianceEmployees('social_insurance', 'uninsured');
+  int get _healthInProgress => _distinctComplianceStatus('health_insurance', {'in_progress'});
+  int get _socialInProgress => _distinctComplianceStatus('social_insurance', {'in_progress'});
+  int get _insuranceInProgress => _healthInProgress + _socialInProgress;
+  int get _healthNotRecorded => (_activeEmployees - _distinctComplianceStatus('health_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees);
+  int get _socialNotRecorded => (_activeEmployees - _distinctComplianceStatus('social_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees);
+  int get _contractsActive => _employees.where((e) => e['is_active'] == true && e['contract_type'] == 'بعقد' && (_asDate(e['contract_end_date']) == null || !_asDate(e['contract_end_date'])!.isBefore(DateTime.now()))).length;
+  int get _contractsMissing => _contractsWithoutEndDate + _employees.where((e) => e['is_active'] == true && (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty)).length;
   int get _licensesExpired => _compliance.where((r) => r['record_type'] == 'license' && (r['status'] == 'expired' || (_asDate(r['expires_on'])?.isBefore(DateTime.now()) ?? false))).length;
   int get _licensesExpiringSoon => _compliance.where((r) { final d = _asDate(r['expires_on']); if (r['record_type'] != 'license' || d == null) return false; final n = DateTime.now(); final t = DateTime(n.year,n.month,n.day); final days = d.difference(t).inDays; return days >= 0 && days <= 30; }).length;
   int get _trainingInProgress => _training.where((r) => r['status'] == 'in_progress').length;
@@ -173,22 +186,30 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _trainingCertificatesExpired => _training.where((r) { final d = _asDate(r['certificate_expires_on']); if (d == null) return false; final n=DateTime.now(); final t=DateTime(n.year,n.month,n.day); return d.isBefore(t); }).length;
   int _candidateCount(String status) => _candidates.where((r) => r['status'] == status).length;
   int get _candidateOpen => _candidates.where((r) => !const ['accepted','rejected','withdrawn'].contains(r['status'])).length;
+  int get _candidateInterviews => _candidateCount('interview');
+  int get _candidateScreening => _candidateCount('screening');
+  int get _candidateDecided => _candidateCount('accepted') + _candidateCount('rejected');
+  double get _candidateAcceptanceRate => _candidateDecided == 0 ? 0 : _candidateCount('accepted') / _candidateDecided * 100;
+  DateTime get _analysisCutoff => DateTime.now().subtract(Duration(days: _analysisPeriodDays));
+  int get _separationsInPeriod => _movements.where((r) => const ['resignation','termination','retirement'].contains(r['movement_type']) && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).length;
+  int get _resignationsInPeriod => _movements.where((r) => r['movement_type'] == 'resignation' && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).length;
+  int get _hiresInPeriod => _employees.where((r) => _asDate(r['hire_date'])?.isAfter(_analysisCutoff) ?? false).length;
   int get _separationsLast12Months => _movements.where((r) => const ['resignation','termination','retirement'].contains(r['movement_type']) && (_asDate(r['effective_on'])?.isAfter(DateTime.now().subtract(const Duration(days:365))) ?? false)).length;
   int get _hiresLast12Months => _employees.where((r) => _asDate(r['hire_date'])?.isAfter(DateTime.now().subtract(const Duration(days:365))) ?? false).length;
   double get _turnoverRate {
     final current = _activeEmployees;
-    final start = current + _separationsLast12Months - _hiresLast12Months;
+    final start = current + _separationsInPeriod - _hiresInPeriod;
     final average = (start + current) / 2;
-    return average <= 0 ? 0 : (_separationsLast12Months / average) * 100;
+    return average <= 0 ? 0 : (_separationsInPeriod / average) * 100;
   }
   // Avoid reporting a false zero turnover rate before service-movement history is recorded.
-  String get _turnoverRateDisplay => _movements.isEmpty
-      ? 'غير متاح — لا توجد حركات خدمة مسجلة'
+  String get _turnoverRateDisplay => _movements.where((r) => _asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false).isEmpty
+      ? 'غير متاح — لا توجد حركات خدمة مسجلة في الفترة'
       : '${_turnoverRate.toStringAsFixed(1)}%';
   int get _pendingLeaveRequests => _leaves.where((r) => !const ['approved','rejected','مقبول','مرفوض'].contains(r['status']?.toString().toLowerCase())).length;
   List<MapEntry<String, int>> get _separationsByDepartment {
     final counts = <String, int>{};
-    final cutoff = DateTime.now().subtract(const Duration(days: 365));
+    final cutoff = _analysisCutoff;
     for (final movement in _movements) {
       if (!const ['resignation','termination','retirement'].contains(movement['movement_type'])) continue;
       final movedOn = _asDate(movement['effective_on']);
@@ -491,16 +512,58 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Row(children: [
           const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('ملخص إدارة موارد بشرية', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _hrPurple)),
+            Text('ملخص إدارة الموارد البشرية', style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900, color: _hrPurple)),
             SizedBox(height: 4),
-            Text('لوحة متابعة تنفيذية للقوى العاملة والهيكل والالتزام الوظيفي', style: TextStyle(color: Colors.black54)),
+            Text('لوحة القيادة التنفيذية لرأس المال البشري • سلسلة', style: TextStyle(color: Colors.black54)),
           ])),
           IconButton(onPressed: _loading ? null : _load, tooltip: 'تحديث المؤشرات', icon: const Icon(Icons.refresh, color: _hrPurple)),
         ]),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [_hrPurple, Color(0xFF6420A0)], begin: Alignment.centerRight, end: Alignment.centerLeft),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(children: [
+            const Icon(Icons.insights_rounded, color: _hrOrange, size: 28),
+            const SizedBox(width: 10),
+            const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('لوحة قيادة رأس المال البشري', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15)),
+              SizedBox(height: 3),
+              Text('مؤشرات القوى العاملة والامتثال والكفاءة والتوظيف', style: TextStyle(color: Colors.white70, fontSize: 11)),
+            ])),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+              decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(20)),
+              child: const Text('SILSILA', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1)),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 10),
         if (_error != null) _notice(_error!, Icons.info_outline, Colors.orange.shade800),
         if (_loading) const Expanded(child: Center(child: CircularProgressIndicator(color: _hrPurple)))
         else Expanded(child: ListView(children: [
+          _panel(children: [
+            Row(children: [
+              const Expanded(child: Text('فترة التحليل', style: TextStyle(fontWeight: FontWeight.w900, color: _hrPurple))),
+              SizedBox(width: 180, child: DropdownButtonFormField<int>(
+                value: _analysisPeriodDays,
+                isDense: true,
+                decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), border: OutlineInputBorder()),
+                items: const [
+                  DropdownMenuItem(value: 30, child: Text('آخر 30 يومًا')),
+                  DropdownMenuItem(value: 90, child: Text('آخر 90 يومًا')),
+                  DropdownMenuItem(value: 180, child: Text('آخر 6 أشهر')),
+                  DropdownMenuItem(value: 365, child: Text('آخر 12 شهرًا')),
+                ],
+                onChanged: (value) => setState(() => _analysisPeriodDays = value ?? 365),
+              )),
+            ]),
+            const SizedBox(height: 8),
+            Text('تُطبق الفترة على التعيينات وحركات انتهاء الخدمة ومعدل دوران العمالة.', style: TextStyle(fontSize: 11, color: Colors.black54)),
+          ]),
+          const SizedBox(height: 12),
           _sectionTitle('مؤشرات القوى العاملة', Icons.groups_2_outlined),
           LayoutBuilder(builder: (context, c) {
             final count = c.maxWidth > 1000 ? 4 : c.maxWidth > 600 ? 2 : 1;
@@ -512,6 +575,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                 _metric('موظفون نشطون', _activeEmployees.toString(), 'على رأس العمل حسب حالة الملف', Icons.verified_user_outlined, Colors.green.shade700),
                 _metric('غير نشطين', _inactiveEmployees.toString(), 'ملفات غير محددة كنشطة', Icons.person_off_outlined, Colors.red.shade700),
                 _metric('الإدارات النشطة', _activeDepartments.toString(), 'من الهيكل التنظيمي', Icons.account_tree_outlined, _hrOrange),
+                _metric('الوظائف النشطة', _activeJobs.toString(), 'وظائف معرفة بالهيكل', Icons.work_outline, _hrPink),
               ],
             );
           }),
@@ -522,6 +586,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _progressRow('إدارات بلا وظائف مرتبطة', _departmentsWithoutJobs, _departments.length, _hrOrange),
             _progressRow('وظائف غير مرتبطة بإدارة', _unassignedJobs, _jobs.length, _hrPink),
             _progressRow('موظفون بلا وظيفة محددة', _employeesWithoutJob, _employees.length, _hrPink),
+            _progressRow('اكتمال ربط الموظفين بوظائف', (_employees.length - _employeesWithoutJob).clamp(0, _employees.length), _employees.length, _hrPurple),
             if (_departments.isEmpty || _jobs.isEmpty)
               _notice('استكمل تعريف الإدارات والوظائف وربط كل وظيفة بإدارتها حتى تصبح مؤشرات اكتمال الهيكل دقيقة.', Icons.account_tree_outlined, Colors.orange.shade800),
           ]),
@@ -544,7 +609,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: count == 1 ? 3.4 : 2.2,
               children: [
                 _metric('عقود تنتهي خلال 30 يومًا', '$_contractsExpiringSoon', 'من الموظفين النشطين', Icons.event_busy_outlined, _hrOrange),
+                _metric('عقود سارية', '$_contractsActive', 'من الموظفين النشطين بعقد', Icons.verified_outlined, Colors.green.shade700),
                 _metric('عقود منتهية', '$_contractsExpired', 'تحتاج مراجعة فورية', Icons.warning_amber_outlined, Colors.red.shade700),
+                _metric('عقود بلا تاريخ نهاية / نوع', '$_contractsMissing', 'تحتاج استكمال البيانات', Icons.assignment_late_outlined, _hrPink),
                 _metric('نواقص مسوغات التعيين', '$_employeesMissingRequiredDocuments', 'وفق متطلبات الوظيفة', Icons.folder_off_outlined, _hrPink),
                 _metric('تأخيرات الشهر', '$_lateAttendanceCount', 'من سجلات الحضور المسجلة', Icons.schedule_outlined, _hrPurple),
                 _metric('غياب الشهر', '$_absenceAttendanceCount', 'من سجلات الحضور المسجلة', Icons.person_off_outlined, Colors.red.shade700),
@@ -562,11 +629,13 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               crossAxisCount: count, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: count == 1 ? 3.4 : 2.2,
               children: [
-                _metric('تأمين صحي مسجل', '$_healthInsured', 'سجلات بحالة مؤمن', Icons.health_and_safety_outlined, _hrPurple),
-                _metric('تأمين صحي غير مكتمل', '$_healthUninsured', 'سجلات بحالة غير مؤمن', Icons.health_and_safety_outlined, Colors.red.shade700),
-                _metric('تأمين اجتماعي مسجل', '$_socialInsured', 'سجلات بحالة مؤمن', Icons.account_balance_outlined, _hrOrange),
-                _metric('تأمين اجتماعي غير مكتمل', '$_socialUninsured', 'سجلات بحالة غير مؤمن', Icons.account_balance_outlined, Colors.red.shade700),
-                _metric('طلبات تأمين جارية', '$_insuranceInProgress', 'سجلات قيد الإجراء', Icons.pending_actions_outlined, _hrPink),
+                _metric('تأمين صحي مؤمن', '$_healthInsured', 'موظفون مميزون دون تكرار', Icons.health_and_safety_outlined, _hrPurple),
+                _metric('تأمين صحي غير مؤمن', '$_healthUninsured', 'موظفون بحالة غير مؤمن', Icons.health_and_safety_outlined, Colors.red.shade700),
+                _metric('تأمين صحي غير مسجل', '$_healthNotRecorded', 'لا يوجد سجل تأمين للموظف', Icons.help_outline, _hrOrange),
+                _metric('تأمين اجتماعي مؤمن', '$_socialInsured', 'موظفون مميزون دون تكرار', Icons.account_balance_outlined, _hrPurple),
+                _metric('تأمين اجتماعي غير مؤمن', '$_socialUninsured', 'موظفون بحالة غير مؤمن', Icons.account_balance_outlined, Colors.red.shade700),
+                _metric('تأمين اجتماعي غير مسجل', '$_socialNotRecorded', 'لا يوجد سجل تأمين للموظف', Icons.help_outline, _hrOrange),
+                _metric('طلبات تأمين جارية', '$_insuranceInProgress', 'عدد الموظفين قيد الإجراء', Icons.pending_actions_outlined, _hrPink),
                 _metric('رخص منتهية', '$_licensesExpired', 'تحتاج تجديدًا', Icons.assignment_late_outlined, Colors.red.shade700),
                 _metric('رخص تنتهي خلال 30 يومًا', '$_licensesExpiringSoon', 'تنبيه مسبق', Icons.event_available_outlined, _hrOrange),
                 _metric('تدريبات جارية', '$_trainingInProgress', 'برامج تدريب مفتوحة', Icons.school_outlined, _hrPurple),
@@ -580,9 +649,13 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           _panel(children: [
             _progressRow('طلبات التوظيف المفتوحة', _candidateOpen, _candidates.length, _hrPurple),
             _progressRow('مقبولون', _candidateCount('accepted'), _candidates.length, Colors.green.shade700),
+            _progressRow('في مرحلة الفرز', _candidateScreening, _candidates.length, _hrOrange),
+            _progressRow('في مرحلة المقابلة', _candidateInterviews, _candidates.length, _hrPink),
             _progressRow('مرفوضون', _candidateCount('rejected'), _candidates.length, Colors.red.shade700),
-            _alert('استقالات وإنهاء خدمة آخر 12 شهرًا', '$_separationsLast12Months حركة مسجلة خلال آخر 12 شهرًا.', _separationsLast12Months > 0 ? _hrOrange : Colors.blueGrey),
-            _alert('معدل دوران العمالة من الحركات المسجلة', '$_turnoverRateDisplay. يعتمد الحساب على تواريخ التعيين وحركات انتهاء الخدمة المسجلة خلال آخر 12 شهرًا.', Colors.blueGrey),
+            _progressRow('نسبة القبول من القرارات المحسومة', _candidateDecided == 0 ? 0 : (_candidateAcceptanceRate * 10).round(), _candidateDecided == 0 ? 0 : 1000, Colors.green.shade700),
+            _alert('الاستقالات', '$_resignationsInPeriod استقالة خلال آخر $_analysisPeriodDays يومًا.', _resignationsInPeriod > 0 ? _hrOrange : Colors.blueGrey),
+            _alert('انتهاء الخدمة', '$_separationsInPeriod حركة انتهاء خدمة خلال الفترة، مقابل $_hiresInPeriod تعيينًا.', _separationsInPeriod > 0 ? _hrOrange : Colors.blueGrey),
+            _alert('معدل دوران العمالة', '$_turnoverRateDisplay. يُحسب على متوسط قوة العمل التقديرية خلال الفترة المحددة.', Colors.blueGrey),
           ]),
           const SizedBox(height: 10),
           _panel(children: [
@@ -592,6 +665,15 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               const Text('لا توجد حركات انتهاء خدمة مسجلة خلال آخر 12 شهرًا.')
             else
               ..._separationsByDepartment.take(8).map((entry) => _progressRow(entry.key, entry.value, _separationsLast12Months, _hrOrange)),
+          ]),
+          const SizedBox(height: 18),
+          _sectionTitle('مؤشرات إدارية متقدمة', Icons.analytics_outlined),
+          _panel(children: [
+            _progressRow('التعيينات خلال الفترة', _hiresInPeriod, _hiresInPeriod + _separationsInPeriod, Colors.green.shade700),
+            _progressRow('حركات انتهاء الخدمة خلال الفترة', _separationsInPeriod, _hiresInPeriod + _separationsInPeriod, _hrOrange),
+            _alert('جودة بيانات الموظفين', 'موظفون بلا وظيفة محددة: $_employeesWithoutJob، وملفات غير نشطة: $_inactiveEmployees، ونواقص مسوغات التعيين: $_employeesMissingRequiredDocuments.', _employeesWithoutJob + _employeesMissingRequiredDocuments > 0 ? _hrOrange : Colors.blueGrey),
+            _alert('التأمين الصحي والاجتماعي', 'غير مسجل صحيًا: $_healthNotRecorded، وغير مسجل اجتماعيًا: $_socialNotRecorded. الأعداد محسوبة على الموظفين النشطين وبحسب سجلاتهم الفردية.', _healthNotRecorded + _socialNotRecorded > 0 ? _hrOrange : Colors.blueGrey),
+            _alert('مؤشرات تتطلب مصدر بيانات إضافيًا', 'العجز الفعلي مقابل الملاك المعتمد، فترة الاختبار، تقييم الأداء، إصابات العمل، تكلفة التوظيف، وتكلفة العمالة مقارنة بالمبيعات لا تُعرض كأرقام قبل ربط مصادرها المعتمدة.', Colors.blueGrey),
           ]),
           const SizedBox(height: 18),
           _sectionTitle('إدارة وتسجيل بيانات الموارد البشرية', Icons.add_task_outlined),
@@ -668,7 +750,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _alert('العقود', 'عقود تنتهي خلال 30 يومًا: $_contractsExpiringSoon، عقود منتهية: $_contractsExpired، وعقود نشطة بلا تاريخ نهاية: $_contractsWithoutEndDate.', _contractsExpired + _contractsExpiringSoon + _contractsWithoutEndDate > 0 ? Colors.orange : Colors.green),
             _alert('مسوغات التعيين', 'عدد الموظفين الذين تنقص ملفاتهم مستندات مطلوبة حسب الوظيفة: $_employeesMissingRequiredDocuments. راجع متطلبات الوظائف وسجل مستندات الموظفين.', _employeesMissingRequiredDocuments > 0 ? Colors.orange : Colors.green),
             _alert('الحضور والانصراف', 'خلال الشهر الحالي: $_absenceAttendanceCount حالات غياب و$_lateAttendanceCount حالات تأخير، وإجمالي الوقت الإضافي المسجل $_overtimeMinutes دقيقة.', Colors.blueGrey),
-            _alert('التأمينات الصحية والاجتماعية', 'تأمين صحي: $_healthInsured مؤمن / $_healthUninsured غير مؤمن، وتأمين اجتماعي: $_socialInsured مؤمن / $_socialUninsured غير مؤمن، وقيد الإجراء: $_insuranceInProgress.', Colors.blueGrey),
+            _alert('التأمينات الصحية والاجتماعية', 'صحي: $_healthInsured مؤمن / $_healthUninsured غير مؤمن / $_healthNotRecorded غير مسجل. اجتماعي: $_socialInsured مؤمن / $_socialUninsured غير مؤمن / $_socialNotRecorded غير مسجل. قيد الإجراء: $_insuranceInProgress.', Colors.blueGrey),
             _alert('الرخص', 'رخص منتهية: $_licensesExpired، ورخص تنتهي خلال 30 يومًا: $_licensesExpiringSoon.', _licensesExpired + _licensesExpiringSoon > 0 ? Colors.orange : Colors.blueGrey),
             _alert('التدريب', 'تدريبات جارية: $_trainingInProgress، مكتملة: $_trainingCompleted، وشهادات تنتهي قريبًا: $_trainingCertificatesExpiring.', Colors.blueGrey),
             _alert('التوظيف والاستقالات', 'متقدمون مفتوحون: $_candidateOpen، مقبولون: ${_candidateCount('accepted')}، مرفوضون: ${_candidateCount('rejected')}، وحركات انتهاء الخدمة خلال 12 شهرًا: $_separationsLast12Months.', Colors.blueGrey),
