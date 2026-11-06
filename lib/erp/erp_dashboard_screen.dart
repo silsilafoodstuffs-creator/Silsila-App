@@ -3183,7 +3183,7 @@ class _ExecutiveDonutPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const palette = [_purple, _orange, _green, _pink, Color(0xFF4C9BE8)];
+    const palette = [_purple, _orange, Color(0xFF18865A), _pink, Color(0xFF4C9BE8)];
     final total = values.fold<double>(0, (sum, value) => sum + (value > 0 ? value : 0));
     final center = Offset(size.width / 2, size.height / 2);
     final stroke = (size.shortestSide * .20).clamp(10.0, 22.0);
