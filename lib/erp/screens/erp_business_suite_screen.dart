@@ -282,8 +282,6 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    final order=orderRows.first;final warehouseId=order['warehouse_id']?.toString();
    final materialText=(d['materials']??'').toString().trim();
    if(materialText.isNotEmpty){
-    final already=await _db.from('erp_production_material_movements').select('id').eq('company_id',co).eq('production_order_id',id).limit(1);
-    if(already.isEmpty){
      if(warehouseId==null)throw Exception('حدد المخزن قبل صرف خامات أمر التصنيع.');
      final lines=materialText.split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty).toList();
      final required=<String,Map<String,dynamic>>{};
@@ -307,7 +305,6 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
       final delta=wanted-already;if(delta<=0)continue;
       await _db.rpc('erp_record_production_stock_movement',params:{'p_company_id':co,'p_production_order_id':id,'p_warehouse_id':warehouseId,'p_item_id':entry.key,'p_item_name':item['item_name'],'p_quantity':delta,'p_unit':spec['unit'],'p_unit_cost':spec['unit_cost'],'p_movement_date':date,'p_lot_number':order['lot_number'],'p_movement_kind':'issue'});
      }
-    }
    }
    final materialRows=await _db.from('erp_production_material_movements').select('quantity,unit_cost,movement_type').eq('company_id',co).eq('production_order_id',id);
    final materialCost=(materialRows as List).fold<double>(0,(sum,row)=>sum+(_n(row['quantity'])*_n(row['unit_cost'])*(row['movement_type']=='return'?-1:1)));
@@ -325,7 +322,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     if(delta>0){
      final itemRows=await _db.from('erp_items').select('item_name,base_unit').eq('company_id',co).eq('id',productId).limit(1);
      if(itemRows.isEmpty)throw Exception('تعذر العثور على المنتج النهائي.');
-     final unitCost=_n(order['actual_cost'])>0?_n(order['actual_cost'])/produced:_n(order['estimated_cost'])/(_n(order['planned_quantity'],1));
+     final unitCost=computedCost>0?computedCost/produced:_n(order['estimated_cost'])/(_n(order['planned_quantity'],1));
      await _db.rpc('erp_record_production_stock_movement',params:{'p_company_id':co,'p_production_order_id':id,'p_warehouse_id':warehouseId,'p_item_id':productId,'p_item_name':itemRows.first['item_name'],'p_quantity':delta,'p_unit':itemRows.first['base_unit'],'p_unit_cost':unitCost,'p_movement_date':date,'p_lot_number':order['lot_number'],'p_movement_kind':'receipt'});
     }
    }
