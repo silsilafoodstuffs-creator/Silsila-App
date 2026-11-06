@@ -134,7 +134,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    case 'fixed_assets:asset_movement':
     final assetCode=(d['asset_code']??'').toString();final assets=await _db.from('erp_fixed_assets').select('id').eq('company_id',co).eq('asset_code',assetCode).limit(1);
     if(assets.isEmpty)throw Exception('سجل الأصل أولاً ثم أنشئ حركة النقل أو العهدة له.');
-    table='erp_asset_movements';data={'company_id':co,'asset_id':assets.first['id'],'movement_type':(d['movement_type']??'').toString().contains('صيانة')?'maintenance_start':(d['movement_type']??'').toString().contains('عهدة')?'custody_out':'transfer','movement_date':date,'from_location':d['from_location'],'to_location':d['to_location'],'from_custodian':null,'to_custodian':d['custodian'],'condition_note':d['condition'],'status':status=='approved'?'approved':'draft'};break;
+    table='erp_asset_movements';data={'company_id':co,'asset_id':assets.first['id'],'movement_type':(d['movement_type']??'').toString().contains('صيانة')?'maintenance_start':(d['movement_type']??'').toString().contains('عهدة')?'custody_out':'transfer','suite_record_code':code,'reference':code,'movement_date':date,'from_location':d['from_location'],'to_location':d['to_location'],'from_custodian':null,'to_custodian':d['custodian'],'condition_note':d['condition'],'status':status=='approved'?'approved':'draft'};break;
    case 'manufacturing:bom':{
     final productKey=(d['product']??name).toString();final byCode=await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_code',productKey).limit(1);
     final products=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_name',productKey).limit(1);
@@ -171,13 +171,13 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    case 'contracting:boq':{
     final projectCode=(d['project']??'').toString();final projectRows=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',projectCode).limit(1);
     if(projectRows.isEmpty)throw Exception('أدخل كود مشروع مسجل في حقل المشروع قبل إضافة بند المقايسة.');
-    table='erp_construction_boq_lines';final orderNo=_n(d['line_order']).round();data={'company_id':co,'project_id':projectRows.first['id'],'item_code':d['item_code']??code,'description':name,'unit':d['unit']??'وحدة','planned_quantity':_n(d['contract_qty'],qty),'unit_rate':_n(d['unit_price'],amount),'executed_quantity':_n(d['executed_qty']),'approved_quantity':_n(d['approved_qty']),'line_order':orderNo>0?orderNo:DateTime.now().millisecondsSinceEpoch%1000000,'notes':d['specification']};break;
+    table='erp_construction_boq_lines';final orderNo=_n(d['line_order']).round();data={'company_id':co,'project_id':projectRows.first['id'],'suite_record_code':code,'item_code':(d['item_code']??'').toString().trim().isEmpty?code:d['item_code'],'description':name,'unit':d['unit']??'وحدة','planned_quantity':_n(d['contract_qty'],qty),'unit_rate':_n(d['unit_price'],amount),'executed_quantity':_n(d['executed_qty']),'approved_quantity':_n(d['approved_qty']),'line_order':orderNo>0?orderNo:DateTime.now().millisecondsSinceEpoch%1000000,'notes':d['specification']};break;
    }
    case 'contracting:construction_cost':{
     final projectCode=(d['project']??'').toString();final projectRows=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',projectCode).limit(1);
     if(projectRows.isEmpty)throw Exception('أدخل كود مشروع مسجل قبل تسجيل التكلفة.');
     final costKind=(d['cost_type']??'').toString();final costType=costKind.contains('مواد')?'material':costKind.contains('عمالة')?'labor':costKind.contains('معدات')?'equipment':costKind.contains('باطن')?'subcontract':costKind.contains('غير مباشرة')?'overhead':'other';
-    table='erp_construction_costs';final costQty=_n(d['quantity'],1),unitCost=_n(d['unit_cost']);data={'company_id':co,'project_id':projectRows.first['id'],'cost_date':_day(d['cost_date']??date),'cost_type':costType,'description':d['description']??name,'quantity':costQty,'unit_cost':unitCost,'amount':_n(payload['amount'],costQty*unitCost),'supplier_name':d['supplier'],'document_reference':d['reference'],'status':status=='approved'?'approved':'draft'};break;
+    table='erp_construction_costs';final costQty=_n(d['quantity'],1),unitCost=_n(d['unit_cost']);data={'company_id':co,'project_id':projectRows.first['id'],'suite_record_code':code,'cost_date':_day(d['cost_date']??date),'cost_type':costType,'description':d['description']??name,'quantity':costQty,'unit_cost':unitCost,'amount':_n(payload['amount'],costQty*unitCost),'supplier_name':d['supplier'],'document_reference':d['reference'],'status':status=='approved'?'approved':'draft'};break;
    }
    case 'contracting:site_report':{
     final projectCode=(d['project']??'').toString();final projectRows=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',projectCode).limit(1);
@@ -224,9 +224,9 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    await _db.from(table).update(data).eq('id',existingId).eq('company_id',co);id=existingId;
   }else{
    final uniqueColumn=switch(table){
-    'erp_asset_categories'=>'category_code','erp_fixed_assets'=>'asset_code','erp_asset_depreciation_runs'=>'run_code','erp_asset_disposals'=>'disposal_code',
+    'erp_asset_categories'=>'category_code','erp_fixed_assets'=>'asset_code','erp_asset_depreciation_runs'=>'run_code','erp_asset_disposals'=>'disposal_code','erp_asset_movements'=>'suite_record_code',
     'erp_manufacturing_boms'=>'bom_code','erp_manufacturing_work_centers'=>'center_code','erp_production_orders'=>'order_code','erp_production_variances'=>'variance_code','erp_production_quality_checks'=>'inspection_code',
-    'erp_construction_projects'=>'project_code','erp_construction_payment_certificates'=>'certificate_number','erp_construction_site_reports'=>'report_code',
+    'erp_construction_projects'=>'project_code','erp_construction_boq_lines'=>'suite_record_code','erp_construction_costs'=>'suite_record_code','erp_construction_payment_certificates'=>'certificate_number','erp_construction_site_reports'=>'report_code',
     'erp_crm_leads'=>'lead_code','erp_service_sla_policies'=>'policy_code','erp_service_tickets'=>'ticket_code','erp_service_visits'=>'visit_code','erp_crm_activities'=>'activity_code',_=>null
    };
    final existing=uniqueColumn==null?[]:await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).limit(1);
