@@ -1,0 +1,2 @@
+alter table public.erp_production_quality_checks add column if not exists inspection_code text;
+create unique index if not exists erp_production_quality_checks_company_code_uidx on public.erp_production_quality_checks(company_id,inspection_code) where inspection_code is not null;
