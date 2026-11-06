@@ -152,10 +152,37 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   }
   return {...d,'_operational_table':table,'_operational_id':id};
  }
+
+ String get _reportTable {
+  final p=widget.page;
+  if(_moduleKey=='fixed_assets'){if(p.contains('إهلاك'))return 'erp_asset_depreciation_runs';if(p.contains('حركة')||p.contains('نقل'))return 'erp_asset_movements';return 'erp_fixed_assets';}
+  if(_moduleKey=='manufacturing'){if(p.contains('خامات'))return 'erp_production_material_movements';if(p.contains('جودة'))return 'erp_production_quality_checks';return 'erp_production_orders';}
+  if(_moduleKey=='contracting'){if(p.contains('مستخلص'))return 'erp_construction_payment_certificates';if(p.contains('تكلفة'))return 'erp_construction_costs';if(p.contains('مقايسة')||p.contains('بنود'))return 'erp_construction_boq_lines';return 'erp_construction_projects';}
+  if(p.contains('فرص'))return 'erp_crm_leads';if(p.contains('زيارة'))return 'erp_service_visits';if(p.contains('نشاط'))return 'erp_crm_activities';return 'erp_service_tickets';
+ }
+ Map<String,dynamic> _reportRow(Map<String,dynamic> r,String table){
+  final id=r['id']?.toString()??'';
+  switch(table){
+   case 'erp_fixed_assets':return {...r,'record_code':r['asset_code'],'name':r['name'],'amount':r['acquisition_cost']??0,'quantity':1,'record_date':r['acquisition_date'],'counterparty':r['supplier_name']};
+   case 'erp_asset_depreciation_runs':return {...r,'record_code':r['run_code'],'name':'تشغيل إهلاك '+(r['period_start']??'').toString(),'amount':r['total_amount']??0,'record_date':r['period_start']};
+   case 'erp_asset_movements':return {...r,'record_code':id,'name':r['movement_type'],'amount':0,'record_date':r['movement_date'],'counterparty':r['to_custodian']??r['to_location']};
+   case 'erp_production_orders':return {...r,'record_code':r['order_code'],'name':r['product_name'],'amount':r['actual_cost']??r['estimated_cost']??0,'quantity':r['planned_quantity']??0,'record_date':r['planned_start']};
+   case 'erp_production_material_movements':return {...r,'record_code':id,'name':r['item_name'],'amount':_n(r['quantity'])*_n(r['unit_cost']),'quantity':r['quantity'],'status':r['movement_type'],'record_date':r['movement_date']};
+   case 'erp_production_quality_checks':return {...r,'record_code':id,'name':r['parameter_name'],'amount':0,'quantity':r['inspected_quantity']??0,'status':r['result']};
+   case 'erp_construction_projects':return {...r,'record_code':r['project_code'],'name':r['name'],'amount':r['contract_value']??0,'record_date':r['planned_start']};
+   case 'erp_construction_payment_certificates':return {...r,'record_code':r['certificate_number'],'name':'مستخلص مشروع','amount':r['net_amount']??0,'record_date':r['period_start']};
+   case 'erp_construction_costs':return {...r,'record_code':id,'name':r['description'],'amount':r['amount']??0,'quantity':r['quantity']??0,'record_date':r['cost_date'],'counterparty':r['supplier_name']};
+   case 'erp_construction_boq_lines':return {...r,'record_code':r['item_code']??id,'name':r['description'],'amount':_n(r['planned_quantity'])*_n(r['unit_rate']),'quantity':r['planned_quantity']??0,'status':'active'};
+   case 'erp_crm_leads':return {...r,'record_code':r['lead_code'],'name':r['title'],'amount':r['expected_revenue']??0,'record_date':r['expected_close_date'],'counterparty':r['contact_name'],'status':r['stage']};
+   case 'erp_service_visits':return {...r,'record_code':r['visit_code'],'name':r['visit_type'],'amount':0,'record_date':r['scheduled_at'],'counterparty':r['assigned_to']};
+   case 'erp_crm_activities':return {...r,'record_code':r['activity_code'],'name':r['subject'],'amount':0,'record_date':r['scheduled_at'],'counterparty':r['assigned_to']};
+   default:return {...r,'record_code':r['ticket_code'],'name':r['subject'],'amount':0,'record_date':r['created_at'],'counterparty':r['team_name']};
+  }
+ }
  Future<void> _load()async{
   final co=(widget.companyId??'').trim();if(co.isEmpty){setState(()=>_loading=false);_error='حدد الشركة أولًا.';return;}
-  setState(()=>_loading=true);try{var q=_db.from('erp_business_suite_records').select('*').eq('company_id',co).eq('module_key',_moduleKey);if(!_report)q=q.eq('record_type',_c.type);final data=await q.order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>Map<String,dynamic>.from(e)).toList();}
-  catch(e){_error='تعذر تحميل السجلات: $e';}finally{if(mounted)setState(()=>_loading=false);}
+  setState(()=>_loading=true);try{if(_report){final table=_reportTable;var q=_db.from(table).select('*').eq('company_id',co);final data=table=='erp_construction_boq_lines'?await q.limit(1500):await q.order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>_reportRow(Map<String,dynamic>.from(e),table)).toList();}else{final data=await _db.from('erp_business_suite_records').select('*').eq('company_id',co).eq('module_key',_moduleKey).eq('record_type',_c.type).order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>Map<String,dynamic>.from(e)).toList();}}
+  catch(e){_error='تعذر تحميل بيانات الشاشة: $e';}finally{if(mounted)setState(()=>_loading=false);}
  }
  bool get _demo=>_rows.isEmpty&&_c.examples.isNotEmpty;
  List<Map<String,dynamic>> get _display=>_demo?_c.examples:_rows;
@@ -180,7 +207,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   for(final x in [code,name,counter,amount,qty,date,due,...ctrls.values]){x.dispose();}if(ok==true)await _load();
  }
  Widget _input(TextEditingController c,String label,{bool required=false,bool number=false,bool date=false})=>Padding(padding:const EdgeInsets.only(bottom:9),child:TextFormField(controller:c,keyboardType:number?const TextInputType.numberWithOptions(decimal:true):TextInputType.text,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder()),validator:(v){final x=(v??'').trim();if(required&&x.isEmpty)return 'هذا الحقل مطلوب';if(number&&x.isNotEmpty&&num.tryParse(x.replaceAll(',','.'))==null)return 'أدخل رقمًا صحيحًا';if(date&&x.isNotEmpty&&DateTime.tryParse(x)==null)return 'YYYY-MM-DD';return null;}));
- Future<void> _delete(Map<String,dynamic> r)async{final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد الحذف'),content:Text('حذف '+r['record_code'].toString()+'؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:const Text('حذف'))]));if(yes!=true)return;try{await _db.from('erp_business_suite_records').delete().eq('id',r['id']).eq('company_id',widget.companyId!);await _load();}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحذف: $e')));}}
+ Future<void> _delete(Map<String,dynamic> r)async{final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد الحذف'),content:Text('حذف '+r['record_code'].toString()+'؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:const Text('حذف'))]));if(yes!=true)return;try{final d=Map<String,dynamic>.from(r['details'] as Map? ?? const {});final table=d['_operational_table']?.toString(),opId=d['_operational_id']?.toString();if(table!=null&&opId!=null&&table.startsWith('erp_'))await _db.from(table).delete().eq('id',opId).eq('company_id',widget.companyId!);await _db.from('erp_business_suite_records').delete().eq('id',r['id']).eq('company_id',widget.companyId!);await _load();}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحذف: $e')));}}
  @override Widget build(BuildContext context){final list=_filtered,demo=_demo;final total=_rows.fold<num>(0,(s,r)=>s+(r['amount'] as num? ?? 0));return Directionality(textDirection:TextDirection.rtl,child:Container(color:const Color(0xFFFAF8FC),padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
   Card(elevation:0,color:Colors.white,child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
    Row(children:[CircleAvatar(backgroundColor:const Color(0xFFF1EAF7),child:Icon(_moduleKey=='fixed_assets'?Icons.account_balance_outlined:_moduleKey=='manufacturing'?Icons.precision_manufacturing_outlined:_moduleKey=='contracting'?Icons.construction_outlined:Icons.support_agent_outlined,color:_p)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.page,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:_p)),Text(widget.module+' • '+widget.group,style:const TextStyle(fontSize:12,color:Colors.black54))])),if(!_report)FilledButton.icon(onPressed:()=>_edit(),icon:const Icon(Icons.add),label:const Text('إنشاء'),style:FilledButton.styleFrom(backgroundColor:_p)),IconButton(onPressed:_load,icon:const Icon(Icons.refresh,color:_p))]),
