@@ -226,6 +226,18 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   double? _executiveCashInflows;
   double? _executiveCashOutflows;
   double? _executiveCashNetFlow;
+  double? _executiveAverageInvoice;
+  double? _executiveSalesReturnRate;
+  double? _executiveAttendanceRate;
+  double? _executivePayrollNetTotal;
+  int? _executiveInvoiceCount;
+  int? _executiveReorderItemCount;
+  int? _executiveExpiryBatchCount;
+  int? _executiveSlowMovingItemCount;
+  int? _executiveFulfillmentPendingCount;
+  int? _executivePendingApprovalCount;
+  List<String> _executiveTopCustomers = <String>[];
+  List<String> _executiveTopItems = <String>[];
   List<double> _executiveDailySales = <double>[];
   List<double> _executiveDailyCollections = <double>[];
   List<double> _executiveInventoryGroupValues = <double>[];
@@ -2049,6 +2061,20 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executiveCashInflows = numberValue(currentData, 'cash_inflows');
         _executiveCashOutflows = numberValue(currentData, 'cash_outflows');
         _executiveCashNetFlow = numberValue(currentData, 'cash_net_flow');
+        _executiveAverageInvoice = numberValue(currentData, 'average_invoice');
+        _executiveSalesReturnRate = numberValue(currentData, 'sales_return_rate');
+        _executiveAttendanceRate = numberValue(currentData, 'attendance_rate');
+        _executivePayrollNetTotal = numberValue(currentData, 'payroll_net_total');
+        _executiveInvoiceCount = numberValue(currentData, 'invoice_count')?.toInt();
+        _executiveReorderItemCount = numberValue(currentData, 'reorder_item_count')?.toInt();
+        _executiveExpiryBatchCount = numberValue(currentData, 'expiry_batch_count_30d')?.toInt();
+        _executiveSlowMovingItemCount = numberValue(currentData, 'slow_moving_item_count')?.toInt();
+        _executiveFulfillmentPendingCount = numberValue(currentData, 'fulfillment_pending_count')?.toInt();
+        _executivePendingApprovalCount = numberValue(currentData, 'pending_approval_count')?.toInt();
+        _executiveTopCustomers = ((currentData['top_customers'] as List?) ?? const [])
+            .whereType<Map>().map((row) => row['name']?.toString() ?? '').where((name) => name.isNotEmpty).toList();
+        _executiveTopItems = ((currentData['top_items'] as List?) ?? const [])
+            .whereType<Map>().map((row) => row['name']?.toString() ?? '').where((name) => name.isNotEmpty).toList();
         _executivePreviousSales = numberValue(previousData, 'sales');
         _executivePreviousCollections = numberValue(previousData, 'collections');
         _executivePreviousPurchases = numberValue(previousData, 'purchases');
@@ -2282,11 +2308,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'color': _purple,
         'items': <Map<String, Object>>[
           {'title': 'صافي مبيعات', 'value': _executiveMoney(_executiveSales), 'note': '$_executivePeriod • فواتير مرحلة', 'icon': Icons.point_of_sale_rounded, 'color': _purple, 'details': 'إجمالي فواتير البيع بعد خصم المرتجعات والخصومات، مع مقارنة يومية وشهرية وبحسب الفرع والمندوب.'},
-          {'title': 'نمو المبيعات', 'value': '—%', 'note': 'عن الفترة السابقة', 'icon': Icons.trending_up_rounded, 'color': _green, 'details': 'نسبة نمو صافي المبيعات ومقارنة الأداء بالفترة السابقة والمستهدف.'},
-          {'title': 'متوسط الفاتورة', 'value': '— ج.م', 'note': 'لكل فاتورة', 'icon': Icons.receipt_long_rounded, 'color': _orange, 'details': 'متوسط قيمة فاتورة البيع وتحليل التغير حسب العميل والمندوب والفرع.'},
-          {'title': 'أفضل العملاء', 'value': '—', 'note': 'حسب قيمة الشراء', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'ترتيب العملاء حسب المبيعات والربحية وانتظام السداد.'},
+          {'title': 'نمو المبيعات', 'value': _executivePreviousSales != null && _executivePreviousSales! > 0 && _executiveSales != null ? '${((_executiveSales! - _executivePreviousSales!) / _executivePreviousSales! * 100).toStringAsFixed(1)}%' : '—%', 'note': 'عن الفترة السابقة', 'icon': Icons.trending_up_rounded, 'color': _green, 'details': 'نسبة نمو صافي المبيعات ومقارنة الأداء بالفترة السابقة والمستهدف.'},
+          {'title': 'متوسط الفاتورة', 'value': _executiveMoney(_executiveAverageInvoice), 'note': '${_executiveInvoiceCount ?? 0} فاتورة مرحلة', 'icon': Icons.receipt_long_rounded, 'color': _orange, 'details': 'متوسط قيمة فاتورة البيع وتحليل التغير حسب العميل والمندوب والفرع.'},
+          {'title': 'أفضل العملاء', 'value': _executiveTopCustomers.isEmpty ? '—' : _executiveTopCustomers.first, 'note': 'أفضل 5: ${_executiveTopCustomers.take(5).join('، ')}', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'ترتيب العملاء حسب المبيعات والربحية وانتظام السداد.'},
           {'title': 'العملاء المتوقفون', 'value': '—', 'note': 'دون شراء حديث', 'icon': Icons.person_off_outlined, 'color': _orange, 'details': 'العملاء الذين لم يشتروا خلال الفترة المحددة مع قيمة مشترياتهم السابقة.'},
-          {'title': 'مرتجعات المبيعات', 'value': '—%', 'note': 'من المبيعات', 'icon': Icons.assignment_return_outlined, 'color': _pink, 'details': 'قيمة ونسبة المرتجعات وأسبابها والأصناف والعملاء الأعلى في المرتجعات.'},
+          {'title': 'مرتجعات المبيعات', 'value': _executiveSalesReturnRate == null ? '—%' : '${_executiveSalesReturnRate!.toStringAsFixed(1)}%', 'note': 'من إجمالي المبيعات', 'icon': Icons.assignment_return_outlined, 'color': _pink, 'details': 'قيمة ونسبة المرتجعات وأسبابها والأصناف والعملاء الأعلى في المرتجعات.'},
         ],
       },
       {
@@ -2308,12 +2334,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'color': const Color(0xFF2475B8),
         'items': <Map<String, Object>>[
           {'title': 'قيمة المخزون', 'value': _executiveMoney(_executiveInventoryValue), 'note': 'تقدير بتكلفة الشراء الحالية', 'icon': Icons.inventory_2_outlined, 'color': const Color(0xFF2475B8), 'details': 'قيمة المخزون المتاح والمحجوز حسب المخزن والفرع والصنف.'},
-          {'title': 'تحت حد الطلب', 'value': '— صنف', 'note': 'بحاجة للشراء', 'icon': Icons.warning_amber_rounded, 'color': _orange, 'details': 'الأصناف التي وصلت إلى حد إعادة الطلب والكميات المقترحة للشراء.'},
-          {'title': 'قرب انتهاء الصلاحية', 'value': '— صنف', 'note': 'خلال 30 / 60 / 90 يومًا', 'icon': Icons.event_busy_outlined, 'color': _pink, 'details': 'الأصناف القريبة من انتهاء الصلاحية مع الكميات والقيمة والمخزن.'},
-          {'title': 'الأصناف الراكدة', 'value': '— صنف', 'note': 'بلا حركة', 'icon': Icons.inventory_outlined, 'color': _orange, 'details': 'الأصناف التي لم تتحرك خلال فترة محددة وقيمة رأس المال المجمد بها.'},
+          {'title': 'تحت حد الطلب', 'value': '${_executiveReorderItemCount ?? '—'} صنف', 'note': 'بحاجة للشراء', 'icon': Icons.warning_amber_rounded, 'color': _orange, 'details': 'الأصناف التي وصلت إلى حد إعادة الطلب والكميات المقترحة للشراء.'},
+          {'title': 'قرب انتهاء الصلاحية', 'value': '${_executiveExpiryBatchCount ?? '—'} تشغيلة', 'note': 'خلال 30 يومًا', 'icon': Icons.event_busy_outlined, 'color': _pink, 'details': 'الأصناف القريبة من انتهاء الصلاحية مع الكميات والقيمة والمخزن.'},
+          {'title': 'الأصناف الراكدة', 'value': '${_executiveSlowMovingItemCount ?? '—'} صنف', 'note': 'بلا صرف خلال 90 يومًا', 'icon': Icons.inventory_outlined, 'color': _orange, 'details': 'الأصناف التي لم تتحرك خلال فترة محددة وقيمة رأس المال المجمد بها.'},
           {'title': 'دوران المخزون', 'value': '— مرة', 'note': 'خلال الفترة', 'icon': Icons.sync_alt_rounded, 'color': _purple, 'details': 'معدل دوران المخزون ومتوسط أيام التخزين حسب الفئة والصنف.'},
           {'title': 'تغير تكلفة الشراء', 'value': '—%', 'note': 'مقارنة بآخر شراء', 'icon': Icons.price_change_outlined, 'color': const Color(0xFF2475B8), 'details': 'تغير تكلفة الشراء ومقارنة أسعار الصنف بين الموردين.'},
-          {'title': 'أعلى الأصناف مبيعًا', 'value': '—', 'note': 'حسب الكمية والقيمة', 'icon': Icons.inventory_2_outlined, 'color': _purple, 'details': 'ترتيب الأصناف حسب صافي الكمية وقيمة المبيعات والربحية خلال الفترة المحددة؛ تظهر النتائج بعد ربط تفاصيل فواتير البيع بالأصناف.'},
+          {'title': 'أعلى الأصناف مبيعًا', 'value': _executiveTopItems.isEmpty ? '—' : _executiveTopItems.first, 'note': 'أفضل 5: ${_executiveTopItems.take(5).join('، ')}', 'icon': Icons.inventory_2_outlined, 'color': _purple, 'details': 'ترتيب الأصناف حسب صافي الكمية وقيمة المبيعات والربحية خلال الفترة المحددة؛ تظهر النتائج بعد ربط تفاصيل فواتير البيع بالأصناف.'},
           {'title': 'الأصناف الأعلى ربحية', 'value': '—', 'note': 'حسب هامش الربح', 'icon': Icons.trending_up_rounded, 'color': _green, 'details': 'تحليل هامش الربح للصنف بعد تكلفة المبيعات والخصومات والمرتجعات.'},
           {'title': 'مساهمة فئات الأصناف', 'value': '—%', 'note': 'من إجمالي المبيعات', 'icon': Icons.donut_large_rounded, 'color': _orange, 'details': 'توزيع صافي المبيعات والربحية على فئات الأصناف الرئيسية والفرعية.'},
           {'title': 'الأصناف بطيئة الحركة', 'value': '— صنف', 'note': 'تحتاج مراجعة', 'icon': Icons.hourglass_bottom_rounded, 'color': _pink, 'details': 'تحديد الأصناف منخفضة الحركة وربطها بقيمة المخزون والمدة منذ آخر حركة.'},
@@ -2324,7 +2350,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.local_shipping_outlined,
         'color': _orange,
         'items': <Map<String, Object>>[
-          {'title': 'طلبات قيد التنفيذ', 'value': '— طلب', 'note': 'في مراحل التشغيل', 'icon': Icons.sync_rounded, 'color': _purple, 'details': 'الطلبات حسب حالة القبول والتجهيز والتحميل والتسليم.'},
+          {'title': 'طلبات قيد التنفيذ', 'value': '${_executiveFulfillmentPendingCount ?? '—'} طلب', 'note': 'في مراحل التشغيل', 'icon': Icons.sync_rounded, 'color': _purple, 'details': 'الطلبات حسب حالة القبول والتجهيز والتحميل والتسليم.'},
           {'title': 'طلبات متأخرة', 'value': '— طلب', 'note': 'تجاوزت الموعد', 'icon': Icons.pending_actions_rounded, 'color': _pink, 'details': 'الطلبات المتأخرة وأسباب التأخير والمسؤول وموعد التسليم المتوقع.'},
           {'title': 'التسليم في الموعد', 'value': '—%', 'note': 'من إجمالي الطلبات', 'icon': Icons.task_alt_rounded, 'color': _green, 'details': 'نسبة التسليم في الموعد ومقارنة أداء الفروع والمندوبين وشركات الشحن.'},
           {'title': 'أداء المندوبين', 'value': '—%', 'note': 'تنفيذ وتحصيل', 'icon': Icons.badge_outlined, 'color': _orange, 'details': 'مبيعات المندوب وتحصيلاته والطلبات المسلمة والمرتجعات.'},
@@ -2337,8 +2363,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.business_outlined,
         'color': _pink,
         'items': <Map<String, Object>>[
-          {'title': 'حضور الموظفين', 'value': '—%', 'note': 'اليوم / الشهر', 'icon': Icons.groups_outlined, 'color': _green, 'details': 'الحضور والغياب والتأخير والإجازات بحسب الفرع والإدارة.'},
-          {'title': 'تكلفة الرواتب', 'value': '— ج.م', 'note': 'والعمولات', 'icon': Icons.payments_rounded, 'color': _purple, 'details': 'الرواتب والعمولات والاستقطاعات والسلف والمستحقات.'},
+          {'title': 'حضور الموظفين', 'value': _executiveAttendanceRate == null ? '—%' : '${_executiveAttendanceRate!.toStringAsFixed(1)}%', 'note': 'من سجلات الحضور بالفترة', 'icon': Icons.groups_outlined, 'color': _green, 'details': 'الحضور والغياب والتأخير والإجازات بحسب الفرع والإدارة.'},
+          {'title': 'تكلفة الرواتب', 'value': _executiveMoney(_executivePayrollNetTotal), 'note': 'صافي المسيرات المعتمدة', 'icon': Icons.payments_rounded, 'color': _purple, 'details': 'الرواتب والعمولات والاستقطاعات والسلف والمستحقات.'},
           {'title': 'أداء الفروع', 'value': '—%', 'note': 'مقارنة بالمستهدف', 'icon': Icons.domain_outlined, 'color': _orange, 'details': 'مقارنة الفروع في المبيعات والربحية والتحصيل والمخزون والمصروفات.'},
           {'title': 'عهد المندوبين', 'value': '— ج.م', 'note': 'قيد التسوية', 'icon': Icons.assignment_ind_outlined, 'color': _pink, 'details': 'العهد النقدية والبضائع المسلمة للمندوبين وما تم تحصيله أو تسويته.'},
         ],
@@ -2348,7 +2374,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'icon': Icons.fact_check_outlined,
         'color': _purple,
         'items': <Map<String, Object>>[
-          {'title': 'بانتظار الاعتماد', 'value': '— حركة', 'note': 'مستندات وقيود', 'icon': Icons.approval_rounded, 'color': _orange, 'details': 'المستندات والقيود التي تنتظر الاعتماد مع تاريخ الإنشاء والمسؤول.'},
+          {'title': 'بانتظار الاعتماد', 'value': '${_executivePendingApprovalCount ?? '—'} حركة', 'note': 'مسودات البيع والشراء والقيود', 'icon': Icons.approval_rounded, 'color': _orange, 'details': 'المستندات والقيود التي تنتظر الاعتماد مع تاريخ الإنشاء والمسؤول.'},
           {'title': 'ملاحظات الحركات', 'value': '— ملاحظة', 'note': 'تحتاج مراجعة', 'icon': Icons.rule_folder_outlined, 'color': _pink, 'details': 'الحركات التي تحتاج إلى مراجعة أو استكمال بيانات أو تصحيح الربط.'},
           {'title': 'تجاوز الائتمان', 'value': '— عميل', 'note': 'تجاوز الحد المعتمد', 'icon': Icons.credit_score_outlined, 'color': _orange, 'details': 'العملاء الذين تجاوزوا حدود الائتمان مع الرصيد والحد المعتمد.'},
           {'title': 'اكتمال البيانات', 'value': '—%', 'note': 'البيانات الأساسية', 'icon': Icons.checklist_rounded, 'color': _green, 'details': 'مؤشر اكتمال البيانات الأساسية واكتشاف الحقول الناقصة والمكررة.'},
