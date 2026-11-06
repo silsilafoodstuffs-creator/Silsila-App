@@ -161,12 +161,19 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _overtimeMinutes => _attendance.fold<int>(0, (sum, r) => sum + ((r['overtime_minutes'] as num?)?.toInt() ?? 0));
   int get _pendingPayrollRuns => _payrollRuns.where((r) => !const ['approved', 'posted', 'paid'].contains(r['status']?.toString().toLowerCase())).length;
   int _complianceCount(String type, String status) => _compliance.where((r) => r['record_type'] == type && r['status'] == status).length;
-  int _distinctComplianceEmployees(String type, String status) => _compliance
-      .where((r) => r['record_type'] == type && r['status'] == status && r['employee_id'] != null)
-      .map((r) => r['employee_id'].toString()).toSet().length;
-  int _distinctComplianceStatus(String type, Set<String> statuses) => _compliance
-      .where((r) => r['record_type'] == type && statuses.contains(r['status']) && r['employee_id'] != null)
-      .map((r) => r['employee_id'].toString()).toSet().length;
+  Map<String, String> _latestComplianceStatusByEmployee(String type) {
+    final latest = <String, String>{};
+    // Compliance rows are loaded newest-first; keep one effective status per employee and record type.
+    for (final row in _compliance) {
+      if (row['record_type'] != type || row['employee_id'] == null) continue;
+      latest.putIfAbsent(row['employee_id'].toString(), () => row['status']?.toString() ?? '');
+    }
+    return latest;
+  }
+  int _distinctComplianceEmployees(String type, String status) =>
+      _latestComplianceStatusByEmployee(type).values.where((value) => value == status).length;
+  int _distinctComplianceStatus(String type, Set<String> statuses) =>
+      _latestComplianceStatusByEmployee(type).values.where(statuses.contains).length;
   int get _healthInsured => _distinctComplianceEmployees('health_insurance', 'insured');
   int get _healthUninsured => _distinctComplianceEmployees('health_insurance', 'uninsured');
   int get _socialInsured => _distinctComplianceEmployees('social_insurance', 'insured');
@@ -176,7 +183,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _insuranceInProgress => _healthInProgress + _socialInProgress;
   int get _healthNotRecorded => (_activeEmployees - _distinctComplianceStatus('health_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
   int get _socialNotRecorded => (_activeEmployees - _distinctComplianceStatus('social_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
-  int get _contractsActive => _employees.where((e) => e['is_active'] == true && e['contract_type'] == 'بعقد' && (_asDate(e['contract_end_date']) == null || !_asDate(e['contract_end_date'])!.isBefore(DateTime.now()))).length;
+  int get _contractsActive => _employees.where((e) { final end = _asDate(e['contract_end_date']); final now = DateTime.now(); final today = DateTime(now.year, now.month, now.day); return e['is_active'] == true && e['contract_type'] == 'بعقد' && (end == null || !end.isBefore(today)); }).length;
   int get _contractsMissing => _contractsWithoutEndDate + _employees.where((e) => e['is_active'] == true && (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty)).length;
   int get _licensesExpired => _compliance.where((r) => r['record_type'] == 'license' && (r['status'] == 'expired' || (_asDate(r['expires_on'])?.isBefore(DateTime.now()) ?? false))).length;
   int get _licensesExpiringSoon => _compliance.where((r) { final d = _asDate(r['expires_on']); if (r['record_type'] != 'license' || d == null) return false; final n = DateTime.now(); final t = DateTime(n.year,n.month,n.day); final days = d.difference(t).inDays; return days >= 0 && days <= 30; }).length;
