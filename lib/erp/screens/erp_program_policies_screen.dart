@@ -15,7 +15,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   static const defaults = <Map<String,dynamic>>[
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
-    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'ارتفاع الخانات والصفوف: 40 بكسل | المسافة بين الخانات والأعمدة: 5 بكسل','all':true},
+    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'ارتفاع الخانات والصفوف: 40 بكسل | المسافة بين الخانات والأعمدة: 5 بكسل | ارتفاع اختيارات القوائم المنسدلة: 40 بكسل | ارتفاع عناصر القوائم المنسدلة: 40 بكسل | تسمية الحقل بمحاذاة يمين القيمة','all':true},
+    {'key':'ui_dropdown_item_height','category':'برمجية','ar':'الارتفاع القياسي لكل اختيار داخل القوائم المنسدلة','en':'Standard dropdown option height','value':'40 بكسل','all':true},
+    {'key':'ui_field_label_alignment','category':'برمجية','ar':'موضع اسم الخانة بالنسبة إلى القيمة أو الاختيار','en':'Field label alignment','value':'اسم الخانة على يمين القيمة أو الاختيار في صف واحد متناسق','all':true},
+    {'key':'ui_mobile_header_compact','category':'برمجية','ar':'ارتفاع الهيدر في شاشات الموبايل','en':'Compact mobile screen headers','value':'هيدر مدمج بارتفاع مناسب دون فراغات أو ارتفاع مبالغ فيه','all':true},
     {'key':'fiscal_year','category':'محاسبية','ar':'فترة السنة المالية','en':'Fiscal year','mandatory':true,'value':'01/01 - 12/31'},
     {'key':'inventory_valuation','category':'محاسبية','ar':'طريقة تقييم المخزون','en':'Inventory valuation method','mandatory':true,'value':'المتوسط المرجح','options':['المتوسط المرجح','الوارد أولاً صادر أولاً (FIFO)','التحديد المحدد']},
     {'key':'inventory_count','category':'محاسبية','ar':'طريقة الجرد','en':'Inventory counting method','mandatory':true,'value':'الجرد المستمر','options':['الجرد المستمر','الجرد الدوري']},
@@ -342,7 +345,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                               style:TextStyle(fontSize:11,height:1.5)),
                                             Text('8) ارتفاع صفوف الجداول القياسي 40 بكسل دون استثناءات افتراضية؛ وأي استثناء يتطلب سياسة موثقة وموافقة صريحة.',
                                               style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('9) الاتساق: تُطبق القواعد عبر ثيم البرنامج العام، وتُوثق الاستثناءات فقط عندما تفرض طبيعة البيانات ذلك.',
+                                            Text('9) القوائم المنسدلة: ارتفاع كل اختيار داخل القائمة 40 بكسل، مع مسافات متناسقة ودون ازدحام.', style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('10) النماذج: اسم كل خانة يظهر على يمين حقل القيمة أو الاختيار في صف واحد متناسق، ولا يوضع الاسم فوق الحقل.', style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('11) الموبايل: الهيدر مدمج بارتفاع مناسب، مع تقليل الحشو والأيقونات والعناوين دون التأثير على سهولة الاستخدام.', style:TextStyle(fontSize:11,height:1.5)),
+                                            Text('12) الاتساق: تُطبق القواعد عبر ثيم البرنامج العام، وتُوثق الاستثناءات فقط عندما تفرض طبيعة البيانات ذلك.',
                                               style:TextStyle(fontSize:11,height:1.5)),
                                           ],
                                         ),
@@ -582,7 +588,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
       _row(0,'VIS001','اسم البرنامج',_field(_name,width:190,hint:'سلسلة')),
-      _row(1,'VIS002','لغة واجهة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight:34,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
+      _row(1,'VIS002','لغة واجهة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight:40,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
       _row(2,'VIS003','شعار البرنامج',Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))])),
       _row(3,'VIS004','اللون الأساسي',_colorField(_primary)),
       _row(4,'VIS005','اللون الثانوي',_colorField(_secondary)),
