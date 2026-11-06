@@ -326,14 +326,27 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   }
 
   Widget _field(TextEditingController c, {required int max, required bool letters, required VoidCallback changed}) =>
-    SizedBox(width:62, child: TextField(
+    SizedBox(width:62, height:36, child: TextField(
       controller:c, textAlign:TextAlign.center, maxLength:max,
       inputFormatters:[FilteringTextInputFormatter.allow(RegExp(letters ? '[a-zA-Z]' : '[0-9]'))],
       onChanged:(_) => setState(changed),
-      decoration:const InputDecoration(counterText:'',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:8),border:OutlineInputBorder()),
+      decoration:const InputDecoration(counterText:'',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:7),border:OutlineInputBorder()),
       style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700),
     ));
 
+  Widget _nameField(TextEditingController controller, {bool readOnly = false}) => SizedBox(
+    width:124, height:36,
+    child:TextField(
+      controller:controller, readOnly:readOnly, textAlign:TextAlign.center,
+      decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:7)),
+      style:const TextStyle(fontSize:11),
+    ),
+  );
+
+  Widget _firstFieldName() => const SizedBox(
+    width:124, height:36,
+    child:Center(child:Text('تسلسل',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+  );
 
   Widget _itemPolicyRow() => Container(
     margin:const EdgeInsets.symmetric(vertical:2),
@@ -343,14 +356,23 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       SizedBox(width:30,child:Text('${_types.length+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
       const SizedBox(width:150,child:Text('الأصناف',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
       SizedBox(width:52,child:Checkbox(value:_itemAutomatic,onChanged:(v)=>setState(()=>_itemAutomatic=v ?? true),visualDensity:VisualDensity.compact)),
+      const SizedBox(width:50),
       SizedBox(width:52,child:Checkbox(value:_itemComposite,onChanged:(v)=>setState(()=>_itemComposite=v ?? true),visualDensity:VisualDensity.compact)),
-      const SizedBox(width:124,child:Text('تسلسل',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+      const SizedBox(width:50),
+      _firstFieldName(),
+      const SizedBox(width:50),
       _field(_itemSegments['serial']!,max:2,letters:false,changed:(){}),
-      const SizedBox(width:124,child:Text('رئيسية',textAlign:TextAlign.center,style:TextStyle(fontSize:11))),
+      const SizedBox(width:50),
+      const SizedBox(width:124,height:36,child:Center(child:Text('رئيسية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:50),
       _field(_itemSegments['main']!,max:2,letters:false,changed:(){}),
-      const SizedBox(width:124,child:Text('فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11))),
+      const SizedBox(width:50),
+      const SizedBox(width:124,height:36,child:Center(child:Text('فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:50),
       _field(_itemSegments['sub']!,max:2,letters:false,changed:(){}),
-      const SizedBox(width:124,child:Text('ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11))),
+      const SizedBox(width:50),
+      const SizedBox(width:124,height:36,child:Center(child:Text('ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:50),
       _field(_itemSegments['secondary']!,max:2,letters:false,changed:(){}),
       SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
         _field(_itemPrefix,max:3,letters:true,changed:(){}),
@@ -420,14 +442,23 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             SizedBox(width:30,child:Text('م',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             SizedBox(width:150,child:Text('اسم السياسة',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             SizedBox(width:52,child:Text('تلقائي',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:52,child:Text('مركب',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:124,child:Text('اسم خانة 1',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:62,child:Text('عدد خانة 1',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:124,child:Text('اسم خانة 2',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:62,child:Text('عدد خانة 2',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:124,child:Text('اسم خانة 3',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:62,child:Text('عدد خانة 3',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:124,child:Text('اسم خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            const SizedBox(width:50),
             SizedBox(width:62,child:Text('عدد خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             SizedBox(width:112,child:Text('بادئة الكود\\n3 حروف إنجليزية فقط',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:9))),
             SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
@@ -443,14 +474,20 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
               SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
               SizedBox(width:150,child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
               SizedBox(width:52,child:Checkbox(value:_automatic[key] ?? true,onChanged:(v)=>setState(()=>_automatic[key]=v ?? true),visualDensity:VisualDensity.compact)),
+              const SizedBox(width:50),
               SizedBox(width:52,child:Checkbox(value:_composite[key] ?? false,onChanged:(v)=>setState(()=>_composite[key]=v ?? false),visualDensity:VisualDensity.compact)),
-              const SizedBox(width:124,child:Text('تسلسل',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+              const SizedBox(width:50),
+              _firstFieldName(),
+              const SizedBox(width:50),
               _field(_digits[key]!,max:2,letters:false,changed:(){}),
+              const SizedBox(width:50),
               for (var slot=0;slot<3;slot++) ...[
-                SizedBox(width:124,child:TextField(controller:_fieldNames[key]![slot],readOnly:key=='customer' && slot==0,textAlign:TextAlign.center,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.all(6)),style:const TextStyle(fontSize:11))),
-                SizedBox(width:62,child:key=='customer' && slot==0
-                  ? const Text('8',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.bold))
+                _nameField(_fieldNames[key]![slot],readOnly:key=='customer' && slot==0),
+                const SizedBox(width:50),
+                SizedBox(width:62,height:36,child:key=='customer' && slot==0
+                  ? const Center(child:Text('8',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.bold)))
                   : _field(_fieldCounts[key]![slot],max:2,letters:false,changed:(){})),
+                if (slot < 2) const SizedBox(width:50),
               ],
               SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
                 key=='customer' ? const Text('Cus',textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)) : _field(_prefix[key]!,max:3,letters:true,changed:(){}),
