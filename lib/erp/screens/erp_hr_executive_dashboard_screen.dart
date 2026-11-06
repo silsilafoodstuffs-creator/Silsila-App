@@ -202,7 +202,6 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _resignationsInPeriod => _movements.where((r) => r['movement_type'] == 'resignation' && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).length;
   int get _hiresInPeriod => _employees.where((r) => _asDate(r['hire_date'])?.isAfter(_analysisCutoff) ?? false).length;
   int get _separationsLast12Months => _movements.where((r) => const ['resignation','termination','retirement'].contains(r['movement_type']) && (_asDate(r['effective_on'])?.isAfter(DateTime.now().subtract(const Duration(days:365))) ?? false)).length;
-  int get _hiresLast12Months => _employees.where((r) => _asDate(r['hire_date'])?.isAfter(DateTime.now().subtract(const Duration(days:365))) ?? false).length;
   double get _turnoverRate {
     final current = _activeEmployees;
     final start = current + _separationsInPeriod - _hiresInPeriod;
@@ -666,7 +665,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           ]),
           const SizedBox(height: 10),
           _panel(children: [
-            const Text('الاستقالات وإنهاء الخدمة حسب الإدارة — آخر 12 شهرًا', style: TextStyle(fontWeight: FontWeight.w800)),
+            const Text('الاستقالات وإنهاء الخدمة حسب الإدارة — آخر $_analysisPeriodDays يومًا', style: TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 6),
             if (_separationsByDepartment.isEmpty)
               const Text('لا توجد حركات انتهاء خدمة مسجلة خلال آخر 12 شهرًا.')
@@ -760,7 +759,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _alert('التأمينات الصحية والاجتماعية', 'صحي: $_healthInsured مؤمن / $_healthUninsured غير مؤمن / $_healthNotRecorded غير مسجل. اجتماعي: $_socialInsured مؤمن / $_socialUninsured غير مؤمن / $_socialNotRecorded غير مسجل. قيد الإجراء: $_insuranceInProgress.', Colors.blueGrey),
             _alert('الرخص', 'رخص منتهية: $_licensesExpired، ورخص تنتهي خلال 30 يومًا: $_licensesExpiringSoon.', _licensesExpired + _licensesExpiringSoon > 0 ? Colors.orange : Colors.blueGrey),
             _alert('التدريب', 'تدريبات جارية: $_trainingInProgress، مكتملة: $_trainingCompleted، وشهادات تنتهي قريبًا: $_trainingCertificatesExpiring.', Colors.blueGrey),
-            _alert('التوظيف والاستقالات', 'متقدمون مفتوحون: $_candidateOpen، مقبولون: ${_candidateCount('accepted')}، مرفوضون: ${_candidateCount('rejected')}، وحركات انتهاء الخدمة خلال 12 شهرًا: $_separationsLast12Months.', Colors.blueGrey),
+            _alert('التوظيف والاستقالات', 'متقدمون مفتوحون: $_candidateOpen، مقبولون: ${_candidateCount('accepted')}، مرفوضون: ${_candidateCount('rejected')}، وحركات انتهاء الخدمة خلال آخر 12 شهرًا: $_separationsLast12Months.', Colors.blueGrey),
             _alert('طلبات الإجازات', 'طلبات الإجازات غير المحسومة خلال الشهر الحالي: $_pendingLeaveRequests.', _pendingLeaveRequests > 0 ? Colors.orange : Colors.blueGrey),
             _alert('مسيرات الرواتب', 'يوجد $_pendingPayrollRuns مسيرًا غير معتمد ضمن آخر 12 مسيرًا تم تحميلها.', _pendingPayrollRuns > 0 ? Colors.orange : Colors.blueGrey),
           ]),
