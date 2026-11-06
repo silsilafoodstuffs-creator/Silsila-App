@@ -1,0 +1,1 @@
+alter table public.erp_production_orders add column if not exists actual_hours numeric(18,4) not null default 0 check(actual_hours>=0);
