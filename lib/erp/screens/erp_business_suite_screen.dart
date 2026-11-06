@@ -29,7 +29,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    if(p.contains('إهلاك'))return _C('depreciation',p,'جدول الإهلاك الدوري، طرق الإهلاك، العمر الإنتاجي، القيمة التخريدية، مجمع الإهلاك والقيود المحاسبية.',const [_F('asset_code','كود الأصل'),_F('method','طريقة الإهلاك',type:'choice',options:['خط مستقيم','متناقص','وحدات الإنتاج']),_F('life_months','العمر الإنتاجي بالأشهر',type:'number'),_F('residual','القيمة التخريدية',type:'number'),_F('period','فترة الإهلاك'),_F('journal','مرجع القيد')],[{'record_code':'DEP-DEMO-01','name':'قسط إهلاك نوفمبر — مثال','status':'planned','amount':1200}]);
    if(p.contains('استبعاد')||p.contains('بيع أصل'))return _C('asset_disposal',p,'بيع الأصل أو تخريده أو شطبه مع حساب القيمة الدفترية وربح أو خسارة الاستبعاد.',const [_F('asset_code','كود الأصل'),_F('method','طريقة الاستبعاد',type:'choice',options:['بيع','تخريد','شطب','تبرع']),_F('reason','سبب الاستبعاد'),_F('buyer','المشتري'),_F('book_value','القيمة الدفترية',type:'number'),_F('sale_value','قيمة البيع',type:'number')],[{'record_code':'DSP-DEMO-01','name':'استبعاد مركبة — مثال','status':'draft','amount':75000}]);
    if(p.contains('نقل')||p.contains('صيانة')||p.contains('جرد')||p.contains('عهدة'))return _C('asset_movement',p,'تتبع النقل بين الفروع والمواقع والعهد والصيانة والجرد والحالة الفنية.',const [_F('asset_code','كود الأصل'),_F('movement_type','نوع الحركة',type:'choice',options:['نقل موقع','تسليم عهدة','استلام عهدة','صيانة','جرد']),_F('from_location','من موقع'),_F('to_location','إلى موقع'),_F('custodian','المسؤول'),_F('condition','الحالة الفنية')],[{'record_code':'MOV-DEMO-01','name':'نقل جهاز — مثال','status':'done'}]);
-   return _C('asset',p,'سجل الأصول الثابتة: الاقتناء والتصنيف والتكلفة والعمر الإنتاجي والإهلاك والقيمة الدفترية والموقع والمسؤول.',const [_F('category','فئة الأصل',type:'choice',options:['أراضي','مباني','سيارات ومركبات','آلات ومعدات','أثاث وتجهيزات','أجهزة وحاسبات','برمجيات','أخرى']),_F('acquisition_date','تاريخ الاقتناء',type:'date'),_F('supplier','المورد'),_F('invoice','مرجع فاتورة الشراء'),_F('serial','الرقم المسلسل'),_F('location','الموقع / الفرع'),_F('custodian','المسؤول'),_F('method','طريقة الإهلاك',type:'choice',options:['خط مستقيم','متناقص','وحدات الإنتاج','بدون إهلاك']),_F('life_months','العمر الإنتاجي بالأشهر',type:'number'),_F('residual','القيمة التخريدية',type:'number'),_F('accumulated','مجمع الإهلاك',type:'number'),_F('asset_account','حساب الأصل'),_F('depreciation_account','حساب الإهلاك')],[{'record_code':'AST-DEMO-001','name':'سيارة توزيع — مثال','status':'active','amount':850000,'quantity':1},{'record_code':'AST-DEMO-002','name':'أجهزة حاسب — مثال','status':'active','amount':125000,'quantity':5}]);
+   return _C('asset',p,'سجل الأصول الثابتة: الاقتناء والتصنيف والتكلفة والعمر الإنتاجي والإهلاك والقيمة الدفترية والموقع والمسؤول.',const [_F('category','فئة الأصل',type:'choice',options:['أراضي','مباني','سيارات ومركبات','آلات ومعدات','أثاث وتجهيزات','أجهزة وحاسبات','برمجيات','أخرى']),_F('acquisition_date','تاريخ الاقتناء',type:'date'),_F('supplier','المورد'),_F('invoice','مرجع فاتورة الشراء'),_F('serial','الرقم المسلسل'),_F('location','الموقع / الفرع'),_F('custodian','المسؤول'),_F('method','طريقة الإهلاك',type:'choice',options:['خط مستقيم','متناقص','وحدات الإنتاج','بدون إهلاك']),_F('life_months','العمر الإنتاجي بالأشهر',type:'number'),_F('residual','القيمة التخريدية',type:'number'),_F('accumulated','مجمع الإهلاك',type:'number'),_F('asset_account','حساب الأصل'),_F('depreciation_account','حساب مجمع الإهلاك'),_F('expense_account','حساب مصروف الإهلاك')],[{'record_code':'AST-DEMO-001','name':'سيارة توزيع — مثال','status':'active','amount':850000,'quantity':1},{'record_code':'AST-DEMO-002','name':'أجهزة حاسب — مثال','status':'active','amount':125000,'quantity':5}]);
   }
   if(widget.module=='تصنيع'){
    if(p.contains('المنتجات المصنعة')||p.contains('المنتجات المصنعة'))return _C('manufactured_product',p,'تعريف المنتج المصنع ووحدات الإنتاج والتتبع والتعبئة وسياسات الجودة.',const [_F('sku','كود المنتج'),_F('unit','وحدة الإنتاج'),_F('tracking','تتبع التشغيلات',type:'choice',options:['بدون تتبع','برقم تشغيلة','برقم مسلسل']),_F('shelf_life','مدة الصلاحية بالأيام',type:'number'),_F('default_bom','قائمة المواد الافتراضية'),_F('quality_profile','قالب الجودة')],[{'record_code':'PRD-DEMO-01','name':'كوفي ميكس 2× أخضر — مثال','status':'active'}]);
@@ -86,6 +86,14 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
  String _priority(dynamic value){final v=(value??'').toString();if(v.contains('عاجل'))return 'urgent';if(v.contains('عال'))return 'high';if(v.contains('منخفض'))return 'low';return 'normal';}
  String _leadStage(dynamic value){final v=(value??'').toString();if(v.contains('فوز'))return 'won';if(v.contains('خسارة'))return 'lost';if(v.contains('تفاوض'))return 'negotiation';if(v.contains('عرض'))return 'proposal';if(v.contains('تأهيل'))return 'qualified';return 'new';}
  String _ticketStatus(dynamic value){final v=(value??'').toString();if(v=='done'||v=='completed'||v=='resolved')return 'resolved';if(v=='closed')return 'closed';if(v=='cancelled')return 'cancelled';if(v=='waiting')return 'waiting_customer';if(v=='in_progress')return 'in_progress';if(v=='approved'||v=='active')return 'assigned';return 'open';}
+
+ Future<String?> _accountId(String? value)async{
+  final key=(value??'').trim();if(key.isEmpty)return null;
+  final byCode=await _db.from('erp_accounts').select('id').eq('company_id',widget.companyId!).eq('account_code',key).limit(1);
+  if(byCode.isNotEmpty)return byCode.first['id'].toString();
+  final byName=await _db.from('erp_accounts').select('id').eq('company_id',widget.companyId!).eq('account_name',key).limit(1);
+  return byName.isEmpty?null:byName.first['id'].toString();
+ }
  Future<Map<String,dynamic>> _syncOperationalRecord(Map<String,dynamic> payload,{Map<String,dynamic>? oldRow}) async {
   final d=Map<String,dynamic>.from(payload['details'] as Map? ?? const {});
   final co=widget.companyId!;
@@ -102,11 +110,13 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   }
   String? table;Map<String,dynamic>? data;
   switch(key){
-   case 'fixed_assets:asset_category':
-    table='erp_asset_categories';data={'company_id':co,'category_code':d['category_code']?.toString().trim().isNotEmpty==true?d['category_code']:code,'name':name,'depreciation_method':_assetMethod(d['depreciation_method']),'useful_life_months':_n(d['useful_life_months']).round(),'is_active':status!='cancelled'};break;
-   case 'fixed_assets:asset':
+   case 'fixed_assets:asset_category':{
+    table='erp_asset_categories';data={'company_id':co,'category_code':d['category_code']?.toString().trim().isNotEmpty==true?d['category_code']:code,'name':name,'depreciation_method':_assetMethod(d['depreciation_method']),'useful_life_months':_n(d['useful_life_months']).round(),'asset_account_id':await _accountId(d['asset_account']),'accumulated_account_id':await _accountId(d['depreciation_account']),'expense_account_id':await _accountId(d['expense_account']),'is_active':status!='cancelled'};break;
+   }
+   case 'fixed_assets:asset':{
     final categoryName=(d['category']??'').toString();final categories=categoryName.isEmpty?[]:await _db.from('erp_asset_categories').select('id').eq('company_id',co).eq('name',categoryName).limit(1);
-    table='erp_fixed_assets';data={'company_id':co,'category_id':categories.isEmpty?null:categories.first['id'],'asset_code':code,'name':name,'serial_number':d['serial'],'acquisition_date':_day(d['acquisition_date']??date),'acquisition_cost':amount,'residual_value':_n(d['residual']),'useful_life_months':_n(d['life_months'],60).round().clamp(1,1200),'depreciation_method':_assetMethod(d['method']),'location':d['location'],'custodian':d['custodian'],'supplier_name':payload['counterparty'],'purchase_reference':d['invoice'],'status':status=='active'?'active':'draft'};break;
+    table='erp_fixed_assets';data={'company_id':co,'category_id':categories.isEmpty?null:categories.first['id'],'asset_code':code,'name':name,'serial_number':d['serial'],'acquisition_date':_day(d['acquisition_date']??date),'in_service_date':_day(d['acquisition_date']??date),'acquisition_cost':amount,'residual_value':_n(d['residual']),'useful_life_months':_n(d['life_months'],60).round().clamp(1,1200),'depreciation_method':_assetMethod(d['method']),'accumulated_depreciation':_n(d['accumulated']),'location':d['location'],'custodian':d['custodian'],'supplier_name':d['supplier']??payload['counterparty'],'purchase_reference':d['invoice'],'asset_account_id':await _accountId(d['asset_account']),'accumulated_account_id':await _accountId(d['depreciation_account']),'expense_account_id':await _accountId(d['expense_account']),'status':status=='active'?'active':'draft'};break;
+   }
    case 'fixed_assets:depreciation':{
     final periodDate=DateTime.tryParse((d['period']??date).toString())??DateTime.parse(date);
     final periodStart=DateTime(periodDate.year,periodDate.month,1).toIso8601String().substring(0,10);
@@ -123,9 +133,11 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     final assetCode=(d['asset_code']??'').toString();final assets=await _db.from('erp_fixed_assets').select('id').eq('company_id',co).eq('asset_code',assetCode).limit(1);
     if(assets.isEmpty)throw Exception('سجل الأصل أولاً ثم أنشئ حركة النقل أو العهدة له.');
     table='erp_asset_movements';data={'company_id':co,'asset_id':assets.first['id'],'movement_type':(d['movement_type']??'').toString().contains('صيانة')?'maintenance_start':(d['movement_type']??'').toString().contains('عهدة')?'custody_out':'transfer','movement_date':date,'from_location':d['from_location'],'to_location':d['to_location'],'from_custodian':null,'to_custodian':d['custodian'],'condition_note':d['condition'],'status':status=='approved'?'approved':'draft'};break;
-   case 'manufacturing:bom':
-    table='erp_manufacturing_boms';data={'company_id':co,'bom_code':code,'product_name':name,'output_quantity':qty>0?qty:1,'output_unit':(d['unit']??'وحدة').toString(),'version':1,'scrap_percent':_n(d['scrap_rate']),'status':status=='active'?'active':'draft','effective_from':d['effective_from']};
-    break;
+   case 'manufacturing:bom':{
+    final productKey=(d['product']??name).toString();final byCode=await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_code',productKey).limit(1);
+    final products=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_name',productKey).limit(1);
+    table='erp_manufacturing_boms';data={'company_id':co,'bom_code':code,'product_id':products.isEmpty?null:products.first['id'],'product_name':products.isEmpty?name:products.first['item_name'],'output_quantity':qty>0?qty:1,'output_unit':(d['unit']??(products.isEmpty?'وحدة':products.first['base_unit'])).toString(),'version':_n(d['version'],1).round().clamp(1,999),'scrap_percent':_n(d['scrap_rate']),'status':status=='active'?'active':'draft','effective_from':d['effective_from'],'effective_to':d['effective_to']};break;
+   }
    case 'manufacturing:work_center':
     table='erp_manufacturing_work_centers';data={'company_id':co,'center_code':code,'name':name,'center_type':d['center_type']??'production_line','capacity_per_hour':_n(d['capacity']),'hourly_cost':_n(d['hour_cost']??d['hourly_cost']),'setup_minutes':_n(d['setup_time']).round(),'location':d['location'],'supervisor':d['supervisor'],'is_active':status!='cancelled'};break;
    case 'manufacturing:production_order':{
@@ -156,8 +168,11 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     if(projectRows.isEmpty)throw Exception('أدخل كود مشروع مسجل قبل حفظ تقرير الموقع.');
     table='erp_construction_site_reports';data={'company_id':co,'project_id':projectRows.first['id'],'report_code':code,'report_date':date,'engineer':d['engineer'],'weather':d['weather'],'labor_count':_n(d['labor']).round(),'equipment':d['equipment'],'materials':d['materials'],'work_done':d['work_done'],'issues':d['issues'],'safety':d['safety'],'status':status=='approved'?'approved':status=='done'?'submitted':'draft'};break;
    }
-   case 'contracting:project':
-    table='erp_construction_projects';data={'company_id':co,'project_code':code,'name':name,'site_address':d['site_address']??d['location'],'project_type':d['project_type'],'contract_number':d['contract_number'],'contract_value':_n(d['contract_value'],amount),'budget_amount':_n(d['budget']),'actual_cost':_n(d['actual_cost']),'progress_percent':_n(d['progress']),'planned_start':date,'planned_end':due,'status':status=='done'?'completed':status=='active'?'in_progress':status=='in_progress'?'in_progress':status=='cancelled'?'cancelled':'draft','project_manager':d['manager']??d['project_manager'],'retention_percent':_n(d['retention']??d['retention_percent']),'notes':d['notes']};break;
+   case 'contracting:project':{
+    final customerKey=(d['customer']??'').toString();final byCode=customerKey.isEmpty?[]:await _db.from('erp_parties').select('id').eq('company_id',co).eq('party_code',customerKey).limit(1);
+    final customers=customerKey.isEmpty||byCode.isNotEmpty?byCode:await _db.from('erp_parties').select('id').eq('company_id',co).eq('party_name',customerKey).limit(1);
+    table='erp_construction_projects';data={'company_id':co,'project_code':code,'name':name,'customer_id':customers.isEmpty?null:customers.first['id'],'site_address':d['site']??d['site_address']??d['location'],'project_type':d['project_type'],'contract_number':d['contract']??d['contract_number'],'contract_value':_n(d['contract_value'],amount),'budget_amount':_n(d['budget']),'actual_cost':_n(d['actual_cost']),'progress_percent':_n(d['progress']),'planned_start':date,'planned_end':due,'status':status=='done'?'completed':status=='active'?'in_progress':status=='in_progress'?'in_progress':status=='cancelled'?'cancelled':'draft','project_manager':d['manager']??d['project_manager'],'retention_percent':_n(d['retention']??d['retention_percent']),'notes':d['notes']};break;
+   }
    case 'contracting:certificate':
     final pcode=(d['project_code']??d['project']??'').toString();final projects=await _db.from('erp_construction_projects').select('id').eq('company_id',co).eq('project_code',pcode).limit(1);
     if(projects.isEmpty)throw Exception('أدخل كود مشروع مسجل في حقل المشروع قبل حفظ المستخلص.');
@@ -209,7 +224,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    await _db.from('erp_construction_projects').update({'progress_percent':progress,'updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',projectId);
   }
   if(table=='erp_construction_payment_certificates'&&(status=='approved'||status=='paid')){
-   final stamp=DateTime.now().toIso8601String();final update=<String,dynamic>{'updated_at':stamp};
+   final stamp=DateTime.now().toIso8601String();final update=<String,dynamic>{};
    if(status=='approved')update['approved_at']=stamp;if(status=='paid')update['paid_at']=stamp;
    await _db.from('erp_construction_payment_certificates').update(update).eq('company_id',co).eq('id',id);
   }
@@ -275,7 +290,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    await _db.from('erp_manufacturing_bom_lines').delete().eq('company_id',co).eq('bom_id',id);
    final lines=(d['components']??'').toString().split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty).toList();
    var lineNo=0;final parsed=<Map<String,dynamic>>[];
-   for(final line in lines){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;lineNo++;parsed.add({'company_id':co,'bom_id':id,'line_no':lineNo,'item_name':parts[0],'quantity':q,'unit':parts.length>2&&parts[2].isNotEmpty?parts[2]:'وحدة'});}
+   for(final line in lines){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;lineNo++;final byCode=await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_code',parts[0]).limit(1);final items=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_name',parts[0]).limit(1);parsed.add({'company_id':co,'bom_id':id,'line_no':lineNo,'item_id':items.isEmpty?null:items.first['id'],'item_name':items.isEmpty?parts[0]:items.first['item_name'],'quantity':q,'unit':parts.length>2&&parts[2].isNotEmpty?parts[2]:(items.isEmpty?'وحدة':items.first['base_unit'])});}
    if(parsed.isNotEmpty)await _db.from('erp_manufacturing_bom_lines').insert(parsed);
   }
   if(table=='erp_service_tickets'&&oldRow!=null&&oldRow['status']!=status){
