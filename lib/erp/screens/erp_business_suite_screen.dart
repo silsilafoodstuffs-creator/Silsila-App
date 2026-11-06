@@ -405,7 +405,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
  }
  Future<void> _load()async{
   final co=(widget.companyId??'').trim();if(co.isEmpty){setState(()=>_loading=false);_error='حدد الشركة أولًا.';return;}
-  setState(()=>_loading=true);try{if(_report){final table=_reportTable;var q=_db.from(table).select('*').eq('company_id',co);final data=table=='erp_construction_boq_lines'?await q.limit(1500):await q.order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>_reportRow(Map<String,dynamic>.from(e),table)).toList();}else{final data=await _db.from('erp_business_suite_records').select('*').eq('company_id',co).eq('module_key',_moduleKey).eq('record_type',_c.type).order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>Map<String,dynamic>.from(e)).toList();}}
+  setState(()=>_loading=true);try{if(_report){final table=_reportTable;var q=_db.from(table).select('*').eq('company_id',co);final orderColumn=table=='erp_production_quality_checks'?'inspected_at':'created_at';final data=table=='erp_construction_boq_lines'?await q.order('line_order',ascending:true).limit(1500):await q.order(orderColumn,ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>_reportRow(Map<String,dynamic>.from(e),table)).toList();}else{final data=await _db.from('erp_business_suite_records').select('*').eq('company_id',co).eq('module_key',_moduleKey).eq('record_type',_c.type).order('created_at',ascending:false).limit(1500);if(!mounted)return;_rows=(data as List).map((e)=>Map<String,dynamic>.from(e)).toList();}}
   catch(e){_error='تعذر تحميل بيانات الشاشة: $e';}finally{if(mounted)setState(()=>_loading=false);}
  }
  bool get _demo=>false;
