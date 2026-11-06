@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/activity_service.dart';
 import '../erp_dashboard_screen.dart';
 import '../../services/app_language.dart';
+import '../widgets/silsila_scrollbar_behavior.dart';
 
 const _silsilaPurple = Color(0xFF3E007D);
 const _silsilaOrange = Color(0xFFFFA015);
@@ -781,7 +782,12 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (_signedIn) return ErpDashboardScreen(initialPage: _newActivityPending ? 'بيانات الشركة' : null);
+    if (_signedIn) {
+      return ScrollConfiguration(
+        behavior: const SilsilaScrollbarBehavior(),
+        child: ErpDashboardScreen(initialPage: _newActivityPending ? 'بيانات الشركة' : null),
+      );
+    }
 
     return Directionality(
       textDirection: SilsilaLanguage.isEnglish ? TextDirection.ltr : TextDirection.rtl,
@@ -870,4 +876,3 @@ class _BrandPill extends StatelessWidget {
     );
   }
 }
-
