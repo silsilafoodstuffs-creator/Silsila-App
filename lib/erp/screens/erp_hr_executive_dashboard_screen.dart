@@ -94,10 +94,6 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       !_jobs.any((j) => j['department_id']?.toString() == d['id']?.toString())).length;
   int get _employeesWithoutJob => _employees.where((e) => e['job_id'] == null).length;
   int get _employeesWithoutContract => _employees.where((e) => e['is_active'] == true && (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty || e['contract_type'] == 'بدون عقد')).length;
-  int get _probationEmployees => _employees.where((e) {
-    final status = (e['employment_status'] ?? '').toString().toLowerCase();
-    return status.contains('probation') || status.contains('trial') || status.contains('اختبار') || status.contains('تجربة');
-  }).length;
   List<MapEntry<String, int>> get _employeesByDepartment {
     final counts = <String, int>{};
     for (final employee in _employees.where((e) => e['is_active'] == true)) {
@@ -797,7 +793,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _alert('الرخص', 'رخص منتهية: $_licensesExpired، ورخص تنتهي خلال 30 يومًا: $_licensesExpiringSoon.', _licensesExpired + _licensesExpiringSoon > 0 ? Colors.orange : Colors.blueGrey),
             _alert('التدريب', 'مخطط: $_trainingPlanned، جارٍ: $_trainingInProgress، مكتمل: $_trainingCompleted، منتهٍ: $_trainingExpired، شهادات منتهية: $_trainingCertificatesExpired، وشهادات تنتهي قريبًا: $_trainingCertificatesExpiring.', Colors.blueGrey),
             _alert('التوظيف والاستقالات', 'متقدمون مفتوحون: $_candidateOpen، مقبولون: ${_candidateCount('accepted')}، مرفوضون: ${_candidateCount('rejected')}، وحركات انتهاء الخدمة خلال آخر 12 شهرًا: $_separationsLast12Months.', Colors.blueGrey),
-            _alert('فترة الاختبار', 'عدد الموظفين الذين تحمل حالة توظيفهم وصف فترة الاختبار: $_probationEmployees. لا تتوفر في نموذج الموظف الحالي تواريخ بداية ونهاية الاختبار أو نتيجة اجتيازه.', _probationEmployees > 0 ? Colors.orange : Colors.blueGrey),
+            _alert('فترة الاختبار', 'غير متاحة كرقم موثوق حاليًا؛ نموذج الموظف لا يحتوي حقولًا منظمة لتاريخ بداية ونهاية الاختبار ونتيجة الاجتياز. لن يتم استنتاج العدد من حالة الموظف العامة.', Colors.blueGrey),
             _alert('طلبات الإجازات', 'طلبات الإجازات غير المحسومة خلال الشهر الحالي: $_pendingLeaveRequests.', _pendingLeaveRequests > 0 ? Colors.orange : Colors.blueGrey),
             _alert('مسيرات الرواتب', 'يوجد $_pendingPayrollRuns مسيرًا غير معتمد ضمن آخر 12 مسيرًا تم تحميلها.', _pendingPayrollRuns > 0 ? Colors.orange : Colors.blueGrey),
           ]),
