@@ -1,0 +1,1 @@
+create unique index if not exists erp_construction_certificate_lines_unique_boq_per_certificate_uidx on public.erp_construction_certificate_lines(certificate_id,boq_line_id);
