@@ -2039,8 +2039,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executivePreviousGrossProfit = numberValue(previousData, 'gross_profit_estimate');
         _executiveDailySales = numberList(currentData, 'daily_sales');
         _executiveDailyCollections = numberList(currentData, 'daily_collections');
-        _executiveInventoryGroupLabels = stringList(currentData, 'inventory_group_labels');
-        _executiveInventoryGroupValues = numberList(currentData, 'inventory_group_values');
+        // Keep the RPC response contract aligned with erp_executive_metrics_rpc.sql.
+        _executiveInventoryGroupLabels = stringList(currentData, 'inventory_category_labels');
+        _executiveInventoryGroupValues = numberList(currentData, 'inventory_category_values');
         _executiveMetricsLoading = false;
       });
       await _loadExecutiveStaffPerformance(companyId, bounds.start, bounds.end);
