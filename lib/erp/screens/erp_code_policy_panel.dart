@@ -93,6 +93,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     'secondary': TextEditingController(text: '2'),
     'serial': TextEditingController(text: '2'),
   };
+  bool _itemAutomatic = true, _itemComposite = true;
   bool _loading = true, _saving = false;
   String? _error, _message;
 
@@ -165,6 +166,8 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           }
         }
         _itemPrefix.text = (data['item_prefix'] ?? 'itm').toString();
+        _itemAutomatic = data['item_automatic'] == null ? true : data['item_automatic'] == true;
+        _itemComposite = data['item_composite'] == null ? true : data['item_composite'] == true;
         _geoPrefix.text = (data['geo_prefix'] ?? 'Rig').toString();
         // Prefer the new per-level lengths. Older policies stored cumulative
         // lengths (4/6/8), so retain the safe 2/2/2 defaults when upgrading them.
@@ -272,6 +275,14 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         'version':4,
         'types':types,
         'item_prefix':_itemPrefix.text.trim(),
+        'item_automatic':_itemAutomatic,
+        'item_composite':_itemComposite,
+        'item_fields':[
+          {'name':'تسلسل','digits':itemSegments['serial']},
+          {'name':'رئيسية','digits':itemSegments['main']},
+          {'name':'فرعية','digits':itemSegments['sub']},
+          {'name':'ثانوية','digits':itemSegments['secondary']},
+        ],
         'item_segments':itemSegments,
         'geo_prefix':_geoPrefix.text.trim(),
         // Legacy cumulative values are intentionally preserved for existing
@@ -323,6 +334,33 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700),
     ));
 
+
+  Widget _itemPolicyRow() => Container(
+    margin:const EdgeInsets.symmetric(vertical:2),
+    padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+    decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
+    child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
+      SizedBox(width:30,child:Text('${_types.length+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+      const SizedBox(width:150,child:Text('الأصناف',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+      SizedBox(width:52,child:Checkbox(value:_itemAutomatic,onChanged:(v)=>setState(()=>_itemAutomatic=v ?? true),visualDensity:VisualDensity.compact)),
+      SizedBox(width:52,child:Checkbox(value:_itemComposite,onChanged:(v)=>setState(()=>_itemComposite=v ?? true),visualDensity:VisualDensity.compact)),
+      const SizedBox(width:124,child:Text('تسلسل',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+      _field(_itemSegments['serial']!,max:2,letters:false,changed:(){}),
+      const SizedBox(width:124,child:Text('رئيسية',textAlign:TextAlign.center,style:TextStyle(fontSize:11))),
+      _field(_itemSegments['main']!,max:2,letters:false,changed:(){}),
+      const SizedBox(width:124,child:Text('فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11))),
+      _field(_itemSegments['sub']!,max:2,letters:false,changed:(){}),
+      const SizedBox(width:124,child:Text('ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11))),
+      _field(_itemSegments['secondary']!,max:2,letters:false,changed:(){}),
+      SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
+        _field(_itemPrefix,max:3,letters:true,changed:(){}),
+        const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
+      ])),
+      SizedBox(width:112,child:Text(
+        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',
+        textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+    ])),
+  );
 
   Widget _geoPolicyCard() => Card(
     elevation: 0,
@@ -395,8 +433,9 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
           ])),
         ]))),
-        ...List.generate(_types.length+1,(i){
+        ...List.generate(_types.length+2,(i){
           if (i == 2) return _geoPolicyCard();
+          if (i == _types.length + 1) return _itemPolicyRow();
           final t=_types[i > 2 ? i-1 : i]; final key=t['key']!;
           return Container(margin:const EdgeInsets.symmetric(vertical:2),padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
             decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
@@ -423,7 +462,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             ])));
         }),
         Card(elevation:0,color:const Color(0xFFFFF4E5),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-          const Text('التكويد الخاص بالأصناف',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
+          const Text('تفاصيل تركيب كود الأصناف',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
           const SizedBox(height:5),
           Row(children:[
             const Expanded(child:Text('بادئة الصنف (3 حروف إنجليزية)',style:TextStyle(fontSize:11))),
