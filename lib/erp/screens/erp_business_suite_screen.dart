@@ -106,9 +106,14 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   final oldDetails=Map<String,dynamic>.from(oldRow?['details'] as Map? ?? const {});
   final existingId=oldDetails['_operational_id']?.toString();
   if(key=='contracting:certificate'&&oldRow!=null&&['approved','paid'].contains(oldRow['status']))throw Exception('المستخلص المعتمد أو المدفوع لا يُعدّل؛ أنشئ مستخلصًا تكميليًا أو إشعار تسوية.');
-  if(key=='manufacturing:production_order'&&existingId!=null&&(oldDetails['materials']??'')!= (d['materials']??'')){
+  if(key=='manufacturing:production_order'&&existingId!=null){
    final already=await _db.from('erp_production_material_movements').select('id').eq('company_id',co).eq('production_order_id',existingId).limit(1);
-   if(already.isNotEmpty)throw Exception('تم صرف خامات لهذا الأمر بالفعل؛ لا يمكن استبدال تفاصيل الصرف بعد ترحيلها. استخدم حركة مرتجع/صرف إضافية مستقلة.');
+   final receipts=await _db.from('erp_inventory_movements').select('id').eq('company_id',co).eq('reference_type','production_order').eq('reference_id',existingId).eq('movement_type','production_receipt').limit(1);
+   if(already.isNotEmpty&&(oldDetails['materials']??'')!=(d['materials']??''))throw Exception('تم صرف خامات لهذا الأمر بالفعل؛ لا يمكن استبدال تفاصيل الصرف بعد ترحيلها. استخدم حركة مرتجع/صرف إضافية مستقلة.');
+   if((already.isNotEmpty||receipts.isNotEmpty)&&(oldDetails['warehouse']??'')!=(d['warehouse']??''))throw Exception('لا يمكن تغيير مخزن أمر التصنيع بعد ترحيل حركات مخزنية.');
+   if(receipts.isNotEmpty&&(oldDetails['product']??'')!=(d['product']??''))throw Exception('لا يمكن تغيير المنتج النهائي بعد استلام إنتاج للمخزون.');
+   if((already.isNotEmpty||receipts.isNotEmpty)&&oldRow!=null&&_day(oldRow['record_date'])!=_day(payload['record_date']))throw Exception('لا يمكن تغيير تاريخ أمر التصنيع بعد ترحيل حركات مخزنية.');
+   if(receipts.isNotEmpty&&((_n(oldDetails['actual_cost'])!=_n(d['actual_cost']))||(_n(oldDetails['actual_hours'])!=_n(d['actual_hours']))))throw Exception('لا يمكن تغيير تكلفة أو ساعات أمر التصنيع بعد استلام المنتج النهائي؛ سجّل تسوية تكلفة مستقلة.');
   }
   String? table;Map<String,dynamic>? data;
   switch(key){
