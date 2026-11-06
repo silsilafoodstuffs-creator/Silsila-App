@@ -94,6 +94,12 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   final date=_day(payload['record_date']),due=_day(payload['due_date']);
   final status=payload['status']?.toString()??'draft';
   final key='${_moduleKey}:${payload['record_type']}';
+  final oldDetails=Map<String,dynamic>.from(oldRow?['details'] as Map? ?? const {});
+  final existingId=oldDetails['_operational_id']?.toString();
+  if(key=='manufacturing:production_order'&&existingId!=null&&(oldDetails['materials']??'')!= (d['materials']??'')){
+   final already=await _db.from('erp_production_material_movements').select('id').eq('company_id',co).eq('production_order_id',existingId).limit(1);
+   if(already.isNotEmpty)throw Exception('تم صرف خامات لهذا الأمر بالفعل؛ لا يمكن استبدال تفاصيل الصرف بعد ترحيلها. استخدم حركة مرتجع/صرف إضافية مستقلة.');
+  }
   String? table;Map<String,dynamic>? data;
   switch(key){
    case 'fixed_assets:asset_category':
@@ -166,20 +172,48 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    default: break;
   }
   if(table==null||data==null)return d;
-  final oldDetails=Map<String,dynamic>.from(oldRow?['details'] as Map? ?? const {});
-  final existingId=oldDetails['_operational_id']?.toString();
   String id;
   if(existingId!=null&&existingId.isNotEmpty){
    await _db.from(table).update(data).eq('id',existingId).eq('company_id',co);id=existingId;
   }else{
    final inserted=await _db.from(table).insert(data).select('id').single();id=inserted['id'].toString();
   }
-  if(table=='erp_production_orders'&&(d['materials']??'').toString().trim().isNotEmpty){
-   await _db.from('erp_production_material_movements').delete().eq('company_id',co).eq('production_order_id',id);
-   final lines=(d['materials']??'').toString().split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty).toList();
-   final parsed=<Map<String,dynamic>>[];for(final line in lines){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;String? itemId;final itemRows=await _db.from('erp_items').select('id,item_code,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_code',parts[0]).limit(1);if(itemRows.isNotEmpty)itemId=itemRows.first['id'].toString();else{final byName=await _db.from('erp_items').select('id,item_code,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_name',parts[0]).limit(1);if(byName.isNotEmpty)itemId=byName.first['id'].toString();}
-    parsed.add({'company_id':co,'production_order_id':id,'item_id':itemId,'item_name':parts[0],'movement_type':'issue','quantity':q,'unit':parts.length>2&&parts[2].isNotEmpty?parts[2]:'وحدة','unit_cost':parts.length>3?_n(parts[3]):0,'movement_date':date,'notes':'صرف خامات لأمر التصنيع '+code});
-   }if(parsed.isNotEmpty)await _db.from('erp_production_material_movements').insert(parsed);
+  if(table=='erp_production_orders'){
+   final orderRows=await _db.from('erp_production_orders').select('warehouse_id,product_id,lot_number,planned_quantity,estimated_cost,actual_cost').eq('company_id',co).eq('id',id).limit(1);
+   if(orderRows.isEmpty)throw Exception('تعذر قراءة أمر التصنيع بعد الحفظ.');
+   final order=orderRows.first;final warehouseId=order['warehouse_id']?.toString();
+   final materialText=(d['materials']??'').toString().trim();
+   if(materialText.isNotEmpty){
+    final already=await _db.from('erp_production_material_movements').select('id').eq('company_id',co).eq('production_order_id',id).limit(1);
+    if(already.isEmpty){
+     if(warehouseId==null)throw Exception('حدد المخزن قبل صرف خامات أمر التصنيع.');
+     final lines=materialText.split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty).toList();
+     for(final line in lines){
+      final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;
+      final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;
+      final byCode=await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_code',parts[0]).limit(1);
+      final itemRows=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_name',parts[0]).limit(1);
+      if(itemRows.isEmpty)throw Exception('الصنف '+parts[0]+' غير موجود في دليل الأصناف.');
+      final item=itemRows.first;final unit=parts.length>2&&parts[2].isNotEmpty?parts[2]:(item['base_unit']??'وحدة').toString();
+      final unitCost=parts.length>3&&parts[3].isNotEmpty?_n(parts[3]):_n(item['purchase_price']);
+      await _db.rpc('erp_record_production_stock_movement',params:{'p_company_id':co,'p_production_order_id':id,'p_warehouse_id':warehouseId,'p_item_id':item['id'],'p_item_name':item['item_name'],'p_quantity':q,'p_unit':unit,'p_unit_cost':unitCost,'p_movement_date':date,'p_lot_number':order['lot_number'],'p_movement_kind':'issue'});
+     }
+    }
+   }
+   final produced=_n(d['produced_qty']);
+   if(produced>0){
+    final productId=order['product_id']?.toString();if(productId==null||warehouseId==null)throw Exception('اختر صنف المنتج النهائي والمخزن قبل استلام الإنتاج.');
+    final receipts=await _db.from('erp_inventory_movements').select('quantity_in').eq('company_id',co).eq('reference_type','production_order').eq('reference_id',id).eq('movement_type','production_receipt');
+    final received=(receipts as List).fold<double>(0,(sum,row)=>sum+_n(row['quantity_in']));
+    if(produced<received)throw Exception('لا يمكن تقليل كمية الإنتاج عن الكمية التي تم استلامها بالمخزون بالفعل.');
+    final delta=produced-received;
+    if(delta>0){
+     final itemRows=await _db.from('erp_items').select('item_name,base_unit').eq('company_id',co).eq('id',productId).limit(1);
+     if(itemRows.isEmpty)throw Exception('تعذر العثور على المنتج النهائي.');
+     final unitCost=_n(order['actual_cost'])>0?_n(order['actual_cost'])/produced:_n(order['estimated_cost'])/(_n(order['planned_quantity'],1));
+     await _db.rpc('erp_record_production_stock_movement',params:{'p_company_id':co,'p_production_order_id':id,'p_warehouse_id':warehouseId,'p_item_id':productId,'p_item_name':itemRows.first['item_name'],'p_quantity':delta,'p_unit':itemRows.first['base_unit'],'p_unit_cost':unitCost,'p_movement_date':date,'p_lot_number':order['lot_number'],'p_movement_kind':'receipt'});
+    }
+   }
   }
   if(table=='erp_manufacturing_boms'&&(d['components']??'').toString().trim().isNotEmpty){
    await _db.from('erp_manufacturing_bom_lines').delete().eq('company_id',co).eq('bom_id',id);
@@ -198,7 +232,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   final p=widget.page;
   if(_moduleKey=='fixed_assets'){if(p.contains('إهلاك'))return 'erp_asset_depreciation_runs';if(p.contains('استبعاد')||p.contains('بيع أصل'))return 'erp_asset_disposals';if(p.contains('حركة')||p.contains('نقل'))return 'erp_asset_movements';return 'erp_fixed_assets';}
   if(_moduleKey=='manufacturing'){if(p.contains('خامات'))return 'erp_production_material_movements';if(p.contains('جودة'))return 'erp_production_quality_checks';return 'erp_production_orders';}
-  if(_moduleKey=='contracting'){if(p.contains('مستخلص'))return 'erp_construction_payment_certificates';if(p.contains('تكلفة'))return 'erp_construction_costs';if(p.contains('مقايسة')||p.contains('بنود'))return 'erp_construction_boq_lines';return 'erp_construction_projects';}
+  if(_moduleKey=='contracting'){if(p.contains('مستخلص'))return 'erp_construction_payment_certificates';if(p.contains('تكلفة')||p.contains('مصروفات'))return 'erp_construction_costs';if(p.contains('مقايسة')||p.contains('بنود'))return 'erp_construction_boq_lines';if(p.contains('موقع'))return 'erp_construction_site_reports';return 'erp_construction_projects';}
   if(p.contains('فرص'))return 'erp_crm_leads';if(p.contains('زيارة'))return 'erp_service_visits';if(p.contains('نشاط'))return 'erp_crm_activities';return 'erp_service_tickets';
  }
  Map<String,dynamic> _reportRow(Map<String,dynamic> r,String table){
