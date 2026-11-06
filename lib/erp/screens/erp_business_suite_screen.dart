@@ -105,6 +105,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   final key='${_moduleKey}:${payload['record_type']}';
   final oldDetails=Map<String,dynamic>.from(oldRow?['details'] as Map? ?? const {});
   final existingId=oldDetails['_operational_id']?.toString();
+  if(key=='contracting:certificate'&&oldRow!=null&&['approved','paid'].contains(oldRow['status']))throw Exception('المستخلص المعتمد أو المدفوع لا يُعدّل؛ أنشئ مستخلصًا تكميليًا أو إشعار تسوية.');
   if(key=='manufacturing:production_order'&&existingId!=null&&(oldDetails['materials']??'')!= (d['materials']??'')){
    final already=await _db.from('erp_production_material_movements').select('id').eq('company_id',co).eq('production_order_id',existingId).limit(1);
    if(already.isNotEmpty)throw Exception('تم صرف خامات لهذا الأمر بالفعل؛ لا يمكن استبدال تفاصيل الصرف بعد ترحيلها. استخدم حركة مرتجع/صرف إضافية مستقلة.');
@@ -257,10 +258,13 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    final progress=budget<=0?0:(executed/budget*100).clamp(0,100);
    await _db.from('erp_construction_projects').update({'progress_percent':progress,'updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',projectId);
   }
-  if(table=='erp_construction_payment_certificates'&&(status=='approved'||status=='paid')){
+  if(table=='erp_construction_payment_certificates'){
    final stamp=DateTime.now().toIso8601String();final update=<String,dynamic>{};
    if(status=='approved')update['approved_at']=stamp;if(status=='paid')update['paid_at']=stamp;
-   await _db.from('erp_construction_payment_certificates').update(update).eq('company_id',co).eq('id',id);
+   if(update.isNotEmpty)await _db.from('erp_construction_payment_certificates').update(update).eq('company_id',co).eq('id',id);
+   final projectId=data['project_id'];final certificates=await _db.from('erp_construction_payment_certificates').select('net_amount,status').eq('company_id',co).eq('project_id',projectId);
+   double certified=0,paid=0;for(final certificate in (certificates as List)){final net=_n(certificate['net_amount']);if(['approved','paid'].contains(certificate['status']))certified+=net;if(certificate['status']=='paid')paid+=net;}
+   await _db.from('erp_construction_projects').update({'certified_amount':certified,'paid_amount':paid,'updated_at':stamp}).eq('company_id',co).eq('id',projectId);
   }
   if(table=='erp_asset_disposals'&&status=='approved'){
    await _db.from('erp_fixed_assets').update({'status':'disposed','updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',data['asset_id']);
