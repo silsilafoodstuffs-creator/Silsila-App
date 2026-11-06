@@ -218,6 +218,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   double? _executiveReceivables;
   double? _executivePurchases;
   double? _executiveInventoryValue;
+  double? _executiveExpenses;
+  double? _executivePreviousExpenses;
+  double? _executiveFixedAssetsGross;
+  double? _executiveFixedAssetsDepreciation;
+  double? _executiveFixedAssetsNet;
+  double? _executiveCashInflows;
+  double? _executiveCashOutflows;
+  double? _executiveCashNetFlow;
   List<double> _executiveDailySales = <double>[];
   List<double> _executiveDailyCollections = <double>[];
   List<double> _executiveInventoryGroupValues = <double>[];
@@ -2033,6 +2041,14 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         _executivePurchases = numberValue(currentData, 'purchases');
         _executiveGrossProfit = numberValue(currentData, 'gross_profit_estimate');
         _executiveInventoryValue = numberValue(currentData, 'inventory_value_estimate');
+        _executiveExpenses = numberValue(currentData, 'expenses');
+        _executivePreviousExpenses = numberValue(previousData, 'expenses');
+        _executiveFixedAssetsGross = numberValue(currentData, 'fixed_assets_gross');
+        _executiveFixedAssetsDepreciation = numberValue(currentData, 'fixed_assets_depreciation');
+        _executiveFixedAssetsNet = numberValue(currentData, 'fixed_assets_net');
+        _executiveCashInflows = numberValue(currentData, 'cash_inflows');
+        _executiveCashOutflows = numberValue(currentData, 'cash_outflows');
+        _executiveCashNetFlow = numberValue(currentData, 'cash_net_flow');
         _executivePreviousSales = numberValue(previousData, 'sales');
         _executivePreviousCollections = numberValue(previousData, 'collections');
         _executivePreviousPurchases = numberValue(previousData, 'purchases');
@@ -2283,7 +2299,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           {'title': 'ديون العملاء', 'value': _executiveMoney(_executiveReceivables), 'note': 'فواتير مرحلة غير مسددة بالكامل', 'icon': Icons.groups_rounded, 'color': _pink, 'details': 'أرصدة العملاء وأعمار الديون والمتأخرات وحدود الائتمان.'},
           {'title': 'مستحقات الموردين', 'value': '— ج.م', 'note': 'مواعيد الاستحقاق', 'icon': Icons.local_shipping_outlined, 'color': _orange, 'details': 'أرصدة الموردين ومواعيد الاستحقاق وأعمار الديون وخطة السداد.'},
           {'title': 'السيولة المتاحة', 'value': '— ج.م', 'note': 'الخزائن والبنوك', 'icon': Icons.account_balance_wallet_rounded, 'color': _purple, 'details': 'الأرصدة المتاحة في الخزائن والحسابات البنكية وحركة النقدية.'},
-          {'title': 'المصروفات', 'value': '— ج.م', 'note': 'من الإيرادات —%', 'icon': Icons.money_off_csred_outlined, 'color': _pink, 'details': 'تحليل المصروفات حسب النوع والفرع ومركز التكلفة ومقارنتها بالإيرادات.'},
+          {'title': 'المصروفات', 'value': _executiveMoney(_executiveExpenses), 'note': 'من الإيرادات ${_executiveSales != null && _executiveSales! > 0 && _executiveExpenses != null ? (_executiveExpenses! / _executiveSales! * 100).toStringAsFixed(1) : '—'}%', 'icon': Icons.money_off_csred_outlined, 'color': _pink, 'details': 'إجمالي المصروفات من قيود اليومية المرحلة خلال الفترة، مع نسبة المصروفات إلى صافي المبيعات.'},
         ],
       },
       {
@@ -2457,27 +2473,27 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
               title: 'المصروفات',
               icon: Icons.money_off_csred_outlined,
               rows: [
-                _analysisRow('إجمالي المصروفات', null, null),
-                _analysisRow('التغير عن الفترة السابقة', null, null),
-                _analysisRow('نسبة المصروفات', null, null, isPercent: true),
+                _analysisRow('إجمالي المصروفات', _executiveExpenses, _executiveChange(_executiveExpenses, _executivePreviousExpenses)),
+                _analysisRow('التغير عن الفترة السابقة', _executiveChange(_executiveExpenses, _executivePreviousExpenses), null, isPercent: true),
+                _analysisRow('نسبة المصروفات من المبيعات', _executiveSales != null && _executiveSales! > 0 && _executiveExpenses != null ? (_executiveExpenses! / _executiveSales! * 100) : null, null, isPercent: true),
               ],
             ),
             _executiveAnalysisCard(
               title: 'الأصول والإهلاك وصافي الأصول',
               icon: Icons.account_balance_outlined,
               rows: [
-                _analysisRow('إجمالي الأصول', null, null),
-                _analysisRow('الإهلاك', null, null),
-                _analysisRow('صافي الأصول', null, null),
+                _analysisRow('إجمالي تكلفة الأصول', _executiveFixedAssetsGross, null),
+                _analysisRow('مجمع الإهلاك', _executiveFixedAssetsDepreciation, null),
+                _analysisRow('صافي القيمة الدفترية', _executiveFixedAssetsNet, null),
               ],
             ),
             _executiveAnalysisCard(
               title: 'التدفقات الداخلة والخارجة',
               icon: Icons.swap_vert_circle_outlined,
               rows: [
-                _analysisRow('التدفقات الداخلة', _executiveCollections, _executiveChange(_executiveCollections, _executivePreviousCollections)),
-                _analysisRow('التدفقات الخارجة', null, null),
-                _analysisRow('صافي التدفق', null, null),
+                _analysisRow('التدفقات الداخلة', _executiveCashInflows, null),
+                _analysisRow('التدفقات الخارجة', _executiveCashOutflows, null),
+                _analysisRow('صافي التدفق النقدي', _executiveCashNetFlow, null),
               ],
             ),
           ];
