@@ -122,6 +122,74 @@ begin
       and status = 'posted'
       and voucher_date >= p_month_start
       and voucher_date < p_month_end
+  ),
+
+  sales_document_metrics as (
+    select count(*) filter (where document_type = 'invoice')::integer as invoice_count,
+      coalesce(avg(grand_total) filter (where document_type = 'invoice'),0) as average_invoice,
+      coalesce(sum(grand_total) filter (where document_type = 'return'),0) as return_total,
+      coalesce(sum(grand_total) filter (where document_type = 'invoice'),0) as gross_invoice_total
+    from sales
+  ),
+  top_customer_metrics as (
+    select coalesce(jsonb_agg(jsonb_build_object('name', q.party_name, 'sales', q.total) order by q.total desc), '[]'::jsonb) as rows
+    from (select p.party_name, sum(case when d.document_type = 'return' then -d.grand_total else d.grand_total end) as total
+      from sales d join public.erp_parties p on p.id = d.customer_id and p.company_id = p_company_id
+      where d.document_type in ('invoice','return') group by p.party_name order by total desc limit 5) q
+  ),
+  top_item_metrics as (
+    select coalesce(jsonb_agg(jsonb_build_object('name', q.item_name, 'sales', q.total) order by q.total desc), '[]'::jsonb) as rows
+    from (select i.item_name, sum(case when d.document_type = 'return' then -l.line_total else l.line_total end) as total
+      from sales d join public.erp_sales_lines l on l.document_id = d.id
+      join public.erp_items i on i.id = l.item_id and i.company_id = p_company_id
+      where d.document_type in ('invoice','return') group by i.item_name order by total desc limit 5) q
+  ),
+  stock_by_item as (
+    select m.item_id, sum(m.quantity_in-m.quantity_out) as quantity
+    from public.erp_inventory_movements m where m.company_id = p_company_id group by m.item_id
+  ),
+  reorder_metrics as (
+    select count(*)::integer as item_count from public.erp_items i
+    left join stock_by_item s on s.item_id = i.id
+    where i.company_id = p_company_id and i.is_active = true and i.reorder_level > 0
+      and coalesce(s.quantity,0) <= i.reorder_level
+  ),
+  expiry_metrics as (
+    select count(*)::integer as batch_count from (
+      select item_id, batch_number, expiry_date from public.erp_inventory_movements
+      where company_id = p_company_id and expiry_date between current_date and current_date + 30
+      group by item_id, batch_number, expiry_date having sum(quantity_in-quantity_out) > 0
+    ) b
+  ),
+  slow_moving_metrics as (
+    select count(*)::integer as item_count from stock_by_item s
+    join public.erp_items i on i.id = s.item_id and i.company_id = p_company_id
+    where s.quantity > 0 and i.is_active = true
+      and not exists (select 1 from public.erp_inventory_movements recent
+        where recent.company_id = p_company_id and recent.item_id = i.id
+          and recent.quantity_out > 0 and recent.movement_date >= current_date - 90)
+  ),
+  fulfillment_metrics as (
+    select count(*) filter (where lower(coalesce(status,'')) not in
+      ('delivered','completed','complete','cancelled','canceled','مُسلّم','تم التسليم','مكتمل','ملغي'))::integer as pending_count
+    from public.erp_sales_fulfillment_documents where company_id = p_company_id
+  ),
+  attendance_metrics as (
+    select count(*)::integer as records_count,
+      count(*) filter (where lower(coalesce(attendance_status,'')) in
+        ('present','late','حاضر','متأخر','موجود'))::integer as present_count
+    from public.erp_attendance_records
+    where company_id = p_company_id and work_date >= p_month_start and work_date < p_month_end
+  ),
+  payroll_metrics as (
+    select coalesce(sum(net_total),0) as net_total from public.erp_payroll_runs
+    where company_id = p_company_id and period_start < p_month_end and period_end >= p_month_start
+      and lower(status) in ('approved','posted','paid','معتمد','مرحّل','مدفوع')
+  ),
+  approval_metrics as (
+    select (select count(*) from public.erp_sales_documents where company_id=p_company_id and status='draft' and is_demo_data=false)
+      + (select count(*) from public.erp_purchase_documents where company_id=p_company_id and status='draft' and is_demo_data=false)
+      + (select count(*) from public.erp_journal_entries where company_id=p_company_id and status='draft') as pending_count
   )
   select jsonb_build_object(
     'month_start', p_month_start,
@@ -152,7 +220,22 @@ begin
     'fixed_assets_net', fat.net_value,
     'cash_inflows', cft.inflows,
     'cash_outflows', cft.outflows,
-    'cash_net_flow', cft.inflows - cft.outflows
+    'cash_net_flow', cft.inflows - cft.outflows,
+    'invoice_count', sdm.invoice_count,
+    'average_invoice', sdm.average_invoice,
+    'sales_return_total', sdm.return_total,
+    'sales_return_rate', case when sdm.gross_invoice_total > 0 then sdm.return_total / sdm.gross_invoice_total * 100 else 0 end,
+    'top_customers', tcm.rows,
+    'top_items', tim.rows,
+    'reorder_item_count', rm.item_count,
+    'expiry_batch_count_30d', xm.batch_count,
+    'slow_moving_item_count', sm.item_count,
+    'fulfillment_pending_count', fm.pending_count,
+    'attendance_records_count', am.records_count,
+    'attendance_present_count', am.present_count,
+    'attendance_rate', case when am.records_count > 0 then am.present_count::numeric / am.records_count * 100 else 0 end,
+    'payroll_net_total', pm.net_total,
+    'pending_approval_count', apm.pending_count
   ) into v_result
   from sales_totals st
   cross join purchase_totals pt
@@ -160,7 +243,17 @@ begin
   cross join inventory_total it
   cross join expense_totals et
   cross join fixed_asset_totals fat
-  cross join cash_flow_totals cft;
+  cross join cash_flow_totals cft
+  cross join sales_document_metrics sdm
+  cross join top_customer_metrics tcm
+  cross join top_item_metrics tim
+  cross join reorder_metrics rm
+  cross join expiry_metrics xm
+  cross join slow_moving_metrics sm
+  cross join fulfillment_metrics fm
+  cross join attendance_metrics am
+  cross join payroll_metrics pm
+  cross join approval_metrics apm;
 
   return v_result;
 end;
