@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:silsila_app/erp/screens/erp_hr_executive_dashboard_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,6 +10,14 @@ void main() {
 
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.flutter.io/shared_preferences'),
+      (methodCall) async {
+        if (methodCall.method == 'getAll') return <String, Object>{};
+        return null;
+      },
+    );
     await Supabase.initialize(
       url: 'https://example.supabase.co',
       anonKey: 'test-anon-key',
