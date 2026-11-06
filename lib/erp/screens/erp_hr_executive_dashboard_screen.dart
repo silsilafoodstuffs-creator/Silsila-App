@@ -573,6 +573,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               const Expanded(child: Text('فترة التحليل', style: TextStyle(fontWeight: FontWeight.w900, color: _hrPurple))),
               SizedBox(width: 180, child: DropdownButtonFormField<int>(
                 value: _analysisPeriodDays,
+                isExpanded: true,
                 isDense: true,
                 isExpanded: true,
                 decoration: const InputDecoration(contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8), border: OutlineInputBorder()),
