@@ -14,7 +14,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
  final _db=Supabase.instance.client;final _search=TextEditingController();List<Map<String,dynamic>> _rows=[];bool _loading=true;String? _error;String _filter='all';
  String get _moduleKey=>switch(widget.module){'أصول ثابتة'=>'fixed_assets','تصنيع'=>'manufacturing','مقاولات'=>'contracting',_=>'customer_service'};
  bool get _report=>widget.group=='تقارير'||widget.page.contains('تقرير')||widget.page.contains('تحليل')||widget.page.contains('لوحة')||widget.page.contains('مؤشرات');
- String _status(dynamic s)=>const {'draft':'مسودة','active':'نشط','planned':'مخطط','in_progress':'قيد التنفيذ','waiting':'بانتظار إجراء','approved':'معتمد','done':'مكتمل','completed':'مكتمل','closed':'مغلق','cancelled':'ملغي','rejected':'مرفوض','paid':'تم الصرف','posted':'مُرحّل'}[s?.toString()]??s?.toString()??'—';
+ String _status(dynamic s)=>const {'draft':'مسودة','active':'نشط','planned':'مخطط','in_progress':'قيد التنفيذ','waiting':'بانتظار إجراء','waiting_customer':'بانتظار العميل','approved':'معتمد','done':'مكتمل','completed':'مكتمل','closed':'مغلق','cancelled':'ملغي','rejected':'مرفوض','paid':'تم الصرف','posted':'مُرحّل','calculated':'تم الاحتساب','submitted':'مُرسل','resolved':'تم الحل','qualified':'مؤهل','proposal':'عرض سعر','negotiation':'تفاوض','won':'تم الفوز','lost':'خسارة','pass':'مطابق','conditional':'مطابق بتحفظ','fail':'مرفوض','scrap':'هالك','byproduct':'منتج ثانوي','disassembly':'تفكيك','rework':'إعادة تصنيع'}[s?.toString()]??s?.toString()??'—';
  _C get _c{
   final p=widget.page;
   if(widget.module=='أصول ثابتة'){
@@ -314,6 +314,17 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    for(final line in lines){final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;lineNo++;final byCode=await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_code',parts[0]).limit(1);final items=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit').eq('company_id',co).eq('item_name',parts[0]).limit(1);parsed.add({'company_id':co,'bom_id':id,'line_no':lineNo,'item_id':items.isEmpty?null:items.first['id'],'item_name':items.isEmpty?parts[0]:items.first['item_name'],'quantity':q,'unit':parts.length>2&&parts[2].isNotEmpty?parts[2]:(items.isEmpty?'وحدة':items.first['base_unit'])});}
    if(parsed.isNotEmpty)await _db.from('erp_manufacturing_bom_lines').insert(parsed);
   }
+  if(table=='erp_production_orders'){
+   final quality=(d['quality']??'').toString();
+   if(quality.isNotEmpty&&quality!='لم يفحص'){
+    final result=quality.contains('مرفوض')?'fail':quality.contains('تحفظ')?'conditional':'pass';
+    final inspectionCode='QC-'+code;
+    final qualityData={'company_id':co,'inspection_code':inspectionCode,'production_order_id':id,'inspection_stage':d['production_stage']??'final','parameter_name':'نتيجة الجودة النهائية','result':result,'inspected_quantity':_n(d['produced_qty']),'rejected_quantity':_n(d['scrap_qty']),'notes':'نتيجة الفحص من أمر التصنيع'};
+    final existingQuality=await _db.from('erp_production_quality_checks').select('id').eq('company_id',co).eq('inspection_code',inspectionCode).limit(1);
+    if(existingQuality.isEmpty)await _db.from('erp_production_quality_checks').insert(qualityData);
+    else await _db.from('erp_production_quality_checks').update(qualityData).eq('company_id',co).eq('id',existingQuality.first['id']);
+   }
+  }
   if(table=='erp_service_tickets'&&oldRow!=null&&oldRow['status']!=status){
    await _db.from('erp_service_ticket_events').insert({'company_id':co,'ticket_id':id,'event_type':'status_change','from_status':_ticketStatus(oldRow['status']),'to_status':_ticketStatus(status),'note':'تغيير حالة التذكرة من شاشة سلسلة'});
   }
@@ -381,7 +392,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
  @override Widget build(BuildContext context){final list=_filtered,demo=_demo;final total=_rows.fold<num>(0,(s,r)=>s+(r['amount'] as num? ?? 0));return Directionality(textDirection:TextDirection.rtl,child:Container(color:const Color(0xFFFAF8FC),padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
   Card(elevation:0,color:Colors.white,child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[
    Row(children:[CircleAvatar(backgroundColor:const Color(0xFFF1EAF7),child:Icon(_moduleKey=='fixed_assets'?Icons.account_balance_outlined:_moduleKey=='manufacturing'?Icons.precision_manufacturing_outlined:_moduleKey=='contracting'?Icons.construction_outlined:Icons.support_agent_outlined,color:_p)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(widget.page,style:const TextStyle(fontSize:19,fontWeight:FontWeight.w900,color:_p)),Text(widget.module+' • '+widget.group,style:const TextStyle(fontSize:12,color:Colors.black54))])),if(!_report)FilledButton.icon(onPressed:()=>_edit(),icon:const Icon(Icons.add),label:const Text('إنشاء'),style:FilledButton.styleFrom(backgroundColor:_p)),IconButton(onPressed:_load,icon:const Icon(Icons.refresh,color:_p))]),
-   const SizedBox(height:12),Wrap(spacing:8,runSpacing:8,children:[_metric('السجلات الفعلية',_rows.length.toString()),_metric('قيد التنفيذ',_rows.where((r)=>r['status']=='in_progress').length.toString()),_metric('مكتمل',_rows.where((r)=>r['status']=='done').length.toString()),_metric('إجمالي القيمة',total.toStringAsFixed(2))]),
+   const SizedBox(height:12),Wrap(spacing:8,runSpacing:8,children:[_metric('السجلات الفعلية',_rows.length.toString()),_metric('قيد التنفيذ',_rows.where((r)=>r['status']=='in_progress').length.toString()),_metric('مكتمل',_rows.where((r)=>['done','completed','posted','resolved'].contains(r['status'])).length.toString()),_metric('إجمالي القيمة',total.toStringAsFixed(2))]),
   ]))),
   if(demo)Container(margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFFFF6E7),border:Border.all(color:_o),borderRadius:BorderRadius.circular(10)),child:const Text('أمثلة توضيحية محلية لشرح محتوى الشاشة ودورة العمل فقط. هذه الأمثلة غير محفوظة ولا تؤثر على بيانات الشركة.',style:TextStyle(color:Color(0xFF805000),fontWeight:FontWeight.w700))),
   Row(children:[
