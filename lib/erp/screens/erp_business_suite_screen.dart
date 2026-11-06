@@ -14,7 +14,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
  final _db=Supabase.instance.client;final _search=TextEditingController();List<Map<String,dynamic>> _rows=[];bool _loading=true;String? _error;String _filter='all';
  String get _moduleKey=>switch(widget.module){'أصول ثابتة'=>'fixed_assets','تصنيع'=>'manufacturing','مقاولات'=>'contracting',_=>'customer_service'};
  bool get _report=>widget.group=='تقارير'||widget.page.contains('تقرير')||widget.page.contains('تحليل')||widget.page.contains('لوحة')||widget.page.contains('مؤشرات');
- String _status(dynamic s)=>const {'draft':'مسودة','active':'نشط','planned':'مخطط','in_progress':'قيد التنفيذ','waiting':'بانتظار إجراء','waiting_customer':'بانتظار العميل','approved':'معتمد','done':'مكتمل','completed':'مكتمل','closed':'مغلق','cancelled':'ملغي','rejected':'مرفوض','paid':'تم الصرف','posted':'مُرحّل','tender':'مناقصة','awarded':'تمت الترسية','suspended':'موقوف','obsolete':'غير ساري','calculated':'تم الاحتساب','submitted':'مُرسل','fulfilled':'تم الصرف','resolved':'تم الحل','qualified':'مؤهل','proposal':'عرض سعر','negotiation':'تفاوض','won':'تم الفوز','lost':'خسارة','pass':'مطابق','conditional':'مطابق بتحفظ','fail':'مرفوض','scrap':'هالك','byproduct':'منتج ثانوي','disassembly':'تفكيك','rework':'إعادة تصنيع'}[s?.toString()]??s?.toString()??'—';
+ String _status(dynamic s)=>const {'draft':'مسودة','active':'نشط','planned':'مخطط','in_progress':'قيد التنفيذ','waiting':'بانتظار إجراء','waiting_customer':'بانتظار العميل','approved':'معتمد','done':'مكتمل','completed':'مكتمل','closed':'مغلق','cancelled':'ملغي','rejected':'مرفوض','paid':'تم الصرف','posted':'مُرحّل','tender':'مناقصة','awarded':'تمت الترسية','suspended':'موقوف','obsolete':'غير ساري','calculated':'تم الاحتساب','submitted':'مُرسل','fulfilled':'تم الصرف','issue':'صرف للموقع','return':'إرجاع للمخزن','resolved':'تم الحل','qualified':'مؤهل','proposal':'عرض سعر','negotiation':'تفاوض','won':'تم الفوز','lost':'خسارة','pass':'مطابق','conditional':'مطابق بتحفظ','fail':'مرفوض','scrap':'هالك','byproduct':'منتج ثانوي','disassembly':'تفكيك','rework':'إعادة تصنيع'}[s?.toString()]??s?.toString()??'—';
  _C get _c{
   final p=widget.page;
   if(widget.module=='أصول ثابتة'){
@@ -306,7 +306,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     if(status=='approved'||status=='paid'){for(final line in parsed){await _db.from('erp_construction_boq_lines').update({'approved_quantity':line['cumulative_quantity']}).eq('company_id',co).eq('id',line['boq_line_id']);}}
    }
   }
-  if(table=='erp_construction_costs'){
+  if(table=='erp_construction_costs'||table=='erp_construction_material_movements'){
    final projectId=data['project_id'];final costs=await _db.from('erp_construction_costs').select('amount,status').eq('company_id',co).eq('project_id',projectId);
    final approvedCost=(costs as List).where((row)=>['approved','posted'].contains(row['status'])).fold<double>(0,(sum,row)=>sum+_n(row['amount']));
    final materialMoves=await _db.from('erp_construction_material_movements').select('movement_type,quantity,unit_cost').eq('company_id',co).eq('project_id',projectId);
@@ -458,7 +458,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   String status=row?['status']?.toString()??'draft';final key=GlobalKey<FormState>();
   final ok=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,sd)=>AlertDialog(title:Text((row==null?'إنشاء ':'تعديل ')+c.title,textDirection:TextDirection.rtl),content:SizedBox(width:650,child:Form(key:key,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
    _input(code,'الكود / الرقم',required:true),_input(name,'الاسم / البيان',required:true),_input(counter,'العميل / المورد / الجهة'),
-   DropdownButtonFormField<String>(value:status,decoration:const InputDecoration(labelText:'الحالة',border:OutlineInputBorder()),items:const ['draft','active','planned','in_progress','waiting','approved','done','posted','tender','awarded','suspended','obsolete','closed','cancelled','rejected','paid'].map((s)=>DropdownMenuItem(value:s,child:Text(_status(s)))).toList(),onChanged:(v)=>sd(()=>status=v??'draft')),
+   DropdownButtonFormField<String>(value:status,decoration:const InputDecoration(labelText:'الحالة',border:OutlineInputBorder()),items:const ['draft','active','planned','in_progress','waiting','approved','done','fulfilled','posted','tender','awarded','suspended','obsolete','closed','cancelled','rejected','paid'].map((s)=>DropdownMenuItem(value:s,child:Text(_status(s)))).toList(),onChanged:(v)=>sd(()=>status=v??'draft')),
    Row(children:[Expanded(child:_input(date,'التاريخ YYYY-MM-DD',date:true)),const SizedBox(width:8),Expanded(child:_input(due,'تاريخ الاستحقاق',date:true))]),
    Row(children:[Expanded(child:_input(amount,'القيمة',number:true)),const SizedBox(width:8),Expanded(child:_input(qty,'الكمية',number:true))]),
    const Divider(height:24),Align(alignment:Alignment.centerRight,child:Text('تفاصيل '+c.title,style:const TextStyle(color:_p,fontWeight:FontWeight.w800))),
