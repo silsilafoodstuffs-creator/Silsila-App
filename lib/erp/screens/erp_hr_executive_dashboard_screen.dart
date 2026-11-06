@@ -174,8 +174,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _healthInProgress => _distinctComplianceStatus('health_insurance', {'in_progress'});
   int get _socialInProgress => _distinctComplianceStatus('social_insurance', {'in_progress'});
   int get _insuranceInProgress => _healthInProgress + _socialInProgress;
-  int get _healthNotRecorded => (_activeEmployees - _distinctComplianceStatus('health_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees);
-  int get _socialNotRecorded => (_activeEmployees - _distinctComplianceStatus('social_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees);
+  int get _healthNotRecorded => (_activeEmployees - _distinctComplianceStatus('health_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
+  int get _socialNotRecorded => (_activeEmployees - _distinctComplianceStatus('social_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
   int get _contractsActive => _employees.where((e) => e['is_active'] == true && e['contract_type'] == 'بعقد' && (_asDate(e['contract_end_date']) == null || !_asDate(e['contract_end_date'])!.isBefore(DateTime.now()))).length;
   int get _contractsMissing => _contractsWithoutEndDate + _employees.where((e) => e['is_active'] == true && (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty)).length;
   int get _licensesExpired => _compliance.where((r) => r['record_type'] == 'license' && (r['status'] == 'expired' || (_asDate(r['expires_on'])?.isBefore(DateTime.now()) ?? false))).length;
@@ -586,7 +586,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _progressRow('إدارات بلا وظائف مرتبطة', _departmentsWithoutJobs, _departments.length, _hrOrange),
             _progressRow('وظائف غير مرتبطة بإدارة', _unassignedJobs, _jobs.length, _hrPink),
             _progressRow('موظفون بلا وظيفة محددة', _employeesWithoutJob, _employees.length, _hrPink),
-            _progressRow('اكتمال ربط الموظفين بوظائف', (_employees.length - _employeesWithoutJob).clamp(0, _employees.length), _employees.length, _hrPurple),
+            _progressRow('اكتمال ربط الموظفين بوظائف', (_employees.length - _employeesWithoutJob).clamp(0, _employees.length).toInt(), _employees.length, _hrPurple),
             if (_departments.isEmpty || _jobs.isEmpty)
               _notice('استكمل تعريف الإدارات والوظائف وربط كل وظيفة بإدارتها حتى تصبح مؤشرات اكتمال الهيكل دقيقة.', Icons.account_tree_outlined, Colors.orange.shade800),
           ]),
@@ -652,7 +652,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _progressRow('في مرحلة الفرز', _candidateScreening, _candidates.length, _hrOrange),
             _progressRow('في مرحلة المقابلة', _candidateInterviews, _candidates.length, _hrPink),
             _progressRow('مرفوضون', _candidateCount('rejected'), _candidates.length, Colors.red.shade700),
-            _progressRow('نسبة القبول من القرارات المحسومة', _candidateDecided == 0 ? 0 : (_candidateAcceptanceRate * 10).round(), _candidateDecided == 0 ? 0 : 1000, Colors.green.shade700),
+            _alert('نسبة القبول من القرارات المحسومة', '${_candidateAcceptanceRate.toStringAsFixed(1)}% من القرارات التي حُسمت بالقبول أو الرفض.', _candidateDecided == 0 ? Colors.blueGrey : Colors.green.shade700),
             _alert('الاستقالات', '$_resignationsInPeriod استقالة خلال آخر $_analysisPeriodDays يومًا.', _resignationsInPeriod > 0 ? _hrOrange : Colors.blueGrey),
             _alert('انتهاء الخدمة', '$_separationsInPeriod حركة انتهاء خدمة خلال الفترة، مقابل $_hiresInPeriod تعيينًا.', _separationsInPeriod > 0 ? _hrOrange : Colors.blueGrey),
             _alert('معدل دوران العمالة', '$_turnoverRateDisplay. يُحسب على متوسط قوة العمل التقديرية خلال الفترة المحددة.', Colors.blueGrey),
