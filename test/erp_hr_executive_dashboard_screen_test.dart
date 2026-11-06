@@ -21,7 +21,7 @@ void main() {
     );
     await Supabase.initialize(
       url: 'https://example.supabase.co',
-      anonKey: 'test-anon-key',
+      publishableKey: 'test-publishable-key',
     );
   });
 
