@@ -93,6 +93,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _departmentsWithoutJobs => _departments.where((d) =>
       !_jobs.any((j) => j['department_id']?.toString() == d['id']?.toString())).length;
   int get _employeesWithoutJob => _employees.where((e) => e['job_id'] == null).length;
+  int get _employeesWithoutContract => _employees.where((e) => e['is_active'] == true && (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty || e['contract_type'] == 'بدون عقد')).length;
   int get _probationEmployees => _employees.where((e) {
     final status = (e['employment_status'] ?? '').toString().toLowerCase();
     return status.contains('probation') || status.contains('trial') || status.contains('اختبار') || status.contains('تجربة');
@@ -172,9 +173,10 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   }
   Map<String, String> _latestComplianceStatusByEmployee(String type) {
     final latest = <String, String>{};
+    final activeIds = _employees.where((e) => e['is_active'] == true).map((e) => e['id']?.toString()).whereType<String>().toSet();
     // Compliance rows are loaded newest-first; keep one effective status per employee and record type.
     for (final row in _compliance) {
-      if (row['record_type'] != type || row['employee_id'] == null) continue;
+      if (row['record_type'] != type || row['employee_id'] == null || !activeIds.contains(row['employee_id'].toString())) continue;
       latest.putIfAbsent(row['employee_id'].toString(), () => row['status']?.toString() ?? '');
     }
     return latest;
@@ -192,7 +194,13 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _insuranceInProgress => _healthInProgress + _socialInProgress;
   int get _healthNotRecorded => (_activeEmployees - _distinctComplianceStatus('health_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
   int get _socialNotRecorded => (_activeEmployees - _distinctComplianceStatus('social_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
-  int get _contractsActive => _employees.where((e) { final end = _asDate(e['contract_end_date']); final now = DateTime.now(); final today = DateTime(now.year, now.month, now.day); return e['is_active'] == true && e['contract_type'] == 'بعقد' && (end == null || !end.isBefore(today)); }).length;
+  int get _contractsActive => _employees.where((e) {
+    final type = e['contract_type']?.toString() ?? '';
+    final end = _asDate(e['contract_end_date']);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return e['is_active'] == true && type.isNotEmpty && type != 'بدون عقد' && (end == null || !end.isBefore(today));
+  }).length;
   int get _contractsMissing => _contractsWithoutEndDate + _employees.where((e) => e['is_active'] == true && (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty)).length;
   int get _licensesExpired => _compliance.where((r) => r['record_type'] == 'license' && (r['status'] == 'expired' || (_asDate(r['expires_on'])?.isBefore(DateTime.now()) ?? false))).length;
   int get _licensesExpiringSoon => _compliance.where((r) { final d = _asDate(r['expires_on']); if (r['record_type'] != 'license' || d == null) return false; final n = DateTime.now(); final t = DateTime(n.year,n.month,n.day); final days = d.difference(t).inDays; return days >= 0 && days <= 30; }).length;
@@ -208,7 +216,10 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _candidateScreening => _candidateCount('screening');
   int get _candidateDecided => _candidateCount('accepted') + _candidateCount('rejected');
   double get _candidateAcceptanceRate => _candidateDecided == 0 ? 0 : _candidateCount('accepted') / _candidateDecided * 100;
-  DateTime get _analysisCutoff => DateTime.now().subtract(Duration(days: _analysisPeriodDays));
+  DateTime get _analysisCutoff {
+    final date = DateTime.now().subtract(Duration(days: _analysisPeriodDays));
+    return DateTime(date.year, date.month, date.day);
+  }
   int get _separationsInPeriod => _movements.where((r) => const ['resignation','termination','retirement'].contains(r['movement_type']) && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).length;
   int get _resignationsInPeriod => _movements.where((r) => r['movement_type'] == 'resignation' && (_asDate(r['effective_on'])?.isAfter(_analysisCutoff) ?? false)).length;
   int get _hiresInPeriod => _employees.where((r) => _asDate(r['hire_date'])?.isAfter(_analysisCutoff) ?? false).length;
@@ -629,6 +640,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                 _metric('عقود سارية', '$_contractsActive', 'من الموظفين النشطين بعقد', Icons.verified_outlined, Colors.green.shade700),
                 _metric('عقود منتهية', '$_contractsExpired', 'تحتاج مراجعة فورية', Icons.warning_amber_outlined, Colors.red.shade700),
                 _metric('عقود بلا تاريخ نهاية / نوع', '$_contractsMissing', 'تحتاج استكمال البيانات', Icons.assignment_late_outlined, _hrPink),
+                _metric('موظفون بلا عقد', '$_employeesWithoutContract', 'موظفون نشطون دون عقد', Icons.assignment_ind_outlined, Colors.blueGrey),
                 _metric('نواقص مسوغات التعيين', '$_employeesMissingRequiredDocuments', 'وفق متطلبات الوظيفة', Icons.folder_off_outlined, _hrPink),
                 _metric('تأخيرات الشهر', '$_lateAttendanceCount', 'من سجلات الحضور المسجلة', Icons.schedule_outlined, _hrPurple),
                 _metric('غياب الشهر', '$_absenceAttendanceCount', 'من سجلات الحضور المسجلة', Icons.person_off_outlined, Colors.red.shade700),
@@ -778,7 +790,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _alert('اكتمال الهيكل التنظيمي', _departmentsWithoutJobs + _unassignedJobs == 0 && _departments.isNotEmpty && _jobs.isNotEmpty
                 ? 'لا توجد فجوات ربط ظاهرة في البيانات الحالية.' : 'توجد إدارات بلا وظائف أو وظائف غير مرتبطة بإدارة؛ راجع الهيكل الوظيفي.', _departmentsWithoutJobs + _unassignedJobs == 0 ? Colors.green : Colors.orange),
             _alert('ملفات الموظفين غير النشطة', 'عدد الملفات غير النشطة: $_inactiveEmployees. راجع أسباب الإيقاف أو انتهاء الخدمة.', Colors.orange),
-            _alert('العقود', 'عقود تنتهي خلال 30 يومًا: $_contractsExpiringSoon، عقود منتهية: $_contractsExpired، وعقود تحتاج استكمال النوع أو تاريخ النهاية: $_contractsMissing.', _contractsExpired + _contractsExpiringSoon + _contractsMissing > 0 ? Colors.orange : Colors.green),
+            _alert('العقود', 'عقود سارية: $_contractsActive، تنتهي خلال 30 يومًا: $_contractsExpiringSoon، منتهية: $_contractsExpired، وتحتاج استكمال النوع أو تاريخ النهاية: $_contractsMissing. موظفون بلا عقد: $_employeesWithoutContract.', _contractsExpired + _contractsExpiringSoon + _contractsMissing + _employeesWithoutContract > 0 ? Colors.orange : Colors.green),
             _alert('مسوغات التعيين', 'عدد الموظفين الذين تنقص ملفاتهم مستندات مطلوبة حسب الوظيفة: $_employeesMissingRequiredDocuments. راجع متطلبات الوظائف وسجل مستندات الموظفين.', _employeesMissingRequiredDocuments > 0 ? Colors.orange : Colors.green),
             _alert('الحضور والانصراف', 'خلال الشهر الحالي: $_absenceAttendanceCount حالات غياب و$_lateAttendanceCount حالات تأخير، وإجمالي الوقت الإضافي المسجل $_overtimeMinutes دقيقة.', Colors.blueGrey),
             _alert('التأمينات الصحية والاجتماعية', 'صحي: $_healthInsured مؤمن / $_healthUninsured غير مؤمن / $_healthNotRecorded غير مسجل. اجتماعي: $_socialInsured مؤمن / $_socialUninsured غير مؤمن / $_socialNotRecorded غير مسجل. قيد الإجراء: $_insuranceInProgress.', Colors.blueGrey),
