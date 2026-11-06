@@ -176,7 +176,15 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   if(existingId!=null&&existingId.isNotEmpty){
    await _db.from(table).update(data).eq('id',existingId).eq('company_id',co);id=existingId;
   }else{
-   final inserted=await _db.from(table).insert(data).select('id').single();id=inserted['id'].toString();
+   final uniqueColumn=switch(table){
+    'erp_asset_categories'=>'category_code','erp_fixed_assets'=>'asset_code','erp_asset_depreciation_runs'=>'run_code','erp_asset_disposals'=>'disposal_code',
+    'erp_manufacturing_boms'=>'bom_code','erp_manufacturing_work_centers'=>'center_code','erp_production_orders'=>'order_code',
+    'erp_construction_projects'=>'project_code','erp_construction_payment_certificates'=>'certificate_number','erp_construction_site_reports'=>'report_code',
+    'erp_crm_leads'=>'lead_code','erp_service_sla_policies'=>'policy_code','erp_service_tickets'=>'ticket_code','erp_service_visits'=>'visit_code','erp_crm_activities'=>'activity_code',_=>null
+   };
+   final existing=uniqueColumn==null?[]:await _db.from(table).select('id').eq('company_id',co).eq(uniqueColumn,code).limit(1);
+   if(existing.isNotEmpty){id=existing.first['id'].toString();await _db.from(table).update(data).eq('id',id).eq('company_id',co);}
+   else{final inserted=await _db.from(table).insert(data).select('id').single();id=inserted['id'].toString();}
   }
   if(table=='erp_production_orders'){
    final orderRows=await _db.from('erp_production_orders').select('warehouse_id,product_id,lot_number,planned_quantity,estimated_cost,actual_cost').eq('company_id',co).eq('id',id).limit(1);
@@ -188,15 +196,26 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     if(already.isEmpty){
      if(warehouseId==null)throw Exception('حدد المخزن قبل صرف خامات أمر التصنيع.');
      final lines=materialText.split(RegExp(r'[\n;]+')).where((x)=>x.trim().isNotEmpty).toList();
+     final required=<String,Map<String,dynamic>>{};
      for(final line in lines){
       final parts=line.split('|').map((x)=>x.trim()).toList();if(parts.length<2)continue;
       final q=_n(parts[1]);if(parts[0].isEmpty||q<=0)continue;
       final byCode=await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_code',parts[0]).limit(1);
       final itemRows=byCode.isNotEmpty?byCode:await _db.from('erp_items').select('id,item_name,base_unit,purchase_price').eq('company_id',co).eq('item_name',parts[0]).limit(1);
       if(itemRows.isEmpty)throw Exception('الصنف '+parts[0]+' غير موجود في دليل الأصناف.');
-      final item=itemRows.first;final unit=parts.length>2&&parts[2].isNotEmpty?parts[2]:(item['base_unit']??'وحدة').toString();
+      final item=itemRows.first, itemId=item['id'].toString();
+      final unit=parts.length>2&&parts[2].isNotEmpty?parts[2]:(item['base_unit']??'وحدة').toString();
       final unitCost=parts.length>3&&parts[3].isNotEmpty?_n(parts[3]):_n(item['purchase_price']);
-      await _db.rpc('erp_record_production_stock_movement',params:{'p_company_id':co,'p_production_order_id':id,'p_warehouse_id':warehouseId,'p_item_id':item['id'],'p_item_name':item['item_name'],'p_quantity':q,'p_unit':unit,'p_unit_cost':unitCost,'p_movement_date':date,'p_lot_number':order['lot_number'],'p_movement_kind':'issue'});
+      final current=required[itemId];
+      if(current==null){required[itemId]={'item':item,'quantity':q,'unit':unit,'unit_cost':unitCost};}
+      else{current['quantity']=_n(current['quantity'])+q;current['unit_cost']=unitCost;}
+     }
+     for(final entry in required.entries){
+      final spec=entry.value,item=spec['item'];final alreadyRows=await _db.from('erp_production_material_movements').select('quantity').eq('company_id',co).eq('production_order_id',id).eq('item_id',entry.key);
+      final already=(alreadyRows as List).fold<double>(0,(sum,row)=>sum+_n(row['quantity']));
+      final wanted=_n(spec['quantity']);if(already>wanted)throw Exception('الكمية المسجلة للصنف '+item['item_name']+' أكبر من الكمية المطلوبة في تفاصيل الأمر.');
+      final delta=wanted-already;if(delta<=0)continue;
+      await _db.rpc('erp_record_production_stock_movement',params:{'p_company_id':co,'p_production_order_id':id,'p_warehouse_id':warehouseId,'p_item_id':entry.key,'p_item_name':item['item_name'],'p_quantity':delta,'p_unit':spec['unit'],'p_unit_cost':spec['unit_cost'],'p_movement_date':date,'p_lot_number':order['lot_number'],'p_movement_kind':'issue'});
      }
     }
    }
