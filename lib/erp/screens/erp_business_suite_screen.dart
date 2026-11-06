@@ -72,7 +72,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    if(p.contains('أسباب')||p.contains('أنواع التذاكر')||p.contains('أنواع الشكاوى'))return _C('service_reason',p,'قوائم موحدة لأنواع الطلبات والشكاوى وأسباب الإغلاق وفقد العملاء.',const [_F('category','التصنيف'),_F('description','الوصف'),_F('requires_action','يتطلب إجراء'),_F('active','نشط')],[{'record_code':'RSN-DEMO-01','name':'تأخر التوصيل — مثال','status':'active'}]);
    if(p.contains('استبيانات'))return _C('customer_survey',p,'قياس رضا العميل بعد إغلاق الخدمة أو الزيارة مع تقييمات وأسئلة وملاحظات.',const [_F('survey_type','نوع الاستبيان'),_F('question_set','الأسئلة'),_F('rating_scale','مقياس التقييم'),_F('send_after_hours','الإرسال بعد ساعات',type:'number'),_F('pass_score','درجة الرضا المستهدفة',type:'number')],[{'record_code':'SUR-DEMO-01','name':'استبيان رضا العميل — مثال','status':'active'}]);
    if(p.contains('كتالوج الخدمات'))return _C('service_catalog',p,'كتالوج الخدمات ومستويات الخدمة والمدة المتوقعة والتكلفة وقابلية الفوترة.',const [_F('service_category','فئة الخدمة'),_F('standard_duration','المدة القياسية بالدقائق',type:'number'),_F('price','السعر',type:'number'),_F('billable','قابل للفوترة'),_F('warranty','مدة الضمان')],[{'record_code':'SRV-DEMO-01','name':'زيارة فنية — مثال','status':'active'}]);
-   if(p.contains('تذكرة')||p.contains('شكوى')||p.contains('دعم')||p.contains('بلاغ'))return _C('ticket',p,'تذكرة خدمة: العميل والقناة والأولوية والفريق والمسؤول والمهلة والتصعيد والحل وقياس رضا العميل.',const [_F('contact','جهة الاتصال'),_F('phone','الهاتف'),_F('email','البريد الإلكتروني'),_F('channel','قناة الاستقبال',type:'choice',options:['هاتف','واتساب','بريد إلكتروني','تطبيق سلسلة','زيارة','فيسبوك']),_F('ticket_type','نوع التذكرة',type:'choice',options:['استفسار','شكوى','طلب خدمة','صيانة','مرتجع','اقتراح']),_F('priority','الأولوية',type:'choice',options:['منخفضة','عادية','عالية','عاجلة']),_F('team','فريق الدعم'),_F('assignee','المسؤول'),_F('sla','مهلة الاستجابة بالساعات',type:'number'),_F('resolution','الحل'),_F('satisfaction','رضا العميل من 5',type:'number')],[{'record_code':'TKT-DEMO-001','name':'شكوى تأخر طلب — مثال','status':'in_progress','counterparty':'عميل افتراضي'},{'record_code':'TKT-DEMO-002','name':'استفسار عن منتج — مثال','status':'waiting','counterparty':'عميل افتراضي'}]);
+   if(p.contains('تذكرة')||p.contains('شكوى')||p.contains('دعم')||p.contains('بلاغ'))return _C('ticket',p,'تذكرة خدمة: العميل والقناة والأولوية والفريق والمسؤول والمهلة والتصعيد والحل وقياس رضا العميل.',const [_F('contact','جهة الاتصال'),_F('phone','الهاتف'),_F('email','البريد الإلكتروني'),_F('channel','قناة الاستقبال',type:'choice',options:['هاتف','واتساب','بريد إلكتروني','تطبيق سلسلة','زيارة','فيسبوك']),_F('ticket_type','نوع التذكرة',type:'choice',options:['استفسار','شكوى','طلب خدمة','صيانة','مرتجع','اقتراح']),_F('priority','الأولوية',type:'choice',options:['منخفضة','عادية','عالية','عاجلة']),_F('team','فريق الدعم'),_F('assignee','المسؤول'),_F('sla','مهلة الاستجابة بالساعات',type:'number'),_F('resolution_sla','مهلة الحل بالساعات',type:'number'),_F('resolution','الحل'),_F('satisfaction','رضا العميل من 5',type:'number')],[{'record_code':'TKT-DEMO-001','name':'شكوى تأخر طلب — مثال','status':'in_progress','counterparty':'عميل افتراضي'},{'record_code':'TKT-DEMO-002','name':'استفسار عن منتج — مثال','status':'waiting','counterparty':'عميل افتراضي'}]);
   if(p.contains('فرصة')||p.contains('عميل محتمل')||p.contains('مسار'))return _C('opportunity',p,'إدارة العملاء المحتملين والفرص ومراحل البيع والاحتمالية والقيمة المتوقعة والنشاط التالي وأسباب الفوز والخسارة.',const [_F('contact','جهة الاتصال'),_F('phone','الهاتف'),_F('email','البريد'),_F('source','مصدر العميل'),_F('salesperson','مسؤول المتابعة'),_F('stage','مرحلة الفرصة',type:'choice',options:['جديد','تأهيل','عرض سعر','تفاوض','فوز','خسارة']),_F('probability','احتمالية الفوز %',type:'number'),_F('expected_revenue','الإيراد المتوقع',type:'number'),_F('lost_reason','سبب الخسارة'),_F('next_activity','النشاط القادم')],[{'record_code':'CRM-DEMO-01','name':'فرصة توريد سلسلة متاجر — مثال','status':'in_progress','amount':350000,'counterparty':'عميل محتمل'},{'record_code':'CRM-DEMO-02','name':'عميل جديد — مثال','status':'planned','amount':80000,'counterparty':'عميل محتمل'}]);
   if(p.contains('زيارة')||p.contains('ميداني')||p.contains('مهمة خدمة'))return _C('field_task',p,'تخطيط زيارات الخدمة الميدانية وتعيين الفنيين والمسار وقطع الغيار وساعات العمل وتأكيد العميل.',const [_F('address','عنوان الزيارة'),_F('technician','الفني / المندوب'),_F('visit_date','موعد الزيارة',type:'date'),_F('service_type','نوع الخدمة'),_F('materials','قطع الغيار والمواد'),_F('hours','ساعات العمل',type:'number'),_F('worksheet','قائمة الفحص / تقرير التنفيذ'),_F('signature','تأكيد العميل')],[{'record_code':'FS-DEMO-01','name':'زيارة متابعة عميل — مثال','status':'planned','counterparty':'عميل افتراضي'}]);
   return _C('activity',p,'سجل موحد للتواصل والمتابعة: مكالمات ورسائل واجتماعات وزيارات ومهام وتذكيرات ونتائج التواصل.',const [_F('activity_type','نوع النشاط',type:'choice',options:['مكالمة','بريد','واتساب','اجتماع','زيارة','مهمة','تذكير']),_F('assignee','المسؤول'),_F('outcome','نتيجة التواصل'),_F('next_step','الخطوة التالية'),_F('next_date','موعد المتابعة',type:'date'),_F('related_record','التذكرة / الفرصة المرتبطة')],[{'record_code':'ACT-DEMO-01','name':'متابعة عميل — مثال','status':'planned','counterparty':'عميل افتراضي'}]);
@@ -166,8 +166,12 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
     table='erp_crm_leads';data={'company_id':co,'lead_code':code,'title':name,'contact_name':d['contact'],'phone':d['phone'],'email':d['email'],'source':d['source'],'stage':_leadStage(d['stage']),'probability':_n(d['probability']),'expected_revenue':_n(d['expected_revenue'],amount),'expected_close_date':due,'next_activity':d['next_activity'],'status':_leadStage(d['stage'])=='won'?'won':_leadStage(d['stage'])=='lost'?'lost':'open'};break;
    case 'customer_service:sla_policy':
     table='erp_service_sla_policies';data={'company_id':co,'policy_code':code,'name':name,'priority':_priority(d['priority']),'first_response_minutes':(_n(d['first_response_hours'],1)*60).round().clamp(1,100000),'resolution_minutes':(_n(d['resolution_hours'],24)*60).round().clamp(1,1000000),'escalation_minutes':(_n(d['escalation_after'])*60).round()>0?(_n(d['escalation_after'])*60).round():null,'is_active':status!='cancelled'};break;
-   case 'customer_service:ticket':
-    table='erp_service_tickets';data={'company_id':co,'ticket_code':code,'subject':name,'description':d['resolution'],'channel':(d['channel']??'other').toString(),'category':d['ticket_type']??'general','priority':_priority(d['priority']),'status':_ticketStatus(status),'team_name':d['team'],'resolution':d['resolution']};break;
+   case 'customer_service:ticket':{
+    final createdAt=DateTime.tryParse(date)??DateTime.now();final responseHours=_n(d['sla']),resolutionHours=_n(d['resolution_sla']);
+    table='erp_service_tickets';data={'company_id':co,'ticket_code':code,'subject':name,'description':d['resolution'],'channel':(d['channel']??'other').toString(),'category':d['ticket_type']??'general','priority':_priority(d['priority']),'status':_ticketStatus(status),'team_name':d['team'],'resolution':d['resolution'],'first_response_due_at':responseHours>0?createdAt.add(Duration(minutes:(responseHours*60).round())).toIso8601String():null,'resolution_due_at':resolutionHours>0?createdAt.add(Duration(minutes:(resolutionHours*60).round())).toIso8601String():null,'updated_at':DateTime.now().toIso8601String()};
+    if(status=='in_progress'||status=='done'||status=='approved')data['first_responded_at']=DateTime.now().toIso8601String();
+    if(status=='done')data['resolved_at']=DateTime.now().toIso8601String();if(status=='closed')data['closed_at']=DateTime.now().toIso8601String();break;
+   }
    case 'customer_service:field_task':
     table='erp_service_visits';data={'company_id':co,'visit_code':code,'scheduled_at':DateTime.tryParse((d['visit_date']??date).toString())?.toIso8601String()??DateTime.now().toIso8601String(),'address':d['address'],'visit_type':d['service_type']??'service','status':status=='done'?'completed':status=='cancelled'?'cancelled':'planned','labor_minutes':(_n(d['hours'])*60).round(),'outcome':d['worksheet']};break;
    case 'customer_service:activity':
@@ -192,6 +196,22 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   }
   if(table=='erp_asset_depreciation_runs'&&(status=='approved'||status=='done')){
    await _db.rpc('erp_calculate_asset_depreciation',params:{'p_company_id':co,'p_run_id':id});
+  }
+  if(table=='erp_construction_costs'){
+   final projectId=data['project_id'];final costs=await _db.from('erp_construction_costs').select('amount').eq('company_id',co).eq('project_id',projectId).neq('status','cancelled');
+   final actual= (costs as List).fold<double>(0,(sum,row)=>sum+_n(row['amount']));
+   await _db.from('erp_construction_projects').update({'actual_cost':actual,'updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',projectId);
+  }
+  if(table=='erp_construction_boq_lines'){
+   final projectId=data['project_id'];final lines=await _db.from('erp_construction_boq_lines').select('planned_quantity,executed_quantity,unit_rate').eq('company_id',co).eq('project_id',projectId);
+   double budget=0,executed=0;for(final line in (lines as List)){final rate=_n(line['unit_rate']);budget+=_n(line['planned_quantity'])*rate;executed+=_n(line['executed_quantity'])*rate;}
+   final progress=budget<=0?0:(executed/budget*100).clamp(0,100);
+   await _db.from('erp_construction_projects').update({'progress_percent':progress,'updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',projectId);
+  }
+  if(table=='erp_construction_payment_certificates'&&(status=='approved'||status=='paid')){
+   final stamp=DateTime.now().toIso8601String();final update=<String,dynamic>{'updated_at':stamp};
+   if(status=='approved')update['approved_at']=stamp;if(status=='paid')update['paid_at']=stamp;
+   await _db.from('erp_construction_payment_certificates').update(update).eq('company_id',co).eq('id',id);
   }
   if(table=='erp_asset_disposals'&&status=='approved'){
    await _db.from('erp_fixed_assets').update({'status':'disposed','updated_at':DateTime.now().toIso8601String()}).eq('company_id',co).eq('id',data['asset_id']);
@@ -259,7 +279,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
    if(parsed.isNotEmpty)await _db.from('erp_manufacturing_bom_lines').insert(parsed);
   }
   if(table=='erp_service_tickets'&&oldRow!=null&&oldRow['status']!=status){
-   await _db.from('erp_service_ticket_events').insert({'company_id':co,'ticket_id':id,'event_type':'status_change','from_status':oldRow['status'],'to_status':status,'note':'تغيير حالة التذكرة من شاشة سلسلة'});
+   await _db.from('erp_service_ticket_events').insert({'company_id':co,'ticket_id':id,'event_type':'status_change','from_status':_ticketStatus(oldRow['status']),'to_status':_ticketStatus(status),'note':'تغيير حالة التذكرة من شاشة سلسلة'});
   }
   return {...d,'_operational_table':table,'_operational_id':id};
  }
@@ -269,7 +289,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   if(_moduleKey=='fixed_assets'){if(p.contains('إهلاك'))return 'erp_asset_depreciation_runs';if(p.contains('استبعاد')||p.contains('بيع أصل'))return 'erp_asset_disposals';if(p.contains('حركة')||p.contains('نقل'))return 'erp_asset_movements';return 'erp_fixed_assets';}
   if(_moduleKey=='manufacturing'){if(p.contains('خامات'))return 'erp_production_material_movements';if(p.contains('جودة'))return 'erp_production_quality_checks';return 'erp_production_orders';}
   if(_moduleKey=='contracting'){if(p.contains('مستخلص'))return 'erp_construction_payment_certificates';if(p.contains('تكلفة')||p.contains('مصروفات'))return 'erp_construction_costs';if(p.contains('مقايسة')||p.contains('بنود'))return 'erp_construction_boq_lines';if(p.contains('موقع'))return 'erp_construction_site_reports';return 'erp_construction_projects';}
-  if(p.contains('فرص'))return 'erp_crm_leads';if(p.contains('زيارة'))return 'erp_service_visits';if(p.contains('نشاط'))return 'erp_crm_activities';return 'erp_service_tickets';
+  if(p.contains('فرص'))return 'erp_crm_leads';if(p.contains('زيارة'))return 'erp_service_visits';if(p.contains('نشاط'))return 'erp_crm_activities';if(p.contains('SLA')||p.contains('استجابة')||p.contains('تذاكر'))return 'erp_service_tickets';return 'erp_service_tickets';
  }
  Map<String,dynamic> _reportRow(Map<String,dynamic> r,String table){
   final id=r['id']?.toString()??'';
