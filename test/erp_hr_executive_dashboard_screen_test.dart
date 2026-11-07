@@ -90,6 +90,21 @@ void main() {
     expect(filterHrOperationalEmployees([]), isEmpty);
   });
 
+  test('staffing headcount calculations cap occupied positions and do not invent vacancies', () {
+    expect(calculateHrStaffingVacancies(5, 2), 3);
+    expect(calculateHrStaffingVacancies(5, 5), 0);
+    expect(calculateHrStaffingVacancies(5, 8), 0);
+    expect(calculateHrStaffingFilledPositions(5, 2), 2);
+    expect(calculateHrStaffingFilledPositions(5, 8), 5);
+    expect(calculateHrStaffingVacancies(0, 0), 0);
+  });
+
+  test('staffing headcount calculations reject negative values', () {
+    expect(() => calculateHrStaffingVacancies(-1, 0), throwsArgumentError);
+    expect(() => calculateHrStaffingVacancies(1, -1), throwsArgumentError);
+    expect(() => calculateHrStaffingFilledPositions(-1, 0), throwsArgumentError);
+  });
+
   testWidgets('HR dashboard exposes performance and vacancy data-quality notices',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
