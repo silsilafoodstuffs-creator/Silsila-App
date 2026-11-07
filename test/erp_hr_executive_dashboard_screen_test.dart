@@ -105,6 +105,14 @@ void main() {
     expect(() => calculateHrStaffingFilledPositions(-1, 0), throwsArgumentError);
   });
 
+  test('suspended employees remain classifiable without being counted as active', () {
+    expect(isHrSuspendedEmployee({'employment_status': 'suspended'}), isTrue);
+    expect(isHrSuspendedEmployee({'employment_status': 'موقوف مؤقتًا'}), isTrue);
+    expect(isHrSuspendedEmployee({'employment_status': 'موقوف'}), isTrue);
+    expect(isHrSuspendedEmployee({'employment_status': 'active'}), isFalse);
+    expect(isHrSuspendedEmployee({'employment_status': 'terminated'}), isFalse);
+  });
+
   testWidgets('HR dashboard exposes performance and vacancy data-quality notices',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
