@@ -539,7 +539,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
   }
 
   Widget _drop(String label, String? value, List<DropdownMenuItem<String>> items, ValueChanged<String?> change, {double width = 245}) {
-    return SizedBox(width: width, child: DropdownButtonFormField<String>(
+    return SizedBox(width: width, child: DropdownButtonFormField<String>(itemHeight: 40, 
       value: value, items: items, isExpanded: true, onChanged: change,
       decoration: InputDecoration(labelText: label, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true),
     ));
