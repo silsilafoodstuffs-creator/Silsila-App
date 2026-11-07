@@ -9,7 +9,7 @@ The HR Executive Summary is available under **موارد بشرية → بيان
 - Changing the job title away from **مدير موارد بشرية** removes this specific template.
 - **مسئول موارد بشرية** and **مسؤول موارد بشرية** are explicitly excluded from the dashboard route.
 - Company owners and admins can review and manage the dashboard. Users with an explicit read permission but without the HR-manager role receive a read-only dashboard.
-- HR source-table policies permit company owners/admins/managers and the exact HR-manager job title; profile self-read is limited to the signed-in member's own profile.
+- HR source-table policies retain each table's existing company-role and HR job-title rules, while requiring the user to have an active membership in the company; profile self-read is limited to the signed-in member's own profile.
 
 ## Dashboard data sources
 
