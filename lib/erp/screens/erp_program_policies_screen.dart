@@ -54,6 +54,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   ];
   final db = Supabase.instance.client;
   final values = <String,Map<String,dynamic>>{};
+  final Map<String, String> _policyCodes = {};
   final users = <Map<String,dynamic>>[];
   final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
   final GlobalKey<ErpCodePolicyPanelState> _codePolicyKey = GlobalKey<ErpCodePolicyPanelState>();
@@ -61,11 +62,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final ScrollController _policyVerticalController = ScrollController();
   int tab = 0; bool loading = true, saving = false; String? error, message;
   String get company => (widget.companyId ?? '').trim();
-  String _programPolicyCode(String key) {
-    final index = defaults.indexWhere((policy) => policy['key'] == key);
-    if (index < 0) throw StateError('السياسة $key غير معرفة ضمن سجل السياسات الأساسي.');
-    return 'Pol${(index + 1).toString().padLeft(3, '0')}';
-  }
+  String _programPolicyCode(String key) => _policyCodes[key] ?? '';
   @override void initState(){super.initState(); final policyKeys = defaults.map((p) => p['key']).toSet(); if (policyKeys.length != defaults.length) { throw StateError('يوجد كود داخلي مكرر في سجل سياسات البرنامج.'); } for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
   @override void didUpdateWidget(covariant ErpProgramPoliciesScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
   Future<void> _load({bool propagateError = false}) async {
@@ -88,6 +85,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         await db.from('erp_program_policies').upsert(missingPolicies,onConflict:'company_id,policy_key');
         rows=await db.from('erp_program_policies').select().eq('company_id',company);
       }
+      _policyCodes
+        ..clear()
+        ..addEntries((rows as List).whereType<Map<String,dynamic>>().map((row) => MapEntry((row['policy_key'] ?? '').toString(), (row['policy_code'] ?? '').toString())));
       for(final row in (rows as List).whereType<Map<String,dynamic>>()) { final key=(row['policy_key']??'').toString(); if(!values.containsKey(key))continue; final p=values[key]!; p['enabled']=row['is_enabled']==true; p['all']=row['apply_to_all']==true || p['mandatory']==true; p['value']=(row['policy_value']??p['value']??'').toString(); p['user_ids']=List<String>.from((row['user_ids'] as List?)??const []); }
       final us=await db.from('erp_users').select('id,user_code,name_ar').eq('company_id',company);
       if(mounted)setState(() { users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)); loading=false; });
@@ -108,7 +108,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       throw StateError(error!);
     }
     setState(() { saving=true; error=null; message=null; });
-    try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??''}).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
+    try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
   }
   Future<void> _refreshCurrentTab() async {
     if (tab == 0) {
@@ -599,14 +599,24 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   bool _loading = true, _saving = false, _editing = false;
   String? _error, _message;
   String get _company => (widget.companyId ?? '').trim();
+  final Map<String, String> _identityCodes = {};
 
   @override void initState() { super.initState(); _load(); }
   @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } super.dispose(); }
+
+  String _identityPolicyCode(int index) {
+    const keys = ['program_name','language','logo','primary_color','secondary_color','accent_color','background_color','heading_1','heading_2','heading_3','heading_4','heading_5'];
+    return _identityCodes['visual_identity.${keys[index]}'] ?? '';
+  }
 
   Future<void> _load({bool propagateError = false}) async {
     if (_company.isEmpty) { setState(() { _loading = false; _error = 'اختر الشركة أولًا.'; }); if (propagateError) throw StateError(_error!); return; }
     setState(() { _loading = true; _error = null; });
     try {
+      final policyRows = await _db.from('erp_program_policies').select('policy_key,policy_code').eq('company_id', _company).eq('category', 'الهوية البصرية');
+      _identityCodes
+        ..clear()
+        ..addEntries((policyRows as List).whereType<Map<String,dynamic>>().map((row) => MapEntry((row['policy_key'] ?? '').toString(), (row['policy_code'] ?? '').toString())));
       final row = await _db.from('erp_program_settings').select().eq('company_id', _company).maybeSingle();
       if (row != null) {
         _name.text = (row['program_name'] ?? 'سلسلة').toString();
@@ -678,6 +688,31 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         'identity_background_color':_background.text.trim().toUpperCase(),
         'heading_styles':styles,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':_db.auth.currentUser?.id,
       }, onConflict:'company_id');
+      final identityValues = <String, String>{
+        'visual_identity.program_name': _name.text.trim().isEmpty ? 'سلسلة' : _name.text.trim(),
+        'visual_identity.language': _language,
+        'visual_identity.logo': _logoBase64 == null ? '' : 'مخزن في إعدادات الهوية',
+        'visual_identity.primary_color': _primary.text.trim().toUpperCase(),
+        'visual_identity.secondary_color': _secondary.text.trim().toUpperCase(),
+        'visual_identity.accent_color': _accent.text.trim().toUpperCase(),
+        'visual_identity.background_color': _background.text.trim().toUpperCase(),
+        for (var i = 0; i < 5; i++) 'visual_identity.heading_${i + 1}': jsonEncode(styles[i]),
+      };
+      final identityNames = <String, String>{
+        'visual_identity.program_name':'اسم البرنامج','visual_identity.language':'لغة واجهة البرنامج',
+        'visual_identity.logo':'شعار البرنامج','visual_identity.primary_color':'اللون الأساسي',
+        'visual_identity.secondary_color':'اللون الثانوي','visual_identity.accent_color':'لون التمييز',
+        'visual_identity.background_color':'لون الخلفية','visual_identity.heading_1':'العنوان الرئيسي',
+        'visual_identity.heading_2':'العنوان الفرعي الأول','visual_identity.heading_3':'العنوان الفرعي الثاني',
+        'visual_identity.heading_4':'العنوان الفرعي الثالث','visual_identity.heading_5':'النص والعناوين الصغيرة',
+      };
+      final identityRows = identityValues.entries.map((entry) => <String,dynamic>{
+        'company_id': _company, 'policy_key': entry.key, 'policy_code': _identityCodes[entry.key],
+        'category': 'الهوية البصرية', 'name_ar': identityNames[entry.key]!,
+        'name_en': entry.key, 'is_enabled': true, 'apply_to_all': true,
+        'user_ids': <String>[], 'policy_value': entry.value,
+      }).toList();
+      await _db.from('erp_program_policies').upsert(identityRows, onConflict: 'company_id,policy_key');
       if (mounted) setState(() { _saving = false; _editing = false; _message = 'تم حفظ إعدادات الهوية البصرية.'; });
     } catch (e) { if (mounted) setState(() { _saving = false; _error = 'تعذر الحفظ: $e'; }); rethrow; }
   }
@@ -782,7 +817,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   );
 
   Widget _field(TextEditingController c, {double width = 150, String? hint}) => SizedBox(width: width, height: 40, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, constraints: const BoxConstraints(minHeight: 40, maxHeight: 40), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
-  String _identityPolicyCode(int index) => 'Idn${(index + 1).toString().padLeft(3, '0')}';
+
 
   Widget _row(int index, String code, String title, Widget value) => Card(
     margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0,
