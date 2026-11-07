@@ -304,7 +304,7 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
     await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setDialog) => AlertDialog(
       title: Text('تعديل $_title محفوظ'),
       content: SizedBox(width: 500, child: Column(mainAxisSize: MainAxisSize.min, children: [
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<String>(itemHeight: 40, 
           value: selected,
           isExpanded: true,
           decoration: const InputDecoration(labelText: 'الإذن'),
@@ -334,7 +334,7 @@ class _ErpSalesFulfillmentScreenState extends State<ErpSalesFulfillmentScreen> {
     String selected = _s(_saved.first['id']);
     final confirmed = await showDialog<bool>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, setDialog) => AlertDialog(
       title: Text('حذف $_title'),
-      content: SizedBox(width: 500, child: DropdownButtonFormField<String>(
+      content: SizedBox(width: 500, child: DropdownButtonFormField<String>(itemHeight: 40, 
         value: selected, isExpanded: true, decoration: const InputDecoration(labelText: 'اختر الإذن'),
         items: _saved.map((r) => DropdownMenuItem(value: _s(r['id']), child: Text('${_s(r['manual_number'])} • ${_s(r['customer_name'])}'))).toList(),
         onChanged: (v) { if (v != null) setDialog(() => selected = v); },

@@ -198,7 +198,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
           DataCell(SizedBox(width:56,child:TextField(controller:s.from[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:8)),style:const TextStyle(fontSize:11),onChanged:canEdit?(_)=>setState((){}):null))),
           DataCell(SizedBox(width:56,child:TextField(controller:s.to[n],readOnly:!canEdit,keyboardType:TextInputType.number,decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:8)),style:const TextStyle(fontSize:11),onChanged:canEdit?(_)=>setState((){}):null))),
           DataCell(SizedBox(width:64,child:TextField(controller:s.value[n],readOnly:!canEdit,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:8)),style:const TextStyle(fontSize:11)))),
-          DataCell(DropdownButton<String>(isDense:true,style:const TextStyle(fontSize:11,color:_purple),value:s.action[n],items:const[DropdownMenuItem(value:'خصم',child:Text('خصم')),DropdownMenuItem(value:'إضافي',child:Text('إضافي'))],onChanged:canEdit?(v)=>setState(()=>s.action[n]=v??'خصم'):null)),
+          DataCell(DropdownButton<String>(itemHeight: 40, isDense:true,style:const TextStyle(fontSize:11,color:_purple),value:s.action[n],items:const[DropdownMenuItem(value:'خصم',child:Text('خصم')),DropdownMenuItem(value:'إضافي',child:Text('إضافي'))],onChanged:canEdit?(v)=>setState(()=>s.action[n]=v??'خصم'):null)),
           DataCell(IconButton(visualDensity:VisualDensity.compact,constraints:const BoxConstraints(minWidth:28,minHeight:28),padding:EdgeInsets.zero,tooltip:'حذف قاعدة التأخير',onPressed:canEdit&&s.from.length>1?()=>_confirmDelete('قاعدة التأخير ${n+1}',()=>setState(()=>s.removeLateRule(n))):null,icon:const Icon(Icons.delete_outline,color:_red,size:18))),
         ])),
       )),
@@ -572,7 +572,7 @@ class _HrFingerprintDevicesScreenState extends State<HrFingerprintDevicesScreen>
       Row(children:[Expanded(child:Text(d.name.text,style:const TextStyle(color:_purple,fontSize:16,fontWeight:FontWeight.w900))),Icon(d.connected?Icons.link:Icons.link_off,color:c),Text(d.connected?'متصل':'غير متصل',style:TextStyle(color:c,fontWeight:FontWeight.w900))]),
       const SizedBox(height:8),Wrap(spacing:8,runSpacing:8,children:[
         _df(d.name,'اسم الجهاز',170),_df(d.model,'الموديل والبروتوكول',190),
-        SizedBox(width:140,child:DropdownButtonFormField<String>(value:d.method,decoration:const InputDecoration(labelText:'طريقة الربط',isDense:true,border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'IP',child:Text('IP عبر الشبكة')),DropdownMenuItem(value:'USB',child:Text('USB'))],onChanged:(v)=>setState(()=>d.method=v??'IP'))),
+        SizedBox(width:140,child:DropdownButtonFormField<String>(itemHeight: 40, value:d.method,decoration:const InputDecoration(labelText:'طريقة الربط',isDense:true,border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'IP',child:Text('IP عبر الشبكة')),DropdownMenuItem(value:'USB',child:Text('USB'))],onChanged:(v)=>setState(()=>d.method=v??'IP'))),
         if(d.method=='IP')_df(d.ip,'عنوان IP',150),if(d.method=='IP')_df(d.port,'المنفذ',90),if(d.method=='USB')_df(d.usb,'معرّف USB',180),
       ]),
       const SizedBox(height:8),Wrap(spacing:7,children:[
@@ -588,7 +588,7 @@ class _HrFingerprintDevicesScreenState extends State<HrFingerprintDevicesScreen>
   void _edit([_Device? old,int? index]){final d=old??_Device();showDialog<void>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,refresh)=>AlertDialog(title:Text(old==null?'إضافة جهاز بصمة':'تعديل جهاز'),content:SizedBox(width:430,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
     TextField(controller:d.name,decoration:const InputDecoration(labelText:'اسم الجهاز')),
     TextField(controller:d.model,decoration:const InputDecoration(labelText:'الشركة / الموديل / البروتوكول')),
-    DropdownButtonFormField<String>(value:d.method,decoration:const InputDecoration(labelText:'طريقة الربط'),items:const[DropdownMenuItem(value:'IP',child:Text('شبكة IP')),DropdownMenuItem(value:'USB',child:Text('USB'))],onChanged:(v)=>refresh(()=>d.method=v??'IP')),
+    DropdownButtonFormField<String>(itemHeight: 40, value:d.method,decoration:const InputDecoration(labelText:'طريقة الربط'),items:const[DropdownMenuItem(value:'IP',child:Text('شبكة IP')),DropdownMenuItem(value:'USB',child:Text('USB'))],onChanged:(v)=>refresh(()=>d.method=v??'IP')),
     if(d.method=='IP')TextField(controller:d.ip,decoration:const InputDecoration(labelText:'عنوان IP')),
     if(d.method=='IP')TextField(controller:d.port,decoration:const InputDecoration(labelText:'المنفذ')),
     if(d.method=='USB')TextField(controller:d.usb,decoration:const InputDecoration(labelText:'معرّف USB / المنفذ')),

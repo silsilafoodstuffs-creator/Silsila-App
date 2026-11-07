@@ -354,7 +354,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
           IconButton(tooltip: 'تحديث الإعلانات', onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
         ]),
         const SizedBox(height: 14),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<String>(itemHeight: 40, 
           value: _selectedActivityCode,
           decoration: const InputDecoration(labelText: 'نطاق عرض الإعلانات حسب النشاط', border: OutlineInputBorder(), isDense: true),
           items: [
@@ -418,7 +418,7 @@ class _ErpAppAdvertisementsScreenState extends State<ErpAppAdvertisementsScreen>
                   ),
                 ),
                 const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
+                DropdownButtonFormField<String>(itemHeight: 40, 
                   value: targetType,
                   decoration: const InputDecoration(labelText: 'التوجه عند الضغط على الصورة', border: OutlineInputBorder(), isDense: true),
                   items: const [
