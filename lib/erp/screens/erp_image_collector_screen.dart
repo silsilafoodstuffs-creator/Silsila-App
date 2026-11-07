@@ -177,7 +177,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
       List<Map<String, dynamic>> options, {bool enabled = true}) {
     final current = item[field]?.toString();
     final valid = options.any((r) => r['id'].toString() == current);
-    return SizedBox(width: 205, child: DropdownButtonFormField<String>(itemHeight: 40, 
+    return SizedBox(width: 205, child: DropdownButtonFormField<String>(itemHeight: 48, 
       value: valid ? current : null, isExpanded: true,
       decoration: InputDecoration(hintText: label, labelText: null,
         isDense: true, border: const OutlineInputBorder(),
@@ -1573,7 +1573,7 @@ class _ErpImageCollectorScreenState extends State<ErpImageCollectorScreen> {
                 }
                 Widget dropdown(String key,String label,String value,List<String> options,{double width=145}) {
                   final choices=options.contains(value)?options:<String>[value,...options];
-                  return SizedBox(width:width,child:DropdownButtonFormField<String>(itemHeight: 40, value:choices.firstWhere((v)=>v==value,orElse:()=>choices.first),isExpanded:true,
+                  return SizedBox(width:width,child:DropdownButtonFormField<String>(itemHeight: 48, value:choices.firstWhere((v)=>v==value,orElse:()=>choices.first),isExpanded:true,
                     decoration:InputDecoration(hintText:label,labelText:null,isDense:true,border:const OutlineInputBorder(),contentPadding:const EdgeInsets.symmetric(horizontal:7,vertical:7)),
                     items:choices.map((v)=>DropdownMenuItem(value:v,child:Text(key=='entity_mode'?(v=='new'?'كود جديد':'كود قديم'):key=='save_as'?(v=='category'?'فئة':'صنف'):key=='major_unit'&&v.isEmpty?'وحدة كبرى':key=='minor_unit'&&v.isEmpty?'وحدة صغرى':key=='middle_unit'&&v.isEmpty?'وحدة وسطى (اختياري)':v,overflow:TextOverflow.ellipsis))).toList(),
                     onChanged:_loading?null:(v){if(v==null)return;setState((){item[key]=v;if(key=='major_unit'||key=='middle_unit'||key=='minor_unit')_rowController(item,key).text=v;if(key=='save_as'){item.remove('entity_mode');item.remove('database_item_id');item.remove('category_target_id');}});}));
