@@ -66,9 +66,10 @@ bool isHrEndedEmployee(Map<String, dynamic> employee) {
 }
 
 class ErpHrExecutiveDashboardScreen extends StatefulWidget {
-  const ErpHrExecutiveDashboardScreen({super.key, this.companyId, this.canManage = false});
+  const ErpHrExecutiveDashboardScreen({super.key, this.companyId, this.canManage = false, this.canApproveStaffingPlans = false});
   final String? companyId;
   final bool canManage;
+  final bool canApproveStaffingPlans;
 
   @override
   State<ErpHrExecutiveDashboardScreen> createState() => _ErpHrExecutiveDashboardScreenState();
@@ -1242,12 +1243,14 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                       '${_staffingLocationLabel(plan['work_location_id'])} • العدد: $authorized • الحالة: $statusLabel',
                     ),
                     trailing: status == 'pending_approval'
-                        ? TextButton(
-                            onPressed: _loading
-                                ? null
-                                : () => _changeStaffingPlanStatus(plan, 'approved'),
-                            child: const Text('اعتماد'),
-                          )
+                        ? canApproveStaffingPlans
+                            ? TextButton(
+                                onPressed: _loading
+                                    ? null
+                                    : () => _changeStaffingPlanStatus(plan, 'approved'),
+                                child: const Text('اعتماد'),
+                              )
+                            : const Text('بانتظار اعتماد المالك')
                         : status == 'draft'
                             ? TextButton(
                                 onPressed: _loading
