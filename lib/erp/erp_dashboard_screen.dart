@@ -432,6 +432,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final db = Supabase.instance.client;
       String jobTitle = '';
       String memberRole = '';
+      bool isActiveCompanyMember = false;
       try {
         final profile = await db.from('erp_company_member_profiles')
             .select('job_title')
@@ -447,6 +448,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             .eq('user_id', userId)
             .eq('is_active', true)
             .maybeSingle();
+        isActiveCompanyMember = member != null;
         memberRole = (member?['member_role'] ?? '').toString().trim().toLowerCase();
       } catch (_) {}
       final rows = await db
@@ -459,10 +461,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           (row['menu_key'] ?? '').toString(): row['allow_access'] == true,
       };
       const hrDashboardKey = 'موارد بشرية::بيانات أساسية::ملخص إدارة موارد بشرية';
-      final isHrManager = jobTitle == 'مدير موارد بشرية';
+      final isHrManager = isActiveCompanyMember && jobTitle == 'مدير موارد بشرية';
       final isHrResponsible = jobTitle == 'مسئول موارد بشرية' || jobTitle == 'مسؤول موارد بشرية';
-      final isCompanyAdmin = memberRole == 'owner' || memberRole == 'admin';
-      final hrDashboardAllowed = !isHrResponsible &&
+      final isCompanyAdmin = isActiveCompanyMember && (memberRole == 'owner' || memberRole == 'admin');
+      final hrDashboardAllowed = isActiveCompanyMember && !isHrResponsible &&
           (isHrManager || isCompanyAdmin || permissions[hrDashboardKey] == true);
       const parentKey = 'التقارير والتحليلات::تقارير::الملخص التنفيذي';
       final childKeys = _executivePermissionSectionKeys.values
