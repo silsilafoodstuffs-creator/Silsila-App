@@ -149,7 +149,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
 
   Future<void> _copyReport() async {
     final rows = <List<Object?>>[
-      ['تقرير اختبار ومراجعة الحركات - سلسلة'],
+      ['تقرير مراجعة الحركات - سلسلة'],
       ['معرّف الشركة', _company.text.trim()],
       ['مجال الفحص', _area],
       ['من تاريخ', _dateText(_startDate)],
@@ -307,7 +307,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           Card(color: const Color(0xFF3E007D), child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Text('اختبار ومراجعة الحركات', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+              const Text('مراجعة الحركات', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
               const Text('فحص بيانات ERP وعرض الأخطاء والتحذيرات وروابط المعالجة.', style: TextStyle(color: Colors.white70, height: 1.5)),
               const SizedBox(height: 8),
               SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
@@ -368,7 +368,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           ]),
           const SizedBox(height: 14),
           const Text(
-            'اختبار كل حركة على حدة',
+            'مراجعة كل حركة على حدة',
             style: TextStyle(color: Color(0xFF3E007D), fontSize: 16, fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 6),
@@ -384,7 +384,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               OutlinedButton.icon(
                 onPressed: _loading ? null : () => _runArea(area),
                 icon: const Icon(Icons.fact_check_outlined, size: 16),
-                label: Text('اختبار $area'),
+                label: Text('مراجعة $area'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _area == area ? Colors.white : const Color(0xFF3E007D),
                   backgroundColor: _area == area ? const Color(0xFF3E007D) : null,
@@ -398,7 +398,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             child: Padding(
               padding: EdgeInsets.all(12),
               child: Text(
-                'نطاق الفحص الحالي: القيود اليومية وتوازنها وصلاحية حساباتها والفترات المالية، سلامة العلاقات في شجرة الحسابات، وربط الخزائن والبنوك بحسابات الأستاذ. حركات المبيعات والمشتريات والمخزون والموظفين تحتاج جداولها الفعلية قبل إضافتها للفحص؛ لن نعرض نتائج تجريبية على أنها تدقيق حقيقي.',
+                'نطاق الفحص الحالي: القيود اليومية وتوازنها وصلاحية حساباتها والفترات المالية، سلامة العلاقات في شجرة الحسابات، وربط الخزائن والبنوك بحسابات الأستاذ. حركات المبيعات والمشتريات والمخزون والموظفين تحتاج جداولها الفعلية قبل إضافتها للفحص؛ لن نعرض نتائج غير مكتملة على أنها تدقيق فعلي.',
                 style: TextStyle(height: 1.5),
               ),
             ),
