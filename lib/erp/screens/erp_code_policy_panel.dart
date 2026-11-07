@@ -204,6 +204,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     }
   }
 
+  bool get isSaving => _saving;
+
   Future<void> reloadFromHeader() => _load(propagateError: true);
 
   Future<void> saveFromHeader() => _save();
@@ -214,39 +216,39 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       final key = t['key']!;
       if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(_prefix[key]!.text.trim())) {
         setState(() => _error = 'بادئة ${t['name']} يجب أن تكون 3 حروف إنجليزية بالضبط.');
-        return;
+        throw StateError(_error!);
       }
       final n = int.tryParse(_digits[key]!.text);
       if (n == null || n < 1 || n > 12) {
         setState(() => _error = 'عدد خانات ${t['name']} يجب أن يكون من 1 إلى 12.');
-        return;
+        throw StateError(_error!);
       }
     }
     if (_prefix['customer']!.text.trim() != 'Cus') {
       setState(() => _error = 'بادئة كود العميل ثابتة على Cus.');
-      return;
+      throw StateError(_error!);
     }
     final prefixes = _types.map((t) => _prefix[t['key']!]!.text.trim().toLowerCase()).toList();
     if (prefixes.toSet().length != prefixes.length || prefixes.contains(_itemPrefix.text.trim().toLowerCase())) {
       setState(() => _error = 'يجب أن تكون كل بادئة فريدة، وألا تتكرر مع بادئة الأصناف.');
-      return;
+      throw StateError(_error!);
     }
     if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(_itemPrefix.text.trim())) {
       setState(() => _error = 'بادئة الأصناف يجب أن تكون 3 حروف إنجليزية بالضبط.');
-      return;
+      throw StateError(_error!);
     }
     for (final entry in _itemSegments.entries) {
       final value = int.tryParse(entry.value.text);
       if (value != 2) {
         final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','brand':'البراند/الماركة','serial':'تسلسل'}[entry.key];
         setState(() => _error = 'عدد خانات $label يجب أن يكون 2 بالضبط.');
-        return;
+        throw StateError(_error!);
       }
     }
     final countryCode = _geoSegments['country']!.text.trim();
     if (!RegExp(r'^[0-9]{2}$').hasMatch(countryCode)) {
       setState(() => _error = 'يجب تحديد كود الدولة من تبويب بيانات الدول (رقمان).');
-      return;
+      throw StateError(_error!);
     }
     const expectedGeoLengths = {'governorate':2,'center':2,'area':2};
     for (final entry in expectedGeoLengths.entries) {
@@ -258,12 +260,12 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           'area':'المنطقة/القرية/التسلسل',
         }[entry.key];
         setState(() => _error = 'عدد خانات $label يجب أن يكون من 1 إلى 6.');
-        return;
+        throw StateError(_error!);
       }
     }
     if (_geoPrefix.text.trim() != 'Rig') {
       setState(() => _error = 'بادئة المنطقة يجب أن تكون 3 حروف إنجليزية مثل Rig.');
-      return;
+      throw StateError(_error!);
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
