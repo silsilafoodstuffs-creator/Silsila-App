@@ -22,7 +22,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   static const defaults = <Map<String,dynamic>>[
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
-    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":50,"field_height":40,"column_spacing":3}','all':true},
+    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":50,"field_height":40,"column_spacing":3}','mandatory':true,'all':true},
     {'key':'ui_dropdown_item_height','category':'برمجية','ar':'الارتفاع القياسي لكل اختيار داخل القوائم المنسدلة','en':'Standard dropdown option height','value':'40 بكسل','all':true},
     {'key':'ui_field_label_alignment','category':'برمجية','ar':'موضع اسم الخانة بالنسبة إلى القيمة أو الاختيار','en':'Field label alignment','value':'اسم الخانة على يمين القيمة أو الاختيار في صف واحد متناسق','all':true},
     {'key':'ui_mobile_header_compact','category':'برمجية','ar':'ارتفاع الهيدر في شاشات الموبايل','en':'Compact mobile screen headers','value':'هيدر مدمج بارتفاع مناسب دون فراغات أو ارتفاع مبالغ فيه','all':true},
@@ -340,8 +340,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
 
   Widget _layoutDimensionSelector(Map<String, dynamic> policy) {
     final dimensions = _layoutDimensions(policy);
-    Widget selector(String label, String key, List<int> options, int width) => SizedBox(
-      width: width.toDouble(),
+    Widget selector(String label, String key, List<int> options) => SizedBox(
+      width: 140,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
         const SizedBox(height: 2),
@@ -360,13 +360,17 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         ),
       ]),
     );
-    return Row(children: [
-      selector('ارتفاع الصفوف', 'row_height', [30, 35, 40, 45, 50, 55, 60, 70, 80, 100], 125),
-      const SizedBox(width: 3),
-      selector('ارتفاع الخانات', 'field_height', [20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100], 125),
-      const SizedBox(width: 3),
-      selector('المسافة بين الأعمدة', 'column_spacing', [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20], 145),
-    ]);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        selector('ارتفاع الصفوف', 'row_height', [30, 35, 40, 45, 50, 55, 60, 70, 80, 100]),
+        const SizedBox(height: 3),
+        selector('ارتفاع الخانات', 'field_height', [20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]),
+        const SizedBox(height: 3),
+        selector('المسافة بين الأعمدة', 'column_spacing', [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20]),
+      ],
+    );
   }
 
   String policySearch = '';
@@ -520,7 +524,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF18865A), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ])),
                                   const SizedBox(width: 8),
-                                  SizedBox(width: p['key'] == 'ui_layout_standard' ? 410 : 220, child: p['key'] == 'ui_layout_standard'
+                                  SizedBox(width: 220, child: p['key'] == 'ui_layout_standard'
                                     ? _layoutDimensionSelector(p)
                                     : p['key'] == 'fiscal_year'
                                     ? Row(children: [
