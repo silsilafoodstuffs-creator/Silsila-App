@@ -44,7 +44,7 @@ jobs:
           if [ ! -f android/app/build.gradle.kts ] || [ ! -f android/gradlew ] || [ ! -f android/settings.gradle.kts ]; then
             flutter create --project-name=silsila_app --platforms=android .
           else
-            echo "Existing Android Gradle project detected; preserving it."
+            echo "Existing Android project files detected; preserving them."
           fi
 
       - name: Resolve Flutter dependencies
@@ -65,6 +65,26 @@ jobs:
           test -s build/web/index.html
           test -s build/web/flutter_bootstrap.js
           grep -q 'flutter_bootstrap.js' build/web/index.html
+
+      - name: Install Chromium browser test dependencies
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+
+      - name: Run real browser WebView tests (desktop + mobile)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/silsila-web/Silsila-App
+          cp -a build/web/. /tmp/silsila-web/Silsila-App/
+          python3 -m http.server 8765 --directory /tmp/silsila-web >/tmp/silsila-web-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:8765/Silsila-App/ >/dev/null; then break; fi
+            sleep 1
+          done
+          node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
 
       - name: Build Android debug APK
         run: flutter build apk --debug
