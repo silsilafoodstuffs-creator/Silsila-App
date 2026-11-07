@@ -1179,7 +1179,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
           if(!_isUser)DataCell(_textCell(row,'name_ar')),if(!_isUser)DataCell(_textCell(row,'name_en')),
           if(_isUser)DataCell(_textCell(row,'name_ar',width:165)),
           if(_isUser)DataCell(SizedBox(width:185,child:Row(children:[Expanded(child:TextFormField(initialValue:_s(row['_password_draft']),obscureText:row['_password_visible']!=true,decoration:const InputDecoration(hintText:'كلمة مرور جديدة',isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:7),border:OutlineInputBorder()),onChanged:(v)=>row['_password_draft']=v)),IconButton(tooltip:'إظهار/إخفاء كلمة المرور',visualDensity:VisualDensity.compact,onPressed:()=>setState(()=>row['_password_visible']=row['_password_visible']!=true),icon:Icon(row['_password_visible']==true?Icons.visibility_off:Icons.visibility,size:18))]))),
-          if(_isUser)DataCell(SizedBox(width:155,child:DropdownButtonFormField<String>(
+          if(_isUser)DataCell(SizedBox(width:155,child:DropdownButtonFormField<String>(itemHeight: 40, 
             key:ValueKey('${id}-type-${row['user_type_id']}'),value:_types.any((t)=>_s(t['id'])==_s(row['user_type_id']))?_s(row['user_type_id']):null,isExpanded:true,
             decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),
             items:_types.map((t)=>DropdownMenuItem(value:_s(t['id']),child:Text(_s(t['name_ar']),overflow:TextOverflow.ellipsis))).toList(),
@@ -1228,7 +1228,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     final parentId=_selectedId;
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Row(children:[
-        Expanded(child:DropdownButtonFormField<String>(
+        Expanded(child:DropdownButtonFormField<String>(itemHeight: 40, 
           key:ValueKey('permission-parent-$parentId-template'),
           value:parentId,
           decoration:const InputDecoration(isDense:true,labelText:'القالب المحدد'),
@@ -1255,7 +1255,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
     final pageValue=pages.any((p)=>p['key']==_selectedPageKey)?_selectedPageKey:(pages.isEmpty?null:pages.first['key']);
     return Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Wrap(spacing:8,runSpacing:8,alignment:WrapAlignment.start,children:[
-        SizedBox(width:340,child:DropdownButtonFormField<String>(
+        SizedBox(width:340,child:DropdownButtonFormField<String>(itemHeight: 40, 
           key:ValueKey('permission-page-$pageValue'),
           value:pageValue,
           isExpanded:true,
@@ -1264,7 +1264,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
           onChanged:(v)=>setState(()=>_selectedPageKey=v??_selectedPageKey),
         )),
         OutlinedButton.icon(onPressed:_openUserPicker,icon:const Icon(Icons.person_search),label:const Text('جلب مستخدمين')),
-        SizedBox(width:190,child:DropdownButtonFormField<String>(
+        SizedBox(width:190,child:DropdownButtonFormField<String>(itemHeight: 40, 
           key:ValueKey('template-select-$_selectedTemplateId'),
           value:_templates.any((t)=>_s(t['id'])==_selectedTemplateId)?_selectedTemplateId:null,
           decoration:const InputDecoration(labelText:'قالب صلاحيات',isDense:true),
@@ -1293,7 +1293,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
             DataCell(Text(_s(user['user_code']))),
             DataCell(_textCell(user,'name_ar')),
             DataCell(_textCell(user,'name_en')),
-            DataCell(SizedBox(width:150,child:DropdownButtonFormField<String>(
+            DataCell(SizedBox(width:150,child:DropdownButtonFormField<String>(itemHeight: 40, 
               key:ValueKey('${uid}-permission-type-${user['user_type_id']}'),
               value:_types.any((t)=>_s(t['id'])==_s(user['user_type_id']))?_s(user['user_type_id']):null,
               isExpanded:true,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),
