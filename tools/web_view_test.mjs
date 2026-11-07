@@ -18,14 +18,21 @@ try {
   console.warn(`Could not load Dart source map: ${error.message}`);
 }
 const describePageError = error => {
-  const frames = String(error.stack || '').split('\\n').map(frame => {
-    const match = frame.match(/main\\.dart\\.js:(\\d+):(\\d+)/);
+  const frames = String(error.stack || '').split('\n').map(frame => {
+    const match = frame.match(/main\.dart\.js:(\d+):(\d+)/);
     if (!match || !sourceMapConsumer) return frame;
-    const original = sourceMapConsumer.originalPositionFor({line:Number(match[1]),column:Number(match[2])});
-    return original.source ? `${frame} => ${original.source}:${original.line}:${original.column}` : frame;
+    const original = sourceMapConsumer.originalPositionFor({
+      line: Number(match[1]),
+      column: Number(match[2]),
+    });
+    return original.source
+      ? frame + ' => ' + original.source + ':' + original.line + ':' + original.column
+      : frame;
   });
-  const details = Object.getOwnPropertyNames(error).filter(key => key !== 'stack').map(key => `${key}=${String(error[key])}`);
-  return `name=${error.name}; message=${error.message || '(empty)'}; ${details.join('; ')}\\n${frames.join('\\n')}`;
+  const details = Object.getOwnPropertyNames(error)
+    .filter(key => key !== 'stack')
+    .map(key => key + '=' + String(error[key]));
+  return 'name=' + error.name + '; message=' + (error.message || '(empty)') + '; ' + details.join('; ') + '\n' + frames.join('\n');
 };
 try {
   for (const viewport of [
