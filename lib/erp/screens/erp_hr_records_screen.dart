@@ -50,11 +50,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('offer_expires_on','انتهاء العرض',type:'date'),
         _Field('joining_date','تاريخ مباشرة العمل',type:'date'),
         _Field('source','مصدر الترشيح'),_Field('notes','ملاحظات'),
-      ],const [
-        {'candidate_name':'مرشح توضيحي — أحمد','status':'interview','applied_on':'2026-11-01','source':'ترشيح مباشر'},
-        {'candidate_name':'مرشحة توضيحية — منى','status':'screening','applied_on':'2026-11-03','source':'إعلان وظيفة'},
-        {'candidate_name':'مرشح توضيحي — محمد','status':'new','applied_on':'2026-11-04','source':'قاعدة المرشحين'},
-      ],'مسار التوظيف من استلام الطلب والفرز إلى المقابلة والقبول أو الاعتذار. سجّل كل مرشح وحدث مرحلته من نفس الملف.');
+      ],const [],'مسار التوظيف من استلام الطلب والفرز إلى المقابلة والقبول أو الاعتذار. سجّل كل مرشح وحدث مرحلته من نفس الملف.');
     }
     if (p.contains('حركة التعيينات') || p.contains('حركة الموظفين') || p.contains('نقل') || p.contains('ترقي') || p.contains('مباشرة') || p.contains('فترة الاختبار') || p.contains('إنهاء الخدمة') || p.contains('ترك الخدمة')) {
       return _Config(p,'erp_hr_employee_movements',const [
@@ -62,10 +58,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('movement_type','نوع الحركة',type:'choice',required:true,options:['hire','resignation','termination','retirement','transfer','promotion','suspension','return_to_work']),
         _Field('effective_on','تاريخ السريان',type:'date',required:true),_Field('target_branch_id','الفرع المستهدف',type:'branch'),_Field('target_department_id','الإدارة المستهدفة',type:'department'),_Field('target_job_id','الوظيفة المستهدفة',type:'job'),_Field('reason','سبب الحركة',required:true),
         _Field('rehire_eligible','مسموح بإعادة التعيين',type:'bool'),_Field('notes','ملاحظات'),
-      ],const [
-        {'movement_type':'hire','effective_on':'2026-11-01','reason':'تعيين توضيحي','rehire_eligible':'نعم'},
-        {'movement_type':'transfer','effective_on':'2026-11-03','reason':'نقل توضيحي بين الإدارات','rehire_eligible':'نعم'},
-      ],'سجل تاريخي للتعيينات والنقل والترقيات والاستقالة وإنهاء الخدمة مع تاريخ سريان كل حركة.');
+      ],const [],'سجل تاريخي للتعيينات والنقل والترقيات والاستقالة وإنهاء الخدمة مع تاريخ سريان كل حركة.');
     }
     if (p.contains('تقييم') || p.contains('الأداء')) {
       return _Config(p,'erp_hr_performance_reviews',const [
@@ -73,10 +66,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('period_end','نهاية الفترة',type:'date',required:true),_Field('score','الدرجة من 100',type:'number',required:true),
         _Field('rating','التقدير'),_Field('strengths','نقاط القوة'),_Field('improvement_areas','نقاط التحسين'),
         _Field('goals','الأهداف القادمة'),_Field('status','الحالة',type:'choice',options:['draft','submitted','approved','rejected']),
-      ],const [
-        {'period_start':'2026-10-01','period_end':'2026-10-31','score':'92','rating':'ممتاز','status':'approved'},
-        {'period_start':'2026-10-01','period_end':'2026-10-31','score':'84','rating':'جيد جدًا','status':'submitted'},
-      ],'تقييم دوري مرتبط بالموظف والفترة والدرجة والأهداف، مع حالات المسودة والإرسال والاعتماد.');
+      ],const [],'تقييم دوري مرتبط بالموظف والفترة والدرجة والأهداف، مع حالات المسودة والإرسال والاعتماد.');
     }
     if (p.contains('إضافي') || p.contains('ساعات العمل')) {
       return _Config(p,'erp_hr_overtime_requests',const [
@@ -84,10 +74,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('hours','عدد الساعات',type:'number',required:true),_Field('hourly_rate','قيمة الساعة',type:'number',required:true),
         _Field('amount','إجمالي المستحق',type:'number'),_Field('reason','السبب',required:true),
         _Field('status','الحالة',type:'choice',options:['pending','approved','rejected','paid']),_Field('notes','ملاحظات'),
-      ],const [
-        {'work_date':'2026-11-02','hours':'2','hourly_rate':'50','amount':'100','reason':'جرد مخزن — مثال','status':'pending'},
-        {'work_date':'2026-11-03','hours':'3','hourly_rate':'50','amount':'150','reason':'تجهيز طلبات — مثال','status':'approved'},
-      ],'تسجيل الساعات الإضافية وربطها بالموظف والتاريخ والسعر والاعتماد ثم إدراجها في المستحقات.');
+      ],const [],'تسجيل الساعات الإضافية وربطها بالموظف والتاريخ والسعر والاعتماد ثم إدراجها في المستحقات.');
     }
     if (p.contains('سلف')) {
       return _Config(p,'erp_hr_employee_advances',const [
@@ -96,10 +83,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('installments','عدد الأقساط',type:'number',required:true),_Field('installment_amount','قيمة القسط',type:'number',required:true),
         _Field('reason','السبب',required:true),_Field('status','الحالة',type:'choice',options:['pending','approved','rejected','disbursed','settled']),
         _Field('settled_amount','المبلغ المسدد',type:'number'),_Field('notes','ملاحظات'),
-      ],const [
-        {'requested_on':'2026-11-01','amount':'3000','installments':'3','installment_amount':'1000','reason':'سلفة توضيحية','status':'pending'},
-        {'requested_on':'2026-10-15','amount':'2000','installments':'2','installment_amount':'1000','reason':'سلفة توضيحية','status':'disbursed'},
-      ],'متابعة طلب السلفة واعتمادها وصرفها وجدولة الأقساط والتسوية.');
+      ],const [],'متابعة طلب السلفة واعتمادها وصرفها وجدولة الأقساط والتسوية.');
     }
     if (p.contains('عهد')) {
       return _Config(p,'erp_hr_employee_custodies',const [
@@ -114,20 +98,14 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('condition_on_issue','الحالة عند التسليم'),
         _Field('condition_on_return','الحالة عند الإرجاع'),
         _Field('notes','ملاحظات'),
-      ],const [
-        {'item_name':'حاسب محمول — مثال توضيحي','category':'أجهزة','serial_number':'DEMO-001','assigned_on':'2026-11-01','expected_return_on':'2027-11-01','status':'assigned'},
-        {'item_name':'هاتف عمل — مثال توضيحي','category':'اتصالات','serial_number':'DEMO-002','assigned_on':'2026-10-15','status':'returned'},
-      ],'سجل عهد الموظفين من التسليم والاستلام إلى الإرجاع أو الفقد أو التلف، مع توثيق حالة العهدة.');
+      ],const [],'سجل عهد الموظفين من التسليم والاستلام إلى الإرجاع أو الفقد أو التلف، مع توثيق حالة العهدة.');
     }
     if (p.contains('جزاء') || p.contains('مكاف') || p.contains('عهد')) {
       return _Config(p,'erp_hr_employee_actions',const [
         _Field('employee_id','الموظف',type:'employee',required:true),_Field('action_type','نوع الإجراء',type:'choice',required:true,options:['penalty','reward']),
         _Field('action_date','التاريخ',type:'date',required:true),_Field('amount','القيمة',type:'number',required:true),
         _Field('reason','السبب',required:true),_Field('status','الحالة',type:'choice',options:['pending','approved','rejected','applied']),_Field('notes','ملاحظات'),
-      ],const [
-        {'action_type':'reward','action_date':'2026-11-02','amount':'500','reason':'أداء متميز — مثال','status':'pending'},
-        {'action_type':'penalty','action_date':'2026-11-03','amount':'100','reason':'مخالفة لائحة — مثال','status':'approved'},
-      ],'تسجيل الجزاءات والمكافآت مع السبب والقيمة وحالة الاعتماد.');
+      ],const [],'تسجيل الجزاءات والمكافآت مع السبب والقيمة وحالة الاعتماد.');
     }
     if (p.contains('تأمين') || p.contains('رخص') || p.contains('امتثال') || p.contains('مسوغات')) {
       return _Config(p,'erp_hr_employee_compliance',const [
@@ -136,10 +114,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('status','الحالة',type:'choice',required:true,options:['insured','uninsured','in_progress','valid','expired','not_required']),
         _Field('provider','الجهة / مقدم الخدمة'),_Field('reference_number','رقم المرجع'),
         _Field('issued_on','تاريخ الإصدار',type:'date'),_Field('expires_on','تاريخ الانتهاء',type:'date'),_Field('notes','ملاحظات'),
-      ],const [
-        {'record_type':'social_insurance','status':'insured','provider':'الهيئة القومية للتأمين الاجتماعي','reference_number':'مثال توضيحي'},
-        {'record_type':'license','status':'valid','provider':'جهة إصدار الرخصة','reference_number':'LIC-DEMO','expires_on':'2027-06-30'},
-      ],'ملف التأمينات والتراخيص والمسوغات مع متابعة الصلاحية وتواريخ الإصدار والانتهاء.');
+      ],const [],'ملف التأمينات والتراخيص والمسوغات مع متابعة الصلاحية وتواريخ الإصدار والانتهاء.');
     }
     if (p.contains('تدريب') || p.contains('شهادات')) {
       return _Config(p,'erp_hr_training_records',const [
@@ -147,10 +122,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('provider','جهة التدريب'),_Field('status','الحالة',type:'choice',options:['planned','in_progress','completed','expired','cancelled']),
         _Field('starts_on','تاريخ البداية',type:'date'),_Field('ends_on','تاريخ النهاية',type:'date'),
         _Field('certificate_expires_on','انتهاء الشهادة',type:'date'),_Field('notes','ملاحظات'),
-      ],const [
-        {'course_name':'سلامة الغذاء — مثال','provider':'مركز تدريب توضيحي','status':'completed','starts_on':'2026-10-10'},
-        {'course_name':'مهارات خدمة العملاء — مثال','provider':'تدريب داخلي','status':'planned','starts_on':'2026-11-20'},
-      ],'خطة التدريب وسجل التنفيذ والشهادات ومدد صلاحيتها وربطها بملف الموظف.');
+      ],const [],'خطة التدريب وسجل التنفيذ والشهادات ومدد صلاحيتها وربطها بملف الموظف.');
     }
     if (p.contains('عقد') || p.contains('عقود') || p.contains('تجديد')) {
       return _Config(p,'erp_hr_employee_contracts',const [
@@ -158,10 +130,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
         _Field('contract_type','نوع التعاقد',type:'choice',options:['بعقد','بدون عقد','شركة عمالة','مؤقت','يومية']),
         _Field('start_date','تاريخ البداية',type:'date',required:true),_Field('end_date','تاريخ النهاية',type:'date'),
         _Field('salary','الأجر المتفق عليه',type:'number'),_Field('status','الحالة',type:'choice',options:['draft','active','expired','terminated']),_Field('notes','ملاحظات'),
-      ],const [
-        {'contract_number':'CTR-DEMO-001','contract_type':'بعقد','start_date':'2026-01-01','end_date':'2026-12-31','salary':'8000','status':'active'},
-        {'contract_number':'CTR-DEMO-002','contract_type':'مؤقت','start_date':'2026-06-01','end_date':'2026-11-30','salary':'6500','status':'active'},
-      ],'إدارة العقود وتواريخ سريانها وتجديدها وانتهائها، مع ربط كل عقد بملف الموظف.');
+      ],const [],'إدارة العقود وتواريخ سريانها وتجديدها وانتهائها، مع ربط كل عقد بملف الموظف.');
     }
     return _Config(p,'erp_hr_end_of_service_settlements',const [
       _Field('employee_id','الموظف',type:'employee',required:true),_Field('service_start_date','بداية الخدمة',type:'date',required:true),
@@ -170,9 +139,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
       _Field('outstanding_advances','سلف قائمة',type:'number'),_Field('other_deductions','استقطاعات أخرى',type:'number'),
       _Field('total_entitlements','إجمالي المستحقات',type:'number'),_Field('net_amount','صافي التسوية',type:'number'),
       _Field('reason','سبب انتهاء الخدمة',required:true),_Field('status','الحالة',type:'choice',options:['pending','approved','rejected','paid']),_Field('notes','ملاحظات'),
-    ],const [
-      {'service_start_date':'2022-01-01','separation_date':'2026-11-01','basic_salary_snapshot':'7000','accrued_leave_amount':'1200','other_entitlements':'500','outstanding_advances':'300','net_amount':'1400','status':'pending'},
-    ],'إعداد تسوية نهاية الخدمة وعرض مكوناتها قبل الاعتماد والصرف. راجع القيم قبل اعتمادها.');
+    ],const [],'إعداد تسوية نهاية الخدمة وعرض مكوناتها قبل الاعتماد والصرف. راجع القيم قبل اعتمادها.');
   }
 
   static const _labels=<String,String>{
@@ -366,7 +333,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
           ]))),
         if(demo)Container(margin:const EdgeInsets.only(top:10),padding:const EdgeInsets.all(12),
           decoration:BoxDecoration(color:const Color(0xFFFFF6E7),borderRadius:BorderRadius.circular(12),border:Border.all(color:_orange)),
-          child:const Row(children:[Icon(Icons.info_outline,color:Color(0xFF9A5A00)),SizedBox(width:8),Expanded(child:Text('لا توجد سجلات فعلية في هذا القسم بعد. المعروض أمثلة توضيحية فقط ولا يتم حفظها في قاعدة البيانات.',style:TextStyle(color:Color(0xFF7A4B0A),fontWeight:FontWeight.w600)))])),
+          child:const Row(children:[Icon(Icons.info_outline,color:Color(0xFF9A5A00)),SizedBox(width:8),Expanded(child:Text('لا توجد سجلات فعلية في هذا القسم بعد.',style:TextStyle(color:Color(0xFF7A4B0A),fontWeight:FontWeight.w600)))])),
         if(_error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
         const SizedBox(height:10),
         Expanded(child:_loading?const Center(child:CircularProgressIndicator(color:_purple)):records.isEmpty
