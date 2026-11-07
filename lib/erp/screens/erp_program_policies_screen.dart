@@ -225,7 +225,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       await FileSaver.instance.saveFile(
         name: 'Silsila_Program_Policies',
         bytes: Uint8List.fromList(bytes),
-        ext: 'xlsx',
+        fileExtension: 'xlsx',
         mimeType: MimeType.microsoftExcel,
       );
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تصدير ملف Excel بنجاح.'), backgroundColor: Color(0xFF18865A)));
@@ -269,7 +269,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       await FileSaver.instance.saveFile(
         name: 'Silsila_Program_Policies',
         bytes: bytes,
-        ext: 'pdf',
+        fileExtension: 'pdf',
         mimeType: MimeType.pdf,
       );
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تصدير PDF بنجاح.'), backgroundColor: Color(0xFF18865A)));
