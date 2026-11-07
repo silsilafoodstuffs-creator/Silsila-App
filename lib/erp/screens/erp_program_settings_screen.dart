@@ -221,7 +221,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
       OutlinedButton.icon(onPressed:_editing?_pickLogo:null,icon:const Icon(Icons.upload_file_rounded,size:18),label:Text(silsilaText('اختيار صورة'))),
       if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red)),
       const SizedBox(width:10),
-      SizedBox(width:240,child:_labeledField('لغة البرنامج',DropdownButtonFormField<String>(value:_language,isExpanded:true,itemHeight:40,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:7),border:OutlineInputBorder()),items:[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null){setState(()=>_language=v);SilsilaLanguage.setLanguage(v);}}:null),labelWidth:82)),
+      SizedBox(width:240,child:_labeledField('لغة البرنامج',DropdownButtonFormField<String>(value:_language,isExpanded:true,itemHeight: 48,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:8,vertical:7),border:OutlineInputBorder()),items:[DropdownMenuItem(value:'ar',child:Text(silsilaText('العربية'))),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null){setState(()=>_language=v);SilsilaLanguage.setLanguage(v);}}:null),labelWidth:82)),
     ])))),
     _section('ألوان وهوية البرنامج',Icons.palette_outlined,Column(children:[
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:SizedBox(width:1050,child:Row(children:[
