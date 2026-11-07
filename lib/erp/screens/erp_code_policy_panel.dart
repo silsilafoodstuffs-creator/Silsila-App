@@ -361,19 +361,19 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   }
 
   Widget _field(TextEditingController c, {required int max, required bool letters, required VoidCallback changed}) =>
-    SizedBox(width:_countCellWidth, height:30, child: TextField(
+    SizedBox(width:_countCellWidth, height:40, child: TextField(
       controller:c, textAlign:TextAlign.center, maxLength:max,
       inputFormatters:[FilteringTextInputFormatter.allow(RegExp(letters ? '[a-zA-Z]' : '[0-9]'))],
       onChanged:(_) => setState(changed),
-      decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:30,maxHeight:30),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3),border:OutlineInputBorder()),
+      decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3),border:OutlineInputBorder()),
       style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700),
     ));
 
   Widget _nameField(TextEditingController controller, {bool readOnly = false}) => SizedBox(
-    width:_nameCellWidth, height:30,
+    width:_nameCellWidth, height:40,
     child:TextField(
       controller:controller, readOnly:readOnly, textAlign:TextAlign.center,
-      decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:30,maxHeight:30),border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3)),
+      decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3)),
       style:const TextStyle(fontSize:11),
     ),
   );
