@@ -843,14 +843,14 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     ),
   );
 
-  Widget _field(TextEditingController c, {double width = 150, String? hint}) => SizedBox(width: width, height: 50, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, constraints: const BoxConstraints(minHeight: 50, maxHeight: 50), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
+  Widget _field(TextEditingController c, {double width = 150, double height = 50, String? hint}) => SizedBox(width: width, height: height, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: height, maxHeight: height), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
 
 
-  Widget _row(int index, String code, String title, Widget value) => Card(
+  Widget _row(int index, String code, String title, Widget value, {double height = 50}) => Card(
     margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0,
     shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: .16)), borderRadius: BorderRadius.circular(6)),
     child: SizedBox(
-      height: 50,
+      height: height,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
         child: SingleChildScrollView(
@@ -903,7 +903,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   );
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
-      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:335,hint:'سلسلة')),
+      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:335,height:100,hint:'سلسلة'),height:100),
       _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:335,height:50,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 50,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:50,maxHeight:50),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
       _row(2,_identityPolicyCode(2),'شعار البرنامج',SizedBox(width:335,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
       _row(3,_identityPolicyCode(3),'اللون الأساسي',_colorField(_primary ,width:335)),
