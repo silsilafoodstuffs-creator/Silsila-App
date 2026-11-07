@@ -148,7 +148,7 @@ class SilsilaTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        constraints: const BoxConstraints(minHeight: 40, maxHeight: 40),
+        constraints: const BoxConstraints(minHeight: 30, maxHeight: 30),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 9,
           vertical: 4,
