@@ -274,10 +274,22 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       return start != null && end != null && !DateUtils.dateOnly(start).isAfter(today) && !DateUtils.dateOnly(end).isBefore(today);
     }).length;
   }
-  int get _contractsMissing => _realEmployees.where((e) =>
-      _isCurrentEmployee(e) &&
-      ((e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty || e['contract_type'] == 'بدون عقد') ||
-       (e['contract_type'] == 'بعقد' && (_asDate(e['contract_start_date']) == null || _asDate(e['contract_end_date']) == null)))).length;
+  int get _contractsMissing {
+    final active = _realEmployees.where(_isCurrentEmployee).toList();
+    if (_contracts.isNotEmpty) {
+      final employeesWithValidContract = _contracts.where((contract) {
+        final employeeId = contract['employee_id']?.toString();
+        final start = _asDate(contract['start_date']);
+        final end = _asDate(contract['end_date']);
+        return _realEmployeeIds.contains(employeeId) && start != null && end != null &&
+            !const ['cancelled','rejected'].contains(contract['status']?.toString().toLowerCase());
+      }).map((contract) => contract['employee_id'].toString()).toSet();
+      return active.where((employee) => !employeesWithValidContract.contains(employee['id']?.toString())).length;
+    }
+    return active.where((e) =>
+      (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty || e['contract_type'] == 'بدون عقد') ||
+      (e['contract_type'] == 'بعقد' && (_asDate(e['contract_start_date']) == null || _asDate(e['contract_end_date']) == null))).length;
+  }
   int get _licensesExpired => _compliance.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && r['record_type'] == 'license' && (r['status'] == 'expired' || (_asDate(r['expires_on'])?.isBefore(DateTime.now()) ?? false))).length;
   int get _licensesExpiringSoon => _compliance.where((r) { final d = _asDate(r['expires_on']); if (!_realEmployeeIds.contains(r['employee_id']?.toString()) || r['record_type'] != 'license' || d == null) return false; final n = DateTime.now(); final t = DateTime(n.year,n.month,n.day); final days = d.difference(t).inDays; return days >= 0 && days <= 30; }).length;
   int get _trainingPlanned => _training.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && r['status'] == 'planned').length;
