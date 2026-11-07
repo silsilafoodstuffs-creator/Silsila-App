@@ -180,7 +180,7 @@ begin
     raise exception 'ليست لديك صلاحية تسجيل دفتر الشيكات';
   end if;
   insert into public.erp_cheques(company_id,checkbook_id,bank_cashbox_id,check_number,cheque_type,direction,issue_date,amount,status,created_by)
-  select b.company_id,b.id,b.bank_cashbox_id,b.first_check_number+g.n,'bank','payment',current_date,0.01,'available',auth.uid()
+  select b.company_id,b.id,b.bank_cashbox_id,b.first_check_number+g.n,'bank','payment',current_date,0,'available',auth.uid()
   from generate_series(0,b.sheet_count-1) as g(n);
   get diagnostics v_inserted=row_count;
   update public.erp_checkbooks set registered=true,registered_at=now() where id=b.id;
