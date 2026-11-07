@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../widgets/erp_quick_task_button.dart';
 
 // Code values are generated atomically by database triggers; item codes follow the three-level category path.
 class ErpCodePolicyPanel extends StatefulWidget {
@@ -199,6 +200,18 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   }
 
   Future<void> _save() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('تأكيد الحفظ'),
+        content: const Text('هل ترغب في الحفظ؟'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('إلغاء')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حفظ')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
     for (final t in _types) {
       final key = t['key']!;
       if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(_prefix[key]!.text.trim())) {
