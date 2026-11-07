@@ -404,9 +404,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                 SizedBox(width: 8),
                                 SizedBox(width: 50, child: Text('تفعيل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
-                                SizedBox(width: 58, child: Text('على الكل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                                SizedBox(width: 8),
-                                SizedBox(width: 62, child: Text('مستخدمون', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 62, child: Text('الكل/مستخدمون', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
                                 SizedBox(width: 112, child: Text('اختيار مستخدمين', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
@@ -424,7 +422,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                               width: width,
                               child: Column(mainAxisSize: MainAxisSize.min, children: [
                                 Text(label, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 9)),
-                                SizedBox(height: 25, child: Checkbox(value: value, onChanged: onChanged, visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)),
+                                SizedBox(height: 25, child: Checkbox(value: value, onChanged: onChanged, activeColor: onChanged == null && value ? Colors.green : null, fillColor: onChanged == null && value ? const WidgetStatePropertyAll<Color>(Colors.green) : null, visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap)),
                               ]),
                             );
                             return Card(
@@ -499,14 +497,18 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                   const SizedBox(width: 8),
                                   checkColumn('تفعيل', mandatory || p['enabled'] == true, mandatory ? null : (v) => setState(() => p['enabled'] = v == true), 50),
                                   const SizedBox(width: 8),
-                                  checkColumn('على الكل', mandatory || all, mandatory ? null : (v) => setState(() { p['all'] = v == true; if (v == true) p['user_ids'] = <String>[]; }), 58),
+                                  checkColumn('الكل/مستخدمون', mandatory || all, mandatory ? null : (v) => setState(() { p['all'] = v == true; if (v == true) p['user_ids'] = <String>[]; }), 62),
                                   const SizedBox(width: 8),
-                                  checkColumn('مستخدمون', !all, mandatory ? null : (v) => setState(() { p['all'] = v != true; if (v == true && (p['user_ids'] as List).isEmpty) p['user_ids'] = <String>[]; }), 62),
-                                  const SizedBox(width: 8),
-                                  SizedBox(width: 112, height: 28, child: OutlinedButton(
-                                    onPressed: mandatory || all ? null : () => _pickUsers(p),
-                                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                                    child: const Text('F1 اختيار مستخدمين', maxLines: 1, style: TextStyle(fontSize: 9)),
+                                  SizedBox(width: 112, height: 28, child: Focus(
+                                    onKeyEvent: (node, event) {
+                                      if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f1 && !mandatory && !all) { _pickUsers(p); return KeyEventResult.handled; }
+                                      return KeyEventResult.ignored;
+                                    },
+                                    child: OutlinedButton(
+                                      onPressed: mandatory || all ? null : () => _pickUsers(p),
+                                      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                                      child: const Text('F1 اختيار مستخدمين', maxLines: 1, style: TextStyle(fontSize: 9)),
+                                    ),
                                   )),
                                   const SizedBox(width: 8),
                                   SizedBox(width: 58, child: Text(mandatory ? '—' : (p['user_ids'] as List).length.toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
