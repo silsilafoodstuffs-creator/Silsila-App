@@ -323,7 +323,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             const Icon(Icons.policy_outlined, color: Color(0xFFFFA015), size: 23),
             const SizedBox(width: 6),
             const Expanded(child: Text('سياسات البرنامج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17))),
-            SizedBox(width: 190, height: 30, child: TextField(
+            SizedBox(width: 190, height: 40, child: TextField(
               controller: _searchController,
               style: const TextStyle(fontSize: 11),
               textInputAction: TextInputAction.search,
@@ -338,7 +338,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
               ),
             )),
             const SizedBox(width: 3),
-            SizedBox(height: 30, child: FilledButton.tonalIcon(
+            SizedBox(height: 40, child: FilledButton.tonalIcon(
               onPressed: () => setState(() => policySearch = _searchController.text),
               icon: const Icon(Icons.search, size: 15),
               label: const Text('بحث', style: TextStyle(fontSize: 11)),
@@ -447,7 +447,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                         Expanded(child: TextFormField(
                                           key: ValueKey('fiscal-from-' + (p['value'] ?? '').toString()),
                                           initialValue: ((p['value'] ?? '01/01 - 12/31').toString().split(' - ').first),
-                                          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 30, maxHeight: 30), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                           style: const TextStyle(fontSize: 10),
                                           onChanged: (v) {
                                             final parts = (p['value'] ?? '01/01 - 12/31').toString().split(' - ');
@@ -778,7 +778,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
               borderRadius: BorderRadius.circular(20),
               child: Container(
                 width: 30,
-                height: 30,
+                height: 40,
                 decoration: BoxDecoration(
                   color: color,
                   shape: BoxShape.circle,
@@ -801,7 +801,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
 
   Widget _colorField(TextEditingController controller, {double width = 145}) => SizedBox(
     width: width,
-    height: 30,
+    height: 40,
     child: Row(
       children: [
         Expanded(
@@ -812,7 +812,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
             style: const TextStyle(fontSize: 10),
             decoration: const InputDecoration(
               isDense: true,
-              constraints: BoxConstraints(minHeight: 30, maxHeight: 30),
+              constraints: BoxConstraints(minHeight: 40, maxHeight: 40),
               contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
               border: OutlineInputBorder(),
             ),
@@ -821,7 +821,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         const SizedBox(width: 3),
         SizedBox(
           width: 28,
-          height: 30,
+          height: 40,
           child: IconButton(
             padding: EdgeInsets.zero,
             visualDensity: VisualDensity.compact,
@@ -843,7 +843,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     ),
   );
 
-  Widget _field(TextEditingController c, {double width = 150, double height = 30, String? hint}) => SizedBox(width: width, height: height, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: height, maxHeight: height), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
+  Widget _field(TextEditingController c, {double width = 150, double height = 40, String? hint}) => SizedBox(width: width, height: height, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: height, maxHeight: height), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
 
 
   Widget _row(int index, String code, String title, Widget value, {double height = 40}) => Card(
@@ -874,37 +874,37 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   );
 
   Widget _fontStyleValue(int i) => SizedBox(
-    height: 30,
+    height: 40,
     child: Row(children: [
       SizedBox(
         width: 126,
-        height: 30,
+        height: 40,
         child: DropdownButtonFormField<String>(
           value: _fonts[i], isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 260,
-          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 30, maxHeight: 30), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
           items: _fontOptions.map((f) => DropdownMenuItem(value: f, child: Text(f, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis))).toList(),
           onChanged: _editing ? (v) { if (v != null) setState(() => _fonts[i] = v); } : null,
         ),
       ),
       const SizedBox(width: 5),
       SizedBox(
-        width: 48, height: 30,
+        width: 48, height: 40,
         child: TextField(
           controller: _sizes[i], enabled: _editing,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 10),
-          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 50, maxHeight: 50), hintText: 'حجم', contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
+          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), hintText: 'حجم', contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
         ),
       ),
       const SizedBox(width: 5),
-      SizedBox(height: 30, child: _colorField(_colors[i], width: 145)),
+      SizedBox(height: 40, child: _colorField(_colors[i], width: 145)),
     ]),
   );
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
       _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:335,height:30,hint:'سلسلة'),height:40),
-      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:335,height:30,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 50,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:30,maxHeight:30),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
+      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:335,height:40,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 48,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:30,maxHeight:30),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
       _row(2,_identityPolicyCode(2),'شعار البرنامج',SizedBox(width:335,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
       _row(3,_identityPolicyCode(3),'اللون الأساسي',_colorField(_primary ,width:335)),
       _row(4,_identityPolicyCode(4),'اللون الثانوي',_colorField(_secondary ,width:335)),
