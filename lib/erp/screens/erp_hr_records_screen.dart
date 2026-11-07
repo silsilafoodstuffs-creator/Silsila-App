@@ -229,7 +229,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
                 : f.type=='branch'
                   ? _branches.map((e)=>DropdownMenuItem<String>(value:e['id'].toString(),child:Text((e['branch_name']??e['branch_code']).toString(),overflow:TextOverflow.ellipsis))).toList()
                   : f.options.map((v)=>DropdownMenuItem<String>(value:v,child:Text(_label(v)))).toList();
-          return Padding(padding:const EdgeInsets.only(bottom:12),child:DropdownButtonFormField<String>(itemHeight: 40, 
+          return Padding(padding:const EdgeInsets.only(bottom:12),child:DropdownButtonFormField<String>(itemHeight: 48, 
             value:selected[f.key],isExpanded:true,decoration:InputDecoration(labelText:f.label,border:const OutlineInputBorder()),
             items:items,onChanged:(v)=>setD(()=>selected[f.key]=v),
             validator:f.required?(v)=>v==null?'هذا الحقل مطلوب':null:null,
