@@ -70,4 +70,37 @@ void main() {
     expect(find.text('آخر 6 أشهر'), findsOneWidget);
     expect(find.text('آخر 12 شهرًا'), findsWidgets);
   });
+  test('operational employee filtering excludes temporary, Arabic test, and demo rows', () {
+    final rows = filterHrOperationalEmployees([
+      {'id': 'real-1', 'notes': 'موظف فعلي'},
+      {'id': 'seed-1', 'notes': 'بيانات أولية مؤقتة'},
+      {'id': 'test-1', 'notes': 'سجل اختبار'},
+      {'id': 'demo-1', 'notes': 'demo employee'},
+      {'id': 'test-status', 'employment_status': 'test'},
+    ]);
+
+    expect(rows.map((row) => row['id']).toList(), ['real-1']);
+  });
+
+  test('operational employee filtering does not treat an empty source as complete data', () {
+    expect(filterHrOperationalEmployees([]), isEmpty);
+  });
+
+  testWidgets('HR dashboard exposes performance and vacancy data-quality notices',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: ErpHrExecutiveDashboardScreen(companyId: null),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final scrollable = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(find.text('تقييم الأداء'), 450, scrollable: scrollable);
+    expect(find.text('تقييم الأداء'), findsOneWidget);
+    expect(find.textContaining('غير متاح — لا توجد تقييمات مكتملة'), findsOneWidget);
+    await tester.scrollUntilVisible(find.textContaining('الوظائف الشاغرة: غير متاحة'), 450, scrollable: scrollable);
+    expect(find.textContaining('الوظائف الشاغرة: غير متاحة'), findsOneWidget);
+  });
+
 }
