@@ -316,7 +316,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
                     ],
                   ),
                   if (filterType != 'all')
-                    DropdownButtonFormField<String>(itemHeight: 40, 
+                    DropdownButtonFormField<String>(itemHeight: 48, 
                       value: filterValue,
                       isExpanded: true,
                       decoration: InputDecoration(
@@ -541,7 +541,7 @@ Widget build(BuildContext context)=>ErpKeyboardActionRegistrar(save: _save, chil
         const Text('طريقة تحديد الصلاحيات',style:TextStyle(fontWeight:FontWeight.w900,color:_permPurple)),
         const SizedBox(height:8),
         SegmentedButton<String>(segments:const[ButtonSegment(value:'template',label:Text('قالب جاهز')),ButtonSegment(value:'manual',label:Text('تحديد يدوي'))],selected:{_mode},onSelectionChanged:(v)=>setState(()=>_mode=v.first)),
-        if(_mode=='template')Padding(padding:const EdgeInsets.only(top:8),child:DropdownButtonFormField<String>(itemHeight: 40, value:_template,decoration:const InputDecoration(labelText:'القالب',isDense:true),items:const['مدير النظام','مدير','محاسب','مشغل','عرض فقط','مخصص بلا صلاحيات'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v){if(v!=null)_applyTemplate(v);})),
+        if(_mode=='template')Padding(padding:const EdgeInsets.only(top:8),child:DropdownButtonFormField<String>(itemHeight: 48, value:_template,decoration:const InputDecoration(labelText:'القالب',isDense:true),items:const['مدير النظام','مدير','محاسب','مشغل','عرض فقط','مخصص بلا صلاحيات'].map((x)=>DropdownMenuItem(value:x,child:Text(x))).toList(),onChanged:(v){if(v!=null)_applyTemplate(v);})),
         const SizedBox(height:8),
         Row(
           children: [
@@ -558,7 +558,7 @@ Widget build(BuildContext context)=>ErpKeyboardActionRegistrar(save: _save, chil
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: DropdownButtonFormField<String>(itemHeight: 40, 
+              child: DropdownButtonFormField<String>(itemHeight: 48, 
                 value: _userFilterType,
                 decoration: const InputDecoration(labelText: 'تصفية حسب', isDense: true),
                 items: const [
@@ -577,7 +577,7 @@ Widget build(BuildContext context)=>ErpKeyboardActionRegistrar(save: _save, chil
         if (_userFilterType != 'all')
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: DropdownButtonFormField<String>(itemHeight: 40, 
+            child: DropdownButtonFormField<String>(itemHeight: 48, 
               value: _userFilterValues.contains(_userFilterValue) ? _userFilterValue : '__all__',
               isExpanded: true,
               decoration: InputDecoration(
@@ -599,7 +599,7 @@ Widget build(BuildContext context)=>ErpKeyboardActionRegistrar(save: _save, chil
           style: const TextStyle(fontSize: 12, color: Colors.black54),
         ),
         const SizedBox(height:8),
-        DropdownButtonFormField<String>(itemHeight: 40, 
+        DropdownButtonFormField<String>(itemHeight: 48, 
           value:_menuScope,
           decoration:const InputDecoration(labelText:'نطاق القوائم',isDense:true),
           items:[
