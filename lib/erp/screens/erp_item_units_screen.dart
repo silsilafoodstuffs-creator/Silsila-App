@@ -262,7 +262,7 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Text('وحدات الأصناف', style: TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
+          DropdownButtonFormField<String>(itemHeight: 40, 
             value: _activities.any((a) => _s(a['code']) == _activityCode) ? _activityCode : null,
             decoration: const InputDecoration(labelText: 'نوع النشاط', filled: true, fillColor: Colors.white),
             items: _activities.map((a) => DropdownMenuItem(value: _s(a['code']), child: Text(_s(a['name'])))).toList(),
