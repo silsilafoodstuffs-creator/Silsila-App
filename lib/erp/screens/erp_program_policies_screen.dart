@@ -90,6 +90,30 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         ..clear()
         ..addEntries((rows as List).whereType<Map<String,dynamic>>().map((row) => MapEntry((row['policy_key'] ?? '').toString(), (row['policy_code'] ?? '').toString())));
       for(final row in (rows as List).whereType<Map<String,dynamic>>()) { final key=(row['policy_key']??'').toString(); if(!values.containsKey(key))continue; final p=values[key]!; p['enabled']=row['is_enabled']==true; p['all']=row['apply_to_all']==true || p['mandatory']==true; p['value']=(row['policy_value']??p['value']??'').toString(); p['user_ids']=List<String>.from((row['user_ids'] as List?)??const []); }
+      // Upgrade the earlier descriptive text to the persisted, editable dimensions object.
+      final layoutPolicy = values['ui_layout_standard'];
+      if (layoutPolicy != null) {
+        var validLayout = false;
+        try {
+          final parsed = jsonDecode((layoutPolicy['value'] ?? '').toString());
+          validLayout = parsed is Map && parsed['row_height'] != null && parsed['field_height'] != null && parsed['column_spacing'] != null;
+        } catch (_) {}
+        if (!validLayout) {
+          layoutPolicy['value'] = jsonEncode({'row_height': 50, 'field_height': 40, 'column_spacing': 3});
+          await db.from('erp_program_policies').upsert({
+            'company_id': company,
+            'policy_key': 'ui_layout_standard',
+            'category': 'برمجية',
+            'name_ar': layoutPolicy['ar'],
+            'name_en': layoutPolicy['en'],
+            'is_enabled': true,
+            'apply_to_all': true,
+            'user_ids': <String>[],
+            'policy_value': layoutPolicy['value'],
+            'policy_code': _policyCodes['ui_layout_standard'],
+          }, onConflict: 'company_id,policy_key');
+        }
+      }
       final us=await db.from('erp_users').select('id,user_code,name_ar').eq('company_id',company);
       if(mounted)setState(() { users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)); loading=false; });
     } catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل السياسات. طبّق migration سياسات البرنامج أولاً. $e'; }); if(propagateError) rethrow;}
