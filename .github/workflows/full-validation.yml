@@ -86,18 +86,23 @@ jobs:
           done
           node tools/web_view_test.mjs http://127.0.0.1:8765/Silsila-App/
 
+      # Keep Android build and artifact collection running even when WebView
+      # fails, so one failed browser assertion does not hide other build results.
       - name: Build Android debug APK
+        if: always() && !cancelled()
         run: flutter build apk --debug
 
       - name: Verify Android APK output
+        if: always() && !cancelled()
         run: test -s build/app/outputs/flutter-apk/app-debug.apk
 
       - name: Upload consolidated validation artifacts
+        if: always() && !cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: silsila-full-validation-${{ github.run_number }}
           path: |
             build/web/
             build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
