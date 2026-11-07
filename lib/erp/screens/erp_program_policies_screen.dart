@@ -100,6 +100,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         } catch (_) {}
         if (!validLayout) {
           layoutPolicy['value'] = jsonEncode({'row_height': 50, 'field_height': 40, 'column_spacing': 3});
+          layoutPolicy['enabled'] = true;
+          layoutPolicy['all'] = true;
           await db.from('erp_program_policies').upsert({
             'company_id': company,
             'policy_key': 'ui_layout_standard',
