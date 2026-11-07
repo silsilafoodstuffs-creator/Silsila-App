@@ -80,14 +80,14 @@ class _ErpCustomerShortagesScreenState extends State<ErpCustomerShortagesScreen>
           Card(child: Padding(
             padding: const EdgeInsets.all(12),
             child: Wrap(spacing: 10, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
-              SizedBox(width: 230, child: DropdownButtonFormField<String?>(
+              SizedBox(width: 230, child: DropdownButtonFormField<String?>(itemHeight: 40, 
                 value: _customerId,
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'العميل', border: OutlineInputBorder(), isDense: true),
                 items: [const DropdownMenuItem<String?>(value: null, child: Text('كل العملاء')), ..._customers.map((c) => DropdownMenuItem<String?>(value: _s(c['id']), child: Text(_s(c['party_name']), overflow: TextOverflow.ellipsis)))],
                 onChanged: (v) => setState(() => _customerId = v),
               )),
-              SizedBox(width: 170, child: DropdownButtonFormField<String>(
+              SizedBox(width: 170, child: DropdownButtonFormField<String>(itemHeight: 40, 
                 value: _status,
                 decoration: const InputDecoration(labelText: 'الحالة', border: OutlineInputBorder(), isDense: true),
                 items: const [
