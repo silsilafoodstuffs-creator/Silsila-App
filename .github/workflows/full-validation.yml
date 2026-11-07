@@ -48,6 +48,26 @@ jobs:
             echo "Existing Android project files detected; preserving them."
           fi
 
+      - name: Configure Android NDK version required by plugins
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle.kts")
+          if not p.exists():
+              raise SystemExit("Android Gradle Kotlin file was not generated")
+          source = p.read_text()
+          version = 'ndkVersion = "27.0.12077973"'
+          if version not in source:
+              marker = "android {"
+              if marker not in source:
+                  raise SystemExit("Android configuration block not found")
+              source = source.replace(marker, marker + "\n    " + version, 1)
+              p.write_text(source)
+          print("Configured Android NDK 27.0.12077973")
+          PY
+
       - name: Resolve Flutter dependencies
         run: flutter pub get
 
