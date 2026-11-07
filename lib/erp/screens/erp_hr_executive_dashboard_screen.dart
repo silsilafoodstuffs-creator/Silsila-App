@@ -37,6 +37,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   List<Map<String, dynamic>> _employees = [];
   List<Map<String, dynamic>> _departments = [];
   List<Map<String, dynamic>> _jobs = [];
+  List<Map<String, dynamic>> _workLocations = [];
+  List<Map<String, dynamic>> _staffingPlans = [];
   List<Map<String, dynamic>> _documents = [];
   List<Map<String, dynamic>> _attendance = [];
   List<Map<String, dynamic>> _payrollRuns = [];
@@ -69,7 +71,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       final dateStart = '${monthStart.year.toString().padLeft(4, '0')}-${monthStart.month.toString().padLeft(2, '0')}-01';
       final dateEnd = '${monthEnd.year.toString().padLeft(4, '0')}-${monthEnd.month.toString().padLeft(2, '0')}-${monthEnd.day.toString().padLeft(2, '0')}';
       final results = await Future.wait([
-        _db.from('erp_employees').select('id,employee_code,full_name,department_name,job_title,is_active,employment_status,work_unit,job_id,hire_date,contract_type,contract_start_date,contract_end_date,notes').eq('company_id', companyId).limit(3000),
+        _db.from('erp_employees').select('id,employee_code,full_name,department_name,job_title,is_active,employment_status,work_unit,job_id,work_location_id,hire_date,contract_type,contract_start_date,contract_end_date,notes').eq('company_id', companyId).limit(3000),
         _db.from('erp_hr_departments').select('id,department_code,name_ar,department_level,parent_id,is_active').eq('company_id', companyId).limit(1000),
         _db.from('erp_hr_jobs').select('id,job_code,name_ar,department_id,is_active,requires_photo,requires_birth_certificate,requires_qualification_certificate,requires_work_card,requires_insurance_printout,requires_military_service,requires_criminal_record,requires_trust_receipt,requires_health_certificate,requires_driving_license,requires_id_copy,requires_bank_account').eq('company_id', companyId).limit(1000),
         _db.from('erp_employee_documents').select('employee_id,doc_type').eq('company_id', companyId).limit(10000),
@@ -83,6 +85,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
         _db.from('erp_hr_employee_contracts').select('id,employee_id,contract_number,contract_type,start_date,end_date,status').eq('company_id', companyId).order('start_date', ascending: false).limit(5000),
         _db.from('erp_hr_performance_reviews').select('id,employee_id,period_start,period_end,score,rating,status').eq('company_id', companyId).order('period_end', ascending: false).limit(5000),
         _db.from('erp_payroll_lines').select('id,payroll_run_id,employee_id,basic_amount,allowances,commissions,overtime_amount,deductions,gross_amount,net_amount').eq('company_id', companyId).limit(20000),
+        _db.from('erp_hr_work_locations').select('id,location_code,name_ar,is_active').eq('company_id', companyId).eq('is_active', true).order('name_ar').limit(500),
+        _db.from('erp_hr_staffing_plans').select('id,job_id,work_location_id,authorized_headcount,effective_from,effective_to,status,notes').eq('company_id', companyId).order('effective_from', ascending: false).limit(2000),
       ]);
       if (!mounted) return;
       setState(() {
@@ -100,6 +104,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
         _contracts = List<Map<String, dynamic>>.from(results[11]);
         _performanceReviews = List<Map<String, dynamic>>.from(results[12]);
         _payrollLines = List<Map<String, dynamic>>.from(results[13]);
+        _workLocations = List<Map<String, dynamic>>.from(results[14]);
+        _staffingPlans = List<Map<String, dynamic>>.from(results[15]);
         _loading = false;
       });
     } catch (e) {
@@ -137,6 +143,52 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _inactiveEmployees => _realEmployees.where((e) => e['is_active'] != true).length;
   int get _activeDepartments => _departments.where((e) => e['is_active'] != false).length;
   int get _activeJobs => _jobs.where((e) => e['is_active'] != false).length;
+
+  List<Map<String, dynamic>> get _activeStaffingPlans {
+    final today = DateUtils.dateOnly(DateTime.now());
+    return _staffingPlans.where((plan) {
+      if (plan['status']?.toString() != 'approved') return false;
+      final start = _asDate(plan['effective_from']);
+      final end = _asDate(plan['effective_to']);
+      return start != null &&
+          !DateUtils.dateOnly(start).isAfter(today) &&
+          (end == null || !DateUtils.dateOnly(end).isBefore(today));
+    }).toList();
+  }
+
+  int _employeesAssignedToStaffingPlan(Map<String, dynamic> plan) {
+    final jobId = plan['job_id']?.toString();
+    final locationId = plan['work_location_id']?.toString();
+    return _realEmployees.where((employee) {
+      if (!_isCurrentEmployee(employee) ||
+          employee['job_id']?.toString() != jobId) return false;
+      return locationId == null ||
+          employee['work_location_id']?.toString() == locationId;
+    }).length;
+  }
+
+  int get _approvedStaffingHeadcount => _activeStaffingPlans.fold<int>(
+      0, (sum, plan) => sum + ((plan['authorized_headcount'] as num?)?.toInt() ?? 0));
+
+  int get _staffingFilledPositions => _activeStaffingPlans.fold<int>(
+      0, (sum, plan) => sum + calculateHrStaffingFilledPositions(
+        (plan['authorized_headcount'] as num?)?.toInt() ?? 0,
+        _employeesAssignedToStaffingPlan(plan),
+      ));
+
+  int get _staffingVacancies => _activeStaffingPlans.fold<int>(
+      0, (sum, plan) => sum + calculateHrStaffingVacancies(
+        (plan['authorized_headcount'] as num?)?.toInt() ?? 0,
+        _employeesAssignedToStaffingPlan(plan),
+      ));
+
+  int get _staffingOverCapacity => _activeStaffingPlans.fold<int>(
+      0, (sum, plan) {
+        final occupied = _employeesAssignedToStaffingPlan(plan);
+        final authorized = (plan['authorized_headcount'] as num?)?.toInt() ?? 0;
+        return sum + (occupied > authorized ? occupied - authorized : 0);
+      });
+
   int get _unassignedJobs => _jobs.where((j) => j['department_id'] == null).length;
   int get _departmentsWithoutJobs => _departments.where((d) =>
       !_jobs.any((j) => j['department_id']?.toString() == d['id']?.toString())).length;
@@ -394,6 +446,176 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       'created_by': _db.auth.currentUser?.id,
     });
     if (mounted) await _load();
+  }
+
+  Future<void> _addStaffingPlan() async {
+    final companyId = widget.companyId;
+    if (companyId == null || companyId.isEmpty) {
+      _showMessage('اختر الشركة أولًا.');
+      return;
+    }
+    final jobs = _jobs.where((job) => job['is_active'] != false).toList();
+    if (jobs.isEmpty) {
+      _showMessage('عرّف وظيفة نشطة واحدة على الأقل قبل تسجيل الملاك الوظيفي.');
+      return;
+    }
+
+    final headcount = TextEditingController(text: '1');
+    final effectiveFrom = TextEditingController(text: _displayDate(DateTime.now()));
+    final effectiveTo = TextEditingController();
+    final notes = TextEditingController();
+    String? jobId = jobs.first['id']?.toString();
+    String? workLocationId;
+    String status = 'draft';
+
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, refresh) => AlertDialog(
+            title: const Text('إضافة خطة ملاك وظيفي معتمد'),
+            content: SizedBox(
+              width: 480,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: jobId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'الوظيفة *'),
+                      items: jobs.map((job) => DropdownMenuItem<String>(
+                        value: job['id'].toString(),
+                        child: Text(
+                          '${job['job_code'] ?? ''} • ${job['name_ar'] ?? ''}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      )).toList(),
+                      onChanged: (value) => refresh(() => jobId = value),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String?>(
+                      value: workLocationId,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'موقع العمل'),
+                      items: [
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('كل مواقع الشركة'),
+                        ),
+                        ..._workLocations.map((location) =>
+                          DropdownMenuItem<String?>(
+                            value: location['id'].toString(),
+                            child: Text(
+                              location['name_ar']?.toString() ?? 'موقع عمل',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          )),
+                      ],
+                      onChanged: (value) =>
+                          refresh(() => workLocationId = value),
+                    ),
+                    TextField(
+                      controller: headcount,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'عدد الوظائف المعتمدة *',
+                      ),
+                    ),
+                    TextField(
+                      controller: effectiveFrom,
+                      decoration: const InputDecoration(
+                        labelText: 'تاريخ بداية السريان DD-MM-YYYY *',
+                      ),
+                    ),
+                    TextField(
+                      controller: effectiveTo,
+                      decoration: const InputDecoration(
+                        labelText: 'تاريخ نهاية السريان DD-MM-YYYY (اختياري)',
+                      ),
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: status,
+                      decoration: const InputDecoration(labelText: 'حالة الخطة'),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'draft',
+                          child: Text('مسودة'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'pending_approval',
+                          child: Text('بانتظار الاعتماد'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'approved',
+                          child: Text('معتمدة'),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          refresh(() => status = value ?? status),
+                    ),
+                    TextField(
+                      controller: notes,
+                      maxLines: 2,
+                      decoration: const InputDecoration(labelText: 'ملاحظات'),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'لا تدخل الخطة في حساب الشواغر إلا بعد اعتمادها وبدء فترة سريانها. يمنع النظام تداخل خطتين معتمدتين للوظيفة والموقع نفسيهما.',
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  final count = int.tryParse(headcount.text.trim());
+                  if (jobId == null || count == null || count < 0) {
+                    _showMessage('اختر الوظيفة واكتب عددًا صحيحًا غير سالب.');
+                    return;
+                  }
+                  try {
+                    final from = _dateValue(effectiveFrom.text);
+                    final to = _dateValue(effectiveTo.text);
+                    if (from == null ||
+                        (to != null && DateTime.parse(to).isBefore(DateTime.parse(from)))) {
+                      _showMessage('راجع تاريخ بداية ونهاية سريان الخطة.');
+                      return;
+                    }
+                    await _db.from('erp_hr_staffing_plans').insert({
+                      'company_id': companyId,
+                      'job_id': jobId,
+                      'work_location_id': workLocationId,
+                      'authorized_headcount': count,
+                      'effective_from': from,
+                      'effective_to': to,
+                      'status': status,
+                      'notes': notes.text.trim(),
+                    });
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (mounted) await _load();
+                  } catch (e) {
+                    _showMessage('تعذر حفظ خطة الملاك: $e');
+                  }
+                },
+                child: const Text('حفظ خطة الملاك'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      headcount.dispose();
+      effectiveFrom.dispose();
+      effectiveTo.dispose();
+      notes.dispose();
+    }
   }
 
   Future<void> _addCompliance() async {
@@ -700,6 +922,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                 _metric('غير نشطين', _inactiveEmployees.toString(), 'ملفات غير محددة كنشطة', Icons.person_off_outlined, Colors.red.shade700),
                 _metric('الإدارات النشطة', _activeDepartments.toString(), 'من الهيكل التنظيمي', Icons.account_tree_outlined, _hrOrange),
                 _metric('الوظائف النشطة', _activeJobs.toString(), 'وظائف معرفة بالهيكل', Icons.work_outline, _hrPink),
+                _metric('شواغر الملاك المعتمد', _activeStaffingPlans.isEmpty ? '—' : _staffingVacancies.toString(), _activeStaffingPlans.isEmpty ? 'اعتمد خطة ملاك سارية أولًا' : 'بعد المقارنة بالموظفين الفعليين', Icons.work_off_outlined, _hrOrange),
               ],
             );
           }),
@@ -707,7 +930,14 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           _sectionTitle('الهيكل التنظيمي والوظائف', Icons.corporate_fare_outlined),
           _panel(children: [
             _progressRow('الوظائف النشطة', _activeJobs, _jobs.length, _hrPurple),
-            _notice('الوظائف الشاغرة: غير متاحة للحساب حاليًا؛ قاعدة البيانات لا تحتوي جدول طلبات شغل أو ملاك وظيفي معتمد، وتعريف الوظائف وحده لا يثبت وجود شاغر.', Icons.info_outline, Colors.blueGrey),
+            if (_activeStaffingPlans.isEmpty)
+              _notice('الملاك الوظيفي والشواغر غير متاحين حاليًا: لا توجد خطة ملاك معتمدة وسارية. لا يتم استنتاج الشواغر من كتالوج الوظائف.', Icons.info_outline, Colors.blueGrey)
+            else ...[
+              _progressRow('الموظفون المشغولون من الملاك', _staffingFilledPositions, _approvedStaffingHeadcount, _hrPurple),
+              _alert('الوظائف الشاغرة حسب الملاك المعتمد', 'عدد الشواغر المحسوب من الخطط المعتمدة السارية: $_staffingVacancies.', _staffingVacancies > 0 ? Colors.orange : Colors.green),
+              if (_staffingOverCapacity > 0)
+                _alert('تجاوز الملاك المعتمد', 'عدد الموظفين الفعليين الزائدين عن العدد المعتمد في بعض الخطط: $_staffingOverCapacity.', Colors.orange),
+            ],
             _progressRow('إدارات بلا وظائف مرتبطة', _departmentsWithoutJobs, _departments.length, _hrOrange),
             _progressRow('وظائف غير مرتبطة بإدارة', _unassignedJobs, _jobs.length, _hrPink),
             _progressRow('موظفون بلا وظيفة محددة', _employeesWithoutJob, _realEmployees.length, _hrPink),
@@ -825,6 +1055,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           const SizedBox(height: 18),
           _sectionTitle('إدارة وتسجيل بيانات الموارد البشرية', Icons.add_task_outlined),
           if (widget.canManage) Wrap(spacing: 8, runSpacing: 8, children: [
+            OutlinedButton.icon(onPressed: _loading ? null : _addStaffingPlan, icon: const Icon(Icons.groups_outlined), label: const Text('إضافة خطة ملاك وظيفي')),
             OutlinedButton.icon(onPressed: _loading ? null : _addCompliance, icon: const Icon(Icons.health_and_safety_outlined), label: const Text('إضافة تأمين / رخصة')),
             OutlinedButton.icon(onPressed: _loading ? null : _addTraining, icon: const Icon(Icons.school_outlined), label: const Text('تسجيل تدريب')),
             OutlinedButton.icon(onPressed: _loading ? null : _addCandidate, icon: const Icon(Icons.person_search_outlined), label: const Text('إضافة متقدم وظيفة')),
