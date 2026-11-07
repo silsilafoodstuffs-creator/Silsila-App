@@ -305,7 +305,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           'center':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text),
           'area':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text) + int.parse(_geoSegments['area']!.text),
         },
-        // New UI contract: each level contributes exactly two digits.
+        // Each geographic level contributes its configured number of digits.
         'geo_segment_lengths':{
           'country':2,
           'governorate':int.parse(_geoSegments['governorate']!.text),
@@ -412,20 +412,20 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
       
       _firstFieldName(),  const SizedBox(width:_countCellWidth,height:_cellHeight), 
-      _geoNameCell('منطقة/قرية'),  _segmentField('عدد',_geoSegments['area']!,2),
-       _geoNameCell('حي/مركز/شياخة'),  _segmentField('عدد',_geoSegments['center']!,2),
-       _geoNameCell('محافظة'),  _segmentField('عدد',_geoSegments['governorate']!,2),
+      _geoNameCell('منطقة/قرية'),  _segmentField('عدد',_geoSegments['area']!,2,width:_countCellWidth),
+       _geoNameCell('حي/مركز/شياخة'),  _segmentField('عدد',_geoSegments['center']!,2,width:_countCellWidth),
+       _geoNameCell('محافظة'),  _segmentField('عدد',_geoSegments['governorate']!,2,width:_countCellWidth),
        _geoNameCell('دولة'),  const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('2',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       
       SizedBox(width:112,child:Text(_geoPrefix.text,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),
-      const SizedBox(width:112,child:Text('Rig + 8 أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10))),
+      SizedBox(width:112,child:Text('Rig + ${2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text) + int.parse(_geoSegments['area']!.text)} أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10))),
     ])),
   );
 
-  Widget _geoNameCell(String name) => SizedBox(width:124,height:_cellHeight,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
+  Widget _geoNameCell(String name) => SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
 
-  Widget _segmentField(String label, TextEditingController controller, int max) => SizedBox(
-    width:112,
+  Widget _segmentField(String label, TextEditingController controller, int max, {double width = 112}) => SizedBox(
+    width:width,
     height:_cellHeight,
     child:TextField(
       controller:controller,
@@ -568,7 +568,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           const SizedBox(height:8),
           Text('الصيغة: ${_itemPrefix.text.trim()} + فئة رئيسية (${_itemSegments['main']!.text}) + فئة فرعية (${_itemSegments['sub']!.text}) + فئة ثانوية (${_itemSegments['secondary']!.text}) + براند/ ماركة (${_itemSegments['brand']!.text}) + تسلسل (${_itemSegments['serial']!.text})',style:const TextStyle(fontSize:11)),
           Text('المعاينة الأولى: ${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
-          const Text('القيم الافتراضية: 2 / 2 / 2 / 2 / 2. كل مستوى رقمي مكوّن من خانتين.',style:TextStyle(fontSize:10,color:Colors.black54)),
+          const Text('القيم الافتراضية: 2 / 2 / 2 / 2 / 2. يمكن تعديل أطوال مستويات التقسيم الجغرافي من 1 إلى 6 خانات لكل مستوى.',style:TextStyle(fontSize:10,color:Colors.black54)),
         ]))),
         if(_error!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
         if(_message!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
