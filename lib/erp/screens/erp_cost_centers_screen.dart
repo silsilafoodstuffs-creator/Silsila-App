@@ -420,7 +420,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
                   DataCell(Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(color: isChild ? const Color(0xFFEDE3FA) : const Color(0xFFE5F2EA), borderRadius: BorderRadius.circular(7)),
                     child: Text(isChild ? 'فرعي' : 'رئيسي', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: isChild ? _costPurple : const Color(0xFF176B3A))))),
-                  DataCell(SizedBox(width: 175, child: DropdownButtonHideUnderline(child: DropdownButton<String>(itemHeight: 40, 
+                  DataCell(SizedBox(width: 175, child: DropdownButtonHideUnderline(child: DropdownButton<String>(itemHeight: 48, 
                     isExpanded: true, isDense: true,
                     value: _branches.any((b) => _s(b['id']) == _s(r['branch_id'])) ? _s(r['branch_id']) : '',
                     items: [
