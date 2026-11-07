@@ -347,7 +347,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         const SizedBox(height: 2),
         DropdownButtonFormField<int>(
           value: options.contains(dimensions[key]) ? dimensions[key] : options.first,
-          isExpanded: true, isDense: true, itemHeight: 40,
+          isExpanded: true, isDense: true, itemHeight: 48,
           decoration: const InputDecoration(
             isDense: true,
             constraints: BoxConstraints(minHeight: 40, maxHeight: 40),
