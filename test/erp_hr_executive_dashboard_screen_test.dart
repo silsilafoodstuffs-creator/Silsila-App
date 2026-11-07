@@ -40,7 +40,10 @@ void main() {
     expect(find.text('إجمالي الموظفين'), findsOneWidget);
     expect(find.textContaining('افتح بيانات الشركة أولاً'), findsOneWidget);
 
-    final scrollable = find.byType(Scrollable).first;
+    final scrollable = find.descendant(
+      of: find.byType(ListView).first,
+      matching: find.byType(Scrollable),
+    ).first;
     await tester.scrollUntilVisible(find.text('الهيكل التنظيمي والوظائف'), 400, scrollable: scrollable);
     expect(find.text('الهيكل التنظيمي والوظائف'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('التأمينات والرخص والتدريب'), 400, scrollable: scrollable);
@@ -96,7 +99,10 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    final scrollable = find.byType(Scrollable).first;
+    final scrollable = find.descendant(
+      of: find.byType(ListView).first,
+      matching: find.byType(Scrollable),
+    ).first;
     await tester.scrollUntilVisible(find.text('تقييم الأداء'), 450, scrollable: scrollable);
     expect(find.text('تقييم الأداء'), findsOneWidget);
     expect(find.textContaining('غير متاح — لا توجد تقييمات مكتملة'), findsOneWidget);
