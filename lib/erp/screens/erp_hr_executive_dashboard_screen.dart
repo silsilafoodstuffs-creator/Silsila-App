@@ -1060,11 +1060,11 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               crossAxisCount: count, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: count == 1 ? 3.4 : 2.2,
               children: [
-                _metric('عقود تنتهي خلال 30 يومًا', _currentEmployeesCount == 0 ? '—' : '$_contractsExpiringSoon', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'من الموظفين النشطين', Icons.event_busy_outlined, _hrOrange),
-                _metric('عقود سارية', _currentEmployeesCount == 0 ? '—' : '$_contractsActive', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'من الموظفين النشطين بعقد', Icons.verified_outlined, Colors.green.shade700),
+                _metric('عقود تنتهي خلال 30 يومًا', _currentEmployeesCount == 0 ? '—' : '$_contractsExpiringSoon', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'من الموظفين الحاليين', Icons.event_busy_outlined, _hrOrange),
+                _metric('عقود سارية', _currentEmployeesCount == 0 ? '—' : '$_contractsActive', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'من الموظفين الحاليين بعقد', Icons.verified_outlined, Colors.green.shade700),
                 _metric('عقود منتهية', _currentEmployeesCount == 0 ? '—' : '$_contractsExpired', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'تحتاج مراجعة فورية', Icons.warning_amber_outlined, Colors.red.shade700),
                 _metric('عقود بلا تاريخ نهاية / نوع', _currentEmployeesCount == 0 ? '—' : '$_contractsMissing', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'تحتاج استكمال البيانات', Icons.assignment_late_outlined, _hrPink),
-                _metric('موظفون بلا عقد', _currentEmployeesCount == 0 ? '—' : '$_employeesWithoutContract', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون نشطون دون عقد', Icons.assignment_ind_outlined, Colors.blueGrey),
+                _metric('موظفون بلا عقد', _currentEmployeesCount == 0 ? '—' : '$_employeesWithoutContract', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون حاليون دون عقد', Icons.assignment_ind_outlined, Colors.blueGrey),
                 _metric('نواقص مسوغات التعيين', _currentEmployeesCount == 0 ? '—' : '$_employeesMissingRequiredDocuments', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : _employeesWithoutJob > 0 ? 'لا يشمل $_employeesWithoutJob موظفًا بلا وظيفة محددة' : 'وفق متطلبات الوظيفة', Icons.folder_off_outlined, _hrPink),
                 _metric('تأخيرات الشهر', _qualifiedAttendanceRecords.isEmpty ? '—' : '$_lateAttendanceCount', _qualifiedAttendanceRecords.isEmpty ? 'لا توجد سجلات حضور لموظفين فعليين' : 'من سجلات الحضور المؤهلة', Icons.schedule_outlined, _hrPurple),
                 _metric('غياب الشهر', _qualifiedAttendanceRecords.isEmpty ? '—' : '$_absenceAttendanceCount', _qualifiedAttendanceRecords.isEmpty ? 'لا توجد سجلات حضور لموظفين فعليين' : 'من سجلات الحضور المؤهلة', Icons.person_off_outlined, Colors.red.shade700),
@@ -1142,11 +1142,11 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _alert('جودة بيانات الموظفين', _currentEmployeesCount == 0
                 ? 'غير متاح — لا توجد سجلات لموظفين فعليين يمكن تقييم ربطهم بالوظائف أو مسوغات تعيينهم.'
                 : 'موظفون بلا وظيفة محددة: $_employeesWithoutJob، وملفات غير نشطة: $_inactiveEmployees، ونواقص المسوغات للموظفين المرتبطين بوظائف: $_employeesMissingRequiredDocuments. لا يشمل التقييم $_employeesWithoutJob موظفًا بلا وظيفة.',
-              _activeEmployees == 0 ? Colors.blueGrey : _employeesWithoutJob + _employeesMissingRequiredDocuments > 0 ? _hrOrange : Colors.blueGrey),
-            _alert('التأمين الصحي والاجتماعي', _activeEmployees == 0
+              _currentEmployeesCount == 0 ? Colors.blueGrey : _employeesWithoutJob + _employeesMissingRequiredDocuments > 0 ? _hrOrange : Colors.blueGrey),
+            _alert('التأمين الصحي والاجتماعي', _currentEmployeesCount == 0
                 ? 'غير متاح — لا توجد قوة عمل فعلية لقياس اكتمال بيانات التأمين.'
                 : 'غير مسجل صحيًا: $_healthNotRecorded، وغير مسجل اجتماعيًا: $_socialNotRecorded. الأعداد محسوبة على الموظفين النشطين وبحسب سجلاتهم الفردية.',
-              _activeEmployees == 0 ? Colors.blueGrey : _healthNotRecorded + _socialNotRecorded > 0 ? _hrOrange : Colors.blueGrey),
+              _currentEmployeesCount == 0 ? Colors.blueGrey : _healthNotRecorded + _socialNotRecorded > 0 ? _hrOrange : Colors.blueGrey),
             _alert('مؤشرات تتطلب استكمال مصدر البيانات', 'فترة الاختبار تحتاج حقولًا منظمة لتاريخ البداية والنهاية ونتيجة الاجتياز. إصابات العمل، تكلفة التوظيف، ومقارنة تكلفة العمالة بالمبيعات تحتاج مصادر متخصصة.', Colors.blueGrey),
           ]),
           const SizedBox(height: 18),
@@ -1274,12 +1274,12 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _alert('العقود', 'عقود سارية: $_contractsActive، تنتهي خلال 30 يومًا: $_contractsExpiringSoon، منتهية: $_contractsExpired، وتحتاج استكمال النوع أو تاريخ النهاية: $_contractsMissing. موظفون بلا عقد: $_employeesWithoutContract.', _contractsExpired + _contractsExpiringSoon + _contractsMissing + _employeesWithoutContract > 0 ? Colors.orange : Colors.green),
             _alert('مسوغات التعيين', 'عدد الموظفين الذين تنقص ملفاتهم مستندات مطلوبة حسب الوظيفة: $_employeesMissingRequiredDocuments. راجع متطلبات الوظائف وسجل مستندات الموظفين.', _employeesMissingRequiredDocuments > 0 ? Colors.orange : Colors.green),
             _alert('الحضور والانصراف', _qualifiedAttendanceRecords.isEmpty ? 'لا توجد سجلات حضور مؤهلة مرتبطة بموظفين فعليين خلال الشهر الحالي؛ لا يمكن اعتبار المؤشرات صفرًا مكتملًا.' : 'خلال الشهر الحالي: $_absenceAttendanceCount حالات غياب و$_lateAttendanceCount حالات تأخير، وإجمالي الوقت الإضافي المسجل $_overtimeMinutes دقيقة.', Colors.blueGrey),
-            _alert('التأمينات الصحية والاجتماعية', _activeEmployees == 0 ? 'غير متاح — لا توجد قوة عمل فعلية لتقييم التغطية التأمينية.' : 'صحي: $_healthInsured مؤمن / $_healthUninsured غير مؤمن / $_healthNotRecorded غير مسجل. اجتماعي: $_socialInsured مؤمن / $_socialUninsured غير مؤمن / $_socialNotRecorded غير مسجل. قيد الإجراء: $_insuranceInProgress.', Colors.blueGrey),
+            _alert('التأمينات الصحية والاجتماعية', _currentEmployeesCount == 0 ? 'غير متاح — لا توجد قوة عمل فعلية لتقييم التغطية التأمينية.' : 'صحي: $_healthInsured مؤمن / $_healthUninsured غير مؤمن / $_healthNotRecorded غير مسجل. اجتماعي: $_socialInsured مؤمن / $_socialUninsured غير مؤمن / $_socialNotRecorded غير مسجل. قيد الإجراء: $_insuranceInProgress.', Colors.blueGrey),
             _alert('الرخص', _qualifiedLicenseRecords.isEmpty ? 'غير متاح — لا توجد سجلات رخص مرتبطة بموظفين فعليين.' : 'رخص منتهية: $_licensesExpired، ورخص تنتهي خلال 30 يومًا: $_licensesExpiringSoon.', _qualifiedLicenseRecords.isEmpty ? Colors.blueGrey : _licensesExpired + _licensesExpiringSoon > 0 ? Colors.orange : Colors.blueGrey),
             _alert('التدريب', _qualifiedTrainingRecords.isEmpty ? 'غير متاح — لا توجد سجلات تدريب مرتبطة بموظفين فعليين.' : 'مخطط: $_trainingPlanned، جارٍ: $_trainingInProgress، مكتمل: $_trainingCompleted، منتهٍ: $_trainingExpired، شهادات منتهية: $_trainingCertificatesExpired، وشهادات تنتهي قريبًا: $_trainingCertificatesExpiring.', Colors.blueGrey),
             _alert('التوظيف والاستقالات', _candidates.isEmpty && _qualifiedMovementsInPeriod.isEmpty ? 'لا توجد طلبات توظيف أو حركات خدمة مؤهلة مسجلة؛ لا يمكن تقييم تدفق التوظيف أو الاستقالات.' : 'متقدمون مفتوحون: $_candidateOpen، مقبولون: ${_candidateCount('accepted')}، مرفوضون: ${_candidateCount('rejected')}، وحركات انتهاء الخدمة خلال آخر 12 شهرًا: $_separationsLast12Months.', Colors.blueGrey),
             _alert('فترة الاختبار', 'غير متاحة كرقم موثوق حاليًا؛ نموذج الموظف لا يحتوي حقولًا منظمة لتاريخ بداية ونهاية الاختبار ونتيجة الاجتياز. لن يتم استنتاج العدد من حالة الموظف العامة.', Colors.blueGrey),
-            _alert('طلبات الإجازات', _activeEmployees == 0 ? 'غير متاح — لا توجد قوة عمل فعلية وطلبات إجازات مؤهلة مرتبطة بها.' : 'طلبات الإجازات غير المحسومة خلال الشهر الحالي: $_pendingLeaveRequests.', _pendingLeaveRequests > 0 ? Colors.orange : Colors.blueGrey),
+            _alert('طلبات الإجازات', _currentEmployeesCount == 0 ? 'غير متاح — لا توجد قوة عمل فعلية وطلبات إجازات مؤهلة مرتبطة بها.' : 'طلبات الإجازات غير المحسومة خلال الشهر الحالي: $_pendingLeaveRequests.', _pendingLeaveRequests > 0 ? Colors.orange : Colors.blueGrey),
             _alert('مسيرات الرواتب', _payrollRuns.isEmpty ? 'لا توجد مسيرات رواتب مسجلة؛ لا يمكن تحديد حالة الاعتماد أو تكلفة العمالة.' : 'يوجد $_pendingPayrollRuns مسيرًا غير معتمد ضمن آخر 12 مسيرًا تم تحميلها.', _payrollRuns.isEmpty ? Colors.blueGrey : _pendingPayrollRuns > 0 ? Colors.orange : Colors.blueGrey),
           ]),
           const SizedBox(height: 18),
