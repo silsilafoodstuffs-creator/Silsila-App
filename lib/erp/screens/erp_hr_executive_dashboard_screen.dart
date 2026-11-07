@@ -6,6 +6,19 @@ const _hrOrange = Color(0xFFFFA015);
 const _hrPink = Color(0xFFFF27C3);
 const _hrBg = Color(0xFFFAF8FC);
 
+/// Excludes clearly marked seed/demo/test employees from operational HR metrics.
+bool isHrExcludedSeedEmployee(Map<String, dynamic> employee) {
+  final notes = (employee['notes']?.toString() ?? '').toLowerCase();
+  final status = (employee['employment_status']?.toString() ?? '').toLowerCase();
+  return notes.contains('بيانات أولية مؤقتة') || notes.contains('اختبار') ||
+      notes.contains('تجريبي') || notes.contains('test') || notes.contains('demo') ||
+      status == 'test' || status == 'demo' || status == 'اختبار' || status == 'تجريبي';
+}
+
+List<Map<String, dynamic>> filterHrOperationalEmployees(
+  List<Map<String, dynamic>> employees,
+) => employees.where((employee) => !isHrExcludedSeedEmployee(employee)).toList();
+
 class ErpHrExecutiveDashboardScreen extends StatefulWidget {
   const ErpHrExecutiveDashboardScreen({super.key, this.companyId, this.canManage = false});
   final String? companyId;
@@ -31,6 +44,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   List<Map<String, dynamic>> _candidates = [];
   List<Map<String, dynamic>> _movements = [];
   List<Map<String, dynamic>> _leaves = [];
+  List<Map<String, dynamic>> _contracts = [];
+  List<Map<String, dynamic>> _performanceReviews = [];
+  List<Map<String, dynamic>> _payrollLines = [];
 
   @override
   void initState() {
@@ -63,6 +79,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
         _db.from('erp_hr_recruitment_candidates').select('id,candidate_name,status,applied_on,decision_on,job_id').eq('company_id', companyId).order('applied_on', ascending: false).limit(2000),
         _db.from('erp_hr_employee_movements').select('id,employee_id,movement_type,effective_on,reason').eq('company_id', companyId).order('effective_on', ascending: false).limit(5000),
         _db.from('erp_leave_requests').select('id,employee_id,status,starts_on,ends_on,requested_days').eq('company_id', companyId).gte('starts_on', dateStart).lte('starts_on', dateEnd).limit(5000),
+        _db.from('erp_hr_employee_contracts').select('id,employee_id,contract_number,contract_type,start_date,end_date,status').eq('company_id', companyId).order('start_date', ascending: false).limit(5000),
+        _db.from('erp_hr_performance_reviews').select('id,employee_id,period_start,period_end,score,rating,status').eq('company_id', companyId).order('period_end', ascending: false).limit(5000),
+        _db.from('erp_payroll_lines').select('id,payroll_run_id,employee_id,basic_amount,allowances,commissions,overtime_amount,deductions,gross_amount,net_amount').eq('company_id', companyId).limit(20000),
       ]);
       if (!mounted) return;
       setState(() {
@@ -77,6 +96,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
         _candidates = List<Map<String, dynamic>>.from(results[8]);
         _movements = List<Map<String, dynamic>>.from(results[9]);
         _leaves = List<Map<String, dynamic>>.from(results[10]);
+        _contracts = List<Map<String, dynamic>>.from(results[11]);
+        _performanceReviews = List<Map<String, dynamic>>.from(results[12]);
+        _payrollLines = List<Map<String, dynamic>>.from(results[13]);
         _loading = false;
       });
     } catch (e) {
@@ -87,16 +109,18 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
 
   bool _isTemporarySeedEmployee(Map<String, dynamic> employee) =>
       (employee['notes']?.toString() ?? '').contains('بيانات أولية مؤقتة');
-  List<Map<String, dynamic>> get _realEmployees =>
-      _employees.where((employee) => !_isTemporarySeedEmployee(employee)).toList();
+  bool _isTestEmployee(Map<String, dynamic> employee) =>
+      isHrExcludedSeedEmployee(employee) && !_isTemporarySeedEmployee(employee);
+  List<Map<String, dynamic>> get _realEmployees => filterHrOperationalEmployees(_employees);
   bool _isCurrentEmployee(Map<String, dynamic> employee) {
-    if (employee['is_active'] != true || _isTemporarySeedEmployee(employee)) return false;
+    if (employee['is_active'] != true || isHrExcludedSeedEmployee(employee)) return false;
     final hireDate = _asDate(employee['hire_date']);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     return hireDate == null || !hireDate.isAfter(today);
   }
   int get _temporaryEmployees => _employees.where(_isTemporarySeedEmployee).length;
+  int get _testEmployees => _employees.where(_isTestEmployee).length;
   Set<String> get _realEmployeeIds => _realEmployees.map((e) => e['id']?.toString()).whereType<String>().toSet();
   int get _upcomingHires => _realEmployees.where((employee) {
     final hireDate = _asDate(employee['hire_date']);
@@ -112,7 +136,10 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _departmentsWithoutJobs => _departments.where((d) =>
       !_jobs.any((j) => j['department_id']?.toString() == d['id']?.toString())).length;
   int get _employeesWithoutJob => _realEmployees.where((e) => _isCurrentEmployee(e) && e['job_id'] == null).length;
-  int get _employeesWithoutContract => _realEmployees.where((e) => _isCurrentEmployee(e) && (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty || e['contract_type'] == 'بدون عقد')).length;
+  int get _employeesWithoutContract => _realEmployees.where((e) => _isCurrentEmployee(e) &&
+      (_contracts.isNotEmpty
+          ? !_contracts.any((contract) => contract['employee_id']?.toString() == e['id']?.toString() && !const ['cancelled','rejected'].contains(contract['status']?.toString().toLowerCase()))
+          : (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty || e['contract_type'] == 'بدون عقد'))).length;
   List<MapEntry<String, int>> get _employeesByDepartment {
     final counts = <String, int>{};
     for (final employee in _realEmployees.where(_isCurrentEmployee)) {
@@ -128,21 +155,35 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     return DateTime.tryParse(value.toString());
   }
 
-  int get _contractsExpiringSoon => _realEmployees.where((e) {
-    final end = _asDate(e['contract_end_date']);
-    if (end == null || !_isCurrentEmployee(e) || e['contract_type'] != 'بعقد') return false;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final days = end.difference(today).inDays;
-    return days >= 0 && days <= 30;
-  }).length;
+  int get _contractsExpiringSoon {
+    final today = DateUtils.dateOnly(DateTime.now());
+    if (_contracts.isNotEmpty) return _contracts.where((contract) {
+      final end = _asDate(contract['end_date']);
+      final employeeId = contract['employee_id']?.toString();
+      if (end == null || !_realEmployeeIds.contains(employeeId)) return false;
+      final days = DateUtils.dateOnly(end).difference(today).inDays;
+      return days >= 0 && days <= 30 && !const ['cancelled','rejected','expired'].contains(contract['status']?.toString().toLowerCase());
+    }).length;
+    return _realEmployees.where((e) {
+      final end = _asDate(e['contract_end_date']);
+      if (end == null || !_isCurrentEmployee(e) || e['contract_type'] != 'بعقد') return false;
+      final days = DateUtils.dateOnly(end).difference(today).inDays;
+      return days >= 0 && days <= 30;
+    }).length;
+  }
 
-  int get _contractsExpired => _realEmployees.where((e) {
-    final end = _asDate(e['contract_end_date']);
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return end != null && end.isBefore(today) && _isCurrentEmployee(e) && e['contract_type'] == 'بعقد';
-  }).length;
+  int get _contractsExpired {
+    final today = DateUtils.dateOnly(DateTime.now());
+    if (_contracts.isNotEmpty) return _contracts.where((contract) {
+      final end = _asDate(contract['end_date']);
+      return end != null && _realEmployeeIds.contains(contract['employee_id']?.toString()) &&
+          DateUtils.dateOnly(end).isBefore(today) && !const ['cancelled','rejected'].contains(contract['status']?.toString().toLowerCase());
+    }).length;
+    return _realEmployees.where((e) {
+      final end = _asDate(e['contract_end_date']);
+      return end != null && DateUtils.dateOnly(end).isBefore(today) && _isCurrentEmployee(e) && e['contract_type'] == 'بعقد';
+    }).length;
+  }
 
   Map<String, dynamic>? _jobForEmployee(Map<String, dynamic> employee) {
     for (final job in _jobs) {
@@ -176,6 +217,16 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _absenceAttendanceCount => _attendance.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && ((r['attendance_status']?.toString().toLowerCase() ?? '').contains('absent') || (r['attendance_status']?.toString() ?? '').contains('غائب') || (r['attendance_status']?.toString() ?? '').contains('غياب'))).length;
   int get _overtimeMinutes => _attendance.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString())).fold<int>(0, (sum, r) => sum + ((r['overtime_minutes'] as num?)?.toInt() ?? 0));
   int get _pendingPayrollRuns => _payrollRuns.where((r) => !const ['approved', 'posted', 'paid'].contains(r['status']?.toString().toLowerCase())).length;
+  List<Map<String, dynamic>> get _latestPayrollLines => _latestPayrollRun == null ? const [] :
+      _payrollLines.where((line) => line['payroll_run_id']?.toString() == _latestPayrollRun!['id']?.toString() && _realEmployeeIds.contains(line['employee_id']?.toString())).toList();
+  double? get _averagePerformanceScore {
+    final scores = _performanceReviews.where((review) =>
+      _realEmployeeIds.contains(review['employee_id']?.toString()) && review['score'] is num &&
+      !const ['draft','cancelled','rejected'].contains(review['status']?.toString().toLowerCase()))
+      .map((review) => (review['score'] as num).toDouble()).toList();
+    if (scores.isEmpty) return null;
+    return scores.reduce((a, b) => a + b) / scores.length;
+  }
   num _numberValue(dynamic value) => value is num ? value : num.tryParse(value?.toString() ?? '') ?? 0;
   Map<String, dynamic>? get _latestPayrollRun => _payrollRuns.isEmpty ? null : _payrollRuns.first;
   String _moneyLabel(dynamic value) {
@@ -205,16 +256,24 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _insuranceInProgress => _healthInProgress + _socialInProgress;
   int get _healthNotRecorded => (_activeEmployees - _distinctComplianceStatus('health_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
   int get _socialNotRecorded => (_activeEmployees - _distinctComplianceStatus('social_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
-  int get _contractsActive => _realEmployees.where((e) {
-    final type = e['contract_type']?.toString() ?? '';
-    if (!_isCurrentEmployee(e) || type.isEmpty || type == 'بدون عقد') return false;
-    if (type != 'بعقد') return true;
-    final start = _asDate(e['contract_start_date']);
-    final end = _asDate(e['contract_end_date']);
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    return start != null && end != null && !start.isAfter(today) && !end.isBefore(today);
-  }).length;
+  int get _contractsActive {
+    final today = DateUtils.dateOnly(DateTime.now());
+    if (_contracts.isNotEmpty) return _contracts.where((contract) {
+      final start = _asDate(contract['start_date']);
+      final end = _asDate(contract['end_date']);
+      return _realEmployeeIds.contains(contract['employee_id']?.toString()) && start != null && end != null &&
+          !DateUtils.dateOnly(start).isAfter(today) && !DateUtils.dateOnly(end).isBefore(today) &&
+          !const ['cancelled','rejected','expired'].contains(contract['status']?.toString().toLowerCase());
+    }).length;
+    return _realEmployees.where((e) {
+      final type = e['contract_type']?.toString() ?? '';
+      if (!_isCurrentEmployee(e) || type.isEmpty || type == 'بدون عقد') return false;
+      if (type != 'بعقد') return true;
+      final start = _asDate(e['contract_start_date']);
+      final end = _asDate(e['contract_end_date']);
+      return start != null && end != null && !DateUtils.dateOnly(start).isAfter(today) && !DateUtils.dateOnly(end).isBefore(today);
+    }).length;
+  }
   int get _contractsMissing => _realEmployees.where((e) =>
       _isCurrentEmployee(e) &&
       ((e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty || e['contract_type'] == 'بدون عقد') ||
@@ -617,7 +676,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               crossAxisCount: count, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: count == 1 ? 3.3 : 2.25,
               children: [
-                _metric('إجمالي الموظفين', _realEmployees.length.toString(), 'بعد استبعاد السجلات المؤقتة', Icons.badge_outlined, _hrPurple),
+                _metric('إجمالي الموظفين', _realEmployees.length.toString(), 'بعد استبعاد السجلات المؤقتة والاختبارية', Icons.badge_outlined, _hrPurple),
                 _metric('موظفون نشطون', _activeEmployees.toString(), 'على رأس العمل حسب حالة الملف', Icons.verified_user_outlined, Colors.green.shade700),
                 _metric('غير نشطين', _inactiveEmployees.toString(), 'ملفات غير محددة كنشطة', Icons.person_off_outlined, Colors.red.shade700),
                 _metric('الإدارات النشطة', _activeDepartments.toString(), 'من الهيكل التنظيمي', Icons.account_tree_outlined, _hrOrange),
@@ -629,6 +688,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           _sectionTitle('الهيكل التنظيمي والوظائف', Icons.corporate_fare_outlined),
           _panel(children: [
             _progressRow('الوظائف النشطة', _activeJobs, _jobs.length, _hrPurple),
+            _notice('الوظائف الشاغرة: غير متاحة للحساب حاليًا؛ قاعدة البيانات لا تحتوي جدول طلبات شغل أو ملاك وظيفي معتمد، وتعريف الوظائف وحده لا يثبت وجود شاغر.', Icons.info_outline, Colors.blueGrey),
             _progressRow('إدارات بلا وظائف مرتبطة', _departmentsWithoutJobs, _departments.length, _hrOrange),
             _progressRow('وظائف غير مرتبطة بإدارة', _unassignedJobs, _jobs.length, _hrPink),
             _progressRow('موظفون بلا وظيفة محددة', _employeesWithoutJob, _realEmployees.length, _hrPink),
@@ -725,7 +785,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               _alert('صافي الرواتب في أحدث مسير', _moneyLabel(_latestPayrollRun!['net_total']), _hrPurple),
               _alert('بيانات المسير', 'الفترة: ${_latestPayrollRun!['period_start'] ?? 'غير محددة'} إلى ${_latestPayrollRun!['period_end'] ?? 'غير محددة'} • عدد الموظفين: ${_latestPayrollRun!['employee_count'] ?? 'غير محدد'} • الحالة: ${_hrStatusLabel(_latestPayrollRun!['status']?.toString() ?? '')}.', Colors.blueGrey),
             ],
-            const Text('هذه أرقام أحدث مسير محمّل وليست متوسط تكلفة الموظف أو مقارنة تكلفة العمالة بالمبيعات.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5)),
+            if (_latestPayrollRun != null) _alert('تفاصيل أحدث مسير', _latestPayrollLines.isEmpty ? 'لا توجد تفاصيل بنود مرتبطة بموظفين فعليين في أحدث مسير.' : 'عدد تفاصيل الموظفين: ${_latestPayrollLines.length} • إجمالي الأساسي: ${_moneyLabel(_latestPayrollLines.fold<num>(0, (s, r) => s + _numberValue(r['basic_amount'])))} • البدلات والعمولات والإضافي: ${_moneyLabel(_latestPayrollLines.fold<num>(0, (s, r) => s + _numberValue(r['allowances']) + _numberValue(r['commissions']) + _numberValue(r['overtime_amount'])))} • الخصومات: ${_moneyLabel(_latestPayrollLines.fold<num>(0, (s, r) => s + _numberValue(r['deductions'])))}.', Colors.blueGrey),
+            const Text('هذه أرقام أحدث مسير محمّل وليست متوسط تكلفة الموظف أو مقارنة تكلفة العمالة بالمبيعات. عند غياب تفاصيل البنود لا يتم تقديرها.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5)),
           ]),
           const SizedBox(height: 18),
           _sectionTitle('مؤشرات إدارية متقدمة', Icons.analytics_outlined),
@@ -734,7 +795,12 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _progressRow('حركات انتهاء الخدمة خلال الفترة', _separationsInPeriod, _hiresInPeriod + _separationsInPeriod, _hrOrange),
             _alert('جودة بيانات الموظفين', 'موظفون بلا وظيفة محددة: $_employeesWithoutJob، وملفات غير نشطة: $_inactiveEmployees، ونواقص مسوغات التعيين: $_employeesMissingRequiredDocuments.', _employeesWithoutJob + _employeesMissingRequiredDocuments > 0 ? _hrOrange : Colors.blueGrey),
             _alert('التأمين الصحي والاجتماعي', 'غير مسجل صحيًا: $_healthNotRecorded، وغير مسجل اجتماعيًا: $_socialNotRecorded. الأعداد محسوبة على الموظفين النشطين وبحسب سجلاتهم الفردية.', _healthNotRecorded + _socialNotRecorded > 0 ? _hrOrange : Colors.blueGrey),
-            _alert('مؤشرات تتطلب استكمال مصدر البيانات', 'العجز مقابل الملاك المعتمد يحتاج عددًا مستهدفًا لكل وظيفة. متابعة فترة الاختبار تحتاج تاريخ بداية ونهاية ونتيجة. تقييم الأداء وإصابات العمل وتكلفة التوظيف ومقارنة تكلفة العمالة بالمبيعات تحتاج سجلات متخصصة قبل احتسابها.', Colors.blueGrey),
+            _alert('مؤشرات تتطلب استكمال مصدر البيانات', 'العجز مقابل الملاك المعتمد يحتاج جدول ملاك/طلبات شاغرة. فترة الاختبار تحتاج حقولًا منظمة. إصابات العمل وتكلفة التوظيف ومقارنة تكلفة العمالة بالمبيعات تحتاج مصادر متخصصة.', Colors.blueGrey),
+            _sectionTitle('تقييم الأداء', Icons.assessment_outlined),
+            _panel(children: [
+              _alert('متوسط تقييم الأداء', _averagePerformanceScore == null ? 'غير متاح — لا توجد تقييمات مكتملة مرتبطة بموظفين فعليين.' : '${_averagePerformanceScore!.toStringAsFixed(1)} نقطة من سجلات التقييم المكتملة.', _averagePerformanceScore == null ? Colors.blueGrey : _hrPurple),
+              _progressRow('تقييمات الأداء المسجلة', _performanceReviews.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString())).length, _activeEmployees, _hrOrange),
+            ]),
           ]),
           const SizedBox(height: 18),
           _sectionTitle('إدارة وتسجيل بيانات الموارد البشرية', Icons.add_task_outlined),
@@ -807,7 +873,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           _panel(children: [
             _alert('اكتمال الهيكل التنظيمي', _departmentsWithoutJobs + _unassignedJobs == 0 && _departments.isNotEmpty && _jobs.isNotEmpty
                 ? 'لا توجد فجوات ربط ظاهرة في البيانات الحالية.' : 'توجد إدارات بلا وظائف أو وظائف غير مرتبطة بإدارة؛ راجع الهيكل الوظيفي.', _departmentsWithoutJobs + _unassignedJobs == 0 ? Colors.green : Colors.orange),
-            _alert('سجلات موظفين مؤقتة', 'تم استبعاد $_temporaryEmployees سجلًا تجريبيًا موسومًا ببيانات أولية مؤقتة من مؤشرات القوى العاملة والعقود والتأمينات والتوظيف؛ راجعها واستبدلها ببيانات فعلية قبل الاعتماد.', _temporaryEmployees > 0 ? Colors.orange : Colors.green),
+            _alert('سجلات موظفين مستبعدة', 'تم استبعاد $_temporaryEmployees سجلًا أوليًا مؤقتًا و$_testEmployees سجلًا اختباريًا من مؤشرات القوى العاملة والارتباطات التابعة. لم يتم حذف أي سجل.', _temporaryEmployees + _testEmployees > 0 ? Colors.orange : Colors.green),
             _alert('التعيينات المستقبلية', 'عدد الموظفين الحقيقيين المسجلين بتاريخ تعيين مستقبلي: $_upcomingHires. لا يدخلون في عدد القوة العاملة الحالية حتى تاريخ مباشرة العمل.', _upcomingHires > 0 ? Colors.blueGrey : Colors.green),
             _alert('ملفات الموظفين غير النشطة', 'عدد الملفات غير النشطة: $_inactiveEmployees. راجع أسباب الإيقاف أو انتهاء الخدمة.', Colors.orange),
             _alert('العقود', 'عقود سارية: $_contractsActive، تنتهي خلال 30 يومًا: $_contractsExpiringSoon، منتهية: $_contractsExpired، وتحتاج استكمال النوع أو تاريخ النهاية: $_contractsMissing. موظفون بلا عقد: $_employeesWithoutContract.', _contractsExpired + _contractsExpiringSoon + _contractsMissing + _employeesWithoutContract > 0 ? Colors.orange : Colors.green),
@@ -860,7 +926,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   Widget _progressRow(String label, int value, int total, Color color) {
     final ratio = total == 0 ? 0.0 : (value / total).clamp(0.0, 1.0);
     return Padding(padding: const EdgeInsets.symmetric(vertical: 7), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Row(children: [Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700))), Text(_hasCompany ? '$value / $total' : '—', style: const TextStyle(fontWeight: FontWeight.w800))]),
+      Row(children: [Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w700))), Text(!_hasCompany ? '—' : total == 0 ? 'غير متاح' : '$value / $total', style: const TextStyle(fontWeight: FontWeight.w800))]),
       const SizedBox(height: 6), ClipRRect(borderRadius: BorderRadius.circular(8), child: LinearProgressIndicator(value: _hasCompany ? ratio : 0, minHeight: 8, color: color, backgroundColor: const Color(0xFFF0EBF4))),
     ]));
   }
