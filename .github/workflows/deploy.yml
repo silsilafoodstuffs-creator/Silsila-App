@@ -1,12 +1,9 @@
 name: Deploy Silsila Web App
 
 'on':
-  workflow_run:
-    workflows:
-      - Silsila Full Validation - All Recent Changes
-    types:
-      - completed
-    branches: [main]
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
@@ -21,16 +18,15 @@ permissions:
 
 jobs:
   build-and-deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout validated source
+      - name: Checkout latest main source
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
 
       - name: Install Flutter
         uses: subosito/flutter-action@fd55f4c5af5b953cc57a2be44cb082c8f6635e8e
