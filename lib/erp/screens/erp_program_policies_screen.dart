@@ -66,7 +66,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if (index < 0) throw StateError('السياسة $key غير معرفة ضمن سجل السياسات الأساسي.');
     return 'Pol${(index + 1).toString().padLeft(3, '0')}';
   }
-  @override void initState(){super.initState(); for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
+  @override void initState(){super.initState(); final policyKeys = defaults.map((p) => p['key']).toSet(); if (policyKeys.length != defaults.length) { throw StateError('يوجد كود داخلي مكرر في سجل سياسات البرنامج.'); } for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
   @override void didUpdateWidget(covariant ErpProgramPoliciesScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
   Future<void> _load({bool propagateError = false}) async {
     if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; }); if(propagateError) throw StateError(error!); return;}
@@ -208,7 +208,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final current = values.values.where((p) => p['category'] == tabs[tab]).toList();
       for (var i = 0; i < current.length; i++) {
         final p = current[i];
-        final originalIndex = defaults.indexWhere((item) => item['key'] == p['key']) + 1;
         rows.add([(i + 1).toString(), _programPolicyCode((p['key'] ?? '').toString()), (p['ar'] ?? '').toString(),
           (p['value'] ?? '').toString(), p['enabled'] == true ? 'نعم' : 'لا',
           p['all'] == true ? 'نعم' : 'لا', ((p['user_ids'] as List?)?.length ?? 0).toString()]);
@@ -419,7 +418,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                             final mandatory = p['mandatory'] == true;
                             final all = p['all'] == true;
                             final options = (p['options'] as List?)?.cast<String>() ?? const <String>[];
-                            final originalIndex = defaults.indexWhere((item) => item['key'] == p['key']) + 1;
                             final policyCode = _programPolicyCode((p['key'] ?? '').toString());
                             Widget checkColumn(String label, bool value, ValueChanged<bool?>? onChanged, double width) => SizedBox(
                               width: width,
