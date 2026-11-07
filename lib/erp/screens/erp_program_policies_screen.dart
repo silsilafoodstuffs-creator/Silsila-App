@@ -746,6 +746,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
             style: const TextStyle(fontSize: 10),
             decoration: const InputDecoration(
               isDense: true,
+              constraints: BoxConstraints(minHeight: 40, maxHeight: 40),
               contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
               border: OutlineInputBorder(),
             ),
@@ -776,7 +777,9 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     ),
   );
 
-  Widget _field(TextEditingController c, {double width = 150, String? hint}) => SizedBox(width: width, height: 40, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
+  Widget _field(TextEditingController c, {double width = 150, String? hint}) => SizedBox(width: width, height: 40, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, constraints: const BoxConstraints(minHeight: 40, maxHeight: 40), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
+  String _identityPolicyCode(int index) => 'Idn${(index + 1).toString().padLeft(3, '0')}';
+
   Widget _row(int index, String code, String title, Widget value) => Card(
     margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0,
     shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: .16)), borderRadius: BorderRadius.circular(6)),
@@ -825,7 +828,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 10),
-          decoration: const InputDecoration(isDense: true, hintText: 'حجم', contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
+          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), hintText: 'حجم', contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
         ),
       ),
       const SizedBox(width: 5),
@@ -834,16 +837,16 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   );
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
-      _row(0,'Pol001','اسم البرنامج',_field(_name,width:335,hint:'سلسلة')),
-      _row(1,'Pol002','لغة واجهة البرنامج',SizedBox(width:335,height:40,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight:40,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
-      _row(2,'Pol003','شعار البرنامج',SizedBox(width:335,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
-      _row(3,'Pol004','اللون الأساسي',_colorField(_primary ,width:335)),
-      _row(4,'Pol005','اللون الثانوي',_colorField(_secondary ,width:335)),
-      _row(5,'Pol006','لون التمييز',_colorField(_accent ,width:335)),
-      _row(6,'Pol007','لون الخلفية',_colorField(_background ,width:335)),
+      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:335,hint:'سلسلة')),
+      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:335,height:40,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight:40,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
+      _row(2,_identityPolicyCode(2),'شعار البرنامج',SizedBox(width:335,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
+      _row(3,_identityPolicyCode(3),'اللون الأساسي',_colorField(_primary ,width:335)),
+      _row(4,_identityPolicyCode(4),'اللون الثانوي',_colorField(_secondary ,width:335)),
+      _row(5,_identityPolicyCode(5),'لون التمييز',_colorField(_accent ,width:335)),
+      _row(6,_identityPolicyCode(6),'لون الخلفية',_colorField(_background ,width:335)),
     ];
     for (var i=0;i<5;i++) {
-      rows.add(_row(7+i,'Pol${(i+8).toString().padLeft(3,'0')}','${_labels[i]}',_fontStyleValue(i)));
+      rows.add(_row(7+i,_identityPolicyCode(7+i),'${_labels[i]}',_fontStyleValue(i)));
     }
     return Column(children:[
       Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),child:Row(children:[
