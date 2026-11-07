@@ -107,8 +107,12 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     }
   }
 
-  bool _isTemporarySeedEmployee(Map<String, dynamic> employee) =>
-      (employee['notes']?.toString() ?? '').contains('بيانات أولية مؤقتة');
+  bool _isTemporarySeedEmployee(Map<String, dynamic> employee) {
+    final notes = (employee['notes']?.toString() ?? '').toLowerCase();
+    final status = (employee['employment_status']?.toString() ?? '').toLowerCase();
+    return notes.contains('بيانات أولية مؤقتة') ||
+        status == 'temporary' || status == 'seed' || status == 'مؤقت' || status == 'بيانات أولية';
+  }
   bool _isTestEmployee(Map<String, dynamic> employee) =>
       isHrExcludedSeedEmployee(employee) && !_isTemporarySeedEmployee(employee);
   List<Map<String, dynamic>> get _realEmployees => filterHrOperationalEmployees(_employees);
