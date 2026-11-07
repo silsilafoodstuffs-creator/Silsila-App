@@ -38,15 +38,16 @@ Dates entered in the dashboard use **DD-MM-YYYY**; dates are stored as ISO date 
 
 - Contract alerts use the employee contract start/end fields and active status.
 - Appointment-document gaps compare each employee's assigned job requirements with the employee's recorded document types.
-- Vacancy counts are calculated only from approved staffing plans whose effective date range includes today. Draft and pending plans are excluded. A company-wide plan cannot overlap a location-specific plan for the same job and period. The number of filled positions is capped at the authorized headcount for that plan; over-capacity is displayed separately.
-- Insurance, license, training, and recruitment metrics count the records actually stored in their respective tables; they do not fabricate missing records.
+- Vacancy counts are calculated only from approved staffing plans whose effective date range includes today. Draft and pending plans are excluded. A company-wide plan cannot overlap a location-specific plan for the same job and period, and approval writes for the same company/job are serialized in the database to avoid concurrent overlapping approvals. The number of filled positions is capped at the authorized headcount for that plan; over-capacity is displayed separately. If any current employee assigned to a job covered by a location-specific plan has no work location, the combined vacancy total is withheld until the assignment is corrected.
+- Insurance, license, training, recruitment, attendance, leave, and payroll metrics count eligible records actually stored in their respective tables; they do not fabricate missing records. A missing source or an empty eligible population is displayed as unavailable, not as a completed zero.
+- Temporarily suspended employees remain part of the current workforce and staffing/insurance/contract denominators, but are excluded from the actively working headcount and shown separately.
 - Absence, lateness, overtime, leave, and payroll indicators use the existing operational tables.
 - Turnover is an estimate derived from recorded employee movements and available hire dates. It is shown as unavailable when no movement history exists.
 - Historical turnover accuracy depends on backfilling historical hires and separations. A company with empty new HR tables must enter its records before those indicators become meaningful.
 
 ## Database security
 
-HR source tables have row-level security enabled and anonymous table privileges revoked. Employee SELECT/UPDATE policies target authenticated users and retain company-role checks. Staffing plans are readable by company members and writable by authorized company managers or the exact **مدير موارد بشرية** job title; only company owners/admins can approve or modify an already approved plan. The public profile directory is a read-only projection for approved marketplace participants and excludes platform-management accounts. The employee-movement trigger behavior remains governed by its existing implementation.
+HR source tables have row-level security enabled and anonymous table privileges revoked. Anonymous table privileges are also revoked from attendance, employee documents, employee monthly targets, leave requests, payroll runs/lines, and business-workspace employee leave records. Employee SELECT/UPDATE policies target authenticated users and retain company-role checks. Staffing plans are readable by company members and writable by authorized company managers or the exact **مدير موارد بشرية** job title; only company owners/admins can approve or modify an already approved plan. The public profile directory is a read-only projection for approved marketplace participants and excludes platform-management accounts. The employee-movement trigger behavior remains governed by its existing implementation.
 
 ## First-use checklist
 
