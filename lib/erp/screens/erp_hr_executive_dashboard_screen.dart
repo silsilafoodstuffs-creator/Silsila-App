@@ -162,10 +162,11 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
 
   int get _contractsExpiringSoon {
     final today = DateUtils.dateOnly(DateTime.now());
+    final currentEmployeeIds = _realEmployees.where(_isCurrentEmployee).map((e) => e['id']?.toString()).whereType<String>().toSet();
     if (_contracts.isNotEmpty) return _contracts.where((contract) {
       final end = _asDate(contract['end_date']);
       final employeeId = contract['employee_id']?.toString();
-      if (end == null || !_realEmployeeIds.contains(employeeId)) return false;
+      if (end == null || !currentEmployeeIds.contains(employeeId)) return false;
       final days = DateUtils.dateOnly(end).difference(today).inDays;
       return days >= 0 && days <= 30 && !const ['cancelled','rejected','expired'].contains(contract['status']?.toString().toLowerCase());
     }).length;
@@ -263,10 +264,11 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _socialNotRecorded => (_activeEmployees - _distinctComplianceStatus('social_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
   int get _contractsActive {
     final today = DateUtils.dateOnly(DateTime.now());
+    final currentEmployeeIds = _realEmployees.where(_isCurrentEmployee).map((e) => e['id']?.toString()).whereType<String>().toSet();
     if (_contracts.isNotEmpty) return _contracts.where((contract) {
       final start = _asDate(contract['start_date']);
       final end = _asDate(contract['end_date']);
-      return _realEmployeeIds.contains(contract['employee_id']?.toString()) && start != null && end != null &&
+      return currentEmployeeIds.contains(contract['employee_id']?.toString()) && start != null && end != null &&
           !DateUtils.dateOnly(start).isAfter(today) && !DateUtils.dateOnly(end).isBefore(today) &&
           !const ['cancelled','rejected','expired'].contains(contract['status']?.toString().toLowerCase());
     }).length;
