@@ -8,10 +8,10 @@ import '../widgets/erp_quick_task_button.dart';
 class ErpCodePolicyPanel extends StatefulWidget {
   const ErpCodePolicyPanel({super.key, required this.companyId});
   final String companyId;
-  @override State<ErpCodePolicyPanel> createState() => _ErpCodePolicyPanelState();
+  @override State<ErpCodePolicyPanel> createState() => ErpCodePolicyPanelState();
 }
 
-class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
+class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   static const _purple = Color(0xFF3E007D);
   // Shared geometry for every coding-policy cell; the serial-count cell is the reference.
   static const double _cellHeight = 40;
