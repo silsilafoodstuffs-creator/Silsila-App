@@ -317,7 +317,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             const Icon(Icons.policy_outlined, color: Color(0xFFFFA015), size: 23),
             const SizedBox(width: 6),
             const Expanded(child: Text('سياسات البرنامج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17))),
-            SizedBox(width: 190, height: 30, child: TextField(
+            SizedBox(width: 190, height: 40, child: TextField(
               controller: _searchController,
               style: const TextStyle(fontSize: 11),
               textInputAction: TextInputAction.search,

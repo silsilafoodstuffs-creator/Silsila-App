@@ -485,7 +485,7 @@ class _ErpEmployeeMasterScreenState extends State<ErpEmployeeMasterScreen> {
       Expanded(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:SingleChildScrollView(child:DataTable(headingRowHeight:72,dataRowMinHeight:48,dataRowMaxHeight:60,
         columns:cols.map((col)=>DataColumn(label:SizedBox(width:col.$1=='full_name'?175:145,child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[
           Text(col.$2,style:const TextStyle(fontWeight:FontWeight.w900)),
-          SizedBox(height:30,child:TextField(controller:_employeeFilters[col.$1],onChanged:(_)=>setState((){}),decoration:const InputDecoration(hintText:'بحث...',isDense:true,border:OutlineInputBorder(),prefixIcon:Icon(Icons.search,size:14),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:5))))
+          SizedBox(height:40,child:TextField(controller:_employeeFilters[col.$1],onChanged:(_)=>setState((){}),decoration:const InputDecoration(hintText:'بحث...',isDense:true,border:OutlineInputBorder(),prefixIcon:Icon(Icons.search,size:14),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:5))))
         ])))).toList(),
         rows:data.map((e)=>DataRow(selected:_s(e['id'])==_selectedEmployeeId,onSelectChanged:(_)=>_selectEmployee(e),cells:[
           DataCell(Text(_s(e['employee_code']))),DataCell(Text(_s(e['full_name']))),DataCell(Text(_s(e['department_name']))),DataCell(Text(_s(e['job_title']))),DataCell(Text(_s(_s(e['mobile_1']).isEmpty?e['phone']:e['mobile_1']))),DataCell(Text(e['is_active']==true?'نشط':'غير نشط'))
