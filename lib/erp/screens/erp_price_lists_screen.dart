@@ -279,7 +279,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         DropdownButtonFormField<String>(itemHeight: 48, 
           value: _currencyCode,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'عملة قائمة الأسعار', isDense: true, constraints: BoxConstraints(minHeight: 54, maxHeight: 58)),
+          decoration: const InputDecoration(labelText: 'عملة قائمة الأسعار', isDense: true, constraints: BoxConstraints(minHeight: 30, maxHeight: 30)),
           items: _currencies.map((currency) => DropdownMenuItem<String>(
             value: _s(currency['currency_code']),
             child: Text(_s(currency['currency_name_ar']) + ' (' + (_s(currency['currency_symbol']).isEmpty ? _s(currency['currency_code']) : _s(currency['currency_symbol'])) + ')'),
