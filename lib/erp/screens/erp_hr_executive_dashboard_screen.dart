@@ -183,11 +183,12 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _temporaryEmployees => _employees.where(_isTemporarySeedEmployee).length;
   int get _testEmployees => _employees.where(_isTestEmployee).length;
   Set<String> get _realEmployeeIds => _realEmployees.map((e) => e['id']?.toString()).whereType<String>().toSet();
+  Set<String> get _currentEmployeeIds => _realEmployees.where(_isCurrentEmployee).map((e) => e['id']?.toString()).whereType<String>().toSet();
   int get _upcomingHires => _realEmployees.where((employee) {
     final hireDate = _asDate(employee['hire_date']);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    return employee['is_active'] == true && hireDate != null && hireDate.isAfter(today);
+    return employee['is_active'] == true && !isHrEndedEmployee(employee) && hireDate != null && hireDate.isAfter(today);
   }).length;
   int get _currentEmployeesCount =>
       _realEmployees.where(_isCurrentEmployee).length;
@@ -278,7 +279,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           : (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty || e['contract_type'] == 'بدون عقد'))).length;
   List<MapEntry<String, int>> get _employeesByDepartment {
     final counts = <String, int>{};
-    for (final employee in _realEmployees.where(_isCurrentEmployee)) {
+    for (final employee in _realEmployees.where((employee) =>
+        _isCurrentEmployee(employee) && !_isSuspendedEmployee(employee))) {
       final department = (employee['department_name'] ?? 'إدارة غير محددة').toString();
       counts[department] = (counts[department] ?? 0) + 1;
     }
@@ -335,6 +337,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   }
 
   int get _employeesMissingRequiredDocuments => _realEmployees.where((employee) {
+    if (!_isCurrentEmployee(employee)) return false;
     final job = _jobForEmployee(employee);
     if (job == null) return false;
     final required = <String, String>{
@@ -359,11 +362,11 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       .where((row) => _realEmployeeIds.contains(row['employee_id']?.toString()))
       .toList();
   List<Map<String, dynamic>> get _qualifiedLicenseRecords => _compliance
-      .where((row) => _realEmployeeIds.contains(row['employee_id']?.toString()) &&
+      .where((row) => _currentEmployeeIds.contains(row['employee_id']?.toString()) &&
           row['record_type'] == 'license')
       .toList();
   List<Map<String, dynamic>> get _qualifiedTrainingRecords => _training
-      .where((row) => _realEmployeeIds.contains(row['employee_id']?.toString()))
+      .where((row) => _currentEmployeeIds.contains(row['employee_id']?.toString()))
       .toList();
   List<Map<String, dynamic>> get _qualifiedMovementsInPeriod => _movements.where((row) =>
       _realEmployeeIds.contains(row['employee_id']?.toString()) &&
@@ -452,14 +455,14 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       (e['contract_type'] == null || e['contract_type'].toString().trim().isEmpty || e['contract_type'] == 'بدون عقد') ||
       (e['contract_type'] == 'بعقد' && (_asDate(e['contract_start_date']) == null || _asDate(e['contract_end_date']) == null))).length;
   }
-  int get _licensesExpired => _compliance.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && r['record_type'] == 'license' && (r['status'] == 'expired' || (_asDate(r['expires_on'])?.isBefore(DateTime.now()) ?? false))).length;
-  int get _licensesExpiringSoon => _compliance.where((r) { final d = _asDate(r['expires_on']); if (!_realEmployeeIds.contains(r['employee_id']?.toString()) || r['record_type'] != 'license' || d == null) return false; final n = DateTime.now(); final t = DateTime(n.year,n.month,n.day); final days = d.difference(t).inDays; return days >= 0 && days <= 30; }).length;
-  int get _trainingPlanned => _training.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && r['status'] == 'planned').length;
-  int get _trainingInProgress => _training.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && r['status'] == 'in_progress').length;
-  int get _trainingCompleted => _training.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && r['status'] == 'completed').length;
-  int get _trainingExpired => _training.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString()) && r['status'] == 'expired').length;
-  int get _trainingCertificatesExpiring => _training.where((r) { final d = _asDate(r['certificate_expires_on']); if (!_realEmployeeIds.contains(r['employee_id']?.toString())) return false; if (d == null) return false; final n=DateTime.now(); final t=DateTime(n.year,n.month,n.day); final days=d.difference(t).inDays; return days>=0 && days<=30; }).length;
-  int get _trainingCertificatesExpired => _training.where((r) { final d = _asDate(r['certificate_expires_on']); if (!_realEmployeeIds.contains(r['employee_id']?.toString())) return false; if (d == null) return false; final n=DateTime.now(); final t=DateTime(n.year,n.month,n.day); return d.isBefore(t); }).length;
+  int get _licensesExpired => _compliance.where((r) => _currentEmployeeIds.contains(r['employee_id']?.toString()) && r['record_type'] == 'license' && (r['status'] == 'expired' || (_asDate(r['expires_on'])?.isBefore(DateTime.now()) ?? false))).length;
+  int get _licensesExpiringSoon => _compliance.where((r) { final d = _asDate(r['expires_on']); if (!_currentEmployeeIds.contains(r['employee_id']?.toString()) || r['record_type'] != 'license' || d == null) return false; final n = DateTime.now(); final t = DateTime(n.year,n.month,n.day); final days = d.difference(t).inDays; return days >= 0 && days <= 30; }).length;
+  int get _trainingPlanned => _training.where((r) => _currentEmployeeIds.contains(r['employee_id']?.toString()) && r['status'] == 'planned').length;
+  int get _trainingInProgress => _training.where((r) => _currentEmployeeIds.contains(r['employee_id']?.toString()) && r['status'] == 'in_progress').length;
+  int get _trainingCompleted => _training.where((r) => _currentEmployeeIds.contains(r['employee_id']?.toString()) && r['status'] == 'completed').length;
+  int get _trainingExpired => _training.where((r) => _currentEmployeeIds.contains(r['employee_id']?.toString()) && r['status'] == 'expired').length;
+  int get _trainingCertificatesExpiring => _training.where((r) { final d = _asDate(r['certificate_expires_on']); if (!_currentEmployeeIds.contains(r['employee_id']?.toString())) return false; if (d == null) return false; final n=DateTime.now(); final t=DateTime(n.year,n.month,n.day); final days=d.difference(t).inDays; return days>=0 && days<=30; }).length;
+  int get _trainingCertificatesExpired => _training.where((r) { final d = _asDate(r['certificate_expires_on']); if (!_currentEmployeeIds.contains(r['employee_id']?.toString())) return false; if (d == null) return false; final n=DateTime.now(); final t=DateTime(n.year,n.month,n.day); return d.isBefore(t); }).length;
   int _candidateCount(String status) => _candidates.where((r) => r['status'] == status).length;
   int get _candidateOpen => _candidates.where((r) => !const ['accepted','rejected','withdrawn'].contains(r['status'])).length;
   int get _candidateInterviews => _candidateCount('interview');
