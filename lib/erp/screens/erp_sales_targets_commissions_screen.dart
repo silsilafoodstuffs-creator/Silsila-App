@@ -176,8 +176,8 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
       title:Text('أهداف وعمولة '+(rep['rep_name']?.toString() ?? 'المندوب')),
       content:SizedBox(width:420,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
         _field(sales,'مستهدف المبيعات الشهري'),_field(collection,'مستهدف التحصيل الشهري'),
-        DropdownButtonFormField<String>(itemHeight: 40, value:classification,decoration:const InputDecoration(labelText:'تصنيف المندوب'),items:const [DropdownMenuItem(value:'داخلي',child:Text('داخلي')),DropdownMenuItem(value:'خارجي',child:Text('خارجي')),DropdownMenuItem(value:'كول سنتر',child:Text('كول سنتر')),DropdownMenuItem(value:'مبيعات ميدانية',child:Text('مبيعات ميدانية')),DropdownMenuItem(value:'مبيعات هاتفية',child:Text('مبيعات هاتفية')),DropdownMenuItem(value:'أخرى',child:Text('أخرى'))],onChanged:(v)=>setLocal(()=>classification=v ?? 'خارجي')),
-        DropdownButtonFormField<String>(itemHeight: 40, value:method,decoration:const InputDecoration(labelText:'طريقة العمولة'),items:const [
+        DropdownButtonFormField<String>(itemHeight: 48, value:classification,decoration:const InputDecoration(labelText:'تصنيف المندوب'),items:const [DropdownMenuItem(value:'داخلي',child:Text('داخلي')),DropdownMenuItem(value:'خارجي',child:Text('خارجي')),DropdownMenuItem(value:'كول سنتر',child:Text('كول سنتر')),DropdownMenuItem(value:'مبيعات ميدانية',child:Text('مبيعات ميدانية')),DropdownMenuItem(value:'مبيعات هاتفية',child:Text('مبيعات هاتفية')),DropdownMenuItem(value:'أخرى',child:Text('أخرى'))],onChanged:(v)=>setLocal(()=>classification=v ?? 'خارجي')),
+        DropdownButtonFormField<String>(itemHeight: 48, value:method,decoration:const InputDecoration(labelText:'طريقة العمولة'),items:const [
           DropdownMenuItem(value:'percentage',child:Text('نسبة من المبيعات')),
           DropdownMenuItem(value:'fixed_per_invoice',child:Text('قيمة لكل فاتورة')),
           DropdownMenuItem(value:'tiered',child:Text('نسب متدرجة')),
@@ -713,9 +713,9 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
           Wrap(spacing:8,runSpacing:8,children:[
             SizedBox(width:180,child:TextField(controller:code,decoration:const InputDecoration(labelText:'كود العميل',prefixIcon:Icon(Icons.tag)),onChanged:(_)=>refresh((){}))),
             SizedBox(width:220,child:TextField(controller:name,decoration:const InputDecoration(labelText:'اسم العميل',prefixIcon:Icon(Icons.search)),onChanged:(_)=>refresh((){}))),
-            SizedBox(width:170,child:DropdownButtonFormField<String>(itemHeight: 40, value:governorate,decoration:const InputDecoration(labelText:'المحافظة'),items:[const DropdownMenuItem(value:null,child:Text('كل المحافظات')),...governors.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>refresh(()=>governorate=v))),
-            SizedBox(width:170,child:DropdownButtonFormField<String>(itemHeight: 40, value:district,decoration:const InputDecoration(labelText:'حي / مركز'),items:[const DropdownMenuItem(value:null,child:Text('كل الأحياء والمراكز')),...districts.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>refresh(()=>district=v))),
-            SizedBox(width:170,child:DropdownButtonFormField<String>(itemHeight: 40, value:locality,decoration:const InputDecoration(labelText:'منطقة / قرية'),items:[const DropdownMenuItem(value:null,child:Text('كل المناطق والقرى')),...areas.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>refresh(()=>locality=v))),
+            SizedBox(width:170,child:DropdownButtonFormField<String>(itemHeight: 48, value:governorate,decoration:const InputDecoration(labelText:'المحافظة'),items:[const DropdownMenuItem(value:null,child:Text('كل المحافظات')),...governors.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>refresh(()=>governorate=v))),
+            SizedBox(width:170,child:DropdownButtonFormField<String>(itemHeight: 48, value:district,decoration:const InputDecoration(labelText:'حي / مركز'),items:[const DropdownMenuItem(value:null,child:Text('كل الأحياء والمراكز')),...districts.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>refresh(()=>district=v))),
+            SizedBox(width:170,child:DropdownButtonFormField<String>(itemHeight: 48, value:locality,decoration:const InputDecoration(labelText:'منطقة / قرية'),items:[const DropdownMenuItem(value:null,child:Text('كل المناطق والقرى')),...areas.map((v)=>DropdownMenuItem(value:v,child:Text(v)))],onChanged:(v)=>refresh(()=>locality=v))),
           ]),
           const SizedBox(height:10),
           Row(children:[Text('المتاح للربط: ${available.length} عميل',style:const TextStyle(fontWeight:FontWeight.w800,color:_p)),const Spacer(),Text('المحدد: ${selected.length}')]),
@@ -884,7 +884,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
                           ),
                         ]),
                         if (hasCommission)
-                          DropdownButtonFormField<String>(itemHeight: 40, 
+                          DropdownButtonFormField<String>(itemHeight: 48, 
                             value: type,
                             isDense: true,
                             decoration: const InputDecoration(labelText: 'نوع العمولة', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 9, vertical: 7)),
