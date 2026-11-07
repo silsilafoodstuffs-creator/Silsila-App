@@ -146,17 +146,32 @@ jobs:
         if: always()
         shell: bash
         run: |
+          status_icon() {
+            case "$1" in
+              success) echo "🟢 ناجح" ;;
+              failure) echo "🔴 فاشل" ;;
+              cancelled) echo "⚪ أُلغي" ;;
+              skipped) echo "⚪ تم تخطيه" ;;
+              *) echo "🟡 لم يُنفّذ / قيد الانتظار" ;;
+            esac
+          }
           {
-            echo "## Silsila Full Validation"
+            echo "## 🧪 Silsila Full Validation — نتيجة الاختبارات"
             echo ""
-            echo "| Check | Result |"
+            echo "| الفحص | الحالة |"
             echo "|---|---|"
-            echo "| Python importer tests | ${{ steps.python_tests.outcome || 'not-run' }} |"
-            echo "| Flutter Analyze | ${{ steps.analyze.outcome || 'not-run' }} |"
-            echo "| Flutter Test | ${{ steps.flutter_tests.outcome || 'not-run' }} |"
-            echo "| Web build | ${{ steps.build_web.outcome || 'not-run' }} |"
-            echo "| Web output verification | ${{ steps.verify_web.outcome || 'not-run' }} |"
-            echo "| WebView desktop/mobile | ${{ steps.webview.outcome || 'not-run' }} |"
-            echo "| Android Debug APK | ${{ steps.android_debug.outcome || 'not-run' }} |"
-            echo "| Android APK verification | ${{ steps.verify_android.outcome || 'not-run' }} |"
+            echo "| اختبارات أدوات Python | $(status_icon '${{ steps.python_tests.outcome }}') |"
+            echo "| تحليل Dart وFlutter | $(status_icon '${{ steps.analyze.outcome }}') |"
+            echo "| اختبارات Flutter | $(status_icon '${{ steps.flutter_tests.outcome }}') |"
+            echo "| بناء نسخة Web | $(status_icon '${{ steps.build_web.outcome }}') |"
+            echo "| التحقق من ملفات Web | $(status_icon '${{ steps.verify_web.outcome }}') |"
+            echo "| اختبار WebView — كمبيوتر وموبايل | $(status_icon '${{ steps.webview.outcome }}') |"
+            echo "| بناء Android Debug APK | $(status_icon '${{ steps.android_debug.outcome }}') |"
+            echo "| التحقق من ملف APK | $(status_icon '${{ steps.verify_android.outcome }}') |"
+            echo ""
+            echo "### معنى الألوان"
+            echo "- 🟢 أخضر: الفحص نجح."
+            echo "- 🔴 أحمر: الفحص فشل."
+            echo "- 🟡 أصفر: لم يبدأ أو لم تتوفر نتيجة بعد."
+            echo "- ⚪ رمادي: تم تخطي الفحص أو إلغاؤه."
           } >> "$GITHUB_STEP_SUMMARY"
