@@ -203,7 +203,7 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
           const SizedBox(height: 8),
           TextField(controller: job, decoration: const InputDecoration(labelText: 'الوظيفة')),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String?>(
+          DropdownButtonFormField<String?>(itemHeight: 40, 
             value: branchId,
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'الفرع'),
@@ -442,7 +442,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
                 SizedBox(width: 270, child: TextField(controller: _userId, decoration: const InputDecoration(labelText: 'معرّف المستخدم UUID', isDense: true))),
                 SizedBox(width: 240, child: TextField(controller: _memberName, decoration: const InputDecoration(labelText: 'اسم المستخدم', isDense: true))),
                 SizedBox(width: 220, child: TextField(controller: _jobTitle, decoration: const InputDecoration(labelText: 'الوظيفة', isDense: true))),
-                SizedBox(width: 220, child: DropdownButtonFormField<String?>(
+                SizedBox(width: 220, child: DropdownButtonFormField<String?>(itemHeight: 40, 
                   value: _newBranchId,
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'الفرع', isDense: true),
@@ -455,7 +455,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
                   ],
                   onChanged: _saving ? null : (value) => setState(() => _newBranchId = value),
                 )),
-                SizedBox(width: 220, child: DropdownButtonFormField<String>(
+                SizedBox(width: 220, child: DropdownButtonFormField<String>(itemHeight: 40, 
                   value: _newRole,
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'الدور داخل الشركة', isDense: true),
@@ -484,7 +484,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(labelText: 'بحث بالاسم أو UUID', prefixIcon: Icon(Icons.search), isDense: true),
           )),
-          SizedBox(width: 220, child: DropdownButtonFormField<String>(
+          SizedBox(width: 220, child: DropdownButtonFormField<String>(itemHeight: 40, 
             value: _jobFilter,
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'فلتر الوظيفة', isDense: true),
@@ -494,7 +494,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             ],
             onChanged: (value) => setState(() => _jobFilter = value ?? '__all__'),
           )),
-          SizedBox(width: 220, child: DropdownButtonFormField<String>(
+          SizedBox(width: 220, child: DropdownButtonFormField<String>(itemHeight: 40, 
             value: _branchFilter,
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'فلتر الفرع', isDense: true),
@@ -559,7 +559,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       ))),
       DataCell(Text(_s(member['job_title']).isEmpty ? '—' : _s(member['job_title']))),
       DataCell(Text(_branchName(member['branch_id']))),
-      DataCell(DropdownButton<String>(
+      DataCell(DropdownButton<String>(itemHeight: 40, 
         value: _roles.containsKey(role) ? role : 'viewer',
         items: _roles.entries.map((entry) => DropdownMenuItem(value: entry.key, enabled: entry.key != 'owner', child: Text(entry.value))).toList(),
         onChanged: isCurrent || isOwner ? null : (value) { if (value != null && value != role) _updateMember(member, role: value); },
