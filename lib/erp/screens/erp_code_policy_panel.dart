@@ -14,8 +14,9 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   static const _purple = Color(0xFF3E007D);
   // Shared geometry for every coding-policy cell; the serial-count cell is the reference.
   static const double _cellHeight = 40;
-  static const double _columnSpacing = 5;
+  static const double _columnSpacing = 2.5;
   static const double _countCellWidth = 62;
+  static const double _nameCellWidth = 83; // 124 × 2/3 = 82.67, rounded to 83 px.
   static const _types = <Map<String, String>>[
     {'key':'employee','name':'الموظفون','prefix':'Emp','digits':'5'},
     {'key':'user','name':'المستخدمون','prefix':'Usr','digits':'5'},
@@ -239,13 +240,13 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     const expectedGeoLengths = {'governorate':2,'center':2,'area':2};
     for (final entry in expectedGeoLengths.entries) {
       final value = int.tryParse(_geoSegments[entry.key]!.text);
-      if (value != entry.value) {
+      if (value == null || value < 1 || value > 6) {
         final label = {
           'governorate':'المحافظة',
           'center':'المركز/الحي',
           'area':'المنطقة/القرية/التسلسل',
         }[entry.key];
-        setState(() => _error = 'خانة $label يجب أن تكون رقمين بالضبط.');
+        setState(() => _error = 'عدد خانات $label يجب أن يكون من 1 إلى 6.');
         return;
       }
     }
@@ -300,22 +301,22 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         // center=6, area=8 total digits.
         'geo_segments':{
           'country':countryCode,
-          'governorate':4,
-          'center':6,
-          'area':8,
+          'governorate':2 + int.parse(_geoSegments['governorate']!.text),
+          'center':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text),
+          'area':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text) + int.parse(_geoSegments['area']!.text),
         },
         // New UI contract: each level contributes exactly two digits.
         'geo_segment_lengths':{
           'country':2,
-          'governorate':2,
-          'center':2,
-          'area':2,
+          'governorate':int.parse(_geoSegments['governorate']!.text),
+          'center':int.parse(_geoSegments['center']!.text),
+          'area':int.parse(_geoSegments['area']!.text),
         },
         'geo_cumulative_lengths':{
           'country':2,
-          'governorate':4,
-          'center':6,
-          'area':8,
+          'governorate':2 + int.parse(_geoSegments['governorate']!.text),
+          'center':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text),
+          'area':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text) + int.parse(_geoSegments['area']!.text),
         },
       });
       await _db.from('erp_program_policies').upsert({
@@ -329,7 +330,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         'user_ids':<String>[],
         'policy_value':payload,
       }, onConflict:'company_id,policy_key');
-      if (mounted) setState(() { _saving = false; _message = 'تم حفظ إعدادات التكويد المركزي.'; });
+      if (mounted) { setState(() { _saving = false; _message = 'تم حفظ إعدادات التكويد المركزي.'; }); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم الحفظ'), backgroundColor: Colors.green, duration: Duration(seconds: 2))); }
     } catch (e) {
       if (mounted) setState(() { _saving = false; _error = 'تعذر حفظ إعدادات التكويد: $e'; });
     }
@@ -345,7 +346,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     ));
 
   Widget _nameField(TextEditingController controller, {bool readOnly = false}) => SizedBox(
-    width:124, height:_cellHeight,
+    width:_nameCellWidth, height:_cellHeight,
     child:TextField(
       controller:controller, readOnly:readOnly, textAlign:TextAlign.center,
       decoration:const InputDecoration(isDense:true,border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:7)),
@@ -373,15 +374,15 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       
       _field(_itemSegments['serial']!,max:2,letters:false,changed:(){}),
       
-      const SizedBox(width:124,height:_cellHeight,child:Center(child:Text('فئة ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('فئة ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
       
       _field(_itemSegments['secondary']!,max:2,letters:false,changed:(){}),
       
-      const SizedBox(width:124,height:_cellHeight,child:Center(child:Text('براند/ ماركة',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('براند/ ماركة',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
       
       _field(_itemSegments['brand']!,max:2,letters:false,changed:(){}),
       
-      const SizedBox(width:124,height:_cellHeight,child:Center(child:Text('فئة فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('فئة فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
       
       _field(_itemSegments['sub']!,max:2,letters:false,changed:(){}),
       
@@ -411,10 +412,10 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
       
       _firstFieldName(),  const SizedBox(width:_countCellWidth,height:_cellHeight), 
-      _geoNameCell('منطقة/قرية'),  _geoCountCell(),
-       _geoNameCell('حي/مركز/شياخة'),  _geoCountCell(),
-       _geoNameCell('محافظة'),  _geoCountCell(),
-       _geoNameCell('دولة'),  _geoCountCell(),
+      _geoNameCell('منطقة/قرية'),  _segmentField('عدد',_geoSegments['area']!,2),
+       _geoNameCell('حي/مركز/شياخة'),  _segmentField('عدد',_geoSegments['center']!,2),
+       _geoNameCell('محافظة'),  _segmentField('عدد',_geoSegments['governorate']!,2),
+       _geoNameCell('دولة'),  const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('2',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       
       SizedBox(width:112,child:Text(_geoPrefix.text,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),
       const SizedBox(width:112,child:Text('Rig + 8 أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10))),
@@ -422,7 +423,6 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   );
 
   Widget _geoNameCell(String name) => SizedBox(width:124,height:_cellHeight,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
-  Widget _geoCountCell() => const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('2',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))));
 
   Widget _segmentField(String label, TextEditingController controller, int max) => SizedBox(
     width:112,
@@ -455,7 +455,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           const SizedBox(height:4),
           const Text('حدد بادئة كل نوع وعدد الخانات الرقمية. المعاينة تعرض أول كود متوقع، ويبدأ الترقيم من 1.',style:TextStyle(fontSize:11,color:Colors.black54)),
           const SizedBox(height:8),
-          const Text('معيار تنسيق الجدول: ارتفاع موحد 40 بكسل لكل الخانات، ومسافة 5 بكسل بين الأعمدة، وعرض خانة العدد 62 بكسل (المساحة 2,480 بكسل²).',style:TextStyle(fontSize:10,color:Colors.black54)),
+          const Text('معيار تنسيق الجدول: ارتفاع 40 بكسل، والمسافة بين الأعمدة 2.5 بكسل، وعرض خانات أسماء الخانات 83 بكسل (بدلًا من 124)، وعرض خانة العدد 62 بكسل.',style:TextStyle(fontSize:10,color:Colors.black54)),
           const SizedBox(height:8),
           SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(spacing:_columnSpacing,children:const[
             SizedBox(width:30,child:Text('م',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
@@ -464,11 +464,11 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             
             SizedBox(width:52,child:Text('مركب',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             
-            SizedBox(width:124,child:Text('اسم خانة 1',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:_nameCellWidth,child:Text('اسم خانة 1',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             
             SizedBox(width:_countCellWidth,child:Text('عدد خانة 1',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             
-            SizedBox(width:124,child:Text('اسم خانة 2',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:_nameCellWidth,child:Text('اسم خانة 2',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             
             SizedBox(width:_countCellWidth,child:Text('عدد خانة 2',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             
@@ -479,7 +479,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             SizedBox(width:124,child:Text('اسم خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             
             SizedBox(width:_countCellWidth,child:Text('عدد خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
-            SizedBox(width:124,child:Text('اسم خانة 5',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:_nameCellWidth,child:Text('اسم خانة 5',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             
             SizedBox(width:_countCellWidth,child:Text('عدد خانة 5',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
             
@@ -572,7 +572,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         ]))),
         if(_error!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
         if(_message!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
-        Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_saving?null:_save,icon:const Icon(Icons.save),label:Text(_saving?'جارٍ الحفظ':'حفظ إعدادات التكويد'))),
+        
       ],
     ),
   );
