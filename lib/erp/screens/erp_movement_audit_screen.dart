@@ -282,7 +282,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
 
   Future<void> _previewAudit() async {
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('معاينة تقرير اختبار الحركات'),
+      title: const Text('معاينة تقرير مراجعة الحركات'),
       content: SizedBox(width: 800, child: _issues.isEmpty ? const Text('لا توجد نتائج بعد. اضغط تحديث / تشغيل الفحص.')
         : SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: _issues.take(150).map((r) => ListTile(
           dense: true,
