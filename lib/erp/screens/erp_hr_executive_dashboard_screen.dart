@@ -20,6 +20,22 @@ List<Map<String, dynamic>> filterHrOperationalEmployees(
   List<Map<String, dynamic>> employees,
 ) => employees.where((employee) => !isHrExcludedSeedEmployee(employee)).toList();
 
+int calculateHrStaffingVacancies(int authorizedHeadcount, int occupiedPositions) {
+  if (authorizedHeadcount < 0 || occupiedPositions < 0) {
+    throw ArgumentError('Staffing counts cannot be negative.');
+  }
+  return (authorizedHeadcount - occupiedPositions)
+      .clamp(0, authorizedHeadcount)
+      .toInt();
+}
+
+int calculateHrStaffingFilledPositions(int authorizedHeadcount, int occupiedPositions) {
+  if (authorizedHeadcount < 0 || occupiedPositions < 0) {
+    throw ArgumentError('Staffing counts cannot be negative.');
+  }
+  return occupiedPositions.clamp(0, authorizedHeadcount).toInt();
+}
+
 class ErpHrExecutiveDashboardScreen extends StatefulWidget {
   const ErpHrExecutiveDashboardScreen({super.key, this.companyId, this.canManage = false});
   final String? companyId;
