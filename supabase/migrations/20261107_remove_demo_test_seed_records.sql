@@ -77,19 +77,24 @@ begin
   delete from public.erp_item_units where item_id = any(v_item_ids);
   delete from public.erp_items where id = any(v_item_ids);
 
-  -- Remove the six Juhayna 235ml records only where the explicit SILSILA_TEST opening-stock marker exists.
-  select coalesce(array_agg(i.id), array[]::uuid[]) into v_item_ids
+  -- Remove all products whose only stock movements were explicitly marked as test opening stock.
+  select coalesce(array_agg(distinct i.id), array[]::uuid[]) into v_item_ids
   from public.erp_items i
-  where i.item_code like 'JUH-235-%'
-    and exists (
-      select 1 from public.erp_inventory_movements m
-      where m.item_id = i.id
-        and m.notes like 'SILSILA_TEST_OPENING_STOCK_20261020:%'
-    );
+  where exists (
+    select 1 from public.erp_inventory_movements m
+    where m.item_id = i.id
+      and m.notes like 'SILSILA_TEST_OPENING_STOCK_20261020:%'
+  )
+  and not exists (
+    select 1 from public.erp_inventory_movements m
+    where m.item_id = i.id
+      and m.notes not like 'SILSILA_TEST_OPENING_STOCK_20261020:%'
+  )
+  and not exists (select 1 from public.erp_sales_lines x where x.item_id = i.id)
+  and not exists (select 1 from public.erp_purchase_lines x where x.item_id = i.id);
 
   delete from public.erp_inventory_movements
-   where item_id = any(v_item_ids)
-     and notes like 'SILSILA_TEST_OPENING_STOCK_20261020:%';
+   where notes like 'SILSILA_TEST_OPENING_STOCK_20261020:%';
   delete from public.erp_item_warehouse_settings where item_id = any(v_item_ids);
   delete from public.erp_item_units where item_id = any(v_item_ids);
   delete from public.erp_items where id = any(v_item_ids);
