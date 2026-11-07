@@ -439,7 +439,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                   SizedBox(width: 225, child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                                     Text(p['ar'].toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
                                     Text(p['en'].toString(), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.black54, fontSize: 9)),
-                                    if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF3E007D), fontSize: 9, fontWeight: FontWeight.bold)),
+                                    if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF18865A), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ])),
                                   const SizedBox(width: 8),
                                   SizedBox(width: 220, child: p['key'] == 'fiscal_year'
