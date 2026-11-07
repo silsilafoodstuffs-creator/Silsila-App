@@ -735,6 +735,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
 
   Widget _colorField(TextEditingController controller, {double width = 145}) => SizedBox(
     width: width,
+    height: 40,
     child: Row(
       children: [
         Expanded(
@@ -775,7 +776,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     ),
   );
 
-  Widget _field(TextEditingController c, {double width = 150, String? hint}) => SizedBox(width: width, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
+  Widget _field(TextEditingController c, {double width = 150, String? hint}) => SizedBox(width: width, height: 40, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
   Widget _row(int index, String code, String title, Widget value) => Card(
     margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0,
     shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: .16)), borderRadius: BorderRadius.circular(6)),
