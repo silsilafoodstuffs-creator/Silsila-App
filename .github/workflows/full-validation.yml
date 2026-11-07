@@ -9,6 +9,14 @@ on:
     paths:
       - 'lib/erp/screens/erp_program_policies_screen.dart'
       - 'lib/erp/screens/erp_code_policy_panel.dart'
+      - 'lib/erp/screens/erp_hr_executive_dashboard_screen.dart'
+      - 'lib/erp/screens/erp_inventory_master_screen.dart'
+      - 'lib/erp/screens/erp_price_lists_screen.dart'
+      - 'lib/erp/screens/erp_payroll_screen.dart'
+      - 'lib/erp/screens/erp_inventory_screen.dart'
+      - 'lib/erp/screens/erp_facebook_group_leads_screen.dart'
+      - 'lib/erp/screens/erp_financial_operations_screen.dart'
+      - 'lib/erp/screens/erp_operational_documents_screen.dart'
       - 'supabase/migrations/*policy*codes*.sql'
       - 'supabase/migrations/*codes*program*policies*.sql'
 
