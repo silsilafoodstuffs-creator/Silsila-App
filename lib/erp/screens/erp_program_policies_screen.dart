@@ -1,5 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:file_saver/file_saver.dart';
+import 'package:excel/excel.dart' as excel;
+import 'package:flutter/services.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -159,6 +165,120 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     );
   }
 
+  Future<List<List<String>>> _currentExportRows() async {
+    final rows = <List<String>>[];
+    if (tab == 0) {
+      final state = _identityKey.currentState;
+      if (state == null) throw StateError('بيانات الهوية البصرية غير جاهزة.');
+      rows.add(['البيان', 'القيمة']);
+      rows.add(['اسم البرنامج', state._name.text]);
+      rows.add(['اللغة', state._language == 'ar' ? 'العربية' : 'English']);
+      rows.add(['اللون الأساسي', state._primary.text]);
+      rows.add(['اللون الثانوي', state._secondary.text]);
+      rows.add(['لون التمييز', state._accent.text]);
+      rows.add(['لون الخلفية', state._background.text]);
+      for (var i = 0; i < state._labels.length; i++) {
+        rows.add([state._labels[i], 'الخط: ${state._fonts[i]} | الحجم: ${state._sizes[i].text} | اللون: ${state._colors[i].text}']);
+      }
+    } else if (tab == 2) {
+      final record = await db.from('erp_program_policies')
+          .select('policy_value')
+          .eq('company_id', company)
+          .eq('policy_key', 'code_generation_registry')
+          .maybeSingle();
+      if (record == null) throw StateError('لا توجد إعدادات تكويد محفوظة لتصديرها.');
+      final payload = jsonDecode((record['policy_value'] ?? '{}').toString()) as Map<String, dynamic>;
+      rows.add(['نوع التكويد', 'البادئة', 'عدد الخانات', 'تلقائي', 'مركب']);
+      final types = Map<String, dynamic>.from(payload['types'] as Map? ?? {});
+      for (final entry in types.entries) {
+        final config = Map<String, dynamic>.from(entry.value as Map? ?? {});
+        rows.add([entry.key, (config['prefix'] ?? '').toString(), (config['digits'] ?? '').toString(),
+          config['automatic'] == true ? 'نعم' : 'لا', config['composite'] == true ? 'نعم' : 'لا']);
+      }
+      rows.add(['الأصناف', (payload['item_prefix'] ?? 'Itm').toString(), '10', payload['item_automatic'] == true ? 'نعم' : 'لا', payload['item_composite'] == true ? 'نعم' : 'لا']);
+      rows.add(['التقسيم الجغرافي', (payload['geo_prefix'] ?? 'Rig').toString(), 'حسب مستويات التقسيم', 'نعم', 'نعم']);
+    } else {
+      rows.add(['م', 'كود السياسة', 'اسم السياسة', 'القيمة', 'مفعلة', 'على الكل', 'عدد المستخدمين']);
+      final current = values.values.where((p) => p['category'] == tabs[tab]).toList();
+      for (var i = 0; i < current.length; i++) {
+        final p = current[i];
+        final originalIndex = defaults.indexWhere((item) => item['key'] == p['key']) + 1;
+        rows.add([(i + 1).toString(), 'POL${originalIndex.toString().padLeft(3, '0')}', (p['ar'] ?? '').toString(),
+          (p['value'] ?? '').toString(), p['enabled'] == true ? 'نعم' : 'لا',
+          p['all'] == true ? 'نعم' : 'لا', ((p['user_ids'] as List?)?.length ?? 0).toString()]);
+      }
+    }
+    if (rows.length <= 1) throw StateError('لا توجد بيانات في التبويب الحالي للتصدير.');
+    return rows;
+  }
+
+  Future<void> _exportCurrentExcel() async {
+    try {
+      final rows = await _currentExportRows();
+      final workbook = excel.Excel.createExcel();
+      final sheet = workbook['سياسات البرنامج'];
+      for (final row in rows) {
+        sheet.appendRow(row.map<excel.CellValue?>((value) => excel.TextCellValue(value)).toList());
+      }
+      final bytes = workbook.encode();
+      if (bytes == null || bytes.isEmpty) throw StateError('تعذر إنشاء ملف Excel.');
+      await FileSaver.instance.saveFile(
+        name: 'Silsila_Program_Policies',
+        bytes: Uint8List.fromList(bytes),
+        ext: 'xlsx',
+        mimeType: MimeType.microsoftExcel,
+      );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تصدير ملف Excel بنجاح.'), backgroundColor: Color(0xFF18865A)));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تصدير Excel: $e'), backgroundColor: const Color(0xFFB42318)));
+      rethrow;
+    }
+  }
+
+  Future<Uint8List> _buildCurrentPdf() async {
+    final rows = await _currentExportRows();
+    final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
+    final pdf = pw.Document();
+    pdf.addPage(pw.MultiPage(
+      theme: pw.ThemeData.withFont(base: font, bold: font),
+      build: (_) => [
+        pw.Text('Silsila • ${tabs[tab]}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 10),
+        pw.TableHelper.fromTextArray(headers: rows.first, data: rows.skip(1).toList()),
+      ],
+    ));
+    return Uint8List.fromList(await pdf.save());
+  }
+
+  Future<void> _printCurrentPolicies() async {
+    try {
+      final bytes = await _buildCurrentPdf();
+      final printed = await Printing.layoutPdf(onLayout: (_) async => bytes);
+      if (printed && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال المستند إلى الطباعة.'), backgroundColor: Color(0xFF18865A)));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذرت الطباعة: $e'), backgroundColor: const Color(0xFFB42318)));
+      rethrow;
+    }
+  }
+
+  Future<void> _exportCurrentPdf() async {
+    try {
+      final bytes = await _buildCurrentPdf();
+      await FileSaver.instance.saveFile(
+        name: 'Silsila_Program_Policies',
+        bytes: bytes,
+        ext: 'pdf',
+        mimeType: MimeType.pdf,
+      );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تصدير PDF بنجاح.'), backgroundColor: Color(0xFF18865A)));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تصدير PDF: $e'), backgroundColor: const Color(0xFFB42318)));
+      rethrow;
+    }
+  }
+
   Future<void> _pickUsers(Map<String,dynamic> p) async {
     final chosen=<String>{...List<String>.from(p['user_ids'] as List)};
     final result=await showDialog<Set<String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,ds)=>AlertDialog(title:const Text('اختيار المستخدمين — F1'),content:SizedBox(width:480,child:Column(mainAxisSize:MainAxisSize.min,children:[Align(alignment:Alignment.centerRight,child:TextButton(onPressed:()=>ds(() { if(chosen.length==users.length){chosen.clear();}else{chosen.addAll(users.map((u)=>(u['id']??'').toString()));} }),child:const Text('تحديد الكل / إلغاء تحديد الكل'))),Flexible(child:ListView(shrinkWrap:true,children:users.map((u){final id=(u['id']??'').toString();final name=(u['name_ar']??u['user_code']??id).toString();return CheckboxListTile(dense:true,value:chosen.contains(id),title:Text(name),onChanged:(v)=>ds(() { if(v==true){chosen.add(id);}else{chosen.remove(id);} }));}).toList()))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,chosen),child:const Text('حفظ'))])));
@@ -226,9 +346,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true, onPressed: loading ? null : _editCurrentTab),
             ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, compact: true, onPressed: null),
             ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, compact: true, onPressed: _previewCurrentTab),
-            ErpQuickTaskButton(label: 'طباعة', icon: Icons.print_outlined, compact: true, onPressed: null),
-            ErpQuickTaskButton(label: 'Excel', icon: Icons.table_view_outlined, compact: true, onPressed: null),
-            ErpQuickTaskButton(label: 'PDF', icon: Icons.picture_as_pdf_outlined, compact: true, onPressed: null),
+            ErpQuickTaskButton(label: 'طباعة', icon: Icons.print_outlined, compact: true, onPressed: _printCurrentPolicies),
+            ErpQuickTaskButton(label: 'Excel', icon: Icons.table_view_outlined, compact: true, onPressed: _exportCurrentExcel),
+            ErpQuickTaskButton(label: 'PDF', icon: Icons.picture_as_pdf_outlined, compact: true, onPressed: _exportCurrentPdf),
           ])),
         ]),
       ),
