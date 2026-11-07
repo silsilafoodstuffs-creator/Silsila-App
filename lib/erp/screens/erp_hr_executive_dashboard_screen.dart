@@ -49,6 +49,22 @@ bool isHrSuspendedEmployee(Map<String, dynamic> employee) {
   }.contains(status);
 }
 
+bool isHrEndedEmployee(Map<String, dynamic> employee) {
+  final status = (employee['employment_status']?.toString() ?? '')
+      .trim()
+      .toLowerCase();
+  return const {
+    'terminated',
+    'resigned',
+    'retired',
+    'inactive',
+    'منتهي الخدمة',
+    'مستقيل',
+    'متقاعد',
+    'غير نشط',
+  }.contains(status);
+}
+
 class ErpHrExecutiveDashboardScreen extends StatefulWidget {
   const ErpHrExecutiveDashboardScreen({super.key, this.companyId, this.canManage = false});
   final String? companyId;
@@ -153,7 +169,9 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       isHrExcludedSeedEmployee(employee) && !_isTemporarySeedEmployee(employee);
   List<Map<String, dynamic>> get _realEmployees => filterHrOperationalEmployees(_employees);
   bool _isCurrentEmployee(Map<String, dynamic> employee) {
-    if (employee['is_active'] != true || isHrExcludedSeedEmployee(employee)) return false;
+    if (employee['is_active'] != true ||
+        isHrExcludedSeedEmployee(employee) ||
+        isHrEndedEmployee(employee)) return false;
     final hireDate = _asDate(employee['hire_date']);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -179,7 +197,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _activeEmployees => _realEmployees
       .where((employee) => _isCurrentEmployee(employee) && !_isSuspendedEmployee(employee))
       .length;
-  int get _inactiveEmployees => _realEmployees.where((e) => e['is_active'] != true).length;
+  int get _inactiveEmployees => _realEmployees.where((e) =>
+      e['is_active'] != true || isHrEndedEmployee(e)).length;
   int get _activeDepartments => _departments.where((e) => e['is_active'] != false).length;
   int get _activeJobs => _jobs.where((e) => e['is_active'] != false).length;
 
@@ -292,9 +311,14 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
 
   int get _contractsExpired {
     final today = DateUtils.dateOnly(DateTime.now());
+    final currentEmployeeIds = _realEmployees
+        .where(_isCurrentEmployee)
+        .map((employee) => employee['id']?.toString())
+        .whereType<String>()
+        .toSet();
     if (_contracts.isNotEmpty) return _contracts.where((contract) {
       final end = _asDate(contract['end_date']);
-      return end != null && _realEmployeeIds.contains(contract['employee_id']?.toString()) &&
+      return end != null && currentEmployeeIds.contains(contract['employee_id']?.toString()) &&
           DateUtils.dateOnly(end).isBefore(today) && !const ['cancelled','rejected'].contains(contract['status']?.toString().toLowerCase());
     }).length;
     return _realEmployees.where((e) {
