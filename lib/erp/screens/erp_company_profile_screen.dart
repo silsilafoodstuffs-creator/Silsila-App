@@ -727,7 +727,7 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
               padding: EdgeInsetsDirectional.only(end: 12),
               child: Text('العملة الأساسية', style: TextStyle(color: _companyPurple, fontWeight: FontWeight.w700, fontSize: 13)),
             )),
-            Expanded(child: DropdownButtonFormField<String>(
+            Expanded(child: DropdownButtonFormField<String>(itemHeight: 40, 
               value: current, isExpanded: true,
               decoration: InputDecoration(prefixIcon: const Icon(Icons.currency_exchange, size: 20), isDense: true,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),

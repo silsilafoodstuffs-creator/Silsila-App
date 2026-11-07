@@ -211,7 +211,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
                                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                                 ),
                             ]),
-                            DropdownButtonFormField<String>(
+                            DropdownButtonFormField<String>(itemHeight: 40, 
                               value: line.accountId,
                               isExpanded: true,
                               decoration: const InputDecoration(labelText: 'الحساب القابل للترحيل *'),
