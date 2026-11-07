@@ -27,6 +27,7 @@ jobs:
           python-version: "3.12"
 
       - name: Validate catalog image importer and matching tests
+        id: python_tests
         run: |
           python -m py_compile tools/catalog_import/import_real_product_images.py
           python -m unittest discover -s tools/catalog_import -p 'test_*.py' -v
@@ -51,15 +52,23 @@ jobs:
         run: flutter pub get
 
       - name: Analyze all application and test Dart code
+        id: analyze
         run: flutter analyze lib test --no-fatal-infos
 
+      # Run independent checks even if analysis or another check fails.
       - name: Run all Flutter tests
+        id: flutter_tests
+        if: always() && !cancelled()
         run: flutter test
 
       - name: Build production-path web app with Dart source maps
+        id: build_web
+        if: always() && !cancelled()
         run: flutter build web --release --source-maps --base-href "/Silsila-App/"
 
       - name: Verify web build output
+        id: verify_web
+        if: always() && !cancelled() && steps.build_web.outcome == 'success'
         run: |
           set -euo pipefail
           test -s build/web/index.html
@@ -67,11 +76,15 @@ jobs:
           grep -q 'flutter_bootstrap.js' build/web/index.html
 
       - name: Install Chromium browser test dependencies
+        id: install_browser
+        if: always() && !cancelled() && steps.build_web.outcome == 'success'
         run: |
           npm install --no-save --no-package-lock playwright source-map
           npx playwright install --with-deps chromium
 
       - name: Run real browser WebView tests (desktop + mobile)
+        id: webview
+        if: always() && !cancelled() && steps.verify_web.outcome == 'success' && steps.install_browser.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
@@ -89,11 +102,13 @@ jobs:
       # Keep Android build and artifact collection running even when WebView
       # fails, so one failed browser assertion does not hide other build results.
       - name: Build Android debug APK
+        id: android_debug
         if: always() && !cancelled()
         run: flutter build apk --debug
 
       - name: Verify Android APK output
-        if: always() && !cancelled()
+        id: verify_android
+        if: always() && !cancelled() && steps.android_debug.outcome == 'success'
         run: test -s build/app/outputs/flutter-apk/app-debug.apk
 
       - name: Upload consolidated validation artifacts
@@ -106,3 +121,22 @@ jobs:
             build/app/outputs/flutter-apk/app-debug.apk
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Write consolidated validation summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Silsila Full Validation"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Python importer tests | ${{ steps.python_tests.outcome || 'not-run' }} |"
+            echo "| Flutter Analyze | ${{ steps.analyze.outcome || 'not-run' }} |"
+            echo "| Flutter Test | ${{ steps.flutter_tests.outcome || 'not-run' }} |"
+            echo "| Web build | ${{ steps.build_web.outcome || 'not-run' }} |"
+            echo "| Web output verification | ${{ steps.verify_web.outcome || 'not-run' }} |"
+            echo "| WebView desktop/mobile | ${{ steps.webview.outcome || 'not-run' }} |"
+            echo "| Android Debug APK | ${{ steps.android_debug.outcome || 'not-run' }} |"
+            echo "| Android APK verification | ${{ steps.verify_android.outcome || 'not-run' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
