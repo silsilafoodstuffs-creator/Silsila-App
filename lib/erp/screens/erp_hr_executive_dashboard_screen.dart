@@ -634,6 +634,47 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     }
   }
 
+  Future<void> _changeStaffingPlanStatus(
+    Map<String, dynamic> plan,
+    String status,
+  ) async {
+    final companyId = widget.companyId;
+    final id = plan['id']?.toString();
+    if (companyId == null || id == null) {
+      _showMessage('بيانات خطة الملاك غير مكتملة.');
+      return;
+    }
+    try {
+      await _db
+          .from('erp_hr_staffing_plans')
+          .update({'status': status})
+          .eq('id', id)
+          .eq('company_id', companyId);
+      if (mounted) await _load();
+    } catch (e) {
+      _showMessage('تعذر تحديث خطة الملاك. الاعتماد متاح لمالك الشركة أو مدير النظام فقط. $e');
+    }
+  }
+
+  String _staffingJobLabel(dynamic id) {
+    for (final job in _jobs) {
+      if (job['id']?.toString() == id?.toString()) {
+        return '${job['job_code'] ?? ''} • ${job['name_ar'] ?? 'وظيفة'}';
+      }
+    }
+    return 'وظيفة غير محددة';
+  }
+
+  String _staffingLocationLabel(dynamic id) {
+    if (id == null) return 'كل مواقع الشركة';
+    for (final location in _workLocations) {
+      if (location['id']?.toString() == id.toString()) {
+        return location['name_ar']?.toString() ?? 'موقع عمل';
+      }
+    }
+    return 'موقع غير محدد';
+  }
+
   Future<void> _addCompliance() async {
     if (_employees.isEmpty) { _showMessage('أضف الموظفين أولًا حتى يمكن ربط سجل التأمين أو الرخصة.'); return; }
     final provider = TextEditingController(), reference = TextEditingController(), issued = TextEditingController(), expires = TextEditingController(), notes = TextEditingController();
@@ -1082,6 +1123,43 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             const SizedBox(height: 18),
             _sectionTitle('متابعة وتحديث السجلات الحديثة', Icons.manage_history_outlined),
             _panel(children: [
+              ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: Text('خطط الملاك الوظيفي (${_staffingPlans.length})'),
+                children: _staffingPlans.take(12).map((plan) {
+                  final status = plan['status']?.toString() ?? 'draft';
+                  final statusLabel = switch (status) {
+                    'approved' => 'معتمدة',
+                    'pending_approval' => 'بانتظار الاعتماد',
+                    'rejected' => 'مرفوضة',
+                    'cancelled' => 'ملغاة',
+                    _ => 'مسودة',
+                  };
+                  final authorized = (plan['authorized_headcount'] as num?)?.toInt() ?? 0;
+                  return ListTile(
+                    dense: true,
+                    title: Text(_staffingJobLabel(plan['job_id'])),
+                    subtitle: Text(
+                      '${_staffingLocationLabel(plan['work_location_id'])} • العدد: $authorized • الحالة: $statusLabel',
+                    ),
+                    trailing: status == 'pending_approval'
+                        ? TextButton(
+                            onPressed: _loading
+                                ? null
+                                : () => _changeStaffingPlanStatus(plan, 'approved'),
+                            child: const Text('اعتماد'),
+                          )
+                        : status == 'draft'
+                            ? TextButton(
+                                onPressed: _loading
+                                    ? null
+                                    : () => _changeStaffingPlanStatus(plan, 'pending_approval'),
+                                child: const Text('إرسال للاعتماد'),
+                              )
+                            : const Text(''),
+                  );
+                }).toList(),
+              ),
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
                 title: Text('طلبات التوظيف (${_candidates.length})'),
