@@ -1157,7 +1157,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
                         if (accountRole == 'customer' && (currentActivity == null || currentActivity.trim().isEmpty))
                           const Padding(
                             padding: EdgeInsets.only(top: 5),
-                            child: Text('لم يحدد نشاط لهذا الحساب بعد؛ تم اقتراح النشاط الأساسي «مواد غذائية» للاختبار ويمكن تغييره قبل الاعتماد.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5)),
+                            child: Text('لم يحدد نشاط لهذا الحساب بعد؛ تم اقتراح النشاط الأساسي «مواد غذائية» للمراجعة ويمكن تغييره قبل الاعتماد.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5)),
                           ),
                         const SizedBox(height: 10),
                         DropdownButtonFormField<String>(
