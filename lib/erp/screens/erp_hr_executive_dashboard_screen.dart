@@ -12,7 +12,8 @@ bool isHrExcludedSeedEmployee(Map<String, dynamic> employee) {
   final status = (employee['employment_status']?.toString() ?? '').toLowerCase();
   return notes.contains('بيانات أولية مؤقتة') || notes.contains('اختبار') ||
       notes.contains('تجريبي') || notes.contains('test') || notes.contains('demo') ||
-      status == 'test' || status == 'demo' || status == 'اختبار' || status == 'تجريبي';
+      status == 'test' || status == 'demo' || status == 'اختبار' || status == 'تجريبي' ||
+      status == 'temporary' || status == 'seed' || status == 'مؤقت' || status == 'بيانات أولية';
 }
 
 List<Map<String, dynamic>> filterHrOperationalEmployees(
