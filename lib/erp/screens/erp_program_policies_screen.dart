@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../widgets/erp_quick_task_button.dart';
 import 'erp_code_policy_panel.dart';
 
 class ErpProgramPoliciesScreen extends StatefulWidget {
@@ -49,11 +50,12 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final values = <String,Map<String,dynamic>>{};
   final users = <Map<String,dynamic>>[];
   final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
+  final GlobalKey<ErpCodePolicyPanelState> _codePolicyKey = GlobalKey<ErpCodePolicyPanelState>();
   int tab = 0; bool loading = true, saving = false; String? error, message;
   String get company => (widget.companyId ?? '').trim();
   @override void initState(){super.initState(); for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
   @override void didUpdateWidget(covariant ErpProgramPoliciesScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
-  Future<void> _load() async {
+  Future<void> _load({bool propagateError = false}) async {
     if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; });return;}
     setState(() { loading=true; error=null; message=null; });
     try {
@@ -76,7 +78,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       for(final row in (rows as List).whereType<Map<String,dynamic>>()) { final key=(row['policy_key']??'').toString(); if(!values.containsKey(key))continue; final p=values[key]!; p['enabled']=row['is_enabled']==true; p['all']=row['apply_to_all']==true || p['mandatory']==true; p['value']=(row['policy_value']??p['value']??'').toString(); p['user_ids']=List<String>.from((row['user_ids'] as List?)??const []); }
       final us=await db.from('erp_users').select('id,user_code,name_ar').eq('company_id',company);
       if(mounted)setState(() { users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)); loading=false; });
-    } catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل السياسات. طبّق migration سياسات البرنامج أولاً. $e'; });}
+    } catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل السياسات. طبّق migration سياسات البرنامج أولاً. $e'; }); if(propagateError) rethrow;}
   }
   Future<void> _save() async {
     for (final key in ['trader_market.sell_duration_hours','trader_market.buy_duration_hours','trader_market.transfer_duration_hours']) {
@@ -95,6 +97,62 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     setState(() { saving=true; error=null; message=null; });
     try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??''}).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; });}
   }
+  Future<void> _refreshCurrentTab() async {
+    if (tab == 0) {
+      await _identityKey.currentState?._load(propagateError: true);
+    } else if (tab == 2) {
+      await _codePolicyKey.currentState?.reloadFromHeader();
+    } else {
+      await _load(propagateError: true);
+    }
+  }
+
+  Future<void> _saveCurrentTab() async {
+    if (tab == 0) {
+      await _identityKey.currentState?._save();
+    } else if (tab == 2) {
+      await _codePolicyKey.currentState?.saveFromHeader();
+    } else {
+      await _save();
+    }
+  }
+
+  void _editCurrentTab() {
+    if (tab == 0) {
+      _identityKey.currentState?._startEditing();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('حقول السياسات في هذا التبويب قابلة للتعديل مباشرة.'),
+      ));
+    }
+  }
+
+  Future<void> _previewCurrentTab() async {
+    final current = values.values.where((p) => tab != 0 && p['category'] == tabs[tab]).toList();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('معاينة ${tabs[tab]}'),
+        content: SizedBox(
+          width: 520,
+          child: current.isEmpty
+              ? const Text('المعاينة التفصيلية متاحة من محتوى التبويب الحالي.')
+              : ListView(
+                  shrinkWrap: true,
+                  children: current.map((p) => ListTile(
+                    dense: true,
+                    title: Text((p['ar'] ?? '').toString()),
+                    subtitle: Text('القيمة: ${(p['value'] ?? '—').toString()}'),
+                    trailing: Icon(p['enabled'] == true ? Icons.check_circle : Icons.remove_circle_outline,
+                      color: p['enabled'] == true ? Colors.green : Colors.grey),
+                  )).toList(),
+                ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إغلاق'))],
+      ),
+    );
+  }
+
   Future<void> _pickUsers(Map<String,dynamic> p) async {
     final chosen=<String>{...List<String>.from(p['user_ids'] as List)};
     final result=await showDialog<Set<String>>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,ds)=>AlertDialog(title:const Text('اختيار المستخدمين — F1'),content:SizedBox(width:480,child:Column(mainAxisSize:MainAxisSize.min,children:[Align(alignment:Alignment.centerRight,child:TextButton(onPressed:()=>ds(() { if(chosen.length==users.length){chosen.clear();}else{chosen.addAll(users.map((u)=>(u['id']??'').toString()));} }),child:const Text('تحديد الكل / إلغاء تحديد الكل'))),Flexible(child:ListView(shrinkWrap:true,children:users.map((u){final id=(u['id']??'').toString();final name=(u['name_ar']??u['user_code']??id).toString();return CheckboxListTile(dense:true,value:chosen.contains(id),title:Text(name),onChanged:(v)=>ds(() { if(v==true){chosen.add(id);}else{chosen.remove(id);} }));}).toList()))])),actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,chosen),child:const Text('حفظ'))])));
@@ -126,41 +184,44 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       Container(
         color: const Color(0xFF3E007D),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Row(children: [
-          const Icon(Icons.policy_outlined, color: Color(0xFFFFA015), size: 23),
-          const SizedBox(width: 6),
-          const Expanded(child: Text('سياسات البرنامج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17))),
-          if (tab == 0) ...[
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            const Icon(Icons.policy_outlined, color: Color(0xFFFFA015), size: 23),
+            const SizedBox(width: 6),
+            const Expanded(child: Text('سياسات البرنامج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17))),
+            SizedBox(width: 190, height: 30, child: TextField(
+              controller: _searchController,
+              style: const TextStyle(fontSize: 11),
+              textInputAction: TextInputAction.search,
+              onSubmitted: (v) => setState(() => policySearch = v),
+              decoration: InputDecoration(
+                hintText: 'ابحث باسم السياسة...',
+                hintStyle: const TextStyle(fontSize: 10),
+                filled: true, fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(5), borderSide: BorderSide.none),
+                isDense: true,
+              ),
+            )),
+            const SizedBox(width: 3),
             SizedBox(height: 30, child: FilledButton.tonalIcon(
-              onPressed: loading ? null : () => _identityKey.currentState?._startEditing(),
-              icon: const Icon(Icons.edit, size: 15), label: const Text('تعديل', style: TextStyle(fontSize: 11)),
+              onPressed: () => setState(() => policySearch = _searchController.text),
+              icon: const Icon(Icons.search, size: 15),
+              label: const Text('بحث', style: TextStyle(fontSize: 11)),
               style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
             )),
-            const SizedBox(width: 4),
-          ],
-          SizedBox(width: 190, height: 30, child: TextField(
-            controller: _searchController,
-            style: const TextStyle(fontSize: 11),
-            textInputAction: TextInputAction.search,
-            onSubmitted: (v) => setState(() => policySearch = v),
-            decoration: InputDecoration(
-              hintText: 'ابحث باسم السياسة...',
-              hintStyle: const TextStyle(fontSize: 10),
-              filled: true, fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(5), borderSide: BorderSide.none),
-              isDense: true,
-            ),
-          )),
-          const SizedBox(width: 3),
-          SizedBox(height: 30, child: FilledButton.tonalIcon(
-            onPressed: () => setState(() => policySearch = _searchController.text),
-            icon: const Icon(Icons.search, size: 15),
-            label: const Text('بحث', style: TextStyle(fontSize: 11)),
-            style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), visualDensity: VisualDensity.compact),
-          )),
-          TextButton.icon(onPressed: loading ? null : () { if (tab == 0) { _identityKey.currentState?._load(); } else { _load(); } }, icon: const Icon(Icons.refresh, color: Colors.white, size: 17), label: const Text('تحديث', style: TextStyle(color: Colors.white))),
-          if (tab != 2) FilledButton.icon(onPressed: saving || (tab == 0 && (_identityKey.currentState?._saving ?? false)) ? null : () { if (tab == 0) { _identityKey.currentState?._save(); } else { _save(); } }, icon: const Icon(Icons.save, size: 17), label: Text(saving || (tab == 0 && (_identityKey.currentState?._saving ?? false)) ? 'جارٍ الحفظ' : 'حفظ')),
+          ]),
+          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+            ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh_rounded, compact: true, onPressed: loading ? null : _refreshCurrentTab),
+            ErpQuickTaskButton(label: 'إضافة', icon: Icons.add_circle_outline_rounded, compact: true, onPressed: null),
+            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving || (tab == 0 && (_identityKey.currentState?._saving ?? false)) ? null : _saveCurrentTab),
+            ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true, onPressed: loading ? null : _editCurrentTab),
+            ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, compact: true, onPressed: null),
+            ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, compact: true, onPressed: _previewCurrentTab),
+            ErpQuickTaskButton(label: 'طباعة', icon: Icons.print_outlined, compact: true, onPressed: null),
+            ErpQuickTaskButton(label: 'Excel', icon: Icons.table_view_outlined, compact: true, onPressed: null),
+            ErpQuickTaskButton(label: 'PDF', icon: Icons.picture_as_pdf_outlined, compact: true, onPressed: null),
+          ])),
         ]),
       ),
       if (error != null) Padding(padding: const EdgeInsets.all(4), child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 11))),
@@ -173,7 +234,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         child: tab == 0
             ? ErpVisualIdentityPolicyScreen(key: _identityKey, companyId: widget.companyId)
             : tab == 2
-                ? ErpCodePolicyPanel(companyId: company)
+                ? ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)
                 : loading
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
@@ -395,7 +456,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   @override void initState() { super.initState(); _load(); }
   @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } super.dispose(); }
 
-  Future<void> _load() async {
+  Future<void> _load({bool propagateError = false}) async {
     if (_company.isEmpty) { setState(() { _loading = false; _error = 'اختر الشركة أولًا.'; }); return; }
     setState(() { _loading = true; _error = null; });
     try {
@@ -423,7 +484,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         }
       }
       if (mounted) setState(() => _loading = false);
-    } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات الهوية البصرية: $e'; }); }
+    } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات الهوية البصرية: $e'; }); if (propagateError) rethrow; }
   }
 
   Future<void> _pickLogo() async {
@@ -471,7 +532,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         'heading_styles':styles,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':_db.auth.currentUser?.id,
       }, onConflict:'company_id');
       if (mounted) setState(() { _saving = false; _editing = false; _message = 'تم حفظ إعدادات الهوية البصرية.'; });
-    } catch (e) { if (mounted) setState(() { _saving = false; _error = 'تعذر الحفظ: $e'; }); }
+    } catch (e) { if (mounted) setState(() { _saving = false; _error = 'تعذر الحفظ: $e'; }); rethrow; }
   }
 
   Color _colorFromHex(String value) {
