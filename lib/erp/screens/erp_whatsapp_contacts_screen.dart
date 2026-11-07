@@ -538,7 +538,7 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
           Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
             SizedBox(width: 230, child: TextField(controller: _search, onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'بحث بالاسم أو الرقم أو الجروب', border: OutlineInputBorder(), isDense: true))),
-            SizedBox(width: 180, child: DropdownButtonFormField<String>(
+            SizedBox(width: 180, child: DropdownButtonFormField<String>(itemHeight: 40, 
               value: _filter, decoration: const InputDecoration(labelText: 'حالة الموافقة', border: OutlineInputBorder(), isDense: true),
               items: const ['الكل','موافق','بانتظار الموافقة','غير موافق'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
               onChanged: (v) => setState(() => _filter = v ?? 'الكل'),

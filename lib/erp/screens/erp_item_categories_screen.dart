@@ -560,7 +560,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       Padding(padding: const EdgeInsets.fromLTRB(12, 7, 12, 3), child: TextField(controller: _searchController, onChanged: (value) => setState(() => _searchQuery = value.trim().toLowerCase()), decoration: InputDecoration(labelText: 'ابحث بكود الفئة أو اسمها', prefixIcon: const Icon(Icons.search, color: _catPurple), suffixIcon: _searchQuery.isEmpty ? null : IconButton(onPressed: () { _searchController.clear(); setState(() => _searchQuery = ''); }, icon: const Icon(Icons.clear)), border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)), isDense: true))),
       Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 3), child: Row(children: [
         const SizedBox(width: 72, child: Text('النشاط', style: TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
-        Expanded(child: DropdownButtonFormField<String>(value: _selectedActivityCode, isExpanded: true,
+        Expanded(child: DropdownButtonFormField<String>(itemHeight: 40, value: _selectedActivityCode, isExpanded: true,
           decoration: const InputDecoration(isDense: true, border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8)),
           items: _activities.map((a) => DropdownMenuItem<String>(value: a['code'], child: Text('${a['code']} - ${a['name']}', overflow: TextOverflow.ellipsis))).toList(),
           onChanged: _editing || _loading ? null : (value) { if (value == null) return; setState(() { _selectedActivityCode = value; _parentFilter = null; _selectedId = null; }); _load(); })),
