@@ -129,6 +129,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     _geoPrefix.dispose();
     for (final controller in _geoSegments.values) { controller.dispose(); }
     for (final controller in _itemSegments.values) { controller.dispose(); }
+    _tableHorizontalController.dispose();
     super.dispose();
   }
 
@@ -360,12 +361,6 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
 
   final ScrollController _tableHorizontalController = ScrollController();
 
-  @override
-  void dispose() {
-    _tableHorizontalController.dispose();
-    super.dispose();
-  }
-
   Widget _itemPolicyRow() => Container(
     margin:const EdgeInsets.symmetric(vertical:2),
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
@@ -426,7 +421,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       
       SizedBox(width:112,child:Text(_geoPrefix.text,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),
       const SizedBox(width:112,child:Text('Rig + 8 أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10))),
-    ])),
+    ]),
   );
 
   Widget _geoNameCell(String name) => SizedBox(width:124,height:_cellHeight,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
@@ -563,7 +558,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
               SizedBox(width:112,child:Text(key=='customer'
                 ? 'Cus + منطقة 8 + ${'1'.padLeft(int.tryParse(_digits[key]!.text) ?? 4,'0')}'
                 : _preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
-            ])));
+            ]));
         }),
             ])),
           ),
