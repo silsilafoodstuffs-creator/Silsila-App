@@ -195,6 +195,27 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     }).toList();
   }
 
+  Set<String> get _employeesMissingStaffingLocationIds {
+    final locationScopedJobIds = _activeStaffingPlans
+        .where((plan) => plan['work_location_id'] != null)
+        .map((plan) => plan['job_id']?.toString())
+        .whereType<String>()
+        .toSet();
+    return _realEmployees
+        .where((employee) =>
+            _isCurrentEmployee(employee) &&
+            locationScopedJobIds.contains(employee['job_id']?.toString()) &&
+            (employee['work_location_id'] == null ||
+                employee['work_location_id'].toString().trim().isEmpty))
+        .map((employee) => employee['id']?.toString())
+        .whereType<String>()
+        .toSet();
+  }
+
+  bool get _staffingVacancyCountAvailable =>
+      _activeStaffingPlans.isNotEmpty &&
+      _employeesMissingStaffingLocationIds.isEmpty;
+
   int _employeesAssignedToStaffingPlan(Map<String, dynamic> plan) {
     final jobId = plan['job_id']?.toString();
     final locationId = plan['work_location_id']?.toString();
@@ -1022,7 +1043,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                 _metric('غير نشطين', _inactiveEmployees.toString(), 'ملفات غير محددة كنشطة', Icons.person_off_outlined, Colors.red.shade700),
                 _metric('الإدارات النشطة', _activeDepartments.toString(), 'من الهيكل التنظيمي', Icons.account_tree_outlined, _hrOrange),
                 _metric('الوظائف النشطة', _activeJobs.toString(), 'وظائف معرفة بالهيكل', Icons.work_outline, _hrPink),
-                _metric('شواغر الملاك المعتمد', _activeStaffingPlans.isEmpty ? '—' : _staffingVacancies.toString(), _activeStaffingPlans.isEmpty ? 'اعتمد خطة ملاك سارية أولًا' : 'بعد المقارنة بالموظفين الفعليين', Icons.work_off_outlined, _hrOrange),
+                _metric('شواغر الملاك المعتمد', !_staffingVacancyCountAvailable ? '—' : _staffingVacancies.toString(), _activeStaffingPlans.isEmpty ? 'اعتمد خطة ملاك سارية أولًا' : _employeesMissingStaffingLocationIds.isNotEmpty ? 'استكمل مواقع الموظفين أولًا' : 'بعد المقارنة بالموظفين الفعليين', Icons.work_off_outlined, _hrOrange),
               ],
             );
           }),
@@ -1032,6 +1053,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _progressRow('الوظائف النشطة', _activeJobs, _jobs.length, _hrPurple),
             if (_activeStaffingPlans.isEmpty)
               _notice('الملاك الوظيفي والشواغر غير متاحين حاليًا: لا توجد خطة ملاك معتمدة وسارية. لا يتم استنتاج الشواغر من كتالوج الوظائف.', Icons.info_outline, Colors.blueGrey)
+            else if (_employeesMissingStaffingLocationIds.isNotEmpty)
+              _notice('تعذر حساب الشواغر حسب الموقع بدقة: يوجد ${_employeesMissingStaffingLocationIds.length} موظفًا فعليًا على وظائف لها خطط موقعية دون موقع عمل مسجل. استكمل مواقعهم أولًا حتى لا تُحتسب شواغر وهمية.', Icons.location_off_outlined, Colors.orange)
             else ...[
               _progressRow('الموظفون المشغولون من الملاك', _staffingFilledPositions, _approvedStaffingHeadcount, _hrPurple),
               _alert('الوظائف الشاغرة حسب الملاك المعتمد', 'عدد الشواغر المحسوب من الخطط المعتمدة السارية: $_staffingVacancies.', _staffingVacancies > 0 ? Colors.orange : Colors.green),
