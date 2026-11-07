@@ -12,7 +12,7 @@ const failures = [];
 let sourceMapConsumer;
 try {
   const mapResponse = await fetch(new URL('main.dart.js.map', target));
-  if (mapResponse.ok) sourceMapConsumer = new SourceMapConsumer(await mapResponse.json());
+  if (mapResponse.ok) sourceMapConsumer = await new SourceMapConsumer(await mapResponse.json());
   else console.warn(`Dart source map unavailable: HTTP ${mapResponse.status}`);
 } catch (error) {
   console.warn(`Could not load Dart source map: ${error.message}`);
