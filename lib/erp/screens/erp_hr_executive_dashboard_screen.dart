@@ -812,11 +812,12 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
             _alert('جودة بيانات الموظفين', 'موظفون بلا وظيفة محددة: $_employeesWithoutJob، وملفات غير نشطة: $_inactiveEmployees، ونواقص مسوغات التعيين: $_employeesMissingRequiredDocuments.', _employeesWithoutJob + _employeesMissingRequiredDocuments > 0 ? _hrOrange : Colors.blueGrey),
             _alert('التأمين الصحي والاجتماعي', 'غير مسجل صحيًا: $_healthNotRecorded، وغير مسجل اجتماعيًا: $_socialNotRecorded. الأعداد محسوبة على الموظفين النشطين وبحسب سجلاتهم الفردية.', _healthNotRecorded + _socialNotRecorded > 0 ? _hrOrange : Colors.blueGrey),
             _alert('مؤشرات تتطلب استكمال مصدر البيانات', 'العجز مقابل الملاك المعتمد يحتاج جدول ملاك/طلبات شاغرة. فترة الاختبار تحتاج حقولًا منظمة. إصابات العمل وتكلفة التوظيف ومقارنة تكلفة العمالة بالمبيعات تحتاج مصادر متخصصة.', Colors.blueGrey),
-            _sectionTitle('تقييم الأداء', Icons.assessment_outlined),
-            _panel(children: [
-              _alert('متوسط تقييم الأداء', _averagePerformanceScore == null ? 'غير متاح — لا توجد تقييمات مكتملة مرتبطة بموظفين فعليين.' : '${_averagePerformanceScore!.toStringAsFixed(1)} نقطة من سجلات التقييم المكتملة.', _averagePerformanceScore == null ? Colors.blueGrey : _hrPurple),
-              _progressRow('تقييمات الأداء المسجلة', _performanceReviews.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString())).length, _activeEmployees, _hrOrange),
-            ]),
+          ]),
+          const SizedBox(height: 18),
+          _sectionTitle('تقييم الأداء', Icons.assessment_outlined),
+          _panel(children: [
+            _alert('متوسط تقييم الأداء', _averagePerformanceScore == null ? 'غير متاح — لا توجد تقييمات مكتملة مرتبطة بموظفين فعليين.' : '${_averagePerformanceScore!.toStringAsFixed(1)} نقطة من سجلات التقييم المكتملة.', _averagePerformanceScore == null ? Colors.blueGrey : _hrPurple),
+            _progressRow('تقييمات الأداء المسجلة', _performanceReviews.where((r) => _realEmployeeIds.contains(r['employee_id']?.toString())).length, _activeEmployees, _hrOrange),
           ]),
           const SizedBox(height: 18),
           _sectionTitle('إدارة وتسجيل بيانات الموارد البشرية', Icons.add_task_outlined),
