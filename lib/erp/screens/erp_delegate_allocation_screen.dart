@@ -225,7 +225,7 @@ class _ErpDelegateAllocationScreenState extends State<ErpDelegateAllocationScree
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<String>(itemHeight: 40, 
                 value: _employeeId,
                 decoration: const InputDecoration(labelText: 'المندوب / موظف المبيعات', border: OutlineInputBorder()),
                 items: _employees.map((row) => DropdownMenuItem(

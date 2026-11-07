@@ -627,14 +627,14 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     await showDialog<void>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,setDialogState)=>AlertDialog(
       title:const Text('تسجيل إجازة موظف'),
       content:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<String>(itemHeight: 40, 
           value:employeeId,
           decoration:const InputDecoration(labelText:'الموظف'),
           items:activeEmployees.map((e)=>DropdownMenuItem(value:e['id'].toString(),child:Text(e['full_name'].toString()))).toList(),
           onChanged:(v)=>setDialogState(()=>employeeId=v),
         ),
         const SizedBox(height:8),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<String>(itemHeight: 40, 
           value:leaveType,
           decoration:const InputDecoration(labelText:'نوع الإجازة'),
           items:const [
@@ -899,7 +899,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     await showDialog<void>(context:context,builder:(dialogContext)=>StatefulBuilder(builder:(dialogContext,setDialogState)=>AlertDialog(
       title:Text('صلاحيات ${member['member_display_name'] ?? 'المستخدم'}'),
       content:SizedBox(width:440,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<String>(itemHeight: 40, 
           value:role=='owner'?'staff':role,
           decoration:const InputDecoration(labelText:'الدور داخل النشاط'),
           items:const [
@@ -1077,7 +1077,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     ),
   );
 
-  Widget _workspacePicker() => DropdownButtonFormField<String>(
+  Widget _workspacePicker() => DropdownButtonFormField<String>(itemHeight: 40, 
     value: _selected?['id']?.toString(),
     decoration: const InputDecoration(labelText: 'النشاط الحالي', border: OutlineInputBorder()),
     items: _workspaces.map((w) => DropdownMenuItem(
@@ -1160,7 +1160,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
                             child: Text('لم يُحدد النشاط لهذا الحساب بعد؛ حدده من دليل الأنشطة قبل الاعتماد.', style: TextStyle(color: Colors.black54, fontSize: 11, height: 1.5)),
                           ),
                         const SizedBox(height: 10),
-                        DropdownButtonFormField<String>(
+                        DropdownButtonFormField<String>(itemHeight: 40, 
                           value: _activityTypes.any((a) => a['code']?.toString() == selectedCode) ? selectedCode : null,
                           isExpanded: true,
                           decoration: const InputDecoration(labelText: 'النشاط المسجل في سلسلة', border: OutlineInputBorder(), isDense: true),
@@ -1313,7 +1313,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       ChoiceChip(label:const Text('تسوية مخزنية'),selected:_inventoryMode=='adjustment',onSelected:(_)=>setState(()=>_inventoryMode='adjustment')),
     ]),
     const SizedBox(height:8),
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value:_warehouses.any((w)=>w['id'].toString()==_sourceWarehouseId)?_sourceWarehouseId:null,
       decoration:InputDecoration(labelText:_inventoryMode=='transfer'?'المخزن المصدر':'المخزن'),
       items:_warehouses.map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
@@ -1327,7 +1327,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     ),
     if(_inventoryMode=='transfer') ...[
       const SizedBox(height:8),
-      DropdownButtonFormField<String>(
+      DropdownButtonFormField<String>(itemHeight: 40, 
         value:_warehouses.any((w)=>w['id'].toString()==_targetWarehouseId && w['id'].toString()!=_sourceWarehouseId)?_targetWarehouseId:null,
         decoration:const InputDecoration(labelText:'المخزن المستهدف'),
         items:_warehouses.where((w)=>w['id'].toString()!=_sourceWarehouseId).map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
@@ -1336,7 +1336,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     ],
     if(_inventoryMode=='adjustment') ...[
       const SizedBox(height:8),
-      DropdownButtonFormField<String>(
+      DropdownButtonFormField<String>(itemHeight: 40, 
         value:_adjustDirection,
         decoration:const InputDecoration(labelText:'اتجاه التسوية'),
         items:const[DropdownMenuItem(value:'increase',child:Text('زيادة رصيد')),DropdownMenuItem(value:'decrease',child:Text('عجز / تخفيض رصيد'))],
@@ -1344,7 +1344,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       ),
     ],
     const SizedBox(height:8),
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value:_itemLinks.any((x)=>x['id'].toString()==_inventoryItemLinkId&&x['is_enabled']==true)?_inventoryItemLinkId:null,
       decoration:const InputDecoration(labelText:'الصنف'),
       items:_itemLinks.where((x)=>x['is_enabled']==true).map((x){final item=x['erp_items'] is Map?Map<String,dynamic>.from(x['erp_items']):<String,dynamic>{};return DropdownMenuItem(value:x['id'].toString(),child:Text((item['item_name']??'صنف').toString()));}).toList(),
@@ -1404,7 +1404,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       ChoiceChip(label:Text(purchase?'مرتجع شراء':'مرتجع بيع'),selected:_documentType==(purchase?'purchase_return':'sale_return'),onSelected:(_){setState(()=>_documentType=purchase?'purchase_return':'sale_return');}),
     ]),
     const SizedBox(height:8),
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value:_branches.any((x)=>x['id'].toString()==_selectedDocBranchId)?_selectedDocBranchId:null,
       decoration:const InputDecoration(labelText:'الفرع'),
       items:_branches.map((b)=>DropdownMenuItem(value:b['id'].toString(),child:Text(b['name_ar'].toString()))).toList(),
@@ -1415,7 +1415,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       }),
     ),
     const SizedBox(height:8),
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value:_warehouses.any((x)=>x['id'].toString()==_selectedDocWarehouseId && x['branch_id']?.toString()==_selectedDocBranchId)?_selectedDocWarehouseId:null,
       decoration:const InputDecoration(labelText:'المخزن'),
       items:_warehouses.where((w)=>w['branch_id']?.toString()==_selectedDocBranchId).map((w)=>DropdownMenuItem(value:w['id'].toString(),child:Text(w['name_ar'].toString()))).toList(),
@@ -1424,7 +1424,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     TextField(controller:_docCounterparty,decoration:InputDecoration(labelText:purchase?'اسم المورد':'اسم العميل')),
     const SizedBox(height:8),
     _sectionTitle('بنود المستند','يمكن إضافة أكثر من صنف قبل إنشاء المسودة'),
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value:_itemLinks.any((x)=>x['id'].toString()==_selectedDocItemLinkId&&x['is_enabled']==true)?_selectedDocItemLinkId:null,
       decoration:const InputDecoration(labelText:'الصنف'),
       items:_itemLinks.where((x)=>x['is_enabled']==true).map((x){
@@ -1478,7 +1478,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
     _backHeader('صرف وتوريد نقدية'),
     _sectionTitle('حركة نقدية مستقلة', 'كل حركة تخص النشاط الحالي ولا تُرحل إلى خزائن سلسلة'),
     if (_canWorkspacePermission('cash.manage')) ...[
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value: _cashType,
       decoration: const InputDecoration(labelText: 'نوع الحركة'),
       items: const [
@@ -1493,14 +1493,14 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       onChanged:(v){if(v!=null)setState(()=>_cashType=v);},
     ),
     const SizedBox(height:8),
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value: _branches.any((x)=>x['id'].toString()==_selectedCashBranchId)?_selectedCashBranchId:null,
       decoration: const InputDecoration(labelText:'الفرع'),
       items:_branches.map((b)=>DropdownMenuItem(value:b['id'].toString(),child:Text(b['name_ar'].toString()))).toList(),
       onChanged:(v)=>setState(()=>_selectedCashBranchId=v),
     ),
     const SizedBox(height:8),
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value:_cashPaymentMethod,
       decoration:const InputDecoration(labelText:'وسيلة الدفع / التحصيل'),
       items:const [
@@ -1605,7 +1605,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   Widget _warehousesPanel() => ListView(children:[
     _sectionTitle('مخازن نشاطي','كل مخزن يتبع فرعاً محدداً، ويمكن التحكم في ظهوره ضمن أرصدة سلسلة'),
     if (_canWorkspacePermission('master.manage')) ...[
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value:_branches.any((x)=>x['id'].toString()==_selectedBranchForWarehouse)?_selectedBranchForWarehouse:null,
       decoration:const InputDecoration(labelText:'الفرع التابع له المخزن'),
       items:_branches.map((b)=>DropdownMenuItem(value:b['id'].toString(),child:Text(b['name_ar'].toString()))).toList(),
@@ -1706,7 +1706,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
       TextField(controller:_memberPhone,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'رقم هاتف المستخدم المسجل')),
       const SizedBox(height:8),
       Row(children:[
-        Expanded(child:DropdownButtonFormField<String>(value:_memberRole,decoration:const InputDecoration(labelText:'الدور'),items:const[
+        Expanded(child:DropdownButtonFormField<String>(itemHeight: 40, value:_memberRole,decoration:const InputDecoration(labelText:'الدور'),items:const[
           DropdownMenuItem(value:'staff',child:Text('مستخدم')),
           DropdownMenuItem(value:'manager',child:Text('مدير فرع')),
           DropdownMenuItem(value:'accountant',child:Text('محاسب')),
@@ -1746,7 +1746,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   Widget _memberLocationsPanel() => ListView(children:[
     _sectionTitle('فروع ومخازن مستخدميني','يمكن السماح بفرع بالكامل أو السماح بمخازن محددة داخله. عند تحديد نطاقات، تُطبق على البيانات فعلياً عبر RLS.'),
     if(_members.where((m)=>m['member_role']!='owner').isNotEmpty)...[
-      DropdownButtonFormField<String>(
+      DropdownButtonFormField<String>(itemHeight: 40, 
         value:_members.any((m)=>m['user_id'].toString()==_selectedLocationMemberUserId&&m['member_role']!='owner')?_selectedLocationMemberUserId:null,
         decoration:const InputDecoration(labelText:'المستخدم الفرعي'),
         items:_members.where((m)=>m['member_role']!='owner').map((m)=>DropdownMenuItem(value:m['user_id'].toString(),child:Text((m['member_display_name']??'مستخدم').toString()))).toList(),
@@ -1770,7 +1770,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
         decoration: const InputDecoration(labelText:'نسبة الضريبة الافتراضية %', helperText:'تُقترح تلقائياً في فواتير النشاط ويمكن تعديلها لكل مستند'),
       ),
       const SizedBox(height:8),
-      DropdownButtonFormField<String>(
+      DropdownButtonFormField<String>(itemHeight: 40, 
         value:_policyCurrencyCode,
         decoration:const InputDecoration(labelText:'العملة الافتراضية'),
         items:const [
@@ -1849,7 +1849,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   Widget _itemSelectionTab() => ListView(children: [
     TextField(controller: _itemSearch, decoration: const InputDecoration(labelText: 'بحث في أصناف سلسلة', prefixIcon: Icon(Icons.search), border: OutlineInputBorder()), onChanged: (_) => setState(() {})),
     const SizedBox(height: 8),
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value: _platformItems.any((x) => x['id'].toString() == _selectedPlatformItemId) ? _selectedPlatformItemId : null,
       isExpanded: true, decoration: const InputDecoration(labelText: 'الصنف المعتمد في سلسلة'),
       items: _platformItems.where((x) {
@@ -1886,14 +1886,14 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   Widget _openingStockTab() => ListView(children: [
     _sectionTitle('الأرصدة الافتتاحية', 'يسجل الرصيد لكل صنف في كل مخزن، ويُنشئ حركة افتتاحية في دفتر المخزون تلقائياً'),
     if (_canWorkspacePermission('inventory.manage')) ...[
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value: _warehouses.any((x) => x['id'].toString() == _selectedStockWarehouseId) ? _selectedStockWarehouseId : null,
       decoration: const InputDecoration(labelText: 'المخزن'),
       items: _warehouses.map((w) => DropdownMenuItem(value: w['id'].toString(), child: Text(w['name_ar'].toString()))).toList(),
       onChanged: (v) => setState(() => _selectedStockWarehouseId = v),
     ),
     const SizedBox(height: 8),
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value: _itemLinks.any((x) => x['id'].toString() == _selectedStockItemLinkId && x['is_enabled'] == true) ? _selectedStockItemLinkId : null,
       decoration: const InputDecoration(labelText: 'الصنف'),
       items: _itemLinks.where((x) => x['is_enabled'] == true).map((x) {
@@ -1997,7 +1997,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   Widget _departmentsPanel() => ListView(children:[
     _sectionTitle('إداراتي وأقسامي','هيكل إداري مستقل بنظام الشجرة'),
     if (_canWorkspacePermission('hr.manage')) ...[
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value:_departments.any((d)=>d['id'].toString()==_selectedParentDepartmentId)?_selectedParentDepartmentId:null,
       decoration:const InputDecoration(labelText:'يتبع الإدارة / القسم (اختياري)'),
       items:[const DropdownMenuItem<String>(value:null,child:Text('قسم رئيسي')),..._departments.map((d)=>DropdownMenuItem(value:d['id'].toString(),child:Text(d['name_ar'].toString())))],
@@ -2017,7 +2017,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
   Widget _employeeRecordsPanel() => ListView(children:[
     _sectionTitle('موظفيني','بيانات مبسطة مستقلة عن موظفي سلسلة'),
     if (_canWorkspacePermission('hr.manage')) ...[
-    DropdownButtonFormField<String>(
+    DropdownButtonFormField<String>(itemHeight: 40, 
       value:_departments.any((d)=>d['id'].toString()==_selectedDepartmentId)?_selectedDepartmentId:null,
       decoration:const InputDecoration(labelText:'الإدارة / القسم'),
       items:_departments.map((d)=>DropdownMenuItem(value:d['id'].toString(),child:Text(d['name_ar'].toString()))).toList(),
