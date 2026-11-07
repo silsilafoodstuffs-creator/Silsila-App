@@ -62,6 +62,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final ScrollController _policyVerticalController = ScrollController();
   int tab = 0; bool loading = true, saving = false; String? error, message;
   String get company => (widget.companyId ?? '').trim();
+  // The displayed identifier is always read from erp_program_policies.policy_code.
   String _programPolicyCode(String key) => _policyCodes[key] ?? '';
   @override void initState(){super.initState(); final policyKeys = defaults.map((p) => p['key']).toSet(); if (policyKeys.length != defaults.length) { throw StateError('يوجد كود داخلي مكرر في سجل سياسات البرنامج.'); } for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
   @override void didUpdateWidget(covariant ErpProgramPoliciesScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
