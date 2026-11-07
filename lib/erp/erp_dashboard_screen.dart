@@ -1910,7 +1910,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         icon: Icon(Icons.menu_rounded, color: _utilitySidebarVisible ? _purple : _orange),
       ),
     ],
-    IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('مركز الإشعارات التجريبي')))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
+    IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('مركز الإشعارات')))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
     const CircleAvatar(radius: 18, backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple, size: 20)),
   ]));
 
@@ -2617,7 +2617,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (canSales) Expanded(child: _executiveChartPanel(
                 title: 'اتجاه المبيعات',
-                caption: 'آخر 7 أيام • فواتير مرحلة وغير تجريبية',
+                caption: 'آخر 7 أيام • فواتير المبيعات المرحلة',
                 color: _purple,
                 value: _executiveMoney(_executiveSales),
                 chart: _ExecutiveChartPainter(color: _purple, values: _executiveDailySales),
@@ -2637,7 +2637,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         else ...[
           if (canSales) _executiveChartPanel(
             title: 'اتجاه المبيعات',
-            caption: 'آخر 7 أيام • فواتير مرحلة وغير تجريبية',
+            caption: 'آخر 7 أيام • فواتير المبيعات المرحلة',
             color: _purple,
             value: _executiveMoney(_executiveSales),
             chart: const _ExecutiveChartPainter(color: _purple),
@@ -3108,7 +3108,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         ]);
       }),
       const SizedBox(height: 16),
-      if (_group == 'تقارير') Padding(padding: EdgeInsets.only(bottom: 12), child: Text(silsilaText('نموذج تقارير تجريبي؛ ستظهر المؤشرات الفعلية بعد ربط مصادر البيانات واعتماد المعادلات المحاسبية.'), style: TextStyle(color: Colors.black54, height: 1.6))),
+      if (_group == 'تقارير') Padding(padding: EdgeInsets.only(bottom: 12), child: Text(silsilaText('لم يتم ربط مصدر البيانات الفعلي لهذا التقرير بعد.'), style: TextStyle(color: Colors.black54, height: 1.6))),
       if (_group != 'تقارير') Padding(padding: const EdgeInsets.only(bottom: 12), child: Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: const Color(0xFFFFF4DF), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFFFA015))), child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(Icons.info_outline, color: Color(0xFF8A4B00), size: 19), SizedBox(width: 8), Expanded(child: Text('تنبيه مراجعة: هذه شاشة عامة غير مرتبطة حتى الآن بجدول الحركة المتخصص. السجلات هنا تحفظ كسجلات مساحة عمل، ولا تُعد قيودًا محاسبية أو حركات مخزون أو مستندات بيع/شراء معتمدة.', style: TextStyle(color: Color(0xFF6D4100), height: 1.45, fontSize: 12, fontWeight: FontWeight.w600)))]))),
       if (_rows.isEmpty && _page != 'الهيكل الوظيفي') Padding(padding: EdgeInsets.all(28), child: Text(silsilaText('لا توجد نتائج مطابقة.'), textAlign: TextAlign.center))
        else SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(headingRowColor: WidgetStateProperty.all(const Color(0xFFF5F0FA)), showCheckboxColumn: true, columns: _gridKeys.map((k) => DataColumn(label: Text(k, style: const TextStyle(color: _purple, fontWeight: FontWeight.w800)))).toList(), rows: _rows.map((r) => DataRow(selected: _selectedRecord != null && _sameRecord(r, _selectedRecord!), onSelectChanged: (selected) => setState(() => _selectedRecord = selected == true ? Map<String, String>.from(r) : null), cells: _gridKeys.map((k) => DataCell(Text(r[k] ?? '—'), onTap: () => setState(() => _selectedRecord = Map<String, String>.from(r)))).toList())).toList())),
