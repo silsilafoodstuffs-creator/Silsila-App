@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-const _p=Color(0xFF3E007D),_o=Color(0xFFFFA015);
+const _p=Color(0xFF3E007D);
 class _F{const _F(this.key,this.label,{this.type='text',this.options=const []});final String key,label,type;final List<String> options;}
 class _C{const _C(this.type,this.title,this.help,this.fields,List<Map<String,dynamic>> examples):examples=const [];final String type,title,help;final List<_F> fields;final List<Map<String,dynamic>> examples;}
 
