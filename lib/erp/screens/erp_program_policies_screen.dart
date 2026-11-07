@@ -323,7 +323,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             const Icon(Icons.policy_outlined, color: Color(0xFFFFA015), size: 23),
             const SizedBox(width: 6),
             const Expanded(child: Text('سياسات البرنامج', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17))),
-            SizedBox(width: 190, height: 40, child: TextField(
+            SizedBox(width: 190, height: 30, child: TextField(
               controller: _searchController,
               style: const TextStyle(fontSize: 11),
               textInputAction: TextInputAction.search,
@@ -447,7 +447,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                         Expanded(child: TextFormField(
                                           key: ValueKey('fiscal-from-' + (p['value'] ?? '').toString()),
                                           initialValue: ((p['value'] ?? '01/01 - 12/31').toString().split(' - ').first),
-                                          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 30, maxHeight: 30), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                           style: const TextStyle(fontSize: 10),
                                           onChanged: (v) {
                                             final parts = (p['value'] ?? '01/01 - 12/31').toString().split(' - ');
@@ -881,7 +881,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         height: 30,
         child: DropdownButtonFormField<String>(
           value: _fonts[i], isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 260,
-          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 50, maxHeight: 50), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 30, maxHeight: 30), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
           items: _fontOptions.map((f) => DropdownMenuItem(value: f, child: Text(f, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis))).toList(),
           onChanged: _editing ? (v) { if (v != null) setState(() => _fonts[i] = v); } : null,
         ),
