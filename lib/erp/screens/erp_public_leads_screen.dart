@@ -184,7 +184,7 @@ class _ErpPublicLeadsScreenState extends State<ErpPublicLeadsScreen> {
               onChanged: (value) => setState(() => _search = value),
               decoration: const InputDecoration(labelText: 'بحث بالاسم أو العنوان أو النشاط', prefixIcon: Icon(Icons.search_rounded), border: OutlineInputBorder(), isDense: true),
             )),
-            SizedBox(width: 190, child: DropdownButtonFormField<String>(
+            SizedBox(width: 190, child: DropdownButtonFormField<String>(itemHeight: 40, 
               value: areas.contains(_governorate) ? _governorate : 'الكل',
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'المحافظة', border: OutlineInputBorder(), isDense: true),
