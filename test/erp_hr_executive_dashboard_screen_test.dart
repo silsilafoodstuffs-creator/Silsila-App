@@ -40,20 +40,22 @@ void main() {
     expect(find.text('إجمالي الموظفين'), findsOneWidget);
     expect(find.textContaining('افتح بيانات الشركة أولاً'), findsOneWidget);
 
-    final scrollable = find.descendant(
-      of: find.byType(ListView).first,
-      matching: find.byType(Scrollable),
-    ).first;
-    await tester.scrollUntilVisible(find.text('الهيكل التنظيمي والوظائف'), 400, scrollable: scrollable);
-    expect(find.text('الهيكل التنظيمي والوظائف'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('التأمينات والرخص والتدريب'), 400, scrollable: scrollable);
-    expect(find.text('التأمينات والرخص والتدريب'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('التوظيف والاستقالات ودوران العمالة'), 400, scrollable: scrollable);
-    expect(find.text('التوظيف والاستقالات ودوران العمالة'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('تنبيهات ومتابعات مدير الموارد البشرية'), 400, scrollable: scrollable);
-    expect(find.text('تنبيهات ومتابعات مدير الموارد البشرية'), findsOneWidget);
-    expect(find.text('سجلات موظفين مستبعدة'), findsOneWidget);
-    expect(find.text('التعيينات المستقبلية'), findsOneWidget);
+    final dashboardList = find.byType(ListView).first;
+    Future<void> revealDashboardText(String value) async {
+      final target = find.text(value);
+      for (var attempt = 0; attempt < 30 && target.evaluate().isEmpty; attempt++) {
+        await tester.drag(dashboardList, const Offset(0, -420));
+        await tester.pumpAndSettle();
+      }
+      expect(target, findsOneWidget, reason: 'Dashboard section should be reachable by scrolling: $value');
+    }
+
+    await revealDashboardText('الهيكل التنظيمي والوظائف');
+    await revealDashboardText('التأمينات والرخص والتدريب');
+    await revealDashboardText('التوظيف والاستقالات ودوران العمالة');
+    await revealDashboardText('تنبيهات ومتابعات مدير الموارد البشرية');
+    await revealDashboardText('سجلات موظفين مستبعدة');
+    await revealDashboardText('التعيينات المستقبلية');
   });
 
   testWidgets('HR executive dashboard exposes the supported analysis periods',
