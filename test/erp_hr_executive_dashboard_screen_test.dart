@@ -49,7 +49,7 @@ void main() {
     expect(find.text('التوظيف والاستقالات ودوران العمالة'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('تنبيهات ومتابعات مدير الموارد البشرية'), 400, scrollable: scrollable);
     expect(find.text('تنبيهات ومتابعات مدير الموارد البشرية'), findsOneWidget);
-    expect(find.text('سجلات موظفين مؤقتة'), findsOneWidget);
+    expect(find.text('سجلات موظفين مستبعدة'), findsOneWidget);
     expect(find.text('التعيينات المستقبلية'), findsOneWidget);
   });
 
