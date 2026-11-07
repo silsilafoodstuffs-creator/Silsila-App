@@ -801,7 +801,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
 
   Widget _colorField(TextEditingController controller, {double width = 145}) => SizedBox(
     width: width,
-    height: 50,
+    height: 30,
     child: Row(
       children: [
         Expanded(
@@ -812,7 +812,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
             style: const TextStyle(fontSize: 10),
             decoration: const InputDecoration(
               isDense: true,
-              constraints: BoxConstraints(minHeight: 50, maxHeight: 50),
+              constraints: BoxConstraints(minHeight: 30, maxHeight: 30),
               contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
               border: OutlineInputBorder(),
             ),
@@ -821,7 +821,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         const SizedBox(width: 3),
         SizedBox(
           width: 28,
-          height: 50,
+          height: 30,
           child: IconButton(
             padding: EdgeInsets.zero,
             visualDensity: VisualDensity.compact,
@@ -843,10 +843,10 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     ),
   );
 
-  Widget _field(TextEditingController c, {double width = 150, double height = 50, String? hint}) => SizedBox(width: width, height: height, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: height, maxHeight: height), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
+  Widget _field(TextEditingController c, {double width = 150, double height = 30, String? hint}) => SizedBox(width: width, height: height, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: height, maxHeight: height), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
 
 
-  Widget _row(int index, String code, String title, Widget value, {double height = 50}) => Card(
+  Widget _row(int index, String code, String title, Widget value, {double height = 40}) => Card(
     margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0,
     shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: .16)), borderRadius: BorderRadius.circular(6)),
     child: SizedBox(
@@ -874,13 +874,13 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   );
 
   Widget _fontStyleValue(int i) => SizedBox(
-    height: 50,
+    height: 30,
     child: Row(children: [
       SizedBox(
         width: 126,
-        height: 50,
+        height: 30,
         child: DropdownButtonFormField<String>(
-          value: _fonts[i], isExpanded: true, isDense: true, itemHeight: 50, menuMaxHeight: 260,
+          value: _fonts[i], isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 260,
           decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 50, maxHeight: 50), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
           items: _fontOptions.map((f) => DropdownMenuItem(value: f, child: Text(f, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis))).toList(),
           onChanged: _editing ? (v) { if (v != null) setState(() => _fonts[i] = v); } : null,
@@ -888,7 +888,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
       ),
       const SizedBox(width: 5),
       SizedBox(
-        width: 48, height: 50,
+        width: 48, height: 30,
         child: TextField(
           controller: _sizes[i], enabled: _editing,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -898,13 +898,13 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         ),
       ),
       const SizedBox(width: 5),
-      SizedBox(height: 50, child: _colorField(_colors[i], width: 145)),
+      SizedBox(height: 30, child: _colorField(_colors[i], width: 145)),
     ]),
   );
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
-      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:335,height:100,hint:'سلسلة'),height:100),
-      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:335,height:50,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 50,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:50,maxHeight:50),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
+      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:335,height:30,hint:'سلسلة'),height:40),
+      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:335,height:30,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 50,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:30,maxHeight:30),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
       _row(2,_identityPolicyCode(2),'شعار البرنامج',SizedBox(width:335,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
       _row(3,_identityPolicyCode(3),'اللون الأساسي',_colorField(_primary ,width:335)),
       _row(4,_identityPolicyCode(4),'اللون الثانوي',_colorField(_secondary ,width:335)),
