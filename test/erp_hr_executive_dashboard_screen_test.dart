@@ -138,7 +138,8 @@ void main() {
     expect(find.textContaining('الملاك الوظيفي والشواغر غير متاحين حاليًا'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('تقييم الأداء'), 450, scrollable: scrollable);
     expect(find.text('تقييم الأداء'), findsOneWidget);
-    expect(find.textContaining('غير متاح — لا توجد تقييمات مكتملة'), findsOneWidget);
+    expect(find.text('متوسط تقييم الأداء'), findsOneWidget);
+    expect(find.textContaining('اختر شركة نشطة لعرض بيانات الموارد البشرية الفعلية.'), findsWidgets);
   });
 
 }
