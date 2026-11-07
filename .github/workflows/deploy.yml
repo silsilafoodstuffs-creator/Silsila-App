@@ -89,7 +89,7 @@ jobs:
 
       - name: Install Chromium browser test dependencies
         run: |
-          npm install --no-save --no-package-lock playwright
+          npm install --no-save --no-package-lock playwright source-map
           npx playwright install --with-deps chromium
 
       - name: Run deployed WebView tests (desktop + mobile)
