@@ -146,6 +146,19 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     final today = DateTime(now.year, now.month, now.day);
     return hireDate == null || !hireDate.isAfter(today);
   }
+
+  bool _isSuspendedEmployee(Map<String, dynamic> employee) {
+    final status = (employee['employment_status']?.toString() ?? '')
+        .trim()
+        .toLowerCase();
+    return const {
+      'suspended',
+      'موقوف',
+      'موقوف مؤقت',
+      'موقوف مؤقتا',
+      'موقوف مؤقتًا',
+    }.contains(status);
+  }
   int get _temporaryEmployees => _employees.where(_isTemporarySeedEmployee).length;
   int get _testEmployees => _employees.where(_isTestEmployee).length;
   Set<String> get _realEmployeeIds => _realEmployees.map((e) => e['id']?.toString()).whereType<String>().toSet();
@@ -155,7 +168,14 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     final today = DateTime(now.year, now.month, now.day);
     return employee['is_active'] == true && hireDate != null && hireDate.isAfter(today);
   }).length;
-  int get _activeEmployees => _realEmployees.where(_isCurrentEmployee).length;
+  int get _currentEmployeesCount =>
+      _realEmployees.where(_isCurrentEmployee).length;
+  int get _suspendedEmployees => _realEmployees
+      .where((employee) => _isCurrentEmployee(employee) && _isSuspendedEmployee(employee))
+      .length;
+  int get _activeEmployees => _realEmployees
+      .where((employee) => _isCurrentEmployee(employee) && !_isSuspendedEmployee(employee))
+      .length;
   int get _inactiveEmployees => _realEmployees.where((e) => e['is_active'] != true).length;
   int get _activeDepartments => _departments.where((e) => e['is_active'] != false).length;
   int get _activeJobs => _jobs.where((e) => e['is_active'] != false).length;
@@ -347,8 +367,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
   int get _healthInProgress => _distinctComplianceStatus('health_insurance', {'in_progress'});
   int get _socialInProgress => _distinctComplianceStatus('social_insurance', {'in_progress'});
   int get _insuranceInProgress => _healthInProgress + _socialInProgress;
-  int get _healthNotRecorded => (_activeEmployees - _distinctComplianceStatus('health_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
-  int get _socialNotRecorded => (_activeEmployees - _distinctComplianceStatus('social_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _activeEmployees).toInt();
+  int get _healthNotRecorded => (_currentEmployeesCount - _distinctComplianceStatus('health_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _currentEmployeesCount).toInt();
+  int get _socialNotRecorded => (_currentEmployeesCount - _distinctComplianceStatus('social_insurance', {'insured','uninsured','in_progress','not_required'})).clamp(0, _currentEmployeesCount).toInt();
   int get _contractsActive {
     final today = DateUtils.dateOnly(DateTime.now());
     final currentEmployeeIds = _realEmployees.where(_isCurrentEmployee).map((e) => e['id']?.toString()).whereType<String>().toSet();
@@ -994,7 +1014,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: count == 1 ? 3.3 : 2.25,
               children: [
                 _metric('إجمالي الموظفين', _realEmployees.length.toString(), 'بعد استبعاد السجلات المؤقتة والاختبارية', Icons.badge_outlined, _hrPurple),
-                _metric('موظفون نشطون', _activeEmployees.toString(), 'على رأس العمل حسب حالة الملف', Icons.verified_user_outlined, Colors.green.shade700),
+                _metric('موظفون نشطون', _activeEmployees.toString(), 'على رأس العمل دون الإيقاف المؤقت', Icons.verified_user_outlined, Colors.green.shade700),
+                _metric('موقوفون مؤقتًا', _suspendedEmployees.toString(), 'ضمن القوة الحالية مع استبعادهم من النشطين', Icons.pause_circle_outline, _hrOrange),
                 _metric('غير نشطين', _inactiveEmployees.toString(), 'ملفات غير محددة كنشطة', Icons.person_off_outlined, Colors.red.shade700),
                 _metric('الإدارات النشطة', _activeDepartments.toString(), 'من الهيكل التنظيمي', Icons.account_tree_outlined, _hrOrange),
                 _metric('الوظائف النشطة', _activeJobs.toString(), 'وظائف معرفة بالهيكل', Icons.work_outline, _hrPink),
@@ -1039,12 +1060,12 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               crossAxisCount: count, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: count == 1 ? 3.4 : 2.2,
               children: [
-                _metric('عقود تنتهي خلال 30 يومًا', _activeEmployees == 0 ? '—' : '$_contractsExpiringSoon', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'من الموظفين النشطين', Icons.event_busy_outlined, _hrOrange),
-                _metric('عقود سارية', _activeEmployees == 0 ? '—' : '$_contractsActive', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'من الموظفين النشطين بعقد', Icons.verified_outlined, Colors.green.shade700),
-                _metric('عقود منتهية', _activeEmployees == 0 ? '—' : '$_contractsExpired', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'تحتاج مراجعة فورية', Icons.warning_amber_outlined, Colors.red.shade700),
-                _metric('عقود بلا تاريخ نهاية / نوع', _activeEmployees == 0 ? '—' : '$_contractsMissing', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'تحتاج استكمال البيانات', Icons.assignment_late_outlined, _hrPink),
-                _metric('موظفون بلا عقد', _activeEmployees == 0 ? '—' : '$_employeesWithoutContract', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون نشطون دون عقد', Icons.assignment_ind_outlined, Colors.blueGrey),
-                _metric('نواقص مسوغات التعيين', _activeEmployees == 0 ? '—' : '$_employeesMissingRequiredDocuments', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : _employeesWithoutJob > 0 ? 'لا يشمل $_employeesWithoutJob موظفًا بلا وظيفة محددة' : 'وفق متطلبات الوظيفة', Icons.folder_off_outlined, _hrPink),
+                _metric('عقود تنتهي خلال 30 يومًا', _currentEmployeesCount == 0 ? '—' : '$_contractsExpiringSoon', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'من الموظفين النشطين', Icons.event_busy_outlined, _hrOrange),
+                _metric('عقود سارية', _currentEmployeesCount == 0 ? '—' : '$_contractsActive', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'من الموظفين النشطين بعقد', Icons.verified_outlined, Colors.green.shade700),
+                _metric('عقود منتهية', _currentEmployeesCount == 0 ? '—' : '$_contractsExpired', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'تحتاج مراجعة فورية', Icons.warning_amber_outlined, Colors.red.shade700),
+                _metric('عقود بلا تاريخ نهاية / نوع', _currentEmployeesCount == 0 ? '—' : '$_contractsMissing', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'تحتاج استكمال البيانات', Icons.assignment_late_outlined, _hrPink),
+                _metric('موظفون بلا عقد', _currentEmployeesCount == 0 ? '—' : '$_employeesWithoutContract', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون نشطون دون عقد', Icons.assignment_ind_outlined, Colors.blueGrey),
+                _metric('نواقص مسوغات التعيين', _currentEmployeesCount == 0 ? '—' : '$_employeesMissingRequiredDocuments', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : _employeesWithoutJob > 0 ? 'لا يشمل $_employeesWithoutJob موظفًا بلا وظيفة محددة' : 'وفق متطلبات الوظيفة', Icons.folder_off_outlined, _hrPink),
                 _metric('تأخيرات الشهر', _qualifiedAttendanceRecords.isEmpty ? '—' : '$_lateAttendanceCount', _qualifiedAttendanceRecords.isEmpty ? 'لا توجد سجلات حضور لموظفين فعليين' : 'من سجلات الحضور المؤهلة', Icons.schedule_outlined, _hrPurple),
                 _metric('غياب الشهر', _qualifiedAttendanceRecords.isEmpty ? '—' : '$_absenceAttendanceCount', _qualifiedAttendanceRecords.isEmpty ? 'لا توجد سجلات حضور لموظفين فعليين' : 'من سجلات الحضور المؤهلة', Icons.person_off_outlined, Colors.red.shade700),
                 _metric('إضافي مسجل', _qualifiedAttendanceRecords.isEmpty ? '—' : '$_overtimeMinutes دقيقة', _qualifiedAttendanceRecords.isEmpty ? 'لا توجد سجلات حضور لموظفين فعليين' : 'إجمالي دقائق الشهر', Icons.more_time_outlined, Colors.green.shade700),
@@ -1061,13 +1082,13 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               crossAxisCount: count, shrinkWrap: true, physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 9, crossAxisSpacing: 9, childAspectRatio: count == 1 ? 3.4 : 2.2,
               children: [
-                _metric('تأمين صحي مؤمن', _activeEmployees == 0 ? '—' : '$_healthInsured', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون مميزون دون تكرار', Icons.health_and_safety_outlined, _hrPurple),
-                _metric('تأمين صحي غير مؤمن', _activeEmployees == 0 ? '—' : '$_healthUninsured', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون بحالة غير مؤمن', Icons.health_and_safety_outlined, Colors.red.shade700),
-                _metric('تأمين صحي غير مسجل', _activeEmployees == 0 ? '—' : '$_healthNotRecorded', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'لا يوجد سجل تأمين للموظف', Icons.help_outline, _hrOrange),
-                _metric('تأمين اجتماعي مؤمن', _activeEmployees == 0 ? '—' : '$_socialInsured', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون مميزون دون تكرار', Icons.account_balance_outlined, _hrPurple),
-                _metric('تأمين اجتماعي غير مؤمن', _activeEmployees == 0 ? '—' : '$_socialUninsured', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون بحالة غير مؤمن', Icons.account_balance_outlined, Colors.red.shade700),
-                _metric('تأمين اجتماعي غير مسجل', _activeEmployees == 0 ? '—' : '$_socialNotRecorded', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'لا يوجد سجل تأمين للموظف', Icons.help_outline, _hrOrange),
-                _metric('طلبات تأمين جارية', _activeEmployees == 0 ? '—' : '$_insuranceInProgress', _activeEmployees == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'عدد الموظفين قيد الإجراء', Icons.pending_actions_outlined, _hrPink),
+                _metric('تأمين صحي مؤمن', _currentEmployeesCount == 0 ? '—' : '$_healthInsured', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون مميزون دون تكرار', Icons.health_and_safety_outlined, _hrPurple),
+                _metric('تأمين صحي غير مؤمن', _currentEmployeesCount == 0 ? '—' : '$_healthUninsured', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون بحالة غير مؤمن', Icons.health_and_safety_outlined, Colors.red.shade700),
+                _metric('تأمين صحي غير مسجل', _currentEmployeesCount == 0 ? '—' : '$_healthNotRecorded', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'لا يوجد سجل تأمين للموظف', Icons.help_outline, _hrOrange),
+                _metric('تأمين اجتماعي مؤمن', _currentEmployeesCount == 0 ? '—' : '$_socialInsured', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون مميزون دون تكرار', Icons.account_balance_outlined, _hrPurple),
+                _metric('تأمين اجتماعي غير مؤمن', _currentEmployeesCount == 0 ? '—' : '$_socialUninsured', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'موظفون بحالة غير مؤمن', Icons.account_balance_outlined, Colors.red.shade700),
+                _metric('تأمين اجتماعي غير مسجل', _currentEmployeesCount == 0 ? '—' : '$_socialNotRecorded', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'لا يوجد سجل تأمين للموظف', Icons.help_outline, _hrOrange),
+                _metric('طلبات تأمين جارية', _currentEmployeesCount == 0 ? '—' : '$_insuranceInProgress', _currentEmployeesCount == 0 ? 'لا توجد قوة عمل فعلية للتقييم' : 'عدد الموظفين قيد الإجراء', Icons.pending_actions_outlined, _hrPink),
                 _metric('رخص منتهية', _qualifiedLicenseRecords.isEmpty ? '—' : '$_licensesExpired', _qualifiedLicenseRecords.isEmpty ? 'لا توجد سجلات رخص لموظفين فعليين' : 'تحتاج تجديدًا', Icons.assignment_late_outlined, Colors.red.shade700),
                 _metric('رخص تنتهي خلال 30 يومًا', _qualifiedLicenseRecords.isEmpty ? '—' : '$_licensesExpiringSoon', _qualifiedLicenseRecords.isEmpty ? 'لا توجد سجلات رخص لموظفين فعليين' : 'تنبيه مسبق', Icons.event_available_outlined, _hrOrange),
                 _metric('تدريب مخطط', _qualifiedTrainingRecords.isEmpty ? '—' : '$_trainingPlanned', _qualifiedTrainingRecords.isEmpty ? 'لا توجد سجلات تدريب لموظفين فعليين' : 'برامج بانتظار التنفيذ', Icons.event_note_outlined, _hrOrange),
@@ -1118,7 +1139,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           _panel(children: [
             _progressRow('التعيينات خلال الفترة', _hiresInPeriod, _hiresInPeriod + _separationsInPeriod, Colors.green.shade700),
             _progressRow('حركات انتهاء الخدمة خلال الفترة', _separationsInPeriod, _hiresInPeriod + _separationsInPeriod, _hrOrange),
-            _alert('جودة بيانات الموظفين', _activeEmployees == 0
+            _alert('جودة بيانات الموظفين', _currentEmployeesCount == 0
                 ? 'غير متاح — لا توجد سجلات لموظفين فعليين يمكن تقييم ربطهم بالوظائف أو مسوغات تعيينهم.'
                 : 'موظفون بلا وظيفة محددة: $_employeesWithoutJob، وملفات غير نشطة: $_inactiveEmployees، ونواقص المسوغات للموظفين المرتبطين بوظائف: $_employeesMissingRequiredDocuments. لا يشمل التقييم $_employeesWithoutJob موظفًا بلا وظيفة.',
               _activeEmployees == 0 ? Colors.blueGrey : _employeesWithoutJob + _employeesMissingRequiredDocuments > 0 ? _hrOrange : Colors.blueGrey),
@@ -1126,7 +1147,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                 ? 'غير متاح — لا توجد قوة عمل فعلية لقياس اكتمال بيانات التأمين.'
                 : 'غير مسجل صحيًا: $_healthNotRecorded، وغير مسجل اجتماعيًا: $_socialNotRecorded. الأعداد محسوبة على الموظفين النشطين وبحسب سجلاتهم الفردية.',
               _activeEmployees == 0 ? Colors.blueGrey : _healthNotRecorded + _socialNotRecorded > 0 ? _hrOrange : Colors.blueGrey),
-            _alert('مؤشرات تتطلب استكمال مصدر البيانات', 'العجز مقابل الملاك المعتمد يحتاج جدول ملاك/طلبات شاغرة. فترة الاختبار تحتاج حقولًا منظمة. إصابات العمل وتكلفة التوظيف ومقارنة تكلفة العمالة بالمبيعات تحتاج مصادر متخصصة.', Colors.blueGrey),
+            _alert('مؤشرات تتطلب استكمال مصدر البيانات', 'فترة الاختبار تحتاج حقولًا منظمة لتاريخ البداية والنهاية ونتيجة الاجتياز. إصابات العمل، تكلفة التوظيف، ومقارنة تكلفة العمالة بالمبيعات تحتاج مصادر متخصصة.', Colors.blueGrey),
           ]),
           const SizedBox(height: 18),
           _sectionTitle('تقييم الأداء', Icons.assessment_outlined),
@@ -1249,7 +1270,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
               _departments.isEmpty || _jobs.isEmpty ? Colors.blueGrey : _departmentsWithoutJobs + _unassignedJobs == 0 ? Colors.green : Colors.orange),
             _alert('سجلات موظفين مستبعدة', 'تم استبعاد $_temporaryEmployees سجلًا أوليًا مؤقتًا و$_testEmployees سجلًا اختباريًا من مؤشرات القوى العاملة والارتباطات التابعة. لم يتم حذف أي سجل.', _temporaryEmployees + _testEmployees > 0 ? Colors.orange : Colors.green),
             _alert('التعيينات المستقبلية', 'عدد الموظفين الحقيقيين المسجلين بتاريخ تعيين مستقبلي: $_upcomingHires. لا يدخلون في عدد القوة العاملة الحالية حتى تاريخ مباشرة العمل.', _upcomingHires > 0 ? Colors.blueGrey : Colors.green),
-            _alert('ملفات الموظفين غير النشطة', 'عدد الملفات غير النشطة: $_inactiveEmployees. راجع أسباب الإيقاف أو انتهاء الخدمة.', Colors.orange),
+            _alert('ملفات الموظفين غير النشطة', 'عدد الملفات غير النشطة: $_inactiveEmployees. والموقوفون مؤقتًا على رأس الخدمة: $_suspendedEmployees. راجع أسباب الإيقاف أو انتهاء الخدمة.', Colors.orange),
             _alert('العقود', 'عقود سارية: $_contractsActive، تنتهي خلال 30 يومًا: $_contractsExpiringSoon، منتهية: $_contractsExpired، وتحتاج استكمال النوع أو تاريخ النهاية: $_contractsMissing. موظفون بلا عقد: $_employeesWithoutContract.', _contractsExpired + _contractsExpiringSoon + _contractsMissing + _employeesWithoutContract > 0 ? Colors.orange : Colors.green),
             _alert('مسوغات التعيين', 'عدد الموظفين الذين تنقص ملفاتهم مستندات مطلوبة حسب الوظيفة: $_employeesMissingRequiredDocuments. راجع متطلبات الوظائف وسجل مستندات الموظفين.', _employeesMissingRequiredDocuments > 0 ? Colors.orange : Colors.green),
             _alert('الحضور والانصراف', _qualifiedAttendanceRecords.isEmpty ? 'لا توجد سجلات حضور مؤهلة مرتبطة بموظفين فعليين خلال الشهر الحالي؛ لا يمكن اعتبار المؤشرات صفرًا مكتملًا.' : 'خلال الشهر الحالي: $_absenceAttendanceCount حالات غياب و$_lateAttendanceCount حالات تأخير، وإجمالي الوقت الإضافي المسجل $_overtimeMinutes دقيقة.', Colors.blueGrey),
