@@ -176,15 +176,15 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
               const SizedBox(height: 10),
               TextField(controller: location, decoration: const InputDecoration(labelText: 'الموقع / وصف المكان', border: OutlineInputBorder())),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(itemHeight: 40, value: governorateId, isExpanded: true, decoration: const InputDecoration(labelText: 'المحافظة', border: OutlineInputBorder()),
+              DropdownButtonFormField<String>(itemHeight: 48, value: governorateId, isExpanded: true, decoration: const InputDecoration(labelText: 'المحافظة', border: OutlineInputBorder()),
                 items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المحافظة')), ..._geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
                 onChanged: (v) => setState(() { governorateId = v; districtId = null; areaId = null; })),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(itemHeight: 40, value: districtId, isExpanded: true, decoration: const InputDecoration(labelText: 'الحي / المركز', border: OutlineInputBorder()),
+              DropdownButtonFormField<String>(itemHeight: 48, value: districtId, isExpanded: true, decoration: const InputDecoration(labelText: 'الحي / المركز', border: OutlineInputBorder()),
                 items: [const DropdownMenuItem<String>(value: null, child: Text('اختر الحي أو المركز')), ..._geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (governorateId ?? '')).map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
                 onChanged: (v) => setState(() { districtId = v; areaId = null; })),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(itemHeight: 40, value: areaId, isExpanded: true, decoration: const InputDecoration(labelText: 'المنطقة / القرية', border: OutlineInputBorder()),
+              DropdownButtonFormField<String>(itemHeight: 48, value: areaId, isExpanded: true, decoration: const InputDecoration(labelText: 'المنطقة / القرية', border: OutlineInputBorder()),
                 items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المنطقة أو القرية')), ..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (districtId ?? '')).map((g) => DropdownMenuItem(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
                 onChanged: (v) => setState(() => areaId = v)),
               const SizedBox(height: 10),
@@ -484,7 +484,7 @@ class _ErpBranchesScreenState extends State<ErpBranchesScreen> {
       ]),
     );
     Widget geoDropdown(String label, String? value, String level, ValueChanged<String?> onChanged, {String? parent, double width = 200}) =>
-      SizedBox(width: width, child: DropdownButtonFormField<String>(itemHeight: 40, 
+      SizedBox(width: width, child: DropdownButtonFormField<String>(itemHeight: 48, 
         value: value, isExpanded: true, isDense: true, menuMaxHeight: 280,
         decoration: InputDecoration(labelText: label, isDense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), border: OutlineInputBorder(borderRadius: BorderRadius.circular(9))),
         items: [
