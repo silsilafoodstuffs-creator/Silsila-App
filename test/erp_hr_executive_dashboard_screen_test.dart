@@ -77,6 +77,7 @@ void main() {
       {'id': 'test-1', 'notes': 'سجل اختبار'},
       {'id': 'demo-1', 'notes': 'demo employee'},
       {'id': 'test-status', 'employment_status': 'test'},
+      {'id': 'seed-status', 'employment_status': 'temporary'},
     ]);
 
     expect(rows.map((row) => row['id']).toList(), ['real-1']);
