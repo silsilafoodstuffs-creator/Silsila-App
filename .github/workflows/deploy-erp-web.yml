@@ -1,11 +1,10 @@
 name: Build Silsila ERP Web Preview
 
 # The production Pages site is deployed by deploy.yml.
-# Build a downloadable ERP web artifact on each main update and on demand.
-# This does not publish to or overwrite the production GitHub Pages site.
+# Manual standalone preview build. The normal preview artifact is produced
+# by Full Validation so each source update has one consolidated test/build batch.
+# This workflow never publishes to or overwrites the production GitHub Pages site.
 'on':
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

@@ -17,9 +17,9 @@ try {
       viewport: { width: viewport.width, height: viewport.height },
       deviceScaleFactor: 1,
     });
-    page.on('pageerror', error => failures.push(`[${viewport.name}] pageerror: ${error.message}`));
+    page.on('pageerror', error => failures.push(`[${viewport.name}] pageerror: ${error.stack || error.message}`));
     page.on('console', message => {
-      if (message.type() === 'error') failures.push(`[${viewport.name}] console: ${message.text()}`);
+      if (message.type() === 'error') failures.push(`[${viewport.name}] console: ${message.text()} (location: ${JSON.stringify(message.location())})`);
     });
     page.on('requestfailed', request => failures.push(`[${viewport.name}] request failed: ${request.url()} - ${request.failure()?.errorText ?? 'unknown'}`));
 

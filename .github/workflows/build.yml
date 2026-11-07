@@ -1,14 +1,17 @@
 name: Build Silsila Android App
 
-# Keep the newest commit's verification/build run; cancel stale duplicate runs.
+# Build the signed release APK only after the full validation batch passes.
+# Manual dispatch remains available for an intentional standalone release build.
 concurrency:
-  group: silsila-build-${{ github.ref }}
-  cancel-in-progress: true
+  group: silsila-android-release
+  cancel-in-progress: false
 
 'on':
-  push:
-    branches: [main]
-  pull_request:
+  workflow_run:
+    workflows:
+      - Silsila Full Validation - All Recent Changes
+    types:
+      - completed
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -23,12 +26,14 @@ permissions:
 
 jobs:
   build-android:
-    if: ${{ github.event_name != 'pull_request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download project
+      - name: Download validated project
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Locate Flutter project
         run: |
