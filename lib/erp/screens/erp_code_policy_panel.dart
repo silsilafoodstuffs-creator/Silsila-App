@@ -129,7 +129,6 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     _geoPrefix.dispose();
     for (final controller in _geoSegments.values) { controller.dispose(); }
     for (final controller in _itemSegments.values) { controller.dispose(); }
-    _tableHorizontalController.dispose();
     super.dispose();
   }
 
@@ -359,13 +358,11 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     child:Center(child:Text('تسلسل',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
   );
 
-  final ScrollController _tableHorizontalController = ScrollController();
-
   Widget _itemPolicyRow() => Container(
     margin:const EdgeInsets.symmetric(vertical:2),
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
     decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
-    child:Row(spacing:_columnSpacing,children:[
+    child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(spacing:_columnSpacing,children:[
       SizedBox(width:30,child:Text('${_types.length+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
       const SizedBox(width:150,child:Text('الأصناف',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
       SizedBox(width:52,child:Checkbox(value:_itemAutomatic,onChanged:(v)=>setState(()=>_itemAutomatic=v ?? true),visualDensity:VisualDensity.compact)),
@@ -399,14 +396,14 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       SizedBox(width:112,child:Text(
         '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',
         textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
-    ]),
+    ])),
   );
 
   Widget _geoPolicyCard() => Container(
     margin:const EdgeInsets.symmetric(vertical:2),
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
     decoration:BoxDecoration(color:const Color(0xFFF5EFFB),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
-    child:Row(spacing:_columnSpacing,children:[
+    child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(spacing:_columnSpacing,children:[
       const SizedBox(width:30,child:Text('3',textAlign:TextAlign.center,style:TextStyle(fontSize:11))),
       const SizedBox(width:150,child:Text('التقسيم الجغرافي',style:TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
@@ -421,7 +418,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       
       SizedBox(width:112,child:Text(_geoPrefix.text,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),
       const SizedBox(width:112,child:Text('Rig + 8 أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10))),
-    ]),
+    ])),
   );
 
   Widget _geoNameCell(String name) => SizedBox(width:124,height:_cellHeight,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
@@ -453,15 +450,6 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     child: _loading ? const Center(child:CircularProgressIndicator()) : ListView(
       padding:const EdgeInsets.all(8),
       children:[
-        Scrollbar(
-          controller:_tableHorizontalController,
-          thumbVisibility:true,
-          thickness:6,
-          radius:const Radius.circular(8),
-          child:SingleChildScrollView(
-            controller:_tableHorizontalController,
-            scrollDirection:Axis.horizontal,
-            child:SizedBox(width:1900,child:Column(children:[
         Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('إعدادات التكويد المركزي',style:TextStyle(color:_purple,fontWeight:FontWeight.w900,fontSize:16)),
           const SizedBox(height:4),
@@ -469,7 +457,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           const SizedBox(height:8),
           const Text('معيار تنسيق الجدول: ارتفاع موحد 40 بكسل لكل الخانات، ومسافة 5 بكسل بين الأعمدة، وعرض خانة العدد 62 بكسل (المساحة 2,480 بكسل²).',style:TextStyle(fontSize:10,color:Colors.black54)),
           const SizedBox(height:8),
-          Row(spacing:_columnSpacing,children:const[
+          SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(spacing:_columnSpacing,children:const[
             SizedBox(width:30,child:Text('م',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             SizedBox(width:150,child:Text('اسم السياسة',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
             SizedBox(width:52,child:Text('تلقائي',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
@@ -497,7 +485,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             
             SizedBox(width:112,child:Text('بادئة الكود\\n3 حروف إنجليزية فقط',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:9))),
             SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
-          ]),
+          ])),
         ]))),
         ...List.generate(_types.length+2,(i){
           if (i == 2) return _geoPolicyCard();
@@ -505,7 +493,7 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           final t=_types[i > 2 ? i-1 : i]; final key=t['key']!;
           return Container(margin:const EdgeInsets.symmetric(vertical:2),padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
             decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
-            child:Row(spacing:_columnSpacing,children:[
+            child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(spacing:_columnSpacing,children:[
               SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
               SizedBox(width:150,child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
               SizedBox(width:52,child:Checkbox(value:_automatic[key] ?? true,onChanged:(v)=>setState(()=>_automatic[key]=v ?? true),visualDensity:VisualDensity.compact)),
@@ -558,11 +546,8 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
               SizedBox(width:112,child:Text(key=='customer'
                 ? 'Cus + منطقة 8 + ${'1'.padLeft(int.tryParse(_digits[key]!.text) ?? 4,'0')}'
                 : _preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
-            ]));
+            ])));
         }),
-            ])),
-          ),
-        ),
         Card(elevation:0,color:const Color(0xFFFFF4E5),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('تفاصيل تركيب كود الأصناف',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
           const SizedBox(height:5),
