@@ -328,7 +328,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
             children: [
               const Text('إضافة موظف للمسير', style: TextStyle(fontWeight: FontWeight.w900)),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(itemHeight: 40, 
+              DropdownButtonFormField<String>(itemHeight: 48, 
                 value: _employeeId, isExpanded: true,
                 decoration: const InputDecoration(labelText: 'الموظف', border: OutlineInputBorder()),
                 items: _employees.map((e) => DropdownMenuItem(value: _s(e['id']), child: Text(_employeeLabel(_s(e['id'])), overflow: TextOverflow.ellipsis))).toList(),
@@ -371,7 +371,7 @@ class _ErpPayrollScreenState extends State<ErpPayrollScreen> {
     ));
   }
 
-  Widget _accountDropdown(String label, String? value, ValueChanged<String?> onChanged) => DropdownButtonFormField<String>(itemHeight: 40, 
+  Widget _accountDropdown(String label, String? value, ValueChanged<String?> onChanged) => DropdownButtonFormField<String>(itemHeight: 48, 
     value: value, isExpanded: true,
     decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
     items: _accounts.map((r) => DropdownMenuItem(value: _s(r['id']), child: Text(_accountLabel(_s(r['id'])), overflow: TextOverflow.ellipsis))).toList(),
