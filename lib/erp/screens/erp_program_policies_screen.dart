@@ -834,13 +834,13 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   );
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
-      _row(0,'Pol001','اسم البرنامج',_field(_name,width:190,hint:'سلسلة')),
-      _row(1,'Pol002','لغة واجهة البرنامج',SizedBox(width:190,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight:40,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
-      _row(2,'Pol003','شعار البرنامج',Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))])),
-      _row(3,'Pol004','اللون الأساسي',_colorField(_primary)),
-      _row(4,'Pol005','اللون الثانوي',_colorField(_secondary)),
-      _row(5,'Pol006','لون التمييز',_colorField(_accent)),
-      _row(6,'Pol007','لون الخلفية',_colorField(_background)),
+      _row(0,'Pol001','اسم البرنامج',_field(_name,width:335,hint:'سلسلة')),
+      _row(1,'Pol002','لغة واجهة البرنامج',SizedBox(width:335,height:40,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight:40,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null))),
+      _row(2,'Pol003','شعار البرنامج',SizedBox(width:335,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
+      _row(3,'Pol004','اللون الأساسي',_colorField(_primary ,width:335)),
+      _row(4,'Pol005','اللون الثانوي',_colorField(_secondary ,width:335)),
+      _row(5,'Pol006','لون التمييز',_colorField(_accent ,width:335)),
+      _row(6,'Pol007','لون الخلفية',_colorField(_background ,width:335)),
     ];
     for (var i=0;i<5;i++) {
       rows.add(_row(7+i,'Pol${(i+8).toString().padLeft(3,'0')}','${_labels[i]}',_fontStyleValue(i)));
