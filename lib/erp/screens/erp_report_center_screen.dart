@@ -142,7 +142,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     if (candidates.isEmpty) {
       setState(() {
         _loading = false;
-        _error = 'لم يُعرّف مصدر بيانات لهذا التقرير بعد؛ لن يتم عرض سجلات تجريبية بديلة.';
+        _error = 'لم يُربط مصدر البيانات الفعلي لهذا التقرير بعد.';
       });
       return;
     }
