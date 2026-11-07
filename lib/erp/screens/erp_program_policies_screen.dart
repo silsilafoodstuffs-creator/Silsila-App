@@ -61,6 +61,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final ScrollController _policyVerticalController = ScrollController();
   int tab = 0; bool loading = true, saving = false; String? error, message;
   String get company => (widget.companyId ?? '').trim();
+  String _programPolicyCode(String key) {
+    final index = defaults.indexWhere((policy) => policy['key'] == key);
+    if (index < 0) throw StateError('السياسة $key غير معرفة ضمن سجل السياسات الأساسي.');
+    return 'Pol${(index + 1).toString().padLeft(3, '0')}';
+  }
   @override void initState(){super.initState(); for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
   @override void didUpdateWidget(covariant ErpProgramPoliciesScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
   Future<void> _load({bool propagateError = false}) async {
@@ -170,15 +175,16 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if (tab == 0) {
       final state = _identityKey.currentState;
       if (state == null) throw StateError('بيانات الهوية البصرية غير جاهزة.');
-      rows.add(['البيان', 'القيمة']);
-      rows.add(['اسم البرنامج', state._name.text]);
-      rows.add(['اللغة', state._language == 'ar' ? 'العربية' : 'English']);
-      rows.add(['اللون الأساسي', state._primary.text]);
-      rows.add(['اللون الثانوي', state._secondary.text]);
-      rows.add(['لون التمييز', state._accent.text]);
-      rows.add(['لون الخلفية', state._background.text]);
+      rows.add(['كود السياسة', 'البيان', 'القيمة']);
+      rows.add([state._identityPolicyCode(0), 'اسم البرنامج', state._name.text]);
+      rows.add([state._identityPolicyCode(1), 'اللغة', state._language == 'ar' ? 'العربية' : 'English']);
+      rows.add([state._identityPolicyCode(2), 'شعار البرنامج', state._logoBase64 == null ? 'غير محدد' : 'تم تحديد شعار']);
+      rows.add([state._identityPolicyCode(3), 'اللون الأساسي', state._primary.text]);
+      rows.add([state._identityPolicyCode(4), 'اللون الثانوي', state._secondary.text]);
+      rows.add([state._identityPolicyCode(5), 'لون التمييز', state._accent.text]);
+      rows.add([state._identityPolicyCode(6), 'لون الخلفية', state._background.text]);
       for (var i = 0; i < state._labels.length; i++) {
-        rows.add([state._labels[i], 'الخط: ${state._fonts[i]} | الحجم: ${state._sizes[i].text} | اللون: ${state._colors[i].text}']);
+        rows.add([state._identityPolicyCode(7 + i), state._labels[i], 'الخط: ${state._fonts[i]} | الحجم: ${state._sizes[i].text} | اللون: ${state._colors[i].text}']);
       }
     } else if (tab == 2) {
       final record = await db.from('erp_program_policies')
@@ -203,7 +209,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       for (var i = 0; i < current.length; i++) {
         final p = current[i];
         final originalIndex = defaults.indexWhere((item) => item['key'] == p['key']) + 1;
-        rows.add([(i + 1).toString(), 'POL${originalIndex.toString().padLeft(3, '0')}', (p['ar'] ?? '').toString(),
+        rows.add([(i + 1).toString(), _programPolicyCode((p['key'] ?? '').toString()), (p['ar'] ?? '').toString(),
           (p['value'] ?? '').toString(), p['enabled'] == true ? 'نعم' : 'لا',
           p['all'] == true ? 'نعم' : 'لا', ((p['user_ids'] as List?)?.length ?? 0).toString()]);
       }
@@ -414,7 +420,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                             final all = p['all'] == true;
                             final options = (p['options'] as List?)?.cast<String>() ?? const <String>[];
                             final originalIndex = defaults.indexWhere((item) => item['key'] == p['key']) + 1;
-                            final policyCode = 'POL' + originalIndex.toString().padLeft(3, '0');
+                            final policyCode = _programPolicyCode((p['key'] ?? '').toString());
                             Widget checkColumn(String label, bool value, ValueChanged<bool?>? onChanged, double width) => SizedBox(
                               width: width,
                               child: Column(mainAxisSize: MainAxisSize.min, children: [
