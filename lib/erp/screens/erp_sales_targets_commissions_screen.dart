@@ -143,10 +143,10 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
 
   Future<void> _editGoal(Map<String,dynamic> customer) async {
     final old=_goal(customer['id'].toString());
-    final sales=TextEditingController(text:old?['sales_target']?.toString() ?? '25000');
-    final collection=TextEditingController(text:old?['collection_target']?.toString() ?? '20000');
-    final orders=TextEditingController(text:old?['target_orders']?.toString() ?? '12');
-    final bonus=TextEditingController(text:old?['bonus_rate']?.toString() ?? '0.5');
+    final sales=TextEditingController(text:old?['sales_target']?.toString() ?? '0');
+    final collection=TextEditingController(text:old?['collection_target']?.toString() ?? '0');
+    final orders=TextEditingController(text:old?['target_orders']?.toString() ?? '0');
+    final bonus=TextEditingController(text:old?['bonus_rate']?.toString() ?? '0');
     final ok=await showDialog<bool>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
       title:Text('هدف شهري: '+(customer['party_name']?.toString() ?? 'عميل')),
       content:SizedBox(width:420,child:SingleChildScrollView(child:Column(mainAxisSize:MainAxisSize.min,children:[
@@ -169,7 +169,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
   Future<void> _editRep(Map<String,dynamic> rep) async {
     final sales=TextEditingController(text:rep['monthly_sales_target']?.toString() ?? '0');
     final collection=TextEditingController(text:rep['monthly_collection_target']?.toString() ?? '0');
-    final rate=TextEditingController(text:rep['default_commission_rate']?.toString() ?? '1.25');
+    final rate=TextEditingController(text:rep['default_commission_rate']?.toString() ?? '0');
     String method=rep['commission_plan']?.toString() ?? 'percentage';
     String classification=rep['rep_classification']?.toString() ?? 'خارجي';
     final ok=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setLocal)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
@@ -203,7 +203,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
     final repId=rep['id']?.toString() ?? '';
     final docs=_docsForRep(repId);
     if(docs.isEmpty) {
-      _toast('لا توجد فواتير مبيعات مرحلة وغير تجريبية لهذا المندوب خلال الشهر الحالي.');
+      _toast('لا توجد فواتير مبيعات مرحلة وفعلية لهذا المندوب خلال الشهر الحالي.');
       return;
     }
     final commissionType=rep['commission_type']?.toString() ?? 'percentage';
@@ -270,7 +270,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
         'calculated_commission':estimate,
         'status':'draft',
         'is_demo_data':false,
-        'notes':'مسودة آلية من الفواتير المرحلة وغير التجريبية؛ يلزم تدقيق المرتجعات والتحصيلات ومراجعة الخطة قبل الاعتماد.',
+        'notes':'مسودة آلية من الفواتير المرحلة والفعلية؛ يلزم تدقيق المرتجعات والتحصيلات ومراجعة الخطة قبل الاعتماد.',
       });
       await _load();
       _toast('تم حفظ مسودة العمولة بنجاح، ولم يتم اعتمادها أو صرفها.');
@@ -305,7 +305,6 @@ Future<void> _previewSalesTargets() async {
 
   @override
   Widget build(BuildContext context){
-    final demo=_db==null || (widget.companyId ?? '').isEmpty;
     return Directionality(textDirection:TextDirection.rtl,child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
       Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(gradient:const LinearGradient(colors:[_p,Color(0xFF7443A6)]),borderRadius:BorderRadius.circular(20)),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
         Row(children:[
@@ -322,13 +321,12 @@ Future<void> _previewSalesTargets() async {
         ])),
       ])),
       const SizedBox(height:12),
-      if(demo) Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(color:const Color(0xFFFFF4DE),borderRadius:BorderRadius.circular(12)),child:const Text('وضع تجريبي: الأسماء والأهداف والعمولات افتراضية وليست بيانات حقيقية. طبّق ملف SQL واربط الشركة لتمكين الحفظ.',style:TextStyle(color:Color(0xFF795000),fontWeight:FontWeight.w700))),
       if(_error!=null) Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
       const SizedBox(height:12),
       LayoutBuilder(builder:(ctx,c){final n=c.maxWidth>1000?3:c.maxWidth>620?2:1;return GridView.count(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),crossAxisCount:n,crossAxisSpacing:10,mainAxisSpacing:10,childAspectRatio:n==1?4:2.4,children:[
-        _stat('عملاء الدليل',demo?'4':_customers.length.toString(),Icons.storefront,_p),
-        _stat('المندوبون',demo?'3':_reps.length.toString(),Icons.badge,_o),
-        _stat('أهداف الشهر',demo?'4':_goals.where((g)=>g['goal_month']?.toString().startsWith(_monthKey)==true).length.toString(),Icons.flag,_pink),
+        _stat('عملاء الدليل',_customers.length.toString(),Icons.storefront,_p),
+        _stat('المندوبون',_reps.length.toString(),Icons.badge,_o),
+        _stat('أهداف الشهر',_goals.where((g)=>g['goal_month']?.toString().startsWith(_monthKey)==true).length.toString(),Icons.flag,_pink),
       ]);}),
       const SizedBox(height:12),
       if(widget.initialTabIndex==0) Padding(padding:const EdgeInsets.only(bottom:10),child:Wrap(spacing:8,runSpacing:8,children:[
@@ -339,7 +337,7 @@ Future<void> _previewSalesTargets() async {
       ])),
       const SizedBox(height:10),
       if(_loading)const Padding(padding:EdgeInsets.all(28),child:Center(child:CircularProgressIndicator()))
-      else SizedBox(height:590,child:switch(widget.initialTabIndex.clamp(0, 3).toInt()) { 1 => _repsView(demo), 2 => _plansView(demo), 3 => _runsView(demo), _ => switch(_goalsTab) { 0 => _goalsPlaceholder(0), 1 => _customersView(demo), 2 => _goalsPlaceholder(2), _ => _goalsPlaceholder(3) } }),
+      else SizedBox(height:590,child:switch(widget.initialTabIndex.clamp(0, 3).toInt()) { 1 => _repsView(), 2 => _plansView(), 3 => _runsView(), _ => switch(_goalsTab) { 0 => _goalsPlaceholder(0), 1 => _customersView(), 2 => _goalsPlaceholder(2), _ => _goalsPlaceholder(3) } }),
     ]));
   }
 
@@ -358,16 +356,14 @@ Future<void> _previewSalesTargets() async {
     ]),
   ));
 
-  Widget _customersView(bool demo){
-    final rows=demo?<Map<String,dynamic>>[
-      {'id':'d1','party_name':'ماركت النور - تجريبي','business_classification':'سوبر ماركت','district':'مدينة نصر','sales_target':45000,'collection_target':40000,'target_orders':24},
-      {'id':'d2','party_name':'بقالة البركة - تجريبي','business_classification':'كشك / بقالة','district':'المرج','sales_target':18000,'collection_target':16000,'target_orders':18},
-      {'id':'d3','party_name':'تاجر جملة المستقبل - تجريبي','business_classification':'جملة','district':'العتبة','sales_target':125000,'collection_target':100000,'target_orders':12},
-      {'id':'d4','party_name':'مؤسسة توريدات غذائية - تجريبي','business_classification':'مدارس / مؤسسات','district':'الدقي','sales_target':70000,'collection_target':60000,'target_orders':8},
-    ]:_customers;
+  Widget _customersView(){
+    final rows=_customers;
+    if(rows.isEmpty)return const Center(child:Text('لا توجد بيانات عملاء فعلية. أضف العملاء من دليل العملاء أولًا.'));
+    return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(ctx,i){
+      final c=rows[i];final g=_goal(c['id'].toString())??<String,dynamic>{};
     if(rows.isEmpty)return const Center(child:Text('لا يوجد عملاء. أضفهم من دليل العملاء أولًا.'));
     return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(ctx,i){
-      final c=rows[i];final g=demo?c:(_goal(c['id'].toString())??<String,dynamic>{});
+      final c=rows[i];final g=_goal(c['id'].toString())??<String,dynamic>{};
       return Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(14),border:Border.all(color:const Color(0xFFE9E2F0))),child:Row(children:[
         const Icon(Icons.storefront,color:_p,size:28),const SizedBox(width:10),
         Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -375,31 +371,27 @@ Future<void> _previewSalesTargets() async {
           Text([c['governorate'],c['district']??c['center'],c['area']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' • ').isEmpty?'موقع غير محدد':[c['governorate'],c['district']??c['center'],c['area']].where((v)=>v!=null&&v.toString().trim().isNotEmpty).join(' • '),style:const TextStyle(fontSize:12,color:Colors.black54)),
           const SizedBox(height:5),Wrap(spacing:12,runSpacing:4,children:[
             Text('المستهدف: '+money(g['sales_target']),style:const TextStyle(color:_p,fontWeight:FontWeight.w700)),
-            Text('المحقق: '+money(demo?0:_actualSalesForCustomer(c['id'].toString())),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w700)),
+            Text('المحقق: '+money(_actualSalesForCustomer(c['id'].toString())),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w700)),
             Text('تحصيل: '+money(g['collection_target']),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w700)),
             Text('فواتير: '+(g['target_orders']?.toString()??'0')),
           ]),
-          if(!demo && _num(g['sales_target'])>0) Padding(padding:const EdgeInsets.only(top:8),child:ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:(_actualSalesForCustomer(c['id'].toString())/_num(g['sales_target'])).clamp(0.0,1.0).toDouble(),minHeight:7,backgroundColor:const Color(0xFFEDE7F4),color:_o))),
+          if(_num(g['sales_target'])>0) Padding(padding:const EdgeInsets.only(top:8),child:ClipRRect(borderRadius:BorderRadius.circular(8),child:LinearProgressIndicator(value:(_actualSalesForCustomer(c['id'].toString())/_num(g['sales_target'])).clamp(0.0,1.0).toDouble(),minHeight:7,backgroundColor:const Color(0xFFEDE7F4),color:_o))),
         ])),
-        IconButton(onPressed:demo?()=>_toast('مثال للعرض فقط.'):()=>_editGoal(c),icon:const Icon(Icons.edit,color:_o),tooltip:'تعديل الهدف'),
+        IconButton(onPressed:()=>_editGoal(c),icon:const Icon(Icons.edit,color:_o),tooltip:'تعديل الهدف'),
       ]));
     });
   }
 
-  Widget _repsView(bool demo){
-    final rows=demo?<Map<String,dynamic>>[
-      {'id':'r1','rep_name':'أحمد سامح - مندوب تجريبي','rep_code':'DEMO-REP-01','monthly_sales_target':350000,'monthly_collection_target':280000,'commission_plan':'tiered','default_commission_rate':1.5},
-      {'id':'r2','rep_name':'محمود عادل - مندوب تجريبي','rep_code':'DEMO-REP-02','monthly_sales_target':275000,'monthly_collection_target':220000,'commission_plan':'percentage','default_commission_rate':1.25},
-      {'id':'r3','rep_name':'كريم أشرف - مندوب تجريبي','rep_code':'DEMO-REP-03','monthly_sales_target':220000,'monthly_collection_target':180000,'commission_plan':'fixed_per_invoice','default_commission_rate':35},
-    ]:_reps;
+  Widget _repsView(){
+    final rows=_reps;
     if(rows.isEmpty)return const Center(child:Text('لا يوجد مندوبون في شاشة بيانات مندوبين المبيعات.'));
     return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(ctx,i){
       final r=rows[i];final m=r['commission_plan']?.toString()??'percentage';final rate=double.tryParse(r['default_commission_rate']?.toString()??'')??0;
       return Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-        Row(children:[const Icon(Icons.badge,color:_p,size:28),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(r['rep_name']?.toString()??'',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),Text((r['rep_code']?.toString()??'')+' • '+(m=='tiered'?'عمولة متدرجة':m=='fixed_per_invoice'?'قيمة لكل فاتورة':'نسبة ثابتة'),style:const TextStyle(color:Colors.black54,fontSize:12))])),IconButton(onPressed:demo?()=>_toast('مثال للعرض فقط.'):()=>_editRep(r),icon:const Icon(Icons.tune,color:_o))]),
-        Wrap(spacing:14,runSpacing:6,children:[Text('مستهدف المبيعات: '+money(r['monthly_sales_target'])),Text('المبيعات المرحلة فعليًا: '+money(demo?0:_actualSalesForRep(r['id'].toString()))),Text(m=='fixed_per_invoice'?'عمولة: '+rate.toStringAsFixed(2)+' ج.م/فاتورة':'العمولة: '+rate.toStringAsFixed(2)+'%',style:const TextStyle(color:_p,fontWeight:FontWeight.w900))]),
-        if(!demo) Padding(padding:const EdgeInsets.only(top:8),child:Text('تقدير العمولة قبل الاعتماد: '+money(_commissionEstimate(r)),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w800))),
-        if(!demo) Align(alignment:Alignment.centerLeft,child:OutlinedButton.icon(onPressed:()=>_createCommissionRun(r),icon:const Icon(Icons.request_quote_rounded),label:const Text('إنشاء مسودة عمولة'))),
+        Row(children:[const Icon(Icons.badge,color:_p,size:28),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(r['rep_name']?.toString()??'',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),Text((r['rep_code']?.toString()??'')+' • '+(m=='tiered'?'عمولة متدرجة':m=='fixed_per_invoice'?'قيمة لكل فاتورة':'نسبة ثابتة'),style:const TextStyle(color:Colors.black54,fontSize:12))])),IconButton(onPressed:()=>_editRep(r),icon:const Icon(Icons.tune,color:_o))]),
+        Wrap(spacing:14,runSpacing:6,children:[Text('مستهدف المبيعات: '+money(r['monthly_sales_target'])),Text('المبيعات المرحلة فعليًا: '+money(_actualSalesForRep(r['id'].toString()))),Text(m=='fixed_per_invoice'?'عمولة: '+rate.toStringAsFixed(2)+' ج.م/فاتورة':'العمولة: '+rate.toStringAsFixed(2)+'%',style:const TextStyle(color:_p,fontWeight:FontWeight.w900))]),
+        Padding(padding:const EdgeInsets.only(top:8),child:Text('تقدير العمولة قبل الاعتماد: '+money(_commissionEstimate(r)),style:const TextStyle(color:Color(0xFF168A70),fontWeight:FontWeight.w800))),
+        Align(alignment:Alignment.centerLeft,child:OutlinedButton.icon(onPressed:()=>_createCommissionRun(r),icon:const Icon(Icons.request_quote_rounded),label:const Text('إنشاء مسودة عمولة'))),
       ]));
     });
   }
@@ -409,10 +401,8 @@ Future<void> _previewSalesTargets() async {
     return 'مندوب';
   }
 
-  Widget _runsView(bool demo) {
-    final rows=demo?<Map<String,dynamic>>[
-      {'representative_name':'أحمد سامح - تجريبي','period_start':_month.toIso8601String().substring(0,10),'period_end':_nextMonth.subtract(const Duration(days:1)).toIso8601String().substring(0,10),'eligible_sales':0,'eligible_invoice_count':0,'calculated_commission':0,'status':'draft','notes':'مثال عرض فقط؛ لا توجد عمولة فعلية.'},
-    ]:_runs;
+  Widget _runsView() {
+    final rows=_runs;
     if(rows.isEmpty)return const Center(child:Text('لا توجد مسودات عمولات. أنشئ مسودة من بطاقة المندوب بعد وجود فواتير مرحلة.'));
     return ListView.separated(
       itemCount:rows.length,
@@ -448,13 +438,9 @@ Future<void> _previewSalesTargets() async {
     );
   }
 
-  Widget _plansView(bool demo){
-    final rows=demo?<Map<String,dynamic>>[
-      {'plan_name':'عمولة نسبة ثابتة','plan_code':'DEMO-COM-PCT','calculation_basis':'sales_value','commission_method':'percentage','flat_rate':1.25,'fixed_amount':0},
-      {'plan_name':'عمولة ثابتة لكل فاتورة','plan_code':'DEMO-COM-FIX','calculation_basis':'invoice_count','commission_method':'fixed_per_invoice','flat_rate':0,'fixed_amount':35},
-      {'plan_name':'شرائح عمولة متدرجة','plan_code':'DEMO-COM-TIER','calculation_basis':'sales_value','commission_method':'tiered','flat_rate':0,'fixed_amount':0},
-    ]:_plans;
-    if(rows.isEmpty)return const Center(child:Text('لا توجد خطط عمولة. طبّق ملف SQL لإنشاء الخطط التجريبية.'));
+  Widget _plansView(){
+    final rows=_plans;
+    if(rows.isEmpty)return const Center(child:Text('لا توجد خطط عمولة فعلية مسجلة. أضف خطة معتمدة من إعدادات العمولات.'));
     return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:10),itemBuilder:(ctx,i){
       final x=rows[i];final m=x['commission_method']?.toString()??'percentage';final id=x['id']?.toString();
       final tiers=_tiers.where((t)=>t['plan_id']?.toString()==id).toList();
@@ -464,7 +450,7 @@ Future<void> _previewSalesTargets() async {
         const SizedBox(height:9),
         if(m=='percentage')Text('النسبة: '+(x['flat_rate']?.toString()??'0')+'%',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
         if(m=='fixed_per_invoice')Text('لكل فاتورة: '+money(x['fixed_amount']),style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),
-        if(m=='tiered')...(tiers.isEmpty?<Widget>[const Text('0–99,999 ج.م: 0.75% • 100,000–249,999 ج.م: 1% • 250,000 ج.م فأكثر: 1.5%',style:TextStyle(fontSize:13))]:tiers.map<Widget>((t)=>Text('من '+money(t['min_value'])+' إلى '+(t['max_value']==null?'غير محدود':money(t['max_value']))+' — '+(t['rate']?.toString()??'0')+'%'))),
+        if(m=='tiered')...(tiers.isEmpty?<Widget>[const Text('لم تُسجل شرائح لهذه الخطة بعد.',style:TextStyle(fontSize:13,color:Colors.black54))]:tiers.map<Widget>((t)=>Text('من '+money(t['min_value'])+' إلى '+(t['max_value']==null?'غير محدود':money(t['max_value']))+' — '+(t['rate']?.toString()??'0')+'%'))),
         const SizedBox(height:8),const Text('يجب مراجعة المرتجعات والتحصيلات والاستحقاق واعتماد العمولة قبل الصرف.',style:TextStyle(color:Colors.black54,fontSize:12)),
       ]));
     });
