@@ -11,7 +11,7 @@ class _Field {
   final List<String> options;
 }
 class _Config {
-  const _Config(this.title, this.table, this.fields, this.examples, this.help);
+  const _Config(this.title, this.table, this.fields, List<Map<String,String>> examples, this.help) : examples = const [];
   final String title, table, help;
   final List<_Field> fields;
   final List<Map<String,String>> examples;
@@ -339,8 +339,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
       widget.page.contains('انتهاء وتجديد') || widget.page.contains('أرصدة') ||
       widget.page.contains('معدل دوران') || widget.page.contains('تكلفة العمالة') ||
       widget.page.contains('تقييمات الأداء') || widget.page.contains('ساعات العمل الإضافية');
-    final demo=_rows.isEmpty&&c.examples.isNotEmpty;
-    final records=demo?c.examples.map((x)=>Map<String,dynamic>.from(x)).toList():_rows;
+    final records=_rows;
     final columns=c.fields.take(5).toList();
     return Directionality(textDirection:TextDirection.rtl,child:Container(
       color:const Color(0xFFFAF8FC),padding:const EdgeInsets.all(16),
@@ -362,7 +361,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
             Wrap(spacing:8,runSpacing:8,children:[
               _metric('السجلات الفعلية',_rows.length.toString()),
               _metric('الموظفون',_employees.length.toString()),
-              _metric('المعروض',_loading?'تحميل':demo?'أمثلة توضيحية':'بيانات النظام'),
+              _metric('المعروض',_loading?'تحميل':'بيانات النظام'),
             ]),
           ]))),
         if(demo)Container(margin:const EdgeInsets.only(top:10),padding:const EdgeInsets.all(12),
