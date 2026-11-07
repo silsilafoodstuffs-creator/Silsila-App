@@ -10,7 +10,8 @@ permissions:
 
 concurrency:
   group: silsila-full-validation
-  cancel-in-progress: false
+  # A newer main commit supersedes an older validation run; always validate the latest tree.
+  cancel-in-progress: true
 
 jobs:
   validate-all:
