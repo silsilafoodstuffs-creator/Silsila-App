@@ -961,7 +961,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       }
       if (!mounted) return;
       _showActionMessage(savedCount == 0
-          ? 'لم توجد سجلات فعلية للحفظ؛ أمثلة الواجهة لم تُرفع إلى قاعدة البيانات.'
+          ? 'لا توجد سجلات فعلية جديدة للحفظ.'
           : 'تم حفظ $savedCount سجلًا في قاعدة البيانات.');
     } catch (error) {
       if (!mounted) return;
@@ -995,7 +995,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
           .then((_) { if (mounted) _showActionMessage('تم حفظ تعديل السجل في قاعدة البيانات.'); })
           .catchError((Object error) { if (mounted) _showActionMessage('تم التعديل محليًا لكن فشل الحفظ الدائم: $error'); });
       } else {
-        _showActionMessage('تم تعديل السجل محليًا؛ لا يُحفظ السجل التوضيحي في قاعدة البيانات.');
+        _showActionMessage('تم تعديل السجل محليًا؛ هذا السجل غير مرتبط بسجل محفوظ في قاعدة البيانات.');
       }
     }
 
@@ -1039,7 +1039,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     }
     final visibleCode = selected['الكود'] ?? selected['الاسم'] ?? selected['اسم الحساب'] ?? '';
     if (!selected.containsKey('_مرجع داخلي') || visibleCode.startsWith('DEMO-') || visibleCode.contains('تجريبي') || visibleCode.contains('توضيحي')) {
-      _showActionMessage('هذا سجل توضيحي وليس بيانات فعلية؛ لن يتم حذفه من قاعدة البيانات.');
+      _showActionMessage('هذا السجل غير مرتبط بقاعدة البيانات؛ لن يتم حذفه منها.');
       return;
     }
     final approved = await showDialog<bool>(
