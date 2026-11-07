@@ -51,6 +51,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final users = <Map<String,dynamic>>[];
   final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
   final GlobalKey<ErpCodePolicyPanelState> _codePolicyKey = GlobalKey<ErpCodePolicyPanelState>();
+  final ScrollController _policyHorizontalController = ScrollController();
+  final ScrollController _policyVerticalController = ScrollController();
   int tab = 0; bool loading = true, saving = false; String? error, message;
   String get company => (widget.companyId ?? '').trim();
   @override void initState(){super.initState(); for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
@@ -95,7 +97,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       return;
     }
     setState(() { saving=true; error=null; message=null; });
-    try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??''}).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; });}
+    try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??''}).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
   }
   Future<void> _refreshCurrentTab() async {
     if (tab == 0) {
@@ -165,6 +167,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _policyHorizontalController.dispose();
+    _policyVerticalController.dispose();
     super.dispose();
   }
 
@@ -239,7 +243,19 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
                     ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
-                    : ListView(
+                    : Scrollbar(
+                      controller: _policyVerticalController,
+                      thumbVisibility: true,
+                      scrollbarOrientation: ScrollbarOrientation.left,
+                      child: Scrollbar(
+                        controller: _policyHorizontalController,
+                        thumbVisibility: true,
+                        scrollbarOrientation: ScrollbarOrientation.bottom,
+                        child: SingleChildScrollView(
+                          controller: _policyHorizontalController,
+                          scrollDirection: Axis.horizontal,
+                          child: SizedBox(width: 1000, child: ListView(
+                        controller: _policyVerticalController,
                         padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
                         children: [
                           Card(
@@ -247,7 +263,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                             elevation: 0, color: const Color(0xFFF5EFFB),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                              child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: const [
+                              child: SizedBox(width: 1000, child: Row(children: const [
                                 SizedBox(width: 34, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
                                 SizedBox(width: 82, child: Text('كود السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
@@ -288,7 +304,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                               shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.16)), borderRadius: BorderRadius.circular(6)),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                child: SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                child: SizedBox(width: 1000, child: Row(mainAxisSize: MainAxisSize.min, children: [
                                   SizedBox(width: 34, child: Text((index + 1).toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10))),
                                   const SizedBox(width: 8),
                                   SizedBox(width: 82, child: Text(policyCode, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600))),
@@ -417,7 +433,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     ),
                           ],
                         ],
+                          )),
+                        ),
                       ),
+                    ),
       ),
     ]);
   }
