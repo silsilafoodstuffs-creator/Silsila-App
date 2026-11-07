@@ -85,3 +85,13 @@ jobs:
           grep -q 'flutter_bootstrap.js' /tmp/silsila-page.html
           grep -q 'سلسلة' /tmp/silsila-page.html
           curl --fail --silent --show-error --location --retry 8 --retry-delay 5 --head "${DEPLOYED_URL%/}/flutter_bootstrap.js"
+
+      - name: Install Chromium browser test dependencies
+        run: |
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+
+      - name: Run deployed WebView tests (desktop + mobile)
+        env:
+          DEPLOYED_URL: ${{ steps.deployment.outputs.page_url }}
+        run: node tools/web_view_test.mjs "$DEPLOYED_URL"
