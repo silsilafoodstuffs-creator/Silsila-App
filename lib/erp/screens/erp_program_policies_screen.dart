@@ -781,9 +781,9 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0,
     shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: .16)), borderRadius: BorderRadius.circular(6)),
     child: SizedBox(
-      height: 48,
+      height: 40,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
