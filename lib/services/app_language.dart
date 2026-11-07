@@ -323,8 +323,6 @@ String silsilaText(String value) {
     "استكشاف التطبيق كزائر": "Explore as guest",
     "يمكنك استكشاف واجهة التطبيق كزائر. يلزم تسجيل الدخول لإتمام العمليات المرتبطة بحسابك.": "You can explore as a guest. Sign in to complete account-related actions.",
     "وصلت للحد الأقصى المسموح لكمية هذا المنتج.": "You have reached the maximum allowed quantity for this product.",
-    "وضع عرض تجريبي: الأسماء التالية أمثلة للواجهة وليست حسابات موردين مسجلة.": "Demo mode: these names are examples, not registered supplier accounts.",
-    "مورد تجريبي • تاجر جملة": "Demo supplier • Wholesale trader",
     "تتبع المخزون ومنع البيع بعد النفاد": "Track inventory and prevent sales when out of stock",
     "أكمل رقم الطلب وشركة الشحن وعنوانَي الاستلام والتوصيل.": "Complete the order number, shipping company, pickup and delivery addresses.",
     "تم إرسال طلب التوصيل.": "Delivery request sent.",
