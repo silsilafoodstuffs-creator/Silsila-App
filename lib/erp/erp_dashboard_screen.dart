@@ -82,7 +82,7 @@ const _canvas = Color(0xFFF7F5FA);
 
 const Map<String, Map<String, List<String>>> _modules = {
   'إعدادات عامة': {
-    'بيانات أساسية': ['سياسات البرنامج', 'بيانات الشركة', 'الفروع', 'مراكز التكلفة', 'بيانات جغرافية', 'أنواع الأنشطة', 'المستخدمين', 'صلاحيات المستخدمين', 'قوالب صلاحيات المستخدمين', 'سجل العمليات', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات'],
+    'بيانات أساسية': ['الملخص التنفيذي', 'سياسات البرنامج', 'بيانات الشركة', 'الفروع', 'مراكز التكلفة', 'بيانات جغرافية', 'أنواع الأنشطة', 'المستخدمين', 'صلاحيات المستخدمين', 'قوالب صلاحيات المستخدمين', 'سجل العمليات', 'إدارة مفاتيح API', 'سجلات التكامل والطلبات'],
     'حركات': ['اختبار ومراجعة الحركات', 'قائمة اعتماد القيود', 'إدارة الجلسات', 'سجل الدخول والخروج', 'النسخ الاحتياطي', 'مسح جميع البيانات', 'إعداد نقاط الربط', 'اختبار الاتصال الخارجي'],
     'تقارير': ['تقرير المستخدمين', 'تقرير نشاط النظام', 'تقرير استهلاك API', 'تقرير أخطاء التكامل'],
   },
@@ -281,7 +281,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     'الموظفون والفروع': 'مؤشرات الموظفين والفروع',
     'الرقابة والتنبيهات': 'مؤشرات الرقابة والتنبيهات',
   };
-  String _module = 'حسابات مالية';
+  String _module = 'إعدادات عامة';
   String _selectedAppKey = 'silsila';
   String _appName = 'سلسلة';
   Color _appPrimary = const Color(0xFF3E007D);
@@ -781,8 +781,8 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     });
   }
   final List<String> _activityLog = ['تم فتح لوحة ERP', 'تم تجهيز أقسام المخازن والفروع', 'تمت إضافة نماذج إدارة المستندات'];
-  String _group = 'تقارير';
-  String _page = 'ملخص تنفيذي';
+  String _group = 'بيانات أساسية';
+  String _page = 'الملخص التنفيذي';
   String _search = '';
   Map<String, String>? _selectedRecord;
   final Map<String, List<Map<String, String>>> _saved = {};
@@ -2557,7 +2557,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               GridView.count(
-                crossAxisCount: constraints.maxWidth >= 900 ? 3 : constraints.maxWidth >= 560 ? 2 : 1,
+                crossAxisCount: constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 460 ? 2 : 1,
                 childAspectRatio: constraints.maxWidth >= 560 ? 3.4 : 3.8,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -2591,9 +2591,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
                 ],
               ),
               const SizedBox(height: 10),
-              GridView.extent(
-                maxCrossAxisExtent: 390,
-                childAspectRatio: 2.35,
+              GridView.count(
+                crossAxisCount: constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 460 ? 2 : 1,
+                childAspectRatio: constraints.maxWidth >= 700 ? 1.65 : constraints.maxWidth >= 460 ? 1.8 : 2.15,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 10,
@@ -3027,7 +3027,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       _expandedModules.add(module);
       _expandedGroups.add('$module::$group');
     });
-    if (module != 'شئون موظفين' && module != 'موارد بشرية' && !['أصول ثابتة', 'تصنيع', 'مقاولات', 'خدمة ومتابعة وعلاقات عملاء'].contains(module)) _loadWorkspacePage(page);
+    if (page != 'الملخص التنفيذي' && module != 'شئون موظفين' && module != 'موارد بشرية' && !['أصول ثابتة', 'تصنيع', 'مقاولات', 'خدمة ومتابعة وعلاقات عملاء'].contains(module)) _loadWorkspacePage(page);
   }
 
   Future<void> _loadWorkspacePage(String page, {bool loadMore = false}) async {
