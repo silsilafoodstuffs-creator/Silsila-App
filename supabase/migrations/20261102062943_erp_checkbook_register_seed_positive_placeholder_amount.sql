@@ -1,3 +1,4 @@
+-- Historical migration; its placeholder amount is superseded by 20261107_allow_blank_cheques_without_placeholder_amount.sql.
 create or replace function public.erp_register_checkbook(p_checkbook_id uuid)
 returns integer language plpgsql security invoker set search_path=public as $$
 declare b public.erp_checkbooks%rowtype; v_inserted integer;
