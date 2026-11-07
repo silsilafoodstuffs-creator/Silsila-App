@@ -2588,7 +2588,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
           _metric('جاهز للترحيل', '$draftCount'),          _metric('مرحّل', '${_rows.where((r) => _s(r['status']) == 'posted').length}'),
         ]),
         const SizedBox(height: 10),
-        if (_rows.isEmpty && !_loading) const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد مستندات للعرض؛ لم تُضف بيانات تجريبية.')),
+        if (_rows.isEmpty && !_loading) const Padding(padding: EdgeInsets.all(12), child: Text('لا توجد مستندات مسجلة بعد.')),
 
         if (_selectedDocumentId != null && _rows.any((r) => _s(r['id']) == _selectedDocumentId && _s(r['status']) == 'draft'))
           Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
