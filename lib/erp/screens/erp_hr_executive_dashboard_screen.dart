@@ -1243,7 +1243,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                       '${_staffingLocationLabel(plan['work_location_id'])} • العدد: $authorized • الحالة: $statusLabel',
                     ),
                     trailing: status == 'pending_approval'
-                        ? canApproveStaffingPlans
+                        ? widget.canApproveStaffingPlans
                             ? TextButton(
                                 onPressed: _loading
                                     ? null
