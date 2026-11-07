@@ -18,6 +18,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   static const double _countCellWidth = 62;
   static const double _nameCellWidth = 83; // 124 × 2/3 = 82.67, rounded to 83 px.
   static const _types = <Map<String, String>>[
+    {'key':'program_policy','name':'سياسات البرنامج','prefix':'Pol','digits':'3'},
     {'key':'employee','name':'الموظفون','prefix':'Emp','digits':'5'},
     {'key':'user','name':'المستخدمون','prefix':'Usr','digits':'5'},
     {'key':'supplier','name':'الموردون','prefix':'Sup','digits':'5'},
