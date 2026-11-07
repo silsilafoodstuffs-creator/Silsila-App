@@ -146,7 +146,7 @@ class _ErpProgramSettingsScreenState extends State<ErpProgramSettingsScreen> {
       decoration: InputDecoration(
         hintText: hint,
         isDense: true,
-        constraints: const BoxConstraints(minHeight: 30, maxHeight: 30),
+        constraints: const BoxConstraints(minHeight: 40, maxHeight: 40),
         contentPadding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       ),
