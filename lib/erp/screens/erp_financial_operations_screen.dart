@@ -137,7 +137,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     inputFormatters:numeric?[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))]:null,
     decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true));
   Widget drop(String label,String? value,List<DropdownMenuItem<String>> items,ValueChanged<String?> onChanged) =>
-    DropdownButtonFormField<String>(itemHeight: 40, value:value,isExpanded:true,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true),items:items,onChanged:onChanged);
+    DropdownButtonFormField<String>(itemHeight: 48, value:value,isExpanded:true,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true),items:items,onChanged:onChanged);
   Future<void> selectBank() async {final r=await pick('bank');if(r!=null)setState(()=>bankId=s(r['id']));}
   Widget bankPicker(String label)=>Focus(
     onKeyEvent:(node,event){if(event is KeyDownEvent&&event.logicalKey==LogicalKeyboardKey.f1){selectBank();return KeyEventResult.handled;}return KeyEventResult.ignored;},
@@ -430,7 +430,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     final yes=await showDialog<bool>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,local)=>AlertDialog(
       title:Text('متابعة الشيك '+s(c['check_number'])),
       content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
-        DropdownButtonFormField<String>(itemHeight: 40, value:result,decoration:const InputDecoration(labelText:'الحالة'),items:[
+        DropdownButtonFormField<String>(itemHeight: 48, value:result,decoration:const InputDecoration(labelText:'الحالة'),items:[
           DropdownMenuItem(value:'paid',child:Text(s(c['direction'])=='receipt'?'تم التحصيل':'تم السداد')),DropdownMenuItem(value:'returned',child:Text('ارتداد')),DropdownMenuItem(value:'cashed_from_cashbox',child:Text(s(c['direction'])=='receipt'?'تم التوريد للخزينة':'صرف من الخزينة'))
         ],onChanged:(v)=>local(()=>result=v??result)),
         const SizedBox(height:8),field(date,s(c['direction'])=='receipt'?'تاريخ التحصيل / التوريد / الارتداد DD-MM-YYYY':'تاريخ السداد / الصرف / الارتداد DD-MM-YYYY'),
