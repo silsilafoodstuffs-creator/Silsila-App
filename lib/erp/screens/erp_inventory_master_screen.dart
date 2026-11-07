@@ -424,7 +424,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       const Text('أرصدة الأنشطة التي سمح أصحابها بمشاركة الرصيد مع سلسلة',style:TextStyle(color:Color(0xFF3E007D),fontWeight:FontWeight.w800)),
       const SizedBox(height:8),
       Row(children:[
-        Expanded(child:DropdownButtonFormField<String>(
+        Expanded(child:DropdownButtonFormField<String>(itemHeight: 40, 
           value:_items.any((item)=>_s(item['id'])==_selectedSharedItemId)?_selectedSharedItemId:null,
           isExpanded:true,decoration:const InputDecoration(labelText:'الصنف المركزي'),
           items:_items.map((item)=>DropdownMenuItem(value:_s(item['id']),child:Text('${_s(item['item_name'])} • ${_s(item['item_code'])}'))).toList(),
@@ -503,7 +503,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           Text('النشاط: ${_s(workspace['activity_type'])} • تاريخ الطلب: ${_s(proposal['created_at']).split('T').first}',style:const TextStyle(color:Colors.black54,fontSize:12)),
           TextFormField(key:ValueKey('proposal-name-$id'),initialValue:_proposalNameEdits[id]??_s(proposal['name_ar']),decoration:const InputDecoration(labelText:'اسم الصنف بعد المراجعة'),onChanged:(v)=>_proposalNameEdits[id]=v),
           TextFormField(key:ValueKey('proposal-unit-$id'),initialValue:_proposalUnitEdits[id]??_s(proposal['unit_name']),decoration:const InputDecoration(labelText:'وحدة القياس'),onChanged:(v)=>_proposalUnitEdits[id]=v),
-          DropdownButtonFormField<String>(
+          DropdownButtonFormField<String>(itemHeight: 40, 
             value:_categories.any((c)=>_s(c['id'])==categoryValue)?categoryValue:null,
             decoration:const InputDecoration(labelText:'الفئة المركزية'),
             items:[const DropdownMenuItem<String>(value:null,child:Text('بدون فئة')), ..._categories.where((c)=>c['is_active']==true).map((c)=>DropdownMenuItem(value:_s(c['id']),child:Text('${_s(c['category_code'])} — ${_s(c['category_name'])}')))],
@@ -790,35 +790,35 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             TextField(controller: _warehouseLandline, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'التليفون الأرضي')),
             TextField(controller: _address, decoration: const InputDecoration(labelText: 'العنوان')),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String>(itemHeight: 40, 
               value: _parentWarehouseId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'المخزن الرئيسي (اتركه فارغًا للمخزن الرئيسي)'),
               items: [const DropdownMenuItem<String>(value: null, child: Text('مخزن رئيسي')), ..._warehouses.where((w) => _s(w['id']) != _parentWarehouseId).map((w) => DropdownMenuItem<String>(value: _s(w['id']), child: Text(_s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name']))))],
               onChanged: (v) => setState(() => _parentWarehouseId = v),
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String>(itemHeight: 40, 
               value: _branchId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'الفرع (اختياري)'),
               items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فرع')), ..._branches.map((b) => DropdownMenuItem<String>(value: _s(b['id']), child: Text(_branchName(_s(b['id'])))))],
               onChanged: (v) => setState(() => _branchId = v),
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String>(itemHeight: 40, 
               value: _governorateId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'المحافظة'),
               items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المحافظة')), ..._geoRows.where((g) => g['level'] == 'governorate').map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
               onChanged: (v) => setState(() { _governorateId = v; _districtId = null; _areaId = null; }),
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String>(itemHeight: 40, 
               value: _districtId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'الحي / المركز'),
               items: [const DropdownMenuItem<String>(value: null, child: Text('اختر الحي أو المركز')), ..._geoRows.where((g) => g['level'] == 'district' && _s(g['parent_id']) == (_governorateId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
               onChanged: (v) => setState(() { _districtId = v; _areaId = null; }),
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String>(itemHeight: 40, 
               value: _areaId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'المنطقة / القرية'),
               items: [const DropdownMenuItem<String>(value: null, child: Text('اختر المنطقة أو القرية')), ..._geoRows.where((g) => g['level'] == 'area' && _s(g['parent_id']) == (_districtId ?? '')).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['name_ar']))))],
@@ -868,7 +868,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             const Text('إضافة صنف', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
             const TextField(enabled: false, decoration: InputDecoration(labelText: 'كود الصنف', hintText: 'يُنشأ تلقائيًا بعد الحفظ', prefixIcon: Icon(Icons.auto_awesome))),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
+            DropdownButtonFormField<String>(itemHeight: 40, 
               value: _itemCategoryId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'الفئة الثانوية للصنف *', helperText: 'اختر الفئة الثانوية المرتبطة بفئة رئيسية وفرعية لإكمال الكود التلقائي'),
               items: _categories.where((g) => g['is_active'] == true && _isSecondaryCategory(g)).map((g) => DropdownMenuItem<String>(value: _s(g['id']), child: Text(_s(g['category_code']) + ' — ' + _s(g['category_name']), overflow: TextOverflow.ellipsis))).toList(),
@@ -1095,7 +1095,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             final warehouse = row['warehouse'] as Map<String,dynamic>;
             final branch = _branches.where((b) => _s(b['id']) == _s(warehouse['branch_id']));
             final branchRow = branch.isEmpty ? <String,dynamic>{} : branch.first;
-            Widget unitPicker(String key) => SizedBox(width: 145, child: DropdownButton<String>(
+            Widget unitPicker(String key) => SizedBox(width: 145, child: DropdownButton<String>(itemHeight: 40, 
               value: units.any((u) => _s(u['id']) == _s(row[key])) ? _s(row[key]) : _s(largest['id']),
               isExpanded: true,
               items: units.map((u) => DropdownMenuItem(value: _s(u['id']), child: Text(_s(u['unit_name']) + ' • ' + _s(u['conversion_factor']), overflow: TextOverflow.ellipsis))).toList(),

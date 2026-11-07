@@ -334,7 +334,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
                 const SizedBox(width: 8),
                 Expanded(flex: 2, child: _field(_nameEn, 'اسم طريقة الدفع إنجليزي')),
                 const SizedBox(width: 8),
-                Expanded(flex: 2, child: DropdownButtonFormField<String>(
+                Expanded(flex: 2, child: DropdownButtonFormField<String>(itemHeight: 40, 
                   value: _type, isExpanded: true, decoration: const InputDecoration(labelText: 'نوع الطريقة', border: OutlineInputBorder(), isDense: true),
                   items: _types.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
                   onChanged: _editing ? (v) => setState(() => _type = v ?? 'cash') : null,
@@ -342,7 +342,7 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
               ]),
               const SizedBox(height: 10),
               Row(children: [
-                Expanded(flex: 2, child: DropdownButtonFormField<String?>(
+                Expanded(flex: 2, child: DropdownButtonFormField<String?>(itemHeight: 40, 
                   value: _cashboxId, isExpanded: true, decoration: const InputDecoration(labelText: 'الخزينة / الحساب البنكي المرتبط', border: OutlineInputBorder(), isDense: true),
                   items: [
                     const DropdownMenuItem<String?>(value: null, child: Text('بدون ربط')),
