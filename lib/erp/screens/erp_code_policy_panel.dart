@@ -458,6 +458,15 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     child: _loading ? const Center(child:CircularProgressIndicator()) : ListView(
       padding:const EdgeInsets.all(8),
       children:[
+        Scrollbar(
+          controller:_tableHorizontalController,
+          thumbVisibility:true,
+          thickness:6,
+          radius:const Radius.circular(8),
+          child:SingleChildScrollView(
+            controller:_tableHorizontalController,
+            scrollDirection:Axis.horizontal,
+            child:SizedBox(width:1900,child:Column(children:[
         Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('إعدادات التكويد المركزي',style:TextStyle(color:_purple,fontWeight:FontWeight.w900,fontSize:16)),
           const SizedBox(height:4),
@@ -556,6 +565,9 @@ class _ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
                 : _preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
             ])));
         }),
+            ])),
+          ),
+        ),
         Card(elevation:0,color:const Color(0xFFFFF4E5),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('تفاصيل تركيب كود الأصناف',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
           const SizedBox(height:5),
