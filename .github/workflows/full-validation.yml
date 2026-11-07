@@ -9,6 +9,7 @@ on:
     paths:
       - 'lib/erp/screens/erp_program_policies_screen.dart'
       - 'lib/erp/screens/erp_code_policy_panel.dart'
+      - 'lib/erp/screens/**'
       - 'lib/erp/screens/erp_hr_executive_dashboard_screen.dart'
       - 'lib/erp/screens/erp_inventory_master_screen.dart'
       - 'lib/erp/screens/erp_price_lists_screen.dart'
