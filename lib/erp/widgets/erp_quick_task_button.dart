@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 /// One consistent visual system for ERP task actions across every screen.
@@ -13,7 +14,7 @@ class ErpQuickTaskButton extends StatelessWidget {
 
   final String label;
   final IconData icon;
-  final VoidCallback? onPressed;
+  final FutureOr<void> Function()? onPressed;
   final Color fallbackColor;
   final bool compact;
 
@@ -74,7 +75,66 @@ class ErpQuickTaskButton extends StatelessWidget {
     return Padding(
       padding: const EdgeInsetsDirectional.only(start: 5, top: 3, bottom: 3),
       child: FilledButton.icon(
-        onPressed: onPressed,
+        onPressed: onPressed == null ? null : () async {
+          final action = label.trim();
+          final isSave = action.contains('حفظ');
+          final isDelete = action.contains('حذف');
+          if (isSave || isDelete) {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (dialogContext) => AlertDialog(
+                title: Text(isSave ? 'تأكيد الحفظ' : 'تأكيد الحذف'),
+                content: Text(isSave ? 'هل ترغب في الحفظ؟' : 'هل ترغب في الحذف؟'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    child: const Text('إلغاء'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    child: Text(isSave ? 'حفظ' : 'حذف'),
+                  ),
+                ],
+              ),
+            );
+            if (confirmed != true || !context.mounted) return;
+          }
+          try {
+            await Future<void>.sync(onPressed!);
+            if (!context.mounted) return;
+            final successMessage = isSave
+                ? 'تم الحفظ'
+                : isDelete
+                    ? 'تم الحذف'
+                    : action.contains('تحديث')
+                        ? 'تم التحديث'
+                        : null;
+            if (successMessage != null) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(
+                  content: Text(successMessage, textAlign: TextAlign.center),
+                  backgroundColor: const Color(0xFF18865A),
+                  behavior: SnackBarBehavior.floating,
+                  elevation: 0,
+                  duration: const Duration(milliseconds: 1800),
+                  shape: const RoundedRectangleBorder(),
+                ));
+            }
+          } catch (error) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(
+                content: Text('تعذر تنفيذ العملية: $error', textAlign: TextAlign.center),
+                backgroundColor: const Color(0xFFB42318),
+                behavior: SnackBarBehavior.floating,
+                elevation: 0,
+                duration: const Duration(seconds: 3),
+                shape: const RoundedRectangleBorder(),
+              ));
+          }
+        },
         icon: Icon(_icon, size: compact ? 16 : 17),
         label: Text(
           label,
