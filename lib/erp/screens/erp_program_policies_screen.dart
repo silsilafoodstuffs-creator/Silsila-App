@@ -22,7 +22,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   static const defaults = <Map<String,dynamic>>[
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
-    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'ارتفاع الخانات والصفوف: 40 بكسل | المسافة بين الخانات والأعمدة: 5 بكسل | ارتفاع اختيارات القوائم المنسدلة: 40 بكسل | ارتفاع عناصر القوائم المنسدلة: 40 بكسل | تسمية الحقل بمحاذاة يمين القيمة','all':true},
+    {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":50,"field_height":40,"column_spacing":3}','all':true},
     {'key':'ui_dropdown_item_height','category':'برمجية','ar':'الارتفاع القياسي لكل اختيار داخل القوائم المنسدلة','en':'Standard dropdown option height','value':'40 بكسل','all':true},
     {'key':'ui_field_label_alignment','category':'برمجية','ar':'موضع اسم الخانة بالنسبة إلى القيمة أو الاختيار','en':'Field label alignment','value':'اسم الخانة على يمين القيمة أو الاختيار في صف واحد متناسق','all':true},
     {'key':'ui_mobile_header_compact','category':'برمجية','ar':'ارتفاع الهيدر في شاشات الموبايل','en':'Compact mobile screen headers','value':'هيدر مدمج بارتفاع مناسب دون فراغات أو ارتفاع مبالغ فيه','all':true},
@@ -291,6 +291,58 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if(result!=null&&mounted)setState(() { p['user_ids']=result.toList(); p['all']=false; });
   }
 
+  Map<String, int> _layoutDimensions(Map<String, dynamic> policy) {
+    try {
+      final decoded = jsonDecode((policy['value'] ?? '').toString());
+      if (decoded is Map) {
+        return {
+          'row_height': int.tryParse((decoded['row_height'] ?? 50).toString()) ?? 50,
+          'field_height': int.tryParse((decoded['field_height'] ?? 40).toString()) ?? 40,
+          'column_spacing': int.tryParse((decoded['column_spacing'] ?? 3).toString()) ?? 3,
+        };
+      }
+    } catch (_) {}
+    return {'row_height': 50, 'field_height': 40, 'column_spacing': 3};
+  }
+
+  void _updateLayoutDimension(Map<String, dynamic> policy, String key, int value) {
+    final dimensions = _layoutDimensions(policy);
+    dimensions[key] = value;
+    policy['value'] = jsonEncode(dimensions);
+    setState(() {});
+  }
+
+  Widget _layoutDimensionSelector(Map<String, dynamic> policy) {
+    final dimensions = _layoutDimensions(policy);
+    Widget selector(String label, String key, List<int> options, int width) => SizedBox(
+      width: width.toDouble(),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 2),
+        DropdownButtonFormField<int>(
+          value: options.contains(dimensions[key]) ? dimensions[key] : options.first,
+          isExpanded: true, isDense: true, itemHeight: 40,
+          decoration: const InputDecoration(
+            isDense: true,
+            constraints: BoxConstraints(minHeight: 40, maxHeight: 40),
+            contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            border: OutlineInputBorder(),
+          ),
+          style: const TextStyle(fontSize: 10, color: Colors.black87),
+          items: options.map((v) => DropdownMenuItem<int>(value: v, child: Text('$v بكسل', maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
+          onChanged: (v) { if (v != null) _updateLayoutDimension(policy, key, v); },
+        ),
+      ]),
+    );
+    return Row(children: [
+      selector('ارتفاع الصفوف', 'row_height', [30, 35, 40, 45, 50, 55, 60, 70, 80, 100], 125),
+      const SizedBox(width: 3),
+      selector('ارتفاع الخانات', 'field_height', [20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100], 125),
+      const SizedBox(width: 3),
+      selector('المسافة بين الأعمدة', 'column_spacing', [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20], 145),
+    ]);
+  }
+
   String policySearch = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -384,7 +436,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                         child: SingleChildScrollView(
                           controller: _policyHorizontalController,
                           scrollDirection: Axis.horizontal,
-                          child: SizedBox(width: 1000, child: ListView(
+                          child: SizedBox(width: 1200, child: ListView(
                         controller: _policyVerticalController,
                         padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
                         children: [
@@ -393,7 +445,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                             elevation: 0, color: const Color(0xFFF5EFFB),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                              child: SizedBox(width: 1000, child: Row(children: const [
+                              child: SizedBox(width: 1200, child: Row(children: const [
                                 SizedBox(width: 34, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
                                 SizedBox(width: 82, child: Text('كود السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
@@ -431,7 +483,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                               shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: 0.16)), borderRadius: BorderRadius.circular(6)),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                                child: SizedBox(width: 1000, child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                child: SizedBox(width: 1200, child: Row(mainAxisSize: MainAxisSize.min, children: [
                                   SizedBox(width: 34, child: Text((index + 1).toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 10))),
                                   const SizedBox(width: 8),
                                   SizedBox(width: 82, child: Text(policyCode, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600))),
@@ -442,7 +494,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF18865A), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ])),
                                   const SizedBox(width: 8),
-                                  SizedBox(width: 220, child: p['key'] == 'fiscal_year'
+                                  SizedBox(width: p['key'] == 'ui_layout_standard' ? 410 : 220, child: p['key'] == 'ui_layout_standard'
+                                    ? _layoutDimensionSelector(p)
+                                    : p['key'] == 'fiscal_year'
                                     ? Row(children: [
                                         Expanded(child: TextFormField(
                                           key: ValueKey('fiscal-from-' + (p['value'] ?? '').toString()),
@@ -517,51 +571,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                             );
                           }),
                           if (tab == 1) ...[
-                            const SizedBox(height: 10),
-                                    Card(
-                                      elevation:0,
-                                      color:const Color(0xFFF5EFFB),
-                                      shape:RoundedRectangleBorder(
-                                        side:const BorderSide(color:Color(0xFFE2D5F0)),
-                                        borderRadius:BorderRadius.circular(10),
-                                      ),
-                                      child:Padding(
-                                        padding:const EdgeInsets.all(12),
-                                        child:Column(
-                                          crossAxisAlignment:CrossAxisAlignment.start,
-                                          children:const [
-                                            Row(children:[
-                                              Icon(Icons.rule_folder_outlined,color:Color(0xFF3E007D),size:20),
-                                              SizedBox(width:7),
-                                              Expanded(child:Text('معيار التخطيط والمسافات الموحد — معتمد لكل شاشات سلسلة',
-                                                style:TextStyle(fontWeight:FontWeight.w900,fontSize:13,color:Color(0xFF3E007D)))),
-                                            ]),
-                                            SizedBox(height:8),
-                                            Text('1) الارتفاع القياسي الثابت لكل الخانات والصفوف: 40 بكسل.',
-                                              style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('2) المسافة القياسية الثابتة بين الخانات والأعمدة: 5 بكسل.',
-                                              style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('3) يحافظ كل عمود على عرضه المحدد؛ ويُستخدم التمرير الأفقي عند الحاجة بدل تداخل الخانات أو ضغطها.',
-                                              style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('4) تطبق القيمتان 40 و5 على الجداول والنماذج وصفوف البيانات، مع عدم تغيير عروض الخانات الحالية.',
-                                              style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('5) لا يُسمح بتداخل الأعمدة أو اقتطاع النص العربي؛ يسمح بالتفاف النص بين الكلمات أو التمرير الأفقي المنظم.',
-                                              style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('6) العربية: ممنوع تقطيع الكلمة أو عرض الحروف رأسيًا؛ يسمح بالتفاف النص بين الكلمات، مع توسيع العمود أو التمرير الأفقي عند الحاجة.',
-                                              style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('7) الشاشات الصغيرة: إعادة توزيع العناصر أو استخدام قوائم/بطاقات وتمرير أفقي منظم، دون تصغير النص إلى درجة تضر القراءة.',
-                                              style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('8) ارتفاع صفوف الجداول القياسي 40 بكسل دون استثناءات افتراضية؛ وأي استثناء يتطلب سياسة موثقة وموافقة صريحة.',
-                                              style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('9) القوائم المنسدلة: ارتفاع كل اختيار داخل القائمة 40 بكسل، مع مسافات متناسقة ودون ازدحام.', style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('10) النماذج: اسم كل خانة يظهر على يمين حقل القيمة أو الاختيار في صف واحد متناسق، ولا يوضع الاسم فوق الحقل.', style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('11) الموبايل: الهيدر مدمج بارتفاع مناسب، مع تقليل الحشو والأيقونات والعناوين دون التأثير على سهولة الاستخدام.', style:TextStyle(fontSize:11,height:1.5)),
-                                            Text('12) الاتساق: تُطبق القواعد عبر ثيم البرنامج العام، وتُوثق الاستثناءات فقط عندما تفرض طبيعة البيانات ذلك.',
-                                              style:TextStyle(fontSize:11,height:1.5)),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
+                            const SizedBox(height: 6),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              child: Text(
+                                'إعدادات الأبعاد قابلة للتغيير من سياسة «المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الأعمدة»، ثم اضغط حفظ لتثبيت القيم.',
+                                style: TextStyle(fontSize: 10, color: Color(0xFF3E007D), fontWeight: FontWeight.w600),
+                              ),
+                            ),
                           ],
                         ],
                           )),
