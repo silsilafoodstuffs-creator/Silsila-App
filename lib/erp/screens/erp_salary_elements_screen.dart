@@ -63,9 +63,9 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
     DataCell(SizedBox(width:105,child:TextField(controller:_newCode,readOnly:true,decoration:const InputDecoration(isDense:true,hintText:'SAL0001')))),
     DataCell(SizedBox(width:150,child:TextField(controller:_newAr,decoration:const InputDecoration(isDense:true,hintText:'اسم العنصر')))),
     DataCell(SizedBox(width:130,child:TextField(controller:_newEn,decoration:const InputDecoration(isDense:true,hintText:'English')))),
-    DataCell(DropdownButton<String>(itemHeight: 40, value:_newType,items:const [DropdownMenuItem(value:'earning',child:Text('استحقاق')),DropdownMenuItem(value:'deduction',child:Text('استقطاع'))],onChanged:(v)=>setState(()=>_newType=v??_newType))),
-    DataCell(DropdownButton<String>(itemHeight: 40, value:_newMode,items:const [DropdownMenuItem(value:'fixed',child:Text('ثابت')),DropdownMenuItem(value:'variable',child:Text('متغير'))],onChanged:(v)=>setState(()=>_newMode=v??_newMode))),
-    DataCell(DropdownButton<String>(itemHeight: 40, value:_newNature,items:const [DropdownMenuItem(value:'value',child:Text('قيمة')),DropdownMenuItem(value:'time',child:Text('وقت')),DropdownMenuItem(value:'days',child:Text('أيام'))],onChanged:(v)=>setState(()=>_newNature=v??_newNature))),
+    DataCell(DropdownButton<String>(itemHeight: 48, value:_newType,items:const [DropdownMenuItem(value:'earning',child:Text('استحقاق')),DropdownMenuItem(value:'deduction',child:Text('استقطاع'))],onChanged:(v)=>setState(()=>_newType=v??_newType))),
+    DataCell(DropdownButton<String>(itemHeight: 48, value:_newMode,items:const [DropdownMenuItem(value:'fixed',child:Text('ثابت')),DropdownMenuItem(value:'variable',child:Text('متغير'))],onChanged:(v)=>setState(()=>_newMode=v??_newMode))),
+    DataCell(DropdownButton<String>(itemHeight: 48, value:_newNature,items:const [DropdownMenuItem(value:'value',child:Text('قيمة')),DropdownMenuItem(value:'time',child:Text('وقت')),DropdownMenuItem(value:'days',child:Text('أيام'))],onChanged:(v)=>setState(()=>_newNature=v??_newNature))),
     DataCell(SizedBox(width:95,child:TextField(controller:_newValue,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(isDense:true,hintText:'0.000')))),
     DataCell(Checkbox(value:_newShowOnPayslip,shape:const CircleBorder(),onChanged:(v)=>setState(()=>_newShowOnPayslip=v??false))),
     DataCell(Checkbox(value:_newActive,shape:const CircleBorder(),onChanged:(v)=>setState(()=>_newActive=v??false))),
@@ -136,9 +136,9 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
         ]),
         const SizedBox(height: 10),
         Wrap(spacing: 10, runSpacing: 8, children: [
-          SizedBox(width: 210, child: DropdownButtonFormField<String>(itemHeight: 40, value:type, decoration:const InputDecoration(labelText:'نوع العنصر'), items:const [DropdownMenuItem(value:'earning',child:Text('استحقاق')),DropdownMenuItem(value:'deduction',child:Text('استقطاع'))], onChanged:(v)=>refresh(()=>type=v??type))),
-          SizedBox(width: 210, child: DropdownButtonFormField<String>(itemHeight: 40, value:mode, decoration:const InputDecoration(labelText:'حالة العنصر'), items:const [DropdownMenuItem(value:'fixed',child:Text('ثابت')),DropdownMenuItem(value:'variable',child:Text('متغير'))], onChanged:(v)=>refresh(()=>mode=v??mode))),
-          SizedBox(width: 210, child: DropdownButtonFormField<String>(itemHeight: 40, value:nature, decoration:const InputDecoration(labelText:'طبيعة العنصر'), items:const [DropdownMenuItem(value:'value',child:Text('قيمة')),DropdownMenuItem(value:'time',child:Text('وقت')),DropdownMenuItem(value:'days',child:Text('أيام'))], onChanged:(v)=>refresh(()=>nature=v??nature))),
+          SizedBox(width: 210, child: DropdownButtonFormField<String>(itemHeight: 48, value:type, decoration:const InputDecoration(labelText:'نوع العنصر'), items:const [DropdownMenuItem(value:'earning',child:Text('استحقاق')),DropdownMenuItem(value:'deduction',child:Text('استقطاع'))], onChanged:(v)=>refresh(()=>type=v??type))),
+          SizedBox(width: 210, child: DropdownButtonFormField<String>(itemHeight: 48, value:mode, decoration:const InputDecoration(labelText:'حالة العنصر'), items:const [DropdownMenuItem(value:'fixed',child:Text('ثابت')),DropdownMenuItem(value:'variable',child:Text('متغير'))], onChanged:(v)=>refresh(()=>mode=v??mode))),
+          SizedBox(width: 210, child: DropdownButtonFormField<String>(itemHeight: 48, value:nature, decoration:const InputDecoration(labelText:'طبيعة العنصر'), items:const [DropdownMenuItem(value:'value',child:Text('قيمة')),DropdownMenuItem(value:'time',child:Text('وقت')),DropdownMenuItem(value:'days',child:Text('أيام'))], onChanged:(v)=>refresh(()=>nature=v??nature))),
         ]),
         const SizedBox(height: 10),
         SizedBox(width: 240, child: TextField(controller:value, keyboardType:const TextInputType.numberWithOptions(decimal:true), inputFormatters:[FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}(\.\d{0,3})?$'))], decoration:InputDecoration(labelText:'القيمة (3 أرقام + 3 كسور)', suffixText:nature=='value'?_currencyLabel(_currency):nature=='days'?'يوم':'دقيقة'), onChanged:(v){final parsed=double.tryParse(v);if(parsed!=null&&parsed>999.999)refresh(()=>error='الحد الأقصى للقيمة 999.999');else if(error!=null)refresh(()=>error=null);})),
@@ -557,10 +557,10 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
     }
   }
 
-  Widget _runDropdown()=>DropdownButtonFormField<String>(itemHeight: 40, value:_runId,isExpanded:true,decoration:const InputDecoration(labelText:'مسير الرواتب المعتمد',border:OutlineInputBorder()),items:_runs.map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text('${_s(r['run_code'])} • ${_s(r['period_start'])} إلى ${_s(r['period_end'])}'))).toList(),onChanged:(v)async{setState(()=>_runId=v);await _loadLines();});
+  Widget _runDropdown()=>DropdownButtonFormField<String>(itemHeight: 48, value:_runId,isExpanded:true,decoration:const InputDecoration(labelText:'مسير الرواتب المعتمد',border:OutlineInputBorder()),items:_runs.map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text('${_s(r['run_code'])} • ${_s(r['period_start'])} إلى ${_s(r['period_end'])}'))).toList(),onChanged:(v)async{setState(()=>_runId=v);await _loadLines();});
   Widget _individual()=>ListView(padding:const EdgeInsets.all(10),children:[
     _runDropdown(),const SizedBox(height:8),
-    DropdownButtonFormField<String>(itemHeight: 40, value:_employeeId,isExpanded:true,decoration:const InputDecoration(labelText:'الموظف',border:OutlineInputBorder()),items:_employees.where((e)=>_lineFor(_s(e['id']))!=null).map((e)=>DropdownMenuItem<String>(value:_s(e['id']),child:Text('${_s(e['employee_code'])} • ${_s(e['full_name'])}'))).toList(),onChanged:(v)=>setState(()=>_employeeId=v)),
+    DropdownButtonFormField<String>(itemHeight: 48, value:_employeeId,isExpanded:true,decoration:const InputDecoration(labelText:'الموظف',border:OutlineInputBorder()),items:_employees.where((e)=>_lineFor(_s(e['id']))!=null).map((e)=>DropdownMenuItem<String>(value:_s(e['id']),child:Text('${_s(e['employee_code'])} • ${_s(e['full_name'])}'))).toList(),onChanged:(v)=>setState(()=>_employeeId=v)),
     const SizedBox(height:10),
     if(_employeeId!=null&&_lineFor(_employeeId!)!=null)Align(alignment:Alignment.centerLeft,child:FilledButton.icon(onPressed:_printIndividual,icon:const Icon(Icons.print),label:const Text('طباعة شريط الموظف'))),
     if(_employeeId!=null&&_lineFor(_employeeId!)!=null)_payslip(_employee(_employeeId!)!,_lineFor(_employeeId!)!)
@@ -662,7 +662,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
         _filterDropdown('الإدارة / القسم',_departmentId,_departments,'name_ar',(v)=>setState(()=>_departmentId=v)),
         _filterDropdown('الموقع',_locationId,_locations,'name_ar',(v)=>setState(()=>_locationId=v)),
         _filterDropdown('الوظيفة',_jobId,_jobs,'name_ar',(v)=>setState(()=>_jobId=v)),
-        DropdownButton<String>(itemHeight: 40, value:_activeFilter,items:const [DropdownMenuItem(value:'الكل',child:Text('الكل')),DropdownMenuItem(value:'نشط',child:Text('نشط')),DropdownMenuItem(value:'غير نشط',child:Text('غير نشط'))],onChanged:(v)=>setState(()=>_activeFilter=v??'الكل')),
+        DropdownButton<String>(itemHeight: 48, value:_activeFilter,items:const [DropdownMenuItem(value:'الكل',child:Text('الكل')),DropdownMenuItem(value:'نشط',child:Text('نشط')),DropdownMenuItem(value:'غير نشط',child:Text('غير نشط'))],onChanged:(v)=>setState(()=>_activeFilter=v??'الكل')),
         OutlinedButton.icon(onPressed:()=>setState((){_branchId=null;_departmentId=null;_locationId=null;_jobId=null;_activeFilter='الكل';}),icon:const Icon(Icons.filter_alt_off),label:const Text('مسح الفلاتر')),
       ])),
       Padding(padding:const EdgeInsets.symmetric(horizontal:10),child:Row(children:[Expanded(child:Text('عدد الموظفين: ${employees.length} • ${_selectedRunPeriod()}',style:const TextStyle(fontWeight:FontWeight.w800))),FilledButton.icon(onPressed:_loading?null:_printAggregate,icon:const Icon(Icons.print),label:const Text('طباعة التقرير'))])),
@@ -704,5 +704,5 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
     ]);
   }
 
-  Widget _filterDropdown(String label,String? value,List<Map<String,dynamic>> rows,String name,ValueChanged<String?> change)=>SizedBox(width:190,child:DropdownButtonFormField<String>(itemHeight: 40, value:value,isExpanded:true,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true),items:rows.map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text(_s(r[name]),overflow:TextOverflow.ellipsis))).toList(),onChanged:change));
+  Widget _filterDropdown(String label,String? value,List<Map<String,dynamic>> rows,String name,ValueChanged<String?> change)=>SizedBox(width:190,child:DropdownButtonFormField<String>(itemHeight: 48, value:value,isExpanded:true,decoration:InputDecoration(labelText:label,border:const OutlineInputBorder(),isDense:true),items:rows.map((r)=>DropdownMenuItem(value:_s(r['id']),child:Text(_s(r[name]),overflow:TextOverflow.ellipsis))).toList(),onChanged:change));
 }
