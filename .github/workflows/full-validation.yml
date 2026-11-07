@@ -17,6 +17,7 @@ on:
       - 'lib/erp/screens/erp_facebook_group_leads_screen.dart'
       - 'lib/erp/screens/erp_financial_operations_screen.dart'
       - 'lib/erp/screens/erp_operational_documents_screen.dart'
+      - '.github/workflows/full-validation.yml'
       - 'supabase/migrations/*policy*codes*.sql'
       - 'supabase/migrations/*codes*program*policies*.sql'
 
