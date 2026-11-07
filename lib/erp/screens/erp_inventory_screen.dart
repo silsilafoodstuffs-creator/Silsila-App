@@ -289,7 +289,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
             children: [
               const Text('تسجيل حركة مخزنية', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<String>(itemHeight: 40, 
                 value: _warehouseId,
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'المخزن', border: OutlineInputBorder()),
@@ -298,7 +298,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
                 onChanged: (v) => setState(() => _warehouseId = v),
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<String>(itemHeight: 40, 
                 value: _itemId,
                 isExpanded: true,
                 decoration: const InputDecoration(labelText: 'الصنف', border: OutlineInputBorder()),
@@ -307,7 +307,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
                 onChanged: (v) => setState(() => _itemId = v),
               ),
               const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<String>(itemHeight: 40, 
                 value: _type,
                 decoration: const InputDecoration(labelText: 'نوع الحركة', border: OutlineInputBorder()),
                 items: _types.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
@@ -315,7 +315,7 @@ class _ErpInventoryScreenState extends State<ErpInventoryScreen> {
               ),
               if (_type == 'transfer_out') ...[
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
+                DropdownButtonFormField<String>(itemHeight: 40, 
                   value: _targetWarehouseId,
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'مخزن الاستلام', border: OutlineInputBorder()),

@@ -276,7 +276,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         TextField(controller: _code, readOnly: true, decoration: const InputDecoration(labelText: 'كود القائمة (تلقائي)', helperText: 'يُنشأ عند الحفظ وفق سياسات التكويد', prefixIcon: Icon(Icons.auto_awesome))),
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'اسم القائمة *')),
         TextField(controller: _notes, decoration: const InputDecoration(labelText: 'ملاحظات')),
-        DropdownButtonFormField<String>(
+        DropdownButtonFormField<String>(itemHeight: 40, 
           value: _currencyCode,
           isExpanded: true,
           decoration: const InputDecoration(labelText: 'عملة قائمة الأسعار', isDense: true, constraints: BoxConstraints(minHeight: 54, maxHeight: 58)),
@@ -290,7 +290,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         FilledButton.icon(onPressed: _saving ? null : _createList, icon: const Icon(Icons.playlist_add), label: const Text('حفظ القائمة')),
       ]))),
       const SizedBox(height: 10),
-      DropdownButtonFormField<String>(
+      DropdownButtonFormField<String>(itemHeight: 40, 
         value: _selectedListId, isExpanded: true,
         decoration: const InputDecoration(labelText: 'القائمة الحالية', border: OutlineInputBorder()),
         items: _lists.map((x) => DropdownMenuItem<String>(value: _s(x['id']), child: Text(_s(x['price_list_code']) + ' — ' + _s(x['price_list_name']), overflow: TextOverflow.ellipsis))).toList(),
@@ -300,7 +300,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
         const SizedBox(height: 10),
         Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const Text('إضافة سعر لصنف', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-          DropdownButtonFormField<String>(
+          DropdownButtonFormField<String>(itemHeight: 40, 
             value: _selectedItemId, isExpanded: true, decoration: const InputDecoration(labelText: 'الصنف'),
             items: _items.map((x) => DropdownMenuItem<String>(value: _s(x['id']), child: Text(_itemLabel(_s(x['id'])), overflow: TextOverflow.ellipsis))).toList(),
             onChanged: (v) => setState(() {
@@ -311,7 +311,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
           ),
           const SizedBox(height: 8),
           Row(children: [
-            Expanded(child: DropdownButtonFormField<String>(
+            Expanded(child: DropdownButtonFormField<String>(itemHeight: 40, 
               value: _selectedUnitId, isExpanded: true,
               decoration: const InputDecoration(labelText: 'وحدة السعر'),
               items: _units.where((u) => _s(u['item_id']) == _selectedItemId).map((u) =>
@@ -330,7 +330,7 @@ class _ErpPriceListsScreenState extends State<ErpPriceListsScreen> {
           FilledButton.icon(onPressed: _saving ? null : _addLine, icon: const Icon(Icons.add), label: const Text('إضافة السعر')),
           const Divider(height: 24),
           const Text('ربط القائمة بطرف', style: TextStyle(fontWeight: FontWeight.w900)),
-          DropdownButtonFormField<String>(
+          DropdownButtonFormField<String>(itemHeight: 40, 
             value: _selectedPartyId, isExpanded: true, decoration: InputDecoration(labelText: _kind == 'sale' ? 'العميل' : 'المورد'),
             items: _parties.map((x) => DropdownMenuItem<String>(value: _s(x['id']), child: Text(_partyLabel(_s(x['id'])), overflow: TextOverflow.ellipsis))).toList(),
             onChanged: (v) => setState(() => _selectedPartyId = v),
