@@ -909,7 +909,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
             const SizedBox(width: 5),
             SizedBox(width: 190, child: Text(title, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600))),
             const SizedBox(width: 5),
-            SizedBox(width: 335, child: value),
+            SizedBox(width: 335, child: Align(alignment: AlignmentDirectional.centerStart, child: value)),
             const SizedBox(width: 5),
             const SizedBox(width: 48, child: Icon(Icons.check_circle, color: Color(0xFF18865A), size: 18)),
             const SizedBox(width: 5),
