@@ -17,6 +17,8 @@ The HR Executive Summary is available under **موارد بشرية → بيان
 | --- | --- |
 | Employees, contract dates, job assignment | `erp_employees` |
 | Departments and jobs | `erp_hr_departments`, `erp_hr_jobs` |
+| Approved authorized headcount and calculated vacancies | `erp_hr_staffing_plans` |
+| Work locations used to scope a staffing plan | `erp_hr_work_locations` |
 | Supporting appointment documents | `erp_employee_documents` |
 | Attendance and overtime | `erp_attendance_records` |
 | Leave requests | `erp_leave_requests` |
@@ -28,7 +30,7 @@ The HR Executive Summary is available under **موارد بشرية → بيان
 
 ## Operating the dashboard
 
-Authorized HR managers can add compliance/license records, training records, candidates, and employee movements. They can also update the status of recent compliance, training, and recruitment records from the dashboard.
+Authorized HR managers can add draft or pending-approval staffing plans, compliance/license records, training records, candidates, and employee movements. Company owners/admins approve staffing plans; approval is enforced by database policy and a trigger, not by a client-side button alone. A plan must match a job and optional work location in the same company. Overlapping approved plans for the same job/location scope are rejected.
 
 Dates entered in the dashboard use **DD-MM-YYYY**; dates are stored as ISO date values in PostgreSQL.
 
@@ -36,6 +38,7 @@ Dates entered in the dashboard use **DD-MM-YYYY**; dates are stored as ISO date 
 
 - Contract alerts use the employee contract start/end fields and active status.
 - Appointment-document gaps compare each employee's assigned job requirements with the employee's recorded document types.
+- Vacancy counts are calculated only from approved staffing plans whose effective date range includes today. Draft and pending plans are excluded. A company-wide plan cannot overlap a location-specific plan for the same job and period. The number of filled positions is capped at the authorized headcount for that plan; over-capacity is displayed separately.
 - Insurance, license, training, and recruitment metrics count the records actually stored in their respective tables; they do not fabricate missing records.
 - Absence, lateness, overtime, leave, and payroll indicators use the existing operational tables.
 - Turnover is an estimate derived from recorded employee movements and available hire dates. It is shown as unavailable when no movement history exists.
@@ -43,12 +46,13 @@ Dates entered in the dashboard use **DD-MM-YYYY**; dates are stored as ISO date 
 
 ## Database security
 
-The four HR operational tables have row-level security enabled. Reads and writes are scoped to the company and limited to authorized company administrators/managers or a member whose own profile job title is exactly **مدير موارد بشرية**. The employee-movement trigger uses invoker rights and only applies the latest effective movement on or before the current date.
+HR source tables have row-level security enabled and anonymous table privileges revoked. Employee SELECT/UPDATE policies target authenticated users and retain company-role checks. Staffing plans are readable by company members and writable by authorized company managers or the exact **مدير موارد بشرية** job title; only company owners/admins can approve or modify an already approved plan. The public profile directory is a read-only projection for approved marketplace participants and excludes platform-management accounts. The employee-movement trigger behavior remains governed by its existing implementation.
 
 ## First-use checklist
 
 1. Create or complete the company member profile for the person who will manage HR.
 2. Set the job title exactly to **مدير موارد بشرية**. The database trigger assigns the company HR-manager template.
 3. Confirm that the dashboard appears for that member and remains hidden for members titled **مسئول موارد بشرية** or **مسؤول موارد بشرية**.
-4. Enter real insurance, license, training, recruitment, and employee-movement records. New HR tables intentionally start empty; the dashboard does not seed invented statuses.
-5. Recheck the dashboard after each entry. Contract and appointment-document indicators continue to use the existing employee and document records.
+4. Create staffing plans for each job and work location, submit them for approval, and have a company owner/admin approve them. Vacancies remain unavailable until an approved plan is effective.
+5. Enter real insurance, license, training, recruitment, and employee-movement records. New HR tables intentionally start empty; the dashboard does not seed invented statuses.
+6. Recheck the dashboard after each entry. Contract and appointment-document indicators continue to use the existing employee and document records.
