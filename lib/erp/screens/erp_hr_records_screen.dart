@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _purple = Color(0xFF3E007D);
-const _orange = Color(0xFFFFA015);
 
 class _Field {
   const _Field(this.key, this.label, {this.type='text', this.required=false, this.options=const []});
