@@ -127,7 +127,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         const SizedBox(height: 10),
         ..._fields.map((field) => Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: DropdownButtonFormField<String>(itemHeight: 40, 
+          child: DropdownButtonFormField<String>(itemHeight: 48, 
             value: _selected[field.$1],
             isExpanded: true,
             decoration: InputDecoration(labelText: field.$2, border: const OutlineInputBorder()),
