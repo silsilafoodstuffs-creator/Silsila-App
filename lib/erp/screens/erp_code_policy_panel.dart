@@ -103,6 +103,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   bool _itemAutomatic = true, _itemComposite = true;
   bool _loading = true, _saving = false;
   final ScrollController _gridHorizontalController = ScrollController();
+  final ScrollController _gridVerticalController = ScrollController();
   String? _error, _message;
 
   @override void initState() {
@@ -131,6 +132,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     _itemPrefix.dispose();
     _geoPrefix.dispose();
     _gridHorizontalController.dispose();
+    _gridVerticalController.dispose();
     for (final controller in _geoSegments.values) { controller.dispose(); }
     for (final controller in _itemSegments.values) { controller.dispose(); }
     super.dispose();
@@ -458,6 +460,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   @override Widget build(BuildContext context) => Directionality(
     textDirection:TextDirection.rtl,
     child: _loading ? const Center(child:CircularProgressIndicator()) : Scrollbar(
+      controller:_gridVerticalController,
+      thumbVisibility:true,
+      scrollbarOrientation:ScrollbarOrientation.left,
+      child:Scrollbar(
       controller:_gridHorizontalController,
       thumbVisibility:true,
       scrollbarOrientation:ScrollbarOrientation.bottom,
@@ -465,6 +471,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         controller:_gridHorizontalController,
         scrollDirection:Axis.horizontal,
         child:SizedBox(width:1420,child:ListView(
+      controller:_gridVerticalController,
       padding:const EdgeInsets.all(8),
       children:[
         Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -593,6 +600,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       ],
         )),
       ),
+    ),
     ),
   );
 }
