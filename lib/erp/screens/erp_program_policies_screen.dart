@@ -950,13 +950,13 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   );
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
-      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:80,height:40,hint:'سلسلة'),height:40,valueWidth:80),
-      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:80,height:40,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 48,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null)),valueWidth:80),
+      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:100,height:40,hint:'سلسلة'),height:40,valueWidth:100),
+      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:100,height:40,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 48,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null)),valueWidth:100),
       _row(2,_identityPolicyCode(2),'شعار البرنامج',SizedBox(width:335,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
-      _row(3,_identityPolicyCode(3),'اللون الأساسي',_colorField(_primary ,width:80),valueWidth:80),
-      _row(4,_identityPolicyCode(4),'اللون الثانوي',_colorField(_secondary ,width:80),valueWidth:80),
-      _row(5,_identityPolicyCode(5),'لون التمييز',_colorField(_accent ,width:80),valueWidth:80),
-      _row(6,_identityPolicyCode(6),'لون الخلفية',_colorField(_background ,width:80),valueWidth:80),
+      _row(3,_identityPolicyCode(3),'اللون الأساسي',_colorField(_primary ,width:100),valueWidth:100),
+      _row(4,_identityPolicyCode(4),'اللون الثانوي',_colorField(_secondary ,width:100),valueWidth:100),
+      _row(5,_identityPolicyCode(5),'لون التمييز',_colorField(_accent ,width:100),valueWidth:100),
+      _row(6,_identityPolicyCode(6),'لون الخلفية',_colorField(_background ,width:100),valueWidth:100),
     ];
     for (var i=0;i<5;i++) {
       rows.add(_row(7+i,_identityPolicyCode(7+i),'${_labels[i]}',_fontStyleValue(i)));
@@ -972,7 +972,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
           SizedBox(width:34,child:Text('م',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
           SizedBox(width:76,child:Text('كود السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
           SizedBox(width:190,child:Text('بيانات السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
-          SizedBox(width:80,child:Text('القيمة/الاختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
+          SizedBox(width:100,child:Text('القيمة/الاختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
           SizedBox(width:48,child:Text('تفعيل',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
           SizedBox(width:160,child:Text('على الكل / مستخدمين / اختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
         ])))),
