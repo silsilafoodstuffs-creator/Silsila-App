@@ -259,7 +259,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                           },
                         ),
                         const SizedBox(height: 10),
-                        DropdownButtonFormField<String>(
+                        DropdownButtonFormField<String>(itemHeight: 40, 
                           value: _activityTypes.any((item) => item['code'] == activity) ? activity : null,
                           isExpanded: true,
                           decoration: InputDecoration(
@@ -281,7 +281,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
                         ),
                         if (!newActivity) ...[
                           const SizedBox(height: 10),
-                          DropdownButtonFormField<String>(
+                          DropdownButtonFormField<String>(itemHeight: 40, 
                             value: _visibleUserTypes.contains(accountType) ? accountType : null,
                             isExpanded: true,
                             decoration: const InputDecoration(labelText: 'نوع الحساب'),
@@ -544,7 +544,7 @@ class _ErpLoginGateState extends State<ErpLoginGate> {
           const SizedBox(height: 5),
           Text(silsilaText('سجّل دخولك لإدارة شركتك وبياناتك بأمان'), textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF756A80), fontSize: 12, height: 1.6)),
           const SizedBox(height: 19),
-          DropdownButtonFormField<String>(
+          DropdownButtonFormField<String>(itemHeight: 40, 
             value: _activityTypes.any((item) => item['code'] == _activity) ? _activity : null,
             isExpanded: true,
             decoration: InputDecoration(
