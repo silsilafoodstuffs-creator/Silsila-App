@@ -36,6 +36,19 @@ int calculateHrStaffingFilledPositions(int authorizedHeadcount, int occupiedPosi
   return occupiedPositions.clamp(0, authorizedHeadcount).toInt();
 }
 
+bool isHrSuspendedEmployee(Map<String, dynamic> employee) {
+  final status = (employee['employment_status']?.toString() ?? '')
+      .trim()
+      .toLowerCase();
+  return const {
+    'suspended',
+    'موقوف',
+    'موقوف مؤقت',
+    'موقوف مؤقتا',
+    'موقوف مؤقتًا',
+  }.contains(status);
+}
+
 class ErpHrExecutiveDashboardScreen extends StatefulWidget {
   const ErpHrExecutiveDashboardScreen({super.key, this.companyId, this.canManage = false});
   final String? companyId;
@@ -147,18 +160,8 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     return hireDate == null || !hireDate.isAfter(today);
   }
 
-  bool _isSuspendedEmployee(Map<String, dynamic> employee) {
-    final status = (employee['employment_status']?.toString() ?? '')
-        .trim()
-        .toLowerCase();
-    return const {
-      'suspended',
-      'موقوف',
-      'موقوف مؤقت',
-      'موقوف مؤقتا',
-      'موقوف مؤقتًا',
-    }.contains(status);
-  }
+  bool _isSuspendedEmployee(Map<String, dynamic> employee) =>
+      isHrSuspendedEmployee(employee);
   int get _temporaryEmployees => _employees.where(_isTemporarySeedEmployee).length;
   int get _testEmployees => _employees.where(_isTestEmployee).length;
   Set<String> get _realEmployeeIds => _realEmployees.map((e) => e['id']?.toString()).whereType<String>().toSet();
