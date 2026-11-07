@@ -56,8 +56,8 @@ jobs:
       - name: Run all Flutter tests
         run: flutter test
 
-      - name: Build production-path web app
-        run: flutter build web --release --base-href "/Silsila-App/"
+      - name: Build production-path web app with Dart source maps
+        run: flutter build web --release --source-maps --base-href "/Silsila-App/"
 
       - name: Verify web build output
         run: |
@@ -68,7 +68,7 @@ jobs:
 
       - name: Install Chromium browser test dependencies
         run: |
-          npm install --no-save --no-package-lock playwright
+          npm install --no-save --no-package-lock playwright source-map
           npx playwright install --with-deps chromium
 
       - name: Run real browser WebView tests (desktop + mobile)
