@@ -182,20 +182,7 @@ class _ErpHrCatalogScreenState extends State<ErpHrCatalogScreen> {
   @override
   Widget build(BuildContext context) {
     final query = _search.text.trim().toLowerCase();
-    final demo = _rows.isEmpty;
-    final examples = widget.catalogType == 'employment_type'
-        ? <Map<String,dynamic>>[
-            {'code':'Emt0001','name_ar':'دوام كامل','name_en':'Full-time','is_active':true},
-            {'code':'Emt0002','name_ar':'دوام جزئي','name_en':'Part-time','is_active':true},
-            {'code':'Emt0003','name_ar':'مؤقت / موسمي','name_en':'Temporary / Seasonal','is_active':true},
-          ]
-        : <Map<String,dynamic>>[
-            {'code':'Cnt0001','name_ar':'عقد محدد المدة','name_en':'Fixed-term contract','is_active':true},
-            {'code':'Cnt0002','name_ar':'عقد غير محدد المدة','name_en':'Permanent contract','is_active':true},
-            {'code':'Cnt0003','name_ar':'عقد مؤقت / يومية','name_en':'Temporary / Daily contract','is_active':true},
-          ];
-    final sourceRows = demo ? examples : _rows;
-    final visible = sourceRows.where((r) {
+    final visible = _rows.where((r) {
       final value = '${r['code']} ${r['name_ar']} ${r['name_en'] ?? ''}'.toLowerCase();
       return query.isEmpty || value.contains(query);
     }).toList();
@@ -250,17 +237,12 @@ class _ErpHrCatalogScreenState extends State<ErpHrCatalogScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Text('عدد السجلات الفعلية: ${_rows.length} • المعروض: ${demo ? 'أمثلة توضيحية' : visible.length}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text('عدد السجلات: ${_rows.length} • المعروض: ${visible.length}', style: const TextStyle(fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
             ),
             if (_error != null) Padding(padding: const EdgeInsets.all(8), child: Text(_error!, style: const TextStyle(color: Colors.red))),
-            if (!_loading && demo) Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFFFFF4E5), borderRadius: BorderRadius.circular(10)),
-              child: const Text('المعروض أمثلة توضيحية فقط وليست سجلات محفوظة. أضف الأنواع الفعلية الخاصة بشركتك من زر «إضافة نوع».', style: TextStyle(color: Color(0xFF7A4B0A), fontWeight: FontWeight.w600)),
-            ),
             const SizedBox(height: 8),
             Expanded(
               child: _loading
@@ -284,7 +266,7 @@ class _ErpHrCatalogScreenState extends State<ErpHrCatalogScreen> {
                                 DataCell(Text(r['name_ar']?.toString() ?? '')),
                                 DataCell(Text(r['name_en']?.toString() ?? '')),
                                 DataCell(Text(r['is_active'] == true ? 'نشط' : 'غير نشط')),
-                                DataCell(demo ? const Text('—') : Row(mainAxisSize: MainAxisSize.min, children: [
+                                DataCell(Row(mainAxisSize: MainAxisSize.min, children: [
                                   IconButton(tooltip: 'تعديل', onPressed: () => _edit(row: r), icon: const Icon(Icons.edit_outlined, color: _hrCatalogPurple)),
                                   IconButton(tooltip: 'حذف', onPressed: () => _delete(r), icon: const Icon(Icons.delete_outline, color: Colors.red)),
                                 ])),
