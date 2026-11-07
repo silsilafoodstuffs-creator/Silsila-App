@@ -17,21 +17,72 @@ try {
       viewport: { width: viewport.width, height: viewport.height },
       deviceScaleFactor: 1,
     });
-    page.on('pageerror', error => failures.push(`[${viewport.name}] ${error.message}`));
+    page.on('pageerror', error => failures.push(`[${viewport.name}] pageerror: ${error.message}`));
+    page.on('console', message => {
+      if (message.type() === 'error') failures.push(`[${viewport.name}] console: ${message.text()}`);
+    });
+    page.on('requestfailed', request => failures.push(`[${viewport.name}] request failed: ${request.url()} - ${request.failure()?.errorText ?? 'unknown'}`));
 
     const response = await page.goto(target, { waitUntil: 'domcontentloaded', timeout: 60000 });
     if (!response || !response.ok()) {
       failures.push(`[${viewport.name}] Web page returned HTTP ${response?.status() ?? 'no response'}`);
     }
 
-    await page.waitForFunction(() => {
-      const pane = document.querySelector('flt-glass-pane');
-      const canvas = pane?.querySelector('canvas');
-      return !!canvas && canvas.width > 0 && canvas.height > 0;
-    }, { timeout: 90000 });
+    const findRenderedCanvas = () => {
+      const findInRoot = root => {
+        const direct = root.querySelector?.('canvas');
+        if (direct && direct.width > 0 && direct.height > 0) return direct;
+        for (const element of root.querySelectorAll?.('*') ?? []) {
+          if (element.shadowRoot) {
+            const nested = findInRoot(element.shadowRoot);
+            if (nested) return nested;
+          }
+        }
+        return null;
+      };
+      return findInRoot(document);
+    };
+
+    try {
+      await page.waitForFunction(() => {
+        const findInRoot = root => {
+          const direct = root.querySelector?.('canvas');
+          if (direct && direct.width > 0 && direct.height > 0) return true;
+          for (const element of root.querySelectorAll?.('*') ?? []) {
+            if (element.shadowRoot && findInRoot(element.shadowRoot)) return true;
+          }
+          return false;
+        };
+        return findInRoot(document);
+      }, null, { timeout: 90000 });
+    } catch (error) {
+      const diagnostics = await page.evaluate(() => ({
+        url: location.href,
+        title: document.title,
+        readyState: document.readyState,
+        flutterGlassPane: !!document.querySelector('flt-glass-pane'),
+        flutterView: !!document.querySelector('flutter-view'),
+        bodyText: document.body?.innerText?.slice(0, 1000) ?? '',
+        bodyHtml: document.body?.innerHTML?.slice(0, 3000) ?? '',
+        scripts: [...document.scripts].map(script => script.src).filter(Boolean),
+      }));
+      console.error(`[${viewport.name}] Flutter render diagnostics: ${JSON.stringify(diagnostics)}`);
+      throw error;
+    }
 
     const result = await page.evaluate(() => {
-      const canvas = document.querySelector('flt-glass-pane canvas');
+      const findInRoot = root => {
+        const direct = root.querySelector?.('canvas');
+        if (direct && direct.width > 0 && direct.height > 0) return direct;
+        for (const element of root.querySelectorAll?.('*') ?? []) {
+          if (element.shadowRoot) {
+            const nested = findInRoot(element.shadowRoot);
+            if (nested) return nested;
+          }
+        }
+        return null;
+      };
+      const canvas = findInRoot(document);
       const rect = canvas?.getBoundingClientRect();
       return {
         title: document.title,
