@@ -284,13 +284,18 @@ class SilsilaApp extends StatelessWidget {
         child: Overlay(
           initialEntries: [
             OverlayEntry(
-              builder: (overlayContext) => SelectionArea(
-                child: Directionality(
-                  textDirection: currentLocale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-                  child: Stack(children: [
-                    Positioned.fill(child: child ?? const SizedBox.shrink()),
-                    const Positioned(left: 8, top: 8, child: SafeArea(child: SilsilaLanguageToggle())),
-                  ]),
+              builder: (overlayContext) => FocusTraversalGroup(
+                // Widget-order traversal avoids measuring focus nodes before
+                // their first layout during the initial browser view-focus event.
+                policy: WidgetOrderTraversalPolicy(),
+                child: SelectionArea(
+                  child: Directionality(
+                    textDirection: currentLocale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                    child: Stack(children: [
+                      Positioned.fill(child: child ?? const SizedBox.shrink()),
+                      const Positioned(left: 8, top: 8, child: SafeArea(child: SilsilaLanguageToggle())),
+                    ]),
+                  ),
                 ),
               ),
             ),
