@@ -113,6 +113,14 @@ void main() {
     expect(isHrSuspendedEmployee({'employment_status': 'terminated'}), isFalse);
   });
 
+  test('ended employment statuses override a stale active flag', () {
+    expect(isHrEndedEmployee({'employment_status': 'terminated', 'is_active': true}), isTrue);
+    expect(isHrEndedEmployee({'employment_status': 'منتهي الخدمة', 'is_active': true}), isTrue);
+    expect(isHrEndedEmployee({'employment_status': 'مستقيل', 'is_active': true}), isTrue);
+    expect(isHrEndedEmployee({'employment_status': 'retired', 'is_active': true}), isTrue);
+    expect(isHrEndedEmployee({'employment_status': 'active', 'is_active': true}), isFalse);
+  });
+
   testWidgets('HR dashboard exposes performance and vacancy data-quality notices',
       (tester) async {
     await tester.pumpWidget(const MaterialApp(
