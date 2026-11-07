@@ -613,7 +613,31 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     if (_company.isEmpty) { setState(() { _loading = false; _error = 'اختر الشركة أولًا.'; }); if (propagateError) throw StateError(_error!); return; }
     setState(() { _loading = true; _error = null; });
     try {
-      final policyRows = await _db.from('erp_program_policies').select('policy_key,policy_code').eq('company_id', _company).eq('category', 'الهوية البصرية');
+      var policyRows = await _db.from('erp_program_policies').select('policy_key,policy_code').eq('company_id', _company).eq('category', 'الهوية البصرية');
+      const identitySeeds = <Map<String,String>>[
+        {'key':'visual_identity.program_name','name':'اسم البرنامج'},
+        {'key':'visual_identity.language','name':'لغة واجهة البرنامج'},
+        {'key':'visual_identity.logo','name':'شعار البرنامج'},
+        {'key':'visual_identity.primary_color','name':'اللون الأساسي'},
+        {'key':'visual_identity.secondary_color','name':'اللون الثانوي'},
+        {'key':'visual_identity.accent_color','name':'لون التمييز'},
+        {'key':'visual_identity.background_color','name':'لون الخلفية'},
+        {'key':'visual_identity.heading_1','name':'العنوان الرئيسي'},
+        {'key':'visual_identity.heading_2','name':'العنوان الفرعي الأول'},
+        {'key':'visual_identity.heading_3','name':'العنوان الفرعي الثاني'},
+        {'key':'visual_identity.heading_4','name':'العنوان الفرعي الثالث'},
+        {'key':'visual_identity.heading_5','name':'النص والعناوين الصغيرة'},
+      ];
+      final storedIdentityKeys = (policyRows as List).whereType<Map<String,dynamic>>().map((row) => (row['policy_key'] ?? '').toString()).toSet();
+      final missingIdentityRows = identitySeeds.where((seed) => !storedIdentityKeys.contains(seed['key'])).map((seed) => <String,dynamic>{
+        'company_id': _company, 'policy_key': seed['key'], 'category': 'الهوية البصرية',
+        'name_ar': seed['name'], 'name_en': seed['key'], 'is_enabled': true,
+        'apply_to_all': true, 'user_ids': <String>[], 'policy_value': '',
+      }).toList();
+      if (missingIdentityRows.isNotEmpty) {
+        await _db.from('erp_program_policies').upsert(missingIdentityRows, onConflict: 'company_id,policy_key');
+        policyRows = await _db.from('erp_program_policies').select('policy_key,policy_code').eq('company_id', _company).eq('category', 'الهوية البصرية');
+      }
       _identityCodes
         ..clear()
         ..addEntries((policyRows as List).whereType<Map<String,dynamic>>().map((row) => MapEntry((row['policy_key'] ?? '').toString(), (row['policy_code'] ?? '').toString())));
