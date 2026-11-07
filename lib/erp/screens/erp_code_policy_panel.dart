@@ -228,6 +228,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'بادئة كود العميل ثابتة على Cus.');
       throw StateError(_error!);
     }
+    if (_prefix['program_policy']!.text.trim() != 'Pol') {
+      setState(() => _error = 'بادئة أكواد سياسات البرنامج ثابتة على Pol لضمان تطابق الأكواد المعروضة.');
+      throw StateError(_error!);
+    }
     final prefixes = _types.map((t) => _prefix[t['key']!]!.text.trim().toLowerCase()).toList();
     if (prefixes.toSet().length != prefixes.length || prefixes.contains(_itemPrefix.text.trim().toLowerCase())) {
       setState(() => _error = 'يجب أن تكون كل بادئة فريدة، وألا تتكرر مع بادئة الأصناف.');
