@@ -105,6 +105,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   final ScrollController _gridHorizontalController = ScrollController();
   final ScrollController _gridVerticalController = ScrollController();
   String? _error, _message;
+  int _nextProgramPolicySerial = 33;
 
   @override void initState() {
     super.initState();
@@ -141,7 +142,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   String _preview(String key) {
     final p = _prefix[key]!.text.trim();
     final n = int.tryParse(_digits[key]!.text) ?? 5;
-    return '$p${(1).toString().padLeft(n.clamp(1, 12).toInt(), '0')}';
+    final serial = key == 'program_policy' ? _nextProgramPolicySerial : 1;
+    return '$p${serial.toString().padLeft(n.clamp(1, 12).toInt(), '0')}';
   }
 
   Future<void> _load({bool propagateError = false}) async {
@@ -157,6 +159,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           .eq('company_id', widget.companyId).eq('name_ar', 'مصر').maybeSingle();
       }
       if (country != null) _geoSegments['country']!.text = country['country_code'].toString();
+      final policyRows = await _db.from('erp_program_policies').select('policy_code')
+        .eq('company_id', widget.companyId).like('policy_code', 'Pol%');
+      final usedPolicySerials = (policyRows as List).map((r) => int.tryParse((r['policy_code'] ?? '').toString().replaceFirst(RegExp(r'^Pol'), '')) ?? 0);
+      _nextProgramPolicySerial = (usedPolicySerials.fold<int>(0, (a, b) => a > b ? a : b)) + 1;
       final row = await _db.from('erp_program_policies').select('policy_value')
         .eq('company_id', widget.companyId).eq('policy_key', 'code_generation_registry').maybeSingle();
       if (row != null && (row['policy_value'] ?? '').toString().isNotEmpty) {
