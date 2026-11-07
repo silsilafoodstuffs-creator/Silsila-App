@@ -535,7 +535,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
       value: e['id'].toString(),
       child: Text('${e['employee_code'] ?? ''} • ${e['full_name'] ?? ''}', overflow: TextOverflow.ellipsis),
     )).toList();
-    return DropdownButtonFormField<String>(itemHeight: 40, 
+    return DropdownButtonFormField<String>(itemHeight: 48, 
       value: _employees.any((e) => e['id']?.toString() == selected) ? selected : null,
       isExpanded: true,
       decoration: const InputDecoration(labelText: 'الموظف *'),
@@ -587,7 +587,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    DropdownButtonFormField<String>(itemHeight: 40, 
+                    DropdownButtonFormField<String>(itemHeight: 48, 
                       value: jobId,
                       isExpanded: true,
                       decoration: const InputDecoration(labelText: 'الوظيفة *'),
@@ -601,7 +601,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                       onChanged: (value) => refresh(() => jobId = value),
                     ),
                     const SizedBox(height: 8),
-                    DropdownButtonFormField<String?>(itemHeight: 40, 
+                    DropdownButtonFormField<String?>(itemHeight: 48, 
                       value: workLocationId,
                       isExpanded: true,
                       decoration: const InputDecoration(labelText: 'موقع العمل'),
@@ -641,7 +641,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
                         labelText: 'تاريخ نهاية السريان DD-MM-YYYY (اختياري)',
                       ),
                     ),
-                    DropdownButtonFormField<String>(itemHeight: 40, 
+                    DropdownButtonFormField<String>(itemHeight: 48, 
                       value: status,
                       decoration: const InputDecoration(labelText: 'حالة الخطة'),
                       items: const [
@@ -777,12 +777,12 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
         content: SizedBox(width: 480, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           _employeePicker(employeeId, (v) => refresh(() => employeeId = v)),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(itemHeight: 40, value: type, decoration: const InputDecoration(labelText: 'نوع السجل'), items: const [
+          DropdownButtonFormField<String>(itemHeight: 48, value: type, decoration: const InputDecoration(labelText: 'نوع السجل'), items: const [
             DropdownMenuItem(value: 'health_insurance', child: Text('تأمين صحي')),
             DropdownMenuItem(value: 'social_insurance', child: Text('تأمين اجتماعي')),
             DropdownMenuItem(value: 'license', child: Text('رخصة')),
           ], onChanged: (v) => refresh(() { type = v ?? type; status = type == 'license' ? 'valid' : 'in_progress'; })),
-          DropdownButtonFormField<String>(itemHeight: 40, value: status, decoration: const InputDecoration(labelText: 'الحالة'), items: const [
+          DropdownButtonFormField<String>(itemHeight: 48, value: status, decoration: const InputDecoration(labelText: 'الحالة'), items: const [
             DropdownMenuItem(value: 'insured', child: Text('مؤمن')),
             DropdownMenuItem(value: 'uninsured', child: Text('غير مؤمن')),
             DropdownMenuItem(value: 'in_progress', child: Text('جارٍ')),
@@ -826,7 +826,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           _employeePicker(employeeId, (v) => refresh(() => employeeId = v)),
           TextField(controller: course, decoration: const InputDecoration(labelText: 'اسم البرنامج التدريبي *')),
           TextField(controller: provider, decoration: const InputDecoration(labelText: 'جهة التدريب')),
-          DropdownButtonFormField<String>(itemHeight: 40, value: status, decoration: const InputDecoration(labelText: 'الحالة'), items: const [
+          DropdownButtonFormField<String>(itemHeight: 48, value: status, decoration: const InputDecoration(labelText: 'الحالة'), items: const [
             DropdownMenuItem(value: 'planned', child: Text('مخطط')),
             DropdownMenuItem(value: 'in_progress', child: Text('جارٍ')),
             DropdownMenuItem(value: 'completed', child: Text('مكتمل')),
@@ -867,11 +867,11 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           TextField(controller: name, decoration: const InputDecoration(labelText: 'اسم المتقدم *')),
           TextField(controller: phone, decoration: const InputDecoration(labelText: 'رقم الهاتف')),
           TextField(controller: email, decoration: const InputDecoration(labelText: 'البريد الإلكتروني')),
-          DropdownButtonFormField<String>(itemHeight: 40, value: jobId, decoration: const InputDecoration(labelText: 'الوظيفة المطلوبة (اختياري)'), items: [
+          DropdownButtonFormField<String>(itemHeight: 48, value: jobId, decoration: const InputDecoration(labelText: 'الوظيفة المطلوبة (اختياري)'), items: [
             const DropdownMenuItem<String>(value: null, child: Text('غير محددة')),
             ..._jobs.map((j) => DropdownMenuItem<String>(value: j['id'].toString(), child: Text(j['name_ar']?.toString() ?? 'وظيفة'))),
           ], onChanged: (v) => refresh(() => jobId = v)),
-          DropdownButtonFormField<String>(itemHeight: 40, value: status, decoration: const InputDecoration(labelText: 'حالة الطلب'), items: const [
+          DropdownButtonFormField<String>(itemHeight: 48, value: status, decoration: const InputDecoration(labelText: 'حالة الطلب'), items: const [
             DropdownMenuItem(value: 'new', child: Text('جديد')),
             DropdownMenuItem(value: 'screening', child: Text('فرز')),
             DropdownMenuItem(value: 'interview', child: Text('مقابلة')),
@@ -910,7 +910,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
         title: const Text('تسجيل حركة موظف'),
         content: SizedBox(width: 480, child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           _employeePicker(employeeId, (v) => refresh(() => employeeId = v)),
-          DropdownButtonFormField<String>(itemHeight: 40, value: type, decoration: const InputDecoration(labelText: 'نوع الحركة'), items: const [
+          DropdownButtonFormField<String>(itemHeight: 48, value: type, decoration: const InputDecoration(labelText: 'نوع الحركة'), items: const [
             DropdownMenuItem(value: 'resignation', child: Text('استقالة')),
             DropdownMenuItem(value: 'termination', child: Text('إنهاء خدمة')),
             DropdownMenuItem(value: 'retirement', child: Text('تقاعد')),
@@ -967,7 +967,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
     String selected = current;
     await showDialog<void>(context: context, builder: (ctx) => StatefulBuilder(builder: (ctx, refresh) => AlertDialog(
       title: const Text('تحديث حالة السجل'),
-      content: DropdownButtonFormField<String>(itemHeight: 40, 
+      content: DropdownButtonFormField<String>(itemHeight: 48, 
         value: selected,
         decoration: const InputDecoration(labelText: 'الحالة الجديدة'),
         items: options.map((o) => DropdownMenuItem<String>(value: o.key, child: Text(o.value))).toList(),
@@ -1040,7 +1040,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
           _panel(children: [
             Row(children: [
               const Expanded(child: Text('فترة التحليل', style: TextStyle(fontWeight: FontWeight.w900, color: _hrPurple))),
-              SizedBox(width: 180, child: DropdownButtonFormField<int>(itemHeight: 40, 
+              SizedBox(width: 180, child: DropdownButtonFormField<int>(itemHeight: 48, 
                 value: _analysisPeriodDays,
                 isExpanded: true,
                 isDense: true,
