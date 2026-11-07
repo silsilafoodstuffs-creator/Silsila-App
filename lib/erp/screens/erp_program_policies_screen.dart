@@ -58,7 +58,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   @override void initState(){super.initState(); for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
   @override void didUpdateWidget(covariant ErpProgramPoliciesScreen oldWidget){super.didUpdateWidget(oldWidget);if(oldWidget.companyId!=widget.companyId)_load();}
   Future<void> _load({bool propagateError = false}) async {
-    if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; });return;}
+    if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; }); if(propagateError) throw StateError(error!); return;}
     setState(() { loading=true; error=null; message=null; });
     try {
       var rows=await db.from('erp_program_policies').select().eq('company_id',company);
@@ -87,14 +87,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final value = int.tryParse((values[key]?['value'] ?? '24').toString());
       if (value == null || value < 1 || value > 720) {
         setState(() { error = 'مدة طلبات سوق التجار يجب أن تكون من ساعة إلى 720 ساعة.'; });
-        return;
+        throw StateError(error!);
       }
     }
     final storyValue = int.tryParse((values['trader_market.story_duration']?['value'] ?? '60').toString());
     final storyUnit = (values['trader_market.story_duration_unit']?['value'] ?? 'دقيقة').toString();
     if (storyValue == null || storyValue < 1 || storyValue > (storyUnit == 'ساعة' ? 24 : 1440)) {
       setState(() { error = 'مدة القصة يجب أن تكون من 1 إلى 1440 دقيقة أو 24 ساعة.'; });
-      return;
+      throw StateError(error!);
     }
     setState(() { saving=true; error=null; message=null; });
     try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??''}).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
@@ -103,7 +103,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if (tab == 0) {
       await _identityKey.currentState?._load(propagateError: true);
     } else if (tab == 2) {
-      await _codePolicyKey.currentState?.reloadFromHeader();
+      final panel = _codePolicyKey.currentState;
+      if (panel == null) throw StateError('شاشة التكويد غير جاهزة للتحديث.');
+      await panel.reloadFromHeader();
     } else {
       await _load(propagateError: true);
     }
@@ -113,7 +115,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if (tab == 0) {
       await _identityKey.currentState?._save();
     } else if (tab == 2) {
-      await _codePolicyKey.currentState?.saveFromHeader();
+      final panel = _codePolicyKey.currentState;
+      if (panel == null) throw StateError('شاشة التكويد غير جاهزة للحفظ.');
+      await panel.saveFromHeader();
     } else {
       await _save();
     }
@@ -218,7 +222,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh_rounded, compact: true, onPressed: loading ? null : _refreshCurrentTab),
             ErpQuickTaskButton(label: 'إضافة', icon: Icons.add_circle_outline_rounded, compact: true, onPressed: null),
-            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving || (tab == 0 && (_identityKey.currentState?._saving ?? false)) ? null : _saveCurrentTab),
+            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving || (tab == 0 && ((_identityKey.currentState?._saving ?? false) || !(_identityKey.currentState?._editing ?? false))) || (tab == 2 && (_codePolicyKey.currentState?.isSaving ?? false)) ? null : _saveCurrentTab),
             ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true, onPressed: loading ? null : _editCurrentTab),
             ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, compact: true, onPressed: null),
             ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, compact: true, onPressed: _previewCurrentTab),
@@ -476,7 +480,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } super.dispose(); }
 
   Future<void> _load({bool propagateError = false}) async {
-    if (_company.isEmpty) { setState(() { _loading = false; _error = 'اختر الشركة أولًا.'; }); return; }
+    if (_company.isEmpty) { setState(() { _loading = false; _error = 'اختر الشركة أولًا.'; }); if (propagateError) throw StateError(_error!); return; }
     setState(() { _loading = true; _error = null; });
     try {
       final row = await _db.from('erp_program_settings').select().eq('company_id', _company).maybeSingle();
@@ -525,15 +529,15 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   void _startEditing() { if (mounted && !_editing) setState(() { _editing = true; _error = null; _message = null; }); }
 
   Future<void> _save() async {
-    if (!_editing) { setState(() => _message = 'اضغط تعديل أولًا.'); return; }
-    if (_company.isEmpty) return;
+    if (!_editing) { setState(() => _message = 'اضغط تعديل أولًا.'); throw StateError('فعّل وضع التعديل أولًا.'); }
+    if (_company.isEmpty) throw StateError('لا توجد شركة محددة للحفظ.');
     final colors = [_primary.text,_secondary.text,_accent.text,_background.text,..._colors.map((c) => c.text)];
     if (colors.any((v) => !RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$').hasMatch(v.trim()))) {
-      setState(() => _error = 'أدخل الألوان بصيغة HEX صحيحة مثل #3E007D.'); return;
+      setState(() => _error = 'أدخل الألوان بصيغة HEX صحيحة مثل #3E007D.'); throw StateError(_error!);
     }
     for (var i = 0; i < 5; i++) {
       final size = double.tryParse(_sizes[i].text.trim());
-      if (size == null || size < 8 || size > 72) { setState(() => _error = 'حجم الخط يجب أن يكون من 8 إلى 72.'); return; }
+      if (size == null || size < 8 || size > 72) { setState(() => _error = 'حجم الخط يجب أن يكون من 8 إلى 72.'); throw StateError(_error!); }
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
