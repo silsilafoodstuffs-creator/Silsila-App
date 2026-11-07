@@ -444,7 +444,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                         Expanded(child: TextFormField(
                                           key: ValueKey('fiscal-from-' + (p['value'] ?? '').toString()),
                                           initialValue: ((p['value'] ?? '01/01 - 12/31').toString().split(' - ').first),
-                                          decoration: const InputDecoration(labelText: 'من', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                           style: const TextStyle(fontSize: 10),
                                           onChanged: (v) {
                                             final parts = (p['value'] ?? '01/01 - 12/31').toString().split(' - ');
@@ -455,7 +455,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                         Expanded(child: TextFormField(
                                           key: ValueKey('fiscal-to-' + (p['value'] ?? '').toString()),
                                           initialValue: ((p['value'] ?? '01/01 - 12/31').toString().split(' - ').length > 1 ? (p['value'] ?? '01/01 - 12/31').toString().split(' - ')[1] : '12/31'),
-                                          decoration: const InputDecoration(labelText: 'إلى', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                           style: const TextStyle(fontSize: 10),
                                           onChanged: (v) {
                                             final parts = (p['value'] ?? '01/01 - 12/31').toString().split(' - ');
@@ -467,7 +467,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                       ? TextFormField(
                                           key: ValueKey('market-policy-' + (p['value'] ?? '').toString()),
                                           initialValue: p['value']?.toString() ?? '24',
-                                          decoration: const InputDecoration(labelText: 'قيمة السياسة', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                           keyboardType: TextInputType.number,
                                           style: const TextStyle(fontSize: 10),
                                           onChanged: (v) => p['value'] = v,
@@ -476,7 +476,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                       ? TextFormField(
                                           key: ValueKey('variance-' + (p['value'] ?? '').toString()),
                                           initialValue: p['value']?.toString() ?? '',
-                                          decoration: const InputDecoration(labelText: 'نسبة %', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                           style: const TextStyle(fontSize: 10),
                                           onChanged: (v) => p['value'] = v,
@@ -484,8 +484,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                       : options.isNotEmpty
                                         ? DropdownButtonFormField<String>(
                                             value: options.contains(p['value']) ? p['value'] as String : options.first,
-                                            isExpanded: true, isDense: true,
-                                            decoration: const InputDecoration(labelText: 'القيمة', isDense: true, contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
+                                            isExpanded: true, isDense: true, itemHeight: 40,
+                                            decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                             style: const TextStyle(fontSize: 10, color: Colors.black87),
                                             items: options.map((v) => DropdownMenuItem(value: v, child: Text(p['key']=='inventory.stocktake.valuation_basis' ? (v=='sale'?'سعر البيع':'سعر الشراء') : v, maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
                                             onChanged: (v) => setState(() => p['value'] = v),
