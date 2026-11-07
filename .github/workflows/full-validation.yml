@@ -3,6 +3,14 @@ name: Silsila Full Validation - All Recent Changes
 # Run the complete validation manually at planned milestones and final delivery.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'lib/erp/screens/erp_program_policies_screen.dart'
+      - 'lib/erp/screens/erp_code_policy_panel.dart'
+      - 'supabase/migrations/*policy*codes*.sql'
+      - 'supabase/migrations/*codes*program*policies*.sql'
 
 permissions:
   contents: read
