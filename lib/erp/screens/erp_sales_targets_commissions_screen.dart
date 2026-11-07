@@ -359,8 +359,6 @@ Future<void> _previewSalesTargets() async {
   Widget _customersView(){
     final rows=_customers;
     if(rows.isEmpty)return const Center(child:Text('لا توجد بيانات عملاء فعلية. أضف العملاء من دليل العملاء أولًا.'));
-    return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(ctx,i){
-      final c=rows[i];final g=_goal(c['id'].toString())??<String,dynamic>{};
     if(rows.isEmpty)return const Center(child:Text('لا يوجد عملاء. أضفهم من دليل العملاء أولًا.'));
     return ListView.separated(itemCount:rows.length,separatorBuilder:(_,__)=>const SizedBox(height:8),itemBuilder:(ctx,i){
       final c=rows[i];final g=_goal(c['id'].toString())??<String,dynamic>{};

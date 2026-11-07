@@ -331,9 +331,6 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
               _metric('المعروض',_loading?'تحميل':'بيانات النظام'),
             ]),
           ]))),
-        if(demo)Container(margin:const EdgeInsets.only(top:10),padding:const EdgeInsets.all(12),
-          decoration:BoxDecoration(color:const Color(0xFFFFF6E7),borderRadius:BorderRadius.circular(12),border:Border.all(color:_orange)),
-          child:const Row(children:[Icon(Icons.info_outline,color:Color(0xFF9A5A00)),SizedBox(width:8),Expanded(child:Text('لا توجد سجلات فعلية في هذا القسم بعد.',style:TextStyle(color:Color(0xFF7A4B0A),fontWeight:FontWeight.w600)))])),
         if(_error!=null)Padding(padding:const EdgeInsets.all(8),child:Text(_error!,style:const TextStyle(color:Colors.red))),
         const SizedBox(height:10),
         Expanded(child:_loading?const Center(child:CircularProgressIndicator(color:_purple)):records.isEmpty
@@ -341,8 +338,8 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
           :Card(elevation:0,color:Colors.white,child:SingleChildScrollView(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
             columns:[...columns.map((f)=>DataColumn(label:Text(f.label,style:const TextStyle(color:_purple,fontWeight:FontWeight.w800)))),const DataColumn(label:Text('الإجراءات',style:TextStyle(color:_purple,fontWeight:FontWeight.w800)))],
             rows:records.map((r)=>DataRow(cells:[
-              ...columns.map((f)=>DataCell(ConstrainedBox(constraints:const BoxConstraints(maxWidth:180),child:Text(demo?_label(r[f.key]??'—'):_value(f,r),overflow:TextOverflow.ellipsis)))),
-              DataCell(demo||readOnly?const Text('—'):Row(mainAxisSize:MainAxisSize.min,children:[
+              ...columns.map((f)=>DataCell(ConstrainedBox(constraints:const BoxConstraints(maxWidth:180),child:Text(_value(f,r),overflow:TextOverflow.ellipsis)))),
+              DataCell(readOnly?const Text('—'):Row(mainAxisSize:MainAxisSize.min,children:[
                 IconButton(tooltip:'تعديل',onPressed:()=>_form(row:r),icon:const Icon(Icons.edit_outlined,color:_purple)),
                 IconButton(tooltip:'حذف',onPressed:()=>_delete(r),icon:const Icon(Icons.delete_outline,color:Colors.red)),
               ])),
