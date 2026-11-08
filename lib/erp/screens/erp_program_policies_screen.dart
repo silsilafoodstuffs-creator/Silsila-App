@@ -175,6 +175,16 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   Future<void> _save() async {
+    if (_programNameController.text.trim().isEmpty) {
+      setState(() { error = 'اسم المشروع مطلوب.'; });
+      throw StateError(error!);
+    }
+    if (values.containsKey('visual_identity.program_name')) {
+      values['visual_identity.program_name']!['value'] = _programNameController.text.trim();
+    }
+    if (values.containsKey('visual_identity.logo')) {
+      values['visual_identity.logo']!['value'] = _programLogoBase64 == null ? '' : 'تم تحديد الشعار';
+    }
     for (final key in ['trader_market.sell_duration_hours','trader_market.buy_duration_hours','trader_market.transfer_duration_hours']) {
       final value = int.tryParse((values[key]?['value'] ?? '24').toString());
       if (value == null || value < 1 || value > 720) {
