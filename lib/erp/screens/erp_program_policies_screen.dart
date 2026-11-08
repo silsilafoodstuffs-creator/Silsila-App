@@ -18,7 +18,7 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['الهوية البصرية','برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية'];
+  static const tabs = ['الهوية البصرية','برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
@@ -51,11 +51,21 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'skip_purchase_order','category':'شرائية','ar':'تخطي أمر الشراء في فاتورة الشراء','en':'Skip purchase order in purchase invoice'},
     {'key':'supplier_bonus_variance','category':'شرائية','ar':'تحديد نسبة فروقات وارد حوافز الموردين','en':'Set supplier incentives incoming variance','value':'0.025%'},
     {'key':'national_id_required','category':'إدارية','ar':'الرقم القومي الزامي لتسجيل موظف جديد','en':'Require national ID for new employees','all':true},
+    {'key':'appearance.language','category':'الخطوط والألوان','ar':'لغة واجهة البرنامج والتطبيقات','en':'Program and apps interface language','value':'العربية','options':['العربية','الإنجليزية'],'mandatory':true,'all':true},
+    {'key':'appearance.header_background','category':'الخطوط والألوان','ar':'لون الهيدر في جميع الشاشات والتقارير','en':'Header background color','value':'#3E007D','mandatory':true,'all':true},
+    {'key':'appearance.screen_background','category':'الخطوط والألوان','ar':'لون الخلفية في جميع الشاشات والتقارير','en':'Screen and report background color','value':'#FFFFFF','mandatory':true,'all':true},
+    {'key':'appearance.header_text','category':'الخطوط والألوان','ar':'لون خط الهيدر ونوعه','en':'Header font style','value':'{"font":"Tajawal","size":25,"bold":false,"color":"#FFFFFF"}','mandatory':true,'all':true},
+    {'key':'appearance.main_heading','category':'الخطوط والألوان','ar':'تنسيق خط العنوان الرئيسي ونوعه','en':'Main heading font style','value':'{"font":"Tajawal","size":20,"bold":true,"color":"#3E007D"}','mandatory':true,'all':true},
+    {'key':'appearance.subheading_1','category':'الخطوط والألوان','ar':'تنسيق خط العنوان الفرعي الأول','en':'First subheading font style','value':'{"font":"Tajawal","size":15,"bold":true,"color":"#3E007D"}','mandatory':true,'all':true},
+    {'key':'appearance.subheading_2','category':'الخطوط والألوان','ar':'تنسيق خط العنوان الفرعي الثاني ونوعه','en':'Second subheading font style','value':'{"font":"Tajawal","size":10,"bold":true,"color":"#FFA015"}','mandatory':true,'all':true},
+    {'key':'appearance.subheading_3','category':'الخطوط والألوان','ar':'تنسيق خط العنوان الفرعي الثالث ونوعه','en':'Third subheading font style','value':'{"font":"Tajawal","size":10,"bold":false,"color":"#FF27C3"}','mandatory':true,'all':true},
+    {'key':'appearance.body_text','category':'الخطوط والألوان','ar':'تنسيق خط النصوص والعناوين الصغيرة ونوعه','en':'Body text and small labels font style','value':'{"font":"Tajawal","size":10,"bold":false,"color":"#3E007D"}','mandatory':true,'all':true},
   ];
   final db = Supabase.instance.client;
   final values = <String,Map<String,dynamic>>{};
   final Map<String, String> _policyCodes = {};
   final users = <Map<String,dynamic>>[];
+  final List<String> _registeredFonts = <String>['Tajawal'];
   final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
   final GlobalKey<ErpCodePolicyPanelState> _codePolicyKey = GlobalKey<ErpCodePolicyPanelState>();
   final ScrollController _policyHorizontalController = ScrollController();
@@ -116,8 +126,17 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           }, onConflict: 'company_id,policy_key');
         }
       }
+      final fontSettings = await db.from('erp_program_settings').select('heading_styles').eq('company_id', company).maybeSingle();
+      final discoveredFonts = <String>{'Tajawal'};
+      final savedStyles = fontSettings?['heading_styles'];
+      if (savedStyles is List) {
+        for (final style in savedStyles.whereType<Map>()) {
+          final family = (style['font'] ?? '').toString().trim();
+          if (family.isNotEmpty) discoveredFonts.add(family);
+        }
+      }
       final us=await db.from('erp_users').select('id,user_code,name_ar').eq('company_id',company);
-      if(mounted)setState(() { users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)); loading=false; });
+      if(mounted)setState(() { users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)); _registeredFonts..clear()..addAll(discoveredFonts.toList()..sort()); loading=false; });
     } catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل السياسات. طبّق migration سياسات البرنامج أولاً. $e'; }); if(propagateError) rethrow;}
   }
   Future<void> _save() async {
@@ -317,6 +336,209 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if(result!=null&&mounted)setState(() { p['user_ids']=result.toList(); p['all']=false; });
   }
 
+  static const List<String> _appearancePolicyKeys = [
+    'appearance.language',
+    'appearance.header_background',
+    'appearance.screen_background',
+    'appearance.header_text',
+    'appearance.main_heading',
+    'appearance.subheading_1',
+    'appearance.subheading_2',
+    'appearance.subheading_3',
+    'appearance.body_text',
+  ];
+
+  Map<String, dynamic> _fontStyle(Map<String, dynamic> policy) {
+    try {
+      final parsed = jsonDecode((policy['value'] ?? '{}').toString());
+      if (parsed is Map) return Map<String, dynamic>.from(parsed);
+    } catch (_) {}
+    return {'font': 'Tajawal', 'size': 10, 'bold': false, 'color': '#3E007D'};
+  }
+
+  Color _appearanceColor(String value) {
+    final hex = value.trim().replaceFirst('#', '');
+    try {
+      return Color(int.parse(hex.length == 6 ? 'FF$hex' : hex, radix: 16));
+    } catch (_) {
+      return const Color(0xFFBDBDBD);
+    }
+  }
+
+  Future<void> _chooseAppearanceColor(Map<String, dynamic> policy, {bool fontStyle = false}) async {
+    const swatches = <Color>[
+      Color(0xFF3E007D), Color(0xFF5E35B1), Color(0xFF7E57C2), Color(0xFF9575CD),
+      Color(0xFFFFA015), Color(0xFFFF8F00), Color(0xFFFF5722), Color(0xFFE53935),
+      Color(0xFFFF27C3), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF3949AB),
+      Color(0xFF039BE5), Color(0xFF00897B), Color(0xFF43A047), Color(0xFF795548),
+      Color(0xFF333333), Color(0xFF666666), Color(0xFF999999), Color(0xFFCCCCCC),
+      Color(0xFFF5EFFB), Color(0xFFFFFFFF),
+    ];
+    final current = fontStyle ? (_fontStyle(policy)['color'] ?? '#3E007D').toString() : (policy['value'] ?? '#FFFFFF').toString();
+    final selected = await showDialog<Color>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('اختيار اللون'),
+        content: SizedBox(width: 300, child: Wrap(
+          spacing: 8, runSpacing: 8,
+          children: swatches.map((color) => InkWell(
+            onTap: () => Navigator.pop(ctx, color),
+            child: Container(
+              width: 30, height: 30,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.black26)),
+              child: _appearanceColor(current).toARGB32() == color.toARGB32()
+                  ? Icon(Icons.check, size: 16, color: color.computeLuminance() < .45 ? Colors.white : Colors.black87)
+                  : null,
+            ),
+          )).toList(),
+        )),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء'))],
+      ),
+    );
+    if (selected == null || !mounted) return;
+    final hex = '#${selected.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+    setState(() {
+      if (fontStyle) {
+        final style = _fontStyle(policy)..['color'] = hex;
+        policy['value'] = jsonEncode(style);
+      } else {
+        policy['value'] = hex;
+      }
+    });
+  }
+
+  Widget _appearanceColorEditor(Map<String, dynamic> policy, {bool fontStyle = false, double width = 150}) {
+    final style = fontStyle ? _fontStyle(policy) : <String, dynamic>{};
+    final value = (fontStyle ? style['color'] : policy['value'] ?? '#FFFFFF').toString();
+    return SizedBox(width: width, height: 40, child: Row(children: [
+      SizedBox(width: width - 66, height: 40, child: TextFormField(
+        key: ValueKey('appearance-color-${policy['key']}-$value'),
+        initialValue: value,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 9),
+        decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 4), border: OutlineInputBorder()),
+        onChanged: (v) => setState(() {
+          if (fontStyle) {
+            final next = _fontStyle(policy)..['color'] = v;
+            policy['value'] = jsonEncode(next);
+          } else {
+            policy['value'] = v;
+          }
+        }),
+      )),
+      const SizedBox(width: 3),
+      SizedBox(width: 22, height: 40, child: IconButton(
+        padding: EdgeInsets.zero, visualDensity: VisualDensity.compact, tooltip: 'لوحة الألوان',
+        onPressed: () => _chooseAppearanceColor(policy, fontStyle: fontStyle),
+        icon: const Icon(Icons.palette_outlined, size: 17),
+      )),
+      const SizedBox(width: 3),
+      Container(width: 30, height: 30, decoration: BoxDecoration(
+        color: _appearanceColor(value), shape: BoxShape.circle, border: Border.all(color: Colors.black26),
+      )),
+    ]));
+  }
+
+  Widget _appearanceFontStyleEditor(Map<String, dynamic> policy) {
+    final style = _fontStyle(policy);
+    final font = (style['font'] ?? 'Tajawal').toString();
+    final size = (style['size'] ?? 10).toString();
+    final bold = style['bold'] == true;
+    final color = (style['color'] ?? '#3E007D').toString();
+    return SizedBox(height: 40, child: Row(children: [
+      SizedBox(width: 58, height: 40, child: DropdownButtonFormField<String>(
+        value: _registeredFonts.contains(font) ? font : (_registeredFonts.isEmpty ? null : _registeredFonts.first),
+        isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 240,
+        decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
+        items: _registeredFonts.map((family) => DropdownMenuItem(value: family, child: Text(family, style: const TextStyle(fontSize: 9), overflow: TextOverflow.ellipsis))).toList(),
+        onChanged: (v) { if (v != null) setState(() { final next = _fontStyle(policy)..['font'] = v; policy['value'] = jsonEncode(next); }); },
+      )),
+      const SizedBox(width: 3),
+      SizedBox(width: 34, height: 40, child: TextFormField(
+        key: ValueKey('appearance-size-${policy['key']}-$size'),
+        initialValue: size, textAlign: TextAlign.center, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        style: const TextStyle(fontSize: 9),
+        decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 4), border: OutlineInputBorder()),
+        onChanged: (v) => setState(() { final next = _fontStyle(policy)..['size'] = double.tryParse(v) ?? v; policy['value'] = jsonEncode(next); }),
+      )),
+      const SizedBox(width: 2),
+      SizedBox(width: 26, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
+        value: bold, onChanged: (v) => setState(() { final next = _fontStyle(policy)..['bold'] = v == true; policy['value'] = jsonEncode(next); }),
+        visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ))),
+      const SizedBox(width: 3),
+      _appearanceColorEditor(policy, fontStyle: true, width: 91),
+    ]));
+  }
+
+  Widget _buildFontsColorsGrid() {
+    final rows = _appearancePolicyKeys.map((key) => values[key]).whereType<Map<String, dynamic>>().toList();
+    Widget headerCell(String label, double width) => SizedBox(width: width, child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)));
+    Widget header = Card(
+      margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0, color: const Color(0xFFF5EFFB),
+      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3), child: SizedBox(width: 1200, child: Row(children: [
+        headerCell('م',34), const SizedBox(width:8), headerCell('كود السياسة',82), const SizedBox(width:8),
+        headerCell('بيانات السياسة',225), const SizedBox(width:8), headerCell('القيمة / الاختيار',220), const SizedBox(width:8),
+        headerCell('تفعيل',50), const SizedBox(width:8), headerCell('الكل/مستخدمون',62), const SizedBox(width:8),
+        headerCell('اختيار مستخدمين',112), const SizedBox(width:8), headerCell('عدد المحدد',58),
+      ]))),
+    );
+    return Scrollbar(controller: _policyVerticalController, thumbVisibility: true, scrollbarOrientation: ScrollbarOrientation.left,
+      child: Scrollbar(controller: _policyHorizontalController, thumbVisibility: true, scrollbarOrientation: ScrollbarOrientation.bottom,
+        child: SingleChildScrollView(controller: _policyHorizontalController, scrollDirection: Axis.horizontal,
+          child: SizedBox(width: 1200, child: ListView(controller: _policyVerticalController, padding: const EdgeInsets.fromLTRB(5,1,5,3), children: [
+            header,
+            ...List.generate(rows.length, (index) {
+              final p = rows[index];
+              final key = (p['key'] ?? '').toString();
+              Widget editor;
+              if (key == 'appearance.language') {
+                editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(
+                  value: (p['value'] ?? 'العربية').toString(),
+                  isExpanded: true, isDense: true, itemHeight: 48,
+                  decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight:40,maxHeight:40), contentPadding: EdgeInsets.symmetric(horizontal:6,vertical:4), border: OutlineInputBorder()),
+                  items: const [
+                    DropdownMenuItem(value:'العربية', child: Text('اللغة العربية')),
+                    DropdownMenuItem(value:'الإنجليزية', child: Text('اللغة الإنجليزية')),
+                  ],
+                  onChanged: (v) { if (v != null) setState(() => p['value'] = v); },
+                ));
+              } else if (key == 'appearance.header_background' || key == 'appearance.screen_background') {
+                editor = _appearanceColorEditor(p, width: 150);
+              } else {
+                editor = _appearanceFontStyleEditor(p);
+              }
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical:1,horizontal:1), elevation:0,
+                shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha:.16)), borderRadius: BorderRadius.circular(6)),
+                child: SizedBox(height:50, child: Padding(padding: const EdgeInsets.symmetric(horizontal:5,vertical:4),
+                  child: SizedBox(width:1200, child: Row(children: [
+                    SizedBox(width:34, child: Text('${index+1}', textAlign:TextAlign.center, style:const TextStyle(fontSize:10))),
+                    const SizedBox(width:8),
+                    SizedBox(width:82, child: Text(_programPolicyCode(key), textAlign:TextAlign.center, style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700))),
+                    const SizedBox(width:8),
+                    SizedBox(width:225, child: Text((p['ar'] ?? '').toString(), maxLines:2, overflow:TextOverflow.ellipsis, style:const TextStyle(fontSize:10,fontWeight:FontWeight.w600))),
+                    const SizedBox(width:8),
+                    SizedBox(width:220, child: Align(alignment:AlignmentDirectional.centerStart, child:editor)),
+                    const SizedBox(width:8),
+                    SizedBox(width:50, child: Center(child: Checkbox(value:true,onChanged:null,activeColor:Colors.green,fillColor:const WidgetStatePropertyAll<Color>(Colors.green),visualDensity:const VisualDensity(horizontal:-4,vertical:-4),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap))),
+                    const SizedBox(width:8),
+                    SizedBox(width:62, child: Center(child: Checkbox(value:true,onChanged:null,activeColor:Colors.green,fillColor:const WidgetStatePropertyAll<Color>(Colors.green),visualDensity:const VisualDensity(horizontal:-4,vertical:-4),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap))),
+                    const SizedBox(width:8),
+                    const SizedBox(width:112),
+                    const SizedBox(width:8),
+                    const SizedBox(width:58, child: Text('—',textAlign:TextAlign.center,style:TextStyle(fontSize:9))),
+                  ])),
+                )),
+              );
+            }),
+            const Padding(padding:EdgeInsets.all(6),child:Text('الخطوط المعروضة مأخوذة من الخطوط المحفوظة في إعدادات الشركة بقاعدة البيانات. يمكن تعديل القيم ثم الضغط على حفظ.',style:TextStyle(fontSize:10,color:Color(0xFF3E007D)))),
+          ])),
+        ),
+      ),
+    );
+  }
+
   Map<String, int> _layoutDimensions(Map<String, dynamic> policy) {
     try {
       final decoded = jsonDecode((policy['value'] ?? '').toString());
@@ -451,7 +673,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             ? ErpVisualIdentityPolicyScreen(key: _identityKey, companyId: widget.companyId)
             : tab == 2
                 ? ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)
-                : loading
+                : tab == 8
+                    ? _buildFontsColorsGrid()
+                    : loading
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
                     ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
