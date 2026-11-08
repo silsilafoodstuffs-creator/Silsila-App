@@ -493,7 +493,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         controller: _appearanceSizeController(policy), textAlign: TextAlign.center, keyboardType: const TextInputType.numberWithOptions(decimal: true),
         style: const TextStyle(fontSize: 9),
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 4), border: OutlineInputBorder()),
-        onChanged: (v) => setState(() { final next = _fontStyle(policy)..['size'] = double.tryParse(v) ?? v; policy['value'] = jsonEncode(next); }),
+        onChanged: (v) => setState(() { final next = _fontStyle(policy)..['size'] = v; policy['value'] = jsonEncode(next); }),
       )),
       const SizedBox(width: 2),
       SizedBox(width: 20, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
