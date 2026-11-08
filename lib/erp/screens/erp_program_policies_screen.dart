@@ -18,8 +18,10 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['الهوية البصرية','برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان'];
+  static const tabs = ['برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان'];
   static const defaults = <Map<String,dynamic>>[
+    {'key':'visual_identity.program_name','category':'برمجية','ar':'اسم المشروع','en':'Project name','value':'سلسلة','mandatory':true,'all':true},
+    {'key':'visual_identity.logo','category':'برمجية','ar':'شعار المشروع','en':'Project logo','value':'','mandatory':true,'all':true},
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
     {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":50,"field_height":40,"column_spacing":3}','mandatory':true,'all':true},
@@ -68,6 +70,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final List<String> _registeredFonts = <String>['Tajawal'];
   final Map<String, TextEditingController> _appearanceColorControllers = {};
   final Map<String, TextEditingController> _appearanceSizeControllers = {};
+  final TextEditingController _programNameController = TextEditingController(text: 'سلسلة');
+  String? _programLogoBase64;
+  String? _programLogoMime;
   final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
   final GlobalKey<ErpCodePolicyPanelState> _codePolicyKey = GlobalKey<ErpCodePolicyPanelState>();
   final ScrollController _policyHorizontalController = ScrollController();
@@ -128,7 +133,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           }, onConflict: 'company_id,policy_key');
         }
       }
-      final fontSettings = await db.from('erp_program_settings').select('heading_styles').eq('company_id', company).maybeSingle();
+      final programSettings = await db.from('erp_program_settings').select().eq('company_id', company).maybeSingle();
+      _programNameController.text = (programSettings?['program_name'] ?? 'سلسلة').toString();
+      _programLogoBase64 = programSettings?['logo_base64']?.toString();
+      _programLogoMime = programSettings?['logo_mime_type']?.toString();
+      final fontSettings = programSettings;
       final discoveredFonts = <String>{'Tajawal'};
       final savedStyles = fontSettings?['heading_styles'];
       if (savedStyles is List) {
@@ -172,12 +181,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       }
     }
     setState(() { saving=true; error=null; message=null; });
-    try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
+    try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key');
+      final settings = await db.from('erp_program_settings').select().eq('company_id',company).maybeSingle();
+      await db.from('erp_program_settings').upsert({...?settings,'company_id':company,'program_name':_programNameController.text.trim().isEmpty?'سلسلة':_programNameController.text.trim(),'logo_base64':_programLogoBase64,'logo_mime_type':_programLogoMime,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':db.auth.currentUser?.id},onConflict:'company_id');
+      if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
   }
   Future<void> _refreshCurrentTab() async {
-    if (tab == 0) {
-      await _identityKey.currentState?._load(propagateError: true);
-    } else if (tab == 2) {
+    if (tab == 1) {
       final panel = _codePolicyKey.currentState;
       if (panel == null) throw StateError('شاشة التكويد غير جاهزة للتحديث.');
       await panel.reloadFromHeader();
@@ -187,9 +197,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   Future<void> _saveCurrentTab() async {
-    if (tab == 0) {
-      await _identityKey.currentState?._save();
-    } else if (tab == 2) {
+    if (tab == 1) {
       final panel = _codePolicyKey.currentState;
       if (panel == null) throw StateError('شاشة التكويد غير جاهزة للحفظ.');
       await panel.saveFromHeader();
@@ -199,9 +207,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   void _editCurrentTab() {
-    if (tab == 0) {
-      _identityKey.currentState?._startEditing();
-    } else {
+    {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('حقول السياسات في هذا التبويب قابلة للتعديل مباشرة.'),
       ));
@@ -209,7 +215,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   Future<void> _previewCurrentTab() async {
-    final current = values.values.where((p) => tab != 0 && p['category'] == tabs[tab]).toList();
+    final current = values.values.where((p) => p['category'] == tabs[tab]).toList();
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -470,7 +476,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         icon: const Icon(Icons.palette_outlined, size: 17),
       )),
       const SizedBox(width: 3),
-      Container(width: 30, height: 30, decoration: BoxDecoration(
+      Container(width: 10, height: 10, decoration: BoxDecoration(
         color: _appearanceColor(value), shape: BoxShape.circle, border: Border.all(color: Colors.black26),
       )),
     ]));
@@ -481,7 +487,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final font = (style['font'] ?? 'Tajawal').toString();
     final bold = style['bold'] == true;
     return SizedBox(height: 40, child: Row(children: [
-      SizedBox(width: 60, height: 40, child: DropdownButtonFormField<String>(
+      SizedBox(width: 80, height: 40, child: DropdownButtonFormField<String>(
         value: _registeredFonts.contains(font) ? font : (_registeredFonts.isEmpty ? null : _registeredFonts.first),
         isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 240,
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
@@ -489,14 +495,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         onChanged: (v) { if (v != null) setState(() { final next = _fontStyle(policy)..['font'] = v; policy['value'] = jsonEncode(next); }); },
       )),
       const SizedBox(width: 3),
-      SizedBox(width: 30, height: 40, child: TextField(
+      SizedBox(width: 40, height: 40, child: TextField(
         controller: _appearanceSizeController(policy), textAlign: TextAlign.center, keyboardType: const TextInputType.numberWithOptions(decimal: true),
         style: const TextStyle(fontSize: 9),
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 4), border: OutlineInputBorder()),
         onChanged: (v) => setState(() { final next = _fontStyle(policy)..['size'] = v; policy['value'] = jsonEncode(next); }),
       )),
       const SizedBox(width: 2),
-      SizedBox(width: 18, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
+      SizedBox(width: 24, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
         value: bold, onChanged: (v) => setState(() { final next = _fontStyle(policy)..['bold'] = v == true; policy['value'] = jsonEncode(next); }),
         visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ))),
@@ -637,6 +643,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     _searchController.dispose();
     _policyHorizontalController.dispose();
     _policyVerticalController.dispose();
+    _programNameController.dispose();
     for (final controller in _appearanceColorControllers.values) { controller.dispose(); }
     for (final controller in _appearanceSizeControllers.values) { controller.dispose(); }
     super.dispose();
@@ -646,7 +653,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget build(BuildContext context) {
     final query = policySearch.trim().toLowerCase();
     final list = values.values.where((p) {
-      if (tab == 0 || p['category'] != tabs[tab]) return false;
+      if (p['category'] != tabs[tab]) return false;
       if (query.isEmpty) return true;
       final ar = (p['ar'] ?? '').toString().toLowerCase();
       final en = (p['en'] ?? '').toString().toLowerCase();
@@ -688,7 +695,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh_rounded, compact: true, onPressed: loading ? null : _refreshCurrentTab),
             ErpQuickTaskButton(label: 'إضافة', icon: Icons.add_circle_outline_rounded, compact: true, onPressed: null),
-            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving || (tab == 0 && ((_identityKey.currentState?._saving ?? false) || !(_identityKey.currentState?._editing ?? false))) || (tab == 2 && (_codePolicyKey.currentState?.isSaving ?? false)) ? null : _saveCurrentTab),
+            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving || (tab == 1 && (_codePolicyKey.currentState?.isSaving ?? false)) ? null : _saveCurrentTab),
             ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true, onPressed: loading ? null : _editCurrentTab),
             ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, compact: true, onPressed: null),
             ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, compact: true, onPressed: _previewCurrentTab),
@@ -705,11 +712,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
       Expanded(
-        child: tab == 0
-            ? ErpVisualIdentityPolicyScreen(key: _identityKey, companyId: widget.companyId)
-            : tab == 2
-                ? ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)
-                : tab == 8
+        child: tab == 1
+            ? ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)
+                : tab == 7
                     ? _buildFontsColorsGrid()
                     : loading
                 ? const Center(child: CircularProgressIndicator())
@@ -1124,7 +1129,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   Widget _field(TextEditingController c, {double width = 150, double height = 40, String? hint}) =>
       SizedBox(width:width,height:height,child:TextField(controller:c,enabled:_editing,style:const TextStyle(fontSize:11),decoration:InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:height,maxHeight:height),hintText:hint,contentPadding:const EdgeInsets.symmetric(horizontal:7,vertical:5),border:const OutlineInputBorder())));
 
-  Widget _row(int index,String code,String title,Widget value,{double height=40,double valueWidth=220}) => Card(
+  Widget _row(int index,String code,String title,Widget value,{double height=40,double valueWidth=250}) => Card(
     margin:const EdgeInsets.symmetric(vertical:1,horizontal:1),elevation:0,
     shape:RoundedRectangleBorder(side:BorderSide(color:Colors.deepPurple.withValues(alpha:.16)),borderRadius:BorderRadius.circular(6)),
     child:SizedBox(height:height,child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:0),child:SizedBox(width:1200,child:Row(children:[
