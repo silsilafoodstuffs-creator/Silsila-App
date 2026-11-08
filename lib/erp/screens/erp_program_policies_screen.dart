@@ -454,9 +454,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final font = (style['font'] ?? 'Tajawal').toString();
     final size = (style['size'] ?? 10).toString();
     final bold = style['bold'] == true;
-    final color = (style['color'] ?? '#3E007D').toString();
     return SizedBox(height: 40, child: Row(children: [
-      SizedBox(width: 58, height: 40, child: DropdownButtonFormField<String>(
+      SizedBox(width: 52, height: 40, child: DropdownButtonFormField<String>(
         value: _registeredFonts.contains(font) ? font : (_registeredFonts.isEmpty ? null : _registeredFonts.first),
         isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 240,
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
@@ -464,7 +463,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         onChanged: (v) { if (v != null) setState(() { final next = _fontStyle(policy)..['font'] = v; policy['value'] = jsonEncode(next); }); },
       )),
       const SizedBox(width: 3),
-      SizedBox(width: 34, height: 40, child: TextFormField(
+      SizedBox(width: 30, height: 40, child: TextFormField(
         key: ValueKey('appearance-size-${policy['key']}-$size'),
         initialValue: size, textAlign: TextAlign.center, keyboardType: const TextInputType.numberWithOptions(decimal: true),
         style: const TextStyle(fontSize: 9),
@@ -472,12 +471,12 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         onChanged: (v) => setState(() { final next = _fontStyle(policy)..['size'] = double.tryParse(v) ?? v; policy['value'] = jsonEncode(next); }),
       )),
       const SizedBox(width: 2),
-      SizedBox(width: 26, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
+      SizedBox(width: 20, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
         value: bold, onChanged: (v) => setState(() { final next = _fontStyle(policy)..['bold'] = v == true; policy['value'] = jsonEncode(next); }),
         visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ))),
       const SizedBox(width: 3),
-      _appearanceColorEditor(policy, fontStyle: true, width: 91),
+      _appearanceColorEditor(policy, fontStyle: true, width: 110),
     ]));
   }
 
