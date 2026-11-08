@@ -136,8 +136,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       _programNameController.text = (programSettings?['program_name'] ?? 'سلسلة').toString();
       _programLogoBase64 = programSettings?['logo_base64']?.toString();
       _programLogoMime = programSettings?['logo_mime_type']?.toString();
-      values['visual_identity.program_name']?['value'] = _programNameController.text;
-      values['visual_identity.logo']?['value'] = _programLogoBase64 == null ? '' : 'تم تحديد الشعار';
+      if (values.containsKey('visual_identity.program_name')) values['visual_identity.program_name']!['value'] = _programNameController.text;
+      if (values.containsKey('visual_identity.logo')) values['visual_identity.logo']!['value'] = _programLogoBase64 == null ? '' : 'تم تحديد الشعار';
       final fontSettings = programSettings;
       final discoveredFonts = <String>{'Tajawal'};
       final savedStyles = fontSettings?['heading_styles'];
@@ -165,7 +165,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       setState(() {
         _programLogoBase64 = base64Encode(bytes);
         _programLogoMime = mime;
-        values['visual_identity.logo']?['value'] = 'تم تحديد الشعار';
+        if (values.containsKey('visual_identity.logo')) values['visual_identity.logo']!['value'] = 'تم تحديد الشعار';
         message = 'تم اختيار الشعار. اضغط حفظ لتثبيته.';
         error = null;
       });
