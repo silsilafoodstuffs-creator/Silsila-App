@@ -67,6 +67,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final users = <Map<String,dynamic>>[];
   final List<String> _registeredFonts = <String>['Tajawal'];
   final Map<String, TextEditingController> _appearanceColorControllers = {};
+  final Map<String, TextEditingController> _appearanceSizeControllers = {};
   final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
   final GlobalKey<ErpCodePolicyPanelState> _codePolicyKey = GlobalKey<ErpCodePolicyPanelState>();
   final ScrollController _policyHorizontalController = ScrollController();
@@ -153,6 +154,22 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if (storyValue == null || storyValue < 1 || storyValue > (storyUnit == 'ساعة' ? 24 : 1440)) {
       setState(() { error = 'مدة القصة يجب أن تكون من 1 إلى 1440 دقيقة أو 24 ساعة.'; });
       throw StateError(error!);
+    }
+    for (final key in ['appearance.header_background', 'appearance.screen_background']) {
+      final color = (values[key]?['value'] ?? '').toString().trim();
+      if (!RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$').hasMatch(color)) {
+        setState(() { error = 'أدخل كود لون صحيح بصيغة HEX مثل #3E007D.'; });
+        throw StateError(error!);
+      }
+    }
+    for (final key in _appearancePolicyKeys.where((key) => key != 'appearance.language' && key != 'appearance.header_background' && key != 'appearance.screen_background')) {
+      final style = _fontStyle(values[key]!);
+      final size = double.tryParse((style['size'] ?? '').toString());
+      final color = (style['color'] ?? '').toString().trim();
+      if (size == null || size < 8 || size > 72 || !RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$').hasMatch(color) || !_registeredFonts.contains((style['font'] ?? '').toString())) {
+        setState(() { error = 'راجع نوع الخط ودرجته وكود اللون في سياسات الخطوط والألوان.'; });
+        throw StateError(error!);
+      }
     }
     setState(() { saving=true; error=null; message=null; });
     try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key'); if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
@@ -408,6 +425,16 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     });
   }
 
+  TextEditingController _appearanceSizeController(Map<String, dynamic> policy) {
+    final key = (policy['key'] ?? '').toString();
+    final value = (_fontStyle(policy)['size'] ?? 10).toString();
+    final controller = _appearanceSizeControllers.putIfAbsent(key, () => TextEditingController(text: value));
+    if (controller.text != value) {
+      controller.value = TextEditingValue(text: value, selection: TextSelection.collapsed(offset: value.length));
+    }
+    return controller;
+  }
+
   TextEditingController _appearanceColorController(Map<String, dynamic> policy, {bool fontStyle = false}) {
     final key = (policy['key'] ?? '').toString();
     final value = fontStyle ? (_fontStyle(policy)['color'] ?? '#3E007D').toString() : (policy['value'] ?? '#FFFFFF').toString();
@@ -452,7 +479,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget _appearanceFontStyleEditor(Map<String, dynamic> policy) {
     final style = _fontStyle(policy);
     final font = (style['font'] ?? 'Tajawal').toString();
-    final size = (style['size'] ?? 10).toString();
     final bold = style['bold'] == true;
     return SizedBox(height: 40, child: Row(children: [
       SizedBox(width: 52, height: 40, child: DropdownButtonFormField<String>(
@@ -463,9 +489,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         onChanged: (v) { if (v != null) setState(() { final next = _fontStyle(policy)..['font'] = v; policy['value'] = jsonEncode(next); }); },
       )),
       const SizedBox(width: 3),
-      SizedBox(width: 30, height: 40, child: TextFormField(
-        key: ValueKey('appearance-size-${policy['key']}-$size'),
-        initialValue: size, textAlign: TextAlign.center, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      SizedBox(width: 30, height: 40, child: TextField(
+        controller: _appearanceSizeController(policy), textAlign: TextAlign.center, keyboardType: const TextInputType.numberWithOptions(decimal: true),
         style: const TextStyle(fontSize: 9),
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 4), border: OutlineInputBorder()),
         onChanged: (v) => setState(() { final next = _fontStyle(policy)..['size'] = double.tryParse(v) ?? v; policy['value'] = jsonEncode(next); }),
@@ -885,7 +910,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   final Map<String, String> _identityCodes = {};
 
   @override void initState() { super.initState(); _load(); }
-  @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } for (final c in _appearanceColorControllers.values) { c.dispose(); } super.dispose(); }
+  @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } for (final c in _appearanceColorControllers.values) { c.dispose(); } for (final c in _appearanceSizeControllers.values) { c.dispose(); } super.dispose(); }
 
   String _identityPolicyCode(int index) {
     const keys = ['program_name','language','logo','primary_color','secondary_color','accent_color','background_color','heading_1','heading_2','heading_3','heading_4','heading_5'];
