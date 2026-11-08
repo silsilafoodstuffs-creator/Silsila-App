@@ -637,6 +637,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     _searchController.dispose();
     _policyHorizontalController.dispose();
     _policyVerticalController.dispose();
+    for (final controller in _appearanceColorControllers.values) { controller.dispose(); }
+    for (final controller in _appearanceSizeControllers.values) { controller.dispose(); }
     super.dispose();
   }
 
@@ -910,7 +912,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   final Map<String, String> _identityCodes = {};
 
   @override void initState() { super.initState(); _load(); }
-  @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } for (final c in _appearanceColorControllers.values) { c.dispose(); } for (final c in _appearanceSizeControllers.values) { c.dispose(); } super.dispose(); }
+  @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } super.dispose(); }
 
   String _identityPolicyCode(int index) {
     const keys = ['program_name','language','logo','primary_color','secondary_color','accent_color','background_color','heading_1','heading_2','heading_3','heading_4','heading_5'];
