@@ -883,7 +883,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     height: 40,
     child: Row(children: [
       SizedBox(
-        width: 126,
+        width: 58,
         height: 40,
         child: DropdownButtonFormField<String>(
           value: _fonts[i], isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 260,
@@ -894,7 +894,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
       ),
       const SizedBox(width: 5),
       SizedBox(
-        width: 48, height: 40,
+        width: 40, height: 40,
         child: TextField(
           controller: _sizes[i], enabled: _editing,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
