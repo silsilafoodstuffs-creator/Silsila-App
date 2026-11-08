@@ -481,7 +481,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final font = (style['font'] ?? 'Tajawal').toString();
     final bold = style['bold'] == true;
     return SizedBox(height: 40, child: Row(children: [
-      SizedBox(width: 52, height: 40, child: DropdownButtonFormField<String>(
+      SizedBox(width: 60, height: 40, child: DropdownButtonFormField<String>(
         value: _registeredFonts.contains(font) ? font : (_registeredFonts.isEmpty ? null : _registeredFonts.first),
         isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 240,
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
@@ -496,12 +496,12 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         onChanged: (v) => setState(() { final next = _fontStyle(policy)..['size'] = v; policy['value'] = jsonEncode(next); }),
       )),
       const SizedBox(width: 2),
-      SizedBox(width: 20, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
+      SizedBox(width: 18, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
         value: bold, onChanged: (v) => setState(() { final next = _fontStyle(policy)..['bold'] = v == true; policy['value'] = jsonEncode(next); }),
         visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ))),
       const SizedBox(width: 3),
-      _appearanceColorEditor(policy, fontStyle: true, width: 110),
+      _appearanceColorEditor(policy, fontStyle: true, width: 104),
     ]));
   }
 
