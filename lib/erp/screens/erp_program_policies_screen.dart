@@ -846,78 +846,37 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
     }
   }
 
-  Widget _colorField(TextEditingController controller, {double width = 145}) => SizedBox(
-    width: width,
-    height: 40,
-    child: Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: controller,
-            enabled: _editing,
-            onChanged: (_) => setState(() {}),
-            style: const TextStyle(fontSize: 10),
-            decoration: const InputDecoration(
-              isDense: true,
-              constraints: BoxConstraints(minHeight: 40, maxHeight: 40),
-              contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ),
-        const SizedBox(width: 3),
-        SizedBox(
-          width: 28,
-          height: 40,
-          child: IconButton(
-            padding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            tooltip: 'لوحة الألوان',
-            onPressed: _editing ? () => _chooseColor(controller) : null,
-            icon: const Icon(Icons.palette_outlined, size: 18),
-          ),
-        ),
-        Container(
-          width: 19,
-          height: 19,
-          decoration: BoxDecoration(
-            color: _colorFromHex(controller.text),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.black26),
-          ),
-        ),
-      ],
-    ),
+  Widget _colorField(TextEditingController controller, {double width = 110}) => SizedBox(
+    width: width, height: 40,
+    child: Row(children: [
+      SizedBox(width:40,height:40,child:TextField(
+        controller:controller,enabled:_editing,onChanged:(_)=>setState((){}),textAlign:TextAlign.center,
+        style:const TextStyle(fontSize:9),
+        decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:2,vertical:5),border:OutlineInputBorder()),
+      )),
+      const SizedBox(width:3),
+      SizedBox(width:21,height:40,child:IconButton(padding:EdgeInsets.zero,visualDensity:VisualDensity.compact,tooltip:'لوحة الألوان',onPressed:_editing?()=>_chooseColor(controller):null,icon:const Icon(Icons.palette_outlined,size:17))),
+      const SizedBox(width:3),
+      Container(width:40,height:40,decoration:BoxDecoration(color:_colorFromHex(controller.text),shape:BoxShape.circle,border:Border.all(color:Colors.black26))),
+    ]),
   );
 
-  Widget _field(TextEditingController c, {double width = 150, double height = 40, String? hint}) => SizedBox(width: width, height: height, child: TextField(controller: c, enabled: _editing, style: const TextStyle(fontSize: 11), decoration: InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: height, maxHeight: height), hintText: hint, contentPadding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: const OutlineInputBorder())));
+  Widget _field(TextEditingController c, {double width = 150, double height = 40, String? hint}) =>
+      SizedBox(width:width,height:height,child:TextField(controller:c,enabled:_editing,style:const TextStyle(fontSize:11),decoration:InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:height,maxHeight:height),hintText:hint,contentPadding:const EdgeInsets.symmetric(horizontal:7,vertical:5),border:const OutlineInputBorder())));
 
-
-  Widget _row(int index, String code, String title, Widget value, {double height = 40, double valueWidth = 335}) => Card(
-    margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0,
-    shape: RoundedRectangleBorder(side: BorderSide(color: Colors.deepPurple.withValues(alpha: .16)), borderRadius: BorderRadius.circular(6)),
-    child: SizedBox(
-      height: height,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 0),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(children: [
-            SizedBox(width: 34, child: Text('${index + 1}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10))),
-            const SizedBox(width: 5),
-            SizedBox(width: 76, child: Text(code, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700))),
-            const SizedBox(width: 5),
-            SizedBox(width: 190, child: Text(title, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600))),
-            const SizedBox(width: 5),
-            SizedBox(width: valueWidth, child: Align(alignment: AlignmentDirectional.centerStart, child: value)),
-            const SizedBox(width: 5),
-            const SizedBox(width: 48, child: Icon(Icons.check_circle, color: Color(0xFF18865A), size: 18)),
-            const SizedBox(width: 5),
-            const SizedBox(width: 78, child: Text('على الكل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF18865A)))),
-          ]),
-        ),
-      ),
-    ),
+  Widget _row(int index,String code,String title,Widget value,{double height=40,double valueWidth=220}) => Card(
+    margin:const EdgeInsets.symmetric(vertical:1,horizontal:1),elevation:0,
+    shape:RoundedRectangleBorder(side:BorderSide(color:Colors.deepPurple.withValues(alpha:.16)),borderRadius:BorderRadius.circular(6)),
+    child:SizedBox(height:height,child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:0),child:SizedBox(width:1200,child:Row(children:[
+      SizedBox(width:34,child:Text('${index+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:10))),const SizedBox(width:8),
+      SizedBox(width:82,child:Text(code,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700))),const SizedBox(width:8),
+      SizedBox(width:225,child:Text(title,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w600))),const SizedBox(width:8),
+      SizedBox(width:valueWidth,child:Align(alignment:AlignmentDirectional.centerStart,child:value)),const SizedBox(width:8),
+      SizedBox(width:50,child:Center(child:Checkbox(value:true,onChanged:null,visualDensity:const VisualDensity(horizontal:-4,vertical:-4),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap))),const SizedBox(width:8),
+      SizedBox(width:62,child:Center(child:Checkbox(value:true,onChanged:null,visualDensity:const VisualDensity(horizontal:-4,vertical:-4),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap))),const SizedBox(width:8),
+      const SizedBox(width:112),const SizedBox(width:8),
+      const SizedBox(width:58,child:Text('—',textAlign:TextAlign.center,style:TextStyle(fontSize:9))),
+    ])))),
   );
 
   Widget _fontStyleValue(int i) => SizedBox(
@@ -945,21 +904,21 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
         ),
       ),
       const SizedBox(width: 5),
-      SizedBox(height: 40, child: _colorField(_colors[i], width: 145)),
+      SizedBox(height: 40, child: _colorField(_colors[i], width: 104)),
     ]),
   );
   @override Widget build(BuildContext context) {
     final rows = <Widget>[
-      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:100,height:40,hint:'سلسلة'),height:40,valueWidth:100),
-      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:100,height:40,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 48,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null)),valueWidth:100),
-      _row(2,_identityPolicyCode(2),'شعار البرنامج',SizedBox(width:335,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
-      _row(3,_identityPolicyCode(3),'اللون الأساسي',_colorField(_primary ,width:100),valueWidth:100),
-      _row(4,_identityPolicyCode(4),'اللون الثانوي',_colorField(_secondary ,width:100),valueWidth:100),
-      _row(5,_identityPolicyCode(5),'لون التمييز',_colorField(_accent ,width:100),valueWidth:100),
-      _row(6,_identityPolicyCode(6),'لون الخلفية',_colorField(_background ,width:100),valueWidth:100),
+      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:100,height:40,hint:'سلسلة'),height:40,valueWidth:220),
+      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:100,height:40,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 48,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null)),valueWidth:220),
+      _row(2,_identityPolicyCode(2),'شعار البرنامج',SizedBox(width:220,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
+      _row(3,_identityPolicyCode(3),'اللون الأساسي',_colorField(_primary ,width:110),valueWidth:220),
+      _row(4,_identityPolicyCode(4),'اللون الثانوي',_colorField(_secondary ,width:110),valueWidth:220),
+      _row(5,_identityPolicyCode(5),'لون التمييز',_colorField(_accent ,width:110),valueWidth:220),
+      _row(6,_identityPolicyCode(6),'لون الخلفية',_colorField(_background ,width:110),valueWidth:220),
     ];
     for (var i=0;i<5;i++) {
-      rows.add(_row(7+i,_identityPolicyCode(7+i),'${_labels[i]}',_fontStyleValue(i)));
+      rows.add(_row(7+i,_identityPolicyCode(7+i),'${_labels[i]}',_fontStyleValue(i),valueWidth:220));
     }
     return Column(children:[
       Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),child:Row(children:[
@@ -968,13 +927,15 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
       if(_error!=null) Padding(padding:const EdgeInsets.all(4),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
       if(_message!=null) Padding(padding:const EdgeInsets.all(4),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
       Expanded(child:_loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.fromLTRB(5,1,5,3),children:[
-        Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:4),child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:const [
-          SizedBox(width:34,child:Text('م',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
-          SizedBox(width:76,child:Text('كود السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
-          SizedBox(width:190,child:Text('بيانات السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
-          SizedBox(width:100,child:Text('القيمة/الاختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
-          SizedBox(width:48,child:Text('تفعيل',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:5),
-          SizedBox(width:160,child:Text('على الكل / مستخدمين / اختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
+        Card(margin:const EdgeInsets.symmetric(vertical:1,horizontal:1),elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:3),child:SizedBox(width:1200,child:Row(children:const [
+          SizedBox(width:34,child:Text('م',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:82,child:Text('كود السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:225,child:Text('بيانات السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:220,child:Text('القيمة / الاختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:50,child:Text('تفعيل',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:62,child:Text('على الكل',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:112,child:Text('اختيار مستخدمين',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
+          SizedBox(width:58,child:Text('عدد المحدد',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
         ])))),
         ...rows,
         const SizedBox(height:10),
