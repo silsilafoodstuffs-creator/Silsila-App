@@ -73,7 +73,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final TextEditingController _programNameController = TextEditingController(text: 'سلسلة');
   String? _programLogoBase64;
   String? _programLogoMime;
-  final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
   final GlobalKey<ErpCodePolicyPanelState> _codePolicyKey = GlobalKey<ErpCodePolicyPanelState>();
   final ScrollController _policyHorizontalController = ScrollController();
   final ScrollController _policyVerticalController = ScrollController();
@@ -137,6 +136,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       _programNameController.text = (programSettings?['program_name'] ?? 'سلسلة').toString();
       _programLogoBase64 = programSettings?['logo_base64']?.toString();
       _programLogoMime = programSettings?['logo_mime_type']?.toString();
+      values['visual_identity.program_name']?['value'] = _programNameController.text;
+      values['visual_identity.logo']?['value'] = _programLogoBase64 == null ? '' : 'تم تحديد الشعار';
       final fontSettings = programSettings;
       final discoveredFonts = <String>{'Tajawal'};
       final savedStyles = fontSettings?['heading_styles'];
@@ -150,6 +151,29 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       if(mounted)setState(() { users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)); _registeredFonts..clear()..addAll(discoveredFonts.toList()..sort()); loading=false; });
     } catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل السياسات. طبّق migration سياسات البرنامج أولاً. $e'; }); if(propagateError) rethrow;}
   }
+  Future<void> _pickProgramLogo() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false, withData: true);
+      if (result == null || result.files.isEmpty) return;
+      final file = result.files.single;
+      final bytes = file.bytes;
+      if (bytes == null || bytes.isEmpty) throw StateError('تعذر قراءة صورة الشعار.');
+      if (bytes.length > 1024 * 1024) throw ArgumentError('حجم الشعار يجب ألا يتجاوز 1 ميجابايت.');
+      final ext = (file.extension ?? '').toLowerCase();
+      final mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','webp':'image/webp'}[ext];
+      if (mime == null) throw ArgumentError('الصيغ المدعومة للشعار PNG وJPG وWEBP.');
+      setState(() {
+        _programLogoBase64 = base64Encode(bytes);
+        _programLogoMime = mime;
+        values['visual_identity.logo']?['value'] = 'تم تحديد الشعار';
+        message = 'تم اختيار الشعار. اضغط حفظ لتثبيته.';
+        error = null;
+      });
+    } catch (e) {
+      if (mounted) setState(() => error = 'تعذر اختيار الشعار: $e');
+    }
+  }
+
   Future<void> _save() async {
     for (final key in ['trader_market.sell_duration_hours','trader_market.buy_duration_hours','trader_market.transfer_duration_hours']) {
       final value = int.tryParse((values[key]?['value'] ?? '24').toString());
@@ -242,21 +266,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
 
   Future<List<List<String>>> _currentExportRows() async {
     final rows = <List<String>>[];
-    if (tab == 0) {
-      final state = _identityKey.currentState;
-      if (state == null) throw StateError('بيانات الهوية البصرية غير جاهزة.');
-      rows.add(['كود السياسة', 'البيان', 'القيمة']);
-      rows.add([state._identityPolicyCode(0), 'اسم البرنامج', state._name.text]);
-      rows.add([state._identityPolicyCode(1), 'اللغة', state._language == 'ar' ? 'العربية' : 'English']);
-      rows.add([state._identityPolicyCode(2), 'شعار البرنامج', state._logoBase64 == null ? 'غير محدد' : 'تم تحديد شعار']);
-      rows.add([state._identityPolicyCode(3), 'اللون الأساسي', state._primary.text]);
-      rows.add([state._identityPolicyCode(4), 'اللون الثانوي', state._secondary.text]);
-      rows.add([state._identityPolicyCode(5), 'لون التمييز', state._accent.text]);
-      rows.add([state._identityPolicyCode(6), 'لون الخلفية', state._background.text]);
-      for (var i = 0; i < state._labels.length; i++) {
-        rows.add([state._identityPolicyCode(7 + i), state._labels[i], 'الخط: ${state._fonts[i]} | الحجم: ${state._sizes[i].text} | اللون: ${state._colors[i].text}']);
-      }
-    } else if (tab == 2) {
+    if (tab == 1) {
       final record = await db.from('erp_program_policies')
           .select('policy_value')
           .eq('company_id', company)
@@ -278,9 +288,15 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final current = values.values.where((p) => p['category'] == tabs[tab]).toList();
       for (var i = 0; i < current.length; i++) {
         final p = current[i];
-        rows.add([(i + 1).toString(), _programPolicyCode((p['key'] ?? '').toString()), (p['ar'] ?? '').toString(),
-          (p['value'] ?? '').toString(), p['enabled'] == true ? 'نعم' : 'لا',
-          p['all'] == true ? 'نعم' : 'لا', ((p['user_ids'] as List?)?.length ?? 0).toString()]);
+        final key = (p['key'] ?? '').toString();
+        final value = key == 'visual_identity.program_name'
+            ? _programNameController.text
+            : key == 'visual_identity.logo'
+                ? (_programLogoBase64 == null ? 'غير محدد' : 'تم تحديد شعار')
+                : (p['value'] ?? '').toString();
+        rows.add([(i + 1).toString(), _programPolicyCode(key), (p['ar'] ?? '').toString(),
+          value, p['enabled'] == true ? 'نعم' : 'لا', p['all'] == true ? 'نعم' : 'لا',
+          ((p['user_ids'] as List?)?.length ?? 0).toString()]);
       }
     }
     if (rows.length <= 1) throw StateError('لا توجد بيانات في التبويب الحالي للتصدير.');
@@ -476,7 +492,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         icon: const Icon(Icons.palette_outlined, size: 17),
       )),
       const SizedBox(width: 3),
-      Container(width: 10, height: 10, decoration: BoxDecoration(
+      Container(width: 4, height: 4, decoration: BoxDecoration(
         color: _appearanceColor(value), shape: BoxShape.circle, border: Border.all(color: Colors.black26),
       )),
     ]));
@@ -487,7 +503,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final font = (style['font'] ?? 'Tajawal').toString();
     final bold = style['bold'] == true;
     return SizedBox(height: 40, child: Row(children: [
-      SizedBox(width: 80, height: 40, child: DropdownButtonFormField<String>(
+      SizedBox(width: 106, height: 40, child: DropdownButtonFormField<String>(
         value: _registeredFonts.contains(font) ? font : (_registeredFonts.isEmpty ? null : _registeredFonts.first),
         isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 240,
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
@@ -495,19 +511,19 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         onChanged: (v) { if (v != null) setState(() { final next = _fontStyle(policy)..['font'] = v; policy['value'] = jsonEncode(next); }); },
       )),
       const SizedBox(width: 3),
-      SizedBox(width: 40, height: 40, child: TextField(
+      SizedBox(width: 53, height: 40, child: TextField(
         controller: _appearanceSizeController(policy), textAlign: TextAlign.center, keyboardType: const TextInputType.numberWithOptions(decimal: true),
         style: const TextStyle(fontSize: 9),
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 4), border: OutlineInputBorder()),
         onChanged: (v) => setState(() { final next = _fontStyle(policy)..['size'] = v; policy['value'] = jsonEncode(next); }),
       )),
       const SizedBox(width: 2),
-      SizedBox(width: 24, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
+      SizedBox(width: 32, height: 40, child: Tooltip(message: 'سميك', child: Checkbox(
         value: bold, onChanged: (v) => setState(() { final next = _fontStyle(policy)..['bold'] = v == true; policy['value'] = jsonEncode(next); }),
         visualDensity: const VisualDensity(horizontal: -4, vertical: -4), materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ))),
       const SizedBox(width: 3),
-      _appearanceColorEditor(policy, fontStyle: true, width: 104),
+      _appearanceColorEditor(policy, fontStyle: true, width: 100),
     ]));
   }
 
@@ -518,9 +534,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0, color: const Color(0xFFF5EFFB),
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3), child: SizedBox(width: 1200, child: Row(children: [
         headerCell('م',34), const SizedBox(width:8), headerCell('كود السياسة',82), const SizedBox(width:8),
-        headerCell('بيانات السياسة',225), const SizedBox(width:8), headerCell('القيمة / الاختيار',220), const SizedBox(width:8),
-        headerCell('تفعيل',50), const SizedBox(width:8), headerCell('الكل/مستخدمون',62), const SizedBox(width:8),
-        headerCell('اختيار مستخدمين',112), const SizedBox(width:8), headerCell('عدد المحدد',58),
+        headerCell('بيانات السياسة',225), const SizedBox(width:8), headerCell('القيمة / الاختيار',300), const SizedBox(width:4),
+        headerCell('تفعيل',50), const SizedBox(width:4), headerCell('الكل/مستخدمون',62), const SizedBox(width:4),
+        headerCell('تحديد مستخدمين',80), const SizedBox(width:4), headerCell('عدد المحدد',58),
       ]))),
     );
     return Scrollbar(controller: _policyVerticalController, thumbVisibility: true, scrollbarOrientation: ScrollbarOrientation.left,
@@ -559,14 +575,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                     const SizedBox(width:8),
                     SizedBox(width:225, child: Text((p['ar'] ?? '').toString(), maxLines:2, overflow:TextOverflow.ellipsis, style:const TextStyle(fontSize:10,fontWeight:FontWeight.w600))),
                     const SizedBox(width:8),
-                    SizedBox(width:220, child: Align(alignment:AlignmentDirectional.centerStart, child:editor)),
-                    const SizedBox(width:8),
+                    SizedBox(width:300, child: Align(alignment:AlignmentDirectional.centerStart, child:editor)),
+                    const SizedBox(width:4),
                     SizedBox(width:50, child: Center(child: Checkbox(value:true,onChanged:null,activeColor:Colors.green,fillColor:const WidgetStatePropertyAll<Color>(Colors.green),visualDensity:const VisualDensity(horizontal:-4,vertical:-4),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap))),
-                    const SizedBox(width:8),
+                    const SizedBox(width:4),
                     SizedBox(width:62, child: Center(child: Checkbox(value:true,onChanged:null,activeColor:Colors.green,fillColor:const WidgetStatePropertyAll<Color>(Colors.green),visualDensity:const VisualDensity(horizontal:-4,vertical:-4),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap))),
-                    const SizedBox(width:8),
-                    const SizedBox(width:112),
-                    const SizedBox(width:8),
+                    const SizedBox(width:4),
+                    const SizedBox(width:80),
+                    const SizedBox(width:4),
                     const SizedBox(width:58, child: Text('—',textAlign:TextAlign.center,style:TextStyle(fontSize:9))),
                   ])),
                 )),
@@ -747,14 +763,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                 SizedBox(width: 8),
                                 SizedBox(width: 225, child: Text('بيانات السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
-                                SizedBox(width: 220, child: Text('القيمة / الاختيار', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                                SizedBox(width: 8),
+                                SizedBox(width: 300, child: Text('القيمة / الاختيار', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 4),
                                 SizedBox(width: 50, child: Text('تفعيل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                                SizedBox(width: 8),
+                                SizedBox(width: 4),
                                 SizedBox(width: 62, child: Text('الكل/مستخدمون', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                                SizedBox(width: 8),
-                                SizedBox(width: 112, child: Text('اختيار مستخدمين', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
-                                SizedBox(width: 8),
+                                SizedBox(width: 4),
+                                SizedBox(width: 80, child: Text('تحديد مستخدمين', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 4),
                                 SizedBox(width: 58, child: Text('عدد المحدد', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                               ])),
                             ),
@@ -789,7 +805,21 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF18865A), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ])),
                                   const SizedBox(width: 8),
-                                  SizedBox(width: 220, child: p['key'] == 'ui_layout_standard'
+                                  SizedBox(width: 300, child: p['key'] == 'visual_identity.program_name'
+                                    ? TextField(
+                                        controller: _programNameController,
+                                        maxLines: 1,
+                                        style: const TextStyle(fontSize: 11),
+                                        decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: OutlineInputBorder(), hintText: 'سلسلة'),
+                                        onChanged: (v) => p['value'] = v,
+                                      )
+                                    : p['key'] == 'visual_identity.logo'
+                                    ? Row(children: [
+                                        if (_programLogoBase64 != null) Container(width: 34, height: 34, margin: const EdgeInsetsDirectional.only(end: 5), decoration: BoxDecoration(border: Border.all(color: Colors.black12), borderRadius: BorderRadius.circular(5)), child: ClipRRect(borderRadius: BorderRadius.circular(5), child: Image.memory(base64Decode(_programLogoBase64!), fit: BoxFit.contain))),
+                                        OutlinedButton.icon(onPressed: _pickProgramLogo, icon: const Icon(Icons.upload_file, size: 15), label: const Text('اختيار الشعار', style: TextStyle(fontSize: 10)), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 7), visualDensity: VisualDensity.compact)),
+                                        if (_programLogoBase64 != null) IconButton(onPressed: () => setState(() { _programLogoBase64 = null; _programLogoMime = null; p['value'] = ''; }), icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18), visualDensity: VisualDensity.compact, padding: EdgeInsets.zero),
+                                      ])
+                                    : p['key'] == 'ui_layout_standard'
                                     ? _layoutDimensionSelector(p)
                                     : p['key'] == 'fiscal_year'
                                     ? Row(children: [
@@ -843,12 +873,12 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                             onChanged: (v) => setState(() => p['value'] = v),
                                           )
                                         : Text((p['value'] ?? '').toString().isEmpty ? '—' : (p['value'] ?? '').toString(), maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 10))),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 4),
                                   checkColumn('تفعيل', mandatory || p['enabled'] == true, mandatory ? null : (v) => setState(() => p['enabled'] = v == true), 50),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 4),
                                   checkColumn('الكل/مستخدمون', mandatory || all, mandatory ? null : (v) => setState(() { p['all'] = v == true; if (v == true) p['user_ids'] = <String>[]; }), 62),
-                                  const SizedBox(width: 8),
-                                  SizedBox(width: 112, height: 28, child: Focus(
+                                  const SizedBox(width: 4),
+                                  SizedBox(width: 80, height: 34, child: Focus(
                                     onKeyEvent: (node, event) {
                                       if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.f1 && !mandatory && !all) { _pickUsers(p); return KeyEventResult.handled; }
                                       return KeyEventResult.ignored;
@@ -856,10 +886,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     child: OutlinedButton(
                                       onPressed: mandatory || all ? null : () => _pickUsers(p),
                                       style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                                      child: const Text('F1 اختيار مستخدمين', maxLines: 1, style: TextStyle(fontSize: 9)),
+                                      child: const Text('تحديد\nمستخدمين', textAlign: TextAlign.center, maxLines: 2, style: TextStyle(fontSize: 8, height: 1.0)),
                                     ),
                                   )),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 4),
                                   SizedBox(width: 58, child: Text(mandatory ? '—' : (p['user_ids'] as List).length.toString(), textAlign: TextAlign.center, style: const TextStyle(fontSize: 9))),
                                 ])),
                               ),
@@ -881,330 +911,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                       ),
                     ),
       ),
-    ]);
-  }
-}
-
-
-
-class ErpVisualIdentityPolicyScreen extends StatefulWidget {
-  const ErpVisualIdentityPolicyScreen({super.key, required this.companyId});
-  final String? companyId;
-  @override State<ErpVisualIdentityPolicyScreen> createState() => _ErpVisualIdentityPolicyScreenState();
-}
-
-class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyScreen> {
-  final _db = Supabase.instance.client;
-  final _name = TextEditingController(text: 'سلسلة');
-  final _primary = TextEditingController(text: '#3E007D');
-  final _secondary = TextEditingController(text: '#FFA015');
-  final _accent = TextEditingController(text: '#FF27C3');
-  final _background = TextEditingController(text: '#FFFFFF');
-  final _logo = TextEditingController();
-  final _sizes = List<TextEditingController>.generate(5, (i) => TextEditingController(text: ['24','20','17','15','13'][i]));
-  final _colors = List<TextEditingController>.generate(5, (i) => TextEditingController(text: ['#3E007D','#3E007D','#3E007D','#333333','#666666'][i]));
-  final _labels = const ['العنوان الرئيسي','العنوان الفرعي الأول','العنوان الفرعي الثاني','العنوان الفرعي الثالث','النص والعناوين الصغيرة'];
-  final _fontOptions = const ['Tajawal','Kufam','Romman','Almarai','Noto Sans Arabic','Arial','Roboto'];
-  final _fonts = List<String>.filled(5, 'Tajawal');
-  final _bold = List<bool>.filled(5, false);
-  final _italic = List<bool>.filled(5, false);
-  final _underline = List<bool>.filled(5, false);
-  String _language = 'ar';
-  String? _logoBase64, _logoMime;
-  bool _loading = true, _saving = false, _editing = false;
-  String? _error, _message;
-  String get _company => (widget.companyId ?? '').trim();
-  final Map<String, String> _identityCodes = {};
-
-  @override void initState() { super.initState(); _load(); }
-  @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } super.dispose(); }
-
-  String _identityPolicyCode(int index) {
-    const keys = ['program_name','language','logo','primary_color','secondary_color','accent_color','background_color','heading_1','heading_2','heading_3','heading_4','heading_5'];
-    return _identityCodes['visual_identity.${keys[index]}'] ?? '';
-  }
-
-  Future<void> _load({bool propagateError = false}) async {
-    if (_company.isEmpty) { setState(() { _loading = false; _error = 'اختر الشركة أولًا.'; }); if (propagateError) throw StateError(_error!); return; }
-    setState(() { _loading = true; _error = null; });
-    try {
-      var policyRows = await _db.from('erp_program_policies').select('policy_key,policy_code').eq('company_id', _company).eq('category', 'الهوية البصرية');
-      const identitySeeds = <Map<String,String>>[
-        {'key':'visual_identity.program_name','name':'اسم البرنامج'},
-        {'key':'visual_identity.language','name':'لغة واجهة البرنامج'},
-        {'key':'visual_identity.logo','name':'شعار البرنامج'},
-        {'key':'visual_identity.primary_color','name':'اللون الأساسي'},
-        {'key':'visual_identity.secondary_color','name':'اللون الثانوي'},
-        {'key':'visual_identity.accent_color','name':'لون التمييز'},
-        {'key':'visual_identity.background_color','name':'لون الخلفية'},
-        {'key':'visual_identity.heading_1','name':'العنوان الرئيسي'},
-        {'key':'visual_identity.heading_2','name':'العنوان الفرعي الأول'},
-        {'key':'visual_identity.heading_3','name':'العنوان الفرعي الثاني'},
-        {'key':'visual_identity.heading_4','name':'العنوان الفرعي الثالث'},
-        {'key':'visual_identity.heading_5','name':'النص والعناوين الصغيرة'},
-      ];
-      final storedIdentityKeys = (policyRows as List).whereType<Map<String,dynamic>>().map((row) => (row['policy_key'] ?? '').toString()).toSet();
-      final missingIdentityRows = identitySeeds.where((seed) => !storedIdentityKeys.contains(seed['key'])).map((seed) => <String,dynamic>{
-        'company_id': _company, 'policy_key': seed['key'], 'category': 'الهوية البصرية',
-        'name_ar': seed['name'], 'name_en': seed['key'], 'is_enabled': true,
-        'apply_to_all': true, 'user_ids': <String>[], 'policy_value': '',
-      }).toList();
-      if (missingIdentityRows.isNotEmpty) {
-        await _db.from('erp_program_policies').upsert(missingIdentityRows, onConflict: 'company_id,policy_key');
-        policyRows = await _db.from('erp_program_policies').select('policy_key,policy_code').eq('company_id', _company).eq('category', 'الهوية البصرية');
-      }
-      _identityCodes
-        ..clear()
-        ..addEntries((policyRows as List).whereType<Map<String,dynamic>>().map((row) => MapEntry((row['policy_key'] ?? '').toString(), (row['policy_code'] ?? '').toString())));
-      final row = await _db.from('erp_program_settings').select().eq('company_id', _company).maybeSingle();
-      if (row != null) {
-        _name.text = (row['program_name'] ?? 'سلسلة').toString();
-        _language = (row['language_code'] ?? 'ar').toString();
-        _primary.text = (row['identity_primary_color'] ?? '#3E007D').toString();
-        _secondary.text = (row['identity_secondary_color'] ?? '#FFA015').toString();
-        _accent.text = (row['identity_accent_color'] ?? '#FF27C3').toString();
-        _background.text = (row['identity_background_color'] ?? '#FFFFFF').toString();
-        _logoBase64 = row['logo_base64']?.toString(); _logoMime = row['logo_mime_type']?.toString();
-        final styles = row['heading_styles'];
-        if (styles is List) {
-          for (var i = 0; i < 5 && i < styles.length; i++) {
-            if (styles[i] is Map) {
-              final s = Map<String,dynamic>.from(styles[i] as Map);
-              _sizes[i].text = (s['size'] ?? _sizes[i].text).toString();
-              _colors[i].text = (s['color'] ?? _colors[i].text).toString();
-              final font = (s['font'] ?? 'Tajawal').toString();
-              _fonts[i] = _fontOptions.contains(font) ? font : 'Tajawal';
-              _bold[i] = s['bold'] == true; _italic[i] = s['italic'] == true; _underline[i] = s['underline'] == true;
-            }
-          }
-        }
-      }
-      if (mounted) setState(() => _loading = false);
-    } catch (e) { if (mounted) setState(() { _loading = false; _error = 'تعذر تحميل بيانات الهوية البصرية: $e'; }); if (propagateError) rethrow; }
-  }
-
-  Future<void> _pickLogo() async {
-    if (!_editing) return;
-    try {
-      final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false, withData: true);
-      if (result == null || result.files.isEmpty) return;
-      final file = result.files.single;
-      final bytes = file.bytes;
-      if (bytes == null || bytes.isEmpty) throw StateError('تعذر قراءة الصورة.');
-      if (bytes.length > 1024 * 1024) throw ArgumentError('حجم الشعار يجب ألا يتجاوز 1 ميجابايت.');
-      final ext = (file.extension ?? '').toLowerCase();
-      final mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','webp':'image/webp'}[ext];
-      if (mime == null) throw ArgumentError('الصيغ المدعومة PNG وJPG وWEBP.');
-      setState(() { _logoBase64 = base64Encode(bytes); _logoMime = mime; _message = 'تم اختيار الشعار؛ احفظ التغييرات لتثبيته.'; });
-    } catch (e) { if (mounted) setState(() => _error = 'تعذر اختيار الشعار: $e'); }
-  }
-
-  void _startEditing() { if (mounted && !_editing) setState(() { _editing = true; _error = null; _message = null; }); }
-
-  Future<void> _save() async {
-    if (!_editing) { setState(() => _message = 'اضغط تعديل أولًا.'); throw StateError('فعّل وضع التعديل أولًا.'); }
-    if (_company.isEmpty) throw StateError('لا توجد شركة محددة للحفظ.');
-    final colors = [_primary.text,_secondary.text,_accent.text,_background.text,..._colors.map((c) => c.text)];
-    if (colors.any((v) => !RegExp(r'^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$').hasMatch(v.trim()))) {
-      setState(() => _error = 'أدخل الألوان بصيغة HEX صحيحة مثل #3E007D.'); throw StateError(_error!);
-    }
-    for (var i = 0; i < 5; i++) {
-      final size = double.tryParse(_sizes[i].text.trim());
-      if (size == null || size < 8 || size > 72) { setState(() => _error = 'حجم الخط يجب أن يكون من 8 إلى 72.'); throw StateError(_error!); }
-    }
-    setState(() { _saving = true; _error = null; _message = null; });
-    try {
-      final existing = await _db.from('erp_program_settings').select('program_name,language_code').eq('company_id', _company).maybeSingle();
-      final styles = List.generate(5, (i) => {'key':'heading_${i+1}','label':_labels[i],'font':_fonts[i],'size':double.parse(_sizes[i].text.trim()),'color':_colors[i].text.trim().toUpperCase(),'bold':_bold[i],'italic':_italic[i],'underline':_underline[i]});
-      await _db.from('erp_program_settings').upsert({
-        'company_id':_company,
-        'program_name':_name.text.trim().isEmpty ? (existing?['program_name'] ?? 'سلسلة') : _name.text.trim(),
-        'language_code':_language,
-        'logo_base64':_logoBase64,'logo_mime_type':_logoMime,
-        'identity_primary_color':_primary.text.trim().toUpperCase(),
-        'identity_secondary_color':_secondary.text.trim().toUpperCase(),
-        'identity_accent_color':_accent.text.trim().toUpperCase(),
-        'identity_background_color':_background.text.trim().toUpperCase(),
-        'heading_styles':styles,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':_db.auth.currentUser?.id,
-      }, onConflict:'company_id');
-      final identityValues = <String, String>{
-        'visual_identity.program_name': _name.text.trim().isEmpty ? 'سلسلة' : _name.text.trim(),
-        'visual_identity.language': _language,
-        'visual_identity.logo': _logoBase64 == null ? '' : 'مخزن في إعدادات الهوية',
-        'visual_identity.primary_color': _primary.text.trim().toUpperCase(),
-        'visual_identity.secondary_color': _secondary.text.trim().toUpperCase(),
-        'visual_identity.accent_color': _accent.text.trim().toUpperCase(),
-        'visual_identity.background_color': _background.text.trim().toUpperCase(),
-        for (var i = 0; i < 5; i++) 'visual_identity.heading_${i + 1}': jsonEncode(styles[i]),
-      };
-      final identityNames = <String, String>{
-        'visual_identity.program_name':'اسم البرنامج','visual_identity.language':'لغة واجهة البرنامج',
-        'visual_identity.logo':'شعار البرنامج','visual_identity.primary_color':'اللون الأساسي',
-        'visual_identity.secondary_color':'اللون الثانوي','visual_identity.accent_color':'لون التمييز',
-        'visual_identity.background_color':'لون الخلفية','visual_identity.heading_1':'العنوان الرئيسي',
-        'visual_identity.heading_2':'العنوان الفرعي الأول','visual_identity.heading_3':'العنوان الفرعي الثاني',
-        'visual_identity.heading_4':'العنوان الفرعي الثالث','visual_identity.heading_5':'النص والعناوين الصغيرة',
-      };
-      final identityRows = identityValues.entries.map((entry) => <String,dynamic>{
-        'company_id': _company, 'policy_key': entry.key, 'policy_code': _identityCodes[entry.key],
-        'category': 'الهوية البصرية', 'name_ar': identityNames[entry.key]!,
-        'name_en': entry.key, 'is_enabled': true, 'apply_to_all': true,
-        'user_ids': <String>[], 'policy_value': entry.value,
-      }).toList();
-      await _db.from('erp_program_policies').upsert(identityRows, onConflict: 'company_id,policy_key');
-      if (mounted) setState(() { _saving = false; _editing = false; _message = 'تم حفظ إعدادات الهوية البصرية.'; });
-    } catch (e) { if (mounted) setState(() { _saving = false; _error = 'تعذر الحفظ: $e'; }); rethrow; }
-  }
-
-  Color _colorFromHex(String value) {
-    final hex = value.trim().replaceFirst('#', '');
-    try {
-      final normalized = hex.length == 6 ? 'FF$hex' : hex;
-      return Color(int.parse(normalized, radix: 16));
-    } catch (_) {
-      return const Color(0xFFBDBDBD);
-    }
-  }
-
-  Future<void> _chooseColor(TextEditingController controller) async {
-    if (!_editing) return;
-    const swatches = <Color>[
-      Color(0xFF3E007D), Color(0xFF5E35B1), Color(0xFF7E57C2), Color(0xFF9575CD),
-      Color(0xFFFFA015), Color(0xFFFF8F00), Color(0xFFFF5722), Color(0xFFE53935),
-      Color(0xFFFF27C3), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF3949AB),
-      Color(0xFF039BE5), Color(0xFF00897B), Color(0xFF43A047), Color(0xFF7CB342),
-      Color(0xFF795548), Color(0xFF616161), Color(0xFF333333), Color(0xFF666666),
-      Color(0xFF999999), Color(0xFFCCCCCC), Color(0xFFF5EFFB), Color(0xFFFFFFFF),
-    ];
-    final selected = await showDialog<Color>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('اختيار اللون'),
-        content: SizedBox(
-          width: 300,
-          child: Wrap(
-            spacing: 9,
-            runSpacing: 9,
-            children: swatches.map((color) => InkWell(
-              onTap: () => Navigator.pop(ctx, color),
-              borderRadius: BorderRadius.circular(20),
-              child: Container(
-                width: 30,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.black26),
-                ),
-                child: _colorFromHex(controller.text).toARGB32() == color.toARGB32()
-                    ? Icon(Icons.check, size: 17, color: color.computeLuminance() < .45 ? Colors.white : Colors.black87)
-                    : null,
-              ),
-            )).toList(),
-          ),
-        ),
-        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء'))],
-      ),
-    );
-    if (selected != null && mounted) {
-      setState(() => controller.text = '#${selected.toARGB32().toRadixString(16).substring(2).toUpperCase()}');
-    }
-  }
-
-  Widget _colorField(TextEditingController controller, {double width = 110}) => SizedBox(
-    width: width, height: 40,
-    child: Row(children: [
-      SizedBox(width:40,height:40,child:TextField(
-        controller:controller,enabled:_editing,onChanged:(_)=>setState((){}),textAlign:TextAlign.center,
-        style:const TextStyle(fontSize:9),
-        decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:2,vertical:5),border:OutlineInputBorder()),
-      )),
-      const SizedBox(width:3),
-      SizedBox(width:21,height:40,child:IconButton(padding:EdgeInsets.zero,visualDensity:VisualDensity.compact,tooltip:'لوحة الألوان',onPressed:_editing?()=>_chooseColor(controller):null,icon:const Icon(Icons.palette_outlined,size:17))),
-      const SizedBox(width:3),
-      Container(width:40,height:40,decoration:BoxDecoration(color:_colorFromHex(controller.text),shape:BoxShape.circle,border:Border.all(color:Colors.black26))),
-    ]),
-  );
-
-  Widget _field(TextEditingController c, {double width = 150, double height = 40, String? hint}) =>
-      SizedBox(width:width,height:height,child:TextField(controller:c,enabled:_editing,style:const TextStyle(fontSize:11),decoration:InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:height,maxHeight:height),hintText:hint,contentPadding:const EdgeInsets.symmetric(horizontal:7,vertical:5),border:const OutlineInputBorder())));
-
-  Widget _row(int index,String code,String title,Widget value,{double height=40,double valueWidth=250}) => Card(
-    margin:const EdgeInsets.symmetric(vertical:1,horizontal:1),elevation:0,
-    shape:RoundedRectangleBorder(side:BorderSide(color:Colors.deepPurple.withValues(alpha:.16)),borderRadius:BorderRadius.circular(6)),
-    child:SizedBox(height:height,child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:0),child:SizedBox(width:1200,child:Row(children:[
-      SizedBox(width:34,child:Text('${index+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:10))),const SizedBox(width:8),
-      SizedBox(width:82,child:Text(code,textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700))),const SizedBox(width:8),
-      SizedBox(width:225,child:Text(title,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w600))),const SizedBox(width:8),
-      SizedBox(width:valueWidth,child:Align(alignment:AlignmentDirectional.centerStart,child:value)),const SizedBox(width:8),
-      SizedBox(width:50,child:Center(child:Checkbox(value:true,onChanged:null,visualDensity:const VisualDensity(horizontal:-4,vertical:-4),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap))),const SizedBox(width:8),
-      SizedBox(width:62,child:Center(child:Checkbox(value:true,onChanged:null,visualDensity:const VisualDensity(horizontal:-4,vertical:-4),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap))),const SizedBox(width:8),
-      const SizedBox(width:112),const SizedBox(width:8),
-      const SizedBox(width:58,child:Text('—',textAlign:TextAlign.center,style:TextStyle(fontSize:9))),
-    ])))),
-  );
-
-  Widget _fontStyleValue(int i) => SizedBox(
-    height: 40,
-    child: Row(children: [
-      SizedBox(
-        width: 58,
-        height: 40,
-        child: DropdownButtonFormField<String>(
-          value: _fonts[i], isExpanded: true, isDense: true, itemHeight: 48, menuMaxHeight: 260,
-          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
-          items: _fontOptions.map((f) => DropdownMenuItem(value: f, child: Text(f, style: const TextStyle(fontSize: 10), overflow: TextOverflow.ellipsis))).toList(),
-          onChanged: _editing ? (v) { if (v != null) setState(() => _fonts[i] = v); } : null,
-        ),
-      ),
-      const SizedBox(width: 5),
-      SizedBox(
-        width: 40, height: 40,
-        child: TextField(
-          controller: _sizes[i], enabled: _editing,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 10),
-          decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), hintText: 'حجم', contentPadding: EdgeInsets.symmetric(horizontal: 3, vertical: 4), border: OutlineInputBorder()),
-        ),
-      ),
-      const SizedBox(width: 5),
-      SizedBox(height: 40, child: _colorField(_colors[i], width: 104)),
-    ]),
-  );
-  @override Widget build(BuildContext context) {
-    final rows = <Widget>[
-      _row(0,_identityPolicyCode(0),'اسم البرنامج',_field(_name,width:100,height:40,hint:'سلسلة'),height:40,valueWidth:220),
-      _row(1,_identityPolicyCode(1),'لغة واجهة البرنامج',SizedBox(width:100,height:40,child:DropdownButtonFormField<String>(value:_language,isExpanded:true,isDense:true,itemHeight: 48,menuMaxHeight:260,decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:6,vertical:5),border:OutlineInputBorder()),items:const[DropdownMenuItem(value:'ar',child:Text('العربية')),DropdownMenuItem(value:'en',child:Text('English'))],onChanged:_editing?(v){if(v!=null)setState(()=>_language=v);}:null)),valueWidth:220),
-      _row(2,_identityPolicyCode(2),'شعار البرنامج',SizedBox(width:220,child:Row(children:[if(_logoBase64!=null) const Icon(Icons.image,color:Color(0xFF3E007D)),OutlinedButton(onPressed:_editing?_pickLogo:null,child:const Text('اختيار صورة')),if(_logoBase64!=null)IconButton(onPressed:_editing?()=>setState(()=>_logoBase64=null):null,icon:const Icon(Icons.delete_outline,color:Colors.red))]))),
-      _row(3,_identityPolicyCode(3),'اللون الأساسي',_colorField(_primary ,width:110),valueWidth:220),
-      _row(4,_identityPolicyCode(4),'اللون الثانوي',_colorField(_secondary ,width:110),valueWidth:220),
-      _row(5,_identityPolicyCode(5),'لون التمييز',_colorField(_accent ,width:110),valueWidth:220),
-      _row(6,_identityPolicyCode(6),'لون الخلفية',_colorField(_background ,width:110),valueWidth:220),
-    ];
-    for (var i=0;i<5;i++) {
-      rows.add(_row(7+i,_identityPolicyCode(7+i),'${_labels[i]}',_fontStyleValue(i),valueWidth:220));
-    }
-    return Column(children:[
-      Padding(padding:const EdgeInsets.symmetric(horizontal:4,vertical:3),child:Row(children:[
-        const Expanded(child:Text('سياسات الهوية البصرية',style:TextStyle(fontWeight:FontWeight.bold,fontSize:14,color:Color(0xFF3E007D)))),
-      ])),
-      if(_error!=null) Padding(padding:const EdgeInsets.all(4),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
-      if(_message!=null) Padding(padding:const EdgeInsets.all(4),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
-      Expanded(child:_loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.fromLTRB(5,1,5,3),children:[
-        Card(margin:const EdgeInsets.symmetric(vertical:1,horizontal:1),elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.symmetric(horizontal:5,vertical:3),child:SizedBox(width:1200,child:Row(children:const [
-          SizedBox(width:34,child:Text('م',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-          SizedBox(width:82,child:Text('كود السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-          SizedBox(width:225,child:Text('بيانات السياسة',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-          SizedBox(width:220,child:Text('القيمة / الاختيار',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-          SizedBox(width:50,child:Text('تفعيل',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-          SizedBox(width:62,child:Text('على الكل',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-          SizedBox(width:112,child:Text('اختيار مستخدمين',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),SizedBox(width:8),
-          SizedBox(width:58,child:Text('عدد المحدد',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.bold))),
-        ])))),
-        ...rows,
-        const SizedBox(height:10),
-      ])),
     ]);
   }
 }
