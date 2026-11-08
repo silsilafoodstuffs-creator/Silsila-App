@@ -66,6 +66,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final Map<String, String> _policyCodes = {};
   final users = <Map<String,dynamic>>[];
   final List<String> _registeredFonts = <String>['Tajawal'];
+  final Map<String, TextEditingController> _appearanceColorControllers = {};
   final GlobalKey<_ErpVisualIdentityPolicyScreenState> _identityKey = GlobalKey<_ErpVisualIdentityPolicyScreenState>();
   final GlobalKey<ErpCodePolicyPanelState> _codePolicyKey = GlobalKey<ErpCodePolicyPanelState>();
   final ScrollController _policyHorizontalController = ScrollController();
@@ -407,13 +408,22 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     });
   }
 
+  TextEditingController _appearanceColorController(Map<String, dynamic> policy, {bool fontStyle = false}) {
+    final key = (policy['key'] ?? '').toString();
+    final value = fontStyle ? (_fontStyle(policy)['color'] ?? '#3E007D').toString() : (policy['value'] ?? '#FFFFFF').toString();
+    final controller = _appearanceColorControllers.putIfAbsent(key, () => TextEditingController(text: value));
+    if (controller.text != value) {
+      controller.value = TextEditingValue(text: value, selection: TextSelection.collapsed(offset: value.length));
+    }
+    return controller;
+  }
+
   Widget _appearanceColorEditor(Map<String, dynamic> policy, {bool fontStyle = false, double width = 150}) {
     final style = fontStyle ? _fontStyle(policy) : <String, dynamic>{};
     final value = (fontStyle ? style['color'] : policy['value'] ?? '#FFFFFF').toString();
     return SizedBox(width: width, height: 40, child: Row(children: [
-      SizedBox(width: width - 66, height: 40, child: TextFormField(
-        key: ValueKey('appearance-color-${policy['key']}-$value'),
-        initialValue: value,
+      SizedBox(width: width - 66, height: 40, child: TextField(
+        controller: _appearanceColorController(policy, fontStyle: fontStyle),
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 9),
         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 2, vertical: 4), border: OutlineInputBorder()),
@@ -876,7 +886,7 @@ class _ErpVisualIdentityPolicyScreenState extends State<ErpVisualIdentityPolicyS
   final Map<String, String> _identityCodes = {};
 
   @override void initState() { super.initState(); _load(); }
-  @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } super.dispose(); }
+  @override void dispose() { _name.dispose(); _primary.dispose(); _secondary.dispose(); _accent.dispose(); _background.dispose(); _logo.dispose(); for (final c in _sizes) { c.dispose(); } for (final c in _colors) { c.dispose(); } for (final c in _appearanceColorControllers.values) { c.dispose(); } super.dispose(); }
 
   String _identityPolicyCode(int index) {
     const keys = ['program_name','language','logo','primary_color','secondary_color','accent_color','background_color','heading_1','heading_2','heading_3','heading_4','heading_5'];
