@@ -761,6 +761,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final key = (p['key'] ?? '').toString().toLowerCase();
       return ar.contains(query) || en.contains(query) || key.contains(query);
     }).toList();
+    if (tabs[tab] == 'الكل') {
+      list.sort((a, b) => _programPolicyCode((a['key'] ?? '').toString())
+          .compareTo(_programPolicyCode((b['key'] ?? '').toString())));
+    }
 
     return Column(children: [
       Container(
