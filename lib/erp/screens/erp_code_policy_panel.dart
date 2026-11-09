@@ -270,6 +270,14 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         throw StateError(_error!);
       }
     }
+    final inheritedGeoDigits = 2 +
+        int.parse(_geoSegments['governorate']!.text) +
+        int.parse(_geoSegments['center']!.text) +
+        int.parse(_geoSegments['area']!.text);
+    if (inheritedGeoDigits != 8) {
+      setState(() => _error = 'كود المنطقة الموروث في كود العميل يجب أن يظل 8 أرقام.');
+      throw StateError(_error!);
+    }
     if (_geoPrefix.text.trim() != 'Rig') {
       setState(() => _error = 'بادئة المنطقة يجب أن تكون 3 حروف إنجليزية مثل Rig.');
       throw StateError(_error!);
@@ -295,6 +303,12 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           'fields':fields,
         };
       }
+      types['customer'] = {
+        'prefix':'Cus', 'digits':3, 'automatic':true, 'composite':true,
+        'required':true, 'apply_to_all':true,
+        'inherit_geo_code':true, 'geo_digits':8, 'serial_digits':3,
+        'fields':[{'name':'كود المنطقة بدون بادئة Rig','digits':8},{'name':'تسلسل العميل','digits':3}],
+      };
       final itemSegments = <String, int>{
         for (final entry in _itemSegments.entries) entry.key:int.parse(entry.value.text),
       };
