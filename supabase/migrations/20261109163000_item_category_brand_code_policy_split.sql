@@ -30,6 +30,8 @@ begin
   execute v_def;
 
   v_def := pg_get_functiondef('public.erp_assign_item_hierarchical_code()'::regprocedure);
+  v_def := replace(v_def,$old$v_serial_digits integer := 2;$old$,$new$v_serial_digits integer := 3;$new$);
+  v_def := replace(v_def,$old$v_serial_digits := coalesce(nullif(v_segments->>'serial', '')::integer, 2);$old$,$new$v_serial_digits := coalesce(nullif(v_segments->>'serial', '')::integer, 3);$new$);
   v_def := replace(v_def,
     $old$select id, parent_id, category_code into v_node$old$,
     $new$select id, parent_id, category_code, created_at into v_node$new$);
@@ -120,6 +122,28 @@ where p.policy_key='code_generation_registry' and left(p.policy_value,1)='{';
 
 update public.erp_program_policies p
 set policy_value=jsonb_set(p.policy_value::jsonb,'{customer_code,serial_digits}','2'::jsonb,true)::text,
+updated_at=now()
+where p.policy_key='code_generation_registry' and left(p.policy_value,1)='{';
+
+update public.erp_program_policies p
+set policy_value=jsonb_set(
+  jsonb_set(
+    jsonb_set(
+      jsonb_set(
+        jsonb_set(p.policy_value::jsonb,'{item_prefix}','"Itm"'::jsonb,true),
+        '{item_segments}','{"main":2,"sub":2,"secondary":2,"serial":3}'::jsonb,true
+      ),
+      '{category_prefix}','"Cat"'::jsonb,true
+    ),
+    '{category_segments}','{"main":2,"sub":2,"secondary":2}'::jsonb,true
+  ),
+  '{brand_prefix}','"Bra"'::jsonb,true
+)::text,
+updated_at=now()
+where p.policy_key='code_generation_registry' and left(p.policy_value,1)='{';
+
+update public.erp_program_policies p
+set policy_value=jsonb_set(p.policy_value::jsonb,'{brand_digits}','3'::jsonb,true)::text,
 updated_at=now()
 where p.policy_key='code_generation_registry' and left(p.policy_value,1)='{';
 
