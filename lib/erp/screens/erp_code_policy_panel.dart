@@ -120,8 +120,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       _fieldNames[key] = List.generate(3, (_) => TextEditingController());
       _fieldCounts[key] = List.generate(3, (_) => TextEditingController());
       if (key == 'customer') {
-        _fieldNames[key]![0].text = 'الدولة + المحافظة + الحي/المركز + المنطقة/القرية';
-        _fieldCounts[key]![0].text = '8';
+        _fieldNames[key]![0].text = 'المنطقة/القرية';
+        _fieldNames[key]![1].text = 'الحي/المركز';
+        _fieldNames[key]![2].text = 'المحافظة';
+        for (final count in _fieldCounts[key]!) { count.text = '2'; }
       }
     }
     _load();
@@ -566,16 +568,16 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
                 if (index.isEven) {
                   return _nameField(
                     _fieldNames[key]![slot],
-                    readOnly: key == 'customer' && slot == 0,
+                    readOnly: key == 'customer',
                   );
                 }
                 return SizedBox(
                   width: _countCellWidth,
                   height: _cellHeight,
-                  child: key == 'customer' && slot == 0
+                  child: key == 'customer'
                       ? const Center(
                           child: Text(
-                            '8',
+                            '2',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 11,
