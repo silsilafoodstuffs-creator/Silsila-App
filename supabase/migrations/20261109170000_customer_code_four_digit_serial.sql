@@ -1,5 +1,4 @@
 -- Customer codes inherit the full 8-digit geographic area code and append a 4-digit serial.
--- Customer codes inherit the full 8-digit geographic area code and append a 4-digit serial.
 create or replace function public.erp_assign_customer_geo_code()
 returns trigger language plpgsql security definer set search_path=''
 as $$
