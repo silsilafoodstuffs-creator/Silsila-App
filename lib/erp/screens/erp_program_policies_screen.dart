@@ -297,7 +297,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       'geo_code.district': {'prefix':'Dis','digits':2,'parent_digits':4},
       'geo_code.area': {'prefix':'Rig','digits':2,'parent_digits':6},      'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
       'category_code.sub': {'prefix':'Cat','digits':2,'parent_digits':2},
-      'category_code.secondary': {'prefix':'Cat','digits':2,'parent_digits':4},      'brand_code': {'prefix':'Bra','digits':3,'parent_digits':0},
+      'category_code.secondary': {'prefix':'Cat','digits':2,'parent_digits':4},
+      'brand_code': {'prefix':'Bra','digits':3,'parent_digits':0},
     };
     return Map<String, dynamic>.from(defaults[key] ?? defaults['geo_code.country']!);
   }
@@ -596,7 +597,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   TextEditingController _appearanceSizeController(Map<String, dynamic> policy) {
-    final key = (policy['key'] ?? '').toString();    final value = (_fontStyle(policy)['size'] ?? 10).toString();
+    final key = (policy['key'] ?? '').toString();
+    final value = (_fontStyle(policy)['size'] ?? 10).toString();
     final controller = _appearanceSizeControllers.putIfAbsent(key, () => TextEditingController(text: value));
     if (controller.text != value) {
       controller.value = TextEditingValue(text: value, selection: TextSelection.collapsed(offset: value.length));
@@ -895,7 +897,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                             elevation: 0, color: const Color(0xFFF5EFFB),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-                              child: SizedBox(width: 1200, child: Row(children: const [                                SizedBox(width: 34, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                              child: SizedBox(width: 1200, child: Row(children: const [
+                                SizedBox(width: 34, child: Text('م', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
                                 SizedBox(width: 82, child: Text('كود السياسة', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 8),
