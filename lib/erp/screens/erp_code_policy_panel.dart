@@ -22,11 +22,14 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'employee','name':'الموظفون','prefix':'Emp','digits':'5'},
     {'key':'user','name':'المستخدمون','prefix':'Usr','digits':'5'},
     {'key':'supplier','name':'الموردون','prefix':'Sup','digits':'5'},
-    {'key':'customer','name':'العملاء','prefix':'Cus','digits':'4'},
+    {'key':'customer','name':'العملاء','prefix':'Cus','digits':'2'},
+
     {'key':'delegate','name':'المندوبون','prefix':'Del','digits':'5'},
     {'key':'branch','name':'الفروع','prefix':'Brn','digits':'5'},
     {'key':'warehouse','name':'المخازن','prefix':'Whs','digits':'5'},
-    {'key':'category','name':'فئات الأصناف','prefix':'Cat','digits':'5'},
+    {'key':'category','name':'فئات الأصناف','prefix':'Cat','digits':'6'},
+    {'key':'brand','name':'البراندات','prefix':'Bra','digits':'3'},
+
     {'key':'department','name':'إدارات الموارد البشرية','prefix':'Dpt','digits':'5'},
     {'key':'job','name':'المسميات الوظيفية','prefix':'Job','digits':'5'},
     {'key':'work_location','name':'مواقع العمل','prefix':'Loc','digits':'5'},
@@ -97,8 +100,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     'main': TextEditingController(text: '2'),
     'sub': TextEditingController(text: '2'),
     'secondary': TextEditingController(text: '2'),
-    'brand': TextEditingController(text: '2'),
-    'serial': TextEditingController(text: '2'),
+        'serial': TextEditingController(text: '2'),
   };
   bool _itemAutomatic = true, _itemComposite = true;
   bool _loading = true, _saving = false;
@@ -118,7 +120,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       _fieldNames[key] = List.generate(3, (_) => TextEditingController());
       _fieldCounts[key] = List.generate(3, (_) => TextEditingController());
       if (key == 'customer') {
-        _fieldNames[key]![0].text = 'كود المنطقة';
+        _fieldNames[key]![0].text = 'الدولة + المحافظة + الحي/المركز + المنطقة/القرية';
         _fieldCounts[key]![0].text = '8';
       }
     }
@@ -143,6 +145,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     final p = _prefix[key]!.text.trim();
     final n = int.tryParse(_digits[key]!.text) ?? 5;
     final serial = key == 'program_policy' ? _nextProgramPolicySerial : 1;
+    if (key == 'category') return 'Cat010101';
+    if (key == 'brand') return 'Bra001';
     return '$p${serial.toString().padLeft(n.clamp(1, 12).toInt(), '0')}';
   }
 
@@ -247,6 +251,14 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'بادئة الأصناف يجب أن تكون 3 حروف إنجليزية بالضبط.');
       throw StateError(_error!);
     }
+    if (_digits['customer']!.text.trim() != '2') {
+      setState(() => _error = 'تسلسل كود العميل يجب أن يكون خانتين بالضبط.');
+      throw StateError(_error!);
+    }
+    if (_digits['brand']!.text.trim() != '3') {
+      setState(() => _error = 'تسلسل كود البراند يجب أن يكون ثلاث خانات بالضبط.');
+      throw StateError(_error!);
+    }
     for (final entry in _itemSegments.entries) {
       final value = int.tryParse(entry.value.text);
       if (value != 2) {
@@ -293,6 +305,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           'digits':int.parse(_digits[key]!.text),
           'automatic':_automatic[key] ?? true,
           'composite':_composite[key] ?? false,
+          'required':key == 'customer',
+          'apply_to_all':key == 'customer' ? true : null,
           'fields':fields,
         };
       }
@@ -311,12 +325,15 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         'item_automatic':_itemAutomatic,
         'item_composite':_itemComposite,
         'item_fields':[
-          {'name':'تسلسل','digits':itemSegments['serial']},
+          {'name':'تسلسل الصنف','digits':itemSegments['serial']},
           {'name':'فئة ثانوية','digits':itemSegments['secondary']},
-          {'name':'براند/ ماركة','digits':itemSegments['brand']},
           {'name':'فئة فرعية','digits':itemSegments['sub']},
           {'name':'فئة رئيسية','digits':itemSegments['main']},
         ],
+        'category_prefix':'Cat',
+        'category_segments':{'main':2,'sub':2,'secondary':2},
+        'brand_prefix':'Bra',
+        'brand_digits':3,
         'item_segments':itemSegments,
         'geo_prefix':_geoPrefix.text.trim(),
         // Legacy cumulative values are intentionally preserved for existing
@@ -402,11 +419,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       
       _field(_itemSegments['secondary']!,max:2,letters:false,changed:(){}),
       
-      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('براند/ ماركة',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
-      
-      _field(_itemSegments['brand']!,max:2,letters:false,changed:(){}),
-      
-      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('فئة فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('فئة فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))), 
       
       _field(_itemSegments['sub']!,max:2,letters:false,changed:(){}),
       
@@ -419,7 +432,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
       ])),
       SizedBox(width:112,child:Text(
-        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',
+        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',
         textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
     ])),
   );
@@ -580,7 +593,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
                 const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
               ])),
               SizedBox(width:112,child:Text(key=='customer'
-                ? 'Cus + منطقة 8 + ${'1'.padLeft(int.tryParse(_digits[key]!.text) ?? 4,'0')}'
+                ? 'Cus + الدولة 20 + المحافظة 01 + الحي/المركز 01 + المنطقة/القرية 01 + تسلسل 01'
                 : _preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
             ])));
         }),
@@ -598,13 +611,12 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             _segmentField('فئة رئيسية',_itemSegments['main']!,2),
             _segmentField('فئة فرعية',_itemSegments['sub']!,2),
             _segmentField('فئة ثانوية',_itemSegments['secondary']!,2),
-            _segmentField('براند/ ماركة',_itemSegments['brand']!,2),
-            _segmentField('تسلسل',_itemSegments['serial']!,2),
+            _segmentField('تسلسل الصنف',_itemSegments['serial']!,2),
           ]),
           const SizedBox(height:8),
-          Text('الصيغة: ${_itemPrefix.text.trim()} + فئة رئيسية (${_itemSegments['main']!.text}) + فئة فرعية (${_itemSegments['sub']!.text}) + فئة ثانوية (${_itemSegments['secondary']!.text}) + براند/ ماركة (${_itemSegments['brand']!.text}) + تسلسل (${_itemSegments['serial']!.text})',style:const TextStyle(fontSize:11)),
+          Text('الصيغة: ${_itemPrefix.text.trim()} + فئة رئيسية (${_itemSegments['main']!.text}) + فئة فرعية (${_itemSegments['sub']!.text}) + فئة ثانوية (${_itemSegments['secondary']!.text}) + تسلسل الصنف (${_itemSegments['serial']!.text})',style:const TextStyle(fontSize:11)),
           Text('المعاينة الأولى: ${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
-          const Text('القيم الافتراضية: 2 / 2 / 2 / 2 / 2. يمكن تعديل أطوال مستويات التقسيم الجغرافي من 1 إلى 6 خانات لكل مستوى.',style:TextStyle(fontSize:10,color:Colors.black54)),
+          const Text('القيم الافتراضية: 2 / 2 / 2 / 2. يمكن تعديل أطوال مستويات التقسيم الجغرافي من 1 إلى 6 خانات لكل مستوى.',style:TextStyle(fontSize:10,color:Colors.black54)),
         ]))),
         if(_error!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
         if(_message!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
