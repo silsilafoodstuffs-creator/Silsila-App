@@ -97,8 +97,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; }); if(propagateError) throw StateError(error!); return;}
     setState(() { loading=true; error=null; message=null; });
     try {
-      var rows=await db.from('erp_program_policies').select().eq('company_id',company);      if ((rows as List).isEmpty) {
-        final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();
+      var rows=await db.from('erp_program_policies').select().eq('company_id',company);      if ((rows as List).isEmpty) {        final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();
         await db.from('erp_program_policies').upsert(initial,onConflict:'company_id,policy_key');
         rows=await db.from('erp_program_policies').select().eq('company_id',company);
       }
@@ -197,8 +196,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         error = null;
       });
     } catch (e) {      if (mounted) setState(() => error = 'تعذر اختيار الشعار: $e');
-    }
-  }
+    }  }
 
   Future<void> _save() async {
     if (_programNameController.text.trim().isEmpty) {
@@ -297,8 +295,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Map<String, dynamic> _geoCodeConfig(Map<String, dynamic> policy) {
     try {      final parsed = jsonDecode((policy['value'] ?? '{}').toString());
       if (parsed is Map) return Map<String, dynamic>.from(parsed);
-    } catch (_) {}
-    final key = (policy['key'] ?? '').toString();
+    } catch (_) {}    final key = (policy['key'] ?? '').toString();
     const defaults = <String, Map<String, dynamic>>{
       'geo_code.country': {'prefix':'Con','digits':2,'parent_digits':0},
       'geo_code.governorate': {'prefix':'Gov','digits':2,'parent_digits':2},
@@ -397,8 +394,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         inputFormatters:[FilteringTextInputFormatter.digitsOnly],        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
         onChanged:(v){final n=int.tryParse(v);if(n!=null&&n>=1&&n<=2)update('digits',n);},
-      )),
-      const SizedBox(width:5),
+      )),      const SizedBox(width:5),
       Expanded(child:Text('$prefix$previewDigits',textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
     ]));
   }
@@ -497,8 +493,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Future<Uint8List> _buildCurrentPdf() async {
     final rows = await _currentExportRows();
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
-    final pdf = pw.Document();
-    pdf.addPage(pw.MultiPage(
+    final pdf = pw.Document();    pdf.addPage(pw.MultiPage(
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
         pw.Text('Silsila • ${tabs[tab]}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
@@ -597,8 +592,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                   ? Icon(Icons.check, size: 16, color: color.computeLuminance() < .45 ? Colors.white : Colors.black87)
                   : null,
             ),
-          )).toList(),
-        )),
+          )).toList(),        )),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء'))],
       ),
     );
@@ -697,8 +691,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final rows = _appearancePolicyKeys.map((key) => values[key]).whereType<Map<String, dynamic>>().toList();
     Widget headerCell(String label, double width) => SizedBox(width: width, child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)));
     Widget header = Card(
-      margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0, color: const Color(0xFFF5EFFB),
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3), child: SizedBox(width: 1200, child: Row(children: [
+      margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1), elevation: 0, color: const Color(0xFFF5EFFB),      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3), child: SizedBox(width: 1200, child: Row(children: [
         headerCell('م',34), const SizedBox(width:8), headerCell('كود السياسة',82), const SizedBox(width:8),
         headerCell('بيانات السياسة',225), const SizedBox(width:8), headerCell('القيمة / الاختيار',300), const SizedBox(width:4),
         headerCell('تفعيل',50), const SizedBox(width:4), headerCell('الكل',62), const SizedBox(width:4),
@@ -797,8 +790,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4),
             border: OutlineInputBorder(),
           ),
-          style: const TextStyle(fontSize: 10, color: Colors.black87),
-          items: options.map((v) => DropdownMenuItem<int>(value: v, child: Text('$v بكسل', maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
+          style: const TextStyle(fontSize: 10, color: Colors.black87),          items: options.map((v) => DropdownMenuItem<int>(value: v, child: Text('$v بكسل', maxLines: 1, overflow: TextOverflow.ellipsis))).toList(),
           onChanged: (v) { if (v != null) _updateLayoutDimension(policy, key, v); },
         ),
       ]),
@@ -896,9 +888,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
       Expanded(
-        child: tab == 7
-                    ? _buildFontsColorsGrid()
-                    : loading
+        child: tab == 1
+            ? ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)
+            : tab == 7
+                ? _buildFontsColorsGrid()                    : loading
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
                     ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
@@ -997,8 +990,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     : p['key'] == 'fiscal_year'
                                     ? Row(children: [
                                         Expanded(child: TextFormField(
-                                          key: ValueKey('fiscal-from-' + (p['value'] ?? '').toString()),
-                                          initialValue: ((p['value'] ?? '01/01 - 12/31').toString().split(' - ').first),
+                                          key: ValueKey('fiscal-from-' + (p['value'] ?? '').toString()),                                          initialValue: ((p['value'] ?? '01/01 - 12/31').toString().split(' - ').first),
                                           decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 5, vertical: 4), border: OutlineInputBorder()),
                                           style: const TextStyle(fontSize: 10),
                                           onChanged: (v) {
