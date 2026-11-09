@@ -405,7 +405,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
     decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
     child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
-      SizedBox(width:30,child:Text('${_types.length+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+      SizedBox(width:30,child:Text('${_types.length+3}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
       const SizedBox(width:150,child:Text('الأصناف',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
       SizedBox(width:52,child:Checkbox(value:_itemAutomatic,onChanged:(v)=>setState(()=>_itemAutomatic=v ?? true),visualDensity:VisualDensity.compact)),
       
@@ -464,7 +464,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
     decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
     child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
-      SizedBox(width:30,child:Text('${_types.length+2}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+      SizedBox(width:30,child:Text('4',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
       const SizedBox(width:150,child:Text('تكويد العملاء',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
