@@ -18,15 +18,20 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان','جغرافية','الكل'];
+  static const tabs = ['برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان','سياسات الأكواد','الكل'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'visual_identity.program_name','category':'برمجية','ar':'اسم المشروع','en':'Project name','value':'سلسلة','mandatory':true,'all':true},
     {'key':'visual_identity.logo','category':'برمجية','ar':'شعار المشروع','en':'Project logo','value':'','mandatory':true,'all':true},
     {'key':'code_generation_registry','category':'تكويدية','ar':'سياسات التكويد المركزي','en':'Central code generation policies','value':'إعدادات التكويد المركزي','mandatory':true,'all':true},
-    {'key':'geo_code.country','category':'جغرافية','ar':'سياسة تكويد دول','en':'Country coding policy','value':'{"prefix":"Con","digits":2,"parent_digits":0}','mandatory':true,'all':true},
-    {'key':'geo_code.governorate','category':'جغرافية','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
-    {'key':'geo_code.district','category':'جغرافية','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
-    {'key':'geo_code.area','category':'جغرافية','ar':'سياسة تكويد مناطق/قرى','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
+    {'key':'geo_code.country','category':'سياسات الأكواد','ar':'سياسة تكويد دول','en':'Country coding policy','value':'{"prefix":"Con","digits":2,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'geo_code.governorate','category':'سياسات الأكواد','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
+    {'key':'geo_code.district','category':'سياسات الأكواد','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
+    {'key':'geo_code.area','category':'سياسات الأكواد','ar':'سياسة تكويد مناطق/قرى','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
+    {'key':'category_code.main','category':'سياسات الأكواد','ar':'سياسة تكويد فئات أصناف رئيسية','en':'Main item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'category_code.sub','category':'سياسات الأكواد','ar':'سياسة تكويد فئات أصناف فرعية','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
+    {'key':'category_code.secondary','category':'سياسات الأكواد','ar':'سياسة تكويد فئات أصناف ثانوية','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
+    {'key':'brand_code','category':'سياسات الأكواد','ar':'سياسة تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":3,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'item_code','category':'سياسات الأكواد','ar':'سياسة تكويد الأصناف','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"serial_digits":3}','mandatory':true,'all':true},
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
     {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":50,"field_height":40,"column_spacing":3}','mandatory':true,'all':true},
@@ -236,6 +241,22 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         throw StateError(error!);
       }
     }
+    const expectedCodePolicies = <String, Map<String, dynamic>>{
+      'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
+      'category_code.sub': {'prefix':'Cat','digits':2,'parent_digits':2},
+      'category_code.secondary': {'prefix':'Cat','digits':2,'parent_digits':4},
+      'brand_code': {'prefix':'Bra','digits':3,'parent_digits':0},
+    };
+    for (final entry in expectedCodePolicies.entries) {
+      final config = _geoCodeConfig(values[entry.key]!);
+      if (config['prefix'] != entry.value['prefix'] || config['digits'] != entry.value['digits'] || config['parent_digits'] != entry.value['parent_digits']) {
+        throw StateError('صيغة السياسة ${values[entry.key]!['ar']} ثابتة حسب تقسيم الأكواد المعتمد.');
+      }
+    }
+    final itemCode = _itemCodeConfig(values['item_code']!);
+    if (itemCode['prefix'] != 'Itm' || itemCode['category_digits'] != 6 || itemCode['serial_digits'] != 3) {
+      throw StateError('سياسة كود الصنف ثابتة على Itm + 6 أرقام للفئة الثانوية + 3 أرقام للتسلسل.');
+    }
     setState(() { saving=true; error=null; message=null; });
     try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key');
       final settings = await db.from('erp_program_settings').select().eq('company_id',company).maybeSingle();
@@ -281,8 +302,43 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       'geo_code.governorate': {'prefix':'Gov','digits':2,'parent_digits':2},
       'geo_code.district': {'prefix':'Dis','digits':2,'parent_digits':4},
       'geo_code.area': {'prefix':'Rig','digits':2,'parent_digits':6},
+      'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
+      'category_code.sub': {'prefix':'Cat','digits':2,'parent_digits':2},
+      'category_code.secondary': {'prefix':'Cat','digits':2,'parent_digits':4},
+      'brand_code': {'prefix':'Bra','digits':3,'parent_digits':0},
     };
     return Map<String, dynamic>.from(defaults[key] ?? defaults['geo_code.country']!);
+  }
+
+  Map<String, dynamic> _itemCodeConfig(Map<String, dynamic> policy) {
+    try {
+      final parsed = jsonDecode((policy['value'] ?? '{}').toString());
+      if (parsed is Map) return Map<String, dynamic>.from(parsed);
+    } catch (_) {}
+    return {'prefix':'Itm','category_digits':6,'serial_digits':3};
+  }
+
+  Widget _itemCodeEditor(Map<String, dynamic> policy) {
+    final config = _itemCodeConfig(policy);
+    final prefix = (config['prefix'] ?? 'Itm').toString();
+    final serialDigits = int.tryParse((config['serial_digits'] ?? 3).toString()) ?? 3;
+    return SizedBox(width:300,height:40,child:Row(children:[
+      SizedBox(width:66,height:40,child:TextFormField(
+        key:ValueKey('item-code-prefix-$prefix'),initialValue:prefix,readOnly:true,textAlign:TextAlign.center,maxLength:3,
+        decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
+        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
+      )),
+      const SizedBox(width:4),
+      const SizedBox(width:48,height:40,child:Center(child:Text('6',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)))),
+      const SizedBox(width:4),
+      SizedBox(width:48,height:40,child:TextFormField(
+        key:ValueKey('item-code-serial-$serialDigits'),initialValue:serialDigits.toString(),readOnly:true,textAlign:TextAlign.center,maxLength:1,
+        decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
+        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
+      )),
+      const SizedBox(width:5),
+      const Expanded(child:Text('Itm + 6 + 3 = 9 أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
+    ]));
   }
 
   Widget _geoCodeEditor(Map<String, dynamic> policy) {
@@ -894,9 +950,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF18865A), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ])),
                                   const SizedBox(width: 8),
-                                  SizedBox(width: 300, child: (p['key'] as String).startsWith('geo_code.')
+                                  SizedBox(width: 300, child: ((p['key'] as String).startsWith('geo_code.') || (p['key'] as String).startsWith('category_code.') || p['key'] == 'brand_code')
                                     ? _geoCodeEditor(p)
-                                    : p['key'] == 'code_generation_registry'
+                                    : p['key'] == 'item_code'
+                                      ? _itemCodeEditor(p)
+                                      : p['key'] == 'code_generation_registry'
                                       ? const Text('إعدادات التكويد المركزي', style: TextStyle(fontSize:10,fontWeight:FontWeight.w600))
                                       : p['key'] == 'visual_identity.program_name'
                                     ? TextField(
