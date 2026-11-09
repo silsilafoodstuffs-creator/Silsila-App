@@ -360,6 +360,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     return SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
         key:ValueKey('geo-prefix-${policy['key']}-$prefix'),initialValue:prefix,
+        readOnly:key.startsWith('category_code.') || key == 'brand_code',
         textAlign:TextAlign.center,maxLength:3,
         inputFormatters:[FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]'))],
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
@@ -369,6 +370,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       const SizedBox(width:4),
       SizedBox(width:48,height:40,child:TextFormField(
         key:ValueKey('geo-digits-${policy['key']}-$digits'),initialValue:digits.toString(),
+        readOnly:key.startsWith('category_code.') || key == 'brand_code',
         textAlign:TextAlign.center,maxLength:2,keyboardType:TextInputType.number,
         inputFormatters:[FilteringTextInputFormatter.digitsOnly],
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
