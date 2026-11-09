@@ -10,9 +10,28 @@ begin
     $old$and (c.category_code, c.id) <= (v_node.category_code, v_node.id);$old$,
     $new$and (c.created_at, c.id) <= (v_node.created_at, v_node.id);$new$);
   v_def := replace(v_def,
+    $old$      and c.activity_code is not distinct from (
+        select activity_code from public.erp_item_categories where id = new.category_id
+      )
+      and (c.created_at, c.id) <= (v_node.created_at, v_node.id);$old$,
+    $new$      and (c.created_at, c.id) <= (v_node.created_at, v_node.id);$new$);
+  v_def := replace(v_def,
     $old$    select count(*) + 1 into v_rank$old$,
     $new$    perform pg_advisory_xact_lock(hashtextextended(new.company_id::text || ':category:' || coalesce(new.activity_code, '') || ':' || coalesce(new.parent_id::text, 'root'), 0));
     select count(*) + 1 into v_rank$new$);
+  v_def := replace(v_def,
+    $old$        and c.activity_code is not distinct from new.activity_code
+        and c.parent_id is not distinct from v_node.parent_id
+        and (c.created_at, c.id) <= (v_node.created_at, v_node.id);$old$,
+    $new$        and c.parent_id is not distinct from v_node.parent_id
+        and (c.created_at, c.id) <= (v_node.created_at, v_node.id);$new$);
+  v_def := replace(v_def,
+    $old$      and c.activity_code is not distinct from new.activity_code
+      and c.parent_id is not distinct from new.parent_id;$old$,
+    $new$      and c.parent_id is not distinct from new.parent_id;$new$);
+  v_def := replace(v_def,
+    $old$perform pg_advisory_xact_lock(hashtextextended(new.company_id::text || ':category:' || coalesce(new.activity_code, '') || ':' || coalesce(new.parent_id::text, 'root'), 0));$old$,
+    $new$perform pg_advisory_xact_lock(hashtextextended(new.company_id::text || ':category:' || coalesce(new.parent_id::text, 'root'), 0));$new$);
   if position('v_node.created_at' in v_def) = 0 or position('pg_advisory_xact_lock' in v_def) = 0 then
     raise exception 'Category hierarchical-code migration did not apply completely';
   end if;
@@ -53,6 +72,29 @@ begin
   end if;
   execute v_def;
 end $;
+
+
+with recursive category_tree as (
+  select c.id,c.company_id,c.parent_id,c.created_at,
+         'Cat'||lpad(row_number() over(partition by c.company_id order by c.created_at,c.id)::text,2,'0') as generated_code
+  from public.erp_item_categories c
+  where c.parent_id is null
+  union all
+  select c.id,c.company_id,c.parent_id,c.created_at,
+         p.generated_code||lpad((
+           select count(*)::text
+           from public.erp_item_categories sibling
+           where sibling.company_id=c.company_id
+             and sibling.parent_id is not distinct from c.parent_id
+             and (sibling.created_at,sibling.id) <= (c.created_at,c.id)
+         ),2,'0')
+  from public.erp_item_categories c
+  join category_tree p on p.id=c.parent_id
+)
+update public.erp_item_categories c
+set category_code=t.generated_code,updated_at=now()
+from category_tree t
+where c.id=t.id and c.category_code is distinct from t.generated_code;
 
 update public.erp_program_policies
 set category = 'سياسات الأكواد', updated_at = now()
