@@ -27,8 +27,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'delegate','name':'المندوبون','prefix':'Del','digits':'5'},
     {'key':'branch','name':'الفروع','prefix':'Brn','digits':'5'},
     {'key':'warehouse','name':'المخازن','prefix':'Whs','digits':'5'},
-    {'key':'category','name':'فئات الأصناف','prefix':'Cat','digits':'6'},
-    {'key':'brand','name':'البراندات','prefix':'Bra','digits':'3'},
 
     {'key':'department','name':'إدارات الموارد البشرية','prefix':'Dpt','digits':'5'},
     {'key':'job','name':'المسميات الوظيفية','prefix':'Job','digits':'5'},
@@ -100,7 +98,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     'main': TextEditingController(text: '2'),
     'sub': TextEditingController(text: '2'),
     'secondary': TextEditingController(text: '2'),
-        'serial': TextEditingController(text: '2'),
+        'serial': TextEditingController(text: '3'),
   };
   bool _itemAutomatic = true, _itemComposite = true;
   bool _loading = true, _saving = false;
@@ -147,8 +145,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     final p = _prefix[key]!.text.trim();
     final n = int.tryParse(_digits[key]!.text) ?? 5;
     final serial = key == 'program_policy' ? _nextProgramPolicySerial : 1;
-    if (key == 'category') return 'Cat010101';
-    if (key == 'brand') return 'Bra001';
     return '$p${serial.toString().padLeft(n.clamp(1, 12).toInt(), '0')}';
   }
 
@@ -207,6 +203,11 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         for (final key in _itemSegments.keys) {
           if (segments[key] != null) _itemSegments[key]!.text = segments[key].toString();
         }
+        _itemPrefix.text = 'Itm';
+        _itemSegments['main']!.text = '2';
+        _itemSegments['sub']!.text = '2';
+        _itemSegments['secondary']!.text = '2';
+        _itemSegments['serial']!.text = '3';
       }
     } catch (e) {
       _error = 'تعذر تحميل إعدادات التكويد: $e';
@@ -240,14 +241,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'بادئة كود العميل ثابتة على Cus.');
       throw StateError(_error!);
     }
-    if (_prefix['category']!.text.trim() != 'Cat' || _digits['category']!.text.trim() != '6') {
-      setState(() => _error = 'سياسة فئات الأصناف ثابتة على Cat وست خانات (2 + 2 + 2).');
-      throw StateError(_error!);
-    }
-    if (_prefix['brand']!.text.trim() != 'Bra' || _digits['brand']!.text.trim() != '3') {
-      setState(() => _error = 'سياسة البراند ثابتة على Bra وثلاث خانات.');
-      throw StateError(_error!);
-    }
     if (_prefix['program_policy']!.text.trim() != 'Pol') {
       setState(() => _error = 'بادئة أكواد سياسات البرنامج ثابتة على Pol لضمان تطابق الأكواد المعروضة.');
       throw StateError(_error!);
@@ -257,8 +250,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'يجب أن تكون كل بادئة فريدة، وألا تتكرر مع بادئة الأصناف.');
       throw StateError(_error!);
     }
-    if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(_itemPrefix.text.trim())) {
-      setState(() => _error = 'بادئة الأصناف يجب أن تكون 3 حروف إنجليزية بالضبط.');
+    if (_itemPrefix.text.trim() != 'Itm') {
+      setState(() => _error = 'بادئة كود الأصناف ثابتة على Itm.');
       throw StateError(_error!);
     }
     if (_digits['customer']!.text.trim() != '2') {
@@ -271,8 +264,9 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     }
     for (final entry in _itemSegments.entries) {
       final value = int.tryParse(entry.value.text);
-      if (value != 2) {
-        final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','brand':'البراند/الماركة','serial':'تسلسل'}[entry.key];
+      final expected = entry.key == 'serial' ? 3 : 2;
+      if (value != expected) {
+        final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','serial':'تسلسل'}[entry.key];
         setState(() => _error = 'عدد خانات $label يجب أن يكون 2 بالضبط.');
         throw StateError(_error!);
       }
@@ -423,7 +417,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       
       _firstFieldName(),
       
-      _field(_itemSegments['serial']!,max:2,letters:false,changed:(){}),
+      _field(_itemSegments['serial']!,max:3,letters:false,changed:(){}),
       
       const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('فئة ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
       
@@ -628,12 +622,12 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             _segmentField('فئة رئيسية',_itemSegments['main']!,2),
             _segmentField('فئة فرعية',_itemSegments['sub']!,2),
             _segmentField('فئة ثانوية',_itemSegments['secondary']!,2),
-            _segmentField('تسلسل الصنف',_itemSegments['serial']!,2),
+            _segmentField('تسلسل الصنف',_itemSegments['serial']!,3),
           ]),
           const SizedBox(height:8),
-          Text('الصيغة: ${_itemPrefix.text.trim()} + فئة رئيسية (${_itemSegments['main']!.text}) + فئة فرعية (${_itemSegments['sub']!.text}) + فئة ثانوية (${_itemSegments['secondary']!.text}) + تسلسل الصنف (${_itemSegments['serial']!.text})',style:const TextStyle(fontSize:11)),
-          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
-          const Text('القيم الافتراضية: 2 / 2 / 2 / 2. يمكن تعديل أطوال مستويات التقسيم الجغرافي من 1 إلى 6 خانات لكل مستوى.',style:TextStyle(fontSize:10,color:Colors.black54)),
+          Text('الصيغة: ${_itemPrefix.text.trim()} + كود الفئة الثانوية بدون Cat (6 أرقام) + تسلسل الصنف (3 أرقام)',style:const TextStyle(fontSize:11)),
+          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}010101001',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
+          const Text('كود الصنف = Itm + 6 أرقام الفئة الثانوية + 3 أرقام تسلسل (9 أرقام رقمية بعد البادئة). مستويات Cat ثابتة على 2 + 2 + 2.',style:TextStyle(fontSize:10,color:Colors.black54)),
         ]))),
         if(_error!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
         if(_message!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
