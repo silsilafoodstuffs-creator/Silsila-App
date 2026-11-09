@@ -238,6 +238,14 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'بادئة كود العميل ثابتة على Cus.');
       throw StateError(_error!);
     }
+    if (_prefix['category']!.text.trim() != 'Cat' || _digits['category']!.text.trim() != '6') {
+      setState(() => _error = 'سياسة فئات الأصناف ثابتة على Cat وست خانات (2 + 2 + 2).');
+      throw StateError(_error!);
+    }
+    if (_prefix['brand']!.text.trim() != 'Bra' || _digits['brand']!.text.trim() != '3') {
+      setState(() => _error = 'سياسة البراند ثابتة على Bra وثلاث خانات.');
+      throw StateError(_error!);
+    }
     if (_prefix['program_policy']!.text.trim() != 'Pol') {
       setState(() => _error = 'بادئة أكواد سياسات البرنامج ثابتة على Pol لضمان تطابق الأكواد المعروضة.');
       throw StateError(_error!);
@@ -615,7 +623,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           ]),
           const SizedBox(height:8),
           Text('الصيغة: ${_itemPrefix.text.trim()} + فئة رئيسية (${_itemSegments['main']!.text}) + فئة فرعية (${_itemSegments['sub']!.text}) + فئة ثانوية (${_itemSegments['secondary']!.text}) + تسلسل الصنف (${_itemSegments['serial']!.text})',style:const TextStyle(fontSize:11)),
-          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
+          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
           const Text('القيم الافتراضية: 2 / 2 / 2 / 2. يمكن تعديل أطوال مستويات التقسيم الجغرافي من 1 إلى 6 خانات لكل مستوى.',style:TextStyle(fontSize:10,color:Colors.black54)),
         ]))),
         if(_error!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
