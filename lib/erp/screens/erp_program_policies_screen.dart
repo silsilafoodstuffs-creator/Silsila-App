@@ -620,7 +620,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       child: Padding(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3), child: SizedBox(width: 1200, child: Row(children: [
         headerCell('م',34), const SizedBox(width:8), headerCell('كود السياسة',82), const SizedBox(width:8),
         headerCell('بيانات السياسة',225), const SizedBox(width:8), headerCell('القيمة / الاختيار',300), const SizedBox(width:4),
-        headerCell('تفعيل',50), const SizedBox(width:4), headerCell('الكل/مستخدمون',62), const SizedBox(width:4),
+        headerCell('تفعيل',50), const SizedBox(width:4), headerCell('الكل',62), const SizedBox(width:4),
         headerCell('تحديد\nمستخدمين',80), const SizedBox(width:4), headerCell('عدد المحدد',58),
       ]))),
     );
@@ -852,7 +852,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                 SizedBox(width: 4),
                                 SizedBox(width: 50, child: Text('تفعيل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 4),
-                                SizedBox(width: 62, child: Text('الكل/مستخدمون', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 62, child: Text('الكل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 4),
                                 SizedBox(width: 80, child: Text('تحديد\nمستخدمين', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 4),
@@ -965,7 +965,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                   const SizedBox(width: 4),
                                   checkColumn('تفعيل', mandatory || p['enabled'] == true, mandatory ? null : (v) => setState(() => p['enabled'] = v == true), 50),
                                   const SizedBox(width: 4),
-                                  checkColumn('الكل/مستخدمون', mandatory || all, mandatory ? null : (v) => setState(() { p['all'] = v == true; if (v == true) p['user_ids'] = <String>[]; }), 62),
+                                  checkColumn('الكل', mandatory || all, mandatory ? null : (v) => setState(() { p['all'] = v == true; if (v == true) p['user_ids'] = <String>[]; }), 62),
                                   const SizedBox(width: 4),
                                   SizedBox(width: 80, height: 34, child: Focus(
                                     onKeyEvent: (node, event) {
