@@ -400,6 +400,24 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     child:Center(child:Text('تسلسل',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
   );
 
+  Widget _brandPolicyCard() => Card(
+    elevation:0,
+    color:const Color(0xFFFFF4E5),
+    child:Padding(
+      padding:const EdgeInsets.all(10),
+      child:Column(
+        crossAxisAlignment:CrossAxisAlignment.stretch,
+        children:[
+          const Text('سياسة تكويد البراند / الماركة',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
+          const SizedBox(height:5),
+          const Text('بادئة ثابتة Bra تليها 3 أرقام متسلسلة، دون إضافة بادئة جغرافية أو حروف أخرى.',style:TextStyle(fontSize:11)),
+          const SizedBox(height:5),
+          const Text('المعاينة الأولى: Bra001',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)),
+        ],
+      ),
+    ),
+  );
+
   Widget _itemPolicyRow() => Container(
     margin:const EdgeInsets.symmetric(vertical:2),
     padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
@@ -582,29 +600,17 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
                 if (index.isEven) {
                   return _nameField(
                     _fieldNames[key]![slot],
-                    readOnly: key == 'customer',
                   );
                 }
                 return SizedBox(
                   width: _countCellWidth,
                   height: _cellHeight,
-                  child: key == 'customer'
-                      ? const Center(
-                          child: Text(
-                            '2',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        )
-                      : _field(
-                          _fieldCounts[key]![slot],
-                          max: 2,
-                          letters: false,
-                          changed: () {},
-                        ),
+                  child: _field(
+                    _fieldCounts[key]![slot],
+                    max: 2,
+                    letters: false,
+                    changed: () {},
+                  ),
                 );
               }),
               
@@ -613,12 +619,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
               const SizedBox(width:_countCellWidth,height:_cellHeight),
               
               SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
-                key=='customer' ? const Text('Cus',textAlign:TextAlign.center,style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)) : _field(_prefix[key]!,max:3,letters:true,changed:(){}),
+                _field(_prefix[key]!,max:3,letters:true,changed:(){}),
                 const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
               ])),
-              SizedBox(width:112,child:Text(key=='customer'
-                ? 'Cus + الدولة ${_geoSegments['country']!.text} + المحافظة 01 + الحي/المركز 01 + المنطقة/القرية 01 + تسلسل 01'
-                : _preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+              SizedBox(width:112,child:Text(_preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
             ])));
         }),
         Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
@@ -628,6 +632,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           const SizedBox(height:6),
           const Text('المعاينة: Cat + 01 + 01 + 01 = Cat010101',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)),
         ]))),
+        _brandPolicyCard(),
         Card(elevation:0,color:const Color(0xFFFFF4E5),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('تفاصيل تركيب كود الأصناف',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
           const SizedBox(height:5),
