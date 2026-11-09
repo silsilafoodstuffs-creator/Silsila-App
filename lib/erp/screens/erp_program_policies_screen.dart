@@ -18,11 +18,11 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['الكل','سياسات الأكواد','الخطوط والألوان','برمجية','محاسبية','مخزنية','بيعية','شرائية','إدارية'];
+  static const tabs = ['برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان','سياسات الأكواد','الكل'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'visual_identity.program_name','category':'برمجية','ar':'اسم المشروع','en':'Project name','value':'سلسلة','mandatory':true,'all':true},
     {'key':'visual_identity.logo','category':'برمجية','ar':'شعار المشروع','en':'Project logo','value':'','mandatory':true,'all':true},
-    {'key':'code_generation_registry','category':'سياسات الأكواد','ar':'سياسات التكويد المركزي','en':'Central code generation policies','value':'إعدادات التكويد المركزي','mandatory':true,'all':true},
+    {'key':'code_generation_registry','category':'تكويدية','ar':'سياسات التكويد المركزي','en':'Central code generation policies','value':'إعدادات التكويد المركزي','mandatory':true,'all':true},
     {'key':'geo_code.country','category':'سياسات الأكواد','ar':'سياسة تكويد دول','en':'Country coding policy','value':'{"prefix":"Con","digits":2,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'geo_code.governorate','category':'سياسات الأكواد','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'geo_code.district','category':'سياسات الأكواد','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
@@ -882,7 +882,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       Expanded(
         child: tab == 1
             ? ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)
-                : tab == 2
+                : tab == 7
                     ? _buildFontsColorsGrid()
                     : loading
                 ? const Center(child: CircularProgressIndicator())
