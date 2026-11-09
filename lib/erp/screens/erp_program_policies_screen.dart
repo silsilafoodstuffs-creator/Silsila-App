@@ -18,12 +18,12 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان','سياسات الأكواد','الكل'];
+  static const tabs = ['برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان','الكل'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'visual_identity.program_name','category':'برمجية','ar':'اسم المشروع','en':'Project name','value':'سلسلة','mandatory':true,'all':true},
     {'key':'visual_identity.logo','category':'برمجية','ar':'شعار المشروع','en':'Project logo','value':'','mandatory':true,'all':true},
     {'key':'code_generation_registry','category':'تكويدية','ar':'سياسات التكويد المركزي','en':'Central code generation policies','value':'إعدادات التكويد المركزي','mandatory':true,'all':true},
-    {'key':'geo_code.country','category':'سياسات الأكواد','ar':'سياسة تكويد دول','en':'Country coding policy','value':'{"prefix":"Con","digits":2,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'geo_code.country','category':'تكويدية','ar':'سياسة تكويد دول','en':'Country coding policy','value':'{"prefix":"Con","digits":2,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'geo_code.governorate','category':'سياسات الأكواد','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'geo_code.district','category':'سياسات الأكواد','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
     {'key':'geo_code.area','category':'سياسات الأكواد','ar':'سياسة تكويد مناطق/قرى','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
@@ -97,8 +97,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; }); if(propagateError) throw StateError(error!); return;}
     setState(() { loading=true; error=null; message=null; });
     try {
-      var rows=await db.from('erp_program_policies').select().eq('company_id',company);      if ((rows as List).isEmpty) {        final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();
-        await db.from('erp_program_policies').upsert(initial,onConflict:'company_id,policy_key');
+      var rows=await db.from('erp_program_policies').select().eq('company_id',company);      if ((rows as List).isEmpty) {        final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();        await db.from('erp_program_policies').upsert(initial,onConflict:'company_id,policy_key');
         rows=await db.from('erp_program_policies').select().eq('company_id',company);
       }
       final existingKeys = (rows as List).whereType<Map<String,dynamic>>().map((row)=>(row['policy_key']??'').toString()).toSet();
@@ -197,7 +196,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       });
     } catch (e) {      if (mounted) setState(() => error = 'تعذر اختيار الشعار: $e');
     }  }
-
   Future<void> _save() async {
     if (_programNameController.text.trim().isEmpty) {
       setState(() { error = 'اسم المشروع مطلوب.'; });
@@ -297,8 +295,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       if (parsed is Map) return Map<String, dynamic>.from(parsed);
     } catch (_) {}    final key = (policy['key'] ?? '').toString();
     const defaults = <String, Map<String, dynamic>>{
-      'geo_code.country': {'prefix':'Con','digits':2,'parent_digits':0},
-      'geo_code.governorate': {'prefix':'Gov','digits':2,'parent_digits':2},
+      'geo_code.country': {'prefix':'Con','digits':2,'parent_digits':0},      'geo_code.governorate': {'prefix':'Gov','digits':2,'parent_digits':2},
       'geo_code.district': {'prefix':'Dis','digits':2,'parent_digits':4},
       'geo_code.area': {'prefix':'Rig','digits':2,'parent_digits':6},
       'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
@@ -398,7 +395,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       Expanded(child:Text('$prefix$previewDigits',textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
     ]));
   }
-
   Future<void> _previewCurrentTab() async {
     final current = values.values.where((p) => tabs[tab] == 'الكل' || p['category'] == tabs[tab]).toList();
     await showDialog<void>(
@@ -497,8 +493,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
         pw.Text('Silsila • ${tabs[tab]}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-        pw.SizedBox(height: 10),
-        pw.TableHelper.fromTextArray(headers: rows.first, data: rows.skip(1).toList()),
+        pw.SizedBox(height: 10),        pw.TableHelper.fromTextArray(headers: rows.first, data: rows.skip(1).toList()),
       ],
     ));
     return Uint8List.fromList(await pdf.save());
@@ -597,8 +592,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       ),
     );
     if (selected == null || !mounted) return;
-    final hex = '#${selected.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
-    setState(() {
+    final hex = '#${selected.toARGB32().toRadixString(16).substring(2).toUpperCase()}';    setState(() {
       if (fontStyle) {
         final style = _fontStyle(policy)..['color'] = hex;
         policy['value'] = jsonEncode(style);
@@ -697,8 +691,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         headerCell('تفعيل',50), const SizedBox(width:4), headerCell('الكل',62), const SizedBox(width:4),
         headerCell('تحديد\nمستخدمين',80), const SizedBox(width:4), headerCell('عدد المحدد',58),
       ]))),
-    );
-    return Scrollbar(controller: _policyVerticalController, thumbVisibility: true, scrollbarOrientation: ScrollbarOrientation.left,
+    );    return Scrollbar(controller: _policyVerticalController, thumbVisibility: true, scrollbarOrientation: ScrollbarOrientation.left,
       child: Scrollbar(controller: _policyHorizontalController, thumbVisibility: true, scrollbarOrientation: ScrollbarOrientation.bottom,
         child: SingleChildScrollView(controller: _policyHorizontalController, scrollDirection: Axis.horizontal,
           child: SizedBox(width: 1200, child: ListView(controller: _policyVerticalController, padding: const EdgeInsets.fromLTRB(5,1,5,3), children: [
@@ -797,8 +790,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
+      mainAxisSize: MainAxisSize.min,      children: [
         selector('ارتفاع الصفوف', 'row_height', [30, 35, 40, 45, 50, 55, 60, 70, 80, 100]),
         const SizedBox(height: 3),
         selector('ارتفاع الخانات', 'field_height', [20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 100]),
@@ -826,6 +818,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget build(BuildContext context) {
     final query = policySearch.trim().toLowerCase();
     final list = values.values.where((p) {
+      if (tab == 1 && p['key'] == 'code_generation_registry') return false;
       if (tabs[tab] != 'الكل' && p['category'] != tabs[tab]) return false;
       if (query.isEmpty) return true;
       final ar = (p['ar'] ?? '').toString().toLowerCase();
@@ -888,17 +881,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
       Expanded(
-        child: tab == 1
-            ? ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)
-            : tab == 7
+        child: tab == 7
                 ? _buildFontsColorsGrid()                    : loading
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
                     ? Center(child: Text(query.isEmpty ? 'لا توجد سياسات في هذه المجموعة.' : 'لا توجد سياسات تطابق البحث.', style: const TextStyle(fontSize: 12)))
                     : Scrollbar(
                       controller: _policyVerticalController,
-                      thumbVisibility: true,
-                      scrollbarOrientation: ScrollbarOrientation.left,
+                      thumbVisibility: true,                      scrollbarOrientation: ScrollbarOrientation.left,
                       child: Scrollbar(
                         controller: _policyHorizontalController,
                         thumbVisibility: true,
@@ -910,6 +900,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                         controller: _policyVerticalController,
                         padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
                         children: [
+                          if (tab == 1) SizedBox(height: 320, child: ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)),
                           Card(
                             margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
                             elevation: 0, color: const Color(0xFFF5EFFB),
@@ -997,8 +988,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                             final parts = (p['value'] ?? '01/01 - 12/31').toString().split(' - ');
                                             p['value'] = '${v.trim()} - ${parts.length > 1 ? parts[1] : '12/31'}';
                                           },
-                                        )),
-                                        const SizedBox(width: 4),
+                                        )),                                        const SizedBox(width: 4),
                                         Expanded(child: TextFormField(
                                           key: ValueKey('fiscal-to-' + (p['value'] ?? '').toString()),
                                           initialValue: ((p['value'] ?? '01/01 - 12/31').toString().split(' - ').length > 1 ? (p['value'] ?? '01/01 - 12/31').toString().split(' - ')[1] : '12/31'),
