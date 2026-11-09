@@ -277,7 +277,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       ancestorSiblings.sort((a,b) {
         final aDate = DateTime.tryParse(_s(a['created_at']));
         final bDate = DateTime.tryParse(_s(b['created_at']));
-        if (aDate != null && bDate != null) return aDate.compareTo(bDate);
+        if (aDate != null && bDate != null) {
+          final byDate = aDate.compareTo(bDate);
+          return byDate != 0 ? byDate : _s(a['id']).compareTo(_s(b['id']));
+        }
         if (aDate != null) return -1;
         if (bDate != null) return 1;
         return _all.indexOf(a).compareTo(_all.indexOf(b));
