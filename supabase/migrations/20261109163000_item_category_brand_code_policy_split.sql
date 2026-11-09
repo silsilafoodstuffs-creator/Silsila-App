@@ -4,6 +4,12 @@ declare v_def text;
 begin
   v_def := pg_get_functiondef('public.erp_item_categories_validate_tree_and_code()'::regprocedure);
   v_def := replace(v_def,
+    $old$select id, parent_id, category_code, company_id, activity_code$old$,
+    $new$select id, parent_id, category_code, company_id, activity_code, created_at$new$);
+  v_def := replace(v_def,
+    $old$and (c.category_code, c.id) <= (v_node.category_code, v_node.id);$old$,
+    $new$and (c.created_at, c.id) <= (v_node.created_at, v_node.id);$new$);
+  v_def := replace(v_def,
     $old$        and c.activity_code is not distinct from new.activity_code
         and c.parent_id is not distinct from v_node.parent_id$old$,
     $new$        and c.parent_id is not distinct from v_node.parent_id$new$);
@@ -24,6 +30,12 @@ begin
   execute v_def;
 
   v_def := pg_get_functiondef('public.erp_assign_item_hierarchical_code()'::regprocedure);
+  v_def := replace(v_def,
+    $old$select id, parent_id, category_code into v_node$old$,
+    $new$select id, parent_id, category_code, created_at into v_node$new$);
+  v_def := replace(v_def,
+    $old$and (c.category_code, c.id) <= (v_node.category_code, v_node.id);$old$,
+    $new$and (c.created_at, c.id) <= (v_node.created_at, v_node.id);$new$);
   v_def := replace(v_def,
     $old$      and c.parent_id is not distinct from v_node.parent_id
       and c.activity_code is not distinct from (
