@@ -22,7 +22,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     {'key':'employee','name':'الموظفون','prefix':'Emp','digits':'5'},
     {'key':'user','name':'المستخدمون','prefix':'Usr','digits':'5'},
     {'key':'supplier','name':'الموردون','prefix':'Sup','digits':'5'},
-    {'key':'customer','name':'العملاء','prefix':'Cus','digits':'2'},
 
     {'key':'delegate','name':'المندوبون','prefix':'Del','digits':'5'},
     {'key':'branch','name':'الفروع','prefix':'Brn','digits':'5'},
@@ -117,12 +116,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       _composite[key] = key == 'customer';
       _fieldNames[key] = List.generate(3, (_) => TextEditingController());
       _fieldCounts[key] = List.generate(3, (_) => TextEditingController());
-      if (key == 'customer') {
-        _fieldNames[key]![0].text = 'المنطقة/القرية';
-        _fieldNames[key]![1].text = 'الحي/المركز';
-        _fieldNames[key]![2].text = 'المحافظة';
-        for (final count in _fieldCounts[key]!) { count.text = '2'; }
-      }
     }
     _load();
   }
@@ -237,10 +230,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         throw StateError(_error!);
       }
     }
-    if (_prefix['customer']!.text.trim() != 'Cus') {
-      setState(() => _error = 'بادئة كود العميل ثابتة على Cus.');
-      throw StateError(_error!);
-    }
     if (_prefix['program_policy']!.text.trim() != 'Pol') {
       setState(() => _error = 'بادئة أكواد سياسات البرنامج ثابتة على Pol لضمان تطابق الأكواد المعروضة.');
       throw StateError(_error!);
@@ -252,10 +241,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     }
     if (_itemPrefix.text.trim() != 'Itm') {
       setState(() => _error = 'بادئة كود الأصناف ثابتة على Itm.');
-      throw StateError(_error!);
-    }
-    if (_digits['customer']!.text.trim() != '2') {
-      setState(() => _error = 'تسلسل كود العميل يجب أن يكون خانتين بالضبط.');
       throw StateError(_error!);
     }
     for (final entry in _itemSegments.entries) {
@@ -321,6 +306,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           'count_cell_width':_countCellWidth.toInt(),
         },
         'types':types,
+        'customer_code':{'prefix':'Cus','inherit_geo_code':true,'geo_digits':8,'serial_digits':3},
         'item_prefix':_itemPrefix.text.trim(),
         'item_automatic':_itemAutomatic,
         'item_composite':_itemComposite,
@@ -362,7 +348,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       await _db.from('erp_program_policies').upsert({
         'company_id':widget.companyId,
         'policy_key':'code_generation_registry',
-        'category':'برمجية',
+        'category':'سياسات الأكواد',
         'name_ar':'سياسات التكويد المركزي',
         'name_en':'Central code generation policies',
         'is_enabled':true,
@@ -459,6 +445,28 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     ])),
   );
 
+  Widget _customerPolicyRow() => Container(
+    margin:const EdgeInsets.symmetric(vertical:2),
+    padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+    decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
+    child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
+      SizedBox(width:30,child:Text('${_types.length+2}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+      const SizedBox(width:150,child:Text('تكويد العملاء',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+      const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
+      const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
+      _firstFieldName(),
+      const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('3',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('كود المنطقة',style:TextStyle(fontSize:11)))),
+      const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('8',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('تسلسل العميل',style:TextStyle(fontSize:11)))),
+      const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('3',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      const SizedBox(width:124,height:_cellHeight),
+      const SizedBox(width:_countCellWidth,height:_cellHeight),
+      const SizedBox(width:112,child:Center(child:Text('Cus',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)))),
+      SizedBox(width:112,child:Text('Cus + كود المنطقة (8 أرقام) + 001',textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+    ])),
+  );
+
   Widget _geoNameCell(String name) => SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
 
   Widget _segmentField(String label, TextEditingController controller, int max, {double width = 112, bool readOnly = false}) => SizedBox(
@@ -537,10 +545,11 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
           ])),
         ]))),
-        ...List.generate(_types.length+2,(i){
+        ...List.generate(_types.length+3,(i){
           if (i == 2) return _geoPolicyCard();
-          if (i == _types.length + 1) return _itemPolicyRow();
-          final t=_types[i > 2 ? i-1 : i]; final key=t['key']!;
+          if (i == 3) return _customerPolicyRow();
+          if (i == _types.length + 2) return _itemPolicyRow();
+          final t=_types[i > 3 ? i-2 : i]; final key=t['key']!;
           return Container(margin:const EdgeInsets.symmetric(vertical:2),padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
             decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
             child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
