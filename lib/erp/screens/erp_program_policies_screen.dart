@@ -97,8 +97,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; }); if(propagateError) throw StateError(error!); return;}
     setState(() { loading=true; error=null; message=null; });
     try {
-      var rows=await db.from('erp_program_policies').select().eq('company_id',company);
-      if ((rows as List).isEmpty) {
+      var rows=await db.from('erp_program_policies').select().eq('company_id',company);      if ((rows as List).isEmpty) {
         final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();
         await db.from('erp_program_policies').upsert(initial,onConflict:'company_id,policy_key');
         rows=await db.from('erp_program_policies').select().eq('company_id',company);
@@ -197,8 +196,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         message = 'تم اختيار الشعار. اضغط حفظ لتثبيته.';
         error = null;
       });
-    } catch (e) {
-      if (mounted) setState(() => error = 'تعذر اختيار الشعار: $e');
+    } catch (e) {      if (mounted) setState(() => error = 'تعذر اختيار الشعار: $e');
     }
   }
 
@@ -297,8 +295,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   Map<String, dynamic> _geoCodeConfig(Map<String, dynamic> policy) {
-    try {
-      final parsed = jsonDecode((policy['value'] ?? '{}').toString());
+    try {      final parsed = jsonDecode((policy['value'] ?? '{}').toString());
       if (parsed is Map) return Map<String, dynamic>.from(parsed);
     } catch (_) {}
     final key = (policy['key'] ?? '').toString();
@@ -397,8 +394,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         key:ValueKey('geo-digits-${policy['key']}-$digits'),initialValue:digits.toString(),
         readOnly:key.startsWith('category_code.') || key == 'brand_code',
         textAlign:TextAlign.center,maxLength:2,keyboardType:TextInputType.number,
-        inputFormatters:[FilteringTextInputFormatter.digitsOnly],
-        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
+        inputFormatters:[FilteringTextInputFormatter.digitsOnly],        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
         onChanged:(v){final n=int.tryParse(v);if(n!=null&&n>=1&&n<=2)update('digits',n);},
       )),
@@ -498,7 +494,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       rethrow;
     }
   }
-
   Future<Uint8List> _buildCurrentPdf() async {
     final rows = await _currentExportRows();
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
@@ -597,8 +592,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           children: swatches.map((color) => InkWell(
             onTap: () => Navigator.pop(ctx, color),
             child: Container(
-              width: 30, height: 30,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.black26)),
+              width: 30, height: 30,              decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.black26)),
               child: _appearanceColor(current).toARGB32() == color.toARGB32()
                   ? Icon(Icons.check, size: 16, color: color.computeLuminance() < .45 ? Colors.white : Colors.black87)
                   : null,
@@ -697,8 +691,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       ))),
       const SizedBox(width: 3),
       _appearanceColorEditor(policy, fontStyle: true, width: 100),
-    ]));
-  }
+    ]));  }
 
   Widget _buildFontsColorsGrid() {
     final rows = _appearancePolicyKeys.map((key) => values[key]).whereType<Map<String, dynamic>>().toList();
@@ -797,8 +790,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w600)),
         const SizedBox(height: 2),
         DropdownButtonFormField<int>(
-          value: options.contains(dimensions[key]) ? dimensions[key] : options.first,
-          isExpanded: true, isDense: true, itemHeight: 48,
+          value: options.contains(dimensions[key]) ? dimensions[key] : options.first,          isExpanded: true, isDense: true, itemHeight: 48,
           decoration: const InputDecoration(
             isDense: true,
             constraints: BoxConstraints(minHeight: 40, maxHeight: 40),
@@ -897,17 +889,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             ErpQuickTaskButton(label: 'PDF', icon: Icons.picture_as_pdf_outlined, compact: true, onPressed: _exportCurrentPdf),
           ])),
         ]),
-      ),
-      if (error != null) Padding(padding: const EdgeInsets.all(4), child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 11))),
+      ),      if (error != null) Padding(padding: const EdgeInsets.all(4), child: Text(error!, style: const TextStyle(color: Colors.red, fontSize: 11))),
       if (message != null) Padding(padding: const EdgeInsets.all(4), child: Text(message!, style: const TextStyle(color: Colors.green, fontSize: 11))),
       SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: List.generate(tabs.length, (i) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
         child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
       Expanded(
-        child: tab == 8
-            ? ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)
-                : tab == 7
+        child: tab == 7
                     ? _buildFontsColorsGrid()
                     : loading
                 ? const Center(child: CircularProgressIndicator())
@@ -997,8 +986,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                         style: const TextStyle(fontSize: 11),
                                         decoration: const InputDecoration(isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40), contentPadding: EdgeInsets.symmetric(horizontal: 7, vertical: 5), border: OutlineInputBorder(), hintText: 'سلسلة'),
                                         onChanged: (v) => p['value'] = v,
-                                      )
-                                    : p['key'] == 'visual_identity.logo'
+                                      )                                    : p['key'] == 'visual_identity.logo'
                                     ? Row(children: [
                                         if (_programLogoBase64 != null) Container(width: 34, height: 34, margin: const EdgeInsetsDirectional.only(end: 5), decoration: BoxDecoration(border: Border.all(color: Colors.black12), borderRadius: BorderRadius.circular(5)), child: ClipRRect(borderRadius: BorderRadius.circular(5), child: Image.memory(base64Decode(_programLogoBase64!), fit: BoxFit.contain))),
                                         OutlinedButton.icon(onPressed: _pickProgramLogo, icon: const Icon(Icons.upload_file, size: 15), label: const Text('اختيار الشعار', style: TextStyle(fontSize: 10)), style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 7), visualDensity: VisualDensity.compact)),
@@ -1098,4 +1086,3 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       ),
     ]);
   }
-}
