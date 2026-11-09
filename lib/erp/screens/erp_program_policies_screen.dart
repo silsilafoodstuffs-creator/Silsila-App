@@ -27,6 +27,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'geo_code.governorate','category':'سياسات الأكواد','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'geo_code.district','category':'سياسات الأكواد','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
     {'key':'geo_code.area','category':'سياسات الأكواد','ar':'سياسة تكويد مناطق/قرى','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
+    {'key':'customer_code','category':'سياسات الأكواد','ar':'سياسة تكويد العملاء','en':'Customer coding policy','value':'{"prefix":"Cus","geo_digits":8,"serial_digits":2,"required":true,"apply_to_all":true}','mandatory':true,'all':true},
     {'key':'category_code.main','category':'سياسات الأكواد','ar':'سياسة تكويد فئات أصناف رئيسية','en':'Main item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'category_code.sub','category':'سياسات الأكواد','ar':'سياسة تكويد فئات أصناف فرعية','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'category_code.secondary','category':'سياسات الأكواد','ar':'سياسة تكويد فئات أصناف ثانوية','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
@@ -241,6 +242,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         throw StateError(error!);
       }
     }
+    final customerCode = _customerCodeConfig(values['customer_code']!);
+    if (customerCode['prefix'] != 'Cus' || customerCode['geo_digits'] != 8 || customerCode['serial_digits'] != 2 || customerCode['required'] != true || customerCode['apply_to_all'] != true) {
+      throw StateError('سياسة كود العميل ثابتة على Cus + 8 أرقام جغرافية + رقمين للتسلسل، ومفعّلة وإلزامية على الكل.');
+    }
     const expectedCodePolicies = <String, Map<String, dynamic>>{
       'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
       'category_code.sub': {'prefix':'Cat','digits':2,'parent_digits':2},
@@ -308,6 +313,26 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       'brand_code': {'prefix':'Bra','digits':3,'parent_digits':0},
     };
     return Map<String, dynamic>.from(defaults[key] ?? defaults['geo_code.country']!);
+  }
+
+  Map<String, dynamic> _customerCodeConfig(Map<String, dynamic> policy) {
+    try {
+      final parsed = jsonDecode((policy['value'] ?? '{}').toString());
+      if (parsed is Map) return Map<String, dynamic>.from(parsed);
+    } catch (_) {}
+    return {'prefix':'Cus','geo_digits':8,'serial_digits':2,'required':true,'apply_to_all':true};
+  }
+
+  Widget _customerCodeEditor(Map<String, dynamic> policy) {
+    return const SizedBox(width:300,height:40,child:Row(children:[
+      SizedBox(width:66,height:40,child:Center(child:Text('Cus',style:TextStyle(fontSize:11,fontWeight:FontWeight.w900)))),
+      SizedBox(width:4),
+      SizedBox(width:48,height:40,child:Center(child:Text('8',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)))),
+      SizedBox(width:4),
+      SizedBox(width:48,height:40,child:Center(child:Text('2',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)))),
+      SizedBox(width:5),
+      Expanded(child:Text('Cus0000000001  •  إلزامي على الكل',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
+    ]));
   }
 
   Map<String, dynamic> _itemCodeConfig(Map<String, dynamic> policy) {
@@ -959,7 +984,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                   const SizedBox(width: 8),
                                   SizedBox(width: 300, child: ((p['key'] as String).startsWith('geo_code.') || (p['key'] as String).startsWith('category_code.') || p['key'] == 'brand_code')
                                     ? _geoCodeEditor(p)
-                                    : p['key'] == 'item_code'
+                                    : p['key'] == 'customer_code'
+                                      ? _customerCodeEditor(p)
+                                      : p['key'] == 'item_code'
                                       ? _itemCodeEditor(p)
                                       : p['key'] == 'code_generation_registry'
                                       ? const Text('إعدادات التكويد المركزي', style: TextStyle(fontSize:10,fontWeight:FontWeight.w600))
