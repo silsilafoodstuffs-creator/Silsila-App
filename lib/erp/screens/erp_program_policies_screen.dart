@@ -880,7 +880,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
       Expanded(
-        child: tab == 1
+        child: tab == 8
             ? ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)
                 : tab == 7
                     ? _buildFontsColorsGrid()
