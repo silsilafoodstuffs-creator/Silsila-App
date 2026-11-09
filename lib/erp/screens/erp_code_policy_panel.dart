@@ -258,16 +258,12 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'تسلسل كود العميل يجب أن يكون خانتين بالضبط.');
       throw StateError(_error!);
     }
-    if (_digits['brand']!.text.trim() != '3') {
-      setState(() => _error = 'تسلسل كود البراند يجب أن يكون ثلاث خانات بالضبط.');
-      throw StateError(_error!);
-    }
     for (final entry in _itemSegments.entries) {
       final value = int.tryParse(entry.value.text);
       final expected = entry.key == 'serial' ? 3 : 2;
       if (value != expected) {
         final label = {'main':'الرئيسية','sub':'الفرعية','secondary':'الثانوية','serial':'تسلسل'}[entry.key];
-        setState(() => _error = 'عدد خانات $label يجب أن يكون 2 بالضبط.');
+        setState(() => _error = 'عدد خانات $label يجب أن يكون $expected بالضبط.');
         throw StateError(_error!);
       }
     }
