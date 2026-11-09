@@ -337,7 +337,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
       )),
       const SizedBox(width:5),
-      const Expanded(child:Text('Itm + 6 + 3 = 9 أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
+      const Expanded(child:Text('Itm010101001  •  9 أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
     ]));
   }
 
@@ -346,7 +346,12 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final prefix = (config['prefix'] ?? '').toString();
     final digits = int.tryParse((config['digits'] ?? 2).toString()) ?? 2;
     final parentDigits = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
-    final previewDigits = List.filled(parentDigits + digits, '0').join();
+    final key = (policy['key'] ?? '').toString();
+    final previewDigits = key == 'brand_code'
+        ? '001'
+        : key.startsWith('category_code.')
+            ? List.filled((parentDigits ~/ 2) + 1, '01').join()
+            : List.filled(parentDigits + digits, '0').join();
     void update(String key, dynamic value) {
       final next = _geoCodeConfig(policy)..[key] = value;
       policy['value'] = jsonEncode(next);
