@@ -258,11 +258,15 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = _level == 1 ? 'أضف فئة رئيسية أولًا.' : 'أضف فئة فرعية أولًا.');
       return;
     }
-    final codeNumbers = _all.map((r) => int.tryParse(_s(r['category_code']).replaceFirst(RegExp(r'^[A-Za-z_-]+'),'')) ?? 0).toList();
-    final next = (codeNumbers.isEmpty ? 0 : codeNumbers.reduce((a,b) => a>b?a:b)) + 1;
+    final siblingCount = _all.where((r) => _s(r['parent_id']) == (parentId ?? '')).length;
+    final next = siblingCount + 1;
+    final parentRow = parentId == null ? null : _all.where((r) => _s(r['id']) == parentId).firstOrNull;
+    final parentDigits = parentRow == null
+        ? ''
+        : _s(parentRow['category_code']).replaceFirst(RegExp(r'^[A-Za-z]+'), '');
     final draft = <String,dynamic>{
       'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company, 'activity_code':_selectedActivityCode,
-      'category_code':'CAT${next.toString().padLeft(4,'0')}', 'category_name':'','category_name_en':'',
+      'category_code':'Cat$parentDigits${next.toString().padLeft(2,'0')}', 'category_name':'','category_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
     setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
