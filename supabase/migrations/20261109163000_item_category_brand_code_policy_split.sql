@@ -27,6 +27,10 @@ begin
     $old$and (c.category_code, c.id) <= (v_node.category_code, v_node.id);$old$,
     $new$and (c.created_at, c.id) <= (v_node.created_at, v_node.id);$new$);
   v_def := replace(v_def,
+    $old$      and c.is_active = true
+      and c.activity_code is not distinct from ($old$,
+    $new$      and c.activity_code is not distinct from ($new$);
+  v_def := replace(v_def,
     $old$  if v_main_digits not between 1 and 4
      or v_sub_digits not between 1 and 4
      or v_secondary_digits not between 1 and 4
