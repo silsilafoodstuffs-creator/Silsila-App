@@ -29,6 +29,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   int _level = 0;
   String? _parentFilter;
   List<Map<String,dynamic>> _all = [];
+  List<Map<String,dynamic>> _companyCategories = [];
   final Map<String,TextEditingController> _ar = {};
   final Map<String,TextEditingController> _en = {};
   final Map<String,Uint8List?> _imageBytes = {};
@@ -104,8 +105,12 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
       }
       if (!_activities.any((a) => a['code'] == _selectedActivityCode)) _selectedActivityCode = _activities.first['code']!;
+      final companyCategoryRows = await _db!.from('erp_item_categories')
+        .select('id,company_id,activity_code,category_code,parent_id,created_at')
+        .eq('company_id', company).order('created_at').order('id').limit(3000);
+      _companyCategories = (companyCategoryRows as List).map((e) => Map<String,dynamic>.from(e)).toList();
       final result = await _db!.from('erp_item_categories')
-        .select('id,company_id,activity_code,category_code,category_name,category_name_en,parent_id,is_active,show_in_app,image_url,image_data,image_mime_type,image_source_url,image_attribution')
+        .select('id,company_id,activity_code,category_code,category_name,category_name_en,parent_id,created_at,is_active,show_in_app,image_url,image_data,image_mime_type,image_source_url,image_attribution')
         .eq('company_id', company).eq('activity_code', _selectedActivityCode).order('category_code').limit(3000);
       _all = (result as List).map((e) => Map<String,dynamic>.from(e)).toList();
       _expandedIds.addAll(_all.map((r) => _s(r['id'])));
@@ -258,22 +263,20 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = _level == 1 ? 'أضف فئة رئيسية أولًا.' : 'أضف فئة فرعية أولًا.');
       return;
     }
-    final siblingsForNew = _all.where((r) =>
-      _s(r['parent_id']) == (parentId ?? '') &&
-      _s(r['activity_code']) == _selectedActivityCode).toList();
+    final siblingsForNew = _companyCategories.where((r) =>
+      _s(r['parent_id']) == (parentId ?? '')).toList();
     final next = siblingsForNew.length + 1;
     final pathSegments = <String>[];
     String? ancestorId = parentId;
     while (ancestorId != null && ancestorId.isNotEmpty) {
       Map<String,dynamic>? ancestor;
-      for (final candidate in _all) {
+      for (final candidate in _companyCategories) {
         if (_s(candidate['id']) == ancestorId) { ancestor = candidate; break; }
       }
       if (ancestor == null) break;
       final ancestorParentId = _s(ancestor['parent_id']);
-      final ancestorSiblings = _all.where((r) =>
-        _s(r['parent_id']) == ancestorParentId &&
-        _s(r['activity_code']) == _selectedActivityCode).toList();
+      final ancestorSiblings = _companyCategories.where((r) =>
+        _s(r['parent_id']) == ancestorParentId).toList();
       ancestorSiblings.sort((a,b) {
         final aDate = DateTime.tryParse(_s(a['created_at']));
         final bDate = DateTime.tryParse(_s(b['created_at']));
@@ -283,7 +286,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
         if (aDate != null) return -1;
         if (bDate != null) return 1;
-        return _all.indexOf(a).compareTo(_all.indexOf(b));
+        return _companyCategories.indexOf(a).compareTo(_companyCategories.indexOf(b));
       });
       final ancestorRank = ancestorSiblings.indexWhere((r) => _s(r['id']) == ancestorId) + 1;
       if (ancestorRank < 1) break;
