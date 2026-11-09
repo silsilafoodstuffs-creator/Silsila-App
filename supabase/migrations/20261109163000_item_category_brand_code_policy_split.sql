@@ -11,10 +11,10 @@ begin
     $new$(c.created_at, c.id) <= (v_node.created_at, v_node.id)$new$);
   v_def := replace(v_def,
     $old$        and c.activity_code is not distinct from new.activity_code
-$old$,$new$$new$);
+$old$,'');
   v_def := replace(v_def,
     $old$      and c.activity_code is not distinct from new.activity_code
-$old$,$new$$new$);
+$old$,'');
   v_def := replace(v_def,
     $old$new.company_id::text || ':category:' || coalesce(new.activity_code, '') || ':' || coalesce(new.parent_id::text, 'root')$old$,
     $new$new.company_id::text || ':category:' || coalesce(new.parent_id::text, 'root')$new$);
@@ -36,7 +36,7 @@ $old$,$new$$new$);
     $old$      and c.activity_code is not distinct from (
         select activity_code from public.erp_item_categories where id = new.category_id
       )
-$old$,$new$$new$);
+$old$,'');
   v_def := replace(v_def,
     $old$  if v_main_digits not between 1 and 4
      or v_sub_digits not between 1 and 4
