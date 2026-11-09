@@ -24,15 +24,15 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'visual_identity.logo','category':'برمجية','ar':'شعار المشروع','en':'Project logo','value':'','mandatory':true,'all':true},
     {'key':'code_generation_registry','category':'تكويدية','ar':'سياسات التكويد المركزي','en':'Central code generation policies','value':'إعدادات التكويد المركزي','mandatory':true,'all':true},
     {'key':'geo_code.country','category':'تكويدية','ar':'سياسة تكويد دول','en':'Country coding policy','value':'{"prefix":"Con","digits":2,"parent_digits":0}','mandatory':true,'all':true},
-    {'key':'geo_code.governorate','category':'سياسات الأكواد','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
-    {'key':'geo_code.district','category':'سياسات الأكواد','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
-    {'key':'geo_code.area','category':'سياسات الأكواد','ar':'سياسة تكويد مناطق/قرى','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
-    {'key':'customer_code','category':'سياسات الأكواد','ar':'سياسة تكويد العملاء','en':'Customer coding policy','value':'{"prefix":"Cus","geo_digits":8,"serial_digits":2,"required":true,"apply_to_all":true}','mandatory':true,'all':true},
-    {'key':'category_code.main','category':'سياسات الأكواد','ar':'سياسة تكويد فئات أصناف رئيسية','en':'Main item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":0}','mandatory':true,'all':true},
-    {'key':'category_code.sub','category':'سياسات الأكواد','ar':'سياسة تكويد فئات أصناف فرعية','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
-    {'key':'category_code.secondary','category':'سياسات الأكواد','ar':'سياسة تكويد فئات أصناف ثانوية','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
-    {'key':'brand_code','category':'سياسات الأكواد','ar':'سياسة تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":3,"parent_digits":0}','mandatory':true,'all':true},
-    {'key':'item_code','category':'سياسات الأكواد','ar':'سياسة تكويد الأصناف','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"serial_digits":3}','mandatory':true,'all':true},
+    {'key':'geo_code.governorate','category':'تكويدية','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
+    {'key':'geo_code.district','category':'تكويدية','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
+    {'key':'geo_code.area','category':'تكويدية','ar':'سياسة تكويد مناطق/قرى','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
+    {'key':'customer_code','category':'تكويدية','ar':'سياسة تكويد العملاء','en':'Customer coding policy','value':'{"prefix":"Cus","geo_digits":8,"serial_digits":2,"required":true,"apply_to_all":true}','mandatory':true,'all':true},
+    {'key':'category_code.main','category':'تكويدية','ar':'سياسة تكويد فئات أصناف رئيسية','en':'Main item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'category_code.sub','category':'تكويدية','ar':'سياسة تكويد فئات أصناف فرعية','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
+    {'key':'category_code.secondary','category':'تكويدية','ar':'سياسة تكويد فئات أصناف ثانوية','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
+    {'key':'brand_code','category':'تكويدية','ar':'سياسة تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":3,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'item_code','category':'تكويدية','ar':'سياسة تكويد الأصناف','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"serial_digits":3}','mandatory':true,'all':true},
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
     {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":50,"field_height":40,"column_spacing":3}','mandatory':true,'all':true},
@@ -97,8 +97,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     if(company.isEmpty){setState(() { loading=false; error='اختر الشركة وسجّل الدخول أولاً.'; }); if(propagateError) throw StateError(error!); return;}
     setState(() { loading=true; error=null; message=null; });
     try {
-      var rows=await db.from('erp_program_policies').select().eq('company_id',company);      if ((rows as List).isEmpty) {        final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();        await db.from('erp_program_policies').upsert(initial,onConflict:'company_id,policy_key');
-        rows=await db.from('erp_program_policies').select().eq('company_id',company);
+      var rows=await db.from('erp_program_policies').select().eq('company_id',company);      if ((rows as List).isEmpty) {        final initial=defaults.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','apply_to_all':p['mandatory']==true || p['all']==true,'user_ids':<String>[],'policy_value':p['value']??''}).toList();        await db.from('erp_program_policies').upsert(initial,onConflict:'company_id,policy_key');        rows=await db.from('erp_program_policies').select().eq('company_id',company);
       }
       final existingKeys = (rows as List).whereType<Map<String,dynamic>>().map((row)=>(row['policy_key']??'').toString()).toSet();
       final missingPolicies = defaults.where((p)=>!existingKeys.contains(p['key'])).map((p)=><String,dynamic>{
@@ -197,8 +196,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     } catch (e) {      if (mounted) setState(() => error = 'تعذر اختيار الشعار: $e');
     }  }
   Future<void> _save() async {
-    if (_programNameController.text.trim().isEmpty) {
-      setState(() { error = 'اسم المشروع مطلوب.'; });
+    if (_programNameController.text.trim().isEmpty) {      setState(() { error = 'اسم المشروع مطلوب.'; });
       throw StateError(error!);
     }
     if (values.containsKey('visual_identity.program_name')) {
@@ -297,8 +295,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     const defaults = <String, Map<String, dynamic>>{
       'geo_code.country': {'prefix':'Con','digits':2,'parent_digits':0},      'geo_code.governorate': {'prefix':'Gov','digits':2,'parent_digits':2},
       'geo_code.district': {'prefix':'Dis','digits':2,'parent_digits':4},
-      'geo_code.area': {'prefix':'Rig','digits':2,'parent_digits':6},
-      'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
+      'geo_code.area': {'prefix':'Rig','digits':2,'parent_digits':6},      'category_code.main': {'prefix':'Cat','digits':2,'parent_digits':0},
       'category_code.sub': {'prefix':'Cat','digits':2,'parent_digits':2},
       'category_code.secondary': {'prefix':'Cat','digits':2,'parent_digits':4},
       'brand_code': {'prefix':'Bra','digits':3,'parent_digits':0},
@@ -397,8 +394,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
   Future<void> _previewCurrentTab() async {
     final current = values.values.where((p) => tabs[tab] == 'الكل' || p['category'] == tabs[tab]).toList();
-    await showDialog<void>(
-      context: context,
+    await showDialog<void>(      context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('معاينة ${tabs[tab]}'),
         content: SizedBox(
@@ -498,7 +494,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     ));
     return Uint8List.fromList(await pdf.save());
   }
-
   Future<void> _printCurrentPolicies() async {
     try {
       final bytes = await _buildCurrentPdf();
@@ -597,8 +592,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         final style = _fontStyle(policy)..['color'] = hex;
         policy['value'] = jsonEncode(style);
       } else {
-        policy['value'] = hex;
-      }
+        policy['value'] = hex;      }
     });
   }
 
@@ -697,8 +691,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           child: SizedBox(width: 1200, child: ListView(controller: _policyVerticalController, padding: const EdgeInsets.fromLTRB(5,1,5,3), children: [
             header,
             ...List.generate(rows.length, (index) {
-              final p = rows[index];
-              final key = (p['key'] ?? '').toString();
+              final p = rows[index];              final key = (p['key'] ?? '').toString();
               Widget editor;
               if (key == 'appearance.language') {
                 editor = SizedBox(width: 150, height: 40, child: DropdownButtonFormField<String>(
@@ -797,8 +790,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         const SizedBox(height: 3),
         selector('المسافة بين الأعمدة', 'column_spacing', [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20]),
       ],
-    );
-  }
+    );  }
 
   String policySearch = '';
   final TextEditingController _searchController = TextEditingController();
@@ -897,8 +889,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                           controller: _policyHorizontalController,
                           scrollDirection: Axis.horizontal,
                           child: SizedBox(width: 1200, child: ListView(
-                        controller: _policyVerticalController,
-                        padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
+                        controller: _policyVerticalController,                        padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
                         children: [
                           if (tab == 1) SizedBox(height: 320, child: ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)),
                           Card(
@@ -997,8 +988,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                           onChanged: (v) {
                                             final parts = (p['value'] ?? '01/01 - 12/31').toString().split(' - ');
                                             p['value'] = '${parts.first} - ${v.trim()}';
-                                          },
-                                        )),
+                                          },                                        )),
                                       ])
                                     : (p['key'] as String).startsWith('trader_market.') && options.isEmpty
                                       ? TextFormField(
