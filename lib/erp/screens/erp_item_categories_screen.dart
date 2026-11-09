@@ -30,6 +30,10 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
   String? _parentFilter;
   List<Map<String,dynamic>> _all = [];
   List<Map<String,dynamic>> _companyCategories = [];
+  List<Map<String,dynamic>> get _codingCategories => <Map<String,dynamic>>[
+    ..._companyCategories,
+    ..._all.where((r) => r['_draft'] == true),
+  ];
   final Map<String,TextEditingController> _ar = {};
   final Map<String,TextEditingController> _en = {};
   final Map<String,Uint8List?> _imageBytes = {};
@@ -263,19 +267,19 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = _level == 1 ? 'أضف فئة رئيسية أولًا.' : 'أضف فئة فرعية أولًا.');
       return;
     }
-    final siblingsForNew = _companyCategories.where((r) =>
+    final siblingsForNew = _codingCategories.where((r) =>
       _s(r['parent_id']) == (parentId ?? '')).toList();
     final next = siblingsForNew.length + 1;
     final pathSegments = <String>[];
     String? ancestorId = parentId;
     while (ancestorId != null && ancestorId.isNotEmpty) {
       Map<String,dynamic>? ancestor;
-      for (final candidate in _companyCategories) {
+      for (final candidate in _codingCategories) {
         if (_s(candidate['id']) == ancestorId) { ancestor = candidate; break; }
       }
       if (ancestor == null) break;
       final ancestorParentId = _s(ancestor['parent_id']);
-      final ancestorSiblings = _companyCategories.where((r) =>
+      final ancestorSiblings = _codingCategories.where((r) =>
         _s(r['parent_id']) == ancestorParentId).toList();
       ancestorSiblings.sort((a,b) {
         final aDate = DateTime.tryParse(_s(a['created_at']));
@@ -286,7 +290,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
         }
         if (aDate != null) return -1;
         if (bDate != null) return 1;
-        return _companyCategories.indexOf(a).compareTo(_companyCategories.indexOf(b));
+        return _codingCategories.indexOf(a).compareTo(_codingCategories.indexOf(b));
       });
       final ancestorRank = ancestorSiblings.indexWhere((r) => _s(r['id']) == ancestorId) + 1;
       if (ancestorRank < 1) break;
