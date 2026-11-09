@@ -461,11 +461,12 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
 
   Widget _geoNameCell(String name) => SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
 
-  Widget _segmentField(String label, TextEditingController controller, int max, {double width = 112}) => SizedBox(
+  Widget _segmentField(String label, TextEditingController controller, int max, {double width = 112, bool readOnly = false}) => SizedBox(
     width:width,
     height:_cellHeight,
     child:TextField(
       controller:controller,
+      readOnly:readOnly,
       textAlign:TextAlign.center,
       keyboardType:TextInputType.number,
       maxLength:max,
@@ -612,13 +613,13 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             _field(_itemPrefix,max:3,letters:true,changed:(){}),
           ]),
           const SizedBox(height:10),
-          const Text('تحديد عدد خانات كل مستوى — قابل للتعديل والحفظ',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
+          const Text('أطوال الخانات المعتمدة — ثابتة: 2 + 2 + 2 + 3',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
           const SizedBox(height:6),
           Wrap(spacing:8,runSpacing:8,children:[
-            _segmentField('فئة رئيسية',_itemSegments['main']!,2),
-            _segmentField('فئة فرعية',_itemSegments['sub']!,2),
-            _segmentField('فئة ثانوية',_itemSegments['secondary']!,2),
-            _segmentField('تسلسل الصنف',_itemSegments['serial']!,3),
+            _segmentField('فئة رئيسية',_itemSegments['main']!,2,readOnly:true),
+            _segmentField('فئة فرعية',_itemSegments['sub']!,2,readOnly:true),
+            _segmentField('فئة ثانوية',_itemSegments['secondary']!,2,readOnly:true),
+            _segmentField('تسلسل الصنف',_itemSegments['serial']!,3,readOnly:true),
           ]),
           const SizedBox(height:8),
           Text('الصيغة: ${_itemPrefix.text.trim()} + كود الفئة الثانوية بدون Cat (6 أرقام) + تسلسل الصنف (3 أرقام)',style:const TextStyle(fontSize:11)),
