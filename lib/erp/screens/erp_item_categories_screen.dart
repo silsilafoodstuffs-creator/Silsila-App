@@ -258,20 +258,40 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
       setState(() => _error = _level == 1 ? 'أضف فئة رئيسية أولًا.' : 'أضف فئة فرعية أولًا.');
       return;
     }
-    final siblingCount = _all.where((r) => _s(r['parent_id']) == (parentId ?? '')).length;
-    final next = siblingCount + 1;
-    Map<String,dynamic>? parentRow;
-    if (parentId != null) {
+    final siblingsForNew = _all.where((r) =>
+      _s(r['parent_id']) == (parentId ?? '') &&
+      _s(r['activity_code']) == _selectedActivityCode).toList();
+    final next = siblingsForNew.length + 1;
+    final pathSegments = <String>[];
+    String? ancestorId = parentId;
+    while (ancestorId != null && ancestorId.isNotEmpty) {
+      Map<String,dynamic>? ancestor;
       for (final candidate in _all) {
-        if (_s(candidate['id']) == parentId) { parentRow = candidate; break; }
+        if (_s(candidate['id']) == ancestorId) { ancestor = candidate; break; }
       }
+      if (ancestor == null) break;
+      final ancestorParentId = _s(ancestor['parent_id']);
+      final ancestorSiblings = _all.where((r) =>
+        _s(r['parent_id']) == ancestorParentId &&
+        _s(r['activity_code']) == _selectedActivityCode).toList();
+      ancestorSiblings.sort((a,b) {
+        final aDate = DateTime.tryParse(_s(a['created_at']));
+        final bDate = DateTime.tryParse(_s(b['created_at']));
+        if (aDate != null && bDate != null) return aDate.compareTo(bDate);
+        if (aDate != null) return -1;
+        if (bDate != null) return 1;
+        return _all.indexOf(a).compareTo(_all.indexOf(b));
+      });
+      final ancestorRank = ancestorSiblings.indexWhere((r) => _s(r['id']) == ancestorId) + 1;
+      if (ancestorRank < 1) break;
+      pathSegments.insert(0, ancestorRank.toString().padLeft(2,'0'));
+      ancestorId = ancestorParentId.isEmpty ? null : ancestorParentId;
     }
-    final parentDigits = parentRow == null
-        ? ''
-        : _s(parentRow['category_code']).replaceFirst(RegExp(r'^[A-Za-z]+'), '');
+    pathSegments.add(next.toString().padLeft(2,'0'));
+    final hierarchicalDigits = pathSegments.join();
     final draft = <String,dynamic>{
       'id':'draft-${DateTime.now().microsecondsSinceEpoch}', 'company_id':_company, 'activity_code':_selectedActivityCode,
-      'category_code':'Cat$parentDigits${next.toString().padLeft(2,'0')}', 'category_name':'','category_name_en':'',
+      'category_code':'Cat$hierarchicalDigits', 'category_name':'','category_name_en':'',
       'parent_id':parentId,'is_active':true,'show_in_app':true,'image_url':null,'image_data':null,'image_mime_type':null,'_draft':true,
     };
     setState(() { _editing = true; _all.add(draft); _selectedId = _s(draft['id']); _expandedIds.add(_s(parentId)); _expandedIds.add(_s(draft['id'])); _syncControllers(); });
