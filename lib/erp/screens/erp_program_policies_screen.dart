@@ -18,10 +18,15 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان'];
+  static const tabs = ['برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان','جغرافية','الكل'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'visual_identity.program_name','category':'برمجية','ar':'اسم المشروع','en':'Project name','value':'سلسلة','mandatory':true,'all':true},
     {'key':'visual_identity.logo','category':'برمجية','ar':'شعار المشروع','en':'Project logo','value':'','mandatory':true,'all':true},
+    {'key':'code_generation_registry','category':'تكويدية','ar':'سياسات التكويد المركزي','en':'Central code generation policies','value':'إعدادات التكويد المركزي','mandatory':true,'all':true},
+    {'key':'geo_code.country','category':'جغرافية','ar':'سياسة تكويد دول','en':'Country coding policy','value':'{"prefix":"Con","digits":2,"parent_digits":0}','mandatory':true,'all':true},
+    {'key':'geo_code.governorate','category':'جغرافية','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
+    {'key':'geo_code.district','category':'جغرافية','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
+    {'key':'geo_code.area','category':'جغرافية','ar':'سياسة تكويد مناطق/قرى','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
     {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":50,"field_height":40,"column_spacing":3}','mandatory':true,'all':true},
@@ -248,8 +253,57 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     }
   }
 
+  Map<String, dynamic> _geoCodeConfig(Map<String, dynamic> policy) {
+    try {
+      final parsed = jsonDecode((policy['value'] ?? '{}').toString());
+      if (parsed is Map) return Map<String, dynamic>.from(parsed);
+    } catch (_) {}
+    final key = (policy['key'] ?? '').toString();
+    const defaults = <String, Map<String, dynamic>>{
+      'geo_code.country': {'prefix':'Con','digits':2,'parent_digits':0},
+      'geo_code.governorate': {'prefix':'Gov','digits':2,'parent_digits':2},
+      'geo_code.district': {'prefix':'Dis','digits':2,'parent_digits':4},
+      'geo_code.area': {'prefix':'Rig','digits':2,'parent_digits':6},
+    };
+    return Map<String, dynamic>.from(defaults[key] ?? defaults['geo_code.country']!);
+  }
+
+  Widget _geoCodeEditor(Map<String, dynamic> policy) {
+    final config = _geoCodeConfig(policy);
+    final prefix = (config['prefix'] ?? '').toString();
+    final digits = int.tryParse((config['digits'] ?? 2).toString()) ?? 2;
+    final parentDigits = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
+    final previewDigits = List.filled(parentDigits + digits, '0').join();
+    void update(String key, dynamic value) {
+      final next = _geoCodeConfig(policy)..[key] = value;
+      policy['value'] = jsonEncode(next);
+      setState(() {});
+    }
+    return SizedBox(width:300,height:40,child:Row(children:[
+      SizedBox(width:66,height:40,child:TextFormField(
+        key:ValueKey('geo-prefix-${policy['key']}-$prefix'),initialValue:prefix,
+        textAlign:TextAlign.center,maxLength:3,
+        inputFormatters:[FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]'))],
+        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
+        decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
+        onChanged:(v)=>update('prefix',v.toUpperCase()),
+      )),
+      const SizedBox(width:4),
+      SizedBox(width:48,height:40,child:TextFormField(
+        key:ValueKey('geo-digits-${policy['key']}-$digits'),initialValue:digits.toString(),
+        textAlign:TextAlign.center,maxLength:2,keyboardType:TextInputType.number,
+        inputFormatters:[FilteringTextInputFormatter.digitsOnly],
+        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
+        decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
+        onChanged:(v){final n=int.tryParse(v);if(n!=null&&n>=1&&n<=2)update('digits',n);},
+      )),
+      const SizedBox(width:5),
+      Expanded(child:Text('$prefix$previewDigits',textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
+    ]));
+  }
+
   Future<void> _previewCurrentTab() async {
-    final current = values.values.where((p) => p['category'] == tabs[tab]).toList();
+    final current = values.values.where((p) => tabs[tab] == 'الكل' || p['category'] == tabs[tab]).toList();
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -295,7 +349,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       rows.add(['التقسيم الجغرافي', (payload['geo_prefix'] ?? 'Rig').toString(), 'حسب مستويات التقسيم', 'نعم', 'نعم']);
     } else {
       rows.add(['م', 'كود السياسة', 'اسم السياسة', 'القيمة', 'مفعلة', 'على الكل', 'عدد المستخدمين']);
-      final current = values.values.where((p) => p['category'] == tabs[tab]).toList();
+      final current = values.values.where((p) => tabs[tab] == 'الكل' || p['category'] == tabs[tab]).toList();
       for (var i = 0; i < current.length; i++) {
         final p = current[i];
         final key = (p['key'] ?? '').toString();
@@ -303,7 +357,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
             ? _programNameController.text
             : key == 'visual_identity.logo'
                 ? (_programLogoBase64 == null ? 'غير محدد' : 'تم تحديد شعار')
-                : (p['value'] ?? '').toString();
+                : key == 'code_generation_registry'
+                    ? 'إعدادات التكويد المركزي'
+                    : key.startsWith('geo_code.')
+                        ? (() { final c = _geoCodeConfig(p); return '${c['prefix']}${List.filled((int.tryParse((c['parent_digits'] ?? 0).toString()) ?? 0) + (int.tryParse((c['digits'] ?? 2).toString()) ?? 2), '0').join()}'; })()
+                        : (p['value'] ?? '').toString();
         rows.add([(i + 1).toString(), _programPolicyCode(key), (p['ar'] ?? '').toString(),
           value, p['enabled'] == true ? 'نعم' : 'لا', p['all'] == true ? 'نعم' : 'لا',
           ((p['user_ids'] as List?)?.length ?? 0).toString()]);
@@ -679,7 +737,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget build(BuildContext context) {
     final query = policySearch.trim().toLowerCase();
     final list = values.values.where((p) {
-      if (p['category'] != tabs[tab]) return false;
+      if (tabs[tab] != 'الكل' && p['category'] != tabs[tab]) return false;
       if (query.isEmpty) return true;
       final ar = (p['ar'] ?? '').toString().toLowerCase();
       final en = (p['en'] ?? '').toString().toLowerCase();
@@ -815,7 +873,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     if (mandatory) const Text('إلزامي', style: TextStyle(color: Color(0xFF18865A), fontSize: 9, fontWeight: FontWeight.bold)),
                                   ])),
                                   const SizedBox(width: 8),
-                                  SizedBox(width: 300, child: p['key'] == 'visual_identity.program_name'
+                                  SizedBox(width: 300, child: (p['key'] as String).startsWith('geo_code.')
+                                    ? _geoCodeEditor(p)
+                                    : p['key'] == 'code_generation_registry'
+                                      ? const Text('إعدادات التكويد المركزي', style: TextStyle(fontSize:10,fontWeight:FontWeight.w600))
+                                      : p['key'] == 'visual_identity.program_name'
                                     ? TextField(
                                         controller: _programNameController,
                                         maxLines: 1,
