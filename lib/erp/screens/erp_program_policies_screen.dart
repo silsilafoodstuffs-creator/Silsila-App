@@ -110,6 +110,23 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       _policyCodes
         ..clear()
         ..addEntries((rows as List).whereType<Map<String,dynamic>>().map((row) => MapEntry((row['policy_key'] ?? '').toString(), (row['policy_code'] ?? '').toString())));
+      // Include database policies not represented by a dedicated editor in the
+      // defaults catalog (including retained legacy policies) in the All tab.
+      for (final row in (rows as List).whereType<Map<String,dynamic>>()) {
+        final key = (row['policy_key'] ?? '').toString();
+        if (key.isEmpty || values.containsKey(key)) continue;
+        values[key] = {
+          'key': key,
+          'category': (row['category'] ?? 'أخرى').toString(),
+          'ar': (row['name_ar'] ?? key).toString(),
+          'en': (row['name_en'] ?? key).toString(),
+          'value': (row['policy_value'] ?? '').toString(),
+          'enabled': row['is_enabled'] == true,
+          'all': row['apply_to_all'] == true,
+          'user_ids': List<String>.from((row['user_ids'] as List?) ?? const []),
+          'mandatory': false,
+        };
+      }
       for(final row in (rows as List).whereType<Map<String,dynamic>>()) { final key=(row['policy_key']??'').toString(); if(!values.containsKey(key))continue; final p=values[key]!; p['enabled']=row['is_enabled']==true; p['all']=row['apply_to_all']==true || p['mandatory']==true; p['value']=(row['policy_value']??p['value']??'').toString(); p['user_ids']=List<String>.from((row['user_ids'] as List?)??const []); }
       // Upgrade the earlier descriptive text to the persisted, editable dimensions object.
       final layoutPolicy = values['ui_layout_standard'];
