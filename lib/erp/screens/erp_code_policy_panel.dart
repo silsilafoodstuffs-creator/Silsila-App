@@ -603,10 +603,17 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
                 const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
               ])),
               SizedBox(width:112,child:Text(key=='customer'
-                ? 'Cus + الدولة 20 + المحافظة 01 + الحي/المركز 01 + المنطقة/القرية 01 + تسلسل 01'
+                ? 'Cus + الدولة ${_geoSegments['country']!.text} + المحافظة 01 + الحي/المركز 01 + المنطقة/القرية 01 + تسلسل 01'
                 : _preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
             ])));
         }),
+        Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('تفاصيل سياسة فئات الأصناف Cat',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
+          const SizedBox(height:6),
+          const Text('تسلسل الفئات هرمي وثابت: فئة رئيسية خانتان + فئة فرعية خانتان + فئة ثانوية خانتان. كل مستوى يُرقّم داخل المستوى الأب، ولا تُضاف حروف إلى أي مستوى.',style:TextStyle(fontSize:11)),
+          const SizedBox(height:6),
+          const Text('المعاينة: Cat + 01 + 01 + 01 = Cat010101',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)),
+        ]))),
         Card(elevation:0,color:const Color(0xFFFFF4E5),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('تفاصيل تركيب كود الأصناف',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
           const SizedBox(height:5),
