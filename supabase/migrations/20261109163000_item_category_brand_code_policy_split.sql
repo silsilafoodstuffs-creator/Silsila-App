@@ -13,6 +13,9 @@ begin
     $old$    select count(*) + 1 into v_rank$old$,
     $new$    perform pg_advisory_xact_lock(hashtextextended(new.company_id::text || ':category:' || coalesce(new.activity_code, '') || ':' || coalesce(new.parent_id::text, 'root'), 0));
     select count(*) + 1 into v_rank$new$);
+  if position('v_node.created_at' in v_def) = 0 or position('pg_advisory_xact_lock' in v_def) = 0 then
+    raise exception 'Category hierarchical-code migration did not apply completely';
+  end if;
   execute v_def;
 
   v_def := pg_get_functiondef('public.erp_assign_item_hierarchical_code()'::regprocedure);
@@ -41,8 +44,15 @@ begin
      or v_secondary_digits <> 2 or v_serial_digits <> 3 then
     raise exception 'سياسة كود الصنف ثابتة على Itm + 2 + 2 + 2 + 3 أرقام';
   end if;$new$);
+  if position('v_serial_digits integer := 3' in v_def) = 0
+     or position('v_serial_digits <> 3' in v_def) = 0
+     or position('v_prefix <> ''Itm''' in v_def) = 0
+     or position('c.created_at, c.id' in v_def) = 0
+     or position('c.is_active = true' in v_def) > 0 then
+    raise exception 'Item hierarchical-code migration did not apply completely';
+  end if;
   execute v_def;
-end $$;
+end $;
 
 update public.erp_program_policies
 set category = 'سياسات الأكواد', updated_at = now()
