@@ -260,7 +260,12 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     }
     final siblingCount = _all.where((r) => _s(r['parent_id']) == (parentId ?? '')).length;
     final next = siblingCount + 1;
-    final parentRow = parentId == null ? null : _all.where((r) => _s(r['id']) == parentId).firstOrNull;
+    Map<String,dynamic>? parentRow;
+    if (parentId != null) {
+      for (final candidate in _all) {
+        if (_s(candidate['id']) == parentId) { parentRow = candidate; break; }
+      }
+    }
     final parentDigits = parentRow == null
         ? ''
         : _s(parentRow['category_code']).replaceFirst(RegExp(r'^[A-Za-z]+'), '');
