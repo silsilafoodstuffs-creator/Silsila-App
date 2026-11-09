@@ -304,10 +304,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         };
       }
       types['customer'] = {
-        'prefix':'Cus', 'digits':3, 'automatic':true, 'composite':true,
+        'prefix':'Cus', 'digits':4, 'automatic':true, 'composite':true,
         'required':true, 'apply_to_all':true,
-        'inherit_geo_code':true, 'geo_digits':8, 'serial_digits':3,
-        'fields':[{'name':'كود المنطقة بدون بادئة Rig','digits':8},{'name':'تسلسل العميل','digits':3}],
+        'inherit_geo_code':true, 'geo_digits':8, 'serial_digits':4,
+        'fields':[{'name':'كود المنطقة بدون بادئة Rig','digits':8},{'name':'تسلسل العميل','digits':4}],
       };
       final itemSegments = <String, int>{
         for (final entry in _itemSegments.entries) entry.key:int.parse(entry.value.text),
@@ -320,7 +320,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
           'count_cell_width':_countCellWidth.toInt(),
         },
         'types':types,
-        'customer_code':{'prefix':'Cus','inherit_geo_code':true,'geo_digits':8,'serial_digits':3},
+        'customer_code':{'prefix':'Cus','inherit_geo_code':true,'geo_digits':8,'serial_digits':4},
         'item_prefix':_itemPrefix.text.trim(),
         'item_automatic':_itemAutomatic,
         'item_composite':_itemComposite,
@@ -487,15 +487,15 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
       _firstFieldName(),
-      const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('3',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('4',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('كود المنطقة',style:TextStyle(fontSize:11)))),
       const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('8',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('تسلسل العميل',style:TextStyle(fontSize:11)))),
-      const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('3',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('4',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       const SizedBox(width:124,height:_cellHeight),
       const SizedBox(width:_countCellWidth,height:_cellHeight),
       const SizedBox(width:112,child:Center(child:Text('Cus',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)))),
-      SizedBox(width:112,child:Text('Cus + كود المنطقة (8 أرقام) + 001',textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+      SizedBox(width:112,child:Text('Cus + كود المنطقة (8 أرقام) + 0001',textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
     ])),
   );
 
