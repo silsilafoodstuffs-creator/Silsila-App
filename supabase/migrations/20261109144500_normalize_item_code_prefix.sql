@@ -1,0 +1,1 @@
+update public.erp_program_policies set policy_value = jsonb_set(case when left(policy_value,1)='{' then policy_value::jsonb else '{}'::jsonb end,'{item_prefix}','"Itm"'::jsonb,true)::text,updated_at=now() where policy_key='code_generation_registry';
