@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import '../services/erp_print_support.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -125,11 +126,11 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
     )));
     if (saved != true || _ar.text.trim().isEmpty || _db == null) return;
     if (!isJob && !isLocation && selectedDepartmentLevel != 'directorate' && selectedParentId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر الإدارة الأب للقسم أو الإدارة الفرعية.')));
+      ErpCenterToast.show(context, 'اختر الإدارة الأب للقسم أو الإدارة الفرعية.', isError: true, duration: const Duration(seconds: 3));
       return;
     }
     if (isJob && (selectedDepartmentId == null || selectedGradeId == null)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر الإدارة أو القسم والدرجة الوظيفية قبل حفظ الوظيفة.')));
+      ErpCenterToast.show(context, 'اختر الإدارة أو القسم والدرجة الوظيفية قبل حفظ الوظيفة.', isError: true, duration: const Duration(seconds: 3));
       return;
     }
     try {
@@ -159,7 +160,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       }
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر الحفظ: ' + e.toString())));
+      if (mounted) ErpCenterToast.show(context, 'تعذر الحفظ: ' + e.toString(), isError: true, duration: const Duration(seconds: 3));
     }
   }
 
@@ -190,7 +191,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       }).eq('id', row['id']).eq('company_id', _companyId);
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعديل السجل: ' + e.toString())));
+      if (mounted) ErpCenterToast.show(context, 'تعذر تعديل السجل: ' + e.toString(), isError: true, duration: const Duration(seconds: 3));
     }
   }
 
@@ -201,7 +202,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       await _db!.from(table).update({'is_active': row['is_active'] != true}).eq('id', row['id']).eq('company_id', _companyId);
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تغيير الحالة: ' + e.toString())));
+      if (mounted) ErpCenterToast.show(context, 'تعذر تغيير الحالة: ' + e.toString(), isError: true, duration: const Duration(seconds: 3));
     }
   }
 
@@ -447,7 +448,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       try {
         await _db!.from('erp_hr_job_grades').insert({'company_id':_companyId,'grade_code':'','name_ar':_ar.text.trim(),'name_en':_en.text.trim(),'rank_order':int.tryParse(rank.text) ?? _grades.length + 1,'is_active':true});
         await _load();
-      } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الدرجة: ' + e.toString()))); }
+      } catch(e) { if(mounted) ErpCenterToast.show(context, 'تعذر حفظ الدرجة: ' + e.toString(), isError: true, duration: const Duration(seconds: 3)); }
     }
     rank.dispose();
   }
@@ -469,7 +470,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       try {
         await _db!.from('erp_hr_job_grades').update({'grade_code':_code.text.trim().toUpperCase(),'name_ar':_ar.text.trim(),'name_en':_en.text.trim(),'rank_order':int.tryParse(rank.text) ?? 1}).eq('id',grade['id']).eq('company_id',_companyId);
         await _load();
-      } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تعديل الدرجة: ' + e.toString()))); }
+      } catch(e) { if(mounted) ErpCenterToast.show(context, 'تعذر تعديل الدرجة: ' + e.toString(), isError: true, duration: const Duration(seconds: 3)); }
     }
     rank.dispose();
   }
@@ -480,7 +481,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       await _db!.from('erp_hr_jobs').update({key:value}).eq('id',job['id']).eq('company_id',_companyId);
       await _load();
     } catch(e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تحديث متطلب التعيين: ' + e.toString())));
+      if(mounted) ErpCenterToast.show(context, 'تعذر تحديث متطلب التعيين: ' + e.toString(), isError: true, duration: const Duration(seconds: 3));
     }
   }
 
@@ -508,7 +509,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       try {
         await _db!.from('erp_hr_jobs').update({'department_id':departmentId,'grade_id':gradeId,'min_qualification':qualification,'min_license_class':license,...required}).eq('id',job['id']).eq('company_id',_companyId);
         await _load();
-      } catch(e) { if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر حفظ متطلبات الوظيفة: ' + e.toString()))); }
+      } catch(e) { if(mounted) ErpCenterToast.show(context, 'تعذر حفظ متطلبات الوظيفة: ' + e.toString(), isError: true, duration: const Duration(seconds: 3)); }
     }
   }
 
@@ -526,7 +527,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   String _quickName(Map<String,dynamic> row) => (row['name_ar']??'').toString();
   Future<void> _quickAdd() async {
     if(!_departmentMode && _tabs.index==1){
-      if(_jobs.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('أضف وظيفة أولاً قبل تعريف متطلبات التعيين.')));return;}
+      if(_jobs.isEmpty){ErpCenterToast.show(context, 'أضف وظيفة أولاً قبل تعريف متطلبات التعيين.');return;}
       String? selectedId;
       final chosen=await showDialog<String>(context:context,builder:(ctx)=>StatefulBuilder(builder:(ctx,setDialogState)=>AlertDialog(
         title:const Text('اختر الوظيفة لتعديل متطلبات التعيين'),
@@ -587,7 +588,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       final table=_quickKind=='department'?'erp_hr_departments':_quickKind=='location'?'erp_hr_work_locations':_quickKind=='grade'?'erp_hr_job_grades':'erp_hr_jobs';
       await _db!.from(table).update({'is_active':false}).eq('id',row['id']).eq('company_id',_companyId);
       await _load();
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر إيقاف السجل: $e')));}
+    }catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر إيقاف السجل: $e', isError: true, duration: const Duration(seconds: 3));}
   }
   void _quickPreview() {
     final rows=_quickRows;
@@ -602,7 +603,7 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
   }
   Future<void> _quickPdf({required bool share}) async {
     final rows=_quickRows;
-    if(rows.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('لا توجد بيانات للتصدير.')));return;}
+    if(rows.isEmpty){ErpCenterToast.show(context, 'لا توجد بيانات للتصدير.', isError: true, duration: const Duration(seconds: 3));return;}
     try{
       final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
       final doc=pw.Document();
@@ -614,11 +615,11 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       final bytes=await doc.save();
       if(share){await Printing.sharePdf(bytes:bytes,filename:'Silsila-HR-Structure.pdf');}
       else{await Printing.layoutPdf(onLayout:(_)=>Future.value(bytes));}
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر إنشاء PDF: $e')));}
+    }catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر إنشاء PDF: $e', isError: true, duration: const Duration(seconds: 3));}
   }
   Future<void> _quickExcel() async {
     final rows=_quickRows;
-    if(rows.isEmpty){ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('لا توجد بيانات للتصدير.')));return;}
+    if(rows.isEmpty){ErpCenterToast.show(context, 'لا توجد بيانات للتصدير.', isError: true, duration: const Duration(seconds: 3));return;}
     try{
       final book=excel.Excel.createExcel();
       final sheet=book['بيانات'];
@@ -627,13 +628,13 @@ class _ErpHrStructureScreenState extends State<ErpHrStructureScreen> with Single
       final bytes=book.encode();
       if(bytes==null)throw StateError('تعذر تجهيز ملف Excel.');
       final saved=await FilePicker.platform.saveFile(dialogTitle:'حفظ بيانات الهيكل الوظيفي',fileName:'Silsila-HR-Structure.xlsx',bytes:Uint8List.fromList(bytes));
-      if(saved!=null&&mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم تجهيز ملف Excel.')));
-    }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تصدير Excel: $e')));}
+      if(saved!=null&&mounted)ErpCenterToast.show(context, 'تم تجهيز ملف Excel.');
+    }catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر تصدير Excel: $e', isError: true, duration: const Duration(seconds: 3));}
   }
   Widget _quickToolbar()=>SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
     ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh,onPressed:_loading?null:_load),
     ErpQuickTaskButton(label:'إضافة',icon:Icons.add,onPressed:_loading?null:_quickAdd),
-    ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:()=>ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('يتم حفظ البيانات مباشرة عند تأكيد نافذة الإضافة أو التعديل.')))),
+    ErpQuickTaskButton(label:'حفظ',icon:Icons.save,onPressed:()=>ErpCenterToast.show(context, 'يتم حفظ البيانات مباشرة عند تأكيد نافذة الإضافة أو التعديل.')),
     ErpQuickTaskButton(label:'تعديل',icon:Icons.edit,onPressed:_quickRows.isEmpty?null:_quickEdit),
     ErpQuickTaskButton(label:'حذف',icon:Icons.delete,onPressed:_quickRows.isEmpty?null:_quickDelete),
     ErpQuickTaskButton(label:'معاينة',icon:Icons.visibility,onPressed:_quickPreview),

@@ -770,7 +770,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
   void _showAppManagementMessage(String message) {
     if (!mounted) return;
     setState(() => _appManagementMessage = message);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ErpCenterToast.show(context, message);
   }
 
   void _updateManagedAppDraft({String? name, Color? primary, Color? accent}) {
@@ -1912,7 +1912,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         icon: Icon(Icons.menu_rounded, color: _utilitySidebarVisible ? _purple : _orange),
       ),
     ],
-    IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(silsilaText('مركز الإشعارات')))), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
+    IconButton(visualDensity: VisualDensity.compact, tooltip: 'الإشعارات', onPressed: () => ErpCenterToast.show(context, silsilaText('مركز الإشعارات')), icon: const Icon(Icons.notifications_none_rounded, color: _purple)),
     const CircleAvatar(radius: 18, backgroundColor: Color(0xFFF0E7FA), child: Icon(Icons.person_rounded, color: _purple, size: 20)),
   ]));
 
@@ -2264,7 +2264,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     if (ok != true) return;
     final amount = double.tryParse(controller.text.trim());
     if (amount == null || amount < 0) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('أدخل قيمة هدف صحيحة لا تقل عن صفر.')));
+      if (mounted) ErpCenterToast.show(context, 'أدخل قيمة هدف صحيحة لا تقل عن صفر.');
       return;
     }
     try {
@@ -2278,9 +2278,9 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         'updated_at': DateTime.now().toIso8601String(),
       }, onConflict: 'company_id,employee_id,target_type,target_month');
       await _loadExecutiveStaffPerformance(companyId, month, DateTime(month.year, month.month + 1));
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ هدف المشتريات الشهري.')));
+      if (mounted) ErpCenterToast.show(context, 'تم حفظ هدف المشتريات الشهري.');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر حفظ الهدف: $e')));
+      if (mounted) ErpCenterToast.show(context, 'تعذر حفظ الهدف: $e', isError: true, duration: const Duration(seconds: 3));
     }
   }
 
@@ -3166,15 +3166,11 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
     try {
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!opened && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تعذر فتح الرابط. تأكد من وجود التطبيق أو المتصفح المناسب.')),
-        );
+        ErpCenterToast.show(context, 'تعذر فتح الرابط. تأكد من وجود التطبيق أو المتصفح المناسب.', isError: true, duration: const Duration(seconds: 3));
       }
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تعذر فتح الرابط على هذا الجهاز.')),
-      );
+      ErpCenterToast.show(context, 'تعذر فتح الرابط على هذا الجهاز.', isError: true, duration: const Duration(seconds: 3));
     }
   }
 
@@ -3226,9 +3222,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       // form again, allowing another user to sign in.
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر إنهاء جلسة الدخول: $error')),
-      );
+      ErpCenterToast.show(context, 'تعذر إنهاء جلسة الدخول: $error', isError: true, duration: const Duration(seconds: 3));
     }
   }
 

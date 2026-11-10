@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _partyPurple = Color(0xFF3E007D);
@@ -70,7 +71,7 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
       setState(()=>_rows=List<Map<String,dynamic>>.from(rows));
     } catch(e) {
       if(mounted&&widget.workspaceId==workspaceId) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تحميل الدفتر: $e')));
+        ErpCenterToast.show(context, 'تعذر تحميل الدفتر: $e', isError: true, duration: const Duration(seconds: 3));
       }
     } finally {
       if(mounted&&widget.workspaceId==workspaceId)setState(()=>_loading=false);
@@ -117,8 +118,8 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
       }
       _clearForm();
       await _load();
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(editingId == null ? 'تم الحفظ في دفتر النشاط المستقل.' : 'تم تحديث بيانات الدفتر.')));
-    } catch(e) { if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحفظ: $e'))); }
+      if(mounted)ErpCenterToast.show(context, editingId == null ? 'تم الحفظ في دفتر النشاط المستقل.' : 'تم تحديث بيانات الدفتر.');
+    } catch(e) { if(mounted)ErpCenterToast.show(context, 'تعذر الحفظ: $e', isError: true, duration: const Duration(seconds: 3)); }
     finally { if(mounted)setState(()=>_saving=false); }
   }
   void _clearForm() {
@@ -150,7 +151,7 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
         .eq('party_type',_type);
       await _load();
     } catch(e) {
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر تحديث الحالة: $e')));
+      if(mounted)ErpCenterToast.show(context, 'تعذر تحديث الحالة: $e', isError: true, duration: const Duration(seconds: 3));
     }
   }
 
@@ -174,9 +175,9 @@ class _ErpBusinessWorkspaceCounterpartiesPanelState extends State<ErpBusinessWor
         .eq('party_type',_type);
       if(_editingId==row['id'].toString())setState(_clearForm);
       await _load();
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('تم الحذف من دفتر النشاط فقط.')));
+      if(mounted)ErpCenterToast.show(context, 'تم الحذف من دفتر النشاط فقط.');
     } catch(e) {
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحذف: $e')));
+      if(mounted)ErpCenterToast.show(context, 'تعذر الحذف: $e', isError: true, duration: const Duration(seconds: 3));
     }
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../erp/widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_theme.dart';
@@ -84,21 +85,11 @@ class _SilsilaForgotPasswordScreenState
     } on AuthException catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('تعذر إرسال الطلب: ${error.message}'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ErpCenterToast.show(context, 'تعذر إرسال الطلب: ${error.message}', isError: true, duration: const Duration(seconds: 3));
     } catch (_) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('حدث خطأ غير متوقع. حاول مرة أخرى لاحقًا.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ErpCenterToast.show(context, 'حدث خطأ غير متوقع. حاول مرة أخرى لاحقًا.', isError: true, duration: const Duration(seconds: 3));
     } finally {
       if (mounted) {
         setState(() => _loading = false);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../erp/widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/app_theme.dart';
@@ -61,23 +62,13 @@ class _SilsilaOtpVerificationScreenState
     } on AuthException catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error.message.isNotEmpty
+      ErpCenterToast.show(context, error.message.isNotEmpty
                 ? error.message
-                : 'تعذر التحقق من الرمز',
-          ),
-        ),
-      );
+                : 'تعذر التحقق من الرمز', isError: true, duration: const Duration(seconds: 3));
     } catch (_) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('حدث خطأ أثناء التحقق. حاول مرة أخرى.'),
-        ),
-      );
+      ErpCenterToast.show(context, 'حدث خطأ أثناء التحقق. حاول مرة أخرى.', isError: true, duration: const Duration(seconds: 3));
     } finally {
       if (mounted) {
         setState(() => _isVerifying = false);
@@ -98,25 +89,15 @@ class _SilsilaOtpVerificationScreenState
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم طلب إعادة إرسال رمز التحقق'),
-        ),
-      );
+      ErpCenterToast.show(context, 'تم طلب إعادة إرسال رمز التحقق');
     } on AuthException catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ErpCenterToast.show(context, error.message);
     } catch (_) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تعذرت إعادة إرسال الرمز. حاول مرة أخرى.'),
-        ),
-      );
+      ErpCenterToast.show(context, 'تعذرت إعادة إرسال الرمز. حاول مرة أخرى.', isError: true, duration: const Duration(seconds: 3));
     } finally {
       if (mounted) {
         setState(() => _isResending = false);

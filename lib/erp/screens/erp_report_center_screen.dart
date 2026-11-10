@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -214,9 +215,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر تحميل الدفعة التالية: $error')),
-      );
+      ErpCenterToast.show(context, 'تعذر تحميل الدفعة التالية: $error', isError: true, duration: const Duration(seconds: 3));
     }
   }
 
@@ -252,9 +251,7 @@ class _ErpReportCenterScreenState extends State<ErpReportCenterScreen> {
     ].join('\r\n');
     await Clipboard.setData(ClipboardData(text: csv));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم نسخ بيانات التقرير بصيغة CSV؛ يمكنك لصقها في Excel.')),
-    );
+    ErpCenterToast.show(context, 'تم نسخ بيانات التقرير بصيغة CSV؛ يمكنك لصقها في Excel.');
   }
 
   @override

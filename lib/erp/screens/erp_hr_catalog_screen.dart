@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _hrCatalogPurple = Color(0xFF3E007D);
@@ -138,7 +139,7 @@ class _ErpHrCatalogScreenState extends State<ErpHrCatalogScreen> {
                   }
                   if (dialogContext.mounted) Navigator.pop(dialogContext, true);
                 } catch (e) {
-                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر الحفظ: $e')));
+                  if (mounted) ErpCenterToast.show(context, 'تعذر الحفظ: $e', isError: true, duration: const Duration(seconds: 3));
                 }
               },
               child: const Text('حفظ'),
@@ -175,7 +176,7 @@ class _ErpHrCatalogScreenState extends State<ErpHrCatalogScreen> {
           .eq('id', row['id']).eq('company_id', (widget.companyId ?? '').trim());
       await _load();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر الحذف: $e')));
+      if (mounted) ErpCenterToast.show(context, 'تعذر الحذف: $e', isError: true, duration: const Duration(seconds: 3));
     }
   }
 
