@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Code values are generated atomically by database triggers; item codes follow the three-level category path.
+// Code values are generated atomically by database triggers; item codes inherit the three-level category digits and the numeric brand segment.
 class ErpCodePolicyPanel extends StatefulWidget {
   const ErpCodePolicyPanel({super.key, required this.companyId});
   final String companyId;
@@ -131,8 +131,15 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   String _preview(String key) {
     final p = _prefix[key]!.text.trim();
     final n = int.tryParse(_digits[key]!.text) ?? 5;
-    final serial = 1;
-    return '$p${serial.toString().padLeft(n.clamp(1, 12).toInt(), '0')}';
+    final serial = 1.toString().padLeft(n.clamp(1, 12).toInt(), '0');
+    if (key == 'user') {
+      // User codes inherit the numeric part of the selected user type code.
+      // Show the first type (Typ01) as the sample, then the five-digit user serial.
+      final typeDigits = int.tryParse(_digits['user_type']!.text) ?? 2;
+      final typeCode = 1.toString().padLeft(typeDigits.clamp(1, 12).toInt(), '0');
+      return '$p$typeCode$serial';
+    }
+    return '$p$serial';
   }
 
   Future<void> _load({bool propagateError = false}) async {
