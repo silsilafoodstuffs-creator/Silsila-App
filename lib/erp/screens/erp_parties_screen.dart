@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -376,9 +377,7 @@ class _ErpPartiesScreenState extends State<ErpPartiesScreen> {
                 await _loadAll();
               } catch (e) {
                 if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text('تعذر حفظ التصنيف: $e')),
-                  );
+                  ErpCenterToast.show(ctx, 'تعذر حفظ التصنيف: $e', isError: true, duration: const Duration(seconds: 3));
                 }
               }
             },

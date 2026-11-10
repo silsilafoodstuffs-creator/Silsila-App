@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -107,7 +108,7 @@ class _ErpPublicLeadsScreenState extends State<ErpPublicLeadsScreen> {
   }
 
   void _toast(String message) {
-    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    if (mounted) ErpCenterToast.show(context, message);
   }
 
   Future<void> _showSource(Map<String, dynamic> lead) async {

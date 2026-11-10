@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _purple = Color(0xFF3E007D);
@@ -280,7 +281,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
             if(row==null){await _db.from(c.table).insert(payload);}
             else{await _db.from(c.table).update(payload).eq('id',row['id']).eq('company_id',widget.companyId!);}
             if(dc.mounted)Navigator.pop(dc,true);
-          }catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحفظ: '+e.toString())));}
+          }catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر الحفظ: '+e.toString(), isError: true, duration: const Duration(seconds: 3));}
         },child:const Text('حفظ')),
       ],
     )));
@@ -295,7 +296,7 @@ class _ErpHrRecordsScreenState extends State<ErpHrRecordsScreen> {
     ));
     if(yes!=true)return;
     try{await _db.from(_config.table).delete().eq('id',row['id']).eq('company_id',widget.companyId!);await _load();}
-    catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحذف: '+e.toString())));}
+    catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر الحذف: '+e.toString(), isError: true, duration: const Duration(seconds: 3));}
   }
 
   @override Widget build(BuildContext context){

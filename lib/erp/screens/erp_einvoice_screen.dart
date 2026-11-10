@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -113,7 +114,7 @@ class _ErpEinvoiceScreenState extends State<ErpEinvoiceScreen> {
     } catch (e) { _msg('تعذر تسجيل الطلب: $e'); }
   }
 
-  void _msg(String value) { if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value))); }
+  void _msg(String value) { if (mounted) ErpCenterToast.show(context, value); }
   Widget _field(String title, TextEditingController c, {bool secret = false, String? Function(String?)? validator}) =>
     TextFormField(controller: c, obscureText: secret, validator: validator, decoration: InputDecoration(labelText: title, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)), filled: true, fillColor: Colors.white));
   Widget _btn(String label, IconData icon, VoidCallback action, {bool primary = false}) =>

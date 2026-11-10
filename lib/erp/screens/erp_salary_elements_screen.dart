@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import '../services/erp_print_support.dart';
 import 'package:flutter/services.dart';
 import 'package:excel/excel.dart' as excel;
@@ -440,7 +441,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
 
   Future<void> _printIndividual() async {
     if (_employeeId == null || _lineFor(_employeeId!) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('اختر موظفًا له شريط قبض في المسير المحدد.')));
+      ErpCenterToast.show(context, 'اختر موظفًا له شريط قبض في المسير المحدد.', isError: true, duration: const Duration(seconds: 3));
       return;
     }
     final employee = _employee(_employeeId!)!;
@@ -505,14 +506,14 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
       )));
       await Printing.layoutPdf(onLayout:(_) async=>doc.save());
     } catch(e) {
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذرت طباعة شريط القبض: $e')));
+      if(mounted)ErpCenterToast.show(context, 'تعذرت طباعة شريط القبض: $e', isError: true, duration: const Duration(seconds: 3));
     }
   }
 
   Future<void> _printAggregate() async {
     final employees=_filteredEmployees;
     if(employees.isEmpty){
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('لا توجد بيانات مطابقة للفلاتر للطباعة.')));
+      ErpCenterToast.show(context, 'لا توجد بيانات مطابقة للفلاتر للطباعة.', isError: true, duration: const Duration(seconds: 3));
       return;
     }
     bool used(Map<String,dynamic> element)=>_lines.any((line){final values=line['element_values'];return values is Map&&_n(values[_s(element['id'])])!=0;});
@@ -555,7 +556,7 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
       ]));
       await Printing.layoutPdf(onLayout:(_) async=>doc.save());
     }catch(e){
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذرت طباعة الشريط المجمع: $e')));
+      if(mounted)ErpCenterToast.show(context, 'تعذرت طباعة الشريط المجمع: $e', isError: true, duration: const Duration(seconds: 3));
     }
   }
 

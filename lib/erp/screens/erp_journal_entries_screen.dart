@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../services/erp_journal_repository.dart';
@@ -497,9 +498,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       reason.dispose();
       await _load();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم إنشاء قيد العكس. راجع دفتر الأستاذ للتأكد من ظهوره.')),
-      );
+      ErpCenterToast.show(context, 'تم إنشاء قيد العكس. راجع دفتر الأستاذ للتأكد من ظهوره.');
     } catch (e) {
       reason.dispose();
       if (!mounted) return;
@@ -530,7 +529,7 @@ class _ErpJournalEntriesScreenState extends State<ErpJournalEntriesScreen> {
       await _repo.postEntry(id);
       await _load();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب ترحيل القيد إلى قاعدة البيانات.')));
+        ErpCenterToast.show(context, 'تم إرسال طلب ترحيل القيد إلى قاعدة البيانات.');
       }
     } catch (e) {
       if (!mounted) return;

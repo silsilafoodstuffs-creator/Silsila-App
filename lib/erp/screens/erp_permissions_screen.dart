@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -405,9 +406,7 @@ class _ErpPermissionsScreenState extends State<ErpPermissionsScreen> {
               FilledButton.icon(
                 onPressed: () {
                   if (chosen.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('اختر مستخدمًا واحدًا على الأقل، أو استخدم تحديد الكل.')),
-                    );
+                    ErpCenterToast.show(context, 'اختر مستخدمًا واحدًا على الأقل، أو استخدم تحديد الكل.', isError: true, duration: const Duration(seconds: 3));
                     return;
                   }
                   setState(() {
