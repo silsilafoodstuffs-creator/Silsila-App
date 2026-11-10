@@ -2,30 +2,8 @@ name: Silsila Full Validation - All Recent Changes
 
 # Run the complete validation manually at planned milestones and final delivery.
 on:
+  # Run once at planned milestones and final delivery, not after every commit.
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'lib/erp/screens/erp_program_policies_screen.dart'
-      - 'lib/erp/screens/**'
-      - 'lib/erp/services/erp_print_support.dart'
-      - 'lib/erp/widgets/erp_center_toast.dart'
-      - 'test/**'
-      - 'lib/erp/erp_dashboard_screen.dart'
-      - 'lib/erp/screens/erp_hr_executive_dashboard_screen.dart'
-      - 'lib/erp/screens/erp_inventory_master_screen.dart'
-      - 'lib/erp/screens/erp_price_lists_screen.dart'
-      - 'lib/erp/screens/erp_payroll_screen.dart'
-      - 'lib/erp/screens/erp_inventory_screen.dart'
-      - 'lib/erp/screens/erp_facebook_group_leads_screen.dart'
-      - 'lib/erp/screens/erp_financial_operations_screen.dart'
-      - 'lib/erp/screens/erp_operational_documents_screen.dart'
-      - '.github/workflows/full-validation.yml'
-      - 'supabase/migrations/*policy*codes*.sql'
-      - 'supabase/migrations/*codes*program*policies*.sql'
-      - 'supabase/migrations/*user*code*.sql'
-      - 'supabase/migrations/*.sql'
 
 permissions:
   contents: read
