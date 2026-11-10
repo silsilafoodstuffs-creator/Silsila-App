@@ -18,21 +18,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   static const double _countCellWidth = 62;
   static const double _nameCellWidth = 83; // 124 × 2/3 = 82.67, rounded to 83 px.
   static const _types = <Map<String, String>>[
-    {'key':'program_policy','name':'سياسات البرنامج','prefix':'Pol','digits':'3'},
-    {'key':'employee','name':'الموظفون','prefix':'Emp','digits':'5'},
-    {'key':'user','name':'المستخدمون','prefix':'Usr','digits':'5'},
-    {'key':'supplier','name':'الموردون','prefix':'Sup','digits':'5'},
 
-    {'key':'delegate','name':'المندوبون','prefix':'Del','digits':'5'},
-    {'key':'branch','name':'الفروع','prefix':'Brn','digits':'5'},
-    {'key':'warehouse','name':'المخازن','prefix':'Whs','digits':'5'},
 
-    {'key':'department','name':'إدارات الموارد البشرية','prefix':'Dpt','digits':'5'},
     {'key':'job','name':'المسميات الوظيفية','prefix':'Job','digits':'5'},
-    {'key':'work_location','name':'مواقع العمل','prefix':'Loc','digits':'5'},
-    {'key':'grade','name':'الدرجات الوظيفية','prefix':'Grd','digits':'5'},
     {'key':'payroll_run','name':'مسيرات الرواتب','prefix':'Prl','digits':'5'},
-    {'key':'salary_element','name':'عناصر المرتبات','prefix':'Sal','digits':'5'},
     {'key':'unit','name':'وحدات الأصناف','prefix':'Unt','digits':'5'},
     {'key':'payment_method','name':'طرق الدفع','prefix':'Pmt','digits':'5'},
     {'key':'shift','name':'ورديات العمل','prefix':'Shf','digits':'5'},
@@ -137,7 +126,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   String _preview(String key) {
     final p = _prefix[key]!.text.trim();
     final n = int.tryParse(_digits[key]!.text) ?? 5;
-    final serial = key == 'program_policy' ? _nextProgramPolicySerial : 1;
+    final serial = 1;
     return '$p${serial.toString().padLeft(n.clamp(1, 12).toInt(), '0')}';
   }
 
@@ -229,10 +218,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         setState(() => _error = 'عدد خانات ${t['name']} يجب أن يكون من 1 إلى 12.');
         throw StateError(_error!);
       }
-    }
-    if (_prefix['program_policy']!.text.trim() != 'Pol') {
-      setState(() => _error = 'بادئة أكواد سياسات البرنامج ثابتة على Pol لضمان تطابق الأكواد المعروضة.');
-      throw StateError(_error!);
     }
     final prefixes = _types.map((t) => _prefix[t['key']!]!.text.trim().toLowerCase()).toList();
     if (prefixes.toSet().length != prefixes.length || prefixes.contains(_itemPrefix.text.trim().toLowerCase())) {
@@ -575,47 +560,24 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
           ])),
         ]))),
-        ...List.generate(_types.length+3,(i){
-          if (i == 2) return _geoPolicyCard();
-          if (i == 3) return _customerPolicyRow();
-          if (i == _types.length + 2) return _itemPolicyRow();
-          final t=_types[i > 3 ? i-2 : i]; final key=t['key']!;
+        ...List.generate(_types.length,(i){
+          final t=_types[i]; final key=t['key']!;
           return Container(margin:const EdgeInsets.symmetric(vertical:2),padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
             decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
             child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
               SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
               SizedBox(width:150,child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
               SizedBox(width:52,child:Checkbox(value:_automatic[key] ?? true,onChanged:(v)=>setState(()=>_automatic[key]=v ?? true),visualDensity:VisualDensity.compact)),
-              
               SizedBox(width:52,child:Checkbox(value:_composite[key] ?? false,onChanged:(v)=>setState(()=>_composite[key]=v ?? false),visualDensity:VisualDensity.compact)),
-              
               _firstFieldName(),
-              
               _field(_digits[key]!,max:2,letters:false,changed:(){}),
-              
               ...List<Widget>.generate(6, (index) {
                 final slot = index ~/ 2;
-                if (index.isEven) {
-                  return _nameField(
-                    _fieldNames[key]![slot],
-                  );
-                }
-                return SizedBox(
-                  width: _countCellWidth,
-                  height: _cellHeight,
-                  child: _field(
-                    _fieldCounts[key]![slot],
-                    max: 2,
-                    letters: false,
-                    changed: () {},
-                  ),
-                );
+                if (index.isEven) return _nameField(_fieldNames[key]![slot]);
+                return SizedBox(width:_countCellWidth,height:_cellHeight,child:_field(_fieldCounts[key]![slot],max:2,letters:false,changed:(){}));
               }),
-              
               const SizedBox(width:124,height:_cellHeight),
-              
               const SizedBox(width:_countCellWidth,height:_cellHeight),
-              
               SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
                 _field(_prefix[key]!,max:3,letters:true,changed:(){}),
                 const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
@@ -623,6 +585,9 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
               SizedBox(width:112,child:Text(_preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
             ])));
         }),
+        _geoPolicyCard(),
+        _customerPolicyRow(),
+        _itemPolicyRow(),
         Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('تفاصيل سياسة فئات الأصناف Cat',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
           const SizedBox(height:6),
