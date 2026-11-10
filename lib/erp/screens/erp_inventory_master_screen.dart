@@ -187,7 +187,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       }
       if (!mounted) return;
       setState(() {
-        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _workspaceItemProposals = values[4]; _brands = values[5]; _isManagementUser = isManagementUser; _itemUnits = extra[0];
+        _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _brands = values[4]; _workspaceItemProposals = values[5]; _isManagementUser = isManagementUser; _itemUnits = extra[0];
         _selectedSharedItemId = _items.any((item)=>_s(item['id'])==_selectedSharedItemId) ? _selectedSharedItemId : (_items.isNotEmpty ? _s(_items.first['id']) : null); if (!isManagementUser && (_view=='proposals'||_view=='shared_stock')) _view='items'; _warehouseItemSettings = extra[1]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
         if (!_brands.any((g) => _s(g['id']) == _itemBrandId && g['is_active'] == true)) _itemBrandId = null;
