@@ -734,7 +734,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final digits = int.tryParse((config['digits'] ?? 2).toString()) ?? 2;
     final parentDigits = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
     final key = (policy['key'] ?? '').toString();
-    final locked = _codePolicyIsLocked(key);
     final previewDigits = key == 'brand_code'
         ? '001'
         : key.startsWith('category_code.')
