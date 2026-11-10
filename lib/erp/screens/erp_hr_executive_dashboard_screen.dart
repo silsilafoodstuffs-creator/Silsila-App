@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _hrPurple = Color(0xFF3E007D);
@@ -993,7 +994,7 @@ class _ErpHrExecutiveDashboardScreenState extends State<ErpHrExecutiveDashboardS
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ErpCenterToast.show(context, message);
   }
 
   @override

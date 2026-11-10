@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_quick_task_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -280,7 +281,7 @@ class _ErpSalesTargetsCommissionsScreenState extends State<ErpSalesTargetsCommis
   }
 
   Widget _field(TextEditingController c,String label,{bool integer=false})=>Padding(padding:const EdgeInsets.only(bottom:10),child:TextField(controller:c,keyboardType:integer?TextInputType.number:const TextInputType.numberWithOptions(decimal:true),decoration:InputDecoration(labelText:label,border:OutlineInputBorder(borderRadius:BorderRadius.circular(12)))));
-  void _toast(String s){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));}
+  void _toast(String s){if(mounted)ErpCenterToast.show(context, s);}
 
   Widget _stat(String title,String value,IconData icon,Color color)=>Container(padding:const EdgeInsets.all(15),decoration:BoxDecoration(color:Colors.white,borderRadius:BorderRadius.circular(15),border:Border.all(color:const Color(0xFFE9E2F0))),child:Row(children:[Icon(icon,color:color,size:28),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text(title,style:const TextStyle(color:Colors.black54,fontSize:13)),Text(value,style:TextStyle(color:color,fontSize:22,fontWeight:FontWeight.w900))]))]));
 
@@ -587,7 +588,7 @@ class _ErpSalesRepresentativesScreenState extends State<ErpSalesRepresentativesS
   }
 
   void _toast(String value) {
-    if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(value)));
+    if(mounted)ErpCenterToast.show(context, value);
   }
 
   Map<String,dynamic>? _goalFor(String customerId) {

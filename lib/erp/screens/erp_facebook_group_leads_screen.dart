@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import '../widgets/erp_center_toast.dart';
 
 import 'package:excel/excel.dart' as xls;
 import 'package:file_picker/file_picker.dart';
@@ -166,8 +167,7 @@ class _ErpFacebookGroupLeadsScreenState
 
   void _toast(String message) {
     if (mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      ErpCenterToast.show(context, message);
     }
   }
 
