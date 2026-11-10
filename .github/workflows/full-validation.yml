@@ -8,7 +8,6 @@ on:
       - main
     paths:
       - 'lib/erp/screens/erp_program_policies_screen.dart'
-      - 'lib/erp/screens/erp_code_policy_panel.dart'
       - 'lib/erp/screens/**'
       - 'lib/erp/services/erp_print_support.dart'
       - 'lib/erp/widgets/erp_center_toast.dart'
