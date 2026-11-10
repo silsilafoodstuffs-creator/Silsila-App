@@ -79,8 +79,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   final _geoPrefix = TextEditingController(text: 'Rig');
   String _customerPrefix = 'Cus';
   int _customerSerialDigits = 2;
-  // Each geographic level is one independent two-digit segment.
-  // The persisted geo_segments map remains cumulative for backward compatibility.
+  // Each geographic level has an independently configurable segment length.
+  // geo_segments remains cumulative for legacy readers; geo_segment_lengths is authoritative.
   final Map<String, TextEditingController> _geoSegments = {
     'country': TextEditingController(text: '20'),
     'governorate': TextEditingController(text: '2'),
@@ -346,8 +346,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         'item_segments':itemSegments,
         'geo_prefix':_geoPrefix.text.trim(),
         // Legacy cumulative values are intentionally preserved for existing
-        // readers and database triggers: country=2, governorate=4,
-        // center=6, area=8 total digits.
+        // readers and database triggers; each cumulative value is derived from
+        // the current independent segment lengths.
         'geo_segments':{
           'country':countryCode,
           'governorate':2 + int.parse(_geoSegments['governorate']!.text),
@@ -656,9 +656,9 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
             _segmentField('تسلسل الصنف',_itemSegments['serial']!,3,readOnly:true),
           ]),
           const SizedBox(height:8),
-          Text('الصيغة: ${_itemPrefix.text.trim()} + كود الفئة الثانوية بدون Cat (6 أرقام) + تسلسل الصنف (3 أرقام)',style:const TextStyle(fontSize:11)),
-          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}010101001',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
-          const Text('كود الصنف = Itm + 6 أرقام الفئة الثانوية + 3 أرقام تسلسل (9 أرقام رقمية بعد البادئة). مستويات Cat ثابتة على 2 + 2 + 2.',style:TextStyle(fontSize:10,color:Colors.black54)),
+          Text('الصيغة: ${_itemPrefix.text.trim()} + كود الفئة الثانوية بدون Cat (6 أرقام) + أرقام البراند بدون Bra (${_digits['brand']!.text}) + تسلسل الصنف (3 أرقام)',style:const TextStyle(fontSize:11)),
+          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}010101${'1'.padLeft(int.tryParse(_itemSegments['brand']!.text)??3,'0')}001',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
+          Text('كود الصنف = Itm + 6 أرقام الفئة الثانوية + ${_digits['brand']!.text} أرقام البراند + 3 أرقام تسلسل. مستويات Cat ثابتة على 2 + 2 + 2.',style:const TextStyle(fontSize:10,color:Colors.black54)),
         ]))),
         if(_error!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
         if(_message!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
