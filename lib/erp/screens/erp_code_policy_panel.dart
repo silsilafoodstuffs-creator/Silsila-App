@@ -20,8 +20,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   static const _types = <Map<String, String>>[
 
 
-    {'key':'job','name':'المسميات الوظيفية','prefix':'Job','digits':'5'},
     {'key':'payroll_run','name':'مسيرات الرواتب','prefix':'Prl','digits':'5'},
+    {'key':'warehouse','name':'المخازن','prefix':'Whs','digits':'5'},
     {'key':'unit','name':'وحدات الأصناف','prefix':'Unt','digits':'5'},
     {'key':'payment_method','name':'طرق الدفع','prefix':'Pmt','digits':'5'},
     {'key':'shift','name':'ورديات العمل','prefix':'Shf','digits':'5'},
