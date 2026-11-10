@@ -107,12 +107,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   String get company => (widget.companyId ?? '').trim();
   static const Map<String, String> _codePolicyCodeSources = {
     'code_policy.program_policy':'erp_program_policies.policy_code',
-    'code_policy.program_policy':'erp_program_policies.policy_code',
     'code_policy.employee':'erp_employees.employee_code',
-    'customer_code':'erp_parties.party_code',
-    'code_policy.user':'erp_users.user_code',
-    'code_policy.supplier':'erp_parties.party_code',
-    'code_policy.representative':'erp_sales_representatives.rep_code',
+        'code_policy.user':'erp_users.user_code',
+        'code_policy.representative':'erp_sales_representatives.rep_code',
     'code_policy.branch':'erp_branches.branch_code',
     'code_policy.storage_location':'erp_warehouses.warehouse_code',
     'code_policy.department':'erp_hr_departments.department_code',
@@ -120,14 +117,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     'code_policy.job':'erp_hr_jobs.job_code',
     'code_policy.grade':'erp_hr_job_grades.grade_code',
     'code_policy.salary_element':'erp_hr_salary_elements.element_code',
-    'geo_code.country':'erp_countries.country_code',
-    'geo_code.governorate':'erp_geographic_data.geo_code',
-    'geo_code.district':'erp_geographic_data.geo_code',
-    'geo_code.area':'erp_geographic_data.geo_code',
-    'category_code.main':'erp_item_categories.category_code',
-    'category_code.sub':'erp_item_categories.category_code',
-    'category_code.secondary':'erp_item_categories.category_code',
-    'item_code':'erp_items.item_code',
+        'item_code':'erp_items.item_code',
     'code_type.payroll_run':'erp_payroll_runs.run_code',
     'code_type.warehouse':'erp_warehouses.warehouse_code',
     'code_type.unit':'erp_item_unit_catalog.unit_code',
@@ -143,19 +133,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     'code_type.cashbox':'erp_cashboxes.cashbox_code',
     'code_type.cost_center':'erp_cost_centers.center_code',
     'code_type.price_list':'erp_price_lists.price_list_code',
-    'code_type.sales_invoice':'erp_sales_documents.document_number',
-    'code_type.sales_order':'erp_sales_documents.document_number',
-    'code_type.sales_delivery':'erp_sales_documents.document_number',
-    'code_type.sales_return':'erp_sales_documents.document_number',
-    'code_type.quotation':'erp_sales_documents.document_number',
-    'code_type.purchase_invoice':'erp_purchase_documents.document_number',
-    'code_type.purchase_order':'erp_purchase_documents.document_number',
-    'code_type.purchase_receipt':'erp_purchase_documents.document_number',
-    'code_type.purchase_return':'erp_purchase_documents.document_number',
-    'code_type.cash_receipt':'erp_cash_vouchers.voucher_number',
-    'code_type.cash_payment':'erp_cash_vouchers.voucher_number',
-    'code_type.cash_transfer':'erp_cash_vouchers.voucher_number',
-    'code_type.cash_movement':'erp_cash_movements.movement_number',
+        'code_type.cash_movement':'erp_cash_movements.movement_number',
     'code_type.cash_order':'erp_cash_orders.order_number',
     'code_type.checkbook':'erp_checkbooks.book_number',
     'code_type.fixed_asset':'erp_fixed_assets.asset_code',
@@ -212,35 +190,63 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         final rows = await db.from(parts[0]).select('id')
             .eq('company_id', company).not(parts[1], 'is', null).neq(parts[1], '').limit(1);
         if ((rows as List).isNotEmpty) locked.addAll(entry.value);
-      } catch (_) {
-        // A missing/unsupported source never locks a policy by guesswork.
-      }
+      } catch (_) {}
     }));
+
+    Future<void> probeCompanyType(String key, String table, String column,
+        {String? filterColumn, String? filterValue, String? excludeValues}) async {
+      try {
+        var query = db.from(table).select('id')
+            .eq('company_id', company).not(column, 'is', null).neq(column, '');
+        if (filterColumn != null && filterValue != null) query = query.eq(filterColumn, filterValue);
+        if (filterColumn != null && excludeValues != null) query = query.not(filterColumn, 'in', excludeValues);
+        final rows = await query.limit(1);
+        if ((rows as List).isNotEmpty) locked.add(key);
+      } catch (_) {}
+    }
+    await Future.wait([
+      probeCompanyType('customer_code','erp_parties','party_code',filterColumn:'party_kind',filterValue:'customer'),
+      probeCompanyType('code_policy.supplier','erp_parties','party_code',filterColumn:'party_kind',filterValue:'supplier'),
+      probeCompanyType('code_type.sales_invoice','erp_sales_documents','document_number',filterColumn:'document_type',excludeValues:'(quotation,order,delivery,return)'),
+      probeCompanyType('code_type.purchase_invoice','erp_purchase_documents','document_number',filterColumn:'document_type',excludeValues:'(order,receipt,return)'),
+      probeCompanyType('code_type.cash_receipt','erp_cash_vouchers','voucher_number',filterColumn:'voucher_type',excludeValues:'(payment,transfer)'),
+      probeCompanyType('code_type.cash_payment','erp_cash_vouchers','voucher_number',filterColumn:'voucher_type',filterValue:'payment'),
+      probeCompanyType('code_type.cash_transfer','erp_cash_vouchers','voucher_number',filterColumn:'voucher_type',filterValue:'transfer'),
+    ]);
     try {
       final workspaceRows = await db.from('erp_business_workspaces')
           .select('id').eq('platform_company_id', company);
       final workspaceIds = (workspaceRows as List)
-          .whereType<Map<String, dynamic>>()
-          .map((row) => row['id'])
+          .whereType<Map<String, dynamic>>().map((row) => row['id'])
           .whereType<String>().toList();
       if (workspaceIds.isNotEmpty) {
-        final workspaceGrouped = <String, List<String>>{};
-        for (final entry in _workspaceCodePolicyCodeSources.entries) {
-          final parts = entry.value.split('.');
-          final source = '${parts[0]}.${parts[1]}';
-          workspaceGrouped.putIfAbsent(source, () => <String>[]).add(entry.key);
-        }
-        await Future.wait(workspaceGrouped.entries.map((entry) async {
-          final parts = entry.key.split('.');
+        Future<void> probeWorkspace(String key, String table, String column,
+            {String? filterColumn, String? filterValue}) async {
           try {
-            final rows = await db.from(parts[0]).select('id')
+            var query = db.from(table).select('id')
                 .inFilter('workspace_id', workspaceIds)
-                .not(parts[1], 'is', null).neq(parts[1], '').limit(1);
-            if ((rows as List).isNotEmpty) locked.addAll(entry.value);
-          } catch (_) {
-            // Workspace tables may be unavailable to accounts without workspace access.
-          }
-        }));
+                .not(column, 'is', null).neq(column, '');
+            if (filterColumn != null && filterValue != null) query = query.eq(filterColumn, filterValue);
+            final rows = await query.limit(1);
+            if ((rows as List).isNotEmpty) locked.add(key);
+          } catch (_) {}
+        }
+        await Future.wait([
+          probeWorkspace('code_type.workspace_branch','erp_business_workspace_branches','branch_code'),
+          probeWorkspace('code_type.workspace_cash_movement','erp_business_workspace_cash_movements','movement_no'),
+          probeWorkspace('code_type.workspace_customer','erp_business_workspace_counterparties','party_code',filterColumn:'party_type',filterValue:'customer'),
+          probeWorkspace('code_type.workspace_supplier','erp_business_workspace_counterparties','party_code',filterColumn:'party_type',filterValue:'supplier'),
+          probeWorkspace('code_type.workspace_department','erp_business_workspace_departments','department_code'),
+          probeWorkspace('code_type.workspace_employee','erp_business_workspace_employees','employee_code'),
+          probeWorkspace('code_type.workspace_warehouse','erp_business_workspace_warehouses','warehouse_code'),
+          probeWorkspace('code_type.workspace_purchase','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'purchase'),
+          probeWorkspace('code_type.workspace_purchase_return','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'purchase_return'),
+          probeWorkspace('code_type.workspace_sale','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'sale'),
+          probeWorkspace('code_type.workspace_sale_return','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'sale_return'),
+          probeWorkspace('code_type.workspace_transfer','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'transfer'),
+          probeWorkspace('code_type.workspace_adjustment','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'adjustment'),
+          probeWorkspace('code_type.workspace_item_link','erp_business_workspace_item_links','local_code'),
+        ]);
       }
     } catch (_) {}
     if (mounted) setState(() => _lockedCodePolicies
@@ -784,7 +790,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         ),
         onChanged:(v){
           final n=int.tryParse(v);
-          if(n!=null&&n>=1&&n<=8)update('serial_digits',n);
+          if(n!=null&&n>=1&&n<=12)update('serial_digits',n);
         },
       )),
       const SizedBox(width:5),
@@ -833,7 +839,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       SizedBox(width:48,height:40,child:TextFormField(
         key:ValueKey('item-code-serial-$serialDigits'),initialValue:serialDigits.toString(),readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:2,
         keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],
-        onChanged:(v){final n=int.tryParse(v);if(n!=null&&n>=1&&n<=8)update('serial_digits',n);},
+        onChanged:(v){final n=int.tryParse(v);if(n!=null&&n>=1&&n<=12)update('serial_digits',n);},
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
       )),
