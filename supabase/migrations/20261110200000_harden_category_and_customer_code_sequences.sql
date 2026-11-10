@@ -102,7 +102,7 @@ BEGIN
       AND c.id IS DISTINCT FROM NEW.id
       AND left(c.category_code,length(v_prefix||v_parent_digits))=v_prefix||v_parent_digits
       AND length(c.category_code)=length(v_prefix||v_parent_digits)+v_segment_digits
-      AND substring(c.category_code from length(v_prefix||v_parent_digits)+1) ~ '^[0-9]+
+      AND substring(c.category_code from length(v_prefix||v_parent_digits)+1) ~ '^[0-9]+';
 
     IF v_rank>power(10::numeric,v_segment_digits)-1 THEN
       RAISE EXCEPTION 'عدد الفئات التابعة تجاوز سعة التكويد المحددة (% خانات)',v_segment_digits;
