@@ -36,7 +36,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'item_code','category':'تكويدية','ar':'سياسة تكويد الأصناف ( يرث كود الفئة الثانوية )','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"brand_digits":2,"serial_digits":3}','mandatory':true,'all':true},
     {'key':'code_policy.program_policy','category':'تكويدية','ar':'سياسات البرنامج','en':'Program policies','value':'Pol + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.employee','category':'تكويدية','ar':'الموظفون','en':'Employees','value':'Emp + 5 أرقام تسلسلية','mandatory':true,'all':true},
-    {'key':'code_policy.user','category':'تكويدية','ar':'المستخدمون','en':'Users','value':'Usr + كود نوع المستخدم بدون البادئة Typ + 5 أرقام؛ وللموظف نفس آخر 5 أرقام من كود الموظف المرتبط','mandatory':true,'all':true},
+    {'key':'code_policy.user','category':'تكويدية','ar':'المستخدمون','en':'Users','value':'Usr + الأرقام الموروثة من نوع المستخدم بدون Typ + 5 أرقام تسلسلية مستقلة؛ دون الاعتماد على كود الموظف','mandatory':true,'all':true},
     {'key':'code_policy.supplier','category':'تكويدية','ar':'الموردون','en':'Suppliers','value':'Ven + 5 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.representative','category':'تكويدية','ar':'المندوبون','en':'Representatives','value':'Rep + كود الموظف المرتبط بدون البادئة Emp','mandatory':true,'all':true},
     {'key':'code_policy.branch','category':'تكويدية','ar':'الفروع','en':'Branches','value':'Brn + 3 أرقام تسلسلية','mandatory':true,'all':true},
@@ -483,7 +483,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   static const Map<String, Map<String, dynamic>> _codePolicyDefaults = {
     'code_policy.program_policy': {'prefix':'Pol','digits':3},
     'code_policy.employee': {'prefix':'Emp','digits':5},
-    'code_policy.user': {'prefix':'Usr','digits':5,'inheritance':'يرث كود نوع المستخدم بدون البادئة Typ؛ وإذا كان نوع المستخدم موظفًا يرث آخر خمسة أرقام من كود الموظف المرتبط'},
+    'code_policy.user': {'prefix':'Usr','digits':5,'inheritance':'يرث الأرقام من كود نوع المستخدم بدون البادئة Typ، ثم يضاف تسلسل مستقل من 5 أرقام؛ ولا يرث كود الموظف'},
     'code_policy.supplier': {'prefix':'Ven','digits':5},
     'code_policy.representative': {'prefix':'Rep','digits':5,'inheritance':'يرث تسلسل كود الموظف المرتبط بدون البادئة Emp'},
     'code_policy.branch': {'prefix':'Brn','digits':3},
