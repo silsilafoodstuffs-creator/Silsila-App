@@ -70,6 +70,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   final Map<String, TextEditingController> _digits = {};
   final Map<String, bool> _automatic = {};
   final Map<String, bool> _composite = {};
+  // Keep persisted generator settings for policy types now edited in the lower policy grid.
+  final Map<String, dynamic> _retainedTypeConfigs = {};
   final Map<String, List<TextEditingController>> _fieldNames = {};
   final Map<String, List<TextEditingController>> _fieldCounts = {};
   final _itemPrefix = TextEditingController(text: 'Itm');
@@ -152,6 +154,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       if (row != null && (row['policy_value'] ?? '').toString().isNotEmpty) {
         final data = jsonDecode(row['policy_value'].toString()) as Map<String, dynamic>;
         final configs = Map<String, dynamic>.from(data['types'] as Map? ?? {});
+        final visibleTypeKeys = _types.map((t) => t['key']!).toSet();
+        _retainedTypeConfigs
+          ..clear()
+          ..addEntries(configs.entries.where((entry) => !visibleTypeKeys.contains(entry.key)));
         for (final t in _types) {
           final cfg = Map<String, dynamic>.from(configs[t['key']] as Map? ?? {});
           if (cfg['prefix'] != null) _prefix[t['key']]!.text = cfg['prefix'].toString();
@@ -269,7 +275,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      final types = <String, dynamic>{};
+      final types = <String, dynamic>{..._retainedTypeConfigs};
       for (final t in _types) {
         final key = t['key']!;
         final fields = <Map<String, dynamic>>[
