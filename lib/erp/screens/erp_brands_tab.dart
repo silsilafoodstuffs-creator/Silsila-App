@@ -154,8 +154,13 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
   }
 
+  Map<String,dynamic>? _selectedRow() {
+    final matches = _rows.where((item) => _s(item['id']) == _selectedId);
+    return matches.isEmpty ? null : matches.first;
+  }
+
   Future<void> _delete() async {
-    final row = _rows.where((item) => _s(item['id']) == _selectedId).firstOrNull;
+    final row = _selectedRow();
     if (row == null) {
       ErpCenterToast.show(context, 'اختر براندًا أولًا.', isError: true);
       return;
@@ -172,7 +177,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   @override
   Widget build(BuildContext context) {
     final rows = _visibleRows;
-    final selected = _rows.where((row) => _s(row['id']) == _selectedId).firstOrNull;
+    final selected = _selectedRow();
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Column(
