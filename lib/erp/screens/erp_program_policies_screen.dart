@@ -43,6 +43,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'code_policy.department','category':'تكويدية','ar':'إدارات الشركة','en':'Company departments','value':'Dep + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.section','category':'تكويدية','ar':'الأقسام','en':'Sections','value':'Sec + كود الإدارة بدون البادئة Dep + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.work_location','category':'تكويدية','ar':'مواقع العمل','en':'Work locations','value':'Plc + 3 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.job','category':'تكويدية','ar':'الوظائف','en':'Jobs','value':'Job + 5 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.grade','category':'تكويدية','ar':'الدرجات الوظيفية','en':'Job grades','value':'Grd + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.salary_element','category':'تكويدية','ar':'عناصر المرتبات','en':'Payroll elements','value':'Elm + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
