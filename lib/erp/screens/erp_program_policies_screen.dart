@@ -208,7 +208,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final newTypeRows = <Map<String, dynamic>>[];
       var nextPolicySequence = 0;
       for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
-        final match = RegExp(r'^Pol(\\d+)$').firstMatch((row['policy_code'] ?? '').toString());
+        final match = RegExp(r'^Pol(\d+)$').firstMatch((row['policy_code'] ?? '').toString());
         final number = int.tryParse(match?.group(1) ?? '') ?? 0;
         if (number > nextPolicySequence) nextPolicySequence = number;
       }
