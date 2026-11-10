@@ -154,3 +154,32 @@ WHEN (
   OR OLD.name_en IS DISTINCT FROM NEW.name_en
 )
 EXECUTE FUNCTION private.erp_sync_linked_user_codes();
+
+
+-- When the central user-type policy changes, refresh the derived type display
+-- codes; the user-type trigger then synchronizes each dependent user code.
+CREATE OR REPLACE FUNCTION private.erp_refresh_user_type_codes_from_policy()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+BEGIN
+  IF NEW.policy_key='code_generation_registry' THEN
+    UPDATE public.erp_user_types
+    SET type_code_display=type_code_display
+    WHERE company_id=NEW.company_id;
+  END IF;
+  RETURN NEW;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION private.erp_refresh_user_type_codes_from_policy() FROM PUBLIC,anon,authenticated;
+
+DROP TRIGGER IF EXISTS erp_program_policies_refresh_user_type_codes ON public.erp_program_policies;
+CREATE TRIGGER erp_program_policies_refresh_user_type_codes
+AFTER INSERT OR UPDATE OF policy_key,policy_value
+ON public.erp_program_policies
+FOR EACH ROW
+WHEN (NEW.policy_key='code_generation_registry')
+EXECUTE FUNCTION private.erp_refresh_user_type_codes_from_policy();
