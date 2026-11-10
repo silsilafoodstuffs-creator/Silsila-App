@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../services/erp_print_support.dart';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -964,14 +965,14 @@ class _ErpUserAdminScreenState extends State<ErpUserAdminScreen> {
   Future<void> _printPdf() async {
     try{
       final doc=pw.Document();
-      doc.addPage(pw.MultiPage(pageFormat:PdfPageFormat.a4.landscape,build:(context)=>[
-        pw.Text('سلسلة — ${_typeNames[_view]}',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
+      doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, pageFormat:PdfPageFormat.a4.landscape,build:(context)=>[
+        ErpPrintSupport.text('سلسلة — ${_typeNames[_view]}',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
         pw.SizedBox(height:12),
         pw.Table(border:pw.TableBorder.all(color:PdfColors.grey400,width:.5),children:[
-          pw.TableRow(children:['م','الكود','الاسم العربي','الاسم الإنجليزي','الحالة'].map((x)=>pw.Padding(padding:const pw.EdgeInsets.all(6),child:pw.Text(x))).toList()),
+          pw.TableRow(children:['م','الكود','الاسم العربي','الاسم الإنجليزي','الحالة'].map((x)=>pw.Padding(padding:const pw.EdgeInsets.all(6),child:ErpPrintSupport.text(x))).toList()),
           for(var i=0;i<_rows.length;i++)pw.TableRow(children:[
             '${i+1}',_s(_rows[i][_isType?'type_code':_isUser?'user_code':'template_code']),_s(_rows[i]['name_ar']),_s(_rows[i]['name_en']),_rows[i]['is_active']==true?'نشط':'غير نشط'
-          ].map((x)=>pw.Padding(padding:const pw.EdgeInsets.all(5),child:pw.Text(x,style:const pw.TextStyle(fontSize:9)))).toList()),
+          ].map((x)=>pw.Padding(padding:const pw.EdgeInsets.all(5),child:ErpPrintSupport.text(x,style:const pw.TextStyle(fontSize:9)))).toList()),
         ]),
       ]));
       await Printing.layoutPdf(onLayout:(_)=>doc.save());

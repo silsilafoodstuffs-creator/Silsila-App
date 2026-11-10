@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../services/erp_print_support.dart';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
@@ -868,10 +869,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Future<Uint8List> _buildCurrentPdf() async {
     final rows = await _currentExportRows();
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
-    final pdf = pw.Document();    pdf.addPage(pw.MultiPage(
+    final pdf = pw.Document();    pdf.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, 
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
-        pw.Text('Silsila • ${tabs[tab]}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        ErpPrintSupport.text('Silsila • ${tabs[tab]}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 10),        pw.TableHelper.fromTextArray(headers: rows.first, data: rows.skip(1).toList()),
       ],
     ));

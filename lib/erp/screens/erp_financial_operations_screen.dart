@@ -1,4 +1,5 @@
 import 'package:excel/excel.dart' hide Border;
+import '../services/erp_print_support.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -235,12 +236,12 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
     final rows=exportRows().map((r)=>r.reversed.toList()).toList();
     final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
     final pdf=pw.Document();
-    pdf.addPage(pw.MultiPage(pageFormat:PdfPageFormat.a4.landscape,margin:const pw.EdgeInsets.all(20),theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
-      pw.Text('سلسلة — '+tabNames[tabs.index],textAlign:pw.TextAlign.right,style:pw.TextStyle(fontSize:16,fontWeight:pw.FontWeight.bold)),
+    pdf.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, pageFormat:PdfPageFormat.a4.landscape,margin:const pw.EdgeInsets.all(20),theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
+      ErpPrintSupport.text('سلسلة — '+tabNames[tabs.index],textAlign:pw.TextAlign.right,style:pw.TextStyle(fontSize:16,fontWeight:pw.FontWeight.bold)),
       pw.SizedBox(height:5),
-      pw.Text('تاريخ التقرير: '+_todayDisplay()+' • عدد السجلات: '+rows.length.toString(),textAlign:pw.TextAlign.right,style:const pw.TextStyle(fontSize:9)),
+      ErpPrintSupport.text('تاريخ التقرير: '+_todayDisplay()+' • عدد السجلات: '+rows.length.toString(),textAlign:pw.TextAlign.right,style:const pw.TextStyle(fontSize:9)),
       pw.SizedBox(height:12),
-      if(rows.isEmpty)pw.Text('لا توجد بيانات.',textAlign:pw.TextAlign.right)
+      if(rows.isEmpty)ErpPrintSupport.text('لا توجد بيانات.',textAlign:pw.TextAlign.right)
       else pw.TableHelper.fromTextArray(headers:headers,data:rows,headerStyle:pw.TextStyle(fontSize:8,fontWeight:pw.FontWeight.bold),cellStyle:const pw.TextStyle(fontSize:8),cellAlignment:pw.Alignment.centerRight,headerAlignment:pw.Alignment.centerRight),
     ]));
     return Uint8List.fromList(await pdf.save());

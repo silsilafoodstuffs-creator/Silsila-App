@@ -1,4 +1,5 @@
 import 'package:excel/excel.dart' hide Border;
+import '../services/erp_print_support.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -730,8 +731,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         if(isWarehouse)return [e.key+1,_s(r['warehouse_code']),_s(r['warehouse_name']),_s(r['address']),r['is_active']==true?'نشط':'موقوف'];
         return [e.key+1,_s(r['item_code']),_s(r['item_name']),_s(r['base_unit']),_money(r['purchase_price']),_money(r['sale_price']),_money(r['tax_rate'])+'%'];
       }).toList();
-      doc.addPage(pw.MultiPage(theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
-        pw.Text(isWarehouse?'بيانات المخازن':'بيانات الأصناف',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
+      doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
+        ErpPrintSupport.text(isWarehouse?'بيانات المخازن':'بيانات الأصناف',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
         pw.SizedBox(height:10),
         pw.TableHelper.fromTextArray(headers:headers,data:data),
       ]));

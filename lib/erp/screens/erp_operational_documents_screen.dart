@@ -1,4 +1,5 @@
 import '../widgets/erp_keyboard_navigation.dart';
+import '../services/erp_print_support.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1611,13 +1612,13 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
       final rows = _pendingLines.isNotEmpty ? _pendingLines : _lines;
       final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
       final pdf = pw.Document();
-      pdf.addPage(pw.MultiPage(theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
-        pw.Text('Silsila - ' + _salesDocumentTitle(_documentType), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+      pdf.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
+        ErpPrintSupport.text('Silsila - ' + _salesDocumentTitle(_documentType), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 8),
-        pw.Text('Document: ' + _documentNumber.text),
+        ErpPrintSupport.text('Document: ' + _documentNumber.text),
         pw.TableHelper.fromTextArray(headers: ['Item', 'Quantity', 'Unit price', 'Total'], data: rows.map((line) => [_s(line['item_name']), _money(line['quantity']), _money(line['unit_price']), _money(_n(line['quantity']) * _n(line['unit_price']))]).toList()),
         pw.SizedBox(height: 8),
-        pw.Text('Total: ' + _money(rows.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price'])))),
+        ErpPrintSupport.text('Total: ' + _money(rows.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price'])))),
       ]));
       await Printing.layoutPdf(onLayout: (_) async => pdf.save());
     } catch (e) { if (mounted) setState(() => _error = 'تعذرت الطباعة أو إنشاء PDF: ' + e.toString()); }
