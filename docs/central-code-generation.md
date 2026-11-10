@@ -2,7 +2,7 @@
 
 ## Ownership and behavior
 
-- There is one user-facing coding-policy location: **إعدادات عامة > سياسات البرنامج > تكويدية**. The former standalone **سياسات الأكواد** screen was retired after confirming its geographic, customer, category, brand, item, and 44 central entity-code definitions are covered by the coding tab. The central database registry and generation triggers remain in place; no policy data or issued identifiers were deleted.
+- There is one user-facing coding-policy location: **إعدادات عامة > سياسات البرنامج > تكويدية**. The former standalone **سياسات الأكواد** screen was retired after confirming its geographic, customer, category, brand, item, and 67 central entity-code definitions are covered by the coding tab. The central database registry and generation triggers remain in place; no policy data or issued identifiers were deleted.
 
 - New identifiers are assigned atomically by Supabase `BEFORE INSERT` triggers, not by Flutter form counters.
 - Code-policy values are edited and saved from the coding-policy tab; the database policy resolver and triggers remain authoritative.
