@@ -341,7 +341,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         if (policy == null) continue;
         final config = _codePolicyConfig(policy);
         final previous = Map<String, dynamic>.from(registryTypes[definition['key']] as Map? ?? {});
-        registryTypes[definition['key']] = {...previous, 'prefix': config['prefix'], 'digits': config['digits']};
+        registryTypes[definition['key']!] = {...previous, 'prefix': config['prefix'], 'digits': config['digits']};
       }
       registryPayload['version'] ??= 4;
       registryPayload['types'] = registryTypes;
