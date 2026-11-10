@@ -339,7 +339,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final preview = prefix + List.filled(8, '0').join() + '1'.padLeft(serialDigits.clamp(1, 12), '0');
     return SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
-        key:ValueKey('customer-code-prefix-$prefix'),initialValue:prefix,maxLength:10,
+        key:const ValueKey('customer-code-prefix'),initialValue:prefix,maxLength:10,
         textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),
         inputFormatters:[FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]'))],
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
@@ -349,7 +349,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       const SizedBox(width:48,height:40,child:Center(child:Text('8',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)))),
       const SizedBox(width:4),
       SizedBox(width:48,height:40,child:TextFormField(
-        key:ValueKey('customer-code-serial-$serialDigits'),initialValue:serialDigits.toString(),maxLength:2,
+        key:const ValueKey('customer-code-serial'),initialValue:serialDigits.toString(),maxLength:2,
         textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w800),
         keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
