@@ -2,6 +2,8 @@
 
 ## Ownership and behavior
 
+- There is one user-facing coding-policy location: **إعدادات عامة > سياسات البرنامج > تكويدية**. The former standalone **سياسات الأكواد** screen was retired after confirming its geographic, customer, category, brand, item, and 44 central entity-code definitions are covered by the coding tab. The central database registry and generation triggers remain in place; no policy data or issued identifiers were deleted.
+
 - New identifiers are assigned atomically by Supabase `BEFORE INSERT` triggers, not by Flutter form counters.
 - Code-policy values are edited and saved from the coding-policy tab; the database policy resolver and triggers remain authoritative.
 - Prefixes and digit widths lock independently for each code family after its first persisted code. If the lock-status check is unavailable, code-format editing remains disabled rather than risking an issued identifier.
@@ -36,7 +38,7 @@ The database resolves the selected secondary category and active company brand, 
 
 ## Customer, category, and geographic identifiers
 
-- Customer codes use the `Cus` prefix by default, followed by the inherited geographic digits and the customer serial. The customer prefix and serial width are configurable in the customer policy.
+- Customer codes use the `Cus` prefix, followed by the inherited 8-digit geographic code and a 4-digit customer serial by default (`Cus + 8 geographic digits + 4 serial digits`). The customer prefix and serial width remain configurable in Program Policies > Coding.
 - Country code is two digits (Egypt is `20`). Governorate, center/district, and area segment widths are independently configured in the geographic policy; child codes inherit their parent's numeric code.
 - Category hierarchy codes use `Cat` plus two digits for each of the three levels: main, subcategory, and secondary category. The category hierarchy remains aligned with the six category digits embedded in item codes.
 
