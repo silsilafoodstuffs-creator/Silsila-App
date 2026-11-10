@@ -383,7 +383,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         'user_ids':<String>[],
         'policy_value':payload,
       }, onConflict:'company_id,policy_key');
-      if (mounted) setState(() { _saving = false; _message = 'تم حفظ إعدادات التكويد المركزي.'; });
+      await _db.rpc('erp_rebuild_geographic_hierarchical_codes', params: {'p_company_id': widget.companyId});
+      if (mounted) setState(() { _saving = false; _message = 'تم حفظ إعدادات التكويد المركزي ومزامنة الأكواد الجغرافية.'; });
     } catch (e) {
       if (mounted) setState(() { _saving = false; _error = 'تعذر حفظ إعدادات التكويد: $e'; });
       rethrow;
@@ -481,9 +482,9 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
       
       _firstFieldName(),  const SizedBox(width:_countCellWidth,height:_cellHeight), 
-      _geoNameCell('منطقة/قرية'),  _segmentField('عدد',_geoSegments['area']!,2,width:_countCellWidth,readOnly:true),
-       _geoNameCell('حي/مركز/شياخة'),  _segmentField('عدد',_geoSegments['center']!,2,width:_countCellWidth,readOnly:true),
-       _geoNameCell('محافظة'),  _segmentField('عدد',_geoSegments['governorate']!,2,width:_countCellWidth,readOnly:true),
+      _geoNameCell('منطقة/قرية'),  _segmentField('عدد',_geoSegments['area']!,2,width:_countCellWidth),
+       _geoNameCell('حي/مركز/شياخة'),  _segmentField('عدد',_geoSegments['center']!,2,width:_countCellWidth),
+       _geoNameCell('محافظة'),  _segmentField('عدد',_geoSegments['governorate']!,2,width:_countCellWidth),
        _geoNameCell('دولة'),  const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('2',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       
       SizedBox(width:112,child:Text(_geoPrefix.text,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),

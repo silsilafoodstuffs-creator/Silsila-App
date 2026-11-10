@@ -500,7 +500,7 @@ class _ErpGeographicDataScreenState extends State<ErpGeographicDataScreen> {
                           style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
                         Text(
-                          '${level == 'area' ? 'Rig' : ''}${s(row['hierarchical_code']).isEmpty ? s(row['geo_code']) : s(row['hierarchical_code'])}  •  ${label(level, s(row['admin_type']))}',
+                          '${level == 'area' && !s(row['hierarchical_code']).startsWith('Rig') ? 'Rig' : ''}${s(row['hierarchical_code']).isEmpty ? s(row['geo_code']) : s(row['hierarchical_code'])}  •  ${label(level, s(row['admin_type']))}',
                           style: const TextStyle(
                             fontSize: 11,
                             color: Color(0xFF3E007D),
