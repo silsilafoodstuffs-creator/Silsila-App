@@ -61,7 +61,7 @@ The extended generator also covers fixed assets and asset categories/depreciatio
 
 ## Default fallback alignment
 
-The database generator and preview defaults match Program Policies: supplier `Ven`/5, representative `Rep`/5, branch `Brn`/3, department `Dep`/3, storage location `Loc`/3, section `Sec`/3, work location `Plc`/3, grade `Grd`/3, salary element `Elm`/3, customer serial `Cus`/4, user type `Typ`/2, and permission template `Tpl`/5. These are fallbacks for companies without a saved registry; saved company policies remain authoritative.
+The database generator and preview defaults match Program Policies: supplier `Ven`/5, representative `Rep`/5, branch `Brn`/3, department `Dep`/3, storage location `Loc`/3, section `Sec`/3, work location `Plc`/3, grade `Grd`/3, salary element `Elm`/3, item units `UNT`/4, payment methods `PAY`/4, shifts `Shf`/5, user classifications `Cls`/5, customer serial `Cus`/4, user type `Typ`/2, and permission template `Tpl`/5. These are fallbacks for companies without a saved registry; saved company policies remain authoritative.
 
 ## Adding a future code family
 
