@@ -1219,7 +1219,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         const Text('الوحدة الكبرى هي الافتراضية للشراء والبيع والتحويل والجرد، ويمكن تخصيص كل مخزن بصورة مستقلة.'),
         const SizedBox(height: 8),
         SingleChildScrollView(scrollDirection: Axis.horizontal, child: DataTable(
-          columnSpacing: 16,
+          columnSpacing: 5,
           headingRowColor: WidgetStateProperty.all(const Color(0xFFE9DDF5)),
           columns: const [
             DataColumn(label: Text('م')),

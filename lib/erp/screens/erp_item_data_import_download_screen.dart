@@ -696,7 +696,7 @@ class _ErpItemDataImportScreenState extends State<ErpItemDataImportScreen> {
                     fixedTopRows: 1,
                     fixedLeftColumns: 4,
                     minWidth: 2350,
-                    columnSpacing: 8,
+                    columnSpacing: 5,
                     headingRowColor: WidgetStateProperty.all(const Color(0xFFF5EFFB)),
                     columns: [
                       DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -875,7 +875,7 @@ class _ErpItemDataDownloadScreenState extends State<ErpItemDataDownloadScreen>{
                   fixedTopRows: 1,
                   fixedLeftColumns: 4,
                   minWidth: 1700,
-                  columnSpacing: 8,
+                  columnSpacing: 5,
                   columns: [
                     DataColumn(label: Row(mainAxisSize: MainAxisSize.min, children: [
                       const Text('الكل'),

@@ -448,7 +448,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
   Widget grid(List<String> heads,List<List<String>> rows,{List<Widget>? actions}) {
     if(rows.isEmpty)return const Card(child:Padding(padding:EdgeInsets.all(16),child:Center(child:Text('لا توجد بيانات حتى الآن.'))));
     return Card(child:SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-      headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),columnSpacing:22,horizontalMargin:12,
+      headingRowColor:WidgetStateProperty.all(const Color(0xFFF5EFFB)),columnSpacing: 5,horizontalMargin: 5,
       columns:[...heads.map((x)=>DataColumn(label:Text(x,style:const TextStyle(fontWeight:FontWeight.w900)))),if(actions!=null)const DataColumn(label:Text('إجراء'))],
       rows:List.generate(rows.length,(i)=>DataRow(cells:[...rows[i].map((v)=>DataCell(Text(v))),if(actions!=null)DataCell(actions[i])])),
     )));

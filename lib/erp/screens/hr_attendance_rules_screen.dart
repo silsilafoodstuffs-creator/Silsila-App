@@ -187,11 +187,11 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
       _numberFields([_num(s.earlyIn,'الحضور المبكر: قيمة الدقيقة إضافي',readOnly:!canEdit),_num(s.earlyOut,'الانصراف المبكر: قيمة الدقيقة خصم',readOnly:!canEdit),_num(s.lateOut,'الانصراف المتأخر: قيمة الدقيقة إضافي',readOnly:!canEdit)]),
       _heading('قواعد الحضور المتأخر — شرائح متتابعة'),
       SingleChildScrollView(scrollDirection:Axis.horizontal,child:DataTable(
-        horizontalMargin:12,
-        columnSpacing:14,
-        dataRowMinHeight:57,
-        dataRowMaxHeight:57,
-        headingRowHeight:57,
+        horizontalMargin: 5,
+        columnSpacing: 5,
+        dataRowMinHeight: 40,
+        dataRowMaxHeight: 40,
+        headingRowHeight: 40,
         headingRowColor:WidgetStateProperty.all(const Color(0xFFF1E9FA)),
         columns:const [DataColumn(label:Text('التأخير')),DataColumn(label:Text('من')),DataColumn(label:Text('إلى')),DataColumn(label:Text('جزاء/دقيقة')),DataColumn(label:Text('نوع')),DataColumn(label:Text('حذف'))],
         rows:List.generate(s.from.length,(n)=>DataRow(cells:[

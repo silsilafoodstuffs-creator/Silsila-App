@@ -310,7 +310,7 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
     await showDialog<void>(context: context, builder: (ctx) => AlertDialog(
       title: const Text('معاينة مراكز التكلفة'),
       content: SizedBox(width: 750, child: SingleChildScrollView(child: DataTable(
-        headingRowHeight: 42, dataRowMinHeight: 40, dataRowMaxHeight: 48,
+        headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40,
         columns: const [DataColumn(label: Text('الكود')), DataColumn(label: Text('الاسم العربي')), DataColumn(label: Text('الاسم الإنجليزي')), DataColumn(label: Text('النوع')), DataColumn(label: Text('الفرع')), DataColumn(label: Text('الحالة'))],
         rows: _tree.map((r) => DataRow(cells: [
           DataCell(Text(_s(r['center_code']))), DataCell(Text('${_child(r) ? '↳ ' : ''}${_ar(r)}')),
@@ -383,8 +383,8 @@ class _ErpCostCentersScreenState extends State<ErpCostCentersScreen> {
         Expanded(child: Scrollbar(child: SingleChildScrollView(child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: DataTable(
-            headingRowHeight: 46, dataRowMinHeight: 46, dataRowMaxHeight: 60,
-            horizontalMargin: 12, columnSpacing: 14, dividerThickness: .7,
+            headingRowHeight: 40, dataRowMinHeight: 40, dataRowMaxHeight: 40,
+            horizontalMargin: 5, columnSpacing: 5, dividerThickness: .7,
             headingTextStyle: const TextStyle(fontWeight: FontWeight.w800, color: _costPurple, fontSize: 12),
             columns: const [
               DataColumn(label: Text('تحديد')), DataColumn(label: Text('م')),
