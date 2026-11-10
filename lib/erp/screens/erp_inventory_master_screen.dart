@@ -677,24 +677,62 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     final code=TextEditingController(text:_s(row[isWarehouse?'warehouse_code':'item_code']));
     final name=TextEditingController(text:_s(row[isWarehouse?'warehouse_name':'item_name']));
     final barcode=TextEditingController(text:_s(row['barcode']));
-    final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(
-      title:Text(isWarehouse?'تعديل بيانات المخزن':'تعديل بيانات الصنف'),
-      content:SizedBox(width:420,child:Column(mainAxisSize:MainAxisSize.min,children:[
-        TextField(controller:code,readOnly:true,decoration:const InputDecoration(labelText:'الكود',helperText:'كود تلقائي ثابت لا يمكن تغييره')),
-        TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم بالعربية')),
-        if(!isWarehouse)TextField(controller:barcode,decoration:const InputDecoration(labelText:'الباركود')),
-      ])),
-      actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ التعديل'))],
-    ));
+    String? editBrandId=_s(row['brand_id']).isEmpty?null:_s(row['brand_id']);
+    String? editCategoryId=_s(row['category_id']).isEmpty?null:_s(row['category_id']);
+    final yes=await showDialog<bool>(
+      context:context,
+      builder:(ctx)=>StatefulBuilder(builder:(ctx,dialogSetState)=>AlertDialog(
+        title:Text(isWarehouse?'تعديل بيانات المخزن':'تعديل بيانات الصنف'),
+        content:SizedBox(width:500,child:Column(mainAxisSize:MainAxisSize.min,children:[
+          TextField(controller:code,readOnly:true,decoration:const InputDecoration(labelText:'الكود',helperText:'كود تلقائي ثابت لا يمكن تغييره')),
+          TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم بالعربية')),
+          if(!isWarehouse)TextField(controller:barcode,decoration:const InputDecoration(labelText:'الباركود')),
+          if(!isWarehouse)DropdownButtonFormField<String>(
+            itemHeight:40,
+            value:_categories.any((x)=>_s(x['id'])==editCategoryId && x['is_active']==true && _isSecondaryCategory(x))?editCategoryId:null,
+            isExpanded:true,
+            decoration:const InputDecoration(labelText:'الفئة الثانوية *'),
+            items:_categories.where((x)=>x['is_active']==true && _isSecondaryCategory(x)).map((x)=>DropdownMenuItem<String>(
+              value:_s(x['id']),
+              child:Text('${_s(x['category_code'])} — ${_s(x['category_name'])}',overflow:TextOverflow.ellipsis),
+            )).toList(),
+            onChanged:(value)=>dialogSetState(()=>editCategoryId=value),
+          ),
+          if(!isWarehouse)DropdownButtonFormField<String>(
+            itemHeight:40,
+            value:_brands.any((x)=>_s(x['id'])==editBrandId && x['is_active']==true)?editBrandId:null,
+            isExpanded:true,
+            decoration:const InputDecoration(labelText:'البراند/الماركة *'),
+            items:_brands.where((x)=>x['is_active']==true).map((x)=>DropdownMenuItem<String>(
+              value:_s(x['id']),
+              child:Text('${_s(x['brand_code'])} — ${_s(x['brand_name'])}',overflow:TextOverflow.ellipsis),
+            )).toList(),
+            onChanged:(value)=>dialogSetState(()=>editBrandId=value),
+          ),
+        ])),
+        actions:[
+          TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),
+          FilledButton(onPressed:()=>Navigator.pop(ctx,true),child:const Text('حفظ التعديل')),
+        ],
+      )),
+    );
     try{
       if(yes==true&&name.text.trim().isNotEmpty){
         if(isWarehouse){
           await Supabase.instance.client.from('erp_warehouses').update({'warehouse_name':name.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
         }else{
-          await Supabase.instance.client.from('erp_items').update({'item_name':name.text.trim(),'barcode':barcode.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
+          if(editCategoryId==null||editBrandId==null){
+            throw StateError('يجب تحديد الفئة الثانوية والبراند/الماركة قبل حفظ تعديل الصنف.');
+          }
+          await Supabase.instance.client.from('erp_items').update({
+            'item_name':name.text.trim(),
+            'barcode':barcode.text.trim(),
+            'category_id':editCategoryId,
+            'brand_id':editBrandId,
+          }).eq('id',row['id']).eq('company_id',_company.text.trim());
         }
         await _load(clearMessage:false);
-        if(mounted)setState(()=>_message='تم تعديل السجل المحدد.');
+        if(mounted)setState(()=>_message=isWarehouse?'تم تعديل المخزن.':'تم تعديل الصنف وتحديث كوده حسب الفئة والبراند.');
       }
     }catch(e){if(mounted)setState(()=>_error='تعذر تعديل السجل: $e');}
     finally{code.dispose();name.dispose();barcode.dispose();}
