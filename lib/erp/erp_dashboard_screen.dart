@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/erp_center_toast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'widgets/erp_quick_task_button.dart';
 import '../widgets/silsila_white_logo.dart';
@@ -575,16 +576,12 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
         value: value,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(successMessage), backgroundColor: const Color(0xFF16834A)),
-        );
+        ErpCenterToast.show(context, successMessage);
       }
       return true;
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('فشل حفظ الإعدادات: $error'), backgroundColor: Colors.red),
-        );
+        ErpCenterToast.show(context, 'فشل حفظ الإعدادات: $error', isError: true);
       }
       return false;
     }
@@ -937,7 +934,7 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
 
   void _showActionMessage(String message) {
     setState(() => _activityLog.insert(0, message));
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ErpCenterToast.show(context, message);
   }
 
   Future<void> _saveCurrentPage() async {

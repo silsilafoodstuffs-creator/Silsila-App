@@ -9,6 +9,7 @@ import 'package:printing/printing.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
+import '../widgets/erp_center_toast.dart';
 
 class ErpProgramPoliciesScreen extends StatefulWidget {
   const ErpProgramPoliciesScreen({super.key, required this.companyId});
@@ -462,7 +463,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key');
       final settings = await db.from('erp_program_settings').select().eq('company_id',company).maybeSingle();
       await db.from('erp_program_settings').upsert({...?settings,'company_id':company,'program_name':_programNameController.text.trim().isEmpty?'سلسلة':_programNameController.text.trim(),'logo_base64':_programLogoBase64,'logo_mime_type':_programLogoMime,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':db.auth.currentUser?.id},onConflict:'company_id');
-      if(mounted){setState(() { saving=false; _isEditing=false; _editSnapshot=''; message='تم الحفظ'; }); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم الحفظ'), backgroundColor: Color(0xFF18865A)));} } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
+      if(mounted){setState(() { saving=false; _isEditing=false; _editSnapshot=''; message='تم الحفظ'; }); ErpCenterToast.show(context, 'تم الحفظ');} } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
   }
   Future<void> _refreshCurrentTab() async => _load(propagateError: true);
 
@@ -881,10 +882,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final bytes = await _buildCurrentPdf();
       final printed = await Printing.layoutPdf(onLayout: (_) async => bytes);
       if (printed && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال المستند إلى الطباعة.'), backgroundColor: Color(0xFF18865A)));
+        ErpCenterToast.show(context, 'تم إرسال المستند إلى الطباعة.');
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذرت الطباعة: $e'), backgroundColor: const Color(0xFFB42318)));
+      if (mounted) ErpCenterToast.show(context, 'تعذرت الطباعة: $e', isError: true);
       rethrow;
     }
   }
@@ -898,7 +899,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         fileExtension: 'pdf',
         mimeType: MimeType.pdf,
       );
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تصدير PDF بنجاح.'), backgroundColor: Color(0xFF18865A)));
+      if (mounted) ErpCenterToast.show(context, 'تم تصدير PDF بنجاح.');
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تصدير PDF: $e'), backgroundColor: const Color(0xFFB42318)));
       rethrow;

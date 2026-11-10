@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'erp_center_toast.dart';
 
 /// One consistent visual system for ERP task actions across every screen.
 class ErpQuickTaskButton extends StatelessWidget {
@@ -110,29 +111,11 @@ class ErpQuickTaskButton extends StatelessWidget {
                         ? 'تم التحديث'
                         : null;
             if (successMessage != null) {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(
-                  content: Text(successMessage, textAlign: TextAlign.center),
-                  backgroundColor: const Color(0xFF18865A),
-                  behavior: SnackBarBehavior.floating,
-                  elevation: 0,
-                  duration: const Duration(milliseconds: 1800),
-                  shape: const RoundedRectangleBorder(),
-                ));
+              ErpCenterToast.show(context, successMessage);
             }
           } catch (error) {
             if (!context.mounted) return;
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(
-                content: Text('تعذر تنفيذ العملية: $error', textAlign: TextAlign.center),
-                backgroundColor: const Color(0xFFB42318),
-                behavior: SnackBarBehavior.floating,
-                elevation: 0,
-                duration: const Duration(seconds: 3),
-                shape: const RoundedRectangleBorder(),
-              ));
+            ErpCenterToast.show(context, 'تعذر تنفيذ العملية: $error', isError: true, duration: const Duration(seconds: 3));
           }
         },
         icon: Icon(_icon, size: compact ? 16 : 17),
