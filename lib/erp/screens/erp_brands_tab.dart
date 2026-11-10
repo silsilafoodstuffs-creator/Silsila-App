@@ -70,6 +70,10 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
   }
 
   Future<void> _edit({Map<String,dynamic>? row}) async {
+    if (row?['is_system'] == true) {
+      ErpCenterToast.show(context, 'السجل الافتراضي «بدون علامة تجارية» محمي من التعديل.', isError: true);
+      return;
+    }
     final name = TextEditingController(text: _s(row?['brand_name']));
     final english = TextEditingController(text: _s(row?['brand_name_en']));
     final formKey = GlobalKey<FormState>();
@@ -195,8 +199,8 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
               child: Row(children: [
                 ErpQuickTaskButton(label:'تحديث',icon:Icons.refresh_rounded,onPressed:_loading || _saving ? null : _load),
                 ErpQuickTaskButton(label:'إضافة',icon:Icons.add_circle_outline,onPressed:_saving ? null : () => _edit()),
-                ErpQuickTaskButton(label:'تعديل',icon:Icons.edit_outlined,onPressed:_saving || selected == null ? null : () => _edit(row:selected)),
-                ErpQuickTaskButton(label:'حذف',icon:Icons.delete_outline,onPressed:_saving || selected == null ? null : _delete),
+                ErpQuickTaskButton(label:'تعديل',icon:Icons.edit_outlined,onPressed:_saving || selected == null || selected['is_system'] == true ? null : () => _edit(row:selected)),
+                ErpQuickTaskButton(label:'حذف',icon:Icons.delete_outline,onPressed:_saving || selected == null || selected['is_system'] == true ? null : _delete),
               ]),
             ),
           ),
