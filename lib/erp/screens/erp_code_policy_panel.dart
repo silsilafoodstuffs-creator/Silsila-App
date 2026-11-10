@@ -440,8 +440,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   );
 
   Widget _itemPolicyRow() => Container(
-    margin:const EdgeInsets.symmetric(vertical:2),
-    padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+    margin:EdgeInsets.zero,
+    padding:const EdgeInsets.symmetric(horizontal:8,vertical:0),
     decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
     child:SizedBox(width:1560,child:Row(spacing:_columnSpacing,children:[
       SizedBox(width:30,child:Text('${_types.length+3}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
@@ -478,8 +478,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   );
 
   Widget _geoPolicyCard() => Container(
-    margin:const EdgeInsets.symmetric(vertical:2),
-    padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+    margin:EdgeInsets.zero,
+    padding:const EdgeInsets.symmetric(horizontal:8,vertical:0),
     decoration:BoxDecoration(color:const Color(0xFFF5EFFB),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
     child:SizedBox(width:1560,child:Row(spacing:_columnSpacing,children:[
       SizedBox(width:30,child:Text('${_types.length+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
@@ -500,8 +500,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   );
 
   Widget _customerPolicyRow() => Container(
-    margin:const EdgeInsets.symmetric(vertical:2),
-    padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+    margin:EdgeInsets.zero,
+    padding:const EdgeInsets.symmetric(horizontal:8,vertical:0),
     decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
     child:SizedBox(width:1560,child:Row(spacing:_columnSpacing,children:[
       SizedBox(width:30,child:Text('${_types.length+2}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
@@ -616,7 +616,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         ]))),
         ...List.generate(_types.length,(i){
           final t=_types[i]; final key=t['key']!;
-          return Container(margin:const EdgeInsets.symmetric(vertical:2),padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+          return Container(margin:EdgeInsets.zero,padding:const EdgeInsets.symmetric(horizontal:8,vertical:0),
             decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
             child:SizedBox(width:1560,child:Row(spacing:_columnSpacing,children:[
               SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
