@@ -860,9 +860,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         fileExtension: 'xlsx',
         mimeType: MimeType.microsoftExcel,
       );
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تصدير ملف Excel بنجاح.'), backgroundColor: Color(0xFF18865A)));
+      if (mounted) ErpCenterToast.show(context, 'تم تصدير ملف Excel بنجاح.');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تصدير Excel: $e'), backgroundColor: const Color(0xFFB42318)));
+      if (mounted) ErpCenterToast.show(context, 'تعذر تصدير Excel: $e', isError: true, duration: const Duration(seconds: 3));
       rethrow;
     }
   }
@@ -902,7 +902,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       );
       if (mounted) ErpCenterToast.show(context, 'تم تصدير PDF بنجاح.');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('تعذر تصدير PDF: $e'), backgroundColor: const Color(0xFFB42318)));
+      if (mounted) ErpCenterToast.show(context, 'تعذر تصدير PDF: $e', isError: true, duration: const Duration(seconds: 3));
       rethrow;
     }
   }

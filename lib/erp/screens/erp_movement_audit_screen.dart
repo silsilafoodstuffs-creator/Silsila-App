@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import '../widgets/erp_quick_task_button.dart';
 import 'package:flutter/services.dart';
 import '../services/erp_movement_audit_repository.dart';
@@ -175,9 +176,7 @@ class _ErpMovementAuditScreenState extends State<ErpMovementAuditScreen> {
         .join('\\r\\n');
     await Clipboard.setData(ClipboardData(text: csv));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم نسخ تقرير المراجعة. يمكنك لصقه في Excel أو حفظه كملف CSV.')),
-    );
+    ErpCenterToast.show(context, 'تم نسخ تقرير المراجعة. يمكنك لصقه في Excel أو حفظه كملف CSV.');
   }
 
   Future<void> _openFix(Map<String, dynamic> issue) async {

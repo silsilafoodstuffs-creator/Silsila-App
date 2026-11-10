@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../widgets/erp_center_toast.dart';
 import '../services/erp_print_support.dart';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
@@ -1244,7 +1245,7 @@ Widget _taskButton(String label, IconData icon, VoidCallback? action) =>
               TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('إلغاء')),
               FilledButton(onPressed: () {
                 if (primary != null && !selected.contains(primary)) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('المخزن الافتراضي يجب أن يكون ضمن المخازن المختارة.')));
+                  ErpCenterToast.show(context, 'المخزن الافتراضي يجب أن يكون ضمن المخازن المختارة.');
                   return;
                 }
                 Navigator.pop(dialogContext, {'allowed': selected.toList(), 'default': primary});

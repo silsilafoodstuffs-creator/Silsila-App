@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'erp_business_workspace_counterparties_panel.dart';
 
@@ -1017,7 +1018,7 @@ _branchName.dispose(); _branchNameEn.dispose(); _warehouseNameEn.dispose();
 
   void _message(String value) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(value)));
+    ErpCenterToast.show(context, value);
   }
 
   @override

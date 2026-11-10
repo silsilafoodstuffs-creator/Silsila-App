@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const _p=Color(0xFF3E007D);
@@ -478,7 +479,7 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   ])))),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(style:FilledButton.styleFrom(backgroundColor:_p),onPressed:()async{
    if(!key.currentState!.validate())return;final payload=<String,dynamic>{'company_id':widget.companyId,'module_key':_moduleKey,'record_type':c.type,'record_code':code.text.trim(),'name':name.text.trim(),'status':status,'counterparty':counter.text.trim().isEmpty?null:counter.text.trim(),'details':{for(final f in c.fields)if(ctrls[f.key]!.text.trim().isNotEmpty)f.key:ctrls[f.key]!.text.trim()}};
    if(date.text.trim().isNotEmpty)payload['record_date']=date.text.trim();if(due.text.trim().isNotEmpty)payload['due_date']=due.text.trim();if(amount.text.trim().isNotEmpty)payload['amount']=num.tryParse(amount.text.trim().replaceAll(',','.'))??0;if(qty.text.trim().isNotEmpty)payload['quantity']=num.tryParse(qty.text.trim().replaceAll(',','.'))??0;
-   try{payload['details']=await _syncOperationalRecord(payload,oldRow:row);if(row==null){payload['created_by']=_db.auth.currentUser?.id;await _db.from('erp_business_suite_records').insert(payload);}else{await _db.from('erp_business_suite_records').update(payload).eq('id',row['id']).eq('company_id',widget.companyId!);}if(ctx.mounted)Navigator.pop(ctx,true);}catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحفظ في السجل التشغيلي: $e')));}
+   try{payload['details']=await _syncOperationalRecord(payload,oldRow:row);if(row==null){payload['created_by']=_db.auth.currentUser?.id;await _db.from('erp_business_suite_records').insert(payload);}else{await _db.from('erp_business_suite_records').update(payload).eq('id',row['id']).eq('company_id',widget.companyId!);}if(ctx.mounted)Navigator.pop(ctx,true);}catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر الحفظ في السجل التشغيلي: $e', isError: true, duration: const Duration(seconds: 3));}
   },child:const Text('حفظ'))])));
   for(final x in [code,name,counter,amount,qty,date,due,...ctrls.values]){x.dispose();}if(ok==true)await _load();
  }
@@ -493,16 +494,16 @@ class _ErpBusinessSuiteScreenState extends State<ErpBusinessSuiteScreen>{
   if(table=='erp_construction_costs'&&['approved','posted'].contains(recordStatus))blocked='تكلفة المشروع معتمدة أو مرحّلة؛ استخدم تسوية بدل الحذف.';
   if(table=='erp_construction_payment_certificates'&&['approved','paid'].contains(recordStatus))blocked='المستخلص معتمد أو مدفوع؛ لا يُحذف.';
   if(table=='erp_construction_material_requests'&&['approved','fulfilled'].contains(recordStatus))blocked='طلب المواد معتمد أو منفذ؛ لا يُحذف.';
-  if(blocked!=null){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(blocked)));return;}
+  if(blocked!=null){if(mounted)ErpCenterToast.show(context, blocked);return;}
   if(table=='erp_production_orders'&&opId!=null){
    final issues=await _db.from('erp_production_material_movements').select('id').eq('company_id',widget.companyId!).eq('production_order_id',opId).limit(1);
    final receipts=await _db.from('erp_inventory_movements').select('id').eq('company_id',widget.companyId!).eq('reference_type','production_order').eq('reference_id',opId).limit(1);
-   if(issues.isNotEmpty||receipts.isNotEmpty){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('أمر التصنيع مرتبط بحركات مخزنية؛ لا يُحذف. استخدم أمر تسوية أو إلغاء معتمد.')));return;}
+   if(issues.isNotEmpty||receipts.isNotEmpty){if(mounted)ErpCenterToast.show(context, 'أمر التصنيع مرتبط بحركات مخزنية؛ لا يُحذف. استخدم أمر تسوية أو إلغاء معتمد.');return;}
   }
   final yes=await showDialog<bool>(context:context,builder:(ctx)=>AlertDialog(title:const Text('تأكيد الحذف'),content:Text('حذف '+r['record_code'].toString()+'؟'),actions:[TextButton(onPressed:()=>Navigator.pop(ctx,false),child:const Text('إلغاء')),FilledButton(onPressed:()=>Navigator.pop(ctx,true),style:FilledButton.styleFrom(backgroundColor:Colors.red),child:const Text('حذف'))]));
   if(yes!=true)return;
   try{if(table!=null&&opId!=null&&table.startsWith('erp_'))await _db.from(table).delete().eq('id',opId).eq('company_id',widget.companyId!);await _db.from('erp_business_suite_records').delete().eq('id',r['id']).eq('company_id',widget.companyId!);await _load();}
-  catch(e){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('تعذر الحذف: $e')));}
+  catch(e){if(mounted)ErpCenterToast.show(context, 'تعذر الحذف: $e', isError: true, duration: const Duration(seconds: 3));}
  }
  @override Widget build(BuildContext context){final list=_filtered;final total=_rows.fold<num>(0,(s,r)=>s+(r['amount'] as num? ?? 0));return Directionality(textDirection:TextDirection.rtl,child:Container(color:const Color(0xFFFAF8FC),padding:const EdgeInsets.all(15),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
   Card(elevation:0,color:Colors.white,child:Padding(padding:const EdgeInsets.all(15),child:Column(children:[

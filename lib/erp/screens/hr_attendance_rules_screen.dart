@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/erp_center_toast.dart';
 import '../services/erp_company_settings_repository.dart';
 
 const _purple = Color(0xFF3E007D);
@@ -362,7 +363,7 @@ class _HrShiftRulesScreenState extends State<HrShiftRulesScreen> {
     if (confirmed == true && mounted) onDelete();
   }
 
-  void _message(String m)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(m)));
+  void _message(String m)=>ErpCenterToast.show(context, m);
 }
 
 class _Shift {
@@ -625,7 +626,7 @@ class _HrFingerprintDevicesScreenState extends State<HrFingerprintDevicesScreen>
 
   void _test(_Device d){setState(()=>d.connected=false);_msg(d.method=='IP'?'اختبار IP الفعلي يحتاج موصل الجهاز والتحقق من الوصول إلى الشبكة.':'اختبار USB يحتاج إضافة دعم أصلي أو خدمة وسيطة.');}
   void _pull(_Device d){setState(()=>d.note='لم تُسحب حركات فعلية بعد؛ يلزم ربط موصل '+d.method+' وتخزين السجلات مع منع التكرار.');_msg(d.note);}
-  void _msg(String s)=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(s)));
+  void _msg(String s)=>ErpCenterToast.show(context, s);
 }
 class _Device{
   _Device();
