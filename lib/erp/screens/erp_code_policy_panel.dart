@@ -76,6 +76,8 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   final Map<String, List<TextEditingController>> _fieldCounts = {};
   final _itemPrefix = TextEditingController(text: 'Itm');
   final _geoPrefix = TextEditingController(text: 'Rig');
+  String _customerPrefix = 'Cus';
+  int _customerSerialDigits = 2;
   // Each geographic level is one independent two-digit segment.
   // The persisted geo_segments map remains cumulative for backward compatibility.
   final Map<String, TextEditingController> _geoSegments = {
@@ -148,6 +150,15 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         .eq('company_id', widget.companyId).like('policy_code', 'Pol%');
       final usedPolicySerials = (policyRows as List).map((r) => int.tryParse((r['policy_code'] ?? '').toString().replaceFirst(RegExp(r'^Pol'), '')) ?? 0);
       _nextProgramPolicySerial = (usedPolicySerials.fold<int>(0, (a, b) => a > b ? a : b)) + 1;
+      final customerPolicy = await _db.from('erp_program_policies').select('policy_value')
+        .eq('company_id', widget.companyId).eq('policy_key', 'customer_code').maybeSingle();
+      if (customerPolicy != null) {
+        try {
+          final customerConfig = Map<String, dynamic>.from(jsonDecode((customerPolicy['policy_value'] ?? '{}').toString()) as Map);
+          _customerPrefix = (customerConfig['prefix'] ?? 'Cus').toString();
+          _customerSerialDigits = int.tryParse((customerConfig['serial_digits'] ?? 2).toString()) ?? 2;
+        } catch (_) {}
+      }
       final row = await _db.from('erp_program_policies').select('policy_value')
         .eq('company_id', widget.companyId).eq('policy_key', 'code_generation_registry').maybeSingle();
       if (row != null && (row['policy_value'] ?? '').toString().isNotEmpty) {
@@ -266,6 +277,384 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
         int.parse(_geoSegments['area']!.text);
     if (inheritedGeoDigits != 8) {
       setState(() => _error = 'كود المنطقة الموروث في كود العميل يجب أن يظل 8 أرقام.');
+      throw StateError(_error!);
+    }
+    final customerPolicy = await _db.from('erp_program_policies').select('policy_value')
+      .eq('company_id', widget.companyId).eq('policy_key', 'customer_code').maybeSingle();
+    if (customerPolicy != null) {
+      try {
+        final customerConfig = Map<String, dynamic>.from(jsonDecode((customerPolicy['policy_value'] ?? '{}').toString()) as Map);
+        _customerPrefix = (customerConfig['prefix'] ?? 'Cus').toString().trim();
+        _customerSerialDigits = int.tryParse((customerConfig['serial_digits'] ?? 2).toString()) ?? 2;
+      } catch (_) {}
+    }
+    if (!RegExp(r'^[A-Za-z]{1,10}
+    if (_geoPrefix.text.trim() != 'Rig') {
+      setState(() => _error = 'بادئة المنطقة يجب أن تكون 3 حروف إنجليزية مثل Rig.');
+      throw StateError(_error!);
+    }
+    setState(() { _saving = true; _error = null; _message = null; });
+    try {
+      final types = <String, dynamic>{..._retainedTypeConfigs};
+      for (final t in _types) {
+        final key = t['key']!;
+        final fields = <Map<String, dynamic>>[
+          {'name':'تسلسل','digits':int.parse(_digits[key]!.text)},
+          for (var i = 0; i < 3; i++)
+            if (_fieldNames[key]![i].text.trim().isNotEmpty)
+              {'name':_fieldNames[key]![i].text.trim(),'digits':int.tryParse(_fieldCounts[key]![i].text) ?? 0},
+        ];
+        types[key] = {
+          'prefix':_prefix[key]!.text.trim(),
+          'digits':int.parse(_digits[key]!.text),
+          'automatic':_automatic[key] ?? true,
+          'composite':_composite[key] ?? false,
+          'required':key == 'customer',
+          'apply_to_all':key == 'customer' ? true : null,
+          'fields':fields,
+        };
+      }
+      types['customer'] = {
+        'prefix':_customerPrefix, 'digits':_customerSerialDigits, 'automatic':true, 'composite':true,
+        'required':true, 'apply_to_all':true,
+        'inherit_geo_code':true, 'geo_digits':8, 'serial_digits':_customerSerialDigits,
+        'fields':[{'name':'كود المنطقة بدون بادئة Rig','digits':8},{'name':'تسلسل العميل','digits':_customerSerialDigits}],
+      };
+      final itemSegments = <String, int>{
+        for (final entry in _itemSegments.entries) entry.key:int.parse(entry.value.text),
+      };
+      final payload = jsonEncode({
+        'version':4,
+        'layout':{
+          'cell_height':_cellHeight.toInt(),
+          'column_spacing':_columnSpacing.toInt(),
+          'count_cell_width':_countCellWidth.toInt(),
+        },
+        'types':types,
+        'customer_code':{'prefix':_customerPrefix,'inherit_geo_code':true,'geo_digits':8,'serial_digits':_customerSerialDigits},
+        'item_prefix':_itemPrefix.text.trim(),
+        'item_automatic':_itemAutomatic,
+        'item_composite':_itemComposite,
+        'item_fields':[
+          {'name':'تسلسل الصنف','digits':itemSegments['serial']},
+          {'name':'فئة ثانوية','digits':itemSegments['secondary']},
+          {'name':'فئة فرعية','digits':itemSegments['sub']},
+          {'name':'فئة رئيسية','digits':itemSegments['main']},
+        ],
+        'category_prefix':'Cat',
+        'category_segments':{'main':2,'sub':2,'secondary':2},
+        'brand_prefix':'Bra',
+        'brand_digits':3,
+        'item_segments':itemSegments,
+        'geo_prefix':_geoPrefix.text.trim(),
+        // Legacy cumulative values are intentionally preserved for existing
+        // readers and database triggers: country=2, governorate=4,
+        // center=6, area=8 total digits.
+        'geo_segments':{
+          'country':countryCode,
+          'governorate':2 + int.parse(_geoSegments['governorate']!.text),
+          'center':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text),
+          'area':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text) + int.parse(_geoSegments['area']!.text),
+        },
+        // Each geographic level contributes its configured number of digits.
+        'geo_segment_lengths':{
+          'country':2,
+          'governorate':int.parse(_geoSegments['governorate']!.text),
+          'center':int.parse(_geoSegments['center']!.text),
+          'area':int.parse(_geoSegments['area']!.text),
+        },
+        'geo_cumulative_lengths':{
+          'country':2,
+          'governorate':2 + int.parse(_geoSegments['governorate']!.text),
+          'center':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text),
+          'area':2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text) + int.parse(_geoSegments['area']!.text),
+        },
+      });
+      await _db.from('erp_program_policies').upsert({
+        'company_id':widget.companyId,
+        'policy_key':'code_generation_registry',
+        'category':'سياسات الأكواد',
+        'name_ar':'سياسات التكويد المركزي',
+        'name_en':'Central code generation policies',
+        'is_enabled':true,
+        'apply_to_all':true,
+        'user_ids':<String>[],
+        'policy_value':payload,
+      }, onConflict:'company_id,policy_key');
+      if (mounted) setState(() { _saving = false; _message = 'تم حفظ إعدادات التكويد المركزي.'; });
+    } catch (e) {
+      if (mounted) setState(() { _saving = false; _error = 'تعذر حفظ إعدادات التكويد: $e'; });
+      rethrow;
+    }
+  }
+
+  Widget _field(TextEditingController c, {required int max, required bool letters, required VoidCallback changed}) =>
+    SizedBox(width:_countCellWidth, height:40, child: TextField(
+      controller:c, textAlign:TextAlign.center, maxLength:max,
+      inputFormatters:[FilteringTextInputFormatter.allow(RegExp(letters ? '[a-zA-Z]' : '[0-9]'))],
+      onChanged:(_) => setState(changed),
+      decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3),border:OutlineInputBorder()),
+      style:const TextStyle(fontSize:12,fontWeight:FontWeight.w700),
+    ));
+
+  Widget _nameField(TextEditingController controller, {bool readOnly = false}) => SizedBox(
+    width:_nameCellWidth, height:40,
+    child:TextField(
+      controller:controller, readOnly:readOnly, textAlign:TextAlign.center,
+      decoration:const InputDecoration(isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),border:OutlineInputBorder(),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3)),
+      style:const TextStyle(fontSize:11),
+    ),
+  );
+
+  Widget _firstFieldName() => const SizedBox(
+    width:124, height:_cellHeight,
+    child:Center(child:Text('تسلسل',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+  );
+
+  Widget _brandPolicyCard() => Card(
+    elevation:0,
+    color:const Color(0xFFFFF4E5),
+    child:Padding(
+      padding:const EdgeInsets.all(10),
+      child:Column(
+        crossAxisAlignment:CrossAxisAlignment.stretch,
+        children:[
+          const Text('سياسة تكويد البراند / الماركة',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
+          const SizedBox(height:5),
+          const Text('بادئة ثابتة Bra تليها 3 أرقام متسلسلة، دون إضافة بادئة جغرافية أو حروف أخرى.',style:TextStyle(fontSize:11)),
+          const SizedBox(height:5),
+          const Text('المعاينة الأولى: Bra001',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)),
+        ],
+      ),
+    ),
+  );
+
+  Widget _itemPolicyRow() => Container(
+    margin:const EdgeInsets.symmetric(vertical:2),
+    padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+    decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
+    child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
+      SizedBox(width:30,child:Text('${_types.length+3}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+      const SizedBox(width:150,child:Text('الأصناف',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+      SizedBox(width:52,child:Checkbox(value:_itemAutomatic,onChanged:(v)=>setState(()=>_itemAutomatic=v ?? true),visualDensity:VisualDensity.compact)),
+      
+      SizedBox(width:52,child:Checkbox(value:_itemComposite,onChanged:(v)=>setState(()=>_itemComposite=v ?? true),visualDensity:VisualDensity.compact)),
+      
+      _firstFieldName(),
+      
+      _field(_itemSegments['serial']!,max:3,letters:false,changed:(){}),
+      
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('فئة ثانوية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      
+      _field(_itemSegments['secondary']!,max:2,letters:false,changed:(){}),
+      
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('فئة فرعية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))), 
+      
+      _field(_itemSegments['sub']!,max:2,letters:false,changed:(){}),
+      
+      const SizedBox(width:124,height:_cellHeight,child:Center(child:Text('فئة رئيسية',textAlign:TextAlign.center,style:TextStyle(fontSize:11)))),
+      
+      _field(_itemSegments['main']!,max:2,letters:false,changed:(){}),
+      
+      SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
+        _field(_itemPrefix,max:3,letters:true,changed:(){}),
+        const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
+      ])),
+      SizedBox(width:112,child:Text(
+        '${_itemPrefix.text.trim()}${'1'.padLeft(int.tryParse(_itemSegments['main']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['sub']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['secondary']!.text)??2,'0')}${'1'.padLeft(int.tryParse(_itemSegments['serial']!.text)??2,'0')}',
+        textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+    ])),
+  );
+
+  Widget _geoPolicyCard() => Container(
+    margin:const EdgeInsets.symmetric(vertical:2),
+    padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+    decoration:BoxDecoration(color:const Color(0xFFF5EFFB),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
+    child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
+      SizedBox(width:30,child:Text('${_types.length+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+      const SizedBox(width:150,child:Text('التقسيم الجغرافي',style:TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
+      const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
+      
+      const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
+      
+      _firstFieldName(),  const SizedBox(width:_countCellWidth,height:_cellHeight), 
+      _geoNameCell('منطقة/قرية'),  _segmentField('عدد',_geoSegments['area']!,2,width:_countCellWidth),
+       _geoNameCell('حي/مركز/شياخة'),  _segmentField('عدد',_geoSegments['center']!,2,width:_countCellWidth),
+       _geoNameCell('محافظة'),  _segmentField('عدد',_geoSegments['governorate']!,2,width:_countCellWidth),
+       _geoNameCell('دولة'),  const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('2',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      
+      SizedBox(width:112,child:Text(_geoPrefix.text,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),
+      SizedBox(width:112,child:Text('Rig + ${2 + int.parse(_geoSegments['governorate']!.text) + int.parse(_geoSegments['center']!.text) + int.parse(_geoSegments['area']!.text)} أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10))),
+    ])),
+  );
+
+  Widget _customerPolicyRow() => Container(
+    margin:const EdgeInsets.symmetric(vertical:2),
+    padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+    decoration:BoxDecoration(color:const Color(0xFFFFF4E5),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
+    child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
+      SizedBox(width:30,child:Text('${_types.length+2}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+      const SizedBox(width:150,child:Text('تكويد العملاء',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700))),
+      const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
+      const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('كود المنطقة',style:TextStyle(fontSize:11)))),
+      const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('8',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      const SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text('تسلسل العميل',style:TextStyle(fontSize:11)))),
+      SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('$_customerSerialDigits',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
+      const SizedBox(width:124,height:_cellHeight),
+      const SizedBox(width:_countCellWidth,height:_cellHeight),
+      SizedBox(width:112,child:Center(child:Text(_customerPrefix,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)))),
+      SizedBox(width:112,child:Text('$_customerPrefix + كود المنطقة (8 أرقام) + ${'1'.padLeft(_customerSerialDigits, '0')}',textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+    ])),
+  );
+
+  Widget _geoNameCell(String name) => SizedBox(width:_nameCellWidth,height:_cellHeight,child:Center(child:Text(name,textAlign:TextAlign.center,style:const TextStyle(fontSize:11))));
+
+  Widget _segmentField(String label, TextEditingController controller, int max, {double width = 112, bool readOnly = false}) => SizedBox(
+    width:width,
+    height:_cellHeight,
+    child:TextField(
+      controller:controller,
+      readOnly:readOnly,
+      textAlign:TextAlign.center,
+      keyboardType:TextInputType.number,
+      maxLength:max,
+      inputFormatters:[FilteringTextInputFormatter.digitsOnly],
+      onChanged:(_) => setState((){}),
+      decoration:InputDecoration(
+        labelText:label,
+        counterText:'',
+        isDense:true,
+        contentPadding:const EdgeInsets.symmetric(horizontal:6,vertical:9),
+        border:const OutlineInputBorder(),
+      ),
+      style:const TextStyle(fontSize:12,fontWeight:FontWeight.w800),
+    ),
+  );
+
+  @override Widget build(BuildContext context) => Directionality(
+    textDirection:TextDirection.rtl,
+    child: _loading ? const Center(child:CircularProgressIndicator()) : Scrollbar(
+      controller:_gridVerticalController,
+      thumbVisibility:true,
+      scrollbarOrientation:ScrollbarOrientation.left,
+      child:Scrollbar(
+      controller:_gridHorizontalController,
+      thumbVisibility:true,
+      scrollbarOrientation:ScrollbarOrientation.bottom,
+      child:SingleChildScrollView(
+        controller:_gridHorizontalController,
+        scrollDirection:Axis.horizontal,
+        child:SizedBox(width:1420,child:ListView(
+      controller:_gridVerticalController,
+      padding:const EdgeInsets.all(8),
+      children:[
+        Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('إعدادات التكويد المركزي',style:TextStyle(color:_purple,fontWeight:FontWeight.w900,fontSize:16)),
+          const SizedBox(height:4),
+          const Text('حدد بادئة كل نوع وعدد الخانات الرقمية. المعاينة تعرض أول كود متوقع، ويبدأ الترقيم من 1.',style:TextStyle(fontSize:11,color:Colors.black54)),
+          const SizedBox(height:8),
+          const Text('معيار تنسيق الجدول: ارتفاع 40 بكسل، والمسافة بين الأعمدة 2.5 بكسل، وعرض خانات أسماء الخانات 83 بكسل (بدلًا من 124)، وعرض خانة العدد 62 بكسل.',style:TextStyle(fontSize:10,color:Colors.black54)),
+          const SizedBox(height:8),
+          SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:const[
+            SizedBox(width:30,child:Text('م',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
+            SizedBox(width:150,child:Text('اسم السياسة',style:TextStyle(fontWeight:FontWeight.bold,fontSize:11))),
+            SizedBox(width:52,child:Text('تلقائي',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:52,child:Text('مركب',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:_nameCellWidth,child:Text('اسم خانة 1',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:_countCellWidth,child:Text('عدد خانة 1',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:_nameCellWidth,child:Text('اسم خانة 2',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:_countCellWidth,child:Text('عدد خانة 2',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:124,child:Text('اسم خانة 3',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:_countCellWidth,child:Text('عدد خانة 3',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:124,child:Text('اسم خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:_countCellWidth,child:Text('عدد خانة 4',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            SizedBox(width:_nameCellWidth,child:Text('اسم خانة 5',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:_countCellWidth,child:Text('عدد خانة 5',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+            
+            SizedBox(width:112,child:Text('بادئة الكود\\n3 حروف إنجليزية فقط',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:9))),
+            SizedBox(width:112,child:Text('معاينة أول كود',textAlign:TextAlign.center,style:TextStyle(fontWeight:FontWeight.bold,fontSize:10))),
+          ])),
+        ]))),
+        ...List.generate(_types.length,(i){
+          final t=_types[i]; final key=t['key']!;
+          return Container(margin:const EdgeInsets.symmetric(vertical:2),padding:const EdgeInsets.symmetric(horizontal:8,vertical:5),
+            decoration:BoxDecoration(color:i.isEven?Colors.white:const Color(0xFFFAF8FC),border:Border.all(color:const Color(0xFFE8E1EF)),borderRadius:BorderRadius.circular(7)),
+            child:SizedBox(width:1420,child:Row(spacing:_columnSpacing,children:[
+              SizedBox(width:30,child:Text('${i+1}',textAlign:TextAlign.center,style:const TextStyle(fontSize:11))),
+              SizedBox(width:150,child:Text(t['name']!,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w600))),
+              SizedBox(width:52,child:Checkbox(value:_automatic[key] ?? true,onChanged:(v)=>setState(()=>_automatic[key]=v ?? true),visualDensity:VisualDensity.compact)),
+              SizedBox(width:52,child:Checkbox(value:_composite[key] ?? false,onChanged:(v)=>setState(()=>_composite[key]=v ?? false),visualDensity:VisualDensity.compact)),
+              _firstFieldName(),
+              _field(_digits[key]!,max:2,letters:false,changed:(){}),
+              ...List<Widget>.generate(6, (index) {
+                final slot = index ~/ 2;
+                if (index.isEven) return _nameField(_fieldNames[key]![slot]);
+                return SizedBox(width:_countCellWidth,height:_cellHeight,child:_field(_fieldCounts[key]![slot],max:2,letters:false,changed:(){}));
+              }),
+              const SizedBox(width:124,height:_cellHeight),
+              const SizedBox(width:_countCellWidth,height:_cellHeight),
+              SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
+                _field(_prefix[key]!,max:3,letters:true,changed:(){}),
+                const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
+              ])),
+              SizedBox(width:112,child:Text(_preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
+            ])));
+        }),
+        _geoPolicyCard(),
+        _customerPolicyRow(),
+        _itemPolicyRow(),
+        Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('تفاصيل سياسة فئات الأصناف Cat',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
+          const SizedBox(height:6),
+          const Text('تسلسل الفئات هرمي وثابت: فئة رئيسية خانتان + فئة فرعية خانتان + فئة ثانوية خانتان. كل مستوى يُرقّم داخل المستوى الأب، ولا تُضاف حروف إلى أي مستوى.',style:TextStyle(fontSize:11)),
+          const SizedBox(height:6),
+          const Text('المعاينة: Cat + 01 + 01 + 01 = Cat010101',style:TextStyle(fontSize:12,fontWeight:FontWeight.w900,color:_purple)),
+        ]))),
+        _brandPolicyCard(),
+        Card(elevation:0,color:const Color(0xFFFFF4E5),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+          const Text('تفاصيل تركيب كود الأصناف',style:TextStyle(fontWeight:FontWeight.w900,color:_purple)),
+          const SizedBox(height:5),
+          Row(spacing:_columnSpacing,children:[
+            const Expanded(child:Text('بادئة الصنف (3 حروف إنجليزية)',style:TextStyle(fontSize:11))),
+            _field(_itemPrefix,max:3,letters:true,changed:(){}),
+          ]),
+          const SizedBox(height:10),
+          const Text('أطوال الخانات المعتمدة — ثابتة: 2 + 2 + 2 + 3',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)),
+          const SizedBox(height:6),
+          Wrap(spacing:8,runSpacing:8,children:[
+            _segmentField('فئة رئيسية',_itemSegments['main']!,2,readOnly:true),
+            _segmentField('فئة فرعية',_itemSegments['sub']!,2,readOnly:true),
+            _segmentField('فئة ثانوية',_itemSegments['secondary']!,2,readOnly:true),
+            _segmentField('تسلسل الصنف',_itemSegments['serial']!,3,readOnly:true),
+          ]),
+          const SizedBox(height:8),
+          Text('الصيغة: ${_itemPrefix.text.trim()} + كود الفئة الثانوية بدون Cat (6 أرقام) + تسلسل الصنف (3 أرقام)',style:const TextStyle(fontSize:11)),
+          Text('المعاينة الأولى: ${_itemPrefix.text.trim()}010101001',style:const TextStyle(fontSize:11,fontWeight:FontWeight.w900,color:_purple)),
+          const Text('كود الصنف = Itm + 6 أرقام الفئة الثانوية + 3 أرقام تسلسل (9 أرقام رقمية بعد البادئة). مستويات Cat ثابتة على 2 + 2 + 2.',style:TextStyle(fontSize:10,color:Colors.black54)),
+        ]))),
+        if(_error!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_error!,style:const TextStyle(color:Colors.red,fontSize:11))),
+        if(_message!=null) Padding(padding:const EdgeInsets.all(6),child:Text(_message!,style:const TextStyle(color:Colors.green,fontSize:11))),
+        
+      ],
+        )),
+      ),
+    ),
+    ),
+  );
+}
+).hasMatch(_customerPrefix) || _customerSerialDigits < 1 || _customerSerialDigits > 12) {
+      setState(() => _error = 'بادئة كود العميل يجب أن تكون من 1 إلى 10 حروف إنجليزية، وعدد خانات التسلسل من 1 إلى 12.');
       throw StateError(_error!);
     }
     if (_geoPrefix.text.trim() != 'Rig') {
