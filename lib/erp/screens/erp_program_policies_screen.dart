@@ -522,8 +522,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   static const List<Map<String, String>> _codePolicyTypeDefinitions = [
     {'key':'payroll_run','name':'مسيرات الرواتب','en':'Payroll runs','prefix':'Prl','digits':'5'},
     {'key':'warehouse','name':'المخازن','en':'Warehouses','prefix':'Whs','digits':'5'},
-    {'key':'unit','name':'وحدات الأصناف','en':'Item units','prefix':'Unt','digits':'5'},
-    {'key':'payment_method','name':'طرق الدفع','en':'Payment methods','prefix':'Pmt','digits':'5'},
+    {'key':'unit','name':'وحدات الأصناف','en':'Item units','prefix':'UNT','digits':'4'},
+    {'key':'payment_method','name':'طرق الدفع','en':'Payment methods','prefix':'PAY','digits':'4'},
     {'key':'shift','name':'ورديات العمل','en':'Work shifts','prefix':'Shf','digits':'5'},
     {'key':'commission_plan','name':'خطط العمولات','en':'Commission plans','prefix':'Com','digits':'5'},
     {'key':'sales_fulfillment','name':'أذون التجهيز والتسليم','en':'Sales fulfillment notes','prefix':'Ful','digits':'5'},
