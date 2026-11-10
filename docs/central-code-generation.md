@@ -44,9 +44,9 @@ The database resolves the selected secondary category and active company brand, 
 
 ## Warehouse storage locations and HR sections
 
-- Root warehouses use `Whs` plus a five-digit serial. A child row in `erp_warehouses` (`parent_warehouse_id` set) is a storage location: `Loc` + branch numeric code + parent warehouse numeric code + three-digit serial. Only direct children of active root warehouses are allowed; the branch is inherited from the parent when available, otherwise it must be selected.
-- Section rows in `erp_hr_departments` (`department_level='section'`) use `Sec` + the parent department's numeric code portion + three-digit serial. The parent must be an active directorate or department.
-- The storage-location and section serials are company-wide rather than restarting per parent. Current branch/warehouse and department numeric portions are not unique, so a per-parent serial would create duplicate codes. Existing legacy codes are preserved and never rewritten.
+- Root warehouses use `Whs` plus a five-digit serial. A child row in `erp_warehouses` (`parent_warehouse_id` set) is a storage location: `Loc` + the branch code without its prefix + the parent warehouse code without its prefix + a three-digit serial. Only direct children of active root warehouses are allowed; the branch is inherited from the parent when available, otherwise it must be selected.
+- Section rows in `erp_hr_departments` (`department_level='section'`) use `Sec` + the parent department code without its prefix + a three-digit serial. The parent must be an active directorate or department.
+- The storage-location and section serials are company-wide rather than restarting per parent. Department code suffixes are not unique across parents, so the section serial is company-wide. The storage-location serial is also company-wide for consistent collision protection. Existing legacy codes are preserved and never rewritten.
 
 ## User identifiers
 

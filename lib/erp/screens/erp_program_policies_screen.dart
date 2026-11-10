@@ -40,9 +40,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'code_policy.supplier','category':'تكويدية','ar':'الموردون','en':'Suppliers','value':'Ven + 5 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.representative','category':'تكويدية','ar':'المندوبون','en':'Representatives','value':'Rep + كود الموظف المرتبط بدون البادئة Emp','mandatory':true,'all':true},
     {'key':'code_policy.branch','category':'تكويدية','ar':'الفروع','en':'Branches','value':'Brn + 3 أرقام تسلسلية','mandatory':true,'all':true},
-    {'key':'code_policy.storage_location','category':'تكويدية','ar':'مواقع التخزين','en':'Storage locations','value':'Loc + أرقام الفرع والمخزن بدون البادئتين + تسلسل عام 3 أرقام','mandatory':true,'all':true},
+    {'key':'code_policy.storage_location','category':'تكويدية','ar':'مواقع التخزين','en':'Storage locations','value':'Loc + كود الفرع بدون البادئة + كود المخزن بدون البادئة + تسلسل عام 3 أرقام','mandatory':true,'all':true},
     {'key':'code_policy.department','category':'تكويدية','ar':'إدارات الشركة','en':'Company departments','value':'Dep + 3 أرقام تسلسلية','mandatory':true,'all':true},
-    {'key':'code_policy.section','category':'تكويدية','ar':'الأقسام','en':'Sections','value':'Sec + أرقام الإدارة بدون البادئة + تسلسل عام 3 أرقام','mandatory':true,'all':true},
+    {'key':'code_policy.section','category':'تكويدية','ar':'الأقسام','en':'Sections','value':'Sec + كود الإدارة بدون البادئة + تسلسل عام 3 أرقام','mandatory':true,'all':true},
     {'key':'code_policy.work_location','category':'تكويدية','ar':'مواقع العمل','en':'Work locations','value':'Plc + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.job','category':'تكويدية','ar':'الوظائف','en':'Jobs','value':'Job + 5 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.grade','category':'تكويدية','ar':'الدرجات الوظيفية','en':'Job grades','value':'Grd + 3 أرقام تسلسلية','mandatory':true,'all':true},
@@ -487,9 +487,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     'code_policy.supplier': {'prefix':'Ven','digits':5},
     'code_policy.representative': {'prefix':'Rep','digits':5,'inheritance':'يرث تسلسل كود الموظف المرتبط بدون البادئة Emp'},
     'code_policy.branch': {'prefix':'Brn','digits':3},
-    'code_policy.storage_location': {'prefix':'Loc','digits':3,'inheritance':'يرث أرقام الفرع والمخزن بدون البادئتين، مع تسلسل عام على مستوى الشركة لمنع التكرار'},
+    'code_policy.storage_location': {'prefix':'Loc','digits':3,'inheritance':'يرث كود الفرع والمخزن بدون البادئتين، مع تسلسل عام على مستوى الشركة لمنع التكرار'},
     'code_policy.department': {'prefix':'Dep','digits':3},
-    'code_policy.section': {'prefix':'Sec','digits':3,'inheritance':'يرث أرقام الإدارة بدون البادئة، مع تسلسل عام على مستوى الشركة لمنع التكرار'},
+    'code_policy.section': {'prefix':'Sec','digits':3,'inheritance':'يرث كود الإدارة بدون البادئة، مع تسلسل عام على مستوى الشركة لمنع التكرار'},
     'code_policy.work_location': {'prefix':'Plc','digits':3},
     'code_policy.job': {'prefix':'Job','digits':5},
     'code_policy.grade': {'prefix':'Grd','digits':3},
@@ -589,7 +589,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final locked = _codePolicyIsLocked((policy['key'] ?? '').toString());
     final policyKey = (policy['key'] ?? '').toString();
     final preview = policyKey == 'code_policy.storage_location'
-        ? '${prefix}001001001'
+        ? '${prefix}001CAI001'
         : policyKey == 'code_policy.section'
             ? '${prefix}001001'
             : policyKey == 'code_policy.user'
@@ -902,7 +902,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         final parent = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
         return '$prefix${zeros(parent + (own > 0 ? own - 1 : 0))}1';
       }
-      if (key == 'code_policy.storage_location') return '${prefix}001001001';
+      if (key == 'code_policy.storage_location') return '${prefix}001CAI001';
       if (key == 'code_policy.section') return '${prefix}001001';
       if (key.startsWith('code_policy.') || key.startsWith('code_type.')) {
         final config = _codePolicyConfig(policy);
