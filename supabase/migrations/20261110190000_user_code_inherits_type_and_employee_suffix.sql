@@ -29,8 +29,16 @@ $function$;
 
 -- Re-render existing derived type codes according to each company's saved policy.
 -- Numeric type_code values and foreign keys remain unchanged.
+DROP TRIGGER IF EXISTS erp_user_types_central_display_code ON public.erp_user_types;
+CREATE TRIGGER erp_user_types_central_display_code
+BEFORE INSERT OR UPDATE OF company_id, type_code, type_code_display
+ON public.erp_user_types
+FOR EACH ROW
+EXECUTE FUNCTION public.erp_set_user_type_display_code();
+
+-- Refresh only the derived display column; type_code is GENERATED ALWAYS identity.
 UPDATE public.erp_user_types
-SET type_code = type_code;
+SET type_code_display = type_code_display;
 
 CREATE OR REPLACE FUNCTION private.erp_assign_user_code()
 RETURNS trigger
