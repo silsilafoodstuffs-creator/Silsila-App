@@ -93,6 +93,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final users = <Map<String,dynamic>>[];
   final List<String> _registeredFonts = <String>['Tajawal'];
   final Map<String, TextEditingController> _appearanceColorControllers = {};
+  final Map<String, TextEditingController> _codePolicyPrefixControllers = {};
+  final Map<String, TextEditingController> _codePolicyDigitsControllers = {};
   final Map<String, TextEditingController> _appearanceSizeControllers = {};
   final TextEditingController _programNameController = TextEditingController(text: 'سلسلة');
   String? _programLogoBase64;
@@ -309,6 +311,87 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         content: Text('حقول السياسات في هذا التبويب قابلة للتعديل مباشرة.'),
       ));
     }
+  }
+
+  static const Map<String, Map<String, dynamic>> _codePolicyDefaults = {
+    'code_policy.program_policy': {'prefix':'Pol','digits':3},
+    'code_policy.employee': {'prefix':'Emp','digits':5},
+    'code_policy.user': {'prefix':'Usr','digits':5,'inheritance':'يرث تسلسل كود الموظف المرتبط بدون البادئة Emp'},
+    'code_policy.supplier': {'prefix':'Ven','digits':5},
+    'code_policy.representative': {'prefix':'Rep','digits':5,'inheritance':'يرث تسلسل كود الموظف المرتبط بدون البادئة Emp'},
+    'code_policy.branch': {'prefix':'Brn','digits':3},
+    'code_policy.storage_location': {'prefix':'Loc','digits':3,'inheritance':'يرث كود الفرع والمخزن بدون بادئتيهما'},
+    'code_policy.department': {'prefix':'Dep','digits':3},
+    'code_policy.section': {'prefix':'Sec','digits':3,'inheritance':'يرث كود الإدارة بدون البادئة Dep'},
+    'code_policy.work_location': {'prefix':'Plc','digits':3},
+    'code_policy.job': {'prefix':'Job','digits':5},
+    'code_policy.grade': {'prefix':'Grd','digits':3},
+    'code_policy.salary_element': {'prefix':'Elm','digits':3},
+  };
+
+  Map<String, dynamic> _codePolicyConfig(Map<String, dynamic> policy) {
+    final key = (policy['key'] ?? '').toString();
+    final defaults = _codePolicyDefaults[key] ?? const {'prefix':'Cod','digits':3};
+    try {
+      final parsed = jsonDecode((policy['value'] ?? '').toString());
+      if (parsed is Map) return {...defaults, ...Map<String, dynamic>.from(parsed)};
+    } catch (_) {}
+    return Map<String, dynamic>.from(defaults);
+  }
+
+  TextEditingController _codePolicyController(
+    Map<String, dynamic> policy, {required bool prefix}
+  ) {
+    final key = (policy['key'] ?? '').toString();
+    final config = _codePolicyConfig(policy);
+    final value = (config[prefix ? 'prefix' : 'digits'] ?? (prefix ? 'Cod' : 3)).toString();
+    final controllers = prefix ? _codePolicyPrefixControllers : _codePolicyDigitsControllers;
+    final controller = controllers.putIfAbsent(key, () => TextEditingController(text: value));
+    return controller;
+  }
+
+  Widget _codePolicyEditor(Map<String, dynamic> policy) {
+    final config = _codePolicyConfig(policy);
+    final prefix = (config['prefix'] ?? 'Cod').toString();
+    final digits = int.tryParse((config['digits'] ?? 3).toString()) ?? 3;
+    final safeDigits = digits.clamp(1, 12);
+    final preview = prefix + '1'.padLeft(safeDigits, '0');
+    void update(String field, String value) {
+      final next = _codePolicyConfig(policy)..[field] = field == 'digits'
+          ? (int.tryParse(value) ?? 1) : value;
+      policy['value'] = jsonEncode(next);
+      setState(() {});
+    }
+    return Row(children: [
+      SizedBox(width: 78, height: 40, child: TextField(
+        controller: _codePolicyController(policy, prefix: true),
+        textAlign: TextAlign.center, maxLength: 10,
+        inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]'))],
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+        decoration: const InputDecoration(hintText: 'ABC', counterText: '',
+          isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40),
+          contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          border: OutlineInputBorder()),
+        onChanged: (v) => update('prefix', v),
+      )),
+      const SizedBox(width: 5),
+      SizedBox(width: 58, height: 40, child: TextField(
+        controller: _codePolicyController(policy, prefix: false),
+        textAlign: TextAlign.center, maxLength: 2, keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+        decoration: const InputDecoration(hintText: '3', counterText: '',
+          isDense: true, constraints: BoxConstraints(minHeight: 40, maxHeight: 40),
+          contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          border: OutlineInputBorder()),
+        onChanged: (v) => update('digits', v),
+      )),
+      const SizedBox(width: 7),
+      Expanded(child: Text(preview, textAlign: TextAlign.center,
+        maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900,
+          color: Color(0xFF3E007D)))),
+    ]);
   }
 
   Map<String, dynamic> _geoCodeConfig(Map<String, dynamic> policy) {
@@ -848,6 +931,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     _policyVerticalController.dispose();
     _programNameController.dispose();
     for (final controller in _appearanceColorControllers.values) { controller.dispose(); }
+    for (final controller in _codePolicyPrefixControllers.values) { controller.dispose(); }
+    for (final controller in _codePolicyDigitsControllers.values) { controller.dispose(); }
     for (final controller in _appearanceSizeControllers.values) { controller.dispose(); }
     super.dispose();
   }
@@ -1001,7 +1086,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                       : p['key'] == 'code_generation_registry'
                                       ? const Text('إعدادات التكويد المركزي', style: TextStyle(fontSize:10,fontWeight:FontWeight.w600))
                                       : (p['key'] as String).startsWith('code_policy.')
-                                      ? Align(alignment:AlignmentDirectional.centerStart,child:Text((p['value'] ?? '').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:Color(0xFF3E007D))))
+                                      ? _codePolicyEditor(p)
                                       : p['key'] == 'visual_identity.program_name'
                                     ? TextField(
                                         controller: _programNameController,
