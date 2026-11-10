@@ -873,7 +873,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
         ErpPrintSupport.text('Silsila • ${tabs[tab]}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
-        pw.SizedBox(height: 10),        pw.TableHelper.fromTextArray(headers: rows.first, data: rows.skip(1).toList()),
+        pw.SizedBox(height: 10),        pw.TableHelper.fromTextArray(headers: rows.first, data: ErpPrintSupport.normalizeTable(rows.skip(1).toList())),
       ],
     ));
     return Uint8List.fromList(await pdf.save());

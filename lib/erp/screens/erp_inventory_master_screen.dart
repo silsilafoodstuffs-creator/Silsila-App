@@ -772,7 +772,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
         ErpPrintSupport.text(isWarehouse?'بيانات المخازن':'بيانات الأصناف',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
         pw.SizedBox(height:10),
-        pw.TableHelper.fromTextArray(headers:headers,data:data),
+        pw.TableHelper.fromTextArray(headers:headers,data:ErpPrintSupport.normalizeTable(data)),
       ]));
       final bytes=await doc.save();
       if(share){await Printing.sharePdf(bytes:bytes,filename:isWarehouse?'Silsila-Warehouses.pdf':'Silsila-Items.pdf');}

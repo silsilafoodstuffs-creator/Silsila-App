@@ -242,7 +242,7 @@ class _ErpFinancialOperationsScreenState extends State<ErpFinancialOperationsScr
       ErpPrintSupport.text('تاريخ التقرير: '+_todayDisplay()+' • عدد السجلات: '+rows.length.toString(),textAlign:pw.TextAlign.right,style:const pw.TextStyle(fontSize:9)),
       pw.SizedBox(height:12),
       if(rows.isEmpty)ErpPrintSupport.text('لا توجد بيانات.',textAlign:pw.TextAlign.right)
-      else pw.TableHelper.fromTextArray(headers:headers,data:rows,headerStyle:pw.TextStyle(fontSize:8,fontWeight:pw.FontWeight.bold),cellStyle:const pw.TextStyle(fontSize:8),cellAlignment:pw.Alignment.centerRight,headerAlignment:pw.Alignment.centerRight),
+      else pw.TableHelper.fromTextArray(headers:headers,data:ErpPrintSupport.normalizeTable(rows),headerStyle:pw.TextStyle(fontSize:8,fontWeight:pw.FontWeight.bold),cellStyle:const pw.TextStyle(fontSize:8),cellAlignment:pw.Alignment.centerRight,headerAlignment:pw.Alignment.centerRight),
     ]));
     return Uint8List.fromList(await pdf.save());
   }

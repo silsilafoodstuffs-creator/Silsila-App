@@ -1616,7 +1616,7 @@ class _ErpOperationalDocumentsScreenState extends State<ErpOperationalDocumentsS
         ErpPrintSupport.text('Silsila - ' + _salesDocumentTitle(_documentType), style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 8),
         ErpPrintSupport.text('Document: ' + _documentNumber.text),
-        pw.TableHelper.fromTextArray(headers: ['Item', 'Quantity', 'Unit price', 'Total'], data: rows.map((line) => [_s(line['item_name']), _money(line['quantity']), _money(line['unit_price']), _money(_n(line['quantity']) * _n(line['unit_price']))]).toList()),
+        pw.TableHelper.fromTextArray(headers: ['Item', 'Quantity', 'Unit price', 'Total'], data: ErpPrintSupport.normalizeTable(rows.map((line) => [_s(line['item_name']), _money(line['quantity']), _money(line['unit_price']), _money(_n(line['quantity']) * _n(line['unit_price']))]).toList())),
         pw.SizedBox(height: 8),
         ErpPrintSupport.text('Total: ' + _money(rows.fold<double>(0, (sum, line) => sum + _n(line['quantity']) * _n(line['unit_price'])))),
       ]));
