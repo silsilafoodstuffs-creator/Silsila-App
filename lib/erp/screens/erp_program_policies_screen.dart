@@ -487,8 +487,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final config = _codePolicyConfig(policy);
       final prefix = (config['prefix'] ?? '').toString().trim();
       final digits = int.tryParse((config['digits'] ?? '').toString());
-      if (!RegExp(r'^[A-Za-z]{1,10}$').hasMatch(prefix) || digits == null || digits < 1 || digits > 12) {
-        throw StateError('راجع بادئة وعدد خانات سياسة ' + (policy['ar'] ?? policy['key'] ?? 'سياسة').toString() + '؛ البادئة من 1 إلى 10 حروف إنجليزية وعدد الأرقام من 1 إلى 12.');
+      if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(prefix) || digits == null || digits < 1 || digits > 12) {
+        throw StateError('راجع بادئة وعدد خانات سياسة ' + (policy['ar'] ?? policy['key'] ?? 'سياسة').toString() + '؛ البادئة ثلاثة أحرف إنجليزية وعدد الأرقام من 1 إلى 12.');
       }
       if (!usedCodePrefixes.add(prefix.toLowerCase())) throw StateError('لا يجوز تكرار بادئة الكود $prefix في سياسات الأكواد.');
       policy['value'] = jsonEncode(config);
@@ -519,8 +519,20 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       }
     }
     final itemCode = _itemCodeConfig(values['item_code']!);
-    if (itemCode['prefix'] != 'Itm' || itemCode['category_digits'] != 6 || itemCode['serial_digits'] != 3) {
-      throw StateError('سياسة كود الصنف ثابتة على Itm + 6 أرقام للفئة الثانوية + 3 أرقام للتسلسل.');
+    final itemPrefix = (itemCode['prefix'] ?? '').toString().trim();
+    final itemSerialDigits = int.tryParse((itemCode['serial_digits'] ?? '').toString());
+    if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(itemPrefix) || itemCode['category_digits'] != 6 || itemSerialDigits == null || itemSerialDigits < 1 || itemSerialDigits > 8) {
+      throw StateError('سياسة كود الصنف تتطلب بادئة من ثلاثة أحرف، وستة أرقام للفئات، وتسلسلًا من 1 إلى 8 أرقام.');
+    }
+    itemCode['prefix'] = itemPrefix;
+    itemCode['serial_digits'] = itemSerialDigits;
+    values['item_code']!['value'] = jsonEncode(itemCode);
+    for (final key in ['geo_code.country','geo_code.governorate','geo_code.district','geo_code.area','category_code.main','brand_code']) {
+      final prefix = (_geoCodeConfig(values[key]!)['prefix'] ?? '').toString().toLowerCase();
+      if (prefix.isNotEmpty && !usedCodePrefixes.add(prefix)) throw StateError('بادئة الكود $prefix مستخدمة بالفعل في سياسة أخرى.');
+    }
+    if (!usedCodePrefixes.add(customerPrefix.toLowerCase()) || !usedCodePrefixes.add(itemPrefix.toLowerCase())) {
+      throw StateError('بادئة كود العميل أو الصنف مستخدمة بالفعل في سياسة أخرى.');
     }
     setState(() { saving=true; error=null; message=null; });
     try {
@@ -528,6 +540,24 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final registryPayload = <String, dynamic>{};
       try { final decoded = jsonDecode((registryRecord?['policy_value'] ?? '{}').toString()); if (decoded is Map) registryPayload.addAll(Map<String, dynamic>.from(decoded)); } catch (_) {}
       final registryTypes = Map<String, dynamic>.from(registryPayload['types'] as Map? ?? {});
+      const legacyRegistryKeys = <String, String>{
+        'code_policy.employee':'employee', 'code_policy.user':'user',
+        'code_policy.supplier':'supplier', 'code_policy.representative':'delegate',
+        'code_policy.branch':'branch', 'code_policy.department':'department',
+        'code_policy.work_location':'work_location', 'code_policy.job':'job',
+        'code_policy.grade':'grade', 'code_policy.salary_element':'salary_element',
+      };
+      for (final entry in legacyRegistryKeys.entries) {
+        final policy = values[entry.key];
+        if (policy == null) continue;
+        final config = _codePolicyConfig(policy);
+        final previous = Map<String, dynamic>.from(registryTypes[entry.value] as Map? ?? {});
+        registryTypes[entry.value] = {...previous, 'prefix': config['prefix'], 'digits': config['digits']};
+      }
+      final customerPrevious = Map<String, dynamic>.from(registryTypes['customer'] as Map? ?? {});
+      registryTypes['customer'] = {...customerPrevious, 'prefix': customerPrefix, 'digits': customerSerialDigits};
+      registryPayload['item_prefix'] = itemPrefix;
+      registryPayload['item_segments'] = {'main':2,'sub':2,'secondary':2,'serial':itemSerialDigits};
       for (final definition in _codePolicyTypeDefinitions) {
         final policy = values['code_type.${definition['key']}'];
         if (policy == null) continue;
@@ -672,7 +702,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     }
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Row(children: [
-      SizedBox(width:78,height:40,child:TextField(controller:_codePolicyController(policy,prefix:true),readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:10,inputFormatters:[FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]'))],style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),decoration:const InputDecoration(hintText:'ABC',counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:4),border:OutlineInputBorder()),onChanged:(v)=>update('prefix',v))),
+      SizedBox(width:78,height:40,child:TextField(controller:_codePolicyController(policy,prefix:true),readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:3,inputFormatters:[FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]'))],style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),decoration:const InputDecoration(hintText:'ABC',counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:4),border:OutlineInputBorder()),onChanged:(v)=>update('prefix',v))),
       const SizedBox(width:5),
       SizedBox(width:58,height:40,child:TextField(controller:_codePolicyController(policy,prefix:false),readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:2,keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),decoration:const InputDecoration(hintText:'3',counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:4,vertical:4),border:OutlineInputBorder()),onChanged:(v)=>update('digits',v))),
       const SizedBox(width:7),
@@ -719,7 +749,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       policy['value'] = jsonEncode(next);
       setState(() {});
     }
-    final safeSerialDigits = serialDigits.clamp(1, 12).toInt();
+    final safeSerialDigits = serialDigits.clamp(1, 8).toInt();
     final preview = prefix + List.filled(8, '0').join() +
         '1'.padLeft(safeSerialDigits, '0');
     return Column(mainAxisSize: MainAxisSize.min, children: [
@@ -754,7 +784,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         ),
         onChanged:(v){
           final n=int.tryParse(v);
-          if(n!=null&&n>=1&&n<=12)update('serial_digits',n);
+          if(n!=null&&n>=1&&n<=8)update('serial_digits',n);
         },
       )),
       const SizedBox(width:5),
@@ -789,11 +819,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     // The six category digits are inherited from the secondary item category;
     // only the serial length is displayed as an editable-policy value.
     const inheritedCategoryCode = '010101';
-    final preview = '$prefix$inheritedCategoryCode${'1'.padLeft(serialDigits.clamp(1, 12).toInt(), '0')}';
+    final preview = '$prefix$inheritedCategoryCode${'1'.padLeft(serialDigits.clamp(1, 8).toInt(), '0')}';
     return Column(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
-        key:ValueKey('item-code-prefix-$prefix'),initialValue:prefix,readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:10,
+        key:ValueKey('item-code-prefix-$prefix'),initialValue:prefix,readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:3,
         inputFormatters:[FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]'))],
         onChanged:(v)=>update('prefix',v.toUpperCase()),
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
@@ -803,7 +833,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       SizedBox(width:48,height:40,child:TextFormField(
         key:ValueKey('item-code-serial-$serialDigits'),initialValue:serialDigits.toString(),readOnly:!_isEditing || locked,textAlign:TextAlign.center,maxLength:2,
         keyboardType:TextInputType.number,inputFormatters:[FilteringTextInputFormatter.digitsOnly],
-        onChanged:(v){final n=int.tryParse(v);if(n!=null&&n>=1&&n<=12)update('serial_digits',n);},
+        onChanged:(v){final n=int.tryParse(v);if(n!=null&&n>=1&&n<=8)update('serial_digits',n);},
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
       )),
@@ -835,7 +865,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
         key:ValueKey('geo-prefix-${policy['key']}-$prefix'),initialValue:prefix,
-        readOnly:!_isEditing || locked,
+        readOnly:true,
         textAlign:TextAlign.center,maxLength:3,
         inputFormatters:[FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]'))],
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
@@ -845,7 +875,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       const SizedBox(width:4),
       SizedBox(width:48,height:40,child:TextFormField(
         key:ValueKey('geo-digits-${policy['key']}-$digits'),initialValue:digits.toString(),
-        readOnly:!_isEditing || locked,
+        readOnly:true,
         textAlign:TextAlign.center,maxLength:2,keyboardType:TextInputType.number,
         inputFormatters:[FilteringTextInputFormatter.digitsOnly],        style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
@@ -853,7 +883,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       )),      const SizedBox(width:5),
       Expanded(child:Text('$prefix$previewDigits',textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
       ])),
-      if (locked) const Text('لا يمكن التعديل بعد عمل أول كود', style: TextStyle(color: Colors.red, fontSize: 8, height: 1)),
     ]);
   }
   Future<void> _previewCurrentTab() async {
