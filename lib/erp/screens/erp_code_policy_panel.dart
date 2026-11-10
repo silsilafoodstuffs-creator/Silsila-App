@@ -548,6 +548,21 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       controller:_gridVerticalController,
       padding:const EdgeInsets.all(8),
       children:[
+        Row(spacing:8,children:[
+          const Text('سياسات الأكواد',style:TextStyle(color:_purple,fontWeight:FontWeight.w900,fontSize:16)),
+          const Spacer(),
+          SizedBox(height:40,child:OutlinedButton.icon(
+            onPressed:_loading||_saving?null:()=>_load(propagateError:true),
+            icon:const Icon(Icons.refresh_rounded,size:16),
+            label:const Text('تحديث'),
+          )),
+          SizedBox(height:40,child:ElevatedButton.icon(
+            onPressed:_loading||_saving?null:()=>_save(),
+            icon:const Icon(Icons.save_outlined,size:16),
+            label:const Text('حفظ'),
+            style:ElevatedButton.styleFrom(backgroundColor:_purple,foregroundColor:Colors.white),
+          )),
+        ]),
         Card(elevation:0,color:const Color(0xFFF5EFFB),child:Padding(padding:const EdgeInsets.all(10),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           const Text('إعدادات التكويد المركزي',style:TextStyle(color:_purple,fontWeight:FontWeight.w900,fontSize:16)),
           const SizedBox(height:4),
