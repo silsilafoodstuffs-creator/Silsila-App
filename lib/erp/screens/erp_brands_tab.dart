@@ -44,6 +44,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       final rows = await _db.from('erp_brands')
         .select('id,brand_code,brand_name,brand_name_en,brand_group,display_order,is_active,is_system')
         .eq('company_id', widget.companyId.trim())
+        .order('display_order')
         .order('brand_code');
       if (!mounted) return;
       setState(() {
