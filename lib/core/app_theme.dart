@@ -145,6 +145,14 @@ class SilsilaTheme {
       ),
 
       // Text fields
+      dataTableTheme: const DataTableThemeData(
+        dataRowMinHeight: 40,
+        dataRowMaxHeight: 40,
+        headingRowHeight: 40,
+        columnSpacing: 5,
+        horizontalMargin: 5,
+      ),
+
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
