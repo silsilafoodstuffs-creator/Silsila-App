@@ -1,4 +1,5 @@
 import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart' as pdf;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Shared RTL PDF direction, numeric shaping and print metadata for Silsila.
@@ -63,7 +64,7 @@ class ErpPrintSupport {
         margin: const pw.EdgeInsets.only(bottom: 8),
         padding: const pw.EdgeInsets.only(bottom: 6),
         decoration: const pw.BoxDecoration(
-          border: pw.Border(bottom: pw.BorderSide(color: pw.PdfColor(.78, .74, .83), width: .6)),
+          border: pw.Border(bottom: pw.BorderSide(color: pdf.PdfColor(.78, .74, .83), width: .6)),
         ),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
@@ -88,7 +89,7 @@ class ErpPrintSupport {
       margin: const pw.EdgeInsets.only(top: 7),
       padding: const pw.EdgeInsets.only(top: 5),
       decoration: const pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(color: pw.PdfColor(.84, .82, .87), width: .5)),
+        border: pw.Border(top: pw.BorderSide(color: pdf.PdfColor(.84, .82, .87), width: .5)),
       ),
       alignment: pw.Alignment.center,
       child: pw.Directionality(
