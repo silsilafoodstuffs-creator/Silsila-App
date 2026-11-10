@@ -190,7 +190,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
         _warehouses = values[0]; _items = values[1]; _itemImageFutures.clear(); _itemsOffset = values[1].length; _itemsHasMore = values[1].length == 500; _branches = values[2]; _categories = values[3]; _workspaceItemProposals = values[4]; _brands = values[5]; _isManagementUser = isManagementUser; _itemUnits = extra[0];
         _selectedSharedItemId = _items.any((item)=>_s(item['id'])==_selectedSharedItemId) ? _selectedSharedItemId : (_items.isNotEmpty ? _s(_items.first['id']) : null); if (!isManagementUser && (_view=='proposals'||_view=='shared_stock')) _view='items'; _warehouseItemSettings = extra[1]; _geoRows = geoRows;
         if (!_categories.any((g) => _s(g['id']) == _itemCategoryId && g['is_active'] == true)) _itemCategoryId = null;
-        if (!_brands.any((g) => _s(g['id']) == _itemBrandId && g['is_active'] == true)) _itemBrandId = _brands.where((g) => g['is_active'] == true && g['is_system'] != true).isNotEmpty ? _s(_brands.firstWhere((g) => g['is_active'] == true && g['is_system'] != true)['id']) : null;
+        if (!_brands.any((g) => _s(g['id']) == _itemBrandId && g['is_active'] == true)) _itemBrandId = null;
         if (!_branches.any((b) => _s(b['id']) == _branchId)) _branchId = null;
         _loading = false;
         _error = loadErrors.isEmpty ? null : 'تم تحميل البيانات المتاحة، وتعذر تحميل بعض الأقسام: ${loadErrors.join(' | ')}';
@@ -721,8 +721,8 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         if(isWarehouse){
           await Supabase.instance.client.from('erp_warehouses').update({'warehouse_name':name.text.trim()}).eq('id',row['id']).eq('company_id',_company.text.trim());
         }else{
-          if(editCategoryId==null||editBrandId==null){
-            throw StateError('يجب تحديد الفئة الثانوية والبراند/الماركة قبل حفظ تعديل الصنف.');
+          if(editCategoryId==null || !_categories.any((x)=>_s(x['id'])==editCategoryId && x['is_active']==true && _isSecondaryCategory(x)) || editBrandId==null || !_brands.any((x)=>_s(x['id'])==editBrandId && x['is_active']==true)){
+            throw StateError('يجب تحديد فئة ثانوية نشطة وبراند/ماركة نشطة قبل حفظ تعديل الصنف.');
           }
           await Supabase.instance.client.from('erp_items').update({
             'item_name':name.text.trim(),
