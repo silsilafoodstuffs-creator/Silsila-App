@@ -345,7 +345,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       policy['value'] = jsonEncode(next);
       setState(() {});
     }
-    final preview = prefix + List.filled(8, '0').join() + '1'.padLeft(serialDigits.clamp(1, 12), '0');
+    final preview = prefix + List.filled(8, '0').join() + '1'.padLeft(serialDigits.clamp(1, 12).toInt(), '0');
     return SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
         key:const ValueKey('customer-code-prefix'),initialValue:prefix,maxLength:10,
