@@ -1104,13 +1104,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         headerCell('م',34), const SizedBox(width:8), headerCell('كود السياسة',82), const SizedBox(width:8),
         headerCell('بيانات السياسة',225), const SizedBox(width:8), headerCell('القيمة / الاختيار',300), const SizedBox(width:4),
         headerCell('تفعيل',50), const SizedBox(width:4), headerCell('الكل',62), const SizedBox(width:4),
-        headerCell('تحديد\nمستخدمين',80), const SizedBox(width:4), headerCell('عدد المحدد',58),
+        headerCell('اختيار',44), const SizedBox(width:4), headerCell('عدد المحدد',58),
       ]))),
     );    return Scrollbar(controller: _policyVerticalController, thumbVisibility: true, scrollbarOrientation: ScrollbarOrientation.left,
       child: Scrollbar(controller: _policyHorizontalController, thumbVisibility: true, scrollbarOrientation: ScrollbarOrientation.bottom,
         child: SingleChildScrollView(controller: _policyHorizontalController, scrollDirection: Axis.horizontal,
-          child: SizedBox(width: 1200, child: ListView(controller: _policyVerticalController, padding: const EdgeInsets.fromLTRB(5,1,5,3), children: [
+          child: SizedBox(width: 1200, child: Column(children: [
             header,
+            Expanded(child: ListView(controller: _policyVerticalController, padding: const EdgeInsets.fromLTRB(5,1,5,3), children: [
             ...List.generate(rows.length, (index) {
               final p = rows[index];              final key = (p['key'] ?? '').toString();
               Widget editor;
@@ -1155,6 +1156,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
               );
             }),
             const Padding(padding:EdgeInsets.all(6),child:Text('الخطوط المعروضة مأخوذة من الخطوط المحفوظة في إعدادات الشركة بقاعدة البيانات. يمكن تعديل القيم ثم الضغط على حفظ.',style:TextStyle(fontSize:10,color:Color(0xFF3E007D)))),
+          ])),
           ])),
         ),
       ),
