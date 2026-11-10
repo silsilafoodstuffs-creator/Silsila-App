@@ -9,7 +9,6 @@ import 'package:printing/printing.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_quick_task_button.dart';
-import 'erp_code_policy_panel.dart';
 
 class ErpProgramPoliciesScreen extends StatefulWidget {
   const ErpProgramPoliciesScreen({super.key, required this.companyId});
@@ -99,7 +98,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final TextEditingController _programNameController = TextEditingController(text: 'سلسلة');
   String? _programLogoBase64;
   String? _programLogoMime;
-  final GlobalKey<ErpCodePolicyPanelState> _codePolicyKey = GlobalKey<ErpCodePolicyPanelState>();
   final ScrollController _policyHorizontalController = ScrollController();
   final ScrollController _policyVerticalController = ScrollController();
   int tab = 0; bool loading = true, saving = false; String? error, message;
@@ -124,6 +122,33 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         await db.from('erp_program_policies').upsert(missingPolicies,onConflict:'company_id,policy_key');
         rows=await db.from('erp_program_policies').select().eq('company_id',company);
       }
+      final registryRows = (rows as List).whereType<Map<String,dynamic>>()
+          .where((row) => row['policy_key'] == 'code_generation_registry').toList();
+      final registryPayload = <String, dynamic>{};
+      if (registryRows.isNotEmpty) {
+        try { final decoded = jsonDecode((registryRows.first['policy_value'] ?? '{}').toString()); if (decoded is Map) registryPayload.addAll(Map<String, dynamic>.from(decoded)); } catch (_) {}
+      }
+      final registryTypes = Map<String, dynamic>.from(registryPayload['types'] as Map? ?? {});
+      final existingTypeKeys = (rows as List).whereType<Map<String,dynamic>>().map((row) => (row['policy_key'] ?? '').toString()).toSet();
+      final newTypeRows = <Map<String, dynamic>>[];
+      for (var i = 0; i < _codePolicyTypeDefinitions.length; i++) {
+        final definition = _codePolicyTypeDefinitions[i];
+        final typeKey = definition['key']!;
+        final policyKey = 'code_type.$typeKey';
+        if (existingTypeKeys.contains(policyKey)) continue;
+        final config = Map<String, dynamic>.from(registryTypes[typeKey] as Map? ?? {});
+        newTypeRows.add({
+          'company_id': company, 'policy_key': policyKey, 'category': 'تكويدية',
+          'name_ar': definition['name'], 'name_en': definition['en'],
+          'is_enabled': true, 'apply_to_all': true, 'user_ids': <String>[],
+          'policy_value': jsonEncode({'prefix': (config['prefix'] ?? definition['prefix']).toString(), 'digits': int.tryParse((config['digits'] ?? definition['digits']).toString()) ?? 5}),
+          'policy_code': 'Pol${(77 + i).toString().padLeft(3, '0')}',
+        });
+      }
+      if (newTypeRows.isNotEmpty) {
+        await db.from('erp_program_policies').upsert(newTypeRows, onConflict: 'company_id,policy_key');
+        rows = await db.from('erp_program_policies').select().eq('company_id', company);
+      }
       _policyCodes
         ..clear()
         ..addEntries((rows as List).whereType<Map<String,dynamic>>().map((row) => MapEntry((row['policy_key'] ?? '').toString(), (row['policy_code'] ?? '').toString())));
@@ -145,6 +170,18 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         };
       }
       for(final row in (rows as List).whereType<Map<String,dynamic>>()) { final key=(row['policy_key']??'').toString(); if(!values.containsKey(key))continue; final p=values[key]!; p['enabled']=row['is_enabled']==true; p['all']=row['apply_to_all']==true || p['mandatory']==true; p['value']=(row['policy_value']??p['value']??'').toString(); p['user_ids']=List<String>.from((row['user_ids'] as List?)??const []); }
+      for (final definition in _codePolicyTypeDefinitions) {
+        final key = 'code_type.${definition['key']}';
+        final matches = (rows as List).whereType<Map<String,dynamic>>().where((item) => item['policy_key'] == key).toList();
+        if (matches.isEmpty) continue;
+        final row = matches.first;
+        values[key] = {
+          'key': key, 'category': 'تكويدية', 'ar': definition['name'], 'en': definition['en'],
+          'value': (row['policy_value'] ?? '').toString(),
+          'enabled': row['is_enabled'] == true, 'all': row['apply_to_all'] == true,
+          'user_ids': List<String>.from((row['user_ids'] as List?) ?? const []), 'mandatory': true,
+        };
+      }
       // Upgrade the earlier descriptive text to the persisted, editable dimensions object.
       final layoutPolicy = values['ui_layout_standard'];
       if (layoutPolicy != null) {
@@ -250,9 +287,11 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       }
     }
     final usedCodePrefixes = <String>{};
-    for (final key in _codePolicyDefaults.keys) {
-      final policy = values[key];
-      if (policy == null) continue;
+    final codePoliciesToValidate = <Map<String, dynamic>>[
+      ..._codePolicyDefaults.keys.map((key) => values[key]).whereType<Map<String, dynamic>>(),
+      ..._codePolicyTypeDefinitions.map((definition) => values['code_type.${definition['key']}']).whereType<Map<String, dynamic>>(),
+    ];
+    for (final policy in codePoliciesToValidate) {
       final config = _codePolicyConfig(policy);
       final prefix = (config['prefix'] ?? '').toString().trim();
       final digits = int.tryParse((config['digits'] ?? '').toString());
@@ -292,31 +331,30 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       throw StateError('سياسة كود الصنف ثابتة على Itm + 6 أرقام للفئة الثانوية + 3 أرقام للتسلسل.');
     }
     setState(() { saving=true; error=null; message=null; });
-    try { final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList(); await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key');
+    try {
+      final registryRecord = await db.from('erp_program_policies').select('policy_value').eq('company_id', company).eq('policy_key', 'code_generation_registry').maybeSingle();
+      final registryPayload = <String, dynamic>{};
+      try { final decoded = jsonDecode((registryRecord?['policy_value'] ?? '{}').toString()); if (decoded is Map) registryPayload.addAll(Map<String, dynamic>.from(decoded)); } catch (_) {}
+      final registryTypes = Map<String, dynamic>.from(registryPayload['types'] as Map? ?? {});
+      for (final definition in _codePolicyTypeDefinitions) {
+        final policy = values['code_type.${definition['key']}'];
+        if (policy == null) continue;
+        final config = _codePolicyConfig(policy);
+        final previous = Map<String, dynamic>.from(registryTypes[definition['key']] as Map? ?? {});
+        registryTypes[definition['key']] = {...previous, 'prefix': config['prefix'], 'digits': config['digits']};
+      }
+      registryPayload['version'] ??= 4;
+      registryPayload['types'] = registryTypes;
+      if (values.containsKey('code_generation_registry')) values['code_generation_registry']!['value'] = jsonEncode(registryPayload);
+      final rows=values.values.map((p)=><String,dynamic>{'company_id':company,'policy_key':p['key'],'category':p['category'],'name_ar':p['ar'],'name_en':p['en'],'is_enabled':p['mandatory']==true?true:p['enabled']==true,'apply_to_all':p['mandatory']==true||p['all']==true,'user_ids':p['mandatory']==true||p['all']==true?[]:p['user_ids'],'policy_value':p['value']??'','policy_code':_policyCodes[p['key']] }).toList();
+      await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key');
       final settings = await db.from('erp_program_settings').select().eq('company_id',company).maybeSingle();
       await db.from('erp_program_settings').upsert({...?settings,'company_id':company,'program_name':_programNameController.text.trim().isEmpty?'سلسلة':_programNameController.text.trim(),'logo_base64':_programLogoBase64,'logo_mime_type':_programLogoMime,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':db.auth.currentUser?.id},onConflict:'company_id');
       if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
   }
-  Future<void> _refreshCurrentTab() async {
-    if (tab == 1) {
-      final panel = _codePolicyKey.currentState;
-      if (panel == null) throw StateError('شاشة التكويد غير جاهزة للتحديث.');
-      await panel.reloadFromHeader();
-    } else {
-      await _load(propagateError: true);
-    }
-  }
+  Future<void> _refreshCurrentTab() async => _load(propagateError: true);
 
-  Future<void> _saveCurrentTab() async {
-    if (tab == 1) {
-      final panel = _codePolicyKey.currentState;
-      if (panel == null) throw StateError('شاشة التكويد غير جاهزة للحفظ.');
-      await _save();
-      await panel.saveFromHeader();
-    } else {
-      await _save();
-    }
-  }
+  Future<void> _saveCurrentTab() async => _save();
 
   void _editCurrentTab() {
     {
@@ -341,6 +379,53 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     'code_policy.grade': {'prefix':'Grd','digits':3},
     'code_policy.salary_element': {'prefix':'Elm','digits':3},
   };
+
+  static const List<Map<String, String>> _codePolicyTypeDefinitions = [
+    {'key':'payroll_run','name':'مسيرات الرواتب','en':'Payroll runs','prefix':'Prl','digits':'5'},
+    {'key':'warehouse','name':'المخازن','en':'Warehouses','prefix':'Whs','digits':'5'},
+    {'key':'unit','name':'وحدات الأصناف','en':'Item units','prefix':'Unt','digits':'5'},
+    {'key':'payment_method','name':'طرق الدفع','en':'Payment methods','prefix':'Pmt','digits':'5'},
+    {'key':'shift','name':'ورديات العمل','en':'Work shifts','prefix':'Shf','digits':'5'},
+    {'key':'commission_plan','name':'خطط العمولات','en':'Commission plans','prefix':'Com','digits':'5'},
+    {'key':'sales_fulfillment','name':'أذون التجهيز والتسليم','en':'Sales fulfillment notes','prefix':'Ful','digits':'5'},
+    {'key':'user_type','name':'أنواع المستخدمين','en':'User types','prefix':'Typ','digits':'5'},
+    {'key':'permission_template','name':'قوالب الصلاحيات','en':'Permission templates','prefix':'Tpl','digits':'5'},
+    {'key':'user_classification','name':'تصنيفات المستخدمين','en':'User classifications','prefix':'Cls','digits':'5'},
+    {'key':'journal_entry','name':'القيود اليومية','en':'Journal entries','prefix':'Jrn','digits':'5'},
+    {'key':'account','name':'الحسابات المالية','en':'Financial accounts','prefix':'Acc','digits':'5'},
+    {'key':'cashbox','name':'الخزائن والحسابات البنكية','en':'Cashboxes and bank accounts','prefix':'Csh','digits':'5'},
+    {'key':'cost_center','name':'مراكز التكلفة','en':'Cost centers','prefix':'Cst','digits':'5'},
+    {'key':'price_list','name':'قوائم الأسعار','en':'Price lists','prefix':'Pli','digits':'5'},
+    {'key':'sales_invoice','name':'فواتير البيع','en':'Sales invoices','prefix':'Siv','digits':'5'},
+    {'key':'sales_order','name':'أوامر البيع','en':'Sales orders','prefix':'Sor','digits':'5'},
+    {'key':'sales_delivery','name':'أذون تسليم المبيعات','en':'Sales delivery notes','prefix':'Dlv','digits':'5'},
+    {'key':'sales_return','name':'مرتجعات المبيعات','en':'Sales returns','prefix':'Srt','digits':'5'},
+    {'key':'quotation','name':'عروض الأسعار','en':'Quotations','prefix':'Qot','digits':'5'},
+    {'key':'purchase_invoice','name':'فواتير الشراء','en':'Purchase invoices','prefix':'Piv','digits':'5'},
+    {'key':'purchase_order','name':'أوامر الشراء','en':'Purchase orders','prefix':'Por','digits':'5'},
+    {'key':'purchase_receipt','name':'إيصالات استلام المشتريات','en':'Purchase receipts','prefix':'Prr','digits':'5'},
+    {'key':'purchase_return','name':'مرتجعات المشتريات','en':'Purchase returns','prefix':'Prt','digits':'5'},
+    {'key':'cash_receipt','name':'سندات القبض','en':'Cash receipts','prefix':'Rcp','digits':'5'},
+    {'key':'cash_payment','name':'سندات الصرف','en':'Cash payments','prefix':'Cpy','digits':'5'},
+    {'key':'cash_transfer','name':'سندات التحويل','en':'Cash transfers','prefix':'Trf','digits':'5'},
+    {'key':'cash_movement','name':'الحركات النقدية','en':'Cash movements','prefix':'Cmv','digits':'5'},
+    {'key':'cash_order','name':'أوامر الخزينة','en':'Treasury orders','prefix':'Cso','digits':'5'},
+    {'key':'checkbook','name':'دفاتر الشيكات','en':'Checkbooks','prefix':'Ckb','digits':'5'},
+    {'key':'workspace_branch','name':'فروع إدارة النشاط','en':'Workspace branches','prefix':'Wbr','digits':'5'},
+    {'key':'workspace_cash_movement','name':'حركات نقدية إدارة النشاط','en':'Workspace cash movements','prefix':'Wcm','digits':'5'},
+    {'key':'workspace_customer','name':'عملاء إدارة النشاط','en':'Workspace customers','prefix':'Wcu','digits':'5'},
+    {'key':'workspace_supplier','name':'موردو إدارة النشاط','en':'Workspace suppliers','prefix':'Wsu','digits':'5'},
+    {'key':'workspace_department','name':'إدارات إدارة النشاط','en':'Workspace departments','prefix':'Wdp','digits':'5'},
+    {'key':'workspace_employee','name':'موظفو إدارة النشاط','en':'Workspace employees','prefix':'Wem','digits':'5'},
+    {'key':'workspace_warehouse','name':'مخازن إدارة النشاط','en':'Workspace warehouses','prefix':'Wwh','digits':'5'},
+    {'key':'workspace_purchase','name':'مستندات شراء إدارة النشاط','en':'Workspace purchase documents','prefix':'Wpi','digits':'5'},
+    {'key':'workspace_purchase_return','name':'مرتجعات شراء إدارة النشاط','en':'Workspace purchase returns','prefix':'Wpr','digits':'5'},
+    {'key':'workspace_sale','name':'مستندات بيع إدارة النشاط','en':'Workspace sales documents','prefix':'Wsi','digits':'5'},
+    {'key':'workspace_sale_return','name':'مرتجعات بيع إدارة النشاط','en':'Workspace sales returns','prefix':'Wsr','digits':'5'},
+    {'key':'workspace_transfer','name':'تحويلات إدارة النشاط','en':'Workspace transfers','prefix':'Wtr','digits':'5'},
+    {'key':'workspace_adjustment','name':'تسويات إدارة النشاط','en':'Workspace adjustments','prefix':'Wad','digits':'5'},
+  ];
+
   Map<String, dynamic> _codePolicyConfig(Map<String, dynamic> policy) {
     final key = (policy['key'] ?? '').toString();
     final defaults = _codePolicyDefaults[key] ?? const {'prefix':'Cod','digits':3};
@@ -956,7 +1041,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final key = (p['key'] ?? '').toString().toLowerCase();
       return ar.contains(query) || en.contains(query) || key.contains(query);
     }).toList();
-    if (tabs[tab] == 'الكل') {
+    if (tabs[tab] == 'الكل' || tabs[tab] == 'تكويدية') {
       list.sort((a, b) => _programPolicyCode((a['key'] ?? '').toString())
           .compareTo(_programPolicyCode((b['key'] ?? '').toString())));
     }
@@ -995,7 +1080,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
             ErpQuickTaskButton(label: 'تحديث', icon: Icons.refresh_rounded, compact: true, onPressed: loading ? null : _refreshCurrentTab),
             ErpQuickTaskButton(label: 'إضافة', icon: Icons.add_circle_outline_rounded, compact: true, onPressed: null),
-            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving || (tab == 1 && (_codePolicyKey.currentState?.isSaving ?? false)) ? null : _saveCurrentTab),
+            ErpQuickTaskButton(label: 'حفظ', icon: Icons.save_outlined, compact: true, onPressed: saving ? null : _saveCurrentTab),
             ErpQuickTaskButton(label: 'تعديل', icon: Icons.edit_outlined, compact: true, onPressed: loading ? null : _editCurrentTab),
             ErpQuickTaskButton(label: 'حذف', icon: Icons.delete_outline_rounded, compact: true, onPressed: null),
             ErpQuickTaskButton(label: 'معاينة', icon: Icons.preview_outlined, compact: true, onPressed: _previewCurrentTab),
@@ -1029,7 +1114,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                           child: SizedBox(width: 1200, child: ListView(
                         controller: _policyVerticalController,                        padding: const EdgeInsets.fromLTRB(5, 1, 5, 3),
                         children: [
-                          if (tab == 1) SizedBox(height: 320, child: ErpCodePolicyPanel(key: _codePolicyKey, companyId: company)),
                           Card(
                             margin: const EdgeInsets.symmetric(vertical: 1, horizontal: 1),
                             elevation: 0, color: const Color(0xFFF5EFFB),
@@ -1092,7 +1176,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                       ? _itemCodeEditor(p)
                                       : p['key'] == 'code_generation_registry'
                                       ? const Text('إعدادات التكويد المركزي', style: TextStyle(fontSize:10,fontWeight:FontWeight.w600))
-                                      : (p['key'] as String).startsWith('code_policy.')
+                                      : ((p['key'] as String).startsWith('code_policy.') || (p['key'] as String).startsWith('code_type.'))
                                       ? _codePolicyEditor(p)
                                       : p['key'] == 'visual_identity.program_name'
                                     ? TextField(
