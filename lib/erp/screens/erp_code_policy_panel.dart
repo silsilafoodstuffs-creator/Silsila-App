@@ -239,6 +239,10 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       setState(() => _error = 'يجب أن تكون كل بادئة فريدة، وألا تتكرر مع بادئة الأصناف.');
       throw StateError(_error!);
     }
+    if (_prefix['brand']!.text.trim() != 'Bra' || int.tryParse(_digits['brand']!.text) != 3) {
+      setState(() => _error = 'سياسة البراندات الحالية ثابتة على Bra + 3 أرقام حتى لا تتعارض مع أكواد البراندات والأصناف القائمة.');
+      throw StateError(_error!);
+    }
     if (_itemPrefix.text.trim() != 'Itm') {
       setState(() => _error = 'بادئة كود الأصناف ثابتة على Itm.');
       throw StateError(_error!);
@@ -386,9 +390,9 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
     }
   }
 
-  Widget _field(TextEditingController c, {required int max, required bool letters, required VoidCallback changed}) =>
+  Widget _field(TextEditingController c, {required int max, required bool letters, required VoidCallback changed, bool readOnly = false}) =>
     SizedBox(width:_countCellWidth, height:40, child: TextField(
-      controller:c, textAlign:TextAlign.center, maxLength:max,
+      controller:c, readOnly:readOnly, textAlign:TextAlign.center, maxLength:max,
       inputFormatters:[FilteringTextInputFormatter.allow(RegExp(letters ? '[a-zA-Z]' : '[0-9]'))],
       onChanged:(_) => setState(changed),
       decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:5,vertical:3),border:OutlineInputBorder()),
@@ -477,9 +481,9 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
       const SizedBox(width:52,child:Center(child:Icon(Icons.check_circle,color:_purple,size:18))),
       
       _firstFieldName(),  const SizedBox(width:_countCellWidth,height:_cellHeight), 
-      _geoNameCell('منطقة/قرية'),  _segmentField('عدد',_geoSegments['area']!,2,width:_countCellWidth),
-       _geoNameCell('حي/مركز/شياخة'),  _segmentField('عدد',_geoSegments['center']!,2,width:_countCellWidth),
-       _geoNameCell('محافظة'),  _segmentField('عدد',_geoSegments['governorate']!,2,width:_countCellWidth),
+      _geoNameCell('منطقة/قرية'),  _segmentField('عدد',_geoSegments['area']!,2,width:_countCellWidth,readOnly:true),
+       _geoNameCell('حي/مركز/شياخة'),  _segmentField('عدد',_geoSegments['center']!,2,width:_countCellWidth,readOnly:true),
+       _geoNameCell('محافظة'),  _segmentField('عدد',_geoSegments['governorate']!,2,width:_countCellWidth,readOnly:true),
        _geoNameCell('دولة'),  const SizedBox(width:_countCellWidth,height:_cellHeight,child:Center(child:Text('2',textAlign:TextAlign.center,style:TextStyle(fontSize:11,fontWeight:FontWeight.w700)))),
       
       SizedBox(width:112,child:Text(_geoPrefix.text,textAlign:TextAlign.center,style:const TextStyle(fontSize:11,fontWeight:FontWeight.w800))),
@@ -612,7 +616,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
               SizedBox(width:52,child:Checkbox(value:_automatic[key] ?? true,onChanged:(v)=>setState(()=>_automatic[key]=v ?? true),visualDensity:VisualDensity.compact)),
               SizedBox(width:52,child:Checkbox(value:_composite[key] ?? false,onChanged:(v)=>setState(()=>_composite[key]=v ?? false),visualDensity:VisualDensity.compact)),
               _firstFieldName(),
-              _field(_digits[key]!,max:2,letters:false,changed:(){}),
+              _field(_digits[key]!,max:2,letters:false,changed:(){},readOnly:key=='brand'),
               ...List<Widget>.generate(6, (index) {
                 final slot = index ~/ 2;
                 if (index.isEven) return _nameField(_fieldNames[key]![slot]);
@@ -621,7 +625,7 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
               const SizedBox(width:124,height:_cellHeight),
               const SizedBox(width:_countCellWidth,height:_cellHeight),
               SizedBox(width:112,child:Column(mainAxisSize:MainAxisSize.min,children:[
-                _field(_prefix[key]!,max:3,letters:true,changed:(){}),
+                _field(_prefix[key]!,max:3,letters:true,changed:(){},readOnly:key=='brand'),
                 const Text('3 حروف إنجليزية فقط',style:TextStyle(fontSize:8,color:Colors.black54)),
               ])),
               SizedBox(width:112,child:Text(_preview(key),textAlign:TextAlign.center,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:_purple))),
