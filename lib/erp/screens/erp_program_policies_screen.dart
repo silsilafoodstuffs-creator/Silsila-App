@@ -90,6 +90,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final values = <String,Map<String,dynamic>>{};
   final Map<String, String> _policyCodes = {};
   final Set<String> _lockedCodePolicies = <String>{};
+  bool _codePolicyLockStatusLoaded = false;
   bool _isEditing = false;
   String _editSnapshot = '';
   final users = <Map<String,dynamic>>[];
@@ -105,146 +106,32 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final ScrollController _policyVerticalController = ScrollController();
   int tab = 0; bool loading = true, saving = false; String? error, message;
   String get company => (widget.companyId ?? '').trim();
-  static const Map<String, String> _codePolicyCodeSources = {
-    'code_policy.program_policy':'erp_program_policies.policy_code',
-    'code_policy.employee':'erp_employees.employee_code',
-        'code_policy.user':'erp_users.user_code',
-        'code_policy.representative':'erp_sales_representatives.rep_code',
-    'code_policy.branch':'erp_branches.branch_code',
-    'code_policy.storage_location':'erp_warehouses.warehouse_code',
-    'code_policy.department':'erp_hr_departments.department_code',
-    'code_policy.work_location':'erp_hr_work_locations.location_code',
-    'code_policy.job':'erp_hr_jobs.job_code',
-    'code_policy.grade':'erp_hr_job_grades.grade_code',
-    'code_policy.salary_element':'erp_hr_salary_elements.element_code',
-        'item_code':'erp_items.item_code',
-    'code_type.payroll_run':'erp_payroll_runs.run_code',
-    'code_type.warehouse':'erp_warehouses.warehouse_code',
-    'code_type.unit':'erp_item_unit_catalog.unit_code',
-    'code_type.payment_method':'erp_payment_methods.payment_method_code',
-    'code_type.shift':'erp_hr_shifts.shift_code',
-    'code_type.commission_plan':'erp_commission_plans.plan_code',
-    'code_type.sales_fulfillment':'erp_sales_fulfillment_documents.manual_number',
-    'code_type.user_type':'erp_user_types.type_code_display',
-    'code_type.permission_template':'erp_permission_templates.template_code_display',
-    'code_type.user_classification':'erp_user_classifications.classification_code_display',
-    'code_type.journal_entry':'erp_journal_entries.entry_number_display',
-    'code_type.account':'erp_accounts.account_code',
-    'code_type.cashbox':'erp_cashboxes.cashbox_code',
-    'code_type.cost_center':'erp_cost_centers.center_code',
-    'code_type.price_list':'erp_price_lists.price_list_code',
-        'code_type.cash_movement':'erp_cash_movements.movement_number',
-    'code_type.cash_order':'erp_cash_orders.order_number',
-    'code_type.checkbook':'erp_checkbooks.book_number',
-    'code_type.fixed_asset':'erp_fixed_assets.asset_code',
-    'code_type.asset_category':'erp_asset_categories.category_code',
-    'code_type.asset_depreciation_run':'erp_asset_depreciation_runs.run_code',
-    'code_type.asset_disposal':'erp_asset_disposals.disposal_code',
-    'code_type.crm_activity':'erp_crm_activities.activity_code',
-    'code_type.crm_lead':'erp_crm_leads.lead_code',
-        'code_type.construction_project':'erp_construction_projects.project_code',
-    'code_type.construction_material_request':'erp_construction_material_requests.request_code',
-    'code_type.construction_payment_certificate':'erp_construction_payment_certificates.certificate_number',
-    'code_type.construction_site_report':'erp_construction_site_reports.report_code',
-    'code_type.manufacturing_bom':'erp_manufacturing_boms.bom_code',
-    'code_type.manufacturing_work_center':'erp_manufacturing_work_centers.center_code',
-    'code_type.production_order':'erp_production_orders.order_code',
-    'code_type.production_quality_check':'erp_production_quality_checks.inspection_code',
-    'code_type.production_variance':'erp_production_variances.variance_code',
-    'code_type.service_ticket':'erp_service_tickets.ticket_code',
-    'code_type.service_visit':'erp_service_visits.visit_code',
-    'code_type.hr_contract':'erp_hr_employee_contracts.contract_number',
-    'code_type.hr_advance':'erp_hr_employee_advances.advance_number',
-    'code_type.hr_custody':'erp_hr_employee_custodies.custody_code',
-    'code_type.business_suite_record':'erp_business_suite_records.record_code',
-    'code_type.construction_material_movement':'erp_construction_material_movements.movement_code',
-    'code_type.service_sla_policy':'erp_service_sla_policies.policy_code',
-  };
   Future<void> _loadCodePolicyLocks() async {
-    final grouped = <String, List<String>>{};
-    for (final entry in _codePolicyCodeSources.entries) {
-      final parts = entry.value.split('.');
-      final source = '${parts[0]}.${parts[1]}';
-      grouped.putIfAbsent(source, () => <String>[]).add(entry.key);
-    }
-    final locked = <String>{};
-    await Future.wait(grouped.entries.map((entry) async {
-      final parts = entry.key.split('.');
-      try {
-        final rows = await db.from(parts[0]).select('id')
-            .eq('company_id', company).not(parts[1], 'is', null).neq(parts[1], '').limit(1);
-        if ((rows as List).isNotEmpty) locked.addAll(entry.value);
-      } catch (_) {}
-    }));
-
-    Future<void> probeCompanyType(String key, String table, String column,
-        {String? filterColumn, String? filterValue, String? excludeValues}) async {
-      try {
-        var query = db.from(table).select('id')
-            .eq('company_id', company).not(column, 'is', null).neq(column, '');
-        if (filterColumn != null && filterValue != null) query = query.eq(filterColumn, filterValue);
-        if (filterColumn != null && excludeValues != null) query = query.not(filterColumn, 'in', excludeValues);
-        final rows = await query.limit(1);
-        if ((rows as List).isNotEmpty) locked.add(key);
-      } catch (_) {}
-    }
-    await Future.wait([
-      probeCompanyType('customer_code','erp_parties','party_code',filterColumn:'party_kind',filterValue:'customer'),
-      probeCompanyType('code_policy.supplier','erp_parties','party_code',filterColumn:'party_kind',filterValue:'supplier'),
-      probeCompanyType('code_type.sales_invoice','erp_sales_documents','document_number',filterColumn:'document_type',excludeValues:'(quotation,order,delivery,return)'),
-      probeCompanyType('code_type.sales_order','erp_sales_documents','document_number',filterColumn:'document_type',filterValue:'order'),
-      probeCompanyType('code_type.sales_delivery','erp_sales_documents','document_number',filterColumn:'document_type',filterValue:'delivery'),
-      probeCompanyType('code_type.sales_return','erp_sales_documents','document_number',filterColumn:'document_type',filterValue:'return'),
-      probeCompanyType('code_type.quotation','erp_sales_documents','document_number',filterColumn:'document_type',filterValue:'quotation'),
-      probeCompanyType('code_type.purchase_invoice','erp_purchase_documents','document_number',filterColumn:'document_type',excludeValues:'(order,receipt,return)'),
-      probeCompanyType('code_type.purchase_order','erp_purchase_documents','document_number',filterColumn:'document_type',filterValue:'order'),
-      probeCompanyType('code_type.purchase_receipt','erp_purchase_documents','document_number',filterColumn:'document_type',filterValue:'receipt'),
-      probeCompanyType('code_type.purchase_return','erp_purchase_documents','document_number',filterColumn:'document_type',filterValue:'return'),
-      probeCompanyType('code_type.cash_receipt','erp_cash_vouchers','voucher_number',filterColumn:'voucher_type',excludeValues:'(payment,transfer)'),
-      probeCompanyType('code_type.cash_payment','erp_cash_vouchers','voucher_number',filterColumn:'voucher_type',filterValue:'payment'),
-      probeCompanyType('code_type.cash_transfer','erp_cash_vouchers','voucher_number',filterColumn:'voucher_type',filterValue:'transfer'),
-    ]);
     try {
-      final workspaceRows = await db.from('erp_business_workspaces')
-          .select('id').eq('platform_company_id', company);
-      final workspaceIds = (workspaceRows as List)
-          .whereType<Map<String, dynamic>>().map((row) => row['id'])
-          .whereType<String>().toList();
-      if (workspaceIds.isNotEmpty) {
-        Future<void> probeWorkspace(String key, String table, String column,
-            {String? filterColumn, String? filterValue}) async {
-          try {
-            var query = db.from(table).select('id')
-                .inFilter('workspace_id', workspaceIds)
-                .not(column, 'is', null).neq(column, '');
-            if (filterColumn != null && filterValue != null) query = query.eq(filterColumn, filterValue);
-            final rows = await query.limit(1);
-            if ((rows as List).isNotEmpty) locked.add(key);
-          } catch (_) {}
-        }
-        await Future.wait([
-          probeWorkspace('code_type.workspace_branch','erp_business_workspace_branches','branch_code'),
-          probeWorkspace('code_type.workspace_cash_movement','erp_business_workspace_cash_movements','movement_no'),
-          probeWorkspace('code_type.workspace_customer','erp_business_workspace_counterparties','party_code',filterColumn:'party_type',filterValue:'customer'),
-          probeWorkspace('code_type.workspace_supplier','erp_business_workspace_counterparties','party_code',filterColumn:'party_type',filterValue:'supplier'),
-          probeWorkspace('code_type.workspace_department','erp_business_workspace_departments','department_code'),
-          probeWorkspace('code_type.workspace_employee','erp_business_workspace_employees','employee_code'),
-          probeWorkspace('code_type.workspace_warehouse','erp_business_workspace_warehouses','warehouse_code'),
-          probeWorkspace('code_type.workspace_purchase','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'purchase'),
-          probeWorkspace('code_type.workspace_purchase_return','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'purchase_return'),
-          probeWorkspace('code_type.workspace_sale','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'sale'),
-          probeWorkspace('code_type.workspace_sale_return','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'sale_return'),
-          probeWorkspace('code_type.workspace_transfer','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'transfer'),
-          probeWorkspace('code_type.workspace_adjustment','erp_business_workspace_documents','document_no',filterColumn:'document_type',filterValue:'adjustment'),
-          probeWorkspace('code_type.workspace_item_link','erp_business_workspace_item_links','local_code'),
-        ]);
+      final result = await db.rpc(
+        'erp_code_policy_lock_status',
+        params: {'p_company_id': company},
+      );
+      final locked = (result as List).map((value) => value.toString()).toSet();
+      if (mounted) {
+        setState(() {
+          _lockedCodePolicies
+            ..clear()
+            ..addAll(locked);
+          _codePolicyLockStatusLoaded = true;
+        });
       }
-    } catch (_) {}
-    if (mounted) setState(() => _lockedCodePolicies
-      ..clear()
-      ..addAll(locked));
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _lockedCodePolicies.clear();
+          _codePolicyLockStatusLoaded = false;
+          error = 'تعذر التحقق من الأكواد الحالية؛ تم إيقاف تعديل سياسات الأكواد لحين استعادة الاتصال.';
+        });
+      }
+    }
   }
-  bool _codePolicyIsLocked(String key) => _lockedCodePolicies.contains(key);
+  bool _codePolicyIsLocked(String key) => !_codePolicyLockStatusLoaded || _lockedCodePolicies.contains(key);
   bool get _hasUnsavedChanges => _isEditing && _editSnapshot != _currentEditSnapshot();
   String _currentEditSnapshot() => jsonEncode({
     'values': values.map((key, value) => MapEntry(key, {
