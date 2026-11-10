@@ -448,7 +448,17 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         registryTypes[entry.value] = {...previous, 'prefix': config['prefix'], 'digits': config['digits']};
       }
       final customerPrevious = Map<String, dynamic>.from(registryTypes['customer'] as Map? ?? {});
-      registryTypes['customer'] = {...customerPrevious, 'prefix': customerPrefix, 'digits': customerSerialDigits};
+      registryTypes['customer'] = {
+        ...customerPrevious,
+        'prefix': customerPrefix,
+        'digits': customerSerialDigits,
+        'serial_digits': customerSerialDigits,
+        'geo_digits': 8,
+        'fields': [
+          {'name': 'كود الدولة والمحافظة والحي/المركز والمنطقة بدون حروف', 'digits': 8},
+          {'name': 'تسلسل العميل', 'digits': customerSerialDigits},
+        ],
+      };
       registryPayload['item_prefix'] = itemPrefix;
       registryPayload['item_segments'] = {'main':2,'sub':2,'secondary':2,'serial':itemSerialDigits};
       for (final definition in _codePolicyTypeDefinitions) {
