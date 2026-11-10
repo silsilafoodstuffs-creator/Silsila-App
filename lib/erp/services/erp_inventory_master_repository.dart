@@ -43,9 +43,9 @@ class ErpInventoryMasterRepository {
 
   Future<List<Map<String, dynamic>>> fetchBrands(String companyId) async {
     final rows = await _db.from('erp_brands')
-      .select('id,brand_code,brand_name,brand_name_en,is_active,is_system')
+      .select('id,brand_code,brand_name,brand_name_en,brand_group,display_order,is_active,is_system')
       .eq('company_id', companyId.trim())
-      .order('brand_code');
+      .order('display_order').order('brand_code');
     return rows.map((r) => Map<String,dynamic>.from(r)).toList();
   }
 

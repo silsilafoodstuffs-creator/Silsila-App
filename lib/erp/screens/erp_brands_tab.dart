@@ -42,7 +42,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     setState(() { _loading = true; _error = null; });
     try {
       final rows = await _db.from('erp_brands')
-        .select('id,brand_code,brand_name,brand_name_en,is_active,is_system')
+        .select('id,brand_code,brand_name,brand_name_en,brand_group,display_order,is_active,is_system')
         .eq('company_id', widget.companyId.trim())
         .order('brand_code');
       if (!mounted) return;
@@ -76,6 +76,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     }
     final name = TextEditingController(text: _s(row?['brand_name']));
     final english = TextEditingController(text: _s(row?['brand_name_en']));
+    final group = TextEditingController(text: _s(row?['brand_group']));
     final formKey = GlobalKey<FormState>();
     final result = await showDialog<bool>(
       context: context,
@@ -101,6 +102,11 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                     controller: english,
                     decoration: const InputDecoration(labelText: 'الاسم بالإنجليزية'),
                   ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: group,
+                    decoration: const InputDecoration(labelText: 'المجموعة (إن وجدت)'),
+                  ),
                 ],
               ),
             ),
@@ -117,6 +123,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     if (result != true) {
       name.dispose();
       english.dispose();
+      group.dispose();
       return;
     }
     setState(() => _saving = true);
@@ -124,6 +131,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
       final payload = <String,dynamic>{
         'brand_name': name.text.trim(),
         'brand_name_en': english.text.trim().isEmpty ? null : english.text.trim(),
+        'brand_group': group.text.trim().isEmpty ? null : group.text.trim(),
       };
       if (row == null) {
         final inserted = await _db.from('erp_brands')
@@ -143,6 +151,7 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
     } finally {
       name.dispose();
       english.dispose();
+      group.dispose();
       if (mounted) setState(() => _saving = false);
     }
   }
@@ -249,7 +258,15 @@ class _ErpBrandsTabState extends State<ErpBrandsTab> {
                             onSelectChanged:(_)=>setState(()=>_selectedId=id),
                             cells:[
                               DataCell(Text(_s(row['brand_code']),style:const TextStyle(fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
-                              DataCell(Text(_s(row['brand_name']))),
+                              DataCell(Column(
+                                mainAxisAlignment:MainAxisAlignment.center,
+                                crossAxisAlignment:CrossAxisAlignment.start,
+                                children:[
+                                  Text(_s(row['brand_name'])),
+                                  if(_s(row['brand_group']).isNotEmpty)
+                                    Text('المجموعة: ${_s(row['brand_group'])}',style:const TextStyle(fontSize:10,color:Color(0xFF6B5A78))),
+                                ],
+                              )),
                               DataCell(Text(_s(row['brand_name_en']))),
                               DataCell(Checkbox(
                                 shape:const CircleBorder(),
