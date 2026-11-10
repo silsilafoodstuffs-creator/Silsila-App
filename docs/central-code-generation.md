@@ -2,37 +2,54 @@
 
 ## Ownership and behavior
 
-- New identifiers are assigned by Supabase `BEFORE INSERT` triggers, not by Flutter form counters.
-- Code-policy values can be changed only after pressing **تعديل** for the current policy tab. Saving closes edit mode and confirms with **تم الحفظ**.
-- Prefixes and digit widths lock independently for each code family as soon as that family has its first persisted code. The policy screen reads the lock state from `erp_code_policy_lock_status`; if that check is unavailable, code-format editing stays disabled rather than risking a change to an issued code.
-- Existing non-empty identifiers are intentionally preserved. This avoids changing codes printed on historical documents or used by external integrations. New records receive the configured central format.
-- Standard central code types use a three-letter English prefix and configurable numeric width (1–12 digits). The item serial width is configurable from 1–8 digits; customer serial width remains 1–12 digits.
-- Prefix uniqueness is validated in the policy editor and in the database policy resolver.
-- The policy registry is stored per company in `erp_program_policies` under `code_generation_registry`. Legacy employee, user, supplier, representative, branch, department, job, work-location, grade, and salary-element policies are synchronized to the corresponding central keys.
-- The authenticated preview RPC for extended entities is `erp_preview_next_extended_central_code(company_id, entity_key)`. The internal policy resolver and trigger functions are not directly executable by client roles.
+- New identifiers are assigned atomically by Supabase `BEFORE INSERT` triggers, not by Flutter form counters.
+- Code-policy values are edited and saved from the coding-policy tab; the database policy resolver and triggers remain authoritative.
+- Prefixes and digit widths lock independently for each code family after its first persisted code. If the lock-status check is unavailable, code-format editing remains disabled rather than risking an issued identifier.
+- Existing identifiers are preserved unless an explicit, reviewed historical-code migration is run. The November 2026 brand-width migration is such an explicit operation and rebuilds linked item codes after a preflight check.
+- Standard central code types use a three-letter English prefix and configurable numeric width. Item serial width is configurable from 1–8 digits; customer serial width is configurable from 1–12 digits.
+- Prefix uniqueness is validated in the policy editor and database policy resolver.
+- Per-company policy settings are stored in `erp_program_policies` under `code_generation_registry`. Legacy policy keys are synchronized to their corresponding central keys.
+- The authenticated preview RPC for extended entities is `erp_preview_next_extended_central_code(company_id, entity_key)`. Internal policy resolver and trigger functions are not directly executable by client roles.
 
 ## Item identifiers
 
-Item identifiers use this format:
+The current item-code format is:
 
 ```text
-[prefix: 3 letters][primary category: 2 digits][secondary category: 2 digits][tertiary category: 2 digits][serial: 1–8 digits]
+[Itm: 3 letters][primary category: 2 digits][secondary category: 2 digits][tertiary category: 2 digits][brand: 2 digits][serial: 3 digits]
 ```
 
-The default is `Itm` + six inherited category digits + a three-digit serial. The prefix and serial width are editable until the first item code is issued. The three category segments remain two digits each to preserve the existing category hierarchy. Workspace item proposal approval now requires a valid secondary category and inserts a blank `item_code`; the database trigger assigns the same central item code. The former random `PRP-` placeholder is no longer used.
+The default first-code example is `Itm01010101001`:
+- `Itm`: item prefix.
+- `010101`: the three inherited category levels, each two digits.
+- `01`: the numeric part of the selected brand code; the brand prefix is omitted.
+- `001`: the serial within the company/category/brand combination.
 
-## Customer and geographic identifiers
+The database resolves the selected secondary category and active company brand, then generates the next serial under a transaction-scoped advisory lock. A missing brand selection resolves to the system brand `بدون علامة تجارية` (brand code `Bra00`). Workspace item proposal approval requires a valid secondary category and leaves `item_code` blank for the same database trigger; the former random `PRP-` placeholder is not used.
 
-- Customer codes inherit the geographic hierarchy and use the customer policy's prefix and serial width. They lock after the first customer code is issued.
-- Country, governorate, district, and area codes retain the fixed two-digit hierarchy used by the existing geographic/customer-code functions. Their labels in the policy grid explain the parent inheritance.
-- Category hierarchy codes retain their existing `Cat` + two-digit-per-level structure. Their prefix/segment layout is kept fixed to protect existing item-category and item-code paths.
-- The brand policy remains a reserved policy because the current schema has no independent brand master/code column; it must not be treated as a generated brand identifier until that model exists.
+## Brand identifiers
+
+- The company-scoped brand master is `erp_brands`; each row has a unique `brand_code` within its company.
+- Brand codes use a three-letter prefix (default `Bra`) followed by two digits (default first assigned code `Bra01`).
+- The system brand `بدون علامة تجارية` uses `Bra00`; item codes inherit only its numeric segment (`00`).
+- Item-to-brand links use `erp_items.brand_id` with a company-scoped foreign key. The brand name stored on an item is synchronized from the selected active brand.
+
+## Customer, category, and geographic identifiers
+
+- Customer codes use the `Cus` prefix by default, followed by the inherited geographic digits and the customer serial. The customer prefix and serial width are configurable in the customer policy.
+- Country code is two digits (Egypt is `20`). Governorate, center/district, and area segment widths are independently configured in the geographic policy; child codes inherit their parent's numeric code.
+- Category hierarchy codes use `Cat` plus two digits for each of the three levels: main, subcategory, and secondary category. The category hierarchy remains aligned with the six category digits embedded in item codes.
+
+## User identifiers
+
+- User codes inherit the numeric portion of the selected user-type code, not an employee code. The user prefix remains separate from the inherited type digits and the user serial.
+- When a central user-type policy changes, linked user codes are refreshed according to the inheritance rule while existing unrelated code families remain unchanged.
 
 ## Covered records
 
 The central code families cover accounts, branches, warehouses, parties, employees, HR structure, cost centers, cashboxes, cash movements, vouchers, checkbooks, journals, price lists, sales and purchase documents, payroll, user classifications, permission templates, and business-workspace records.
 
-The extended generator now also covers fixed assets and asset categories/depreciation/disposals; CRM activities and leads; construction projects, material requests, material movements, payment certificates and site reports; manufacturing BOMs/work centers; production orders, quality checks and variances; service tickets, visits and SLA policies; HR contracts, advances and custodies; and business-suite records. Workspace item links use a workspace-scoped code generator.
+The extended generator also covers fixed assets and asset categories/depreciation/disposals; CRM activities and leads; construction projects, material requests, material movements, payment certificates and site reports; manufacturing BOMs/work centers; production orders, quality checks and variances; service tickets, visits and SLA policies; HR contracts, advances and custodies; and business-suite records. Workspace item links use a workspace-scoped code generator.
 
 ## Adding a future code family
 
@@ -48,4 +65,4 @@ Do not add a visible policy row without wiring its database generator and lock c
 
 ## Historical identifiers
 
-A historical-code migration must be a separate, reviewed operation with an explicit old-to-new mapping and reference checks. It is not part of automatic insert numbering.
+A historical-code migration must be a separate, reviewed operation with an explicit old-to-new mapping and reference checks. It must preserve record IDs and foreign-key relationships, verify uniqueness before changing data, and fail before mutation when the preflight checks detect a collision or invalid hierarchy.
