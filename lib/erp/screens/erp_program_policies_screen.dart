@@ -32,7 +32,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'category_code.sub','category':'تكويدية','ar':'سياسة تكويد فئات أصناف فرعية','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
     {'key':'category_code.secondary','category':'تكويدية','ar':'سياسة تكويد فئات أصناف ثانوية','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
     {'key':'brand_code','category':'تكويدية','ar':'سياسة تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":3,"parent_digits":0}','mandatory':true,'all':true},
-    {'key':'item_code','category':'تكويدية','ar':'سياسة تكويد الأصناف','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"serial_digits":3}','mandatory':true,'all':true},
+    {'key':'item_code','category':'تكويدية','ar':'سياسة تكويد الأصناف ( يرث كود الفئة الثانوية )','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"serial_digits":3}','mandatory':true,'all':true},
     {'key':'code_policy.program_policy','category':'تكويدية','ar':'سياسات البرنامج','en':'Program policies','value':'Pol + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.employee','category':'تكويدية','ar':'الموظفون','en':'Employees','value':'Emp + 5 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'code_policy.user','category':'تكويدية','ar':'المستخدمون','en':'Users','value':'Usr + كود الموظف المرتبط بدون البادئة Emp','mandatory':true,'all':true},
@@ -469,6 +469,10 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final config = _itemCodeConfig(policy);
     final prefix = (config['prefix'] ?? 'Itm').toString();
     final serialDigits = int.tryParse((config['serial_digits'] ?? 3).toString()) ?? 3;
+    // The six category digits are inherited from the secondary item category;
+    // only the serial length is displayed as an editable-policy value.
+    const inheritedCategoryCode = '010101';
+    final preview = '$prefix$inheritedCategoryCode${'1'.padLeft(serialDigits.clamp(1, 12).toInt(), '0')}';
     return SizedBox(width:300,height:40,child:Row(children:[
       SizedBox(width:66,height:40,child:TextFormField(
         key:ValueKey('item-code-prefix-$prefix'),initialValue:prefix,readOnly:true,textAlign:TextAlign.center,maxLength:3,
@@ -476,15 +480,13 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
       )),
       const SizedBox(width:4),
-      const SizedBox(width:48,height:40,child:Center(child:Text('6',style:TextStyle(fontSize:11,fontWeight:FontWeight.w800)))),
-      const SizedBox(width:4),
       SizedBox(width:48,height:40,child:TextFormField(
-        key:ValueKey('item-code-serial-$serialDigits'),initialValue:serialDigits.toString(),readOnly:true,textAlign:TextAlign.center,maxLength:1,
+        key:ValueKey('item-code-serial-$serialDigits'),initialValue:serialDigits.toString(),readOnly:true,textAlign:TextAlign.center,maxLength:2,
         decoration:const InputDecoration(counterText:'',isDense:true,constraints:BoxConstraints(minHeight:40,maxHeight:40),contentPadding:EdgeInsets.symmetric(horizontal:3,vertical:4),border:OutlineInputBorder()),
         style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700),
       )),
       const SizedBox(width:5),
-      const Expanded(child:Text('Itm010101001  •  9 أرقام',textAlign:TextAlign.center,style:TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
+      Expanded(child:Text(preview,textAlign:TextAlign.center,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w900,color:Color(0xFF3E007D)))),
     ]));
   }
 
