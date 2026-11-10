@@ -483,7 +483,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   static const Map<String, Map<String, dynamic>> _codePolicyDefaults = {
     'code_policy.program_policy': {'prefix':'Pol','digits':3},
     'code_policy.employee': {'prefix':'Emp','digits':5},
-    'code_policy.user': {'prefix':'Usr','digits':5,'inheritance':'يرث تسلسل كود الموظف المرتبط بدون البادئة Emp'},
+    'code_policy.user': {'prefix':'Usr','digits':5,'inheritance':'يرث كود نوع المستخدم بدون البادئة Typ؛ وإذا كان نوع المستخدم موظفًا يرث آخر خمسة أرقام من كود الموظف المرتبط'},
     'code_policy.supplier': {'prefix':'Ven','digits':5},
     'code_policy.representative': {'prefix':'Rep','digits':5,'inheritance':'يرث تسلسل كود الموظف المرتبط بدون البادئة Emp'},
     'code_policy.branch': {'prefix':'Brn','digits':3},
