@@ -95,7 +95,6 @@ class ErpCodePolicyPanelState extends State<ErpCodePolicyPanel> {
   final ScrollController _gridHorizontalController = ScrollController();
   final ScrollController _gridVerticalController = ScrollController();
   String? _error, _message;
-  int _nextProgramPolicySerial = 33;
 
   @override void initState() {
     super.initState();
