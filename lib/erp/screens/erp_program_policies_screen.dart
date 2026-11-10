@@ -296,7 +296,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final prefix = (config['prefix'] ?? '').toString().trim();
       final digits = int.tryParse((config['digits'] ?? '').toString());
       if (!RegExp(r'^[A-Za-z]{1,10}$').hasMatch(prefix) || digits == null || digits < 1 || digits > 12) {
-        throw StateError('راجع بادئة وعدد خانات سياسة ' + (policy['ar'] ?? key).toString() + '؛ البادئة من 1 إلى 10 حروف إنجليزية وعدد الأرقام من 1 إلى 12.');
+        throw StateError('راجع بادئة وعدد خانات سياسة ' + (policy['ar'] ?? policy['key'] ?? 'سياسة').toString() + '؛ البادئة من 1 إلى 10 حروف إنجليزية وعدد الأرقام من 1 إلى 12.');
       }
       if (!usedCodePrefixes.add(prefix.toLowerCase())) throw StateError('لا يجوز تكرار بادئة الكود $prefix في سياسات الأكواد.');
       policy['value'] = jsonEncode(config);
