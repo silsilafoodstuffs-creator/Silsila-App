@@ -33,6 +33,18 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'category_code.secondary','category':'تكويدية','ar':'سياسة تكويد فئات أصناف ثانوية','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
     {'key':'brand_code','category':'تكويدية','ar':'سياسة تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":3,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'item_code','category':'تكويدية','ar':'سياسة تكويد الأصناف','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"serial_digits":3}','mandatory':true,'all':true},
+    {'key':'code_policy.program_policy','category':'تكويدية','ar':'سياسات البرنامج','en':'Program policies','value':'Pol + 3 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.employee','category':'تكويدية','ar':'الموظفون','en':'Employees','value':'Emp + 5 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.user','category':'تكويدية','ar':'المستخدمون','en':'Users','value':'Usr + كود الموظف المرتبط بدون البادئة Emp','mandatory':true,'all':true},
+    {'key':'code_policy.supplier','category':'تكويدية','ar':'الموردون','en':'Suppliers','value':'Ven + 5 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.representative','category':'تكويدية','ar':'المندوبون','en':'Representatives','value':'Rep + كود الموظف المرتبط بدون البادئة Emp','mandatory':true,'all':true},
+    {'key':'code_policy.branch','category':'تكويدية','ar':'الفروع','en':'Branches','value':'Brn + 3 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.storage_location','category':'تكويدية','ar':'مواقع التخزين','en':'Storage locations','value':'Loc + كود الفرع بدون البادئة + كود المخزن بدون البادئة + 3 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.department','category':'تكويدية','ar':'إدارات الشركة','en':'Company departments','value':'Dep + 3 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.section','category':'تكويدية','ar':'الأقسام','en':'Sections','value':'Sec + كود الإدارة بدون البادئة Dep + 3 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.work_location','category':'تكويدية','ar':'مواقع العمل','en':'Work locations','value':'Plc + 3 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.grade','category':'تكويدية','ar':'الدرجات الوظيفية','en':'Job grades','value':'Grd + 3 أرقام تسلسلية','mandatory':true,'all':true},
+    {'key':'code_policy.salary_element','category':'تكويدية','ar':'عناصر المرتبات','en':'Payroll elements','value':'Elm + 3 أرقام تسلسلية','mandatory':true,'all':true},
     {'key':'ui_dimensions','category':'برمجية','ar':'السماح بتعديل مساحة وحدود الأزرار والخانات','en':'Allow changing button and field dimensions'},
     {'key':'ui_reorder','category':'برمجية','ar':'نقل مكان الأزرار وتعديل ترتيب الأعمدة أو الصفوف','en':'Reposition buttons and reorder columns or rows'},
     {'key':'ui_layout_standard','category':'برمجية','ar':'المعيار الموحد لارتفاع الخانات والصفوف والمسافات بين الخانات والأعمدة','en':'Global standard for cell/row height and cell/column spacing','value':'{"row_height":50,"field_height":40,"column_spacing":3}','mandatory':true,'all':true},
@@ -954,6 +966,8 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                       ? _itemCodeEditor(p)
                                       : p['key'] == 'code_generation_registry'
                                       ? const Text('إعدادات التكويد المركزي', style: TextStyle(fontSize:10,fontWeight:FontWeight.w600))
+                                      : (p['key'] as String).startsWith('code_policy.')
+                                      ? Align(alignment:AlignmentDirectional.centerStart,child:Text((p['value'] ?? '').toString(),maxLines:2,overflow:TextOverflow.ellipsis,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:Color(0xFF3E007D))))
                                       : p['key'] == 'visual_identity.program_name'
                                     ? TextField(
                                         controller: _programNameController,
