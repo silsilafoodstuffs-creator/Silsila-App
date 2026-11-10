@@ -671,7 +671,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               child: Row(children: [
                 const SizedBox(width: 72, child: Text('النشاط', style: TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
                 Expanded(child: DropdownButtonFormField<String>(
-                  itemHeight: 48,
+                  itemHeight: 40,
                   value: _selectedActivityCode,
                   isExpanded: true,
                   decoration: const InputDecoration(

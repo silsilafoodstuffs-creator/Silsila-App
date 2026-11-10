@@ -326,7 +326,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             ),
           ),
           const SizedBox(height: 10),
-          DropdownButtonFormField<String>(itemHeight: 48, 
+          DropdownButtonFormField<String>(itemHeight: 40, 
             value: _area,
             decoration: const InputDecoration(labelText: 'مجال الفحص', border: OutlineInputBorder()),
             items: _areas.map((a) => DropdownMenuItem(value: a, child: Text(a))).toList(),
