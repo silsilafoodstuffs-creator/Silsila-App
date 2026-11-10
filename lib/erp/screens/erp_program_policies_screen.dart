@@ -107,6 +107,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   String get company => (widget.companyId ?? '').trim();
   static const Map<String, String> _codePolicyCodeSources = {
     'code_policy.program_policy':'erp_program_policies.policy_code',
+    'code_policy.program_policy':'erp_program_policies.policy_code',
     'code_policy.employee':'erp_employees.employee_code',
     'customer_code':'erp_parties.party_code',
     'code_policy.user':'erp_users.user_code',
@@ -129,7 +130,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     'item_code':'erp_items.item_code',
     'code_type.payroll_run':'erp_payroll_runs.run_code',
     'code_type.warehouse':'erp_warehouses.warehouse_code',
-    'code_type.unit':'erp_item_units.unit_code',
+    'code_type.unit':'erp_item_unit_catalog.unit_code',
     'code_type.payment_method':'erp_payment_methods.payment_method_code',
     'code_type.shift':'erp_hr_shifts.shift_code',
     'code_type.commission_plan':'erp_commission_plans.plan_code',
@@ -153,7 +154,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     'code_type.purchase_return':'erp_purchase_documents.document_number',
     'code_type.cash_receipt':'erp_cash_vouchers.voucher_number',
     'code_type.cash_payment':'erp_cash_vouchers.voucher_number',
-    'code_type.cash_transfer':'erp_cash_movements.movement_number',
+    'code_type.cash_transfer':'erp_cash_vouchers.voucher_number',
     'code_type.cash_movement':'erp_cash_movements.movement_number',
     'code_type.cash_order':'erp_cash_orders.order_number',
     'code_type.checkbook':'erp_checkbooks.book_number',
@@ -178,7 +179,24 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     'code_type.hr_advance':'erp_hr_employee_advances.advance_number',
     'code_type.hr_custody':'erp_hr_employee_custodies.custody_code',
     'code_type.business_suite_record':'erp_business_suite_records.record_code',
+    'code_type.construction_material_movement':'erp_construction_material_movements.movement_code',
     'code_type.service_sla_policy':'erp_service_sla_policies.policy_code',
+  };
+  static const Map<String, String> _workspaceCodePolicyCodeSources = {
+    'code_type.workspace_branch':'erp_business_workspace_branches.branch_code',
+    'code_type.workspace_cash_movement':'erp_business_workspace_cash_movements.movement_no',
+    'code_type.workspace_customer':'erp_business_workspace_counterparties.party_code',
+    'code_type.workspace_supplier':'erp_business_workspace_counterparties.party_code',
+    'code_type.workspace_department':'erp_business_workspace_departments.department_code',
+    'code_type.workspace_employee':'erp_business_workspace_employees.employee_code',
+    'code_type.workspace_warehouse':'erp_business_workspace_warehouses.warehouse_code',
+    'code_type.workspace_purchase':'erp_business_workspace_documents.document_no',
+    'code_type.workspace_purchase_return':'erp_business_workspace_documents.document_no',
+    'code_type.workspace_sale':'erp_business_workspace_documents.document_no',
+    'code_type.workspace_sale_return':'erp_business_workspace_documents.document_no',
+    'code_type.workspace_transfer':'erp_business_workspace_documents.document_no',
+    'code_type.workspace_adjustment':'erp_business_workspace_documents.document_no',
+    'code_type.workspace_item_link':'erp_business_workspace_item_links.local_code',
   };
   Future<void> _loadCodePolicyLocks() async {
     final grouped = <String, List<String>>{};
@@ -198,6 +216,33 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         // A missing/unsupported source never locks a policy by guesswork.
       }
     }));
+    try {
+      final workspaceRows = await db.from('erp_business_workspaces')
+          .select('id').eq('platform_company_id', company);
+      final workspaceIds = (workspaceRows as List)
+          .whereType<Map<String, dynamic>>()
+          .map((row) => row['id'])
+          .whereType<String>().toList();
+      if (workspaceIds.isNotEmpty) {
+        final workspaceGrouped = <String, List<String>>{};
+        for (final entry in _workspaceCodePolicyCodeSources.entries) {
+          final parts = entry.value.split('.');
+          final source = '${parts[0]}.${parts[1]}';
+          workspaceGrouped.putIfAbsent(source, () => <String>[]).add(entry.key);
+        }
+        await Future.wait(workspaceGrouped.entries.map((entry) async {
+          final parts = entry.key.split('.');
+          try {
+            final rows = await db.from(parts[0]).select('id')
+                .inFilter('workspace_id', workspaceIds)
+                .not(parts[1], 'is', null).neq(parts[1], '').limit(1);
+            if ((rows as List).isNotEmpty) locked.addAll(entry.value);
+          } catch (_) {
+            // Workspace tables may be unavailable to accounts without workspace access.
+          }
+        }));
+      }
+    } catch (_) {}
     if (mounted) setState(() => _lockedCodePolicies
       ..clear()
       ..addAll(locked));
@@ -572,6 +617,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'workspace_sale_return','name':'مرتجعات بيع إدارة النشاط','en':'Workspace sales returns','prefix':'Wsr','digits':'5'},
     {'key':'workspace_transfer','name':'تحويلات إدارة النشاط','en':'Workspace transfers','prefix':'Wtr','digits':'5'},
     {'key':'workspace_adjustment','name':'تسويات إدارة النشاط','en':'Workspace adjustments','prefix':'Wad','digits':'5'},
+    {'key':'workspace_item_link','name':'ربط الأصناف بالنشاط','en':'Workspace item links','prefix':'Wil','digits':'5'},
     {'key':'fixed_asset','name':'الأصول الثابتة','en':'Fixed assets','prefix':'Ast','digits':'5'},
     {'key':'asset_category','name':'فئات الأصول','en':'Asset categories','prefix':'Aca','digits':'3'},
     {'key':'asset_depreciation_run','name':'عمليات إهلاك الأصول','en':'Asset depreciation runs','prefix':'Adr','digits':'5'},
@@ -582,6 +628,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'construction_material_request','name':'طلبات مواد المشروعات','en':'Construction material requests','prefix':'Cmr','digits':'5'},
     {'key':'construction_payment_certificate','name':'مستخلصات المشروعات','en':'Construction payment certificates','prefix':'Cpc','digits':'5'},
     {'key':'construction_site_report','name':'تقارير مواقع المشروعات','en':'Construction site reports','prefix':'Csr','digits':'5'},
+    {'key':'construction_material_movement','name':'حركات مواد المشروعات','en':'Construction material movements','prefix':'Cmm','digits':'5'},
     {'key':'manufacturing_bom','name':'قوائم مكونات التصنيع','en':'Manufacturing bills of materials','prefix':'Mfb','digits':'5'},
     {'key':'manufacturing_work_center','name':'مراكز تشغيل التصنيع','en':'Manufacturing work centers','prefix':'Mwc','digits':'4'},
     {'key':'production_order','name':'أوامر الإنتاج','en':'Production orders','prefix':'Pdo','digits':'5'},
