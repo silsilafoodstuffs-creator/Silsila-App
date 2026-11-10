@@ -208,6 +208,7 @@ DECLARE
   v_category_digits text;
   v_brand_code text;
   v_brand_name text;
+  v_resolved_brand_id uuid;
   v_brand_digits_value text;
   v_serial_max numeric;
   v_serial bigint;
@@ -270,12 +271,13 @@ BEGIN
   END IF;
 
   IF NEW.brand_id IS NULL AND nullif(btrim(coalesce(NEW.brand_name,'')),'') IS NOT NULL THEN
-    SELECT b.id INTO NEW.brand_id
+    SELECT b.id INTO v_resolved_brand_id
     FROM public.erp_brands b
     WHERE b.company_id=NEW.company_id
       AND lower(btrim(b.brand_name))=lower(btrim(NEW.brand_name))
     ORDER BY b.is_active DESC
     LIMIT 1;
+    NEW.brand_id:=v_resolved_brand_id;
   END IF;
 
   IF NEW.brand_id IS NULL THEN
