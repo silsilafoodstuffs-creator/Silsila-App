@@ -17,19 +17,19 @@ class ErpProgramPoliciesScreen extends StatefulWidget {
 }
 
 class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
-  static const tabs = ['برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان','الكل'];
+  static const tabs = ['الكل','برمجية','تكويدية','محاسبية','مخزنية','بيعية','شرائية','إدارية','الخطوط والألوان'];
   static const defaults = <Map<String,dynamic>>[
     {'key':'visual_identity.program_name','category':'برمجية','ar':'اسم المشروع','en':'Project name','value':'سلسلة','mandatory':true,'all':true},
     {'key':'visual_identity.logo','category':'برمجية','ar':'شعار المشروع','en':'Project logo','value':'','mandatory':true,'all':true},
     {'key':'code_generation_registry','category':'تكويدية','ar':'سياسات التكويد المركزي','en':'Central code generation policies','value':'إعدادات التكويد المركزي','mandatory':true,'all':true},
     {'key':'geo_code.country','category':'تكويدية','ar':'سياسة تكويد دول','en':'Country coding policy','value':'{"prefix":"Con","digits":2,"parent_digits":0}','mandatory':true,'all':true},
-    {'key':'geo_code.governorate','category':'تكويدية','ar':'سياسة تكويد محافظات','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
-    {'key':'geo_code.district','category':'تكويدية','ar':'سياسة تكويد أحياء/مراكز','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
-    {'key':'geo_code.area','category':'تكويدية','ar':'سياسة تكويد مناطق/قرى','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
-    {'key':'customer_code','category':'تكويدية','ar':'سياسة تكويد العملاء ( يرث كود المنطقة )','en':'Customer coding policy','value':'{"prefix":"Cus","geo_digits":8,"serial_digits":2,"required":true,"apply_to_all":true}','mandatory':true,'all':true},
+    {'key':'geo_code.governorate','category':'تكويدية','ar':'سياسة تكويد محافظات ( يرث ك دولة )','en':'Governorate coding policy','value':'{"prefix":"Gov","digits":2,"parent_digits":2}','mandatory':true,'all':true},
+    {'key':'geo_code.district','category':'تكويدية','ar':'سياسة تكويد أحياء/مراكز ( يرث ك محافظة )','en':'District/center coding policy','value':'{"prefix":"Dis","digits":2,"parent_digits":4}','mandatory':true,'all':true},
+    {'key':'geo_code.area','category':'تكويدية','ar':'سياسة تكويد مناطق/قرى ( يرث ك حي/مركز )','en':'Area/village coding policy','value':'{"prefix":"Rig","digits":2,"parent_digits":6}','mandatory':true,'all':true},
+    {'key':'customer_code','category':'تكويدية','ar':'سياسة تكويد العملاء ( يرث ك منطقة )','en':'Customer coding policy','value':'{"prefix":"Cus","geo_digits":8,"serial_digits":2,"required":true,"apply_to_all":true}','mandatory':true,'all':true},
     {'key':'category_code.main','category':'تكويدية','ar':'سياسة تكويد فئات أصناف رئيسية','en':'Main item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":0}','mandatory':true,'all':true},
-    {'key':'category_code.sub','category':'تكويدية','ar':'سياسة تكويد فئات أصناف فرعية','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
-    {'key':'category_code.secondary','category':'تكويدية','ar':'سياسة تكويد فئات أصناف ثانوية','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
+    {'key':'category_code.sub','category':'تكويدية','ar':'سياسة تكويد فئات أصناف فرعية ( يرث ك ف رئيسية )','en':'Sub item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":2}','mandatory':true,'all':true},
+    {'key':'category_code.secondary','category':'تكويدية','ar':'سياسة تكويد فئات أصناف ثانوية ( يرث ك ف فرعية )','en':'Secondary item category coding policy','value':'{"prefix":"Cat","digits":2,"parent_digits":4}','mandatory':true,'all':true},
     {'key':'brand_code','category':'تكويدية','ar':'سياسة تكويد البراند','en':'Brand coding policy','value':'{"prefix":"Bra","digits":3,"parent_digits":0}','mandatory':true,'all':true},
     {'key':'item_code','category':'تكويدية','ar':'سياسة تكويد الأصناف ( يرث كود الفئة الثانوية )','en':'Item coding policy','value':'{"prefix":"Itm","category_digits":6,"serial_digits":3}','mandatory':true,'all':true},
     {'key':'code_policy.program_policy','category':'تكويدية','ar':'سياسات البرنامج','en':'Program policies','value':'Pol + 3 أرقام تسلسلية','mandatory':true,'all':true},
@@ -89,6 +89,9 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final db = Supabase.instance.client;
   final values = <String,Map<String,dynamic>>{};
   final Map<String, String> _policyCodes = {};
+  final Set<String> _lockedCodePolicies = <String>{};
+  bool _isEditing = false;
+  String _editSnapshot = '';
   final users = <Map<String,dynamic>>[];
   final List<String> _registeredFonts = <String>['Tajawal'];
   final Map<String, TextEditingController> _appearanceColorControllers = {};
@@ -102,6 +105,147 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   final ScrollController _policyVerticalController = ScrollController();
   int tab = 0; bool loading = true, saving = false; String? error, message;
   String get company => (widget.companyId ?? '').trim();
+  static const Map<String, String> _codePolicyCodeSources = {
+    'code_policy.employee':'erp_employees.employee_code',
+    'code_policy.user':'erp_users.user_code',
+    'code_policy.supplier':'erp_parties.party_code',
+    'code_policy.representative':'erp_sales_representatives.rep_code',
+    'code_policy.branch':'erp_branches.branch_code',
+    'code_policy.storage_location':'erp_warehouses.warehouse_code',
+    'code_policy.department':'erp_hr_departments.department_code',
+    'code_policy.work_location':'erp_hr_work_locations.location_code',
+    'code_policy.job':'erp_hr_jobs.job_code',
+    'code_policy.grade':'erp_hr_job_grades.grade_code',
+    'code_policy.salary_element':'erp_hr_salary_elements.element_code',
+    'geo_code.country':'erp_countries.country_code',
+    'geo_code.governorate':'erp_geographic_data.geo_code',
+    'geo_code.district':'erp_geographic_data.geo_code',
+    'geo_code.area':'erp_geographic_data.geo_code',
+    'category_code.main':'erp_item_categories.category_code',
+    'category_code.sub':'erp_item_categories.category_code',
+    'category_code.secondary':'erp_item_categories.category_code',
+    'item_code':'erp_items.item_code',
+    'code_type.payroll_run':'erp_payroll_runs.run_code',
+    'code_type.warehouse':'erp_warehouses.warehouse_code',
+    'code_type.unit':'erp_item_units.unit_code',
+    'code_type.payment_method':'erp_payment_methods.payment_method_code',
+    'code_type.shift':'erp_hr_shifts.shift_code',
+    'code_type.commission_plan':'erp_commission_plans.plan_code',
+    'code_type.sales_fulfillment':'erp_sales_fulfillment_documents.manual_number',
+    'code_type.user_type':'erp_user_types.type_code_display',
+    'code_type.permission_template':'erp_permission_templates.template_code_display',
+    'code_type.user_classification':'erp_user_classifications.classification_code_display',
+    'code_type.journal_entry':'erp_journal_entries.entry_number_display',
+    'code_type.account':'erp_accounts.account_code',
+    'code_type.cashbox':'erp_cashboxes.cashbox_code',
+    'code_type.cost_center':'erp_cost_centers.center_code',
+    'code_type.price_list':'erp_price_lists.price_list_code',
+    'code_type.sales_invoice':'erp_sales_documents.document_number',
+    'code_type.sales_order':'erp_sales_documents.document_number',
+    'code_type.sales_delivery':'erp_sales_documents.document_number',
+    'code_type.sales_return':'erp_sales_documents.document_number',
+    'code_type.quotation':'erp_sales_documents.document_number',
+    'code_type.purchase_invoice':'erp_purchase_documents.document_number',
+    'code_type.purchase_order':'erp_purchase_documents.document_number',
+    'code_type.purchase_receipt':'erp_purchase_documents.document_number',
+    'code_type.purchase_return':'erp_purchase_documents.document_number',
+    'code_type.cash_receipt':'erp_cash_vouchers.voucher_number',
+    'code_type.cash_payment':'erp_cash_vouchers.voucher_number',
+    'code_type.cash_transfer':'erp_cash_movements.movement_number',
+    'code_type.cash_movement':'erp_cash_movements.movement_number',
+    'code_type.cash_order':'erp_cash_orders.order_number',
+    'code_type.checkbook':'erp_checkbooks.book_number',
+    'code_type.fixed_asset':'erp_fixed_assets.asset_code',
+    'code_type.asset_category':'erp_asset_categories.category_code',
+    'code_type.asset_depreciation_run':'erp_asset_depreciation_runs.run_code',
+    'code_type.asset_disposal':'erp_asset_disposals.disposal_code',
+    'code_type.crm_activity':'erp_crm_activities.activity_code',
+    'code_type.crm_lead':'erp_crm_leads.lead_code',
+    'code_type.sales_representative':'erp_sales_representatives.rep_code',
+    'code_type.cash_voucher':'erp_cash_vouchers.voucher_number',
+    'code_type.construction_project':'erp_construction_projects.project_code',
+    'code_type.construction_material_request':'erp_construction_material_requests.request_code',
+    'code_type.construction_payment_certificate':'erp_construction_payment_certificates.certificate_number',
+    'code_type.construction_site_report':'erp_construction_site_reports.report_code',
+    'code_type.manufacturing_bom':'erp_manufacturing_boms.bom_code',
+    'code_type.manufacturing_work_center':'erp_manufacturing_work_centers.center_code',
+    'code_type.production_order':'erp_production_orders.order_code',
+    'code_type.production_quality_check':'erp_production_quality_checks.inspection_code',
+    'code_type.production_variance':'erp_production_variances.variance_code',
+    'code_type.service_ticket':'erp_service_tickets.ticket_code',
+    'code_type.service_visit':'erp_service_visits.visit_code',
+    'code_type.hr_contract':'erp_hr_employee_contracts.contract_number',
+    'code_type.hr_advance':'erp_hr_employee_advances.advance_number',
+    'code_type.hr_custody':'erp_hr_employee_custodies.custody_code',
+  };
+  Future<void> _loadCodePolicyLocks() async {
+    final grouped = <String, List<String>>{};
+    for (final entry in _codePolicyCodeSources.entries) {
+      final parts = entry.value.split('.');
+      final source = '${parts[0]}.${parts[1]}';
+      grouped.putIfAbsent(source, () => <String>[]).add(entry.key);
+    }
+    final locked = <String>{};
+    await Future.wait(grouped.entries.map((entry) async {
+      final parts = entry.key.split('.');
+      try {
+        final rows = await db.from(parts[0]).select('id')
+            .eq('company_id', company).not(parts[1], 'is', null).limit(1);
+        if ((rows as List).isNotEmpty) locked.addAll(entry.value);
+      } catch (_) {
+        // A missing/unsupported source never locks a policy by guesswork.
+      }
+    }));
+    if (mounted) setState(() => _lockedCodePolicies
+      ..clear()
+      ..addAll(locked));
+  }
+  bool _codePolicyIsLocked(String key) => _lockedCodePolicies.contains(key);
+  bool get _hasUnsavedChanges => _isEditing && _editSnapshot != _currentEditSnapshot();
+  String _currentEditSnapshot() => jsonEncode({
+    'values': values.map((key, value) => MapEntry(key, {
+      'value': value['value'], 'enabled': value['enabled'],
+      'all': value['all'], 'user_ids': value['user_ids'],
+    })),
+    'program_name': _programNameController.text,
+    'logo': _programLogoBase64,
+  });
+  Future<String?> _askSaveBeforeLeaving() => showDialog<String>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      title: const Text('تعديلات غير محفوظة'),
+      content: const Text('هل ترغب في حفظ التعديلات قبل الخروج؟'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('إلغاء الأمر')),
+        TextButton(onPressed: () => Navigator.pop(ctx, 'no'), child: const Text('لا')),
+        FilledButton(onPressed: () => Navigator.pop(ctx, 'yes'), child: const Text('نعم')),
+      ],
+    ),
+  );
+  Future<bool> _onWillPop() async {
+    if (!_hasUnsavedChanges) return true;
+    final choice = await _askSaveBeforeLeaving();
+    if (choice == 'yes') {
+      try { await _save(); return true; } catch (_) { return false; }
+    }
+    if (choice == 'no') { _isEditing = false; return true; }
+    return false;
+  }
+  Future<void> _selectPolicyTab(int nextTab) async {
+    if (nextTab == tab) return;
+    if (!_hasUnsavedChanges) {
+      setState(() { tab = nextTab; _isEditing = false; });
+      return;
+    }
+    final choice = await _askSaveBeforeLeaving();
+    if (choice == 'yes') {
+      try { await _save(); if (mounted) setState(() => tab = nextTab); } catch (_) {}
+    } else if (choice == 'no') {
+      await _load();
+      if (mounted) setState(() { tab = nextTab; _isEditing = false; });
+    }
+  }
   // The displayed identifier is always read from erp_program_policies.policy_code.
   String _programPolicyCode(String key) => _policyCodes[key] ?? '';
   @override void initState(){super.initState(); final policyKeys = defaults.map((p) => p['key']).toSet(); if (policyKeys.length != defaults.length) { throw StateError('يوجد كود داخلي مكرر في سجل سياسات البرنامج.'); } for(final p in defaults){values[p['key'] as String]={...p,'enabled':p['mandatory']==true || p['enabled_default']==true || p['key']=='skip_quotation' || p['key']=='national_id_required','all':p['mandatory']==true || p['all']==true,'user_ids':<String>[]};} _load();}
@@ -224,6 +368,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         }
       }
       final us=await db.from('erp_users').select('id,user_code,name_ar').eq('company_id',company);
+      await _loadCodePolicyLocks();
       if(mounted)setState(() { users..clear()..addAll((us as List).whereType<Map<String,dynamic>>().map(Map<String,dynamic>.from)); _registeredFonts..clear()..addAll(discoveredFonts.toList()..sort()); loading=false; });
     } catch(e){if(mounted)setState(() { loading=false; error='تعذر تحميل السياسات. طبّق migration سياسات البرنامج أولاً. $e'; }); if(propagateError) rethrow;}
   }
@@ -350,18 +495,19 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       await db.from('erp_program_policies').upsert(rows,onConflict:'company_id,policy_key');
       final settings = await db.from('erp_program_settings').select().eq('company_id',company).maybeSingle();
       await db.from('erp_program_settings').upsert({...?settings,'company_id':company,'program_name':_programNameController.text.trim().isEmpty?'سلسلة':_programNameController.text.trim(),'logo_base64':_programLogoBase64,'logo_mime_type':_programLogoMime,'updated_at':DateTime.now().toUtc().toIso8601String(),'updated_by':db.auth.currentUser?.id},onConflict:'company_id');
-      if(mounted)setState(() { saving=false; message='تم حفظ سياسات البرنامج.'; }); } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
+      if(mounted){setState(() { saving=false; _isEditing=false; _editSnapshot=''; message='تم الحفظ'; }); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم الحفظ'), backgroundColor: Color(0xFF18865A)));} } catch(e){if(mounted)setState(() { saving=false; error='تعذر حفظ السياسات: $e'; }); rethrow;}
   }
   Future<void> _refreshCurrentTab() async => _load(propagateError: true);
 
   Future<void> _saveCurrentTab() async => _save();
 
   void _editCurrentTab() {
-    {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('حقول السياسات في هذا التبويب قابلة للتعديل مباشرة.'),
-      ));
-    }
+    setState(() {
+      _isEditing = true;
+      _editSnapshot = _currentEditSnapshot();
+      message = 'وضع التعديل مفعل لتبويب «${tabs[tab]}».';
+      error = null;
+    });
   }
 
   static const Map<String, Map<String, dynamic>> _codePolicyDefaults = {
@@ -424,6 +570,32 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     {'key':'workspace_sale_return','name':'مرتجعات بيع إدارة النشاط','en':'Workspace sales returns','prefix':'Wsr','digits':'5'},
     {'key':'workspace_transfer','name':'تحويلات إدارة النشاط','en':'Workspace transfers','prefix':'Wtr','digits':'5'},
     {'key':'workspace_adjustment','name':'تسويات إدارة النشاط','en':'Workspace adjustments','prefix':'Wad','digits':'5'},
+    {'key':'fixed_asset','name':'الأصول الثابتة','en':'Fixed assets','prefix':'Ast','digits':'5'},
+    {'key':'asset_category','name':'فئات الأصول','en':'Asset categories','prefix':'Aca','digits':'3'},
+    {'key':'asset_depreciation_run','name':'عمليات إهلاك الأصول','en':'Asset depreciation runs','prefix':'Adr','digits':'5'},
+    {'key':'asset_disposal','name':'استبعادات الأصول','en':'Asset disposals','prefix':'Adp','digits':'5'},
+    {'key':'crm_activity','name':'أنشطة علاقات العملاء','en':'CRM activities','prefix':'Act','digits':'5'},
+    {'key':'crm_lead','name':'العملاء المحتملون','en':'CRM leads','prefix':'Led','digits':'5'},
+    {'key':'sales_representative','name':'مندوبي المبيعات','en':'Sales representatives','prefix':'Sre','digits':'5'},
+    {'key':'cash_voucher','name':'سندات القبض والصرف','en':'Cash vouchers','prefix':'Vch','digits':'5'},
+    {'key':'construction_project','name':'المشروعات','en':'Construction projects','prefix':'Cpj','digits':'5'},
+    {'key':'construction_material_request','name':'طلبات مواد المشروعات','en':'Construction material requests','prefix':'Cmr','digits':'5'},
+    {'key':'construction_payment_certificate','name':'مستخلصات المشروعات','en':'Construction payment certificates','prefix':'Cpc','digits':'5'},
+    {'key':'construction_site_report','name':'تقارير مواقع المشروعات','en':'Construction site reports','prefix':'Csr','digits':'5'},
+    {'key':'manufacturing_bom','name':'قوائم مكونات التصنيع','en':'Manufacturing bills of materials','prefix':'Mfb','digits':'5'},
+    {'key':'manufacturing_work_center','name':'مراكز تشغيل التصنيع','en':'Manufacturing work centers','prefix':'Mwc','digits':'4'},
+    {'key':'production_order','name':'أوامر الإنتاج','en':'Production orders','prefix':'Pdo','digits':'5'},
+    {'key':'production_quality_check','name':'فحوص جودة الإنتاج','en':'Production quality checks','prefix':'Pqc','digits':'5'},
+    {'key':'production_variance','name':'فروقات الإنتاج','en':'Production variances','prefix':'Pvr','digits':'5'},
+    {'key':'service_ticket','name':'تذاكر الخدمة','en':'Service tickets','prefix':'Svt','digits':'5'},
+    {'key':'service_visit','name':'زيارات الخدمة','en':'Service visits','prefix':'Svs','digits':'5'},
+    {'key':'hr_contract','name':'عقود الموظفين','en':'Employee contracts','prefix':'Hct','digits':'5'},
+    {'key':'hr_advance','name':'سلف الموظفين','en':'Employee advances','prefix':'Hav','digits':'5'},
+    {'key':'hr_custody','name':'عهَد الموظفين','en':'Employee custodies','prefix':'Hcy','digits':'5'},
+    {'key':'sales_campaign','name':'الحملات البيعية','en':'Sales campaigns','prefix':'Scp','digits':'5'},
+    {'key':'customer_monthly_goal','name':'مستهدفات العملاء الشهرية','en':'Customer monthly goals','prefix':'Cmg','digits':'5'},
+    {'key':'employee_monthly_target','name':'مستهدفات الموظفين الشهرية','en':'Employee monthly targets','prefix':'Emt','digits':'5'},
+    {'key':'service_sla_policy','name':'سياسات مستوى الخدمة','en':'Service level policies','prefix':'Slp','digits':'4'},
   ];
 
   Map<String, dynamic> _codePolicyConfig(Map<String, dynamic> policy) {
@@ -947,7 +1119,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                     const SizedBox(width:4),
                     SizedBox(width:62, child: Center(child: Checkbox(value:true,onChanged:null,activeColor:Colors.green,fillColor:const WidgetStatePropertyAll<Color>(Colors.green),visualDensity:const VisualDensity(horizontal:-4,vertical:-4),materialTapTargetSize:MaterialTapTargetSize.shrinkWrap))),
                     const SizedBox(width:4),
-                    const SizedBox(width:80),
+                    const SizedBox(width:44),
                     const SizedBox(width:4),
                     const SizedBox(width:58, child: Text('—',textAlign:TextAlign.center,style:TextStyle(fontSize:9))),
                   ])),
@@ -1096,7 +1268,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
         child: ChoiceChip(label: Text(tabs[i]), selected: tab == i, onSelected: (_) => setState(() => tab = i), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
       )))),
       Expanded(
-        child: tab == 7
+        child: tab == 8
                 ? _buildFontsColorsGrid()                    : loading
                 ? const Center(child: CircularProgressIndicator())
                 : list.isEmpty
@@ -1132,7 +1304,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                 SizedBox(width: 4),
                                 SizedBox(width: 62, child: Text('الكل', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 4),
-                                SizedBox(width: 80, child: Text('تحديد\nمستخدمين', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
+                                SizedBox(width: 44, child: Text('اختيار', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                                 SizedBox(width: 4),
                                 SizedBox(width: 58, child: Text('عدد المحدد', textAlign: TextAlign.center, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold))),
                               ])),
@@ -1255,7 +1427,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                                     child: OutlinedButton(
                                       onPressed: mandatory || all ? null : () => _pickUsers(p),
                                       style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                                      child: const Text('تحديد\nمستخدمين', textAlign: TextAlign.center, maxLines: 2, style: TextStyle(fontSize: 8, height: 1.0)),
+                                      child: const Text('اختيار', textAlign: TextAlign.center, maxLines: 1, style: TextStyle(fontSize: 9, height: 1.0)),
                                     ),
                                   )),
                                   const SizedBox(width: 4),
@@ -1264,7 +1436,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
                               ),
                             );
                           }),
-                          if (tab == 1) ...[
+                          if (tab == 2) ...[
                             const SizedBox(height: 6),
                             const Padding(
                               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
