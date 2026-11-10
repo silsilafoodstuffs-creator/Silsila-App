@@ -353,8 +353,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final config = _codePolicyConfig(policy);
     final value = (config[prefix ? 'prefix' : 'digits'] ?? (prefix ? 'Cod' : 3)).toString();
     final controllers = prefix ? _codePolicyPrefixControllers : _codePolicyDigitsControllers;
-    final controller = controllers.putIfAbsent(key, () => TextEditingController(text: value));
-    return controller;
+    return controllers.putIfAbsent(key, () => TextEditingController(text: value));
   }
 
   Widget _codePolicyEditor(Map<String, dynamic> policy) {
@@ -1305,8 +1304,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     final config = _codePolicyConfig(policy);
     final value = (config[prefix ? 'prefix' : 'digits'] ?? (prefix ? 'Cod' : 3)).toString();
     final controllers = prefix ? _codePolicyPrefixControllers : _codePolicyDigitsControllers;
-    final controller = controllers.putIfAbsent(key, () => TextEditingController(text: value));
-    return controller;
+    return controllers.putIfAbsent(key, () => TextEditingController(text: value));
   }
 
   Widget _codePolicyEditor(Map<String, dynamic> policy) {
