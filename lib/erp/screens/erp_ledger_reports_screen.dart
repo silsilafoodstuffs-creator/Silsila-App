@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_print_support.dart';
 import '../widgets/erp_quick_task_button.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
@@ -140,8 +141,8 @@ class _ErpLedgerReportsScreenState extends State<ErpLedgerReportsScreen> {
       final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
       final keys = _rows.first.keys.toList();
       final pdf = pw.Document();
-      pdf.addPage(pw.MultiPage(theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
-        pw.Text('Silsila • ' + _title, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+      pdf.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
+        ErpPrintSupport.text('Silsila • ' + _title, style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 10),
         pw.TableHelper.fromTextArray(headers: keys, data: _rows.map((row) => keys.map((key) => row[key]?.toString() ?? '').toList()).toList()),
       ]));

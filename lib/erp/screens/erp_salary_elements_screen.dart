@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_print_support.dart';
 import 'package:flutter/services.dart';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_saver/file_saver.dart';
@@ -290,8 +291,8 @@ class _ErpSalaryElementsScreenState extends State<ErpSalaryElementsScreen> {
     try{
       final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
       final doc=pw.Document();
-      doc.addPage(pw.MultiPage(theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
-        pw.Text('عناصر المرتبات',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
+      doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme:pw.ThemeData.withFont(base:font,bold:font),build:(_)=>[
+        ErpPrintSupport.text('عناصر المرتبات',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold)),
         pw.SizedBox(height:8),
         pw.TableHelper.fromTextArray(headers:const ['م','الكود','اسم العنصر','النوع','طريقة الحساب','الطبيعة','القيمة الافتراضية','الحالة'],data:_rows.asMap().entries.map((e){
           final r=e.value;
@@ -468,36 +469,37 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
       doc.addPage(pw.Page(pageFormat:PdfPageFormat.a4,build:(ctx)=>pw.Directionality(
         textDirection:pw.TextDirection.rtl,
         child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
-          pw.Center(child:pw.Text('سلسلة • شريط قبض موظف',style:pw.TextStyle(fontSize:19,fontWeight:pw.FontWeight.bold))),
+          ErpPrintSupport.header(ctx),
+          pw.Center(child:ErpPrintSupport.text('سلسلة • شريط قبض موظف',style:pw.TextStyle(fontSize:19,fontWeight:pw.FontWeight.bold))),
           pw.SizedBox(height:12),
-          pw.Text('الموظف: ${_s(employee['full_name'])}     الكود: ${_s(employee['employee_code'])}'),
-          pw.Text('القسم: ${_label(_departments,_s(employee['department_id']),'department_code','name_ar')}'),
-          pw.Text('الوظيفة: ${_label(_jobs,_s(employee['job_id']),'job_code','name_ar')}'),
-          pw.Text('الفرع: ${_label(_branches,_s(employee['branch_id']),'branch_code','branch_name')}'),
-          pw.Text('الموقع: ${_label(_locations,_s(employee['work_location_id']),'location_code','name_ar')}'),
-          pw.Text('فترة المسير: ${_selectedRunPeriod()}'),
+          ErpPrintSupport.text('الموظف: ${_s(employee['full_name'])}     الكود: ${_s(employee['employee_code'])}'),
+          ErpPrintSupport.text('القسم: ${_label(_departments,_s(employee['department_id']),'department_code','name_ar')}'),
+          ErpPrintSupport.text('الوظيفة: ${_label(_jobs,_s(employee['job_id']),'job_code','name_ar')}'),
+          ErpPrintSupport.text('الفرع: ${_label(_branches,_s(employee['branch_id']),'branch_code','branch_name')}'),
+          ErpPrintSupport.text('الموقع: ${_label(_locations,_s(employee['work_location_id']),'location_code','name_ar')}'),
+          ErpPrintSupport.text('فترة المسير: ${_selectedRunPeriod()}'),
           pw.SizedBox(height:16),
           pw.Row(crossAxisAlignment:pw.CrossAxisAlignment.start,children:[
             pw.Expanded(child:pw.Column(children:[
-              pw.Text('الاستحقاقات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,fontSize:13)),
+              ErpPrintSupport.text('الاستحقاقات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,fontSize:13)),
               pw.TableHelper.fromTextArray(headers:earningRows.first, data:earningRows.skip(1).toList()),
             ])),
             pw.SizedBox(width:12),
             pw.Expanded(child:pw.Column(children:[
-              pw.Text('الاستقطاعات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,fontSize:13)),
+              ErpPrintSupport.text('الاستقطاعات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,fontSize:13)),
               pw.TableHelper.fromTextArray(headers:deductionRows.first, data:deductionRows.skip(1).toList()),
             ])),
           ]),
           pw.SizedBox(height:18),
           pw.Container(padding:const pw.EdgeInsets.all(10),decoration:pw.BoxDecoration(border:pw.Border.all(color:PdfColors.deepPurple),color:PdfColors.grey100),child:pw.Column(children:[
-            pw.Text('صافي المستحق: ${_fmt(line['net_amount'])} ${_currencySymbol()}',style:pw.TextStyle(fontSize:16,fontWeight:pw.FontWeight.bold)),
+            ErpPrintSupport.text('صافي المستحق: ${_fmt(line['net_amount'])} ${_currencySymbol()}',style:pw.TextStyle(fontSize:16,fontWeight:pw.FontWeight.bold)),
             pw.SizedBox(height:5),
-            pw.Text('فقط ${_spell(_n(line['net_amount']))} لا غير'),
+            ErpPrintSupport.text('فقط ${_spell(_n(line['net_amount']))} لا غير'),
           ])),
           pw.Spacer(),
           pw.Row(mainAxisAlignment:pw.MainAxisAlignment.spaceBetween,children:[
-            pw.Text('توقيع الموظف: ........................'),
-            pw.Text('اعتماد الحسابات: ........................'),
+            ErpPrintSupport.text('توقيع الموظف: ........................'),
+            ErpPrintSupport.text('اعتماد الحسابات: ........................'),
           ]),
         ]),
       )));
@@ -537,18 +539,18 @@ class _ErpPayslipReportsScreenState extends State<ErpPayslipReportsScreen> with 
     try{
       final font=pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
       final doc=pw.Document(theme:pw.ThemeData.withFont(base:font,bold:font));
-      doc.addPage(pw.MultiPage(pageFormat:PdfPageFormat.a3.landscape,build:(ctx)=>[
+      doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, pageFormat:PdfPageFormat.a3.landscape,build:(ctx)=>[
         pw.Directionality(textDirection:pw.TextDirection.rtl,child:pw.Column(crossAxisAlignment:pw.CrossAxisAlignment.stretch,children:[
-          pw.Center(child:pw.Text('سلسلة • شريط قبض مجمع',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold))),
+          pw.Center(child:ErpPrintSupport.text('سلسلة • شريط قبض مجمع',style:pw.TextStyle(fontSize:18,fontWeight:pw.FontWeight.bold))),
           pw.SizedBox(height:5),
-          pw.Text('الفترة: ${_selectedRunPeriod()}    عدد الموظفين: ${employees.length}'),
-          pw.Text('الفلاتر: الفرع ${_branchId==null?'الكل':_label(_branches,_branchId!,'branch_code','branch_name')} • الإدارة/القسم ${_departmentId==null?'الكل':_label(_departments,_departmentId!,'department_code','name_ar')} • الموقع ${_locationId==null?'الكل':_label(_locations,_locationId!,'location_code','name_ar')}'),
+          ErpPrintSupport.text('الفترة: ${_selectedRunPeriod()}    عدد الموظفين: ${employees.length}'),
+          ErpPrintSupport.text('الفلاتر: الفرع ${_branchId==null?'الكل':_label(_branches,_branchId!,'branch_code','branch_name')} • الإدارة/القسم ${_departmentId==null?'الكل':_label(_departments,_departmentId!,'department_code','name_ar')} • الموقع ${_locationId==null?'الكل':_label(_locations,_locationId!,'location_code','name_ar')}'),
           pw.SizedBox(height:8),
-          pw.Text('الاستحقاقات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,color:PdfColors.green800)),
-          pw.Text('الاستقطاعات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,color:PdfColors.red800)),
+          ErpPrintSupport.text('الاستحقاقات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,color:PdfColors.green800)),
+          ErpPrintSupport.text('الاستقطاعات',style:pw.TextStyle(fontWeight:pw.FontWeight.bold,color:PdfColors.red800)),
           pw.TableHelper.fromTextArray(headers:headers,data:data,headerStyle:pw.TextStyle(fontSize:6,fontWeight:pw.FontWeight.bold),cellStyle:const pw.TextStyle(fontSize:6)),
           pw.SizedBox(height:12),
-          pw.Text('إجمالي الموظفين: ${employees.length}    توقيع المسؤول: ................................................'),
+          ErpPrintSupport.text('إجمالي الموظفين: ${employees.length}    توقيع المسؤول: ................................................'),
         ])),
       ]));
       await Printing.layoutPdf(onLayout:(_) async=>doc.save());

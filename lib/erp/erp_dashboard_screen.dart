@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'services/erp_print_support.dart';
 import 'widgets/erp_center_toast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'widgets/erp_quick_task_button.dart';
@@ -1152,10 +1153,10 @@ class _ErpDashboardScreenState extends State<ErpDashboardScreen> {
       final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
       final keys = _rows.first.keys.where((key) => key != '_مرجع داخلي').toList();
       final document = pw.Document();
-      document.addPage(pw.MultiPage(
+      document.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, 
         theme: pw.ThemeData.withFont(base: font, bold: font),
         build: (_) => [
-          pw.Text('Silsila • $_module • $_page', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          ErpPrintSupport.text('Silsila • $_module • $_page', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 10),
           pw.TableHelper.fromTextArray(
             headers: keys,

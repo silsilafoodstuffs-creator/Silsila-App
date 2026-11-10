@@ -1,4 +1,5 @@
 import 'package:excel/excel.dart' as excel;
+import '../services/erp_print_support.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -215,11 +216,11 @@ class _ErpItemUnitsScreenState extends State<ErpItemUnitsScreen> {
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
     final doc = pw.Document();
     final rows = _activityRows;
-    doc.addPage(pw.MultiPage(
+    doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, 
       theme: pw.ThemeData.withFont(base: font, bold: font),
       pageFormat: PdfPageFormat.a4.landscape,
       build: (_) => [
-        pw.Text('وحدات الأصناف', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        ErpPrintSupport.text('وحدات الأصناف', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 10),
         pw.TableHelper.fromTextArray(
           headers: const ['م', 'كود الوحدة', 'اسم الوحدة عربي', 'اسم الوحدة إنجليزي', 'الحالة'],
