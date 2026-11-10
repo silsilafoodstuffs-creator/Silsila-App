@@ -125,6 +125,10 @@ class ErpInventoryMasterRepository {
     Uint8List? imageBytes, String? imageMimeType,
   }) async {
     final majorName = unit.trim();
+    final normalizedCategoryId = categoryId?.trim() ?? '';
+    if (normalizedCategoryId.isEmpty) {
+      throw ArgumentError('اختر الفئة الثانوية قبل حفظ الصنف لتوليد كوده تلقائيًا.');
+    }
     final middleName = middleUnit?.trim() ?? '';
     final minorName = minorUnit?.trim() ?? '';
     final hasMiddle = middleName.isNotEmpty;
@@ -159,7 +163,7 @@ class ErpInventoryMasterRepository {
     );
 
     final inserted = await _db.from('erp_items').insert({
-      'company_id': companyId.trim(), 'item_code': '', 'item_name': name.trim(), 'category_id': categoryId,
+      'company_id': companyId.trim(), 'item_code': '', 'item_name': name.trim(), 'category_id': normalizedCategoryId,
       'barcode': _blank(barcode), 'base_unit': hasMinor ? minorName : hasMiddle ? middleName : majorName,
       'purchase_price': purchasePrice, 'sale_price': salePrice, 'tax_rate': taxRate,
       'reorder_level': reorderLevel, 'expiry_tracking': expiryTracking,

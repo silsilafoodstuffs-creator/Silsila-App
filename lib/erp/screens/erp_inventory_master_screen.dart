@@ -302,6 +302,11 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
     final taxRate = double.tryParse(_taxRate.text.trim()) ?? -1;
     final majorInner = double.tryParse(_majorInner.text.trim()) ?? -1;
     final middleInner = double.tryParse(_middleInner.text.trim()) ?? -1;
+    final validSecondaryCategory = _categories.any((c)=>_s(c['id'])==_itemCategoryId && c['is_active']==true && _isSecondaryCategory(c));
+    if (!validSecondaryCategory) {
+      setState(() { _error = 'اختار الفئة الثانوية المرتبطة بفئة فرعية ورئيسية لتوليد كود الصنف تلقائيًا.'; _message = null; });
+      return;
+    }
     setState(() { _saving = true; _error = null; _message = null; });
     try {
 
@@ -464,15 +469,29 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
     final id=_s(proposal['id']);
     final name=_proposalNameEdits[id] ?? _s(proposal['name_ar']);
     final unit=_proposalUnitEdits[id] ?? _s(proposal['unit_name']);
+    final matchingCategories=_categories.where((c)=>
+      c['is_active']==true &&
+      _isSecondaryCategory(c) &&
+      _s(c['category_name']).toLowerCase()==_s(proposal['proposed_category']).toLowerCase()
+    ).toList();
+    final selectedCategoryId=_proposalCategorySelections.containsKey(id)
+      ? _proposalCategorySelections[id]
+      : (matchingCategories.isEmpty ? null : _s(matchingCategories.first['id']));
     if(decision=='approve' && name.trim().length<2) {
       setState(()=>_error='اسم الصنف المعتمد يجب أن يتكون من حرفين على الأقل.');
+      return;
+    }
+    if(decision=='approve' && !_categories.any((c)=>
+      _s(c['id'])==selectedCategoryId && c['is_active']==true && _isSecondaryCategory(c)
+    )) {
+      setState(()=>_error='اختار الفئة الثانوية المرتبطة بفئة فرعية ورئيسية قبل اعتماد الصنف.');
       return;
     }
     setState(()=>_saving=true);
     try {
       await Supabase.instance.client.rpc('erp_review_business_workspace_item_proposal',params:{
         'p_proposal_id':id,'p_decision':decision,'p_company_id':_company.text.trim(),
-        'p_category_id':_proposalCategorySelections[id],
+        'p_category_id':selectedCategoryId,
         'p_item_code':null,'p_item_name':name.trim(),
         'p_item_name_en':_s(proposal['name_en']),
         'p_unit_name':unit.trim(),'p_note':decision=='approve'?'تم الاعتماد من دليل الأصناف':'تم رفض الاقتراح',
@@ -496,7 +515,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
       : ListView(children:_workspaceItemProposals.map((proposal){
         final id=_s(proposal['id']);
         final workspace=proposal['erp_business_workspaces'] is Map?Map<String,dynamic>.from(proposal['erp_business_workspaces']):<String,dynamic>{};
-        final matchedCategories=_categories.where((c)=>_s(c['category_name']).toLowerCase()==_s(proposal['proposed_category']).toLowerCase()).toList();
+        final matchedCategories=_categories.where((c)=>c['is_active']==true && _isSecondaryCategory(c) && _s(c['category_name']).toLowerCase()==_s(proposal['proposed_category']).toLowerCase()).toList();
         final categoryValue=_proposalCategorySelections.containsKey(id)?_proposalCategorySelections[id]:(matchedCategories.isEmpty?null:_s(matchedCategories.first['id']));
         return Card(child:Padding(padding:const EdgeInsets.all(12),child:Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
           Text(_s(workspace['workspace_name']).isEmpty?'نشاط غير محدد':_s(workspace['workspace_name']),style:const TextStyle(fontWeight:FontWeight.w800,color:Color(0xFF3E007D))),
@@ -504,9 +523,9 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           TextFormField(key:ValueKey('proposal-name-$id'),initialValue:_proposalNameEdits[id]??_s(proposal['name_ar']),decoration:const InputDecoration(labelText:'اسم الصنف بعد المراجعة'),onChanged:(v)=>_proposalNameEdits[id]=v),
           TextFormField(key:ValueKey('proposal-unit-$id'),initialValue:_proposalUnitEdits[id]??_s(proposal['unit_name']),decoration:const InputDecoration(labelText:'وحدة القياس'),onChanged:(v)=>_proposalUnitEdits[id]=v),
           DropdownButtonFormField<String>(itemHeight: 48, 
-            value:_categories.any((c)=>_s(c['id'])==categoryValue)?categoryValue:null,
-            decoration:const InputDecoration(labelText:'الفئة المركزية'),
-            items:[const DropdownMenuItem<String>(value:null,child:Text('بدون فئة')), ..._categories.where((c)=>c['is_active']==true).map((c)=>DropdownMenuItem(value:_s(c['id']),child:Text('${_s(c['category_code'])} — ${_s(c['category_name'])}')))],
+            value:_categories.any((c)=>_s(c['id'])==categoryValue && c['is_active']==true && _isSecondaryCategory(c))?categoryValue:null,
+            decoration:const InputDecoration(labelText:'الفئة الثانوية المطلوبة للكود التلقائي',helperText:'يجب اختيار فئة ثانوية مرتبطة بفئة فرعية ورئيسية'),
+            items:_categories.where((c)=>c['is_active']==true && _isSecondaryCategory(c)).map((c)=>DropdownMenuItem(value:_s(c['id']),child:Text('${_s(c['category_code'])} — ${_s(c['category_name'])}'))).toList(),
             onChanged:(v)=>setState(()=>_proposalCategorySelections[id]=v),
           ),
           if(_s(proposal['description']).isNotEmpty)Text(_s(proposal['description']),style:const TextStyle(color:Colors.black54)),

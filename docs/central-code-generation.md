@@ -19,7 +19,7 @@ Item identifiers use this format:
 [prefix: 3 letters][primary category: 2 digits][secondary category: 2 digits][tertiary category: 2 digits][serial: 1–8 digits]
 ```
 
-The default is `Itm` + six inherited category digits + a three-digit serial. The prefix and serial width are editable until the first item code is issued. The three category segments remain two digits each to preserve the existing category hierarchy.
+The default is `Itm` + six inherited category digits + a three-digit serial. The prefix and serial width are editable until the first item code is issued. The three category segments remain two digits each to preserve the existing category hierarchy. Workspace item proposal approval now requires a valid secondary category and inserts a blank `item_code`; the database trigger assigns the same central item code. The former random `PRP-` placeholder is no longer used.
 
 ## Customer and geographic identifiers
 
