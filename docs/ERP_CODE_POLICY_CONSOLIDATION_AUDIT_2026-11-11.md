@@ -62,10 +62,10 @@ A transaction-based insert/rollback check successfully exercised geographic area
 | Central policy/registry consistency for active code families | 100% |
 | Geographic, customer, category, brand, item, user and representative generator checks | 100% for tested paths |
 | Unit/payment/shift/template/classification generator checks | 100% for tested paths |
-| UI geometry persisted and applied in the coding policy grid | 85% (project-wide all-screen enforcement still needs visual verification) |
+| UI geometry: global text-field theme is 40px; all 50 active screens with explicit dropdown option heights use 40px; global DataTable theme sets 40px rows and 5px column spacing, and all 11 active screens with explicit table overrides were normalized | 95% (runtime visual verification remains) |
 | Final Flutter/Web/Android/Pages workflow evidence | 0% verified |
 
-Estimated completion for this coding-policy consolidation work package: **85%**. The remaining portion is final CI/build/deployment evidence and runtime visual verification across all screens. This is not a claim that the entire Silsila ERP product is 83% functionally complete.
+Estimated completion for this coding-policy consolidation work package: **85%**. The remaining portion is final CI/build/deployment evidence and runtime visual verification across all screens. This is not a claim that the entire Silsila ERP product is 85% functionally complete.
 
 ## Broader project items still open
 
