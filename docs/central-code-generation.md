@@ -38,9 +38,15 @@ The database resolves the selected secondary category and active company brand, 
 
 ## Customer, category, and geographic identifiers
 
-- Customer codes use the `Cus` prefix, followed by the inherited 8-digit geographic code and a 4-digit customer serial by default (`Cus + 8 geographic digits + 4 serial digits`). The customer prefix and serial width remain configurable in Program Policies > Coding.
+- Customer codes use `Cus` by default, followed by eight inherited geographic digits and a four-digit customer serial. The prefix and serial width remain configurable in Program Policies > Coding; the generator and preview use the same four-digit fallback for new companies.
 - Country code is two digits (Egypt is `20`). Governorate, center/district, and area segment widths are independently configured in the geographic policy; child codes inherit their parent's numeric code.
 - Category hierarchy codes use `Cat` plus two digits for each of the three levels: main, subcategory, and secondary category. The category hierarchy remains aligned with the six category digits embedded in item codes.
+
+## Warehouse storage locations and HR sections
+
+- Root warehouses use `Whs` plus a five-digit serial. A child row in `erp_warehouses` (`parent_warehouse_id` set) is a storage location: `Loc` + branch numeric code + parent warehouse numeric code + three-digit serial. Only direct children of active root warehouses are allowed; the branch is inherited from the parent when available, otherwise it must be selected.
+- Section rows in `erp_hr_departments` (`department_level='section'`) use `Sec` + the parent department's numeric code portion + three-digit serial. The parent must be an active directorate or department.
+- The storage-location and section serials are company-wide rather than restarting per parent. Current branch/warehouse and department numeric portions are not unique, so a per-parent serial would create duplicate codes. Existing legacy codes are preserved and never rewritten.
 
 ## User identifiers
 
@@ -52,6 +58,10 @@ The database resolves the selected secondary category and active company brand, 
 The central code families cover accounts, branches, warehouses, parties, employees, HR structure, cost centers, cashboxes, cash movements, vouchers, checkbooks, journals, price lists, sales and purchase documents, payroll, user classifications, permission templates, and business-workspace records.
 
 The extended generator also covers fixed assets and asset categories/depreciation/disposals; CRM activities and leads; construction projects, material requests, material movements, payment certificates and site reports; manufacturing BOMs/work centers; production orders, quality checks and variances; service tickets, visits and SLA policies; HR contracts, advances and custodies; and business-suite records. Workspace item links use a workspace-scoped code generator.
+
+## Default fallback alignment
+
+The database generator and preview defaults match Program Policies: supplier `Ven`/5, representative `Rep`/5, branch `Brn`/3, department `Dep`/3, storage location `Loc`/3, section `Sec`/3, work location `Plc`/3, grade `Grd`/3, salary element `Elm`/3, customer serial `Cus`/4, user type `Typ`/2, and permission template `Tpl`/3. These are fallbacks for companies without a saved registry; saved company policies remain authoritative.
 
 ## Adding a future code family
 

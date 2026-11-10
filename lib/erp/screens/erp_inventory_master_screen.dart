@@ -241,28 +241,83 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
   }
 
   Future<void> _createWarehouse() async {
+    final isStorageLocation = _parentWarehouseId != null;
+    String? effectiveBranchId = (_branchId == null || _branchId!.isEmpty) ? null : _branchId;
+
+    if (isStorageLocation) {
+      final parent = _warehouses.firstWhere(
+        (w) => _s(w['id']) == _parentWarehouseId,
+        orElse: () => <String, dynamic>{},
+      );
+      if (_s(parent['id']).isEmpty) {
+        setState(() => _error = 'المخزن الرئيسي المحدد لم يعد موجودًا. حدّث القائمة ثم حاول مرة أخرى.');
+        return;
+      }
+      final parentBranchId = _s(parent['branch_id']);
+      if (parentBranchId.isNotEmpty) {
+        if (effectiveBranchId == null) effectiveBranchId = parentBranchId;
+        if (effectiveBranchId != parentBranchId) {
+          setState(() => _error = 'يجب أن يتبع موقع التخزين نفس فرع المخزن الرئيسي.');
+          return;
+        }
+      }
+      if (effectiveBranchId == null) {
+        setState(() => _error = 'اختر فرعًا لموقع التخزين أو اختر مخزنًا رئيسيًا مرتبطًا بفرع.');
+        return;
+      }
+    }
+
     setState(() { _saving = true; _error = null; _message = null; });
     try {
-      final generatedWarehouseCode = await _repo.createWarehouse(companyId: _company.text,
-        name: _warehouseName.text, branchId: _branchId, address: _address.text,
-        nameEn: _warehouseNameEn.text, parentWarehouseId: _parentWarehouseId,
-        location: _warehouseLocation.text, phone: _warehousePhone.text, landline: _warehouseLandline.text,
-        governorateId: _governorateId, districtId: _districtId, areaId: _areaId);
+      final generatedWarehouseCode = await _repo.createWarehouse(
+        companyId: _company.text,
+        name: _warehouseName.text,
+        branchId: effectiveBranchId,
+        address: _address.text,
+        nameEn: _warehouseNameEn.text,
+        parentWarehouseId: _parentWarehouseId,
+        location: _warehouseLocation.text,
+        phone: _warehousePhone.text,
+        landline: _warehouseLandline.text,
+        governorateId: _governorateId,
+        districtId: _districtId,
+        areaId: _areaId,
+      );
       if (!mounted) return;
-      _warehouseCode.clear(); _warehouseName.clear(); _warehouseNameEn.clear(); _warehouseLocation.clear(); _warehousePhone.clear(); _warehouseLandline.clear(); _address.clear(); _parentWarehouseId = null; _governorateId = null; _districtId = null; _areaId = null;
-      setState(() { _saving = false; _message = 'تمت إضافة المخزن بالكود التلقائي: $generatedWarehouseCode'; });
+      _warehouseCode.clear();
+      _warehouseName.clear();
+      _warehouseNameEn.clear();
+      _warehouseLocation.clear();
+      _warehousePhone.clear();
+      _warehouseLandline.clear();
+      _address.clear();
+      _parentWarehouseId = null;
+      _branchId = null;
+      _governorateId = null;
+      _districtId = null;
+      _areaId = null;
+      setState(() {
+        _saving = false;
+        _message = isStorageLocation
+            ? 'تمت إضافة موقع التخزين بالكود التلقائي: $generatedWarehouseCode'
+            : 'تمت إضافة المخزن بالكود التلقائي: $generatedWarehouseCode';
+      });
       await _load(clearMessage: false);
     } catch (e) {
       if (!mounted) return;
-      setState(() { _saving = false; _error = 'تعذرت إضافة المخزن: $e'; });
+      setState(() {
+        _saving = false;
+        _error = isStorageLocation
+            ? 'تعذر إضافة موقع التخزين: $e'
+            : 'تعذرت إضافة المخزن: $e';
+      });
     }
   }
-
 
   Future<void> _deleteWarehouse(Map<String, dynamic> warehouse) async {
     final yes = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
       title: const Text('حذف المخزن'),
-      content: Text('حذف المخزن «${_s(warehouse['warehouse_name'])}»؟ إذا كان مرتبطًا بحركات أو يحتوي مخازن فرعية سيرفض النظام الحذف.'),
+      content: Text('حذف ${_s(warehouse['parent_warehouse_id']).isEmpty ? 'المخزن' : 'موقع التخزين'} «${_s(warehouse['warehouse_name'])}»؟ إذا كان مرتبطًا بحركات أو يحتوي مواقع تخزين سيرفض النظام الحذف.'),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No / لا')),
         FilledButton(style: FilledButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(context, true), child: const Text('Yes / نعم، احذف المخزن')),
@@ -275,7 +330,7 @@ class _ErpInventoryMasterScreenState extends State<ErpInventoryMasterScreen> {
       if (mounted) setState(() => _message = 'تم حذف المخزن.');
       await _load(clearMessage: false);
     } catch (e) {
-      if (mounted) setState(() => _error = 'تعذر حذف المخزن؛ قد يكون مرتبطًا بحركات أو بمخازن فرعية: $e');
+      if (mounted) setState(() => _error = 'تعذر حذف ${_s(warehouse['parent_warehouse_id']).isEmpty ? 'المخزن' : 'موقع التخزين'}؛ قد يكون مرتبطًا بحركات أو بمواقع تخزين: $e');
     }
   }
 
@@ -847,25 +902,40 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
         Card(child: Padding(padding: const EdgeInsets.all(12), child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(_parentWarehouseId == null ? 'إضافة مخزن رئيسي' : 'إضافة مخزن فرعي', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
-            const TextField(enabled: false, decoration: InputDecoration(labelText: 'كود المخزن', hintText: 'يُنشأ تلقائيًا عند الحفظ', prefixIcon: Icon(Icons.auto_awesome))),
-            TextField(controller: _warehouseName, decoration: const InputDecoration(labelText: 'اسم المخزن عربي *')),
+            Text(_parentWarehouseId == null ? 'إضافة مخزن رئيسي' : 'إضافة موقع تخزين', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+            TextField(enabled: false, decoration: InputDecoration(labelText: _parentWarehouseId == null ? 'كود المخزن' : 'كود موقع التخزين', hintText: 'يُنشأ تلقائيًا عند الحفظ', prefixIcon: const Icon(Icons.auto_awesome))),
+            TextField(controller: _warehouseName, decoration: InputDecoration(labelText: _parentWarehouseId == null ? 'اسم المخزن عربي *' : 'اسم موقع التخزين عربي *')),
             TextField(controller: _warehouseNameEn, decoration: const InputDecoration(labelText: 'اسم المخزن إنجليزي')),
             TextField(controller: _warehouseLocation, decoration: const InputDecoration(labelText: 'الموقع / وصف المكان')),
             TextField(controller: _warehousePhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'الموبايل')),
             TextField(controller: _warehouseLandline, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'التليفون الأرضي')),
             TextField(controller: _address, decoration: const InputDecoration(labelText: 'العنوان')),
             const SizedBox(height: 8),
-            DropdownButtonFormField<String>(itemHeight: 48, 
+            DropdownButtonFormField<String>(itemHeight: 48,
               value: _parentWarehouseId, isExpanded: true,
-              decoration: const InputDecoration(labelText: 'المخزن الرئيسي (اتركه فارغًا للمخزن الرئيسي)'),
-              items: [const DropdownMenuItem<String>(value: null, child: Text('مخزن رئيسي')), ..._warehouses.where((w) => _s(w['id']) != _parentWarehouseId).map((w) => DropdownMenuItem<String>(value: _s(w['id']), child: Text(_s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name']))))],
-              onChanged: (v) => setState(() => _parentWarehouseId = v),
+              decoration: const InputDecoration(labelText: 'المخزن الرئيسي التابع له موقع التخزين (اتركه فارغًا لإنشاء مخزن رئيسي)'),
+              items: [
+                const DropdownMenuItem<String>(value: null, child: Text('مخزن رئيسي')),
+                ..._warehouses.where((w) => _s(w['parent_warehouse_id']).isEmpty).map((w) => DropdownMenuItem<String>(
+                  value: _s(w['id']),
+                  child: Text(_s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name'])),
+                )),
+              ],
+              onChanged: (v) {
+                final parent = v == null
+                    ? <String, dynamic>{}
+                    : _warehouses.firstWhere((w) => _s(w['id']) == v, orElse: () => <String, dynamic>{});
+                final parentBranch = _s(parent['branch_id']);
+                setState(() {
+                  _parentWarehouseId = v;
+                  _branchId = v == null || parentBranch.isEmpty ? null : parentBranch;
+                });
+              },
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(itemHeight: 48, 
               value: _branchId, isExpanded: true,
-              decoration: const InputDecoration(labelText: 'الفرع (اختياري)'),
+              decoration: InputDecoration(labelText: _parentWarehouseId == null ? 'الفرع (اختياري)' : 'الفرع (يُورث من المخزن الرئيسي إن وُجد)'),
               items: [const DropdownMenuItem<String>(value: null, child: Text('بدون فرع')), ..._branches.map((b) => DropdownMenuItem<String>(value: _s(b['id']), child: Text(_branchName(_s(b['id'])))))],
               onChanged: (v) => setState(() => _branchId = v),
             ),
@@ -891,7 +961,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               onChanged: (v) => setState(() => _areaId = v),
             ),
             const SizedBox(height: 8),
-            FilledButton.icon(onPressed: _saving ? null : _createWarehouse, icon: const Icon(Icons.add_business), label: const Text('حفظ المخزن')),
+            FilledButton.icon(onPressed: _saving ? null : _createWarehouse, icon: const Icon(Icons.add_business), label: Text(_parentWarehouseId == null ? 'حفظ المخزن' : 'حفظ موقع التخزين')),
           ],
         ))),
         Text('الفروع المسجلة • ' + _branches.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
@@ -909,20 +979,20 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             ),
           )),
         const SizedBox(height: 12),
-        Text('المخازن المسجلة • ' + _warehouses.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
+        Text('المخازن ومواقع التخزين المسجلة • ' + _warehouses.length.toString(), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17)),
         if (_warehouses.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
-            child: Text('لا توجد مخازن مسجلة لهذه الشركة حتى الآن. يمكنك إضافة مخزن من النموذج أعلاه، أو الضغط على «تحديث» لإعادة التحميل.'),
+            child: Text('لا توجد مخازن أو مواقع تخزين مسجلة لهذه الشركة حتى الآن. يمكنك إضافة مخزن رئيسي أو موقع تخزين من النموذج أعلاه، أو الضغط على «تحديث» لإعادة التحميل.'),
           )
         else
           ..._warehouses.map((w) => Card(child: ListTile(
           leading: const Icon(Icons.warehouse_outlined, color: Color(0xFF3E007D)),
           title: Text((_s(w['parent_warehouse_id']).isEmpty ? '' : '↳ ') + _s(w['warehouse_code']) + ' — ' + _s(w['warehouse_name'])),
-          subtitle: Text(_branchName(_s(w['branch_id'])) + (_s(w['address']).isEmpty ? '' : '\n' + _s(w['address'])) + (_s(w['parent_warehouse_id']).isEmpty ? '' : '\nمخزن فرعي تابع لـ ' + _warehouseParentName(_s(w['parent_warehouse_id'])))),
+          subtitle: Text(_branchName(_s(w['branch_id'])) + (_s(w['address']).isEmpty ? '' : '\n' + _s(w['address'])) + (_s(w['parent_warehouse_id']).isEmpty ? '' : '\nموقع تخزين تابع لـ ' + _warehouseParentName(_s(w['parent_warehouse_id'])))),
           isThreeLine: true,
           trailing: Wrap(spacing: 0, children: [
-            IconButton(tooltip: 'إضافة مخزن فرعي', onPressed: _saving ? null : () => setState(() { _parentWarehouseId = _s(w['id']); _message = 'سيتم ربط المخزن الجديد بالمخزن: ' + _s(w['warehouse_name']); }), icon: const Icon(Icons.account_tree_outlined, color: Color(0xFF3E007D))),
+            if (_s(w['parent_warehouse_id']).isEmpty) IconButton(tooltip: 'إضافة موقع تخزين', onPressed: _saving ? null : () => setState(() { _parentWarehouseId = _s(w['id']); final branch = _s(w['branch_id']); _branchId = branch.isEmpty ? null : branch; _message = 'سيتم إنشاء موقع تخزين تابع للمخزن: ' + _s(w['warehouse_name']); }), icon: const Icon(Icons.account_tree_outlined, color: Color(0xFF3E007D))),
             IconButton(tooltip: 'حذف المخزن', onPressed: _saving ? null : () => _deleteWarehouse(w), icon: const Icon(Icons.delete_forever, color: Colors.red)),
             IconButton(onPressed: _saving ? null : () => _toggle(w, false), icon: Icon(w['is_active'] == true ? Icons.pause_circle_outline : Icons.play_circle_outline)),
           ]),
