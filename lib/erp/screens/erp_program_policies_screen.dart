@@ -160,22 +160,6 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
     'code_type.construction_material_movement':'erp_construction_material_movements.movement_code',
     'code_type.service_sla_policy':'erp_service_sla_policies.policy_code',
   };
-  static const Map<String, String> _workspaceCodePolicyCodeSources = {
-    'code_type.workspace_branch':'erp_business_workspace_branches.branch_code',
-    'code_type.workspace_cash_movement':'erp_business_workspace_cash_movements.movement_no',
-    'code_type.workspace_customer':'erp_business_workspace_counterparties.party_code',
-    'code_type.workspace_supplier':'erp_business_workspace_counterparties.party_code',
-    'code_type.workspace_department':'erp_business_workspace_departments.department_code',
-    'code_type.workspace_employee':'erp_business_workspace_employees.employee_code',
-    'code_type.workspace_warehouse':'erp_business_workspace_warehouses.warehouse_code',
-    'code_type.workspace_purchase':'erp_business_workspace_documents.document_no',
-    'code_type.workspace_purchase_return':'erp_business_workspace_documents.document_no',
-    'code_type.workspace_sale':'erp_business_workspace_documents.document_no',
-    'code_type.workspace_sale_return':'erp_business_workspace_documents.document_no',
-    'code_type.workspace_transfer':'erp_business_workspace_documents.document_no',
-    'code_type.workspace_adjustment':'erp_business_workspace_documents.document_no',
-    'code_type.workspace_item_link':'erp_business_workspace_item_links.local_code',
-  };
   Future<void> _loadCodePolicyLocks() async {
     final grouped = <String, List<String>>{};
     for (final entry in _codePolicyCodeSources.entries) {
@@ -208,7 +192,14 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       probeCompanyType('customer_code','erp_parties','party_code',filterColumn:'party_kind',filterValue:'customer'),
       probeCompanyType('code_policy.supplier','erp_parties','party_code',filterColumn:'party_kind',filterValue:'supplier'),
       probeCompanyType('code_type.sales_invoice','erp_sales_documents','document_number',filterColumn:'document_type',excludeValues:'(quotation,order,delivery,return)'),
+      probeCompanyType('code_type.sales_order','erp_sales_documents','document_number',filterColumn:'document_type',filterValue:'order'),
+      probeCompanyType('code_type.sales_delivery','erp_sales_documents','document_number',filterColumn:'document_type',filterValue:'delivery'),
+      probeCompanyType('code_type.sales_return','erp_sales_documents','document_number',filterColumn:'document_type',filterValue:'return'),
+      probeCompanyType('code_type.quotation','erp_sales_documents','document_number',filterColumn:'document_type',filterValue:'quotation'),
       probeCompanyType('code_type.purchase_invoice','erp_purchase_documents','document_number',filterColumn:'document_type',excludeValues:'(order,receipt,return)'),
+      probeCompanyType('code_type.purchase_order','erp_purchase_documents','document_number',filterColumn:'document_type',filterValue:'order'),
+      probeCompanyType('code_type.purchase_receipt','erp_purchase_documents','document_number',filterColumn:'document_type',filterValue:'receipt'),
+      probeCompanyType('code_type.purchase_return','erp_purchase_documents','document_number',filterColumn:'document_type',filterValue:'return'),
       probeCompanyType('code_type.cash_receipt','erp_cash_vouchers','voucher_number',filterColumn:'voucher_type',excludeValues:'(payment,transfer)'),
       probeCompanyType('code_type.cash_payment','erp_cash_vouchers','voucher_number',filterColumn:'voucher_type',filterValue:'payment'),
       probeCompanyType('code_type.cash_transfer','erp_cash_vouchers','voucher_number',filterColumn:'voucher_type',filterValue:'transfer'),
@@ -755,7 +746,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       policy['value'] = jsonEncode(next);
       setState(() {});
     }
-    final safeSerialDigits = serialDigits.clamp(1, 8).toInt();
+    final safeSerialDigits = serialDigits.clamp(1, 12).toInt();
     final preview = prefix + List.filled(8, '0').join() +
         '1'.padLeft(safeSerialDigits, '0');
     return Column(mainAxisSize: MainAxisSize.min, children: [
