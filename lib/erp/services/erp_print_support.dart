@@ -84,6 +84,8 @@ class ErpPrintSupport {
     );
   }
 
+  static String pageLabel(int pageNumber, int pagesCount) => 'Page $pageNumber / $pagesCount';
+
   static pw.Widget footer(pw.Context context) {
     return pw.Container(
       margin: const pw.EdgeInsets.only(top: 7),
@@ -95,7 +97,7 @@ class ErpPrintSupport {
       child: pw.Directionality(
         textDirection: pw.TextDirection.ltr,
         child: pw.Text(
-          normalizeText('Page ${context.pageNumber} / ${context.pagesCount}'),
+          pageLabel(context.pageNumber, context.pagesCount),
           style: const pw.TextStyle(fontSize: 8),
           textAlign: pw.TextAlign.center,
         ),

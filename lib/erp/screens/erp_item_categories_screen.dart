@@ -245,18 +245,6 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
     return 2;
   }
 
-  List<Map<String,dynamic>> get _visibleRows {
-    final rows = _all.where((r) {
-      if (_rowLevel(r) != _level) return false;
-      if (_level == 0 || _parentFilter == null) return true;
-      if (_level == 1) return _s(r['parent_id']) == _parentFilter;
-      final parent = _parentOf(r);
-      return parent != null && _s(parent['parent_id']) == _parentFilter;
-    }).toList();
-    rows.sort((a,b) => _s(a['category_code']).compareTo(_s(b['category_code'])));
-    return rows;
-  }
-
   Future<void> _add({String? parentIdOverride}) async {
     if (_company == null || _company!.isEmpty) { setState(() => _error = 'حدد الشركة أولًا.'); return; }
     String? parentId = parentIdOverride;
@@ -683,7 +671,7 @@ class _ErpItemCategoriesScreenState extends State<ErpItemCategoriesScreen> {
               child: Row(children: [
                 const SizedBox(width: 72, child: Text('النشاط', style: TextStyle(fontWeight: FontWeight.w800, color: _catPurple))),
                 Expanded(child: DropdownButtonFormField<String>(
-                  itemHeight: 40,
+                  itemHeight: 48,
                   value: _selectedActivityCode,
                   isExpanded: true,
                   decoration: const InputDecoration(

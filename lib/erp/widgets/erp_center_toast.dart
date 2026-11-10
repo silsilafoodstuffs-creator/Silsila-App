@@ -43,19 +43,19 @@ class ErpCenterToast {
                 child: Material(
                   color: Colors.transparent,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 380),
+                    constraints: const BoxConstraints(maxWidth: 340),
                     child: IntrinsicWidth(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                         decoration: BoxDecoration(
                           color: background,
-                          borderRadius: BorderRadius.circular(11),
-                          border: Border.all(color: Colors.white.withValues(alpha: .72), width: .8),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withValues(alpha: .72), width: .5),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: .16),
-                              blurRadius: 16,
-                              offset: const Offset(0, 5),
+                              blurRadius: 9,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
@@ -63,8 +63,8 @@ class ErpCenterToast {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
-                              color: Colors.white, size: 19),
-                            const SizedBox(width: 8),
+                              color: Colors.white, size: 16),
+                            const SizedBox(width: 6),
                             Flexible(
                               child: Text(
                                 message,
@@ -73,8 +73,8 @@ class ErpCenterToast {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 13,
-                                  height: 1.25,
+                                  fontSize: 12,
+                                  height: 1.2,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),

@@ -688,7 +688,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
           TextField(controller:name,decoration:const InputDecoration(labelText:'الاسم بالعربية')),
           if(!isWarehouse)TextField(controller:barcode,decoration:const InputDecoration(labelText:'الباركود')),
           if(!isWarehouse)DropdownButtonFormField<String>(
-            itemHeight:40,
+            itemHeight:48,
             value:_categories.any((x)=>_s(x['id'])==editCategoryId && x['is_active']==true && _isSecondaryCategory(x))?editCategoryId:null,
             isExpanded:true,
             decoration:const InputDecoration(labelText:'الفئة الثانوية *'),
@@ -699,7 +699,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
             onChanged:(value)=>dialogSetState(()=>editCategoryId=value),
           ),
           if(!isWarehouse)DropdownButtonFormField<String>(
-            itemHeight:40,
+            itemHeight:48,
             value:_brands.any((x)=>_s(x['id'])==editBrandId && x['is_active']==true)?editBrandId:null,
             isExpanded:true,
             decoration:const InputDecoration(labelText:'البراند/الماركة *'),
@@ -941,7 +941,7 @@ Widget _quickTask(String label, IconData icon, Color color, VoidCallback? action
               onChanged: (v) => setState(() => _itemCategoryId = v),
             ),
             DropdownButtonFormField<String>(
-              itemHeight:40,
+              itemHeight:48,
               value:_brands.any((b)=>_s(b['id'])==_itemBrandId && b['is_active']==true)?_itemBrandId:null,
               isExpanded:true,
               decoration:const InputDecoration(labelText:'البراند/الماركة *',helperText:'يرث كود الصنف أرقام البراند دون بادئته Bra'),

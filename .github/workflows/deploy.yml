@@ -67,6 +67,28 @@ jobs:
         with:
           path: build/web
 
+      - name: Wait for the uploaded Pages artifact to become visible
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deadline = Date.now() + 60000;
+            while (Date.now() < deadline) {
+              const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+                per_page: 100,
+              });
+              const artifact = data.artifacts.find((item) => item.name === 'github-pages' && !item.expired);
+              if (artifact) {
+                core.info(`Pages artifact ${artifact.id} is ready (${artifact.size_in_bytes} bytes).`);
+                return;
+              }
+              core.info('Pages artifact is not visible yet; retrying in 3 seconds.');
+              await new Promise((resolve) => setTimeout(resolve, 3000));
+            }
+            throw new Error('The github-pages artifact did not become visible within 60 seconds.');
+
       - name: Publish to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
