@@ -206,11 +206,12 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
       final registryTypes = Map<String, dynamic>.from(registryPayload['types'] as Map? ?? {});
       final existingTypeKeys = (rows as List).whereType<Map<String,dynamic>>().map((row) => (row['policy_key'] ?? '').toString()).toSet();
       final newTypeRows = <Map<String, dynamic>>[];
-      const additionalPolicyCodes = <String, String>{
-        'construction_material_movement':'Pol146',
-        'workspace_item_link':'Pol147',
-        'business_suite_record':'Pol148',
-      };
+      var nextPolicySequence = 0;
+      for (final row in (rows as List).whereType<Map<String, dynamic>>()) {
+        final match = RegExp(r'^Pol(\\d+)$').firstMatch((row['policy_code'] ?? '').toString());
+        final number = int.tryParse(match?.group(1) ?? '') ?? 0;
+        if (number > nextPolicySequence) nextPolicySequence = number;
+      }
       for (var i = 0; i < _codePolicyTypeDefinitions.length; i++) {
         final definition = _codePolicyTypeDefinitions[i];
         final typeKey = definition['key']!;
@@ -222,7 +223,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
           'name_ar': definition['name'], 'name_en': definition['en'],
           'is_enabled': true, 'apply_to_all': true, 'user_ids': <String>[],
           'policy_value': jsonEncode({'prefix': (config['prefix'] ?? definition['prefix']).toString(), 'digits': int.tryParse((config['digits'] ?? definition['digits']).toString()) ?? 5}),
-          'policy_code': additionalPolicyCodes[typeKey] ?? 'Pol${(77 + i).toString().padLeft(3, '0')}',
+          'policy_code': 'Pol${(++nextPolicySequence).toString().padLeft(3, '0')}',
         });
       }
       if (newTypeRows.isNotEmpty) {
