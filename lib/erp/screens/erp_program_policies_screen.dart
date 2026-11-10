@@ -631,7 +631,7 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   Widget _customerCodeEditor(Map<String, dynamic> policy) {
     final config = _customerCodeConfig(policy);
     final prefix = (config['prefix'] ?? 'Cus').toString();
-    final serialDigits = int.tryParse((config['serial_digits'] ?? 4).toString()) ?? 2;
+    final serialDigits = int.tryParse((config['serial_digits'] ?? 4).toString()) ?? 4;
     final locked = _codePolicyIsLocked('customer_code');
     void update(String key, dynamic value) {
       final next = _customerCodeConfig(policy)..[key] = value;
@@ -803,44 +803,156 @@ class _ErpProgramPoliciesScreenState extends State<ErpProgramPoliciesScreen> {
   }
 
   Future<List<List<String>>> _currentExportRows() async {
-    final rows = <List<String>>[];
-    if (tab == 1) {
-      final record = await db.from('erp_program_policies')
-          .select('policy_value')
-          .eq('company_id', company)
-          .eq('policy_key', 'code_generation_registry')
-          .maybeSingle();
-      if (record == null) throw StateError('لا توجد إعدادات تكويد محفوظة لتصديرها.');
-      final payload = jsonDecode((record['policy_value'] ?? '{}').toString()) as Map<String, dynamic>;
-      rows.add(['نوع التكويد', 'البادئة', 'عدد الخانات', 'تلقائي', 'مركب']);
-      final types = Map<String, dynamic>.from(payload['types'] as Map? ?? {});
-      for (final entry in types.entries) {
-        final config = Map<String, dynamic>.from(entry.value as Map? ?? {});
-        rows.add([entry.key, (config['prefix'] ?? '').toString(), (config['digits'] ?? '').toString(),
-          config['automatic'] == true ? 'نعم' : 'لا', config['composite'] == true ? 'نعم' : 'لا']);
+    const retiredDuplicatePolicies = <String>{
+      'code_type.cash_voucher', 'code_type.sales_representative',
+      'code_type.sales_campaign', 'code_type.customer_monthly_goal',
+      'code_type.employee_monthly_target',
+      'code_policy.storage_location', 'code_policy.section',
+    };
+
+    final current = values.values.where((p) {
+      final key = (p['key'] ?? '').toString();
+      if (retiredDuplicatePolicies.contains(key)) return false;
+      if (tab == 2 && key == 'code_generation_registry') return false;
+      return tabs[tab] == 'الكل' || p['category'] == tabs[tab];
+    }).toList();
+
+    if (tab == 0 || tab == 2) {
+      current.sort((a, b) => _programPolicyCode((a['key'] ?? '').toString())
+          .compareTo(_programPolicyCode((b['key'] ?? '').toString())));
+    }
+
+    String zeros(int count) => List.filled(count > 0 ? count : 0, '0').join();
+
+    String codePrefix(Map<String, dynamic> policy) {
+      final key = (policy['key'] ?? '').toString();
+      if (key == 'customer_code') {
+        return (_customerCodeConfig(policy)['prefix'] ?? 'Cus').toString();
       }
-      rows.add(['الأصناف', (payload['item_prefix'] ?? 'Itm').toString(), '10', payload['item_automatic'] == true ? 'نعم' : 'لا', payload['item_composite'] == true ? 'نعم' : 'لا']);
-      rows.add(['التقسيم الجغرافي', (payload['geo_prefix'] ?? 'Rig').toString(), 'حسب مستويات التقسيم', 'نعم', 'نعم']);
+      if (key == 'item_code') {
+        return (_itemCodeConfig(policy)['prefix'] ?? 'Itm').toString();
+      }
+      if (key.startsWith('geo_code.') || key.startsWith('category_code.') || key == 'brand_code') {
+        return (_geoCodeConfig(policy)['prefix'] ?? 'Cod').toString();
+      }
+      if (key.startsWith('code_policy.') || key.startsWith('code_type.')) {
+        return (_codePolicyConfig(policy)['prefix'] ?? 'Cod').toString();
+      }
+      return '';
+    }
+
+    String codeStructure(Map<String, dynamic> policy) {
+      final key = (policy['key'] ?? '').toString();
+      if (key == 'customer_code') {
+        final config = _customerCodeConfig(policy);
+        final geo = int.tryParse((config['geo_digits'] ?? 8).toString()) ?? 8;
+        final serial = int.tryParse((config['serial_digits'] ?? 4).toString()) ?? 4;
+        return '$geo أرقام جغرافية + $serial أرقام تسلسلية';
+      }
+      if (key == 'item_code') {
+        final config = _itemCodeConfig(policy);
+        final categories = int.tryParse((config['category_digits'] ?? 6).toString()) ?? 6;
+        final brand = int.tryParse((config['brand_digits'] ?? 2).toString()) ?? 2;
+        final serial = int.tryParse((config['serial_digits'] ?? 3).toString()) ?? 3;
+        return '$categories أرقام فئات + $brand للبراند + $serial للتسلسل';
+      }
+      if (key.startsWith('geo_code.') || key.startsWith('category_code.') || key == 'brand_code') {
+        final config = _geoCodeConfig(policy);
+        final own = int.tryParse((config['digits'] ?? 2).toString()) ?? 2;
+        final parent = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
+        return parent > 0 ? '$parent أرقام موروثة + $own أرقام' : '$own أرقام';
+      }
+      if (key.startsWith('code_policy.') || key.startsWith('code_type.')) {
+        final config = _codePolicyConfig(policy);
+        final inheritance = (config['inheritance'] ?? '').toString().trim();
+        if (inheritance.isNotEmpty) return inheritance;
+        final digits = int.tryParse((config['digits'] ?? 3).toString()) ?? 3;
+        return '$digits أرقام تسلسلية';
+      }
+      return (policy['value'] ?? '').toString();
+    }
+
+    String codeExample(Map<String, dynamic> policy) {
+      final key = (policy['key'] ?? '').toString();
+      final prefix = codePrefix(policy);
+      if (key == 'customer_code') {
+        final config = _customerCodeConfig(policy);
+        final geo = int.tryParse((config['geo_digits'] ?? 8).toString()) ?? 8;
+        final serial = int.tryParse((config['serial_digits'] ?? 4).toString()) ?? 4;
+        return '$prefix${zeros(geo)}${zeros(serial > 0 ? serial - 1 : 0)}1';
+      }
+      if (key == 'item_code') {
+        final config = _itemCodeConfig(policy);
+        final categories = int.tryParse((config['category_digits'] ?? 6).toString()) ?? 6;
+        final brand = int.tryParse((config['brand_digits'] ?? 2).toString()) ?? 2;
+        final serial = int.tryParse((config['serial_digits'] ?? 3).toString()) ?? 3;
+        return '$prefix${zeros(categories)}${zeros(brand)}${zeros(serial > 0 ? serial - 1 : 0)}1';
+      }
+      if (key.startsWith('geo_code.') || key.startsWith('category_code.') || key == 'brand_code') {
+        final config = _geoCodeConfig(policy);
+        final own = int.tryParse((config['digits'] ?? 2).toString()) ?? 2;
+        final parent = int.tryParse((config['parent_digits'] ?? 0).toString()) ?? 0;
+        return '$prefix${zeros(parent + (own > 0 ? own - 1 : 0))}1';
+      }
+      if (key.startsWith('code_policy.') || key.startsWith('code_type.')) {
+        final config = _codePolicyConfig(policy);
+        final digits = int.tryParse((config['digits'] ?? 3).toString()) ?? 3;
+        if (key == 'code_policy.user') return '${prefix}01${zeros(4)}1';
+        return '$prefix${zeros(digits > 0 ? digits - 1 : 0)}1';
+      }
+      return (policy['value'] ?? '').toString();
+    }
+
+    final rows = <List<String>>[];
+    if (tab == 2) {
+      rows.add(['م', 'كود السياسة', 'اسم السياسة', 'البادئة', 'التركيب / عدد الخانات', 'مثال', 'مفعلة', 'على الكل', 'عدد المستخدمين']);
+      for (var i = 0; i < current.length; i++) {
+        final policy = current[i];
+        final key = (policy['key'] ?? '').toString();
+        rows.add([
+          (i + 1).toString(),
+          _programPolicyCode(key),
+          (policy['ar'] ?? '').toString(),
+          codePrefix(policy),
+          codeStructure(policy),
+          codeExample(policy),
+          policy['enabled'] == true ? 'نعم' : 'لا',
+          policy['all'] == true ? 'نعم' : 'لا',
+          ((policy['user_ids'] as List?)?.length ?? 0).toString(),
+        ]);
+      }
     } else {
       rows.add(['م', 'كود السياسة', 'اسم السياسة', 'القيمة', 'مفعلة', 'على الكل', 'عدد المستخدمين']);
-      final current = values.values.where((p) => tabs[tab] == 'الكل' || p['category'] == tabs[tab]).toList();
       for (var i = 0; i < current.length; i++) {
-        final p = current[i];
-        final key = (p['key'] ?? '').toString();
+        final policy = current[i];
+        final key = (policy['key'] ?? '').toString();
         final value = key == 'visual_identity.program_name'
             ? _programNameController.text
             : key == 'visual_identity.logo'
                 ? (_programLogoBase64 == null ? 'غير محدد' : 'تم تحديد شعار')
                 : key == 'code_generation_registry'
                     ? 'إعدادات التكويد المركزي'
-                    : key.startsWith('geo_code.')
-                        ? (() { final c = _geoCodeConfig(p); return '${c['prefix']}${List.filled((int.tryParse((c['parent_digits'] ?? 0).toString()) ?? 0) + (int.tryParse((c['digits'] ?? 2).toString()) ?? 2), '0').join()}'; })()
-                        : (p['value'] ?? '').toString();
-        rows.add([(i + 1).toString(), _programPolicyCode(key), (p['ar'] ?? '').toString(),
-          value, p['enabled'] == true ? 'نعم' : 'لا', p['all'] == true ? 'نعم' : 'لا',
-          ((p['user_ids'] as List?)?.length ?? 0).toString()]);
+                    : (key.startsWith('code_policy.') ||
+                       key.startsWith('code_type.') ||
+                       key == 'customer_code' ||
+                       key == 'item_code' ||
+                       key.startsWith('geo_code.') ||
+                       key.startsWith('category_code.') ||
+                       key == 'brand_code')
+                        ? codeExample(policy)
+                        : (policy['value'] ?? '').toString();
+        rows.add([
+          (i + 1).toString(),
+          _programPolicyCode(key),
+          (policy['ar'] ?? '').toString(),
+          value,
+          policy['enabled'] == true ? 'نعم' : 'لا',
+          policy['all'] == true ? 'نعم' : 'لا',
+          ((policy['user_ids'] as List?)?.length ?? 0).toString(),
+        ]);
       }
     }
+
     if (rows.length <= 1) throw StateError('لا توجد بيانات في التبويب الحالي للتصدير.');
     return rows;
   }
