@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../services/erp_print_support.dart';
 import 'package:excel/excel.dart' as excel;
 import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
@@ -415,15 +416,15 @@ class _ErpWhatsappContactsScreenState extends State<ErpWhatsappContactsScreen> {
     final dateLabel = reportDate.day.toString().padLeft(2, '0') + '-' + reportDate.month.toString().padLeft(2, '0') + '-' + reportDate.year.toString();
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
     final pdf = pw.Document();
-    pdf.addPage(pw.MultiPage(
+    pdf.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, 
       pageFormat: PdfPageFormat.a4.landscape,
       margin: const pw.EdgeInsets.all(22),
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
-        pw.Text('سلسلة — جهات اتصال واتساب', textAlign: pw.TextAlign.right,
+        ErpPrintSupport.text('سلسلة — جهات اتصال واتساب', textAlign: pw.TextAlign.right,
           style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 6),
-        pw.Text('عدد السجلات: ' + rows.length.toString() + '    •    تاريخ التقرير: ' + dateLabel,
+        ErpPrintSupport.text('عدد السجلات: ' + rows.length.toString() + '    •    تاريخ التقرير: ' + dateLabel,
           textAlign: pw.TextAlign.right, style: const pw.TextStyle(fontSize: 9)),
         pw.SizedBox(height: 12),
         pw.TableHelper.fromTextArray(

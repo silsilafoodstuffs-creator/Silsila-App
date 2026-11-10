@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_print_support.dart';
 import '../widgets/erp_quick_task_button.dart';
 import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
@@ -343,11 +344,11 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
     final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
     final doc = pw.Document();
     final rows = _filteredMembers;
-    doc.addPage(pw.MultiPage(
+    doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, 
       pageFormat: PdfPageFormat.a4.landscape,
       theme: pw.ThemeData.withFont(base: font, bold: font),
       build: (_) => [
-        pw.Text('دليل مستخدمي الشركة — سلسلة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        ErpPrintSupport.text('دليل مستخدمي الشركة — سلسلة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 10),
         pw.Table(
           border: pw.TableBorder.all(color: PdfColors.grey400, width: .5),
@@ -373,7 +374,7 @@ class _ErpCompanyMembersScreenState extends State<ErpCompanyMembersScreen> {
     decoration: header ? const pw.BoxDecoration(color: PdfColors.orange100) : null,
     children: values.map((value) => pw.Padding(
       padding: const pw.EdgeInsets.all(6),
-      child: pw.Text(value, style: pw.TextStyle(fontSize: header ? 10 : 9, fontWeight: header ? pw.FontWeight.bold : pw.FontWeight.normal)),
+      child: ErpPrintSupport.text(value, style: pw.TextStyle(fontSize: header ? 10 : 9, fontWeight: header ? pw.FontWeight.bold : pw.FontWeight.normal)),
     )).toList(),
   );
 

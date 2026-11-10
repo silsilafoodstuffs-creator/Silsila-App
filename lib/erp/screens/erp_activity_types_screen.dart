@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_print_support.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import '../widgets/erp_quick_task_button.dart';
@@ -270,8 +271,8 @@ class _ErpActivityTypesScreenState extends State<ErpActivityTypesScreen> {
       final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
       const keys = ['ترتيب السطر', 'كود النشاط', 'اسم النشاط عربي', 'اسم النشاط إنجليزي', 'نشط', 'يظهر في التطبيق'];
       final doc = pw.Document();
-      doc.addPage(pw.MultiPage(theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
-        pw.Text('سلسلة — أنواع الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+      doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, theme: pw.ThemeData.withFont(base: font, bold: font), build: (_) => [
+        ErpPrintSupport.text('سلسلة — أنواع الأنشطة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 12),
         pw.TableHelper.fromTextArray(headers: keys, data: _rows.map((row) => keys.map((key) => row[key] ?? '').toList()).toList()),
       ]));

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_print_support.dart';
 import '../widgets/erp_quick_task_button.dart';
 import '../widgets/erp_keyboard_navigation.dart';
 import 'package:flutter/services.dart';
@@ -358,18 +359,18 @@ class _ErpCompanyProfileScreenState extends State<ErpCompanyProfileScreen> {
       'العنوان': _address.text,
       'معرّف الشركة': _activeCompanyId ?? widget.companyId ?? '',
     };
-    document.addPage(pw.MultiPage(
+    document.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, 
       theme: pw.ThemeData.withFont(base: font, bold: font),
       pageFormat: PdfPageFormat.a4,
       build: (_) => [
-        pw.Text('بيانات الشركة - سلسلة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+        ErpPrintSupport.text('بيانات الشركة - سلسلة', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 14),
         pw.Table(
           border: pw.TableBorder.all(color: PdfColors.grey400, width: .5),
           columnWidths: {0: const pw.FlexColumnWidth(1), 1: const pw.FlexColumnWidth(2)},
           children: values.entries.map((entry) => pw.TableRow(children: [
-            pw.Padding(padding: const pw.EdgeInsets.all(7), child: pw.Text(entry.key)),
-            pw.Padding(padding: const pw.EdgeInsets.all(7), child: pw.Text(entry.value.trim().isEmpty ? '—' : entry.value.trim())),
+            pw.Padding(padding: const pw.EdgeInsets.all(7), child: ErpPrintSupport.text(entry.key)),
+            pw.Padding(padding: const pw.EdgeInsets.all(7), child: ErpPrintSupport.text(entry.value.trim().isEmpty ? '—' : entry.value.trim())),
           ])).toList(),
         ),
       ],

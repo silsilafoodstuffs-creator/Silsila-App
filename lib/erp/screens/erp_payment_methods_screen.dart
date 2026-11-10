@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/erp_print_support.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
@@ -240,10 +241,10 @@ class _ErpPaymentMethodsScreenState extends State<ErpPaymentMethodsScreen> {
     try {
       final font = pw.Font.ttf(await rootBundle.load('assets/fonts/Tajawal.ttf'));
       final doc = pw.Document();
-      doc.addPage(pw.MultiPage(
+      doc.addPage(pw.MultiPage(header: ErpPrintSupport.header, footer: ErpPrintSupport.footer, textDirection: pw.TextDirection.rtl, 
         theme: pw.ThemeData.withFont(base: font, bold: font),
         build: (_) => [
-          pw.Text('سلسلة • دليل طرق الدفع', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          ErpPrintSupport.text('سلسلة • دليل طرق الدفع', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 10),
           pw.TableHelper.fromTextArray(
             headers: const ['الكود','الاسم','النوع','الخزينة','قبض','صرف','مرجع','الحالة'],
